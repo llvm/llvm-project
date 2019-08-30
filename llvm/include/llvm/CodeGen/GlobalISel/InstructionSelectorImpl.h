@@ -662,7 +662,21 @@ bool InstructionSelector::executeMatchTable(
           return false;
       break;
     }
-
+    case GIM_CheckCmpPredicate: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t Value = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckCmpPredicate(MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), Value=" << Value << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!MO.isPredicate() || MO.getPredicate() != Value)
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
     case GIM_CheckIsMBB: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];

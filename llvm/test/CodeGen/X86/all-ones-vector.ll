@@ -466,16 +466,10 @@ define <64 x i8> @allones_v64i8() nounwind {
 ; X32-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    retl
 ;
-; X32-KNL-LABEL: allones_v64i8:
-; X32-KNL:       # %bb.0:
-; X32-KNL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; X32-KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-KNL-NEXT:    retl
-;
-; X32-SKX-LABEL: allones_v64i8:
-; X32-SKX:       # %bb.0:
-; X32-SKX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; X32-SKX-NEXT:    retl
+; X32-AVX512-LABEL: allones_v64i8:
+; X32-AVX512:       # %bb.0:
+; X32-AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; X32-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: allones_v64i8:
 ; X64-SSE:       # %bb.0:
@@ -498,16 +492,10 @@ define <64 x i8> @allones_v64i8() nounwind {
 ; X64-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-KNL-LABEL: allones_v64i8:
-; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; X64-KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X64-KNL-NEXT:    retq
-;
-; X64-SKX-LABEL: allones_v64i8:
-; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; X64-SKX-NEXT:    retq
+; X64-AVX512-LABEL: allones_v64i8:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
   ret <64 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 }
 
@@ -533,16 +521,10 @@ define <32 x i16> @allones_v32i16() nounwind {
 ; X32-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    retl
 ;
-; X32-KNL-LABEL: allones_v32i16:
-; X32-KNL:       # %bb.0:
-; X32-KNL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; X32-KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X32-KNL-NEXT:    retl
-;
-; X32-SKX-LABEL: allones_v32i16:
-; X32-SKX:       # %bb.0:
-; X32-SKX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; X32-SKX-NEXT:    retl
+; X32-AVX512-LABEL: allones_v32i16:
+; X32-AVX512:       # %bb.0:
+; X32-AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; X32-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: allones_v32i16:
 ; X64-SSE:       # %bb.0:
@@ -565,16 +547,10 @@ define <32 x i16> @allones_v32i16() nounwind {
 ; X64-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-KNL-LABEL: allones_v32i16:
-; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; X64-KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; X64-KNL-NEXT:    retq
-;
-; X64-SKX-LABEL: allones_v32i16:
-; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; X64-SKX-NEXT:    retq
+; X64-AVX512-LABEL: allones_v32i16:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
   ret <32 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 }
 

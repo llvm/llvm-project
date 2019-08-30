@@ -17,11 +17,11 @@ define dso_local <2 x double> @test1(<8 x i16> %a) {
 ; P9BE-NEXT:    li r3, 0
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    rlwinm r3, r3, 0, 16, 31
-; P9BE-NEXT:    mtvsrwz f0, r3
+; P9BE-NEXT:    mtfprwz f0, r3
 ; P9BE-NEXT:    li r3, 2
 ; P9BE-NEXT:    vextuhlx r3, r3, v2
 ; P9BE-NEXT:    rlwinm r3, r3, 0, 16, 31
-; P9BE-NEXT:    mtvsrwz f1, r3
+; P9BE-NEXT:    mtfprwz f1, r3
 ; P9BE-NEXT:    xscvuxddp f0, f0
 ; P9BE-NEXT:    xscvuxddp f1, f1
 ; P9BE-NEXT:    xxmrghd v2, vs0, vs1
@@ -32,11 +32,11 @@ define dso_local <2 x double> @test1(<8 x i16> %a) {
 ; P9LE-NEXT:    li r3, 0
 ; P9LE-NEXT:    vextuhrx r3, r3, v2
 ; P9LE-NEXT:    rlwinm r3, r3, 0, 16, 31
-; P9LE-NEXT:    mtvsrwz f0, r3
+; P9LE-NEXT:    mtfprwz f0, r3
 ; P9LE-NEXT:    li r3, 2
 ; P9LE-NEXT:    vextuhrx r3, r3, v2
 ; P9LE-NEXT:    rlwinm r3, r3, 0, 16, 31
-; P9LE-NEXT:    mtvsrwz f1, r3
+; P9LE-NEXT:    mtfprwz f1, r3
 ; P9LE-NEXT:    xscvuxddp f0, f0
 ; P9LE-NEXT:    xscvuxddp f1, f1
 ; P9LE-NEXT:    xxmrghd v2, vs1, vs0
@@ -49,8 +49,8 @@ define dso_local <2 x double> @test1(<8 x i16> %a) {
 ; P8BE-NEXT:    rldicl r3, r3, 32, 48
 ; P8BE-NEXT:    rlwinm r4, r4, 0, 16, 31
 ; P8BE-NEXT:    rlwinm r3, r3, 0, 16, 31
-; P8BE-NEXT:    mtvsrwz f0, r4
-; P8BE-NEXT:    mtvsrwz f1, r3
+; P8BE-NEXT:    mtfprwz f0, r4
+; P8BE-NEXT:    mtfprwz f1, r3
 ; P8BE-NEXT:    xscvuxddp f0, f0
 ; P8BE-NEXT:    xscvuxddp f1, f1
 ; P8BE-NEXT:    xxmrghd v2, vs0, vs1
@@ -64,8 +64,8 @@ define dso_local <2 x double> @test1(<8 x i16> %a) {
 ; P8LE-NEXT:    rldicl r3, r3, 48, 48
 ; P8LE-NEXT:    rlwinm r4, r4, 0, 16, 31
 ; P8LE-NEXT:    rlwinm r3, r3, 0, 16, 31
-; P8LE-NEXT:    mtvsrwz f0, r4
-; P8LE-NEXT:    mtvsrwz f1, r3
+; P8LE-NEXT:    mtfprwz f0, r4
+; P8LE-NEXT:    mtfprwz f1, r3
 ; P8LE-NEXT:    xscvuxddp f0, f0
 ; P8LE-NEXT:    xscvuxddp f1, f1
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0
@@ -103,10 +103,10 @@ define dso_local <2 x double> @test2(<4 x i32> %a, <4 x i32> %b) {
 ; P8BE:       # %bb.0: # %entry
 ; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
 ; P8BE-NEXT:    mfvsrwz r4, v3
-; P8BE-NEXT:    mtvsrwz f1, r4
+; P8BE-NEXT:    mtfprwz f1, r4
 ; P8BE-NEXT:    mfvsrwz r3, f0
 ; P8BE-NEXT:    xscvuxddp f1, f1
-; P8BE-NEXT:    mtvsrwz f0, r3
+; P8BE-NEXT:    mtfprwz f0, r3
 ; P8BE-NEXT:    xscvuxddp f0, f0
 ; P8BE-NEXT:    xxmrghd v2, vs0, vs1
 ; P8BE-NEXT:    blr
@@ -117,8 +117,8 @@ define dso_local <2 x double> @test2(<4 x i32> %a, <4 x i32> %b) {
 ; P8LE-NEXT:    xxsldwi vs1, v3, v3, 1
 ; P8LE-NEXT:    mfvsrwz r3, f0
 ; P8LE-NEXT:    mfvsrwz r4, f1
-; P8LE-NEXT:    mtvsrwz f0, r3
-; P8LE-NEXT:    mtvsrwz f1, r4
+; P8LE-NEXT:    mtfprwz f0, r3
+; P8LE-NEXT:    mtfprwz f1, r4
 ; P8LE-NEXT:    xscvuxddp f0, f0
 ; P8LE-NEXT:    xscvuxddp f1, f1
 ; P8LE-NEXT:    xxmrghd v2, vs1, vs0

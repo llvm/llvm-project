@@ -248,7 +248,11 @@ template <class ELFT>
 Expected<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
   uint32_t Offset = this->st_name;
   if (Offset >= StrTab.size())
-    return errorCodeToError(object_error::parse_failed);
+    return createStringError(object_error::parse_failed,
+                             "st_name (0x%" PRIx32
+                             ") is past the end of the string table"
+                             " of size 0x%zx",
+                             Offset, StrTab.size());
   return StringRef(StrTab.data() + Offset);
 }
 

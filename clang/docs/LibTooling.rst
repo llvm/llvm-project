@@ -34,7 +34,7 @@ looked for.  Let me give you an example:
   TEST(runToolOnCode, CanSyntaxCheckCode) {
     // runToolOnCode returns whether the action was correctly run over the
     // given code.
-    EXPECT_TRUE(runToolOnCode(new clang::SyntaxOnlyAction, "class X {};"));
+    EXPECT_TRUE(runToolOnCode(std::make_unique<clang::SyntaxOnlyAction>(), "class X {};"));
   }
 
 Writing a standalone tool

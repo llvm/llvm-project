@@ -181,13 +181,25 @@ std::unique_ptr<Module> llvm::CloneModule(
   }
 
   // And named metadata....
+  const auto* LLVM_DBG_CU = M.getNamedMetadata("llvm.dbg.cu");
   for (Module::const_named_metadata_iterator I = M.named_metadata_begin(),
                                              E = M.named_metadata_end();
        I != E; ++I) {
     const NamedMDNode &NMD = *I;
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    if (&NMD == LLVM_DBG_CU) {
+      // Do not insert duplicate operands.
+      SmallPtrSet<const void*, 8> Visited;
+      for (const auto* Operand : NewNMD->operands())
+        Visited.insert(Operand);
+      for (const auto* Operand : NMD.operands()) {
+        auto* MappedOperand = MapMetadata(Operand, VMap);
+        if (Visited.insert(MappedOperand).second)
+          NewNMD->addOperand(MappedOperand);
+      }
+    } else
+      for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
+        NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
   }
 
   return New;

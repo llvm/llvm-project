@@ -1075,7 +1075,7 @@ MemRegionManager::getCXXBaseObjectRegion(const CXXRecordDecl *RD,
                                          const SubRegion *Super,
                                          bool IsVirtual) {
   if (isa<TypedValueRegion>(Super)) {
-    assert(isValidBaseClass(RD, dyn_cast<TypedValueRegion>(Super), IsVirtual));
+    assert(isValidBaseClass(RD, cast<TypedValueRegion>(Super), IsVirtual));
     (void)&isValidBaseClass;
 
     if (IsVirtual) {
@@ -1426,6 +1426,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
     case MemRegion::FieldRegionKind: {
       const auto *FR = cast<FieldRegion>(R);
       R = FR->getSuperRegion();
+      assert(R);
 
       const RecordDecl *RD = FR->getDecl()->getParent();
       if (RD->isUnion() || !RD->isCompleteDefinition()) {

@@ -111,6 +111,8 @@ export function activate(context: vscode.ExtensionContext) {
                                                 serverOptions, clientOptions);
   const semanticHighlightingFeature =
       new semanticHighlighting.SemanticHighlightingFeature();
+  context.subscriptions.push(
+      vscode.Disposable.from(semanticHighlightingFeature));
   clangdClient.registerFeature(semanticHighlightingFeature);
   console.log('Clang Language Server is now active!');
   context.subscriptions.push(clangdClient.start());
@@ -133,9 +135,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showTextDocument(doc);
       }));
   const status = new FileStatus();
+  context.subscriptions.push(vscode.Disposable.from(status));
   context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(
       () => { status.updateStatus(); }));
-  clangdClient.onDidChangeState(({newState}) => {
+  context.subscriptions.push(clangdClient.onDidChangeState(({newState}) => {
     if (newState == vscodelc.State.Running) {
       // clangd starts or restarts after crash.
       clangdClient.onNotification(
@@ -150,7 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
       status.clear();
       semanticHighlightingFeature.dispose();
     }
-  })
+  }));
   // An empty place holder for the activate command, otherwise we'll get an
   // "command is not registered" error.
   context.subscriptions.push(vscode.commands.registerCommand(

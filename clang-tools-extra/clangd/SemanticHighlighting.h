@@ -29,13 +29,16 @@ enum class HighlightingKind {
   Parameter,
   Function,
   Method,
+  StaticMethod,
   Field,
+  StaticField,
   Class,
   Enum,
   EnumConstant,
   Namespace,
   TemplateParameter,
   Primitive,
+  Macro,
 
   NumKinds,
 };

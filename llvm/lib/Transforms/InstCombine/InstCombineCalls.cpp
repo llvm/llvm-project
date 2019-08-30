@@ -4183,8 +4183,10 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
   ConstantInt *Op1C = (Call.getNumArgOperands() == 1)
                           ? nullptr
                           : dyn_cast<ConstantInt>(Call.getOperand(1));
+  // Bail out if the allocation size is zero.
   if ((Op0C && Op0C->isNullValue()) || (Op1C && Op1C->isNullValue()))
     return;
+
   if (isMallocLikeFn(&Call, TLI) && Op0C) {
     Call.addAttribute(AttributeList::ReturnIndex,
                       Attribute::getWithDereferenceableOrNullBytes(

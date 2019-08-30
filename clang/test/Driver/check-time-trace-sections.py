@@ -12,9 +12,9 @@ def is_before(range1, range2):
     return b <= c
 
 events = json.loads(sys.stdin.read())["traceEvents"]
-codegens = filter(lambda x: x["name"] == "CodeGen Function", events)
-frontends = filter(lambda x: x["name"] == "Frontend", events)
-backends = filter(lambda x: x["name"] == "Backend", events)
+codegens = [event for event in events if event["name"] == "CodeGen Function"]
+frontends = [event for event in events if event["name"] == "Frontend"]
+backends = [event for event in events if event["name"] == "Backend"]
 
 if not all([any([is_inside(codegen, frontend) for frontend in frontends])
                         for codegen in codegens]):

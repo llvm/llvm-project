@@ -5,7 +5,7 @@
 ; RUN: llvm-rc /FO %t/tag-user.res -- %p/Inputs/tag-user.rc
 ; RUN: llvm-readobj %t/tag-user.res | FileCheck %s
 
-; CHECK:      Resource type (int): 500
+; CHECK:      Resource type (int): ID 500
 ; CHECK-NEXT: Resource name (int): 500
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x30
@@ -20,7 +20,7 @@
 ; CHECK-NEXT:   0020: CDAB01EF CDAB                        |......|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 10
+; CHECK-DAG:  Resource type (int): RCDATA (ID 10)
 ; CHECK-NEXT: Resource name (int): 501
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x30
@@ -46,7 +46,7 @@
 ; CHECK-NEXT: Data size: 0
 ; CHECK-NEXT: Data:: ()
 
-; CHECK-DAG:  Resource type (int): 600
+; CHECK-DAG:  Resource type (int): ID 600
 ; CHECK-NEXT: Resource name (int): 600
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x30

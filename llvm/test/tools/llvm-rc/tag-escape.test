@@ -1,7 +1,7 @@
 ; RUN: llvm-rc /FO %t -- %p/Inputs/tag-escape.rc
 ; RUN: llvm-readobj %t | FileCheck %s
 
-; CHECK:      Resource type (int): 4
+; CHECK:      Resource type (int): MENU (ID 4)
 ; CHECK-NEXT: Resource name (int): 1
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -32,7 +32,7 @@
 ; CHECK-NEXT:   0120: 00000700 61000000 80000800 61000000  |....a.......a...|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 4
+; CHECK-DAG:  Resource type (int): MENU (ID 4)
 ; CHECK-NEXT: Resource name (int): 2
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -98,7 +98,7 @@
 ; CHECK-NEXT:   0080: 00006100 00006200 0000               |..a...b...|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 6
+; CHECK-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 1
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -136,7 +136,7 @@
 ; CHECK-NEXT:   0190: 00000000                             |....|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 6
+; CHECK-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 2
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030

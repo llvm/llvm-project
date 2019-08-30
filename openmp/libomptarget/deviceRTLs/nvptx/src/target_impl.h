@@ -16,12 +16,12 @@
 
 #include "option.h"
 
-INLINE void __kmpc_impl_unpack(int64_t val, int32_t &lo, int32_t &hi) {
+INLINE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
 }
 
-INLINE int64_t __kmpc_impl_pack(int32_t lo, int32_t hi) {
-  int64_t val;
+INLINE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
+  uint64_t val;
   asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
   return val;
 }
@@ -34,9 +34,15 @@ INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
   return res;
 }
 
-INLINE int __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
+INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
+  __kmpc_impl_lanemask_t res;
+  asm("mov.u32 %0, %%lanemask_gt;" : "=r"(res));
+  return res;
+}
 
-INLINE int __kmpc_impl_popc(uint32_t x) { return __popc(x); }
+INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
+
+INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
 
 #ifndef CUDA_VERSION
 #error CUDA_VERSION macro is undefined, something wrong with cuda.

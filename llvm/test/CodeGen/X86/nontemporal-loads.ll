@@ -550,22 +550,10 @@ define <32 x i16> @test_v32i16(<32 x i16>* %src) {
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: test_v32i16:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm1
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v32i16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %zmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v32i16:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm1
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_v32i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovntdqa (%rdi), %zmm0
+; AVX512-NEXT:    retq
   %1 = load <32 x i16>, <32 x i16>* %src, align 64, !nontemporal !1
   ret <32 x i16> %1
 }
@@ -603,22 +591,10 @@ define <64 x i8> @test_v64i8(<64 x i8>* %src) {
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: test_v64i8:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm1
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v64i8:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %zmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v64i8:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm1
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_v64i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovntdqa (%rdi), %zmm0
+; AVX512-NEXT:    retq
   %1 = load <64 x i8>, <64 x i8>* %src, align 64, !nontemporal !1
   ret <64 x i8> %1
 }
@@ -1299,10 +1275,12 @@ define <32 x i16> @test_arg_v32i16(<32 x i16> %arg, <32 x i16>* %src) {
 ;
 ; AVX512F-LABEL: test_arg_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm2
-; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm3
-; AVX512F-NEXT:    vpaddw %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddw %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm2
+; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm3
+; AVX512F-NEXT:    vpaddw %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_arg_v32i16:
@@ -1313,10 +1291,12 @@ define <32 x i16> @test_arg_v32i16(<32 x i16> %arg, <32 x i16>* %src) {
 ;
 ; AVX512VL-LABEL: test_arg_v32i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm2
-; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm3
-; AVX512VL-NEXT:    vpaddw %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddw %ymm2, %ymm1, %ymm1
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm2
+; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm3
+; AVX512VL-NEXT:    vpaddw %ymm3, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
   %1 = load <32 x i16>, <32 x i16>* %src, align 64, !nontemporal !1
   %2 = add <32 x i16> %arg, %1
@@ -1370,10 +1350,12 @@ define <64 x i8> @test_arg_v64i8(<64 x i8> %arg, <64 x i8>* %src) {
 ;
 ; AVX512F-LABEL: test_arg_v64i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm2
-; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm3
-; AVX512F-NEXT:    vpaddb %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddb %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm2
+; AVX512F-NEXT:    vmovntdqa 32(%rdi), %ymm3
+; AVX512F-NEXT:    vpaddb %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_arg_v64i8:
@@ -1384,10 +1366,12 @@ define <64 x i8> @test_arg_v64i8(<64 x i8> %arg, <64 x i8>* %src) {
 ;
 ; AVX512VL-LABEL: test_arg_v64i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm2
-; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm3
-; AVX512VL-NEXT:    vpaddb %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddb %ymm2, %ymm1, %ymm1
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm2
+; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm3
+; AVX512VL-NEXT:    vpaddb %ymm3, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
   %1 = load <64 x i8>, <64 x i8>* %src, align 64, !nontemporal !1
   %2 = add <64 x i8> %arg, %1
@@ -1742,22 +1726,10 @@ define <32 x i16> @test_unaligned_v32i16(<32 x i16>* %src) {
 ; AVX-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: test_unaligned_v32i16:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovups (%rdi), %ymm0
-; AVX512F-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_unaligned_v32i16:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovups (%rdi), %zmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_unaligned_v32i16:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_unaligned_v32i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovups (%rdi), %zmm0
+; AVX512-NEXT:    retq
   %1 = load <32 x i16>, <32 x i16>* %src, align 1, !nontemporal !1
   ret <32 x i16> %1
 }
@@ -1777,22 +1749,10 @@ define <64 x i8> @test_unaligned_v64i8(<64 x i8>* %src) {
 ; AVX-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: test_unaligned_v64i8:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovups (%rdi), %ymm0
-; AVX512F-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_unaligned_v64i8:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovups (%rdi), %zmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_unaligned_v64i8:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_unaligned_v64i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovups (%rdi), %zmm0
+; AVX512-NEXT:    retq
   %1 = load <64 x i8>, <64 x i8>* %src, align 1, !nontemporal !1
   ret <64 x i8> %1
 }

@@ -38,19 +38,6 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; PPC32-NEXT:    mflr 0
 ; PPC32-NEXT:    stw 0, 4(1)
 ; PPC32-NEXT:    stwu 1, -80(1)
-; PPC32-NEXT:    .cfi_def_cfa_offset 80
-; PPC32-NEXT:    .cfi_offset lr, 4
-; PPC32-NEXT:    .cfi_offset r20, -48
-; PPC32-NEXT:    .cfi_offset r21, -44
-; PPC32-NEXT:    .cfi_offset r22, -40
-; PPC32-NEXT:    .cfi_offset r23, -36
-; PPC32-NEXT:    .cfi_offset r24, -32
-; PPC32-NEXT:    .cfi_offset r25, -28
-; PPC32-NEXT:    .cfi_offset r26, -24
-; PPC32-NEXT:    .cfi_offset r27, -20
-; PPC32-NEXT:    .cfi_offset r28, -16
-; PPC32-NEXT:    .cfi_offset r29, -12
-; PPC32-NEXT:    .cfi_offset r30, -8
 ; PPC32-NEXT:    stw 26, 56(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    stw 27, 60(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    stw 29, 68(1) # 4-byte Folded Spill
@@ -178,6 +165,6 @@ start:
 ; Function Attrs: nounwind readnone speculatable
 declare { i128, i1 } @llvm.umul.with.overflow.i128(i128, i128) #1
 
-attributes #0 = { nounwind readnone uwtable }
+attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }

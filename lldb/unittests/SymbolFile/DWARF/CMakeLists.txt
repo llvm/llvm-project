@@ -1,4 +1,5 @@
 add_lldb_unittest(SymbolFileDWARFTests
+  DWARFASTParserClangTests.cpp
   SymbolFileDWARFTests.cpp
 
   LINK_LIBS

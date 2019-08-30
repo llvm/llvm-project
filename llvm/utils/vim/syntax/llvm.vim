@@ -89,6 +89,7 @@ syn keyword llvmKeyword
       \ hhvmcc
       \ hhvm_ccc
       \ hidden
+      \ immarg
       \ initialexec
       \ inlinehint
       \ inreg

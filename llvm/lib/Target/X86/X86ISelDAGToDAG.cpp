@@ -507,6 +507,7 @@ namespace {
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
+    bool combineIncDecVector(SDNode *Node);
     bool tryShrinkShlLogicImm(SDNode *N);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
 
@@ -3775,6 +3776,49 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   return true;
 }
 
+/// Convert vector increment or decrement to sub/add with an all-ones constant:
+/// add X, <1, 1...> --> sub X, <-1, -1...>
+/// sub X, <1, 1...> --> add X, <-1, -1...>
+/// The all-ones vector constant can be materialized using a pcmpeq instruction
+/// that is commonly recognized as an idiom (has no register dependency), so
+/// that's better/smaller than loading a splat 1 constant.
+bool X86DAGToDAGISel::combineIncDecVector(SDNode *Node) {
+  assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::SUB) &&
+         "Unexpected opcode for increment/decrement transform");
+
+  EVT VT = Node->getValueType(0);
+  assert(VT.isVector() && "Should only be called for vectors.");
+
+  SDValue X = Node->getOperand(0);
+  SDValue OneVec = Node->getOperand(1);
+
+  APInt SplatVal;
+  if (!X86::isConstantSplat(OneVec, SplatVal) || !SplatVal.isOneValue())
+    return false;
+
+  SDLoc DL(Node);
+  SDValue AllOnesVec;
+
+  APInt Ones = APInt::getAllOnesValue(32);
+  assert(VT.getSizeInBits() % 32 == 0 &&
+         "Expected bit count to be a multiple of 32");
+  unsigned NumElts = VT.getSizeInBits() / 32;
+  assert(NumElts > 0 && "Expected to get non-empty vector.");
+  AllOnesVec =
+      CurDAG->getConstant(Ones, DL, MVT::getVectorVT(MVT::i32, NumElts));
+  insertDAGNode(*CurDAG, X, AllOnesVec);
+
+  AllOnesVec = CurDAG->getBitcast(VT, AllOnesVec);
+  insertDAGNode(*CurDAG, X, AllOnesVec);
+
+  unsigned NewOpcode = Node->getOpcode() == ISD::ADD ? ISD::SUB : ISD::ADD;
+  SDValue NewNode = CurDAG->getNode(NewOpcode, DL, VT, X, AllOnesVec);
+
+  ReplaceNode(Node, NewNode.getNode());
+  SelectCode(NewNode.getNode());
+  return true;
+}
+
 /// If the high bits of an 'and' operand are known zero, try setting the
 /// high bits of an 'and' constant operand to produce a smaller encoding by
 /// creating a small, sign-extended negative immediate rather than a large
@@ -4347,6 +4391,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     LLVM_FALLTHROUGH;
   case ISD::ADD:
   case ISD::SUB: {
+    if ((Opcode == ISD::ADD || Opcode == ISD::SUB) && NVT.isVector() &&
+        combineIncDecVector(Node))
+      return;
+
     // Try to avoid folding immediates with multiple uses for optsize.
     // This code tries to select to register form directly to avoid going
     // through the isel table which might fold the immediate. We can't change

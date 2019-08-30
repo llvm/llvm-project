@@ -163,11 +163,10 @@ unsigned AMDGPURegisterBankInfo::getBreakDownCost(
 
 const RegisterBank &AMDGPURegisterBankInfo::getRegBankFromRegClass(
     const TargetRegisterClass &RC) const {
+  if (&RC == &AMDGPU::SReg_1RegClass)
+    return AMDGPU::VCCRegBank;
 
-  if (TRI->isSGPRClass(&RC))
-    return getRegBank(AMDGPU::SGPRRegBankID);
-
-  return getRegBank(AMDGPU::VGPRRegBankID);
+  return TRI->isSGPRClass(&RC) ? AMDGPU::SGPRRegBank : AMDGPU::VGPRRegBank;
 }
 
 template <unsigned NumOps>

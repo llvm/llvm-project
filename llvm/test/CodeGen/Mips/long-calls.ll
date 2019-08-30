@@ -43,9 +43,11 @@ define void @caller() {
 ; ON64: daddiu  $25, $1, %lo(callee)
 ; ON64: jalr    $25
 
-; ON64: daddiu  $1, $zero, %higher(memset)
 ; ON64: lui     $2, %highest(memset)
-; ON64: lui     $2, %hi(memset)
+; ON64: daddiu  $1, $2, %higher(memset)
+; ON64: dsll    $1, $1, 16
+; ON64: daddiu  $1, $1, %hi(memset)
+; ON64: dsll    $1, $1, 16
 ; ON64: daddiu  $25, $1, %lo(memset)
 ; ON64: jalr    $25
 

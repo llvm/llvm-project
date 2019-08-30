@@ -870,7 +870,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!DT || !UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   // Merge adjacent basic blocks, if possible.
   for (BasicBlock *Latch : Latches) {
     BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());
@@ -890,6 +890,8 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       }
     }
   }
+  // Apply updates to the DomTree.
+  DT = &DTU.getDomTree();
 
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.

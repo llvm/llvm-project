@@ -2527,10 +2527,6 @@ public:
   }
 };
 
-/// Implementation of inline functions that require the template declarations
-inline AnyFunctionDecl::AnyFunctionDecl(FunctionTemplateDecl *FTD)
-    : Function(FTD) {}
-
 /// Represents a variable template specialization, which refers to
 /// a variable template with a given set of template arguments.
 ///

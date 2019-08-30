@@ -107,6 +107,10 @@ public:
   WasmSymbolType getWasmType() const;
   bool isExported() const;
 
+  // Indicates that the symbol is used in an __attribute__((used)) directive
+  // or similar.
+  bool isNoStrip() const;
+
   const WasmSignature* getSignature() const;
 
   bool isInGOT() const { return gotIndex != INVALID_INDEX; }

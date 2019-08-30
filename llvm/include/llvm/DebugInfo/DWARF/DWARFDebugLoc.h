@@ -29,7 +29,7 @@ public:
     /// The ending address of the instruction range.
     uint64_t End;
     /// The location of the variable within the specified range.
-    SmallString<4> Loc;
+    SmallVector<uint8_t, 4> Loc;
   };
 
   /// A list of locations that contain one variable.
@@ -68,8 +68,8 @@ public:
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
-  Optional<LocationList> parseOneLocationList(DWARFDataExtractor Data,
-                                              uint64_t *Offset);
+  static Expected<LocationList>
+  parseOneLocationList(const DWARFDataExtractor &Data, uint64_t *Offset);
 };
 
 class DWARFDebugLoclists {
@@ -78,7 +78,7 @@ public:
     uint8_t Kind;
     uint64_t Value0;
     uint64_t Value1;
-    SmallVector<char, 4> Loc;
+    SmallVector<uint8_t, 4> Loc;
   };
 
   struct LocationList {
@@ -106,8 +106,9 @@ public:
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
-  static Optional<LocationList>
-  parseOneLocationList(DataExtractor Data, uint64_t *Offset, unsigned Version);
+  static Expected<LocationList> parseOneLocationList(const DataExtractor &Data,
+                                                     uint64_t *Offset,
+                                                     unsigned Version);
 };
 
 } // end namespace llvm

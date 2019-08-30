@@ -341,6 +341,7 @@ class targetCommandTestCase(TestBase):
         self.expect("target create -s doesntexist doesntexisteither", error=True,
                     substrs=["invalid symbol file path 'doesntexist'"])
 
+    @skipIfWindows
     @no_debug_info_test
     def test_target_create_invalid_core_file(self):
         invalid_core_path = os.path.join(self.getSourceDir(), "invalid_core_file")

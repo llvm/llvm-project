@@ -3023,12 +3023,14 @@ define <32 x i8> @trunc_packus_v32i16_v32i8(<32 x i16> %a0) {
 ;
 ; AVX512F-LABEL: trunc_packus_v32i16_v32i8:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: trunc_packus_v32i16_v32i8:
 ; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512VL-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512VL-NEXT:    retq

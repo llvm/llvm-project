@@ -46,3 +46,59 @@ if.then:
 declare void @crash(i8*) noreturn
 declare void @crash2(i8*)
 declare void @g(i8*)
+
+%struct.ByVal = type { [10 x i32] }
+
+define dso_local i32 @pr43155() {
+entry:
+  %agg.tmp = alloca %struct.ByVal, align 4
+  %agg.tmp5 = alloca %struct.ByVal, align 4
+  %agg.tmp6 = alloca %struct.ByVal, align 4
+  %call = tail call i32 @cond()
+  %tobool = icmp eq i32 %call, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call x86_stdcallcc void @stdcall_abort(i32 12, i32 2)
+  unreachable
+
+if.end:                                           ; preds = %entry
+  %call1 = tail call i32 @cond()
+  %tobool2 = icmp eq i32 %call1, 0
+  br i1 %tobool2, label %if.end4, label %if.then3
+
+if.then3:                                         ; preds = %if.end
+  tail call x86_stdcallcc void @stdcall_abort(i32 15, i32 2)
+  unreachable
+
+if.end4:                                          ; preds = %if.end
+  call void @getbyval(%struct.ByVal* nonnull sret %agg.tmp)
+  call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 4 %agg.tmp)
+  call void @getbyval(%struct.ByVal* nonnull sret %agg.tmp5)
+  call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 4 %agg.tmp5)
+  call void @getbyval(%struct.ByVal* nonnull sret %agg.tmp6)
+  call void @make_push_unprofitable(%struct.ByVal* nonnull byval(%struct.ByVal) align 4 %agg.tmp6)
+  ret i32 0
+}
+
+;   Check that there are no stack adjustments after stdcall_abort.
+; CHECK-LABEL: pr43155:
+;   The main function body contents are not important.
+; CHECK: retl
+; CHECK:  # %if.then
+; CHECK: calll _stdcall_abort@8
+; CHECK-NOT: sub
+; CHECK-NOT: add
+; CHECK:  # %if.then3
+; CHECK: calll _stdcall_abort@8
+; CHECK-NOT: sub
+; CHECK-NOT: add
+; CHECK: # -- End function
+
+declare dso_local i32 @cond()
+
+declare dso_local x86_stdcallcc void @stdcall_abort(i32, i32) noreturn
+
+declare dso_local void @make_push_unprofitable(%struct.ByVal* byval(%struct.ByVal) align 4)
+
+declare dso_local void @getbyval(%struct.ByVal* sret)

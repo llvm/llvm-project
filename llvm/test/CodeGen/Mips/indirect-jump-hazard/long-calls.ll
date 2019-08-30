@@ -74,20 +74,18 @@ define void @caller() {
 ; N64-NEXT:    daddiu $25, $1, %lo(callee)
 ; N64-NEXT:    jalr.hb $25
 ; N64-NEXT:    nop
-; N64-NEXT:    daddiu $1, $zero, %higher(memset)
-; N64-NEXT:    lui $2, %highest(memset)
-; N64-NEXT:    daddu $1, $2, $1
-; N64-NEXT:    dsll $1, $1, 16
-; N64-NEXT:    lui $2, %hi(memset)
-; N64-NEXT:    daddu $1, $1, $2
-; N64-NEXT:    dsll $1, $1, 16
-; N64-NEXT:    daddiu $25, $1, %lo(memset)
 ; N64-NEXT:    lui $1, %highest(val)
 ; N64-NEXT:    daddiu $1, $1, %higher(val)
 ; N64-NEXT:    dsll $1, $1, 16
 ; N64-NEXT:    daddiu $1, $1, %hi(val)
 ; N64-NEXT:    dsll $1, $1, 16
+; N64-NEXT:    lui $2, %highest(memset)
 ; N64-NEXT:    daddiu $4, $1, %lo(val)
+; N64-NEXT:    daddiu $1, $2, %higher(memset)
+; N64-NEXT:    dsll $1, $1, 16
+; N64-NEXT:    daddiu $1, $1, %hi(memset)
+; N64-NEXT:    dsll $1, $1, 16
+; N64-NEXT:    daddiu $25, $1, %lo(memset)
 ; N64-NEXT:    daddiu $5, $zero, 0
 ; N64-NEXT:    jalr.hb $25
 ; N64-NEXT:    daddiu $6, $zero, 80

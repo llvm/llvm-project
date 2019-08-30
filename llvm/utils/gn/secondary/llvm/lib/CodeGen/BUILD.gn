@@ -116,6 +116,7 @@ static_library("CodeGen") {
     "MachineTraceMetrics.cpp",
     "MachineVerifier.cpp",
     "MacroFusion.cpp",
+    "ModuloSchedule.cpp",
     "OptimizePHIs.cpp",
     "PHIElimination.cpp",
     "PHIEliminationUtils.cpp",

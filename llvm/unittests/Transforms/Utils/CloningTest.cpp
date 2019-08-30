@@ -652,6 +652,62 @@ TEST_F(CloneFunc, DebugIntrinsics) {
   }
 }
 
+static int GetDICompileUnitCount(const Module& M) {
+  if (const auto* LLVM_DBG_CU = M.getNamedMetadata("llvm.dbg.cu")) {
+    return LLVM_DBG_CU->getNumOperands();
+  }
+  return 0;
+}
+
+TEST(CloneFunction, CloneFunctionToDifferentModule) {
+  StringRef ImplAssembly = R"(
+    define void @foo() {
+      ret void, !dbg !5
+    }
+
+    !llvm.module.flags = !{!0}
+    !llvm.dbg.cu = !{!2, !6}
+    !0 = !{i32 1, !"Debug Info Version", i32 3}
+    !1 = distinct !DISubprogram(unit: !2)
+    !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
+    !3 = !DIFile(filename: "foo.c", directory: "/tmp")
+    !4 = distinct !DISubprogram(unit: !2)
+    !5 = !DILocation(line: 4, scope: !1)
+    !6 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
+  )";
+  StringRef DeclAssembly = R"(
+    declare void @foo()
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+
+  auto ImplModule = parseAssemblyString(ImplAssembly, Error, Context);
+  EXPECT_TRUE(ImplModule != nullptr);
+  // DICompileUnits: !2, !6. Only !2 is reachable from @foo().
+  EXPECT_TRUE(GetDICompileUnitCount(*ImplModule) == 2);
+  auto* ImplFunction = ImplModule->getFunction("foo");
+  EXPECT_TRUE(ImplFunction != nullptr);
+
+  auto DeclModule = parseAssemblyString(DeclAssembly, Error, Context);
+  EXPECT_TRUE(DeclModule != nullptr);
+  // No DICompileUnits defined here.
+  EXPECT_TRUE(GetDICompileUnitCount(*DeclModule) == 0);
+  auto* DeclFunction = DeclModule->getFunction("foo");
+  EXPECT_TRUE(DeclFunction != nullptr);
+
+  ValueToValueMapTy VMap;
+  VMap[ImplFunction] = DeclFunction;
+  // No args to map
+  SmallVector<ReturnInst*, 8> Returns;
+  CloneFunctionInto(DeclFunction, ImplFunction, VMap, true, Returns);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+  EXPECT_FALSE(verifyModule(*DeclModule, &errs()));
+  // DICompileUnit !2 shall be inserted into DeclModule.
+  EXPECT_TRUE(GetDICompileUnitCount(*DeclModule) == 1);
+}
+
 class CloneModule : public ::testing::Test {
 protected:
   void SetUp() override {

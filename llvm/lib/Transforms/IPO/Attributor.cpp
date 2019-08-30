@@ -123,6 +123,11 @@ static cl::opt<bool> VerifyAttributor(
              "manifestation of attributes -- may issue false-positive errors"),
     cl::init(false));
 
+static cl::opt<unsigned> DepRecInterval(
+    "attributor-dependence-recompute-interval", cl::Hidden,
+    cl::desc("Number of iterations until dependences are recomputed."),
+    cl::init(4));
+
 /// Logic operators for the change status enum class.
 ///
 ///{
@@ -423,16 +428,16 @@ void IRPosition::verify() {
     assert(KindOrArgNo >= 0 && "Expected argument or call site argument!");
     assert((isa<CallBase>(AnchorVal) || isa<Argument>(AnchorVal)) &&
            "Expected call base or argument for positive attribute index!");
-    if (auto *Arg = dyn_cast<Argument>(AnchorVal)) {
-      assert(Arg->getArgNo() == unsigned(getArgNo()) &&
+    if (isa<Argument>(AnchorVal)) {
+      assert(cast<Argument>(AnchorVal)->getArgNo() == unsigned(getArgNo()) &&
              "Argument number mismatch!");
-      assert(Arg == &getAssociatedValue() && "Associated value mismatch!");
+      assert(cast<Argument>(AnchorVal) == &getAssociatedValue() &&
+             "Associated value mismatch!");
     } else {
-      auto &CB = cast<CallBase>(*AnchorVal);
-      (void)CB;
-      assert(CB.arg_size() > unsigned(getArgNo()) &&
+      assert(cast<CallBase>(*AnchorVal).arg_size() > unsigned(getArgNo()) &&
              "Call site argument number mismatch!");
-      assert(CB.getArgOperand(getArgNo()) == &getAssociatedValue() &&
+      assert(cast<CallBase>(*AnchorVal).getArgOperand(getArgNo()) ==
+                 &getAssociatedValue() &&
              "Associated value mismatch!");
     }
     break;
@@ -680,7 +685,34 @@ struct AANoUnwindFunction final : public AANoUnwindImpl {
 };
 
 /// NoUnwind attribute deduction for a call sites.
-using AANoUnwindCallSite = AANoUnwindFunction;
+struct AANoUnwindCallSite final : AANoUnwindImpl {
+  AANoUnwindCallSite(const IRPosition &IRP) : AANoUnwindImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoUnwindImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AANoUnwind>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AANoUnwind::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nounwind); }
+};
 
 /// --------------------- Function Return Values -------------------------------
 
@@ -1084,7 +1116,7 @@ struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
-    //       call site specific liveness liveness information and then it makes
+    //       call site specific liveness information and then it makes
     //       sense to specialize attributes for call sites instead of
     //       redirecting requests to the callee.
     llvm_unreachable("Abstract attributes for returned values are not "
@@ -1271,7 +1303,33 @@ struct AANoSyncFunction final : public AANoSyncImpl {
 };
 
 /// NoSync attribute deduction for a call sites.
-using AANoSyncCallSite = AANoSyncFunction;
+struct AANoSyncCallSite final : AANoSyncImpl {
+  AANoSyncCallSite(const IRPosition &IRP) : AANoSyncImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoSyncImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AANoSync>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const AANoSync::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nosync); }
+};
 
 /// ------------------------ No-Free Attributes ----------------------------
 
@@ -1315,7 +1373,33 @@ struct AANoFreeFunction final : public AANoFreeImpl {
 };
 
 /// NoFree attribute deduction for a call sites.
-using AANoFreeCallSite = AANoFreeFunction;
+struct AANoFreeCallSite final : AANoFreeImpl {
+  AANoFreeCallSite(const IRPosition &IRP) : AANoFreeImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoFreeImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AANoFree>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const AANoFree::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nofree); }
+};
 
 /// ------------------------ NonNull Argument Attribute ------------------------
 struct AANonNullImpl : AANonNull {
@@ -1364,8 +1448,8 @@ struct AANonNullFloating : AANonNullImpl {
       const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
         if (!isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr,
-                         /* TODO: CtxI */ nullptr,
-                         /* TODO: DT */ nullptr))
+                            /* TODO: CtxI */ nullptr,
+                            /* TODO: DT */ nullptr))
           T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.
@@ -1412,7 +1496,7 @@ struct AANonNullCallSiteArgument final : AANonNullFloating {
   AANonNullCallSiteArgument(const IRPosition &IRP) : AANonNullFloating(IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nonnul) }
+  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nonnull) }
 };
 
 /// NonNull attribute for a call site return position.
@@ -1456,7 +1540,35 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(norecurse) }
 };
 
-using AANoRecurseCallSite = AANoRecurseFunction;
+/// NoRecurse attribute deduction for a call sites.
+struct AANoRecurseCallSite final : AANoRecurseImpl {
+  AANoRecurseCallSite(const IRPosition &IRP) : AANoRecurseImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoRecurseImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AANoRecurse>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AANoRecurse::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(norecurse); }
+};
 
 /// ------------------------ Will-Return Attributes ----------------------------
 
@@ -1532,7 +1644,34 @@ struct AAWillReturnFunction final : AAWillReturnImpl {
 };
 
 /// WillReturn attribute deduction for a call sites.
-using AAWillReturnCallSite = AAWillReturnFunction;
+struct AAWillReturnCallSite final : AAWillReturnImpl {
+  AAWillReturnCallSite(const IRPosition &IRP) : AAWillReturnImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAWillReturnImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AAWillReturn>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AAWillReturn::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(willreturn); }
+};
 
 /// ------------------------ NoAlias Argument Attribute ------------------------
 
@@ -1554,6 +1693,12 @@ struct AANoAliasImpl : AANoAlias {
 struct AANoAliasFloating final : AANoAliasImpl {
   AANoAliasFloating(const IRPosition &IRP) : AANoAliasImpl(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: It isn't sound to initialize as the same with `AANoAliasImpl`
+    // because `noalias` may not be valid in the current position.
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Implement this.
@@ -1567,14 +1712,10 @@ struct AANoAliasFloating final : AANoAliasImpl {
 };
 
 /// NoAlias attribute for an argument.
-struct AANoAliasArgument final : AANoAliasImpl {
-  AANoAliasArgument(const IRPosition &IRP) : AANoAliasImpl(IRP) {}
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Implement this.
-    return indicatePessimisticFixpoint();
-  }
+struct AANoAliasArgument final
+    : AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl> {
+  AANoAliasArgument(const IRPosition &IRP)
+      : AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl>(IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noalias) }
@@ -1582,6 +1723,14 @@ struct AANoAliasArgument final : AANoAliasImpl {
 
 struct AANoAliasCallSiteArgument final : AANoAliasImpl {
   AANoAliasCallSiteArgument(const IRPosition &IRP) : AANoAliasImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // See callsite argument attribute and callee argument attribute.
+    ImmutableCallSite ICS(&getAnchorValue());
+    if (ICS.paramHasAttr(getArgNo(), Attribute::NoAlias))
+      indicateOptimisticFixpoint();
+  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -1637,7 +1786,33 @@ struct AANoAliasReturned final : AANoAliasImpl {
 };
 
 /// NoAlias attribute deduction for a call site return value.
-using AANoAliasCallSiteReturned = AANoAliasReturned;
+struct AANoAliasCallSiteReturned final : AANoAliasImpl {
+  AANoAliasCallSiteReturned(const IRPosition &IRP) : AANoAliasImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoAliasImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::returned(*F);
+    auto &FnAA = A.getAAFor<AANoAlias>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const AANoAlias::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noalias); }
+};
 
 /// -------------------AAIsDead Function Attribute-----------------------
 
@@ -1818,8 +1993,9 @@ struct AAIsDeadFunction final : public AAIsDeadImpl {
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
-    STATS_DECL(DeadInternalFunction, Function,
-               "Number of internal functions classified as dead (no live callsite)");
+    STATS_DECL(
+        DeadInternalFunction, Function,
+        "Number of internal functions classified as dead (no live callsite)");
     BUILD_STAT_NAME(DeadInternalFunction, Function) +=
         (getAssociatedFunction()->hasInternalLinkage() &&
          AssumedLiveBlocks.empty())
@@ -1951,6 +2127,7 @@ ChangeStatus AAIsDeadImpl::updateImpl(Attributor &A) {
     // which will prevent us from querying isAssumedDead().
     indicatePessimisticFixpoint();
     assert(!isValidState() && "Expected an invalid state!");
+    Status = ChangeStatus::CHANGED;
   }
 
   return Status;
@@ -1963,7 +2140,7 @@ struct AAIsDeadCallSite final : AAIsDeadImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
-    //       call site specific liveness liveness information and then it makes
+    //       call site specific liveness information and then it makes
     //       sense to specialize attributes for call sites instead of
     //       redirecting requests to the callee.
     llvm_unreachable("Abstract attributes for liveness are not "
@@ -2132,7 +2309,7 @@ struct AADereferenceableArgument final
             IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override{
+  void trackStatistics() const override {
     STATS_DECLTRACK_ARG_ATTR(dereferenceable)
   }
 };
@@ -2149,7 +2326,36 @@ struct AADereferenceableCallSiteArgument final : AADereferenceableFloating {
 };
 
 /// Dereferenceable attribute deduction for a call site return value.
-using AADereferenceableCallSiteReturned = AADereferenceableReturned;
+struct AADereferenceableCallSiteReturned final : AADereferenceableImpl {
+  AADereferenceableCallSiteReturned(const IRPosition &IRP)
+      : AADereferenceableImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AADereferenceableImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::returned(*F);
+    auto &FnAA = A.getAAFor<AADereferenceable>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const DerefState &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CS_ATTR(dereferenceable);
+  }
+};
 
 // ------------------------ Align Argument Attribute ------------------------
 
@@ -2168,30 +2374,6 @@ struct AAAlignImpl : AAAlign {
     for (const Attribute &Attr : Attrs)
       takeKnownMaximum(Attr.getValueAsInt());
   }
-
-  // TODO: Provide a helper to determine the implied ABI alignment and check in
-  //       the existing manifest method and a new one for AAAlignImpl that value
-  //       to avoid making the alignment explicit if it did not improve.
-
-  /// See AbstractAttribute::getDeducedAttributes
-  virtual void
-  getDeducedAttributes(LLVMContext &Ctx,
-                       SmallVectorImpl<Attribute> &Attrs) const override {
-    if (getAssumedAlign() > 1)
-      Attrs.emplace_back(Attribute::getWithAlignment(Ctx, getAssumedAlign()));
-  }
-
-  /// See AbstractAttribute::getAsStr().
-  const std::string getAsStr() const override {
-    return getAssumedAlign() ? ("align<" + std::to_string(getKnownAlign()) +
-                                "-" + std::to_string(getAssumedAlign()) + ">")
-                             : "unknown-align";
-  }
-};
-
-/// Align attribute for a floating value.
-struct AAAlignFloating : AAAlignImpl {
-  AAAlignFloating(const IRPosition &IRP) : AAAlignImpl(IRP) {}
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
@@ -2219,8 +2401,32 @@ struct AAAlignFloating : AAAlignImpl {
       }
     }
 
-    return AAAlignImpl::manifest(A) | Changed;
+    return AAAlign::manifest(A) | Changed;
   }
+
+  // TODO: Provide a helper to determine the implied ABI alignment and check in
+  //       the existing manifest method and a new one for AAAlignImpl that value
+  //       to avoid making the alignment explicit if it did not improve.
+
+  /// See AbstractAttribute::getDeducedAttributes
+  virtual void
+  getDeducedAttributes(LLVMContext &Ctx,
+                       SmallVectorImpl<Attribute> &Attrs) const override {
+    if (getAssumedAlign() > 1)
+      Attrs.emplace_back(Attribute::getWithAlignment(Ctx, getAssumedAlign()));
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return getAssumedAlign() ? ("align<" + std::to_string(getKnownAlign()) +
+                                "-" + std::to_string(getAssumedAlign()) + ">")
+                             : "unknown-align";
+  }
+};
+
+/// Align attribute for a floating value.
+struct AAAlignFloating : AAAlignImpl {
+  AAAlignFloating(const IRPosition &IRP) : AAAlignImpl(IRP) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -2289,7 +2495,33 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
 };
 
 /// Align attribute deduction for a call site return value.
-using AAAlignCallSiteReturned = AAAlignReturned;
+struct AAAlignCallSiteReturned final : AAAlignImpl {
+  AAAlignCallSiteReturned(const IRPosition &IRP) : AAAlignImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAAlignImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::returned(*F);
+    auto &FnAA = A.getAAFor<AAAlign>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const AAAlign::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
+};
 
 /// ------------------ Function No-Return Attribute ----------------------------
 struct AANoReturnImpl : public AANoReturn {
@@ -2324,7 +2556,34 @@ struct AANoReturnFunction final : AANoReturnImpl {
 };
 
 /// NoReturn attribute deduction for a call sites.
-using AANoReturnCallSite = AANoReturnFunction;
+struct AANoReturnCallSite final : AANoReturnImpl {
+  AANoReturnCallSite(const IRPosition &IRP) : AANoReturnImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoReturnImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AANoReturn::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noreturn); }
+};
 
 /// ----------------------------------------------------------------------------
 ///                               Attributor
@@ -2548,11 +2807,24 @@ ChangeStatus Attributor::run() {
   SetVector<AbstractAttribute *> Worklist;
   Worklist.insert(AllAbstractAttributes.begin(), AllAbstractAttributes.end());
 
+  bool RecomputeDependences = false;
+
   do {
     // Remember the size to determine new attributes.
     size_t NumAAs = AllAbstractAttributes.size();
     LLVM_DEBUG(dbgs() << "\n\n[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist size: " << Worklist.size() << "\n");
+
+    // If dependences (=QueryMap) are recomputed we have to look at all abstract
+    // attributes again, regardless of what changed in the last iteration.
+    if (RecomputeDependences) {
+      LLVM_DEBUG(
+          dbgs() << "[Attributor] Run all AAs to recompute dependences\n");
+      QueryMap.clear();
+      ChangedAAs.clear();
+      Worklist.insert(AllAbstractAttributes.begin(),
+                      AllAbstractAttributes.end());
+    }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
@@ -2575,6 +2847,10 @@ ChangeStatus Attributor::run() {
         if (AA->update(*this) == ChangeStatus::CHANGED)
           ChangedAAs.push_back(AA);
 
+    // Check if we recompute the dependences in the next iteration.
+    RecomputeDependences = (DepRecomputeInterval > 0 &&
+                            IterationCounter % DepRecomputeInterval == 0);
+
     // Add attributes to the changed set if they have been created in the last
     // iteration.
     ChangedAAs.append(AllAbstractAttributes.begin() + NumAAs,
@@ -2585,17 +2861,14 @@ ChangeStatus Attributor::run() {
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
 
-  } while (!Worklist.empty() && IterationCounter++ < MaxFixpointIterations);
-
-  size_t NumFinalAAs = AllAbstractAttributes.size();
+  } while (!Worklist.empty() && (IterationCounter++ < MaxFixpointIterations ||
+                                 VerifyMaxFixpointIterations));
 
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
                     << IterationCounter << "/" << MaxFixpointIterations
                     << " iterations\n");
 
-  if (VerifyMaxFixpointIterations && IterationCounter != MaxFixpointIterations)
-    llvm_unreachable("The fixpoint was not reached with exactly the number of "
-                     "specified iterations!");
+  size_t NumFinalAAs = AllAbstractAttributes.size();
 
   bool FinishedAtFixpoint = Worklist.empty();
 
@@ -2709,6 +2982,15 @@ ChangeStatus Attributor::run() {
     Fn->eraseFromParent();
   }
 
+  if (VerifyMaxFixpointIterations &&
+      IterationCounter != MaxFixpointIterations) {
+    errs() << "\n[Attributor] Fixpoint iteration done after: "
+           << IterationCounter << "/" << MaxFixpointIterations
+           << " iterations\n";
+    llvm_unreachable("The fixpoint was not reached with exactly the number of "
+                     "specified iterations!");
+  }
+
   return ManifestChange;
 }
 
@@ -2785,6 +3067,9 @@ void Attributor::identifyDefaultAbstractAttributes(
       // Every argument with pointer type might be marked nonnull.
       checkAndRegisterAA<AANonNullArgument>(ArgPos, *this, Whitelist);
 
+      // Every argument with pointer type might be marked noalias.
+      checkAndRegisterAA<AANoAliasArgument>(ArgPos, *this, Whitelist);
+
       // Every argument with pointer type might be marked dereferenceable.
       checkAndRegisterAA<AADereferenceableArgument>(ArgPos, *this, Whitelist);
 
@@ -2848,6 +3133,10 @@ void Attributor::identifyDefaultAbstractAttributes(
 
         // Call site argument attribute "non-null".
         checkAndRegisterAA<AANonNullCallSiteArgument>(CSArgPos, *this,
+                                                      Whitelist);
+
+        // Call site argument attribute "no-alias".
+        checkAndRegisterAA<AANoAliasCallSiteArgument>(CSArgPos, *this,
                                                       Whitelist);
 
         // Call site argument attribute "dereferenceable".
@@ -2930,7 +3219,7 @@ static bool runAttributorOnModule(Module &M) {
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
   InformationCache InfoCache(M.getDataLayout());
-  Attributor A(InfoCache);
+  Attributor A(InfoCache, DepRecInterval);
 
   for (Function &F : M) {
     // TODO: Not all attributes require an exact definition. Find a way to
@@ -2985,7 +3274,6 @@ struct AttributorLegacyPass : public ModulePass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     // FIXME: Think about passes we will preserve and add them here.
-    AU.setPreservesCFG();
   }
 };
 

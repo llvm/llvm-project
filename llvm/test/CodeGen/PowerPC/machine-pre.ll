@@ -54,16 +54,10 @@ return:
   ret i32 %ret
 }
 
-define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) local_unnamed_addr #0 {
+define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-LABEL: foo:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mflr r0
-; CHECK-P9-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P9-NEXT:    .cfi_offset lr, 16
-; CHECK-P9-NEXT:    .cfi_offset r27, -40
-; CHECK-P9-NEXT:    .cfi_offset r28, -32
-; CHECK-P9-NEXT:    .cfi_offset r29, -24
-; CHECK-P9-NEXT:    .cfi_offset r30, -16
 ; CHECK-P9-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
 ; CHECK-P9-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-P9-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
@@ -75,8 +69,19 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) local_unnamed_
 ; CHECK-P9-NEXT:    lis r3, 21845
 ; CHECK-P9-NEXT:    add r28, r30, r29
 ; CHECK-P9-NEXT:    ori r27, r3, 21846
+; CHECK-P9-NEXT:    b .LBB1_4
 ; CHECK-P9-NEXT:    .p2align 4
-; CHECK-P9-NEXT:  .LBB1_1: # %while.cond
+; CHECK-P9-NEXT:  .LBB1_1: # %sw.bb3
+; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    mulli r3, r30, 23
+; CHECK-P9-NEXT:  .LBB1_2: # %sw.epilog
+; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    add r28, r3, r28
+; CHECK-P9-NEXT:  .LBB1_3: # %sw.epilog
+; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    cmpwi r28, 1025
+; CHECK-P9-NEXT:    bge cr0, .LBB1_7
+; CHECK-P9-NEXT:  .LBB1_4: # %while.cond
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    extsw r3, r29
 ; CHECK-P9-NEXT:    bl bar
@@ -95,27 +100,16 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) local_unnamed_
 ; CHECK-P9-NEXT:    add r4, r4, r5
 ; CHECK-P9-NEXT:    subf r3, r4, r3
 ; CHECK-P9-NEXT:    cmplwi r3, 1
-; CHECK-P9-NEXT:    beq cr0, .LBB1_4
-; CHECK-P9-NEXT:  # %bb.2: # %while.cond
+; CHECK-P9-NEXT:    beq cr0, .LBB1_1
+; CHECK-P9-NEXT:  # %bb.5: # %while.cond
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    cmplwi r3, 0
-; CHECK-P9-NEXT:    bne cr0, .LBB1_6
-; CHECK-P9-NEXT:  # %bb.3: # %sw.bb
+; CHECK-P9-NEXT:    bne cr0, .LBB1_3
+; CHECK-P9-NEXT:  # %bb.6: # %sw.bb
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    mulli r3, r29, 13
-; CHECK-P9-NEXT:    b .LBB1_5
-; CHECK-P9-NEXT:    .p2align 4
-; CHECK-P9-NEXT:  .LBB1_4: # %sw.bb3
-; CHECK-P9-NEXT:    #   
-; CHECK-P9-NEXT:    mulli r3, r30, 23
-; CHECK-P9-NEXT:  .LBB1_5: # %sw.epilog
-; CHECK-P9-NEXT:    #   
-; CHECK-P9-NEXT:    add r28, r3, r28 
-; CHECK-P9-NEXT:  .LBB1_6: # %sw.epilog
-; CHECK-P9-NEXT:    #   
-; CHECK-P9-NEXT:    cmpwi r28, 1025
-; CHECK-P9-NEXT:    blt cr0, .LBB1_1
-; CHECK-P9-NEXT:  # %bb.7: # %while.end
+; CHECK-P9-NEXT:    b .LBB1_2
+; CHECK-P9-NEXT:  .LBB1_7: # %while.end
 ; CHECK-P9-NEXT:    lis r3, -13108
 ; CHECK-P9-NEXT:    ori r3, r3, 52429
 ; CHECK-P9-NEXT:    mullw r3, r28, r3

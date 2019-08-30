@@ -148,7 +148,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
 
   /// We may create a new instruction, so remember it because it
   /// must be deleted when the pass is finished.
-  SmallPtrSet<MachineInstr *, 4> NewMIs;
+  DenseMap<MachineInstr*, MachineInstr *> NewMIs;
 
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
@@ -297,53 +297,8 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  void generatePipelinedLoop(SMSchedule &Schedule);
-  void generateProlog(SMSchedule &Schedule, unsigned LastStage,
-                      MachineBasicBlock *KernelBB, ValueMapTy *VRMap,
-                      MBBVectorTy &PrologBBs);
-  void generateEpilog(SMSchedule &Schedule, unsigned LastStage,
-                      MachineBasicBlock *KernelBB, ValueMapTy *VRMap,
-                      MBBVectorTy &EpilogBBs, MBBVectorTy &PrologBBs);
-  void generateExistingPhis(MachineBasicBlock *NewBB, MachineBasicBlock *BB1,
-                            MachineBasicBlock *BB2, MachineBasicBlock *KernelBB,
-                            SMSchedule &Schedule, ValueMapTy *VRMap,
-                            InstrMapTy &InstrMap, unsigned LastStageNum,
-                            unsigned CurStageNum, bool IsLast);
-  void generatePhis(MachineBasicBlock *NewBB, MachineBasicBlock *BB1,
-                    MachineBasicBlock *BB2, MachineBasicBlock *KernelBB,
-                    SMSchedule &Schedule, ValueMapTy *VRMap,
-                    InstrMapTy &InstrMap, unsigned LastStageNum,
-                    unsigned CurStageNum, bool IsLast);
-  void removeDeadInstructions(MachineBasicBlock *KernelBB,
-                              MBBVectorTy &EpilogBBs);
-  void splitLifetimes(MachineBasicBlock *KernelBB, MBBVectorTy &EpilogBBs,
-                      SMSchedule &Schedule);
-  void addBranches(MachineBasicBlock &PreheaderBB, MBBVectorTy &PrologBBs,
-                   MachineBasicBlock *KernelBB, MBBVectorTy &EpilogBBs,
-                   SMSchedule &Schedule, ValueMapTy *VRMap);
   bool computeDelta(MachineInstr &MI, unsigned &Delta);
-  void updateMemOperands(MachineInstr &NewMI, MachineInstr &OldMI,
-                         unsigned Num);
-  MachineInstr *cloneInstr(MachineInstr *OldMI, unsigned CurStageNum,
-                           unsigned InstStageNum);
-  MachineInstr *cloneAndChangeInstr(MachineInstr *OldMI, unsigned CurStageNum,
-                                    unsigned InstStageNum,
-                                    SMSchedule &Schedule);
-  void updateInstruction(MachineInstr *NewMI, bool LastDef,
-                         unsigned CurStageNum, unsigned InstrStageNum,
-                         SMSchedule &Schedule, ValueMapTy *VRMap);
   MachineInstr *findDefInLoop(unsigned Reg);
-  unsigned getPrevMapVal(unsigned StageNum, unsigned PhiStage, unsigned LoopVal,
-                         unsigned LoopStage, ValueMapTy *VRMap,
-                         MachineBasicBlock *BB);
-  void rewritePhiValues(MachineBasicBlock *NewBB, unsigned StageNum,
-                        SMSchedule &Schedule, ValueMapTy *VRMap,
-                        InstrMapTy &InstrMap);
-  void rewriteScheduledInstr(MachineBasicBlock *BB, SMSchedule &Schedule,
-                             InstrMapTy &InstrMap, unsigned CurStageNum,
-                             unsigned PhiNum, MachineInstr *Phi,
-                             unsigned OldReg, unsigned NewReg,
-                             unsigned PrevReg = 0);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);
@@ -529,12 +484,6 @@ private:
   /// Map from instruction to execution cycle.
   std::map<SUnit *, int> InstrToCycle;
 
-  /// Map for each register and the max difference between its uses and def.
-  /// The first element in the pair is the max difference in stages. The
-  /// second is true if the register defines a Phi value and loop value is
-  /// scheduled before the Phi.
-  std::map<unsigned, std::pair<unsigned, bool>> RegToStageDiff;
-
   /// Keep track of the first cycle value in the schedule.  It starts
   /// as zero, but the algorithm allows negative values.
   int FirstCycle = 0;
@@ -560,7 +509,6 @@ public:
   void reset() {
     ScheduledInstrs.clear();
     InstrToCycle.clear();
-    RegToStageDiff.clear();
     FirstCycle = 0;
     LastCycle = 0;
     InitiationInterval = 0;
@@ -618,28 +566,6 @@ public:
   /// Return the maximum stage count needed for this schedule.
   unsigned getMaxStageCount() {
     return (LastCycle - FirstCycle) / InitiationInterval;
-  }
-
-  /// Return the max. number of stages/iterations that can occur between a
-  /// register definition and its uses.
-  unsigned getStagesForReg(int Reg, unsigned CurStage) {
-    std::pair<unsigned, bool> Stages = RegToStageDiff[Reg];
-    if (CurStage > getMaxStageCount() && Stages.first == 0 && Stages.second)
-      return 1;
-    return Stages.first;
-  }
-
-  /// The number of stages for a Phi is a little different than other
-  /// instructions. The minimum value computed in RegToStageDiff is 1
-  /// because we assume the Phi is needed for at least 1 iteration.
-  /// This is not the case if the loop value is scheduled prior to the
-  /// Phi in the same stage.  This function returns the number of stages
-  /// or iterations needed between the Phi definition and any uses.
-  unsigned getStagesForPhi(int Reg) {
-    std::pair<unsigned, bool> Stages = RegToStageDiff[Reg];
-    if (Stages.second)
-      return Stages.first;
-    return Stages.first - 1;
   }
 
   /// Return the instructions that are scheduled at the specified cycle.

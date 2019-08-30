@@ -831,10 +831,6 @@ bool ScopBuilder::buildDomains(
   auto *S =
       isl_set_universe(isl_space_set_alloc(scop->getIslCtx().get(), 0, LD + 1));
 
-  while (LD-- >= 0) {
-    L = L->getParentLoop();
-  }
-
   InvalidDomainMap[EntryBB] = isl::manage(isl_set_empty(isl_set_get_space(S)));
   isl::noexceptions::set Domain = isl::manage(S);
   scop->setDomain(EntryBB, Domain);

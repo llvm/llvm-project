@@ -55,8 +55,8 @@ public:
   CommentVerifier GetVerifier();
 
 protected:
-  ASTFrontendAction *CreateTestAction() override {
-    return new CommentHandlerAction(this);
+  std::unique_ptr<ASTFrontendAction> CreateTestAction() override {
+    return std::make_unique<CommentHandlerAction>(this);
   }
 
 private:

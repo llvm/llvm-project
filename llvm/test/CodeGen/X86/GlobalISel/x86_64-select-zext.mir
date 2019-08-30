@@ -351,7 +351,8 @@ body:             |
     ; CHECK-LABEL: name: zext_i32_to_i64
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32bit
+    ; CHECK: [[MOV32rr:%[0-9]+]]:gr32 = MOV32rr [[COPY]]
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32rr]], %subreg.sub_32bit
     ; CHECK: $rax = COPY [[SUBREG_TO_REG]]
     ; CHECK: RET 0, implicit $rax
     %0:gpr(s32) = COPY $edi

@@ -127,6 +127,17 @@ class ProcessorItineraries<list<FuncUnit> fu, list<Bypass> bp,
   list<FuncUnit> FU = fu;
   list<Bypass> BP = bp;
   list<InstrItinData> IID = iid;
+  // The packetizer automaton to use for this itinerary. By default all
+  // itineraries for a target are bundled up into the same automaton. This only
+  // works correctly when there are no conflicts in functional unit IDs between
+  // itineraries. For example, given two itineraries A<[SLOT_A]>, B<[SLOT_B]>,
+  // SLOT_A and SLOT_B will be assigned the same functional unit index, and
+  // the generated packetizer will confuse instructions referencing these slots.
+  //
+  // To avoid this, setting PacketizerNamespace to non-"" will cause this
+  // itinerary to be generated in a different automaton. The subtarget will need
+  // to declare a method "create##Namespace##DFAPacketizer()".
+  string PacketizerNamespace = "";
 }
 
 // NoItineraries - A marker that can be used by processors without schedule

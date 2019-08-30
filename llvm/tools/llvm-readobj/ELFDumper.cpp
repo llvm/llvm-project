@@ -3525,14 +3525,40 @@ void GNUStyle<ELFT>::printSectionMapping(const ELFO *Obj) {
   }
 }
 
+namespace {
+template <class ELFT> struct RelSymbol {
+  const typename ELFT::Sym *Sym;
+  std::string Name;
+};
+
+template <class ELFT>
+RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> *Obj, StringRef FileName,
+                                  const ELFDumper<ELFT> *Dumper,
+                                  const typename ELFT::Rela &Reloc) {
+  uint32_t SymIndex = Reloc.getSymbol(Obj->isMips64EL());
+  const typename ELFT::Sym *Sym = Dumper->dynamic_symbols().begin() + SymIndex;
+  Expected<StringRef> ErrOrName = Sym->getName(Dumper->getDynamicStringTable());
+
+  std::string Name;
+  if (ErrOrName) {
+    Name = maybeDemangle(*ErrOrName);
+  } else {
+    reportWarning(
+        createError("unable to get name of the dynamic symbol with index " +
+                    Twine(SymIndex) + ": " + toString(ErrOrName.takeError())),
+        FileName);
+    Name = "<corrupt>";
+  }
+
+  return {Sym, std::move(Name)};
+}
+} // namespace
+
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
                                             bool IsRela) {
-  uint32_t SymIndex = R.getSymbol(Obj->isMips64EL());
-  const Elf_Sym *Sym = this->dumper()->dynamic_symbols().begin() + SymIndex;
-  std::string SymbolName = maybeDemangle(unwrapOrError(
-      this->FileName, Sym->getName(this->dumper()->getDynamicStringTable())));
-  printRelocation(Obj, Sym, SymbolName, R, IsRela);
+  RelSymbol<ELFT> S = getSymbolForReloc(Obj, this->FileName, this->dumper(), R);
+  printRelocation(Obj, S.Sym, S.Name, R, IsRela);
 }
 
 template <class ELFT> void GNUStyle<ELFT>::printDynamic(const ELFO *Obj) {
@@ -5404,11 +5430,9 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel) {
   SmallString<32> RelocName;
   Obj->getRelocationTypeName(Rel.getType(Obj->isMips64EL()), RelocName);
-  std::string SymbolName;
-  uint32_t SymIndex = Rel.getSymbol(Obj->isMips64EL());
-  const Elf_Sym *Sym = this->dumper()->dynamic_symbols().begin() + SymIndex;
-  SymbolName = maybeDemangle(unwrapOrError(
-      this->FileName, Sym->getName(this->dumper()->getDynamicStringTable())));
+  std::string SymbolName =
+      getSymbolForReloc(Obj, this->FileName, this->dumper(), Rel).Name;
+
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printHex("Offset", Rel.r_offset);

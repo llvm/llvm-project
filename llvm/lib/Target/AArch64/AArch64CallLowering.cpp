@@ -409,6 +409,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
 
+  if (Info.IsMustTailCall) {
+    LLVM_DEBUG(dbgs() << "Cannot lower musttail calls yet.\n");
+    return false;
+  }
+
   SmallVector<ArgInfo, 8> SplitArgs;
   for (auto &OrigArg : Info.OrigArgs) {
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI, Info.CallConv);

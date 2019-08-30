@@ -180,6 +180,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(*PR);
   initializeAArch64SpeculationHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
+  initializeAArch64StackTaggingPreRAPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -541,6 +542,8 @@ bool AArch64PassConfig::addILPOpts() {
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createAArch64StackTaggingPreRAPass());
   return true;
 }
 

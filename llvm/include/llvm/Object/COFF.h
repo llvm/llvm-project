@@ -1204,16 +1204,34 @@ public:
   ResourceSectionRef() = default;
   explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
 
+  Error load(const COFFObjectFile *O);
+  Error load(const COFFObjectFile *O, const SectionRef &S);
+
   Expected<ArrayRef<UTF16>>
   getEntryNameString(const coff_resource_dir_entry &Entry);
   Expected<const coff_resource_dir_table &>
   getEntrySubDir(const coff_resource_dir_entry &Entry);
+  Expected<const coff_resource_data_entry &>
+  getEntryData(const coff_resource_dir_entry &Entry);
   Expected<const coff_resource_dir_table &> getBaseTable();
+  Expected<const coff_resource_dir_entry &>
+  getTableEntry(const coff_resource_dir_table &Table, uint32_t Index);
+
+  Expected<StringRef> getContents(const coff_resource_data_entry &Entry);
 
 private:
   BinaryByteStream BBS;
 
+  SectionRef Section;
+  const COFFObjectFile *Obj;
+
+  std::vector<const coff_relocation *> Relocs;
+
   Expected<const coff_resource_dir_table &> getTableAtOffset(uint32_t Offset);
+  Expected<const coff_resource_dir_entry &>
+  getTableEntryAtOffset(uint32_t Offset);
+  Expected<const coff_resource_data_entry &>
+  getDataEntryAtOffset(uint32_t Offset);
   Expected<ArrayRef<UTF16>> getDirStringAtOffset(uint32_t Offset);
 };
 

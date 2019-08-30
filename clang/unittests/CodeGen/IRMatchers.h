@@ -356,7 +356,7 @@ public:
 
 // Helper function used to construct matchers.
 
-std::shared_ptr<Matcher> MSameAs(unsigned N) {
+inline std::shared_ptr<Matcher> MSameAs(unsigned N) {
   return std::shared_ptr<Matcher>(new SameAsMatcher(N));
 }
 
@@ -367,36 +367,35 @@ std::shared_ptr<InstructionMatcher> MInstruction(unsigned C, T... Args) {
   return std::shared_ptr<InstructionMatcher>(Result);
 }
 
-std::shared_ptr<Matcher> MConstInt(uint64_t V, unsigned W = 0) {
+inline std::shared_ptr<Matcher> MConstInt(uint64_t V, unsigned W = 0) {
   return std::shared_ptr<Matcher>(new ConstantIntMatcher(V, W));
 }
 
-std::shared_ptr<EntityMatcher<Value>>
- MValType(std::shared_ptr<EntityMatcher<Type>> T) {
+inline std::shared_ptr<EntityMatcher<Value>>
+MValType(std::shared_ptr<EntityMatcher<Type>> T) {
   return std::shared_ptr<EntityMatcher<Value>>(new ValueTypeMatcher(T));
 }
 
-std::shared_ptr<EntityMatcher<Value>> MValType(const Type *T) {
+inline std::shared_ptr<EntityMatcher<Value>> MValType(const Type *T) {
   return std::shared_ptr<EntityMatcher<Value>>(new ValueTypeMatcher(T));
 }
 
-std::shared_ptr<EntityMatcher<Type>>
+inline std::shared_ptr<EntityMatcher<Type>>
 MType(std::function<bool(const Type &)> C) {
   return std::shared_ptr<EntityMatcher<Type>>(new CondMatcher<Type>(C));
 }
 
-std::shared_ptr<EntityMatcher<Metadata>> MMAny() {
+inline std::shared_ptr<EntityMatcher<Metadata>> MMAny() {
   return std::shared_ptr<EntityMatcher<Metadata>>(new AnyMatcher<Metadata>);
 }
 
-std::shared_ptr<EntityMatcher<Metadata>>
+inline std::shared_ptr<EntityMatcher<Metadata>>
 MMSave(const Metadata *&V, std::shared_ptr<EntityMatcher<Metadata>> M) {
   return std::shared_ptr<EntityMatcher<Metadata>>(
       new SavingMatcher<Metadata>(V, M));
 }
 
-std::shared_ptr<EntityMatcher<Metadata>>
-MMString(const char *Name) {
+inline std::shared_ptr<EntityMatcher<Metadata>> MMString(const char *Name) {
   return std::shared_ptr<EntityMatcher<Metadata>>(new NameMetaMatcher(Name));
 }
 
@@ -413,7 +412,8 @@ std::shared_ptr<EntityMatcher<Metadata>> MMTuple(T... Args) {
 /// \returns Pointer to the found instruction or nullptr if such instruction
 ///          was not found.
 ///
-const Instruction *match(const BasicBlock *BB, std::shared_ptr<Matcher> M) {
+inline const Instruction *match(const BasicBlock *BB,
+                                std::shared_ptr<Matcher> M) {
   MatcherContext MC;
   for (const auto &I : *BB) {
     MC.push(&I);
@@ -425,13 +425,12 @@ const Instruction *match(const BasicBlock *BB, std::shared_ptr<Matcher> M) {
   return nullptr;
 }
 
-
 /// Looks for the instruction that satisfies condition of the specified
 /// matcher starting from the specified instruction inside the same basic block.
 ///
 /// The given instruction is not checked.
 ///
-const Instruction *matchNext(const Instruction *I, std::shared_ptr<Matcher> M) {
+inline const Instruction *matchNext(const Instruction *I, std::shared_ptr<Matcher> M) {
   if (!I)
     return nullptr;
   MatcherContext MC;

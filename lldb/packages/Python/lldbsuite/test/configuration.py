@@ -57,10 +57,6 @@ cflags_extras = ''
 # The filters (testclass.testmethod) used to admit tests into our test suite.
 filters = []
 
-# Parsable mode silences headers, and any other output this script might generate, and instead
-# prints machine-readable output similar to what clang tests produce.
-parsable = False
-
 # The regular expression pattern to match against eligible filenames as
 # our test cases.
 regexp = None
@@ -110,6 +106,9 @@ lldb_platform_working_dir = None
 # The base directory in which the tests are being built.
 test_build_dir = None
 
+# The clang module cache directory used by lldb.
+module_cache_dir = None
+
 # The only directory to scan for tests. If multiple test directories are
 # specified, and an exclusive test subdirectory is specified, the latter option
 # takes precedence.
@@ -124,7 +123,6 @@ test_result = None
 
 # Test rerun configuration vars
 rerun_all_issues = False
-rerun_max_file_threhold = 0
 
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.

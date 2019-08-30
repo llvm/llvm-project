@@ -11,14 +11,10 @@ define i1 @will_overflow(i64 %size, i64 %nmemb) {
 ; ALL-LABEL: @will_overflow(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SIZE:%.*]], 0
-; ALL-NEXT:    br i1 [[CMP]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
-; ALL:       land.rhs:
 ; ALL-NEXT:    [[UMUL:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[SIZE]], i64 [[NMEMB:%.*]])
 ; ALL-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
 ; ALL-NEXT:    [[UMUL_NOT_OV:%.*]] = xor i1 [[UMUL_OV]], true
-; ALL-NEXT:    br label [[LAND_END]]
-; ALL:       land.end:
-; ALL-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[UMUL_NOT_OV]], [[LAND_RHS]] ]
+; ALL-NEXT:    [[TMP0:%.*]] = select i1 [[CMP]], i1 true, i1 [[UMUL_NOT_OV]]
 ; ALL-NEXT:    ret i1 [[TMP0]]
 ;
 entry:

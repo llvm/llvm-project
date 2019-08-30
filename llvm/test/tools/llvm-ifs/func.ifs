@@ -1,0 +1,56 @@
+# RUN: llvm-ifs -action write-ifs -o - %s %S/object.ifs | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# RUN: llvm-ifs -action write-bin -o - %s %S/object.ifs | \
+# RUN: llvm-readelf --all | FileCheck %s --check-prefixes=CHECK-ELF
+
+# RUN: llvm-ifs -action write-bin -force-format TBD -o - %s %S/object.ifs | \
+# RUN: FileCheck %s --check-prefixes=CHECK-DARWIN-TBD3
+
+# RUN: llvm-ifs -action write-ifs -o - %s %s | \
+# RUN: FileCheck %s --check-prefixes=CHECK-MERGE-IFS
+
+# CHECK-IFS: --- !experimental-ifs-v1
+# CHECK-IFS-NEXT: IfsVersion:      1.0
+# CHECK-IFS-NEXT: Triple:          x86_64-unknown-linux-gnu
+# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS-NEXT: Symbols:
+# CHECK-IFS-DAG:   a:               { Type: Func }
+# CHECK-IFS-DAG:   b:               { Type: Object, Size: 4 }
+# CHECK-IFS: ...
+
+# CHECK-ELF: ELF Header:
+# CHECK-ELF:   Class:                             ELF64
+# CHECK-ELF:   Type:                              DYN (Shared object file)
+# CHECK-ELF:   FUNC    GLOBAL DEFAULT  1 a
+# CHECK-ELF:   OBJECT  GLOBAL DEFAULT  1 b
+
+# CHECK-DARWIN-TBD3: --- !tapi-tbd-v3
+# CHECK-DARWIN-TBD3-NEXT: archs:           [ x86_64 ]
+# CHECK-DARWIN-TBD3-NEXT: platform:        macosx
+# CHECK-DARWIN-TBD3-NEXT: flags:           [ flat_namespace, not_app_extension_safe ]
+# CHECK-DARWIN-TBD3-NEXT: install-name:    ''
+# CHECK-DARWIN-TBD3-NEXT: current-version: 0
+# CHECK-DARWIN-TBD3-NEXT: compatibility-version: 0
+# CHECK-DARWIN-TBD3-NEXT: objc-constraint: none
+# CHECK-DARWIN-TBD3-NEXT: exports:
+# CHECK-DARWIN-TBD3-NEXT:   - archs:           [ x86_64 ]
+# CHECK-DARWIN-TBD3-NEXT:     symbols:         [ a, b ]
+# CHECK-DARWIN-TBD3-NEXT: ...
+
+# Here we are testing to see if two identical symbols will merge.
+# CHECK-MERGE-IFS: --- !experimental-ifs-v1
+# CHECK-MERGE-IFS-NEXT: IfsVersion:      1.0
+# CHECK-MERGE-IFS-NEXT: Triple:          x86_64-unknown-linux-gnu
+# CHECK-MERGE-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-MERGE-IFS-NEXT: Symbols:
+# CHECK-MERGE-IFS-NEXT:   a:               { Type: Func }
+# CHECK-MERGE-IFS-NEXT: ...
+
+--- !experimental-ifs-v1
+IfsVersion: 1.0
+Triple: x86_64-unknown-linux-gnu
+ObjectFileFormat: ELF
+Symbols:
+  a: { Type: Func }
+...

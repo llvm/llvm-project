@@ -1898,9 +1898,7 @@ define <4 x i32> @larger_mul(<16 x i16> %A, <16 x i16> %B) {
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; AVX512-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrd $3, %xmm2, %eax
@@ -1977,9 +1975,11 @@ define <16 x i32> @pmaddwd_32(<32 x i16> %A, <32 x i16> %B) {
 ;
 ; AVX512F-LABEL: pmaddwd_32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: pmaddwd_32:
@@ -2188,9 +2188,11 @@ define <16 x i32> @jumbled_indices16(<32 x i16> %A, <32 x i16> %B) {
 ;
 ; AVX512F-LABEL: jumbled_indices16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: jumbled_indices16:

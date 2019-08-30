@@ -141,6 +141,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FPTOUI)
       .libcallForCartesianProduct({s64}, {s64, s32})
+      .lowerForCartesianProduct({s32}, {s64, s32})
       .minScalar(0, s32);
 
   // Int to FP conversion instructions
@@ -151,6 +152,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_UITOFP)
       .libcallForCartesianProduct({s64, s32}, {s64})
+      .customForCartesianProduct({s64, s32}, {s32})
       .minScalar(1, s32);
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
@@ -167,8 +169,54 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
   using namespace TargetOpcode;
 
   MIRBuilder.setInstr(MI);
+  const MipsSubtarget &STI =
+      static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
 
-  return false;
+  switch (MI.getOpcode()) {
+  case G_UITOFP: {
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    LLT SrcTy = MRI.getType(Src);
+
+    if (SrcTy != s32)
+      return false;
+    if (DstTy != s32 && DstTy != s64)
+      return false;
+
+    // Let 0xABCDEFGH be given unsigned in MI.getOperand(1). First let's convert
+    // unsigned to double. Mantissa has 52 bits so we use following trick:
+    // First make floating point bit mask 0x43300000ABCDEFGH.
+    // Mask represents 2^52 * 0x1.00000ABCDEFGH i.e. 0x100000ABCDEFGH.0 .
+    // Next, subtract  2^52 * 0x1.0000000000000 i.e. 0x10000000000000.0 from it.
+    // Done. Trunc double to float if needed.
+
+    MachineInstrBuilder Bitcast = MIRBuilder.buildInstr(
+        STI.isFP64bit() ? Mips::BuildPairF64_64 : Mips::BuildPairF64, {s64},
+        {Src, MIRBuilder.buildConstant(s32, UINT32_C(0x43300000))});
+    Bitcast.constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
+                             *STI.getRegBankInfo());
+
+    MachineInstrBuilder TwoP52FP = MIRBuilder.buildFConstant(
+        s64, BitsToDouble(UINT64_C(0x4330000000000000)));
+
+    if (DstTy == s64)
+      MIRBuilder.buildFSub(Dst, Bitcast, TwoP52FP);
+    else {
+      MachineInstrBuilder ResF64 = MIRBuilder.buildFSub(s64, Bitcast, TwoP52FP);
+      MIRBuilder.buildFPTrunc(Dst, ResF64);
+    }
+
+    MI.eraseFromParent();
+    break;
+  }
+  default:
+    return false;
+  }
+
+  return true;
 }
 
 bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,

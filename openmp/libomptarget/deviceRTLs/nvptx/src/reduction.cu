@@ -28,12 +28,11 @@ EXTERN int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size) {
 }
 
 EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size) {
-   int lo, hi;
-   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
+   uint32_t lo, hi;
+   __kmpc_impl_unpack(val, lo, hi);
    hi = __kmpc_impl_shfl_down_sync(0xFFFFFFFF, hi, delta, size);
    lo = __kmpc_impl_shfl_down_sync(0xFFFFFFFF, lo, delta, size);
-   asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
-   return val;
+   return __kmpc_impl_pack(lo, hi);
 }
 
 INLINE static void gpu_regular_warp_reduce(void *reduce_data,
@@ -60,18 +59,16 @@ INLINE static void gpu_irregular_warp_reduce(void *reduce_data,
 
 INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
-  uint32_t lanemask_lt;
-  uint32_t lanemask_gt;
   uint32_t size, remote_id, physical_lane_id;
   physical_lane_id = GetThreadIdInBlock() % WARPSIZE;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lanemask_lt));
+  uint32_t lanemask_lt = __kmpc_impl_lanemask_lt();
   uint32_t Liveness = __ACTIVEMASK();
-  uint32_t logical_lane_id = __popc(Liveness & lanemask_lt) * 2;
-  asm("mov.u32 %0, %%lanemask_gt;" : "=r"(lanemask_gt));
+  uint32_t logical_lane_id = __kmpc_impl_popc(Liveness & lanemask_lt) * 2;
+  uint32_t lanemask_gt = __kmpc_impl_lanemask_gt();
   do {
     Liveness = __ACTIVEMASK();
-    remote_id = __ffs(Liveness & lanemask_gt);
-    size = __popc(Liveness);
+    remote_id = __kmpc_impl_ffs(Liveness & lanemask_gt);
+    size = __kmpc_impl_popc(Liveness);
     logical_lane_id /= 2;
     shflFct(reduce_data, /*LaneId =*/logical_lane_id,
             /*Offset=*/remote_id - 1 - physical_lane_id, /*AlgoVersion=*/2);
@@ -150,7 +147,7 @@ static int32_t nvptx_parallel_reduce_nowait(
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
     gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/__popc(Liveness),
+                              /*LaneCount=*/__kmpc_impl_popc(Liveness),
                               /*LaneId=*/GetThreadIdInBlock() % WARPSIZE);
   else if (!isRuntimeUninitialized) // Dispersed lanes. Only threads in L2
                                     // parallel region may enter here; return
@@ -325,7 +322,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else // Partial warp but contiguous lanes
     gpu_irregular_warp_reduce(reduce_data, shflFct,
-                              /*LaneCount=*/__popc(Liveness),
+                              /*LaneCount=*/__kmpc_impl_popc(Liveness),
                               /*LaneId=*/ThreadId % WARPSIZE);
 
   // When we have more than [warpsize] number of threads

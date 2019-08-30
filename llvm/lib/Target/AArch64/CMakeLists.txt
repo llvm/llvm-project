@@ -56,6 +56,7 @@ add_llvm_target(AArch64CodeGen
   AArch64SelectionDAGInfo.cpp
   AArch64SpeculationHardening.cpp
   AArch64StackTagging.cpp
+  AArch64StackTaggingPreRA.cpp
   AArch64StorePairSuppress.cpp
   AArch64Subtarget.cpp
   AArch64TargetMachine.cpp

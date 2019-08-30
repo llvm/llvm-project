@@ -3,7 +3,7 @@
 ; RUN: llvm-rc /FO %t/tag-html.res -- %p/Inputs/tag-html.rc
 ; RUN: llvm-readobj %t/tag-html.res | FileCheck %s --check-prefix HTML
 
-; HTML: Resource type (int): 23
+; HTML: Resource type (int): HTML (ID 23)
 ; HTML-NEXT: Resource name (int): 100
 ; HTML-NEXT: Data version: 0
 ; HTML-NEXT: Memory flags: 0x30
@@ -18,7 +18,7 @@
 ; HTML-NEXT:   0020: 6F64793E 0A3C2F68 746D6C3E 0A        |ody>.</html>.|
 ; HTML-NEXT: )
 
-; HTML-DAG: Resource type (int): 23
+; HTML-DAG: Resource type (int): HTML (ID 23)
 ; HTML-NEXT: Resource name (string): KITTEN
 ; HTML-NEXT: Data version: 0
 ; HTML-NEXT: Memory flags: 0x30

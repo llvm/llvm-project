@@ -18,8 +18,8 @@ define i64 @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    rldicl r3, r3, 56, 56
 ; CHECK-P8-NEXT:    rlwinm r4, r4, 0, 24, 31
 ; CHECK-P8-NEXT:    rlwinm r3, r3, 0, 24, 31
-; CHECK-P8-NEXT:    mtvsrwz f0, r4
-; CHECK-P8-NEXT:    mtvsrwz f1, r3
+; CHECK-P8-NEXT:    mtfprwz f0, r4
+; CHECK-P8-NEXT:    mtfprwz f1, r3
 ; CHECK-P8-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f1
 ; CHECK-P8-NEXT:    xscvdpspn vs0, f0
@@ -37,14 +37,14 @@ define i64 @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    vextubrx r3, r3, v2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 0, 24, 31
-; CHECK-P9-NEXT:    mtvsrwz f0, r3
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdpspn vs0, f0
 ; CHECK-P9-NEXT:    vextubrx r3, r3, v2
 ; CHECK-P9-NEXT:    rlwinm r3, r3, 0, 24, 31
 ; CHECK-P9-NEXT:    xxsldwi v3, vs0, vs0, 1
-; CHECK-P9-NEXT:    mtvsrwz f0, r3
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdpspn vs0, f0
 ; CHECK-P9-NEXT:    xxsldwi v2, vs0, vs0, 1
@@ -58,13 +58,13 @@ define i64 @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    li r3, 1
 ; CHECK-BE-NEXT:    vextublx r3, r3, v2
 ; CHECK-BE-NEXT:    rlwinm r3, r3, 0, 24, 31
-; CHECK-BE-NEXT:    mtvsrwz f0, r3
+; CHECK-BE-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    xscvuxdsp f0, f0
 ; CHECK-BE-NEXT:    vextublx r3, r3, v2
 ; CHECK-BE-NEXT:    rlwinm r3, r3, 0, 24, 31
 ; CHECK-BE-NEXT:    xscvdpspn v3, f0
-; CHECK-BE-NEXT:    mtvsrwz f0, r3
+; CHECK-BE-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-NEXT:    xscvuxdsp f0, f0
 ; CHECK-BE-NEXT:    xscvdpspn v2, f0
 ; CHECK-BE-NEXT:    vmrghw v2, v2, v3
@@ -286,8 +286,8 @@ define i64 @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    rldicl r3, r3, 56, 56
 ; CHECK-P8-NEXT:    extsb r4, r4
 ; CHECK-P8-NEXT:    extsb r3, r3
-; CHECK-P8-NEXT:    mtvsrwa f0, r4
-; CHECK-P8-NEXT:    mtvsrwa f1, r3
+; CHECK-P8-NEXT:    mtfprwa f0, r4
+; CHECK-P8-NEXT:    mtfprwa f1, r3
 ; CHECK-P8-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f1
 ; CHECK-P8-NEXT:    xscvdpspn vs0, f0
@@ -305,14 +305,14 @@ define i64 @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    vextubrx r3, r3, v2
 ; CHECK-P9-NEXT:    extsb r3, r3
-; CHECK-P9-NEXT:    mtvsrwa f0, r3
+; CHECK-P9-NEXT:    mtfprwa f0, r3
 ; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdpspn vs0, f0
 ; CHECK-P9-NEXT:    vextubrx r3, r3, v2
 ; CHECK-P9-NEXT:    extsb r3, r3
 ; CHECK-P9-NEXT:    xxsldwi v3, vs0, vs0, 1
-; CHECK-P9-NEXT:    mtvsrwa f0, r3
+; CHECK-P9-NEXT:    mtfprwa f0, r3
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdpspn vs0, f0
 ; CHECK-P9-NEXT:    xxsldwi v2, vs0, vs0, 1
@@ -326,13 +326,13 @@ define i64 @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    li r3, 1
 ; CHECK-BE-NEXT:    vextublx r3, r3, v2
 ; CHECK-BE-NEXT:    extsb r3, r3
-; CHECK-BE-NEXT:    mtvsrwa f0, r3
+; CHECK-BE-NEXT:    mtfprwa f0, r3
 ; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    xscvsxdsp f0, f0
 ; CHECK-BE-NEXT:    vextublx r3, r3, v2
 ; CHECK-BE-NEXT:    extsb r3, r3
 ; CHECK-BE-NEXT:    xscvdpspn v3, f0
-; CHECK-BE-NEXT:    mtvsrwa f0, r3
+; CHECK-BE-NEXT:    mtfprwa f0, r3
 ; CHECK-BE-NEXT:    xscvsxdsp f0, f0
 ; CHECK-BE-NEXT:    xscvdpspn v2, f0
 ; CHECK-BE-NEXT:    vmrghw v2, v2, v3

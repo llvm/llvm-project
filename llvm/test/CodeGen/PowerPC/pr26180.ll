@@ -11,7 +11,7 @@ define i32 @bad(double %x) {
 ; CHECK: stfd [[REG0]], [[OFF:.*]](1)
 ; CHECK: lwz {{[0-9]*}}, [[OFF]](1)
 ; GENERIC: xscvdpuxws [[REG0:[0-9]+]], 1
-; GENERIC: mfvsrwz  {{[0-9]*}}, [[REG0]]
+; GENERIC: mffprwz  {{[0-9]*}}, [[REG0]]
 }
 
 define i32 @bad1(float %x) {
@@ -23,5 +23,5 @@ entry:
 ; CHECK: stfd [[REG0]], [[OFF:.*]](1)
 ; CHECK: lwa {{[0-9]*}}, [[OFF]](1)
 ; GENERIC: xscvdpsxws [[REG0:[0-9]+]], 1
-; GENERIC: mfvsrwz  {{[0-9]*}}, [[REG0]]
+; GENERIC: mffprwz  {{[0-9]*}}, [[REG0]]
 }

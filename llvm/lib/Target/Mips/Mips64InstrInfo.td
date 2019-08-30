@@ -651,6 +651,7 @@ def : MipsPat<(MipsTlsHi tglobaltlsaddr:$in), (LUi64 tglobaltlsaddr:$in)>,
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(MipsJmpLink (i64 texternalsym:$dst)),
                 (JAL texternalsym:$dst)>, ISA_MIPS3, GPR_64, SYM_64;
+
   def : MipsPat<(MipsHighest (i64 tglobaladdr:$in)),
                 (LUi64 tglobaladdr:$in)>, ISA_MIPS3, GPR_64, SYM_64;
   def : MipsPat<(MipsHighest (i64 tblockaddress:$in)),
@@ -682,6 +683,20 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 (DADDiu GPR64:$hi, tjumptable:$lo)>, ISA_MIPS3, GPR_64, SYM_64;
   def : MipsPat<(add GPR64:$hi, (MipsHigher (i64 tconstpool:$lo))),
                 (DADDiu GPR64:$hi, tconstpool:$lo)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(add GPR64:$hi, (MipsHigher (i64 texternalsym:$lo))),
+                (DADDiu GPR64:$hi, texternalsym:$lo)>,
+                ISA_MIPS3, GPR_64, SYM_64;
+
+  def : MipsPat<(MipsHi (i64 tglobaladdr:$in)),
+                (DADDiu ZERO_64, tglobaladdr:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsHi (i64 tblockaddress:$in)),
+                (DADDiu ZERO_64, tblockaddress:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsHi (i64 tjumptable:$in)),
+                (DADDiu ZERO_64, tjumptable:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsHi (i64 tconstpool:$in)),
+                (DADDiu ZERO_64, tconstpool:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsHi (i64 texternalsym:$in)),
+                (DADDiu ZERO_64, texternalsym:$in)>, ISA_MIPS3, GPR_64, SYM_64;
 
   def : MipsPat<(add GPR64:$hi, (MipsHi (i64 tglobaladdr:$lo))),
                 (DADDiu GPR64:$hi, tglobaladdr:$lo)>, ISA_MIPS3, GPR_64, SYM_64;
@@ -692,6 +707,23 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 (DADDiu GPR64:$hi, tjumptable:$lo)>, ISA_MIPS3, GPR_64, SYM_64;
   def : MipsPat<(add GPR64:$hi, (MipsHi (i64 tconstpool:$lo))),
                 (DADDiu GPR64:$hi, tconstpool:$lo)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(add GPR64:$hi, (MipsHi (i64 texternalsym:$lo))),
+                (DADDiu GPR64:$hi, texternalsym:$lo)>,
+                ISA_MIPS3, GPR_64, SYM_64;
+
+  def : MipsPat<(MipsLo (i64 tglobaladdr:$in)),
+                (DADDiu ZERO_64, tglobaladdr:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsLo (i64 tblockaddress:$in)),
+                (DADDiu ZERO_64, tblockaddress:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsLo (i64 tjumptable:$in)),
+                (DADDiu ZERO_64, tjumptable:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsLo (i64 tconstpool:$in)),
+                (DADDiu ZERO_64, tconstpool:$in)>, ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsLo (i64 tglobaltlsaddr:$in)),
+                (DADDiu ZERO_64, tglobaltlsaddr:$in)>,
+                ISA_MIPS3, GPR_64, SYM_64;
+  def : MipsPat<(MipsLo (i64 texternalsym:$in)),
+                (DADDiu ZERO_64, texternalsym:$in)>, ISA_MIPS3, GPR_64, SYM_64;
 
   def : MipsPat<(add GPR64:$hi, (MipsLo (i64 tglobaladdr:$lo))),
                 (DADDiu GPR64:$hi, tglobaladdr:$lo)>, ISA_MIPS3, GPR_64, SYM_64;
@@ -705,6 +737,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(add GPR64:$hi, (MipsLo (i64 tglobaltlsaddr:$lo))),
                 (DADDiu GPR64:$hi, tglobaltlsaddr:$lo)>, ISA_MIPS3, GPR_64,
                 SYM_64;
+  def : MipsPat<(add GPR64:$hi, (MipsLo (i64 texternalsym:$lo))),
+                (DADDiu GPR64:$hi, texternalsym:$lo)>,
+                ISA_MIPS3, GPR_64, SYM_64;
 }
 
 // gp_rel relocs
