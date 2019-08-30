@@ -299,6 +299,35 @@ Mull - Mutation Testing tool for C and C++
 `Mull <https://github.com/mull-project/mull>`_ is an LLVM-based tool for
 mutation testing with a strong focus on C and C++ languages.
 
+Portable Computing Language (pocl)
+----------------------------------
+
+In addition to producing an easily portable open source OpenCL
+implementation, another major goal of `pocl <http://portablecl.org/>`_
+is improving performance portability of OpenCL programs with
+compiler optimizations, reducing the need for target-dependent manual
+optimizations. An important part of pocl is a set of LLVM passes used to
+statically parallelize multiple work-items with the kernel compiler, even in
+the presence of work-group barriers. This enables static parallelization of
+the fine-grained static concurrency in the work groups in multiple ways.
+
+TTA-based Co-design Environment (TCE)
+-------------------------------------
+
+`TCE <http://openasip.org/>`_ is an open source toolset for designing customized
+processors based on the Transport Triggered Architecture (TTA).
+The toolset provides a complete co-design flow from C/C++
+programs down to synthesizable VHDL/Verilog and parallel program binaries.
+Processor customization points include register files, function units,
+supported operations, and the interconnection network.
+
+TCE uses Clang and LLVM for C/C++/OpenCL C language support, target independent
+optimizations and also for parts of code generation. It generates new
+LLVM-based code generators "on the fly" for the designed TTA processors and
+loads them in to the compiler backend as runtime libraries to avoid
+per-target recompilation of larger parts of the compiler chain.
+
+
 Zig Programming Language
 ------------------------
 
@@ -309,7 +338,6 @@ IR features such as aliases and intrinsics. Zig uses Clang to provide automatic
 import of .h symbols, including inline functions and simple macros. Zig uses
 LLD combined with lazily building compiler-rt to provide out-of-the-box
 cross-compiling for all supported targets.
-
 
 
 Additional Information
