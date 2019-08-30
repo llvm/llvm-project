@@ -34,7 +34,6 @@ public:
 
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
-  static bool ComputeSupportFileDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                              ArchSpec &arch_64);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);

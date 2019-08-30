@@ -120,18 +120,6 @@ uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 
 FileSpec HostInfoPosix::GetDefaultShell() { return FileSpec("/bin/sh"); }
 
-bool HostInfoPosix::ComputeSupportFileDirectory(FileSpec &file_spec) {
-  FileSpec temp_file_spec;
-
-  if (FileSpec temp_file_spec = GetShlibDir()) {
-    temp_file_spec.AppendPathComponent("lldb");
-    file_spec = temp_file_spec;
-    return true;
-  }
-
-  return false;
-}
-
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return ComputePathRelativeToLibrary(file_spec, "/bin");
 }
