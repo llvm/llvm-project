@@ -37,8 +37,7 @@
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
-; CHECK-NEXT:      Loop Pass Manager
-; CHECK-NEXT:        Transform loops to use DSP intrinsics
+; CHECK-NEXT:      Transform functions to use DSP intrinsics
 ; CHECK-NEXT:      Interleaved Access Pass
 ; CHECK-NEXT:      ARM IR optimizations
 ; CHECK-NEXT:      Dominator Tree Construction

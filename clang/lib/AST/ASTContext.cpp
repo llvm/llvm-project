@@ -8191,9 +8191,9 @@ bool ASTContext::canAssignObjCInterfacesInBlockPointer(
   }
 
   if (LHSOPT->isObjCQualifiedIdType() || RHSOPT->isObjCQualifiedIdType())
-    return finish(ObjCQualifiedIdTypesAreCompatible(QualType(LHSOPT,0),
-                                                    QualType(RHSOPT,0),
-                                                    false));
+    return finish(ObjCQualifiedIdTypesAreCompatible(
+        QualType(BlockReturnType ? LHSOPT : RHSOPT, 0),
+        QualType(BlockReturnType ? RHSOPT : LHSOPT, 0), false));
 
   const ObjCInterfaceType* LHS = LHSOPT->getInterfaceType();
   const ObjCInterfaceType* RHS = RHSOPT->getInterfaceType();

@@ -112,14 +112,6 @@ export function activate(context: vscode.ExtensionContext) {
   const semanticHighlightingFeature =
       new semanticHighlighting.SemanticHighlightingFeature();
   clangdClient.registerFeature(semanticHighlightingFeature);
-  // The notification handler must be registered after the client is ready or
-  // the client will crash.
-  clangdClient.onReady().then(
-      () => clangdClient.onNotification(
-          semanticHighlighting.NotificationType,
-          semanticHighlightingFeature.handleNotification.bind(
-              semanticHighlightingFeature)));
-
   console.log('Clang Language Server is now active!');
   context.subscriptions.push(clangdClient.start());
   context.subscriptions.push(vscode.commands.registerCommand(
@@ -149,9 +141,14 @@ export function activate(context: vscode.ExtensionContext) {
       clangdClient.onNotification(
           'textDocument/clangd.fileStatus',
           (fileStatus) => { status.onFileUpdated(fileStatus); });
+      clangdClient.onNotification(
+          semanticHighlighting.NotificationType,
+          semanticHighlightingFeature.handleNotification.bind(
+              semanticHighlightingFeature));
     } else if (newState == vscodelc.State.Stopped) {
       // Clear all cached statuses when clangd crashes.
       status.clear();
+      semanticHighlightingFeature.dispose();
     }
   })
   // An empty place holder for the activate command, otherwise we'll get an

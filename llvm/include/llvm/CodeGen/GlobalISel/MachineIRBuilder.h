@@ -370,6 +370,17 @@ public:
   /// given. Convert "llvm.dbg.label Label" to "DBG_LABEL Label".
   MachineInstrBuilder buildDbgLabel(const MDNode *Label);
 
+  /// Build and insert \p Res = G_DYN_STACKALLOC \p Size, \p Align
+  ///
+  /// G_DYN_STACKALLOC does a dynamic stack allocation and writes the address of
+  /// the allocated memory into \p Res.
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildDynStackAlloc(const DstOp &Res, const SrcOp &Size,
+                                         unsigned Align);
+
   /// Build and insert \p Res = G_FRAME_INDEX \p Idx
   ///
   /// G_FRAME_INDEX materializes the address of an alloca value or other

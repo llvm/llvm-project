@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTU.h"
+#include "Compiler.h"
+#include "Diagnostics.h"
 #include "TestFS.h"
 #include "index/FileIndex.h"
 #include "index/MemIndex.h"
@@ -59,14 +61,16 @@ ParsedAST TestTU::build() const {
   Inputs.Index = ExternalIndex;
   if (Inputs.Index)
     Inputs.Opts.SuggestMissingIncludes = true;
-  auto CI = buildCompilerInvocation(Inputs);
+  StoreDiags Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");
   auto Preamble =
       buildPreamble(FullFilename, *CI,
                     /*OldPreamble=*/nullptr,
                     /*OldCompileCommand=*/Inputs.CompileCommand, Inputs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
-  auto AST = buildAST(FullFilename, std::move(CI), Inputs, Preamble);
+  auto AST =
+      buildAST(FullFilename, std::move(CI), Diags.take(), Inputs, Preamble);
   if (!AST.hasValue()) {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");

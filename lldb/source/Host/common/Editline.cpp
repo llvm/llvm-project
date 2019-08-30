@@ -954,6 +954,12 @@ unsigned char Editline::TabCommand(int ch) {
       el_insertstr(m_editline, to_add.c_str());
       break;
     }
+    case CompletionMode::Partial: {
+      std::string to_add = completion.GetCompletion();
+      to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
+      el_insertstr(m_editline, to_add.c_str());
+      break;
+    }
     case CompletionMode::RewriteLine: {
       el_deletestr(m_editline, line_info->cursor - line_info->buffer);
       el_insertstr(m_editline, completion.GetCompletion().c_str());

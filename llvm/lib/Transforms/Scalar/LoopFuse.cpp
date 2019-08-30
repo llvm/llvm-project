@@ -294,16 +294,6 @@ private:
   }
 };
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidate &FC) {
-  if (FC.isValid())
-    OS << FC.Preheader->getName();
-  else
-    OS << "<Invalid>";
-
-  return OS;
-}
-
 struct FusionCandidateCompare {
   /// Comparison functor to sort two Control Flow Equivalent fusion candidates
   /// into dominance order.
@@ -355,6 +345,16 @@ using FusionCandidateSet = std::set<FusionCandidate, FusionCandidateCompare>;
 using FusionCandidateCollection = SmallVector<FusionCandidateSet, 4>;
 
 #if !defined(NDEBUG)
+static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const FusionCandidate &FC) {
+  if (FC.isValid())
+    OS << FC.Preheader->getName();
+  else
+    OS << "<Invalid>";
+
+  return OS;
+}
+
 static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      const FusionCandidateSet &CandSet) {
   for (const FusionCandidate &FC : CandSet)

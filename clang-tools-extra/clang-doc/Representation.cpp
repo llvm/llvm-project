@@ -34,8 +34,8 @@ template <typename T>
 llvm::Expected<std::unique_ptr<Info>>
 reduce(std::vector<std::unique_ptr<Info>> &Values) {
   if (Values.empty())
-    return llvm::make_error<llvm::StringError>(" No values to reduce.\n",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no value to reduce");
   std::unique_ptr<Info> Merged = std::make_unique<T>(Values[0]->USR);
   T *Tmp = static_cast<T *>(Merged.get());
   for (auto &I : Values)
@@ -96,8 +96,8 @@ void reduceChildren(std::vector<EnumInfo> &Children,
 llvm::Expected<std::unique_ptr<Info>>
 mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
   if (Values.empty())
-    return llvm::make_error<llvm::StringError>("No info values to merge.\n",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no info values to merge");
 
   switch (Values[0]->IT) {
   case InfoType::IT_namespace:
@@ -109,8 +109,8 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
   case InfoType::IT_function:
     return reduce<FunctionInfo>(Values);
   default:
-    return llvm::make_error<llvm::StringError>("Unexpected info type.\n",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "unexpected info type");
   }
 }
 

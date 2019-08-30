@@ -383,8 +383,8 @@ public:
   INLINE static int64_t Shuffle(unsigned active, int64_t val, int leader) {
     int lo, hi;
     __kmpc_impl_unpack(val, lo, hi);
-    hi = __SHFL_SYNC(active, hi, leader);
-    lo = __SHFL_SYNC(active, lo, leader);
+    hi = __kmpc_impl_shfl_sync(active, hi, leader);
+    lo = __kmpc_impl_shfl_sync(active, lo, leader);
     return __kmpc_impl_pack(lo, hi);
   }
 

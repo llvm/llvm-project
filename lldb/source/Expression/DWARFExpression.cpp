@@ -59,12 +59,9 @@ DWARFExpression::DWARFExpression()
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
-                                 const DWARFUnit *dwarf_cu,
-                                 lldb::offset_t data_offset,
-                                 lldb::offset_t data_length)
-    : m_module_wp(), m_data(data, data_offset, data_length),
-      m_dwarf_cu(dwarf_cu), m_reg_kind(eRegisterKindDWARF),
-      m_loclist_slide(LLDB_INVALID_ADDRESS) {
+                                 const DWARFUnit *dwarf_cu)
+    : m_module_wp(), m_data(data), m_dwarf_cu(dwarf_cu),
+      m_reg_kind(eRegisterKindDWARF), m_loclist_slide(LLDB_INVALID_ADDRESS) {
   if (module_sp)
     m_module_wp = module_sp;
 }
@@ -1135,9 +1132,9 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
 
         if (length > 0 && lo_pc <= pc && pc < hi_pc) {
           return DWARFExpression::Evaluate(
-              exe_ctx, reg_ctx, module_sp, m_data, m_dwarf_cu, offset, length,
-              m_reg_kind, initial_value_ptr, object_address_ptr, result,
-              error_ptr);
+              exe_ctx, reg_ctx, module_sp,
+              DataExtractor(m_data, offset, length), m_dwarf_cu, m_reg_kind,
+              initial_value_ptr, object_address_ptr, result, error_ptr);
         }
         offset += length;
       }
@@ -1148,20 +1145,19 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
   }
 
   // Not a location list, just a single expression.
-  return DWARFExpression::Evaluate(
-      exe_ctx, reg_ctx, module_sp, m_data, m_dwarf_cu, 0, m_data.GetByteSize(),
-      m_reg_kind, initial_value_ptr, object_address_ptr, result, error_ptr);
+  return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, m_data,
+                                   m_dwarf_cu, m_reg_kind, initial_value_ptr,
+                                   object_address_ptr, result, error_ptr);
 }
 
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    const DWARFUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
-    const lldb::offset_t opcodes_length, const lldb::RegisterKind reg_kind,
+    const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
     Value &result, Status *error_ptr) {
 
-  if (opcodes_length == 0) {
+  if (opcodes.GetByteSize() == 0) {
     if (error_ptr)
       error_ptr->SetErrorString(
           "no location, value may have been optimized out");
@@ -1182,8 +1178,7 @@ bool DWARFExpression::Evaluate(
   if (initial_value_ptr)
     stack.push_back(*initial_value_ptr);
 
-  lldb::offset_t offset = opcodes_offset;
-  const lldb::offset_t end_offset = opcodes_offset + opcodes_length;
+  lldb::offset_t offset = 0;
   Value tmp;
   uint32_t reg_num;
 
@@ -1191,16 +1186,9 @@ bool DWARFExpression::Evaluate(
   uint64_t op_piece_offset = 0;
   Value pieces; // Used for DW_OP_piece
 
-  // Make sure all of the data is available in opcodes.
-  if (!opcodes.ValidOffsetForDataOfSize(opcodes_offset, opcodes_length)) {
-    if (error_ptr)
-      error_ptr->SetErrorString(
-          "invalid offset and/or length for opcodes buffer.");
-    return false;
-  }
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  while (opcodes.ValidOffset(offset) && offset < end_offset) {
+  while (opcodes.ValidOffset(offset)) {
     const lldb::offset_t op_offset = offset;
     const uint8_t op = opcodes.GetU8(&offset);
 
@@ -1946,7 +1934,7 @@ bool DWARFExpression::Evaluate(
     case DW_OP_skip: {
       int16_t skip_offset = (int16_t)opcodes.GetU16(&offset);
       lldb::offset_t new_offset = offset + skip_offset;
-      if (new_offset >= opcodes_offset && new_offset < end_offset)
+      if (opcodes.ValidOffset(new_offset))
         offset = new_offset;
       else {
         if (error_ptr)
@@ -1975,7 +1963,7 @@ bool DWARFExpression::Evaluate(
         Scalar zero(0);
         if (tmp.ResolveValue(exe_ctx) != zero) {
           lldb::offset_t new_offset = offset + bra_offset;
-          if (new_offset >= opcodes_offset && new_offset < end_offset)
+          if (opcodes.ValidOffset(new_offset))
             offset = new_offset;
           else {
             if (error_ptr)

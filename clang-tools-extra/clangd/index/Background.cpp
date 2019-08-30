@@ -369,11 +369,11 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   Inputs.FS = std::move(FS);
   Inputs.FS->setCurrentWorkingDirectory(Cmd.Directory);
   Inputs.CompileCommand = std::move(Cmd);
-  auto CI = buildCompilerInvocation(Inputs);
+  IgnoreDiagnostics IgnoreDiags;
+  auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
   if (!CI)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Couldn't build compiler invocation");
-  IgnoreDiagnostics IgnoreDiags;
   auto Clang = prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
                                        std::move(*Buf), Inputs.FS, IgnoreDiags);
   if (!Clang)

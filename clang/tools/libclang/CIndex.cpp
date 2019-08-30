@@ -3417,6 +3417,8 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     = options & CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
   bool SingleFileParse = options & CXTranslationUnit_SingleFileParse;
   bool ForSerialization = options & CXTranslationUnit_ForSerialization;
+  bool RetainExcludedCB = options &
+    CXTranslationUnit_RetainExcludedConditionalBlocks;
   SkipFunctionBodiesScope SkipFunctionBodies = SkipFunctionBodiesScope::None;
   if (options & CXTranslationUnit_SkipFunctionBodies) {
     SkipFunctionBodies =
@@ -3517,7 +3519,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       /*RemappedFilesKeepOriginalName=*/true, PrecompilePreambleAfterNParses,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,
-      /*UserFilesAreVolatile=*/true, ForSerialization,
+      /*UserFilesAreVolatile=*/true, ForSerialization, RetainExcludedCB,
       CXXIdx->getPCHContainerOperations()->getRawReader().getFormat(),
       &ErrUnit));
 

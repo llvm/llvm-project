@@ -3506,23 +3506,6 @@ bool PPC64LongBranchTargetSection::isNeeded() const {
   return !finalized || !entries.empty();
 }
 
-RISCVSdataSection::RISCVSdataSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 1, ".sdata") {}
-
-bool RISCVSdataSection::isNeeded() const {
-  if (!ElfSym::riscvGlobalPointer)
-    return false;
-
-  // __global_pointer$ is defined relative to .sdata . If the section does not
-  // exist, create a dummy one.
-  for (BaseCommand *base : getParent()->sectionCommands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(base))
-      for (InputSection *isec : isd->sections)
-        if (isec != this)
-          return false;
-  return true;
-}
-
 static uint8_t getAbiVersion() {
   // MIPS non-PIC executable gets ABI version 1.
   if (config->emachine == EM_MIPS) {

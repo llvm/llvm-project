@@ -78,6 +78,62 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !10
 }
 
+; Check that fold tail under optsize passes the reduction live-out value
+; through a select.
+; int reduction_i32(int *A, int *B, int N) {
+;   int sum = 0;
+;   for (int i = 0; i < N; ++i)
+;     sum += (A[i] + B[i]);
+;   return sum;
+; }
+;
+define i32 @reduction_i32(i32* nocapture readonly %A, i32* nocapture readonly %B, i32 %N) #0 {
+; CHECK-LABEL: @reduction_i32(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[ACCUM_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, %vector.ph ], [ [[ACCUM:%.*]], %vector.body ]
+; CHECK:         [[ICMPULE:%.*]] = icmp ule <8 x i64>
+; CHECK:         [[LOAD1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* {{.*}}, i32 4, <8 x i1> [[ICMPULE]], <8 x i32> undef)
+; CHECK:         [[LOAD2:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* {{.*}}, i32 4, <8 x i1> [[ICMPULE]], <8 x i32> undef)
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <8 x i32> [[LOAD2]], [[LOAD1]]
+; CHECK-NEXT:    [[ACCUM]] = add nuw nsw <8 x i32> [[ADD]], [[ACCUM_PHI]]
+; CHECK:         [[LIVEOUT:%.*]] = select <8 x i1> [[ICMPULE]], <8 x i32> [[ACCUM]], <8 x i32> [[ACCUM_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[LIVEOUT]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[LIVEOUT]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX5:%.*]] = add <8 x i32> [[BIN_RDX]], [[RDX_SHUF4]]
+; CHECK-NEXT:    [[RDX_SHUF6:%.*]] = shufflevector <8 x i32> [[BIN_RDX5]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <8 x i32> [[BIN_RDX5]], [[RDX_SHUF6]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i32> [[BIN_RDX7]], i32 0
+; CHECK-NEXT:    br i1 true, label %for.cond.cleanup, label %scalar.ph
+; CHECK:       scalar.ph:
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ {{.*}}, %for.body ], [ [[TMP17]], %middle.block ]
+; CHECK-NEXT:    ret i32 [[SUM_1_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %sum.0 = phi i32 [ %sum.1, %for.body ], [ 0, %entry ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %arrayidxA = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidxA, align 4
+  %arrayidxB = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %1 = load i32, i32* %arrayidxB, align 4
+  %add = add nsw i32 %1, %0
+  %sum.1 = add nuw nsw i32 %add, %sum.0
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %N
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret i32 %sum.1
+}
+
 ; CHECK:      !0 = distinct !{!0, !1}
 ; CHECK-NEXT: !1 = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-NEXT: !2 = distinct !{!2, !3, !1}

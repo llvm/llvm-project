@@ -55,26 +55,26 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
-// CHECK-NEXT:    11000:       bl      #4 <func1>
-// CHECK-NEXT:    11004:       bl      #4 <func2>
-// CHECK-NEXT:    11008:       bx      lr
+// CHECK-NEXT:    11108:       bl      #4 <func1>
+// CHECK-NEXT:                 bl      #4 <func2>
+// CHECK-NEXT:                 bx      lr
 // CHECK:      func1:
-// CHECK-NEXT:    1100c:       bx      lr
+// CHECK-NEXT:    11114:       bx      lr
 // CHECK:      func2:
-// CHECK-NEXT:    11010:       bx      lr
+// CHECK-NEXT:    11118:       bx      lr
 // CHECK:      __gxx_personality_v0:
-// CHECK-NEXT:    11014:       bx      lr
+// CHECK-NEXT:    1111c:       bx      lr
 // CHECK:      __aeabi_unwind_cpp_pr0:
-// CHECK-NEXT:    11018:       bx      lr
+// CHECK-NEXT:    11120:       bx      lr
 
-// 100d4 + f2c = 11000 = main (linker generated cantunwind)
-// 100dc + f30 = 1100c = func1 (inline unwinding data)
-// CHECK-EXIDX:      100d4 2c0f0000 01000000 300f0000 08849780
-// 100e4 + f2c = 11010 = func2 (100e8 + 14 = 100fc = .ARM.extab entry)
-// 100ec + f28 = 11014 = __gcc_personality_v0 (linker generated cantunwind)
-// CHECK-EXIDX-NEXT: 100e4 2c0f0000 14000000 280f0000 01000000
-// 100f4 + f28 = 1101c = sentinel
-// CHECK-EXIDX-NEXT: 100f4 280f0000 01000000
+// 100d4 + 0x1034 = 0x11108 = main (linker generated cantunwind)
+// 100dc + 0x1038 = 0x11114 = func1 (inline unwinding data)
+// CHECK-EXIDX:      100d4 34100000 01000000 38100000 08849780
+// 100e4 + 0x1034 = 0x11118 = func2 (100e8 + 14 = 100fc = .ARM.extab entry)
+// 100ec + 0x1030 = 0x1111c = __gxx_personality_v0 (linker generated cantunwind)
+// CHECK-EXIDX-NEXT: 100e4 34100000 14000000 30100000 01000000
+// 100f4 + 0x1030 = 1101c = sentinel
+// CHECK-EXIDX-NEXT: 100f4 30100000 01000000
 
 // CHECK-PT:          Name: .ARM.exidx
 // CHECK-PT-NEXT:     Type: SHT_ARM_EXIDX (0x70000001)

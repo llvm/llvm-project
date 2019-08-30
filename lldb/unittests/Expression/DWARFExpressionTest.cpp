@@ -24,8 +24,8 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr) {
   Status status;
   if (!DWARFExpression::Evaluate(
           /*exe_ctx*/ nullptr, /*reg_ctx*/ nullptr, /*opcode_ctx*/ nullptr,
-          extractor, /*dwarf_cu*/ nullptr, /*offset*/ 0, expr.size(),
-          lldb::eRegisterKindLLDB, /*initial_value_ptr*/ nullptr,
+          extractor, /*dwarf_cu*/ nullptr, lldb::eRegisterKindLLDB,
+          /*initial_value_ptr*/ nullptr,
           /*object_address_ptr*/ nullptr, result, &status))
     return status.ToError();
 

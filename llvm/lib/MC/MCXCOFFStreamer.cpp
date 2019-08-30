@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCXCOFFStreamer.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/MC/MCXCOFFStreamer.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -72,7 +73,8 @@ MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,
   return S;
 }
 
-void MCXCOFFStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                            unsigned ByteAlign) {
-  report_fatal_error("Emission of local commons not implemented yet.");
+void MCXCOFFStreamer::EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol,
+                                                 uint64_t Size,
+                                                 unsigned ByteAlignment) {
+  EmitCommonSymbol(Symbol, Size, ByteAlignment);
 }

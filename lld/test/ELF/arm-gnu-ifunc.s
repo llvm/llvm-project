@@ -43,8 +43,8 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_EXECINSTR
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x11020
-// CHECK-NEXT:     Offset: 0x1020
+// CHECK-NEXT:     Address: 0x11130
+// CHECK-NEXT:     Offset: 0x130
 // CHECK-NEXT:     Size: 32
 // CHECK:          Index: 4
 // CHECK-NEXT:     Name: .got
@@ -53,13 +53,13 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x12000
-// CHECK-NEXT:     Offset: 0x2000
+// CHECK-NEXT:     Address: 0x12150
+// CHECK-NEXT:     Offset: 0x150
 // CHECK-NEXT:     Size: 8
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (1) .rel.dyn {
-// CHECK-NEXT:     0x12000 R_ARM_IRELATIVE
-// CHECK-NEXT:     0x12004 R_ARM_IRELATIVE
+// CHECK-NEXT:     0x12150 R_ARM_IRELATIVE
+// CHECK-NEXT:     0x12154 R_ARM_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:        Symbol {
@@ -86,7 +86,7 @@ _start:
 // CHECK-NEXT:   }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x11008
+// CHECK-NEXT:    Value: 0x1110C
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: None
@@ -95,7 +95,7 @@ _start:
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: bar
-// CHECK-NEXT:    Value: 0x11004
+// CHECK-NEXT:    Value: 0x11108
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -104,7 +104,7 @@ _start:
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: foo
-// CHECK-NEXT:    Value: 0x11000
+// CHECK-NEXT:    Value: 0x11104
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -115,31 +115,31 @@ _start:
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:    11000:      bx      lr
+// DISASM-NEXT:    11104:      bx      lr
 // DISASM: bar:
-// DISASM-NEXT:    11004:      bx      lr
+// DISASM-NEXT:    11108:      bx      lr
 // DISASM: _start:
-// DISASM-NEXT:    11008:      bl      #16
-// DISASM-NEXT:    1100c:      bl      #28
+// DISASM-NEXT:    1110c:      bl      #28
+// DISASM-NEXT:    11110:      bl      #40
 // 1 * 65536 + 244 = 0x100f4 __rel_iplt_start
-// DISASM-NEXT:    11010:      movw    r0, #244
-// DISASM-NEXT:    11014:      movt    r0, #1
+// DISASM-NEXT:    11114:      movw    r0, #244
+// DISASM-NEXT:    11118:      movt    r0, #1
 // 1 * 65536 + 260 = 0x10104 __rel_iplt_end
-// DISASM-NEXT:    11018:      movw    r0, #260
-// DISASM-NEXT:    1101c:      movt    r0, #1
+// DISASM-NEXT:    1111c:      movw    r0, #260
+// DISASM-NEXT:    11120:      movt    r0, #1
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: $a:
-// DISASM-NEXT:    11020:       add     r12, pc, #0, #12
-// DISASM-NEXT:    11024:       add     r12, r12, #0, #20
-// DISASM-NEXT:    11028:       ldr     pc, [r12, #4056]!
+// DISASM-NEXT:    11130:       add     r12, pc, #0, #12
+// DISASM-NEXT:    11134:       add     r12, r12, #4096
+// DISASM-NEXT:    11138:       ldr     pc, [r12, #24]!
 // DISASM: $d:
-// DISASM-NEXT:    1102c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    1113c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM: $a:
-// DISASM-NEXT:    11030:       add     r12, pc, #0, #12
-// DISASM-NEXT:    11034:       add     r12, r12, #0, #20
-// DISASM-NEXT:    11038:       ldr     pc, [r12, #4044]!
+// DISASM-NEXT:    11140:       add     r12, pc, #0, #12
+// DISASM-NEXT:    11144:       add     r12, r12, #4096
+// DISASM-NEXT:    11148:       ldr     pc, [r12, #12]!
 // DISASM: $d:
-// DISASM-NEXT:    1103c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    1114c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 

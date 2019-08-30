@@ -493,11 +493,7 @@ public:
       unsigned OldShiftOpcode, unsigned NewShiftOpcode,
       SelectionDAG &DAG) const override;
 
-  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-    if (DAG.getMachineFunction().getFunction().hasMinSize())
-      return false;
-    return true;
-  }
+  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override {

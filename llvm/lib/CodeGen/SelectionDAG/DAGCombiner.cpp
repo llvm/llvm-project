@@ -516,6 +516,7 @@ namespace {
     bool isSetCCEquivalent(SDValue N, SDValue &LHS, SDValue &RHS,
                            SDValue &CC) const;
     bool isOneUseSetCC(SDValue N) const;
+    bool isCheaperToUseNegatedFPOps(SDValue X, SDValue Y);
 
     SDValue SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                          unsigned HiOp);
@@ -1664,8 +1665,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       bool NIsValid = DAG.LegalizeOp(N, UpdatedNodes);
 
       for (SDNode *LN : UpdatedNodes) {
-        AddToWorklist(LN);
         AddUsersToWorklist(LN);
+        AddToWorklist(LN);
       }
       if (!NIsValid)
         continue;
@@ -5903,15 +5904,11 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
           SDValue NewLHS = ZeroN00 ? N0.getOperand(1) : N0.getOperand(0);
           SDValue NewRHS = ZeroN10 ? N1.getOperand(1) : N1.getOperand(0);
 
-          bool LegalMask = TLI.isShuffleMaskLegal(Mask, VT);
-          if (!LegalMask) {
-            std::swap(NewLHS, NewRHS);
-            ShuffleVectorSDNode::commuteMask(Mask);
-            LegalMask = TLI.isShuffleMaskLegal(Mask, VT);
-          }
-
-          if (LegalMask)
-            return DAG.getVectorShuffle(VT, SDLoc(N), NewLHS, NewRHS, Mask);
+          SDValue LegalShuffle =
+              TLI.buildLegalVectorShuffle(VT, SDLoc(N), NewLHS, NewRHS,
+                                          Mask, DAG);
+          if (LegalShuffle)
+            return LegalShuffle;
         }
       }
     }
@@ -11119,15 +11116,10 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       for (int i = 0; i != MaskScale; ++i)
         NewMask.push_back(M < 0 ? -1 : M * MaskScale + i);
 
-    bool LegalMask = TLI.isShuffleMaskLegal(NewMask, VT);
-    if (!LegalMask) {
-      std::swap(SV0, SV1);
-      ShuffleVectorSDNode::commuteMask(NewMask);
-      LegalMask = TLI.isShuffleMaskLegal(NewMask, VT);
-    }
-
-    if (LegalMask)
-      return DAG.getVectorShuffle(VT, SDLoc(N), SV0, SV1, NewMask);
+    SDValue LegalShuffle =
+        TLI.buildLegalVectorShuffle(VT, SDLoc(N), SV0, SV1, NewMask, DAG);
+    if (LegalShuffle)
+      return LegalShuffle;
   }
 
   return SDValue();
@@ -12110,6 +12102,22 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   return SDValue();
 }
 
+/// Return true if both inputs are at least as cheap in negated form and at
+/// least one input is strictly cheaper in negated form.
+bool DAGCombiner::isCheaperToUseNegatedFPOps(SDValue X, SDValue Y) {
+  const TargetOptions &Options = DAG.getTarget().Options;
+  if (char LHSNeg = isNegatibleForFree(X, LegalOperations, TLI, &Options,
+                                   ForCodeSize))
+    if (char RHSNeg = isNegatibleForFree(Y, LegalOperations, TLI, &Options,
+                                         ForCodeSize))
+      // Both negated operands are at least as cheap as their counterparts.
+      // Check to see if at least one is cheaper negated.
+      if (LHSNeg == 2 || RHSNeg == 2)
+        return true;
+
+  return false;
+}
+
 SDValue DAGCombiner::visitFMUL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -12180,21 +12188,11 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
     if (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))
       return DAG.getNode(ISD::FNEG, DL, VT, N0);
 
-  // fold (fmul (fneg X), (fneg Y)) -> (fmul X, Y)
-  if (char LHSNeg = isNegatibleForFree(N0, LegalOperations, TLI, &Options,
-                                       ForCodeSize)) {
-    if (char RHSNeg = isNegatibleForFree(N1, LegalOperations, TLI, &Options,
-                                         ForCodeSize)) {
-      // Both can be negated for free, check to see if at least one is cheaper
-      // negated.
-      if (LHSNeg == 2 || RHSNeg == 2)
-        return DAG.getNode(ISD::FMUL, DL, VT,
-                           GetNegatedExpression(N0, DAG, LegalOperations,
-                                                ForCodeSize),
-                           GetNegatedExpression(N1, DAG, LegalOperations,
-                                                ForCodeSize),
-                           Flags);
-    }
+  // -N0 * -N1 --> N0 * N1
+  if (isCheaperToUseNegatedFPOps(N0, N1)) {
+    SDValue NegN0 = GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN1 = GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    return DAG.getNode(ISD::FMUL, DL, VT, NegN0, NegN1, Flags);
   }
 
   // fold (fmul X, (select (fcmp X > 0.0), -1.0, 1.0)) -> (fneg (fabs X))
@@ -12271,6 +12269,13 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
       isa<ConstantFPSDNode>(N1) &&
       isa<ConstantFPSDNode>(N2)) {
     return DAG.getNode(ISD::FMA, DL, VT, N0, N1, N2);
+  }
+
+  // (-N0 * -N1) + N2 --> (N0 * N1) + N2
+  if (isCheaperToUseNegatedFPOps(N0, N1)) {
+    SDValue NegN0 = GetNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue NegN1 = GetNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    return DAG.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2, Flags);
   }
 
   if (UnsafeFPMath) {
@@ -14118,7 +14123,7 @@ struct LoadedSlice {
   /// Helper structure used to compute the cost of a slice.
   struct Cost {
     /// Are we optimizing for code size.
-    bool ForCodeSize;
+    bool ForCodeSize = false;
 
     /// Various cost.
     unsigned Loads = 0;
@@ -14127,10 +14132,10 @@ struct LoadedSlice {
     unsigned ZExts = 0;
     unsigned Shift = 0;
 
-    Cost(bool ForCodeSize = false) : ForCodeSize(ForCodeSize) {}
+    explicit Cost(bool ForCodeSize) : ForCodeSize(ForCodeSize) {}
 
     /// Get the cost of one isolated slice.
-    Cost(const LoadedSlice &LS, bool ForCodeSize = false)
+    Cost(const LoadedSlice &LS, bool ForCodeSize)
         : ForCodeSize(ForCodeSize), Loads(1) {
       EVT TruncType = LS.Inst->getValueType(0);
       EVT LoadedType = LS.getLoadedType();
@@ -17238,17 +17243,16 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
     // the shuffle mask with -1.
   }
 
-  // Turn this into a shuffle with zero if that's legal.
-  EVT VecVT = Extract.getOperand(0).getValueType();
-  if (!DAG.getTargetLoweringInfo().isShuffleMaskLegal(ShufMask, VecVT))
-    return SDValue();
-
   // buildvec undef, ..., (zext (extractelt V, IndexC)), undef... -->
   // bitcast (shuffle V, ZeroVec, VectorMask)
   SDLoc DL(BV);
+  EVT VecVT = Extract.getOperand(0).getValueType();
   SDValue ZeroVec = DAG.getConstant(0, DL, VecVT);
-  SDValue Shuf = DAG.getVectorShuffle(VecVT, DL, Extract.getOperand(0), ZeroVec,
-                                      ShufMask);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Shuf = TLI.buildLegalVectorShuffle(VecVT, DL, Extract.getOperand(0),
+                                             ZeroVec, ShufMask, DAG);
+  if (!Shuf)
+    return SDValue();
   return DAG.getBitcast(VT, Shuf);
 }
 
@@ -17723,11 +17727,9 @@ static SDValue combineConcatVectorOfExtracts(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  if (!DAG.getTargetLoweringInfo().isShuffleMaskLegal(Mask, VT))
-    return SDValue();
-
-  return DAG.getVectorShuffle(VT, SDLoc(N), DAG.getBitcast(VT, SV0),
-                              DAG.getBitcast(VT, SV1), Mask);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  return TLI.buildLegalVectorShuffle(VT, SDLoc(N), DAG.getBitcast(VT, SV0),
+                                     DAG.getBitcast(VT, SV1), Mask, DAG);
 }
 
 SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
@@ -19063,22 +19065,13 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       SV1 = DAG.getUNDEF(VT);
 
     // Avoid introducing shuffles with illegal mask.
-    if (!TLI.isShuffleMaskLegal(Mask, VT)) {
-      ShuffleVectorSDNode::commuteMask(Mask);
-
-      if (!TLI.isShuffleMaskLegal(Mask, VT))
-        return SDValue();
-
-      //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, A, M2)
-      //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(C, A, M2)
-      //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(C, B, M2)
-      std::swap(SV0, SV1);
-    }
-
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(A, B, M2)
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(A, C, M2)
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, C, M2)
-    return DAG.getVectorShuffle(VT, SDLoc(N), SV0, SV1, Mask);
+    //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, A, M2)
+    //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(C, A, M2)
+    //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(C, B, M2)
+    return TLI.buildLegalVectorShuffle(VT, SDLoc(N), SV0, SV1, Mask, DAG);
   }
 
   if (SDValue V = foldShuffleOfConcatUndefs(SVN, DAG))
@@ -19101,35 +19094,35 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
       SmallVector<int, 8> NewMask(InVecT.getVectorNumElements(), -1);
       int Elt = C0->getZExtValue();
       NewMask[0] = Elt;
-      SDValue Val;
       // If we have an implict truncate do truncate here as long as it's legal.
       // if it's not legal, this should
       if (VT.getScalarType() != InVal.getValueType() &&
           InVal.getValueType().isScalarInteger() &&
           isTypeLegal(VT.getScalarType())) {
-        Val =
+        SDValue Val =
             DAG.getNode(ISD::TRUNCATE, SDLoc(InVal), VT.getScalarType(), InVal);
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), VT, Val);
       }
       if (VT.getScalarType() == InVecT.getScalarType() &&
-          VT.getVectorNumElements() <= InVecT.getVectorNumElements() &&
-          TLI.isShuffleMaskLegal(NewMask, VT)) {
-        Val = DAG.getVectorShuffle(InVecT, SDLoc(N), InVec,
-                                   DAG.getUNDEF(InVecT), NewMask);
-        // If the initial vector is the correct size this shuffle is a
-        // valid result.
-        if (VT == InVecT)
-          return Val;
-        // If not we must truncate the vector.
-        if (VT.getVectorNumElements() != InVecT.getVectorNumElements()) {
-          MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
-          SDValue ZeroIdx = DAG.getConstant(0, SDLoc(N), IdxTy);
-          EVT SubVT =
-              EVT::getVectorVT(*DAG.getContext(), InVecT.getVectorElementType(),
-                               VT.getVectorNumElements());
-          Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), SubVT, Val,
-                            ZeroIdx);
-          return Val;
+          VT.getVectorNumElements() <= InVecT.getVectorNumElements()) {
+        SDValue LegalShuffle =
+          TLI.buildLegalVectorShuffle(InVecT, SDLoc(N), InVec,
+                                      DAG.getUNDEF(InVecT), NewMask, DAG);
+        if (LegalShuffle) {
+          // If the initial vector is the correct size this shuffle is a
+          // valid result.
+          if (VT == InVecT)
+            return LegalShuffle;
+          // If not we must truncate the vector.
+          if (VT.getVectorNumElements() != InVecT.getVectorNumElements()) {
+            MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+            SDValue ZeroIdx = DAG.getConstant(0, SDLoc(N), IdxTy);
+            EVT SubVT =
+                EVT::getVectorVT(*DAG.getContext(), InVecT.getVectorElementType(),
+                                 VT.getVectorNumElements());
+            return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), SubVT,
+                               LegalShuffle, ZeroIdx);
+          }
         }
       }
     }
@@ -19559,14 +19552,14 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
         TLI.isOperationLegalOrCustomOrPromote(Opcode, NarrowVT)) {
       SDLoc DL(N);
       unsigned NumOperands = LHS.getNumOperands();
-      SmallVector<SDValue, 4> Ops;
+      SmallVector<SDValue, 4> ConcatOps;
       for (unsigned i = 0; i != NumOperands; ++i) {
         // This constant fold for operands 1 and up.
-        Ops.push_back(DAG.getNode(Opcode, DL, NarrowVT, LHS.getOperand(i),
-                                  RHS.getOperand(i)));
+        ConcatOps.push_back(DAG.getNode(Opcode, DL, NarrowVT, LHS.getOperand(i),
+                                        RHS.getOperand(i)));
       }
 
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Ops);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
     }
   }
 
@@ -20707,11 +20700,11 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   SDValue TF = DAG.getTokenFactor(SDLoc(STChain), TFOps);
   CombineTo(St, TF);
 
-  AddToWorklist(STChain);
-  // Add TF operands worklist in reverse order.
-  for (auto I = TF->getNumOperands(); I;)
-    AddToWorklist(TF->getOperand(--I).getNode());
+  // Add TF and its operands to the worklist.
   AddToWorklist(TF.getNode());
+  for (const SDValue &Op : TF->ops())
+    AddToWorklist(Op.getNode());
+  AddToWorklist(STChain);
   return true;
 }
 

@@ -340,8 +340,8 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              *frame_base = DWARFExpression(module, data, cu,
-                                            block_offset, block_length);
+              *frame_base = DWARFExpression(
+                  module, DataExtractor(data, block_offset, block_length), cu);
             } else {
               const DWARFDataExtractor &debug_loc_data = dwarf.DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
@@ -349,9 +349,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               size_t loc_list_length = DWARFExpression::LocationListSize(
                   cu, debug_loc_data, debug_loc_offset);
               if (loc_list_length > 0) {
-                *frame_base =
-                    DWARFExpression(module, debug_loc_data, cu,
-                                    debug_loc_offset, loc_list_length);
+                *frame_base = DWARFExpression(module,
+                                              DataExtractor(debug_loc_data,
+                                                            debug_loc_offset,
+                                                            loc_list_length),
+                                              cu);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
                   frame_base->SetLocationListSlide(lo_pc -

@@ -971,8 +971,16 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
     if (!CB || UnresolvedCalls.count(CB))
       continue;
 
-    const auto &RetValAA =
-        A.getAAFor<AAReturnedValues>(*this, IRPosition::callsite_function(*CB));
+    if (!CB->getCalledFunction()) {
+      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Unresolved call: " << *CB
+                        << "\n");
+      UnresolvedCalls.insert(CB);
+      continue;
+    }
+
+    // TODO: use the function scope once we have call site AAReturnedValues.
+    const auto &RetValAA = A.getAAFor<AAReturnedValues>(
+        *this, IRPosition::function(*CB->getCalledFunction()));
     LLVM_DEBUG(dbgs() << "[AAReturnedValues] Found another AAReturnedValues: "
                       << static_cast<const AbstractAttribute &>(RetValAA)
                       << "\n");
@@ -1070,7 +1078,27 @@ struct AAReturnedValuesFunction final : public AAReturnedValuesImpl {
 };
 
 /// Returned values information for a call sites.
-using AAReturnedValuesCallSite = AAReturnedValuesFunction;
+struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
+  AAReturnedValuesCallSite(const IRPosition &IRP) : AAReturnedValuesImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites instead of
+    //       redirecting requests to the callee.
+    llvm_unreachable("Abstract attributes for returned values are not "
+                     "supported for call sites yet!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
 
 /// ------------------------ NoSync Function Attribute -------------------------
 
@@ -1929,12 +1957,27 @@ ChangeStatus AAIsDeadImpl::updateImpl(Attributor &A) {
 }
 
 /// Liveness information for a call sites.
-//
-// TODO: Once we have call site specific value information we can provide call
-//       site specific liveness liveness information and then it makes sense to
-//       specialize attributes for call sites instead of redirecting requests to
-//       the callee.
-using AAIsDeadCallSite = AAIsDeadFunction;
+struct AAIsDeadCallSite final : AAIsDeadImpl {
+  AAIsDeadCallSite(const IRPosition &IRP) : AAIsDeadImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites instead of
+    //       redirecting requests to the callee.
+    llvm_unreachable("Abstract attributes for liveness are not "
+                     "supported for call sites yet!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
 
 /// -------------------- Dereferenceable Argument Attribute --------------------
 
@@ -2385,7 +2428,8 @@ bool Attributor::checkForAllReturnedValuesAndReturnInsts(
 
   // If this is a call site query we use the call site specific return values
   // and liveness information.
-  const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
   if (!AARetVal.getState().isValidState())
     return false;
@@ -2402,7 +2446,8 @@ bool Attributor::checkForAllReturnedValues(
   if (!AssociatedFunction || !AssociatedFunction->hasExactDefinition())
     return false;
 
-  const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &AARetVal = getAAFor<AAReturnedValues>(QueryingAA, QueryIRP);
   if (!AARetVal.getState().isValidState())
     return false;
@@ -2423,7 +2468,8 @@ bool Attributor::checkForAllInstructions(
   if (!AssociatedFunction || !AssociatedFunction->hasExactDefinition())
     return false;
 
-  const IRPosition &QueryIRP = IRPosition::function_scope(IRP);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto &LivenessAA =
       getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
   bool AnyDead = false;
@@ -2459,8 +2505,10 @@ bool Attributor::checkForAllReadWriteInstructions(
   if (!AssociatedFunction)
     return false;
 
-  const auto &LivenessAA = getAAFor<AAIsDead>(
-      QueryingAA, QueryingAA.getIRPosition(), /* TrackDependence */ false);
+  // TODO: use the function scope once we have call site AAReturnedValues.
+  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
+  const auto &LivenessAA =
+      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
   bool AnyDead = false;
 
   for (Instruction *I :
@@ -2641,6 +2689,26 @@ ChangeStatus Attributor::run() {
   assert(
       NumFinalAAs == AllAbstractAttributes.size() &&
       "Expected the final number of abstract attributes to remain unchanged!");
+
+  // Delete stuff at the end to avoid invalid references and a nice order.
+  LLVM_DEBUG(dbgs() << "\n[Attributor] Delete " << ToBeDeletedFunctions.size()
+                    << " functions and " << ToBeDeletedBlocks.size()
+                    << " blocks and " << ToBeDeletedInsts.size()
+                    << " instructions\n");
+  for (Instruction *I : ToBeDeletedInsts) {
+    if (I->hasNUsesOrMore(1))
+      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->eraseFromParent();
+  }
+  for (BasicBlock *BB : ToBeDeletedBlocks) {
+    // TODO: Check if we need to replace users (PHIs, indirect branches?)
+    BB->eraseFromParent();
+  }
+  for (Function *Fn : ToBeDeletedFunctions) {
+    Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
+    Fn->eraseFromParent();
+  }
+
   return ManifestChange;
 }
 

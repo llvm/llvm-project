@@ -252,7 +252,9 @@ private:
         : clang::ASTImporter(*target_ctx, master.m_file_manager, *source_ctx,
                              master.m_file_manager, true /*minimal*/),
           m_decls_to_deport(nullptr), m_decls_already_deported(nullptr),
-          m_master(master), m_source_ctx(source_ctx) {}
+          m_master(master), m_source_ctx(source_ctx) {
+      setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
+    }
 
     /// Scope guard that attaches a CxxModuleHandler to an ASTImporterDelegate
     /// and deattaches it at the end of the scope. Supports being used multiple

@@ -3243,15 +3243,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
                 uint32_t block_length = form_value.Unsigned();
-                location = DWARFExpression(module, debug_info_data, die.GetCU(),
-                                           block_offset, block_length);
+                location = DWARFExpression(
+                    module,
+                    DataExtractor(debug_info_data, block_offset, block_length),
+                    die.GetCU());
               } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
                 // Retrieve the value as a data expression.
                 uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
                 if (auto data_length = form_value.GetFixedSize())
-                  location =
-                      DWARFExpression(module, debug_info_data, die.GetCU(),
-                                      data_offset, *data_length);
+                  location = DWARFExpression(
+                      module,
+                      DataExtractor(debug_info_data, data_offset, *data_length),
+                      die.GetCU());
                 else {
                   const uint8_t *data_pointer = form_value.BlockData();
                   if (data_pointer) {
@@ -3267,17 +3270,21 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 if (form_value.Form() == DW_FORM_strp) {
                   uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
                   if (auto data_length = form_value.GetFixedSize())
-                    location =
-                        DWARFExpression(module, debug_info_data, die.GetCU(),
-                                        data_offset, *data_length);
+                    location = DWARFExpression(module,
+                                               DataExtractor(debug_info_data,
+                                                             data_offset,
+                                                             *data_length),
+                                               die.GetCU());
                 } else {
                   const char *str = form_value.AsCString();
                   uint32_t string_offset =
                       str - (const char *)debug_info_data.GetDataStart();
                   uint32_t string_length = strlen(str) + 1;
-                  location =
-                      DWARFExpression(module, debug_info_data, die.GetCU(),
-                                      string_offset, string_length);
+                  location = DWARFExpression(module,
+                                             DataExtractor(debug_info_data,
+                                                           string_offset,
+                                                           string_length),
+                                             die.GetCU());
                 }
               }
             }
@@ -3291,8 +3298,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              location = DWARFExpression(module, data, die.GetCU(),
-                                         block_offset, block_length);
+              location = DWARFExpression(
+                  module, DataExtractor(data, block_offset, block_length),
+                  die.GetCU());
             } else {
               const DWARFDataExtractor &debug_loc_data = DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
@@ -3300,8 +3308,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               size_t loc_list_length = DWARFExpression::LocationListSize(
                   die.GetCU(), debug_loc_data, debug_loc_offset);
               if (loc_list_length > 0) {
-                location = DWARFExpression(module, debug_loc_data, die.GetCU(),
-                                           debug_loc_offset, loc_list_length);
+                location = DWARFExpression(module,
+                                           DataExtractor(debug_loc_data,
+                                                         debug_loc_offset,
+                                                         loc_list_length),
+                                           die.GetCU());
                 assert(func_low_pc != LLDB_INVALID_ADDRESS);
                 location.SetLocationListSlide(
                     func_low_pc -

@@ -832,6 +832,10 @@ getAsConstantIndexedAddress(Value *V, const DataLayout &DL) {
 static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
                                               ICmpInst::Predicate Cond,
                                               const DataLayout &DL) {
+  // FIXME: Support vector of pointers.
+  if (GEPLHS->getType()->isVectorTy())
+    return nullptr;
+
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
@@ -882,7 +886,9 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     RHS = RHS->stripPointerCasts();
 
   Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS && GEPLHS->isInBounds()) {
+  // FIXME: Support vector pointer GEPs.
+  if (PtrBase == RHS && GEPLHS->isInBounds() &&
+      !GEPLHS->getType()->isVectorTy()) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     // This transformation (ignoring the base and scales) is valid because we
     // know pointers can't overflow since the gep is inbounds.  See if we can
@@ -894,10 +900,12 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       Offset = EmitGEPOffset(GEPLHS);
     return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Offset,
                         Constant::getNullValue(Offset->getType()));
-  } else if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-             isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
-             !NullPointerIsDefined(I.getFunction(),
-                                   RHS->getType()->getPointerAddressSpace())) {
+  }
+
+  if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
+      isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+      !NullPointerIsDefined(I.getFunction(),
+                            RHS->getType()->getPointerAddressSpace())) {
     // For most address spaces, an allocation can't be placed at null, but null
     // itself is treated as a 0 size allocation in the in bounds rules.  Thus,
     // the only valid inbounds address derived from null, is null itself.
@@ -945,11 +953,13 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       // If we're comparing GEPs with two base pointers that only differ in type
       // and both GEPs have only constant indices or just one use, then fold
       // the compare with the adjusted indices.
+      // FIXME: Support vector of pointers.
       if (GEPLHS->isInBounds() && GEPRHS->isInBounds() &&
           (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
           (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse()) &&
           PtrBase->stripPointerCasts() ==
-              GEPRHS->getOperand(0)->stripPointerCasts()) {
+              GEPRHS->getOperand(0)->stripPointerCasts() &&
+          !GEPLHS->getType()->isVectorTy()) {
         Value *LOffset = EmitGEPOffset(GEPLHS);
         Value *ROffset = EmitGEPOffset(GEPRHS);
 
@@ -993,15 +1003,20 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       unsigned DiffOperand = 0;     // The operand that differs.
       for (unsigned i = 1, e = GEPRHS->getNumOperands(); i != e; ++i)
         if (GEPLHS->getOperand(i) != GEPRHS->getOperand(i)) {
-          if (GEPLHS->getOperand(i)->getType()->getPrimitiveSizeInBits() !=
-                   GEPRHS->getOperand(i)->getType()->getPrimitiveSizeInBits()) {
+          Type *LHSType = GEPLHS->getOperand(i)->getType();
+          Type *RHSType = GEPRHS->getOperand(i)->getType();
+          // FIXME: Better support for vector of pointers.
+          if (LHSType->getPrimitiveSizeInBits() !=
+                   RHSType->getPrimitiveSizeInBits() ||
+              (GEPLHS->getType()->isVectorTy() &&
+               (!LHSType->isVectorTy() || !RHSType->isVectorTy()))) {
             // Irreconcilable differences.
             NumDifferences = 2;
             break;
-          } else {
-            if (NumDifferences++) break;
-            DiffOperand = i;
           }
+
+          if (NumDifferences++) break;
+          DiffOperand = i;
         }
 
       if (NumDifferences == 0)   // SAME GEP?

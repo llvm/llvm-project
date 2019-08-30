@@ -21,27 +21,6 @@
 using namespace clang;
 using namespace clang::index;
 
-bool IndexDataConsumer::handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
-                                            ArrayRef<SymbolRelation> Relations,
-                                            SourceLocation Loc,
-                                            ASTNodeInfo ASTNode) {
-  return true;
-}
-
-bool IndexDataConsumer::handleMacroOccurence(const IdentifierInfo *Name,
-                                             const MacroInfo *MI,
-                                             SymbolRoleSet Roles,
-                                             SourceLocation Loc) {
-  return true;
-}
-
-bool IndexDataConsumer::handleModuleOccurence(const ImportDecl *ImportD,
-                                              const Module *Mod,
-                                              SymbolRoleSet Roles,
-                                              SourceLocation Loc) {
-  return true;
-}
-
 namespace {
 
 class IndexASTConsumer : public ASTConsumer {

@@ -128,10 +128,9 @@ void printSectionContents(const object::ObjectFile *O);
 void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
                       StringRef ArchitectureName = StringRef());
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message);
-LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef File);
-LLVM_ATTRIBUTE_NORETURN void
-reportError(Error E, StringRef FileName, StringRef ArchiveName,
-            StringRef ArchitectureName = StringRef());
+LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef FileName,
+                                         StringRef ArchiveName = "",
+                                         StringRef ArchitectureName = "");
 void reportWarning(Twine Message, StringRef File);
 
 template <typename T, typename... Ts>

@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 
 EXTERN
 void __kmpc_nvptx_end_reduce(int32_t global_tid) {}
@@ -23,14 +24,14 @@ EXTERN
 void __kmpc_nvptx_end_reduce_nowait(int32_t global_tid) {}
 
 EXTERN int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size) {
-  return __SHFL_DOWN_SYNC(0xFFFFFFFF, val, delta, size);
+  return __kmpc_impl_shfl_down_sync(0xFFFFFFFF, val, delta, size);
 }
 
 EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size) {
    int lo, hi;
    asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
-   hi = __SHFL_DOWN_SYNC(0xFFFFFFFF, hi, delta, size);
-   lo = __SHFL_DOWN_SYNC(0xFFFFFFFF, lo, delta, size);
+   hi = __kmpc_impl_shfl_down_sync(0xFFFFFFFF, hi, delta, size);
+   lo = __kmpc_impl_shfl_down_sync(0xFFFFFFFF, lo, delta, size);
    asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
    return val;
 }

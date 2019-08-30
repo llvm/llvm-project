@@ -379,117 +379,115 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   if (!target)
     target = &GetDummyTarget();
 
-    lldb::ValueObjectSP result_valobj_sp;
-    bool keep_in_memory = true;
-    StackFrame *frame = exe_ctx.GetFramePtr();
+  lldb::ValueObjectSP result_valobj_sp;
+  bool keep_in_memory = true;
+  StackFrame *frame = exe_ctx.GetFramePtr();
 
-    EvaluateExpressionOptions options;
-    options.SetCoerceToId(m_varobj_options.use_objc);
-    options.SetUnwindOnError(m_command_options.unwind_on_error);
-    options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
-    options.SetKeepInMemory(keep_in_memory);
-    options.SetUseDynamic(m_varobj_options.use_dynamic);
-    options.SetTryAllThreads(m_command_options.try_all_threads);
-    options.SetDebug(m_command_options.debug);
-    options.SetLanguage(m_command_options.language);
-    options.SetExecutionPolicy(
-        m_command_options.allow_jit
-            ? EvaluateExpressionOptions::default_execution_policy
-            : lldb_private::eExecutionPolicyNever);
+  EvaluateExpressionOptions options;
+  options.SetCoerceToId(m_varobj_options.use_objc);
+  options.SetUnwindOnError(m_command_options.unwind_on_error);
+  options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
+  options.SetKeepInMemory(keep_in_memory);
+  options.SetUseDynamic(m_varobj_options.use_dynamic);
+  options.SetTryAllThreads(m_command_options.try_all_threads);
+  options.SetDebug(m_command_options.debug);
+  options.SetLanguage(m_command_options.language);
+  options.SetExecutionPolicy(
+      m_command_options.allow_jit
+          ? EvaluateExpressionOptions::default_execution_policy
+          : lldb_private::eExecutionPolicyNever);
 
-    bool auto_apply_fixits;
-    if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
-      auto_apply_fixits = target->GetEnableAutoApplyFixIts();
-    else
-      auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
+  bool auto_apply_fixits;
+  if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
+    auto_apply_fixits = target->GetEnableAutoApplyFixIts();
+  else
+    auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
 
-    options.SetAutoApplyFixIts(auto_apply_fixits);
+  options.SetAutoApplyFixIts(auto_apply_fixits);
 
-    if (m_command_options.top_level)
-      options.SetExecutionPolicy(eExecutionPolicyTopLevel);
+  if (m_command_options.top_level)
+    options.SetExecutionPolicy(eExecutionPolicyTopLevel);
 
-    // If there is any chance we are going to stop and want to see what went
-    // wrong with our expression, we should generate debug info
-    if (!m_command_options.ignore_breakpoints ||
-        !m_command_options.unwind_on_error)
-      options.SetGenerateDebugInfo(true);
+  // If there is any chance we are going to stop and want to see what went
+  // wrong with our expression, we should generate debug info
+  if (!m_command_options.ignore_breakpoints ||
+      !m_command_options.unwind_on_error)
+    options.SetGenerateDebugInfo(true);
 
-    if (m_command_options.timeout > 0)
-      options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
-    else
-      options.SetTimeout(llvm::None);
+  if (m_command_options.timeout > 0)
+    options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
+  else
+    options.SetTimeout(llvm::None);
 
-    ExpressionResults success = target->EvaluateExpression(
-        expr, frame, result_valobj_sp, options, &m_fixed_expression);
+  ExpressionResults success = target->EvaluateExpression(
+      expr, frame, result_valobj_sp, options, &m_fixed_expression);
 
-    // We only tell you about the FixIt if we applied it.  The compiler errors
-    // will suggest the FixIt if it parsed.
-    if (error_stream && !m_fixed_expression.empty() &&
-        target->GetEnableNotifyAboutFixIts()) {
-      if (success == eExpressionCompleted)
-        error_stream->Printf(
-            "  Fix-it applied, fixed expression was: \n    %s\n",
-            m_fixed_expression.c_str());
-    }
+  // We only tell you about the FixIt if we applied it.  The compiler errors
+  // will suggest the FixIt if it parsed.
+  if (error_stream && !m_fixed_expression.empty() &&
+      target->GetEnableNotifyAboutFixIts()) {
+    if (success == eExpressionCompleted)
+      error_stream->Printf("  Fix-it applied, fixed expression was: \n    %s\n",
+                           m_fixed_expression.c_str());
+  }
 
-    if (result_valobj_sp) {
-      Format format = m_format_options.GetFormat();
+  if (result_valobj_sp) {
+    Format format = m_format_options.GetFormat();
 
-      if (result_valobj_sp->GetError().Success()) {
-        if (format != eFormatVoid) {
-          if (format != eFormatDefault)
-            result_valobj_sp->SetFormat(format);
+    if (result_valobj_sp->GetError().Success()) {
+      if (format != eFormatVoid) {
+        if (format != eFormatDefault)
+          result_valobj_sp->SetFormat(format);
 
-          if (m_varobj_options.elem_count > 0) {
-            Status error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
-            if (error.Fail()) {
-              result->AppendErrorWithFormat(
-                  "expression cannot be used with --element-count %s\n",
-                  error.AsCString(""));
-              result->SetStatus(eReturnStatusFailed);
-              return false;
-            }
-          }
-
-          DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
-              m_command_options.m_verbosity, format));
-          options.SetVariableFormatDisplayLanguage(
-              result_valobj_sp->GetPreferredDisplayLanguage());
-
-          result_valobj_sp->Dump(*output_stream, options);
-
-          if (result)
-            result->SetStatus(eReturnStatusSuccessFinishResult);
-        }
-      } else {
-        if (result_valobj_sp->GetError().GetError() ==
-            UserExpression::kNoResult) {
-          if (format != eFormatVoid && GetDebugger().GetNotifyVoid()) {
-            error_stream->PutCString("(void)\n");
-          }
-
-          if (result)
-            result->SetStatus(eReturnStatusSuccessFinishResult);
-        } else {
-          const char *error_cstr = result_valobj_sp->GetError().AsCString();
-          if (error_cstr && error_cstr[0]) {
-            const size_t error_cstr_len = strlen(error_cstr);
-            const bool ends_with_newline =
-                error_cstr[error_cstr_len - 1] == '\n';
-            if (strstr(error_cstr, "error:") != error_cstr)
-              error_stream->PutCString("error: ");
-            error_stream->Write(error_cstr, error_cstr_len);
-            if (!ends_with_newline)
-              error_stream->EOL();
-          } else {
-            error_stream->PutCString("error: unknown error\n");
-          }
-
-          if (result)
+        if (m_varobj_options.elem_count > 0) {
+          Status error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
+          if (error.Fail()) {
+            result->AppendErrorWithFormat(
+                "expression cannot be used with --element-count %s\n",
+                error.AsCString(""));
             result->SetStatus(eReturnStatusFailed);
+            return false;
+          }
         }
+
+        DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
+            m_command_options.m_verbosity, format));
+        options.SetVariableFormatDisplayLanguage(
+            result_valobj_sp->GetPreferredDisplayLanguage());
+
+        result_valobj_sp->Dump(*output_stream, options);
+
+        if (result)
+          result->SetStatus(eReturnStatusSuccessFinishResult);
+      }
+    } else {
+      if (result_valobj_sp->GetError().GetError() ==
+          UserExpression::kNoResult) {
+        if (format != eFormatVoid && GetDebugger().GetNotifyVoid()) {
+          error_stream->PutCString("(void)\n");
+        }
+
+        if (result)
+          result->SetStatus(eReturnStatusSuccessFinishResult);
+      } else {
+        const char *error_cstr = result_valobj_sp->GetError().AsCString();
+        if (error_cstr && error_cstr[0]) {
+          const size_t error_cstr_len = strlen(error_cstr);
+          const bool ends_with_newline = error_cstr[error_cstr_len - 1] == '\n';
+          if (strstr(error_cstr, "error:") != error_cstr)
+            error_stream->PutCString("error: ");
+          error_stream->Write(error_cstr, error_cstr_len);
+          if (!ends_with_newline)
+            error_stream->EOL();
+        } else {
+          error_stream->PutCString("error: unknown error\n");
+        }
+
+        if (result)
+          result->SetStatus(eReturnStatusFailed);
       }
     }
+  }
 
   return true;
 }

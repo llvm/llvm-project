@@ -227,6 +227,7 @@ public:
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

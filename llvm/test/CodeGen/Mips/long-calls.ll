@@ -33,9 +33,8 @@ define void @caller() {
 ; ON32: addiu  $25, $1, %lo(callee)
 ; ON32: jalr   $25
 
-; ON32: addiu  $1, $zero, %lo(memset)
-; ON32: lui    $2, %hi(memset)
-; ON32: addu   $25, $2, $1
+; ON32: lui    $1, %hi(memset)
+; ON32: addiu  $25, $1, %lo(memset)
 ; ON32: jalr   $25
 
 ; ON64: lui     $1, %highest(callee)
@@ -47,8 +46,7 @@ define void @caller() {
 ; ON64: daddiu  $1, $zero, %higher(memset)
 ; ON64: lui     $2, %highest(memset)
 ; ON64: lui     $2, %hi(memset)
-; ON64: daddiu  $2, $zero, %lo(memset)
-; ON64: daddu   $25, $1, $2
+; ON64: daddiu  $25, $1, %lo(memset)
 ; ON64: jalr    $25
 
   call void @callee()

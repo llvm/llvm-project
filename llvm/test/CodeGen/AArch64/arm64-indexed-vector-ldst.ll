@@ -6319,3 +6319,22 @@ define void  @test_ld1lane_build_i8(i8* %a, i8* %b, i8* %c, i8* %d, i8* %e, i8* 
   store <8 x i8> %sub, <8 x i8>* %p
   ret void
 }
+
+define <4 x i32> @test_inc_cycle(<4 x i32> %vec, i32* %in) {
+; CHECK-LABEL: test_inc_cycle:
+; CHECK: ld1.s { v0 }[0], [x0]{{$}}
+
+  %elt = load i32, i32* %in
+  %newvec = insertelement <4 x i32> %vec, i32 %elt, i32 0
+
+  ; %inc cannot be %elt directly because we check that the load is only
+  ; used by the insert before trying to form post-inc.
+  %inc.vec = bitcast <4 x i32> %newvec to <2 x i64>
+  %inc = extractelement <2 x i64> %inc.vec, i32 0
+  %newaddr = getelementptr i32, i32* %in, i64 %inc
+  store i32* %newaddr, i32** @var
+
+  ret <4 x i32> %newvec
+}
+
+@var = global i32* null
