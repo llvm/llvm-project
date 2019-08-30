@@ -47,7 +47,7 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                      kind),
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
       m_stack_frame_top(LLDB_INVALID_ADDRESS), m_allow_cxx(false),
-      m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(), 
+      m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(),
       m_materializer_up(), m_jit_module_wp(),
       m_can_interpret(false), m_materialized_address(LLDB_INVALID_ADDRESS) {}
 

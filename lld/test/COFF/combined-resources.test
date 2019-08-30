@@ -4,12 +4,31 @@
 // > rc /fo combined-resources.res /nologo combined-resources.rc
 // > rc /fo combined-resources-2.res /nologo combined-resources-2.rc
 
+// The object files were generated with GNU windres and MS cvtres.exe,
+// > x86_64-w64-mingw32-windres combined-resources.res combined-resources.o
+// > cvtres -machine:x64 -out:combined-resources-2.o combined-resources.res
+
 # RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
 # RUN: lld-link /out:%t.exe /entry:main %t.obj %p/Inputs/resource.res \
 # RUN:   %p/Inputs/combined-resources.res %p/Inputs/combined-resources-2.res
 
 # RUN: llvm-readobj --coff-resources --file-headers --section-data %t.exe | \
 # RUN:   FileCheck %s
+
+# RUN: yaml2obj < %p/Inputs/combined-resources.yaml > %t-combined-resources.o
+# RUN: yaml2obj < %p/Inputs/combined-resources-2.yaml > %t-combined-resources-2.o
+
+# RUN: lld-link /lldmingw /out:%t-resobj.exe /entry:main %t.obj %p/Inputs/resource.res \
+# RUN:   %t-combined-resources.o %t-combined-resources-2.o
+
+// As input resources are traversed in a slightly different order, the
+// RVAs of data blobs will end up slightly different, even if they are
+// equivalent. Filter out such addresses from llvm-readobj's output,
+// and compare the rest to make sure it is equivalent.
+
+# RUN: llvm-readobj --coff-resources %t.exe | sed -E 's/(RVA|Address|File): .*//' > %t-orig.txt
+# RUN: llvm-readobj --coff-resources %t-resobj.exe | sed -E 's/(RVA|Address|File): .*//' > %t-resobj.txt
+# RUN: cmp %t-orig.txt %t-resobj.txt
 
 CHECK:      ResourceTableRVA: 0x2000
 CHECK-NEXT: ResourceTableSize: 0xC20

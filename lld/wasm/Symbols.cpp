@@ -155,6 +155,10 @@ bool Symbol::isExported() const {
   return flags & WASM_SYMBOL_EXPORTED;
 }
 
+bool Symbol::isNoStrip() const {
+  return flags & WASM_SYMBOL_NO_STRIP;
+}
+
 uint32_t FunctionSymbol::getFunctionIndex() const {
   if (auto *f = dyn_cast<DefinedFunction>(this))
     return f->function->getFunctionIndex();
