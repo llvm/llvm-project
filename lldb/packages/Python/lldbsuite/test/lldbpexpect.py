@@ -22,7 +22,7 @@ else:
     class PExpectTest(TestBase):
 
         NO_DEBUG_INFO_TESTCASE = True
-        PROMPT = "(lldb) "
+        PROMPT = str("(lldb) ")
 
         def expect_prompt(self):
             self.child.expect_exact(self.PROMPT)
