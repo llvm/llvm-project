@@ -1519,8 +1519,7 @@ static void maybeAddAddressTakenFunction(SymbolRVASet &addressTakenSyms,
     // Absolute is never code, synthetic generally isn't and usually isn't
     // determinable.
     break;
-  case Symbol::LazyArchiveKind:
-  case Symbol::LazyObjectKind:
+  case Symbol::LazyKind:
   case Symbol::UndefinedKind:
     // Undefined symbols resolve to zero, so they don't have an RVA. Lazy
     // symbols shouldn't have relocations.

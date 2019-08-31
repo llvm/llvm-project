@@ -1,7 +1,11 @@
 # RUN: not llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+# RUN: not llvm-mc -triple x86_64-windows-msvc %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 	.text
 
-	.seh_pushreg 6
+# CHECK: error: .seh_ directive must appear within an active frame
+	.seh_handlerdata
+
+	.seh_pushreg %rsi
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
 
 	.seh_stackalloc 32
@@ -16,11 +20,11 @@
 f:                                      # @f
 .seh_proc f
 	pushq	%rsi
-	.seh_pushreg 6
+	.seh_pushreg %rsi
 	pushq	%rdi
-	.seh_pushreg 7
+	.seh_pushreg %rdi
 	pushq	%rbx
-	.seh_pushreg 3
+	.seh_pushreg %rbx
 	subq	$32, %rsp
 	.seh_stackalloc 0
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: stack allocation size must be non-zero
@@ -39,15 +43,15 @@ f:                                      # @f
 	.seh_endproc
 
 
-	.seh_pushreg 6
+	.seh_pushreg %rsi
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
 
 g:
 	.seh_proc g
 	pushq %rbp
-	.seh_pushreg 3
+	.seh_pushreg %rbx
 	pushq %rsi
-	.seh_pushreg 6
+	.seh_pushreg %rsi
 	.seh_endprologue
 	.seh_setframe 3 255
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: you must specify a stack pointer offset
@@ -74,11 +78,11 @@ h:                                      # @h
         movaps  %xmm7, 48(%rsp)         # 16-byte Spill
         .seh_savexmm 7 44
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: you must specify an offset on the stack
-        .seh_savexmm 7, 44
+        .seh_savexmm %xmm7, 44
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: offset is not a multiple of 16
-        .seh_savexmm 7, 48
+        .seh_savexmm %xmm7, 48
         movaps  %xmm6, 32(%rsp)         # 16-byte Spill
-        .seh_savexmm 6, 32
+        .seh_savexmm %xmm6, 32
         .seh_endprologue
         movapd  %xmm0, %xmm6
         callq   getdbl
@@ -94,3 +98,21 @@ h:                                      # @h
         .text
         .seh_endproc
                                         # -- End function
+
+	.globl i
+	.def i; .scl 2; .type 32; .endef
+        .p2align        4, 0x90
+i:
+	.seh_proc i
+	pushq %rbp
+	.seh_pushreg 17
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: incorrect register number for use with this directive
+	pushq %rbx
+	.seh_pushreg %xmm0
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register is not supported for use with this directive
+	leaq 16(%rsp), %rbp
+	.seh_setframe %xmm0, 16
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register is not supported for use with this directive
+	.seh_endprologue
+	ret
+	.seh_endproc

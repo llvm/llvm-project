@@ -1237,15 +1237,15 @@ bb9:                                              ; preds = %bb1
   ret void
 }
 
-define void @bcast_unfold_fsub_v16f32(float* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fsub_v16f32:
+define void @bcast_unfold_fmul_v16f32(float* nocapture %arg) {
+; CHECK-LABEL: bcast_unfold_fmul_v16f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB36_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %zmm0
-; CHECK-NEXT:    vaddps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vmulps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB36_1
@@ -1260,209 +1260,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
   %tmp3 = bitcast float* %tmp2 to <16 x float>*
   %tmp4 = load <16 x float>, <16 x float>* %tmp3, align 4
-  %tmp5 = fsub <16 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-  %tmp6 = bitcast float* %tmp2 to <16 x float>*
-  store <16 x float> %tmp5, <16 x float>* %tmp6, align 4
-  %tmp7 = add i64 %tmp, 16
-  %tmp8 = icmp eq i64 %tmp7, 1024
-  br i1 %tmp8, label %bb9, label %bb1
-
-bb9:                                              ; preds = %bb1
-  ret void
-}
-
-define void @bcast_unfold_fsub_v8f32(float* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fsub_v8f32:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB37_1: # %bb1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %ymm0
-; CHECK-NEXT:    vaddps {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; CHECK-NEXT:    vmovups %ymm0, 4096(%rdi,%rax)
-; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    jne .LBB37_1
-; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
-  %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
-  %tmp3 = bitcast float* %tmp2 to <8 x float>*
-  %tmp4 = load <8 x float>, <8 x float>* %tmp3, align 4
-  %tmp5 = fsub <8 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-  %tmp6 = bitcast float* %tmp2 to <8 x float>*
-  store <8 x float> %tmp5, <8 x float>* %tmp6, align 4
-  %tmp7 = add i64 %tmp, 8
-  %tmp8 = icmp eq i64 %tmp7, 1024
-  br i1 %tmp8, label %bb9, label %bb1
-
-bb9:                                              ; preds = %bb1
-  ret void
-}
-
-define void @bcast_unfold_fsub_v4f32(float* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fsub_v4f32:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB38_1: # %bb1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %xmm0
-; CHECK-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-NEXT:    vmovups %xmm0, 4096(%rdi,%rax)
-; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    jne .LBB38_1
-; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    retq
-bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
-  %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
-  %tmp3 = bitcast float* %tmp2 to <4 x float>*
-  %tmp4 = load <4 x float>, <4 x float>* %tmp3, align 4
-  %tmp5 = fsub <4 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-  %tmp6 = bitcast float* %tmp2 to <4 x float>*
-  store <4 x float> %tmp5, <4 x float>* %tmp6, align 4
-  %tmp7 = add i64 %tmp, 4
-  %tmp8 = icmp eq i64 %tmp7, 1024
-  br i1 %tmp8, label %bb9, label %bb1
-
-bb9:                                              ; preds = %bb1
-  ret void
-}
-
-define void @bcast_unfold_fsub_v8f64(double* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fsub_v8f64:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB39_1: # %bb1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %zmm0
-; CHECK-NEXT:    vaddpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; CHECK-NEXT:    vmovupd %zmm0, 8192(%rdi,%rax)
-; CHECK-NEXT:    addq $64, %rax
-; CHECK-NEXT:    jne .LBB39_1
-; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
-  %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
-  %tmp3 = bitcast double* %tmp2 to <8 x double>*
-  %tmp4 = load <8 x double>, <8 x double>* %tmp3, align 8
-  %tmp5 = fsub <8 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
-  %tmp6 = bitcast double* %tmp2 to <8 x double>*
-  store <8 x double> %tmp5, <8 x double>* %tmp6, align 8
-  %tmp7 = add i64 %tmp, 8
-  %tmp8 = icmp eq i64 %tmp7, 1024
-  br i1 %tmp8, label %bb9, label %bb1
-
-bb9:                                              ; preds = %bb1
-  ret void
-}
-
-define void @bcast_unfold_fsub_v4f64(double* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fsub_v4f64:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB40_1: # %bb1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %ymm0
-; CHECK-NEXT:    vaddpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; CHECK-NEXT:    vmovupd %ymm0, 8192(%rdi,%rax)
-; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    jne .LBB40_1
-; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
-  %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
-  %tmp3 = bitcast double* %tmp2 to <4 x double>*
-  %tmp4 = load <4 x double>, <4 x double>* %tmp3, align 8
-  %tmp5 = fsub <4 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
-  %tmp6 = bitcast double* %tmp2 to <4 x double>*
-  store <4 x double> %tmp5, <4 x double>* %tmp6, align 8
-  %tmp7 = add i64 %tmp, 4
-  %tmp8 = icmp eq i64 %tmp7, 1024
-  br i1 %tmp8, label %bb9, label %bb1
-
-bb9:                                              ; preds = %bb1
-  ret void
-}
-
-define void @bcast_unfold_fsub_v2f64(double* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fsub_v2f64:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vmovapd {{.*#+}} xmm0 = [-2.0E+0,-2.0E+0]
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB41_1: # %bb1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vaddpd 8192(%rdi,%rax), %xmm0, %xmm1
-; CHECK-NEXT:    vmovupd %xmm1, 8192(%rdi,%rax)
-; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    jne .LBB41_1
-; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    retq
-bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
-  %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
-  %tmp3 = bitcast double* %tmp2 to <2 x double>*
-  %tmp4 = load <2 x double>, <2 x double>* %tmp3, align 8
-  %tmp5 = fsub <2 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00>
-  %tmp6 = bitcast double* %tmp2 to <2 x double>*
-  store <2 x double> %tmp5, <2 x double>* %tmp6, align 8
-  %tmp7 = add i64 %tmp, 2
-  %tmp8 = icmp eq i64 %tmp7, 1024
-  br i1 %tmp8, label %bb9, label %bb1
-
-bb9:                                              ; preds = %bb1
-  ret void
-}
-
-define void @bcast_unfold_fmul_v16f32(float* nocapture %arg) {
-; CHECK-LABEL: bcast_unfold_fmul_v16f32:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB42_1: # %bb1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %zmm0
-; CHECK-NEXT:    vaddps %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovups %zmm0, 4096(%rdi,%rax)
-; CHECK-NEXT:    addq $64, %rax
-; CHECK-NEXT:    jne .LBB42_1
-; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
-bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i64 [ 0, %bb ], [ %tmp7, %bb1 ]
-  %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
-  %tmp3 = bitcast float* %tmp2 to <16 x float>*
-  %tmp4 = load <16 x float>, <16 x float>* %tmp3, align 4
-  %tmp5 = fmul <16 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp5 = fmul <16 x float> %tmp4, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   %tmp6 = bitcast float* %tmp2 to <16 x float>*
   store <16 x float> %tmp5, <16 x float>* %tmp6, align 4
   %tmp7 = add i64 %tmp, 16
@@ -1478,13 +1276,13 @@ define void @bcast_unfold_fmul_v8f32(float* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB43_1: # %bb1
+; CHECK-NEXT:  .LBB37_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %ymm0
-; CHECK-NEXT:    vaddps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vmulps {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    jne .LBB43_1
+; CHECK-NEXT:    jne .LBB37_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1496,7 +1294,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
   %tmp3 = bitcast float* %tmp2 to <8 x float>*
   %tmp4 = load <8 x float>, <8 x float>* %tmp3, align 4
-  %tmp5 = fmul <8 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp5 = fmul <8 x float> %tmp4, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   %tmp6 = bitcast float* %tmp2 to <8 x float>*
   store <8 x float> %tmp5, <8 x float>* %tmp6, align 4
   %tmp7 = add i64 %tmp, 8
@@ -1512,13 +1310,13 @@ define void @bcast_unfold_fmul_v4f32(float* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB44_1: # %bb1
+; CHECK-NEXT:  .LBB38_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %xmm0
-; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmulps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    jne .LBB44_1
+; CHECK-NEXT:    jne .LBB38_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    retq
 bb:
@@ -1529,7 +1327,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
   %tmp3 = bitcast float* %tmp2 to <4 x float>*
   %tmp4 = load <4 x float>, <4 x float>* %tmp3, align 4
-  %tmp5 = fmul <4 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp5 = fmul <4 x float> %tmp4, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
   %tmp6 = bitcast float* %tmp2 to <4 x float>*
   store <4 x float> %tmp5, <4 x float>* %tmp6, align 4
   %tmp7 = add i64 %tmp, 4
@@ -1545,13 +1343,13 @@ define void @bcast_unfold_fmul_v8f64(double* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB45_1: # %bb1
+; CHECK-NEXT:  .LBB39_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %zmm0
-; CHECK-NEXT:    vaddpd %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vmulpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovupd %zmm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
-; CHECK-NEXT:    jne .LBB45_1
+; CHECK-NEXT:    jne .LBB39_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1563,7 +1361,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
   %tmp3 = bitcast double* %tmp2 to <8 x double>*
   %tmp4 = load <8 x double>, <8 x double>* %tmp3, align 8
-  %tmp5 = fmul <8 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %tmp5 = fmul <8 x double> %tmp4, <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>
   %tmp6 = bitcast double* %tmp2 to <8 x double>*
   store <8 x double> %tmp5, <8 x double>* %tmp6, align 8
   %tmp7 = add i64 %tmp, 8
@@ -1579,13 +1377,13 @@ define void @bcast_unfold_fmul_v4f64(double* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB46_1: # %bb1
+; CHECK-NEXT:  .LBB40_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %ymm0
-; CHECK-NEXT:    vaddpd %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vmulpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovupd %ymm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    jne .LBB46_1
+; CHECK-NEXT:    jne .LBB40_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1597,7 +1395,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
   %tmp3 = bitcast double* %tmp2 to <4 x double>*
   %tmp4 = load <4 x double>, <4 x double>* %tmp3, align 8
-  %tmp5 = fmul <4 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %tmp5 = fmul <4 x double> %tmp4, <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>
   %tmp6 = bitcast double* %tmp2 to <4 x double>*
   store <4 x double> %tmp5, <4 x double>* %tmp6, align 8
   %tmp7 = add i64 %tmp, 4
@@ -1612,14 +1410,14 @@ define void @bcast_unfold_fmul_v2f64(double* nocapture %arg) {
 ; CHECK-LABEL: bcast_unfold_fmul_v2f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
+; CHECK-NEXT:    vmovapd {{.*#+}} xmm0 = [3.0E+0,3.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB47_1: # %bb1
+; CHECK-NEXT:  .LBB41_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %xmm0
-; CHECK-NEXT:    vaddpd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovupd %xmm0, 8192(%rdi,%rax)
+; CHECK-NEXT:    vmulpd 8192(%rdi,%rax), %xmm0, %xmm1
+; CHECK-NEXT:    vmovupd %xmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    jne .LBB47_1
+; CHECK-NEXT:    jne .LBB41_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    retq
 bb:
@@ -1630,7 +1428,7 @@ bb1:                                              ; preds = %bb1, %bb
   %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
   %tmp3 = bitcast double* %tmp2 to <2 x double>*
   %tmp4 = load <2 x double>, <2 x double>* %tmp3, align 8
-  %tmp5 = fmul <2 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00>
+  %tmp5 = fmul <2 x double> %tmp4, <double 3.000000e+00, double 3.000000e+00>
   %tmp6 = bitcast double* %tmp2 to <2 x double>*
   store <2 x double> %tmp5, <2 x double>* %tmp6, align 8
   %tmp7 = add i64 %tmp, 2
@@ -1646,13 +1444,13 @@ define void @bcast_unfold_fdiv_v16f32(float* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB48_1: # %bb1
+; CHECK-NEXT:  .LBB42_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %zmm0
 ; CHECK-NEXT:    vdivps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
-; CHECK-NEXT:    jne .LBB48_1
+; CHECK-NEXT:    jne .LBB42_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1680,13 +1478,13 @@ define void @bcast_unfold_fdiv_v8f32(float* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB49_1: # %bb1
+; CHECK-NEXT:  .LBB43_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %ymm0
 ; CHECK-NEXT:    vdivps {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    jne .LBB49_1
+; CHECK-NEXT:    jne .LBB43_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1714,13 +1512,13 @@ define void @bcast_unfold_fdiv_v4f32(float* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB50_1: # %bb1
+; CHECK-NEXT:  .LBB44_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %xmm0
 ; CHECK-NEXT:    vdivps {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, 4096(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    jne .LBB50_1
+; CHECK-NEXT:    jne .LBB44_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    retq
 bb:
@@ -1747,13 +1545,13 @@ define void @bcast_unfold_fdiv_v8f64(double* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB51_1: # %bb1
+; CHECK-NEXT:  .LBB45_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %zmm0
 ; CHECK-NEXT:    vdivpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovupd %zmm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
-; CHECK-NEXT:    jne .LBB51_1
+; CHECK-NEXT:    jne .LBB45_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1781,13 +1579,13 @@ define void @bcast_unfold_fdiv_v4f64(double* nocapture %arg) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB52_1: # %bb1
+; CHECK-NEXT:  .LBB46_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %ymm0
 ; CHECK-NEXT:    vdivpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovupd %ymm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    jne .LBB52_1
+; CHECK-NEXT:    jne .LBB46_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -1816,13 +1614,13 @@ define void @bcast_unfold_fdiv_v2f64(double* nocapture %arg) {
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
 ; CHECK-NEXT:    vmovapd {{.*#+}} xmm0 = [2.0E+0,2.0E+0]
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB53_1: # %bb1
+; CHECK-NEXT:  .LBB47_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %xmm1
 ; CHECK-NEXT:    vdivpd %xmm0, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovupd %xmm1, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
-; CHECK-NEXT:    jne .LBB53_1
+; CHECK-NEXT:    jne .LBB47_1
 ; CHECK-NEXT:  # %bb.2: # %bb9
 ; CHECK-NEXT:    retq
 bb:

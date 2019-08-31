@@ -2775,6 +2775,9 @@ public:
                                              Expr *Value,
                                              bool AllowNRVO = true);
 
+  bool CanPerformAggregateInitializationForOverloadResolution(
+      const InitializedEntity &Entity, InitListExpr *From);
+
   bool CanPerformCopyInitialization(const InitializedEntity &Entity,
                                     ExprResult Init);
   ExprResult PerformCopyInitialization(const InitializedEntity &Entity,
@@ -4633,6 +4636,10 @@ public:
                                       Expr *LiteralExpr);
 
   ExprResult ActOnInitList(SourceLocation LBraceLoc,
+                           MultiExprArg InitArgList,
+                           SourceLocation RBraceLoc);
+
+  ExprResult BuildInitList(SourceLocation LBraceLoc,
                            MultiExprArg InitArgList,
                            SourceLocation RBraceLoc);
 

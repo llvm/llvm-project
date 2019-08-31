@@ -2558,7 +2558,7 @@ bool blockEndIsUnreachable(const MachineBasicBlock &MBB,
              MBB.succ_begin(), MBB.succ_end(),
              [](const MachineBasicBlock *Succ) { return Succ->isEHPad(); }) &&
          std::all_of(MBBI, MBB.end(), [](const MachineInstr &MI) {
-           return MI.isMetaInstruction();
+           return MI.isMetaInstruction() || MI.getOpcode() == X86::SEH_NoReturn;
          });
 }
 

@@ -42,7 +42,7 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN64-LABEL: test_CallargReti1:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incb %al
 ; WIN64-NEXT:    movzbl %al, %eax
@@ -110,7 +110,7 @@ define x86_regcallcc i8 @test_CallargReti8(i8 %a)  {
 ; WIN64-LABEL: test_CallargReti8:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incb %al
 ; WIN64-NEXT:    movzbl %al, %eax
@@ -179,7 +179,7 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; WIN64-LABEL: test_CallargReti16:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    callq test_argReti16
@@ -245,7 +245,7 @@ define x86_regcallcc i32 @test_CallargReti32(i32 %a)  {
 ; WIN64-LABEL: test_CallargReti32:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    callq test_argReti32
@@ -312,7 +312,7 @@ define x86_regcallcc i64 @test_CallargReti64(i64 %a)  {
 ; WIN64-LABEL: test_CallargReti64:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incq %rax
 ; WIN64-NEXT:    callq test_argReti64
@@ -379,11 +379,11 @@ define x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; WIN64-LABEL: test_CallargRetFloat:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    subq $16, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 16
 ; WIN64-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
-; WIN64-NEXT:    .seh_savexmm 8, 0
+; WIN64-NEXT:    .seh_savexmm %xmm8, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
 ; WIN64-NEXT:    vaddss %xmm8, %xmm0, %xmm0
@@ -461,11 +461,11 @@ define x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; WIN64-LABEL: test_CallargRetDouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    subq $16, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 16
 ; WIN64-NEXT:    vmovaps %xmm8, (%rsp) # 16-byte Spill
-; WIN64-NEXT:    .seh_savexmm 8, 0
+; WIN64-NEXT:    .seh_savexmm %xmm8, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
 ; WIN64-NEXT:    vaddsd %xmm8, %xmm0, %xmm0
@@ -538,7 +538,7 @@ define x86_regcallcc x86_fp80 @test_CallargRetf80(x86_fp80 %a)  {
 ; WIN64-LABEL: test_CallargRetf80:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    fadd %st, %st(0)
 ; WIN64-NEXT:    callq test_argRetf80
@@ -602,7 +602,7 @@ define x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
 ; WIN64-LABEL: test_CallargRetPointer:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    callq test_argRetPointer
@@ -684,11 +684,11 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i1> %x, <4 x i32> 
 ; WIN64-LABEL: test_CallargRet128Vector:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    subq $32, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 32
 ; WIN64-NEXT:    vmovaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; WIN64-NEXT:    .seh_savexmm 8, 16
+; WIN64-NEXT:    .seh_savexmm %xmm8, 16
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovdqa %xmm1, %xmm8
 ; WIN64-NEXT:    vpslld $31, %xmm0, %xmm1
@@ -780,7 +780,7 @@ define x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i1> %x, <8 x i32> 
 ; WIN64-LABEL: test_CallargRet256Vector:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    subq $80, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 80
 ; WIN64-NEXT:    .seh_endprologue
@@ -868,7 +868,7 @@ define x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x, <16 x i3
 ; WIN64-LABEL: test_CallargRet512Vector:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsp
-; WIN64-NEXT:    .seh_pushreg 4
+; WIN64-NEXT:    .seh_pushreg %rsp
 ; WIN64-NEXT:    subq $176, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 176
 ; WIN64-NEXT:    .seh_endprologue

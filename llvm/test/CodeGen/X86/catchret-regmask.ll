@@ -6,6 +6,7 @@ target triple = "x86_64-pc-windows-msvc"
 declare i32 @__CxxFrameHandler3(...)
 declare void @throw() noreturn uwtable
 declare i8* @getval()
+declare void @llvm.trap()
 
 define i8* @reload_out_of_pad(i8* %arg) #0 personality i32 (...)* @__CxxFrameHandler3 {
 assertPassed:
@@ -19,6 +20,7 @@ catch:
   ; This block *must* appear after the catchret to test the bug.
   ; FIXME: Make this an MIR test so we can control MBB layout.
 unreachable:
+  call void @llvm.trap()
   unreachable
 
 catch.dispatch:
@@ -35,7 +37,7 @@ return:
 ; CHECK: movq -[[arg_slot]](%rbp), %rax # 8-byte Reload
 ; CHECK: retq
 
-; CHECK: "?catch$3@?0?reload_out_of_pad@4HA":
+; CHECK: "?catch${{[0-9]+}}@?0?reload_out_of_pad@4HA":
 ; CHECK-NOT: Reload
 ; CHECK: retq
 
@@ -50,6 +52,7 @@ catch:
   catchret from %cp to label %return
 
 unreachable:
+  call void @llvm.trap()
   unreachable
 
 catch.dispatch:
@@ -65,7 +68,7 @@ return:
 ; CHECK: movq -[[val_slot:[0-9]+]](%rbp), %rax # 8-byte Reload
 ; CHECK: retq
 
-; CHECK: "?catch$3@?0?spill_in_pad@4HA":
+; CHECK: "?catch${{[0-9]+}}@?0?spill_in_pad@4HA":
 ; CHECK: callq getval
 ; CHECK: movq %rax, -[[val_slot]](%rbp) # 8-byte Spill
 ; CHECK: retq

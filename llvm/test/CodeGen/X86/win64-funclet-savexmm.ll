@@ -79,18 +79,18 @@ try.cont:                                         ; preds = %catchret.dest, %inv
 ; CHECK: # %catch
 ; CHECK: movq    %rdx, 16(%rsp)
 ; CHECK: pushq   %rbp
-; CHECK: .seh_pushreg 5
+; CHECK: .seh_pushreg %rbp
 ; CHECK: pushq   %rbx
-; CHECK: .seh_pushreg 3
+; CHECK: .seh_pushreg %rbx
 ; CHECK: subq    $88, %rsp
 ; CHECK: .seh_stackalloc 88
 ; CHECK: leaq    112(%rdx), %rbp
 ; CHECK: vmovaps %xmm8, 48(%rsp)
-; CHECK: .seh_savexmm 8, 48
+; CHECK: .seh_savexmm %xmm8, 48
 ; CHECK: vmovaps %xmm7, 64(%rsp)
-; CHECK: .seh_savexmm 7, 64
+; CHECK: .seh_savexmm %xmm7, 64
 ; CHECK: vmovaps %xmm6, 80(%rsp)
-; CHECK: .seh_savexmm 6, 80
+; CHECK: .seh_savexmm %xmm6, 80
 ; CHECK: .seh_endprologue
 ; CHECK: movl   -{{[0-9]+}}(%rbp), %ecx
 ; CHECK: vmovaps 80(%rsp), %xmm6

@@ -24,10 +24,9 @@ catch:
 ; WIN64: nop
 ; WIN64: addq ${{[0-9]+}}, %rsp
 ; WIN64: retq
-; Check for 'ud2' after noreturn call
+; Check for 'int3' after noreturn call.
 ; WIN64: callq _Unwind_Resume
-; WIN64-NEXT: ud2
-; WIN64: .seh_endproc
+; WIN64-NEXT: int3
 
 
 ; Check it still works when blocks are reordered.

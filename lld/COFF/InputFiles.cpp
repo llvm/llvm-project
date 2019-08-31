@@ -73,10 +73,6 @@ static void checkAndSetWeakAlias(SymbolTable *symtab, InputFile *f,
   }
 }
 
-static bool ignoredSymbolName(StringRef name) {
-  return name == "@feat.00" || name == "@comp.id";
-}
-
 ArchiveFile::ArchiveFile(MemoryBufferRef m) : InputFile(ArchiveKind, m) {}
 
 void ArchiveFile::parse() {
@@ -85,7 +81,7 @@ void ArchiveFile::parse() {
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols())
-    symtab->addLazyArchive(this, sym);
+    symtab->addLazy(this, sym);
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -118,49 +114,6 @@ std::vector<MemoryBufferRef> getArchiveMembers(Archive *file) {
     fatal(file->getFileName() +
           ": Archive::children failed: " + toString(std::move(err)));
   return v;
-}
-
-void LazyObjFile::fetch() {
-  if (mb.getBuffer().empty())
-    return;
-
-  InputFile *file;
-  if (isBitcode(mb))
-    file = make<BitcodeFile>(mb, "", 0, std::move(symbols));
-  else
-    file = make<ObjFile>(mb, std::move(symbols));
-  mb = {};
-  symtab->addFile(file);
-}
-
-void LazyObjFile::parse() {
-  if (isBitcode(this->mb)) {
-    // Bitcode file.
-    std::unique_ptr<lto::InputFile> obj =
-        CHECK(lto::InputFile::create(this->mb), this);
-    for (const lto::InputFile::Symbol &sym : obj->symbols()) {
-      if (!sym.isUndefined())
-        symtab->addLazyObject(this, sym.getName());
-    }
-    return;
-  }
-
-  // Native object file.
-  COFFObjectFile *coffObj =
-      dyn_cast<COFFObjectFile>(CHECK(createBinary(mb), this).get());
-  uint32_t numSymbols = coffObj->getNumberOfSymbols();
-  for (uint32_t i = 0; i < numSymbols; ++i) {
-    COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
-    if (coffSym.isUndefined() || !coffSym.isExternal() ||
-        coffSym.isWeakExternal())
-      continue;
-    StringRef name;
-    coffObj->getSymbolName(coffSym, name);
-    if (coffSym.isAbsolute() && ignoredSymbolName(name))
-      continue;
-    symtab->addLazyObject(this, name);
-    i += coffSym.getNumberOfAuxSymbols();
-  }
 }
 
 void ObjFile::parse() {
@@ -573,11 +526,13 @@ Optional<Symbol *> ObjFile::createDefined(
   if (sym.isAbsolute()) {
     StringRef name = getName();
 
-    if (name == "@feat.00")
-      feat00Flags = sym.getValue();
     // Skip special symbols.
-    if (ignoredSymbolName(name))
+    if (name == "@comp.id")
       return nullptr;
+    if (name == "@feat.00") {
+      feat00Flags = sym.getValue();
+      return nullptr;
+    }
 
     if (sym.isExternal())
       return symtab->addAbsolute(name, sym);
@@ -827,9 +782,8 @@ void ImportFile::parse() {
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive,
-                         std::vector<Symbol *> &&symbols)
-    : InputFile(BitcodeKind, mb), symbols(std::move(symbols)) {
+                         uint64_t offsetInArchive)
+    : InputFile(BitcodeKind, mb) {
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());

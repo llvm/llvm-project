@@ -35,8 +35,9 @@ void X86WinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   MCStreamer::EmitWinEHHandlerData(Loc);
 
   // We have to emit the unwind info now, because this directive
-  // actually switches to the .xdata section!
-  EHStreamer.EmitUnwindInfo(*this, getCurrentWinFrameInfo());
+  // actually switches to the .xdata section.
+  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo())
+    EHStreamer.EmitUnwindInfo(*this, CurFrame);
 }
 
 void X86WinCOFFStreamer::EmitWindowsUnwindTables() {

@@ -116,6 +116,8 @@ public:
 
   const StringRef getName() const { return Name; }
 
+  bool isValid() const { return Entry->isValid(); }
+
   const FileEntry &getFileEntry() const { return *Entry; }
 
   off_t getSize() const { return Entry->getSize(); }
@@ -127,6 +129,13 @@ public:
   }
 
   time_t getModificationTime() const { return Entry->getModificationTime(); }
+
+  friend bool operator==(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return LHS.Entry == RHS.Entry && LHS.Name == RHS.Name;
+  }
+  friend bool operator!=(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return !(LHS == RHS);
+  }
 
 private:
   StringRef Name;
@@ -157,6 +166,10 @@ class FileManager : public RefCountedBase<FileManager> {
   SmallVector<std::unique_ptr<DirectoryEntry>, 4> VirtualDirectoryEntries;
   /// The virtual files that we have allocated.
   SmallVector<std::unique_ptr<FileEntry>, 4> VirtualFileEntries;
+
+  /// A set of files that bypass the maps and uniquing.  They can have
+  /// conflicting filenames.
+  SmallVector<std::unique_ptr<FileEntry>, 0> BypassFileEntries;
 
   /// A cache that maps paths to directory entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
@@ -314,6 +327,16 @@ public:
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 
+  /// Retrieve a FileEntry that bypasses VFE, which is expected to be a virtual
+  /// file entry, to access the real file.  The returned FileEntry will have
+  /// the same filename as FE but a different identity and its own stat.
+  ///
+  /// This should be used only for rare error recovery paths because it
+  /// bypasses all mapping and uniquing, blindly creating a new FileEntry.
+  /// There is no attempt to deduplicate these; if you bypass the same file
+  /// twice, you get two new file entries.
+  llvm::Optional<FileEntryRef> getBypassFile(FileEntryRef VFE);
+
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
@@ -352,11 +375,6 @@ public:
   /// file to the corresponding FileEntry pointer.
   void GetUniqueIDMapping(
                     SmallVectorImpl<const FileEntry *> &UIDToFiles) const;
-
-  /// Modifies the size and modification time of a previously created
-  /// FileEntry. Use with caution.
-  static void modifyFileEntry(FileEntry *File, off_t Size,
-                              time_t ModificationTime);
 
   /// Retrieve the canonical name for a given directory.
   ///

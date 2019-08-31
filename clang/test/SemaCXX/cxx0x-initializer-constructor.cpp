@@ -406,6 +406,6 @@ namespace PR11410 {
     0, 1
   }; // expected-error {{ambiguous}} expected-note {{in implicit initialization of array element 2}}
   C c2[3] = {
-    [0] = 1, [2] = 3
+    [0] = 1, [2] = 3 // expected-warning {{C99}}
   }; // expected-error {{ambiguous}} expected-note {{in implicit initialization of array element 1}}
 }

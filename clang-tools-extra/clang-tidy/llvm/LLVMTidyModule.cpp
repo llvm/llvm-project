@@ -13,6 +13,7 @@
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
+#include "PreferRegisterOverUnsignedCheck.h"
 #include "TwineLocalCheck.h"
 
 namespace clang {
@@ -28,6 +29,8 @@ public:
         "llvm-namespace-comment");
     CheckFactories.registerCheck<PreferIsaOrDynCastInConditionalsCheck>(
         "llvm-prefer-isa-or-dyn-cast-in-conditionals");
+    CheckFactories.registerCheck<PreferRegisterOverUnsignedCheck>(
+        "llvm-prefer-register-over-unsigned");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
   }
 };

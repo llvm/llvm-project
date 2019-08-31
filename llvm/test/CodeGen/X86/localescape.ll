@@ -77,7 +77,7 @@ define void @alloc_func(i32 %n) {
 ; X64: subq    $16, %rsp
 ; X64: .seh_stackalloc 16
 ; X64: leaq    16(%rsp), %rbp
-; X64: .seh_setframe 5, 16
+; X64: .seh_setframe %rbp, 16
 ; X64: .set .Lalloc_func$frame_escape_0, -4
 ; X64: .set .Lalloc_func$frame_escape_1, -12
 ; X64: movl $42, -4(%rbp)
