@@ -326,6 +326,10 @@ public:
   /// \brief Return the profile format.
   SampleProfileFormat getFormat() { return Format; }
 
+  virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
+    return nullptr;
+  };
+
 protected:
   /// Map every function to its associated profile.
   ///
@@ -477,6 +481,7 @@ public:
 class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
+  std::unique_ptr<ProfileSymbolList> ProfSymList;
   std::error_code readSecHdrTableEntry();
   std::error_code readSecHdrTable();
   virtual std::error_code readHeader() override;
@@ -498,6 +503,7 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
                                          SecType Type) override;
+  std::error_code readProfileSymbolList();
 
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -506,6 +512,10 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+  virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
+    return std::move(ProfSymList);
+  };
 };
 
 class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {

@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=14 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -90,6 +90,8 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 ; <label>:3:                                      ; preds = %1
 ; ATTRIBUTOR: %4 = tail call i8* @f2(i8* nonnull align 8 dereferenceable(1) @a1)
   %4 = tail call i8* @f2(i8* nonnull @a1)
+; ATTRIBUTOR: %l = load i8, i8* %4, align 8
+  %l = load i8, i8* %4
   br label %5
 
 ; <label>:5:                                      ; preds = %1, %3

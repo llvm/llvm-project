@@ -570,8 +570,8 @@ private:
 struct Attributor {
   /// Constructor
   ///
-  /// \param InformationCache Cache to hold various information accessible for
-  ///                         the abstract attributes.
+  /// \param InfoCache Cache to hold various information accessible for
+  ///                  the abstract attributes.
   /// \param DepRecomputeInterval Number of iterations until the dependences
   ///                             between abstract attributes are recomputed.
   Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval)
@@ -629,6 +629,11 @@ struct Attributor {
     // No matching attribute found, create one.
     auto &AA = AAType::createForPosition(IRP, *this);
     registerAA(AA);
+
+    // Bootstrap the new attribute with an initial update to propagate
+    // information, e.g., function -> call site.
+    AA.update(*this);
+
     if (TrackDependence && AA.getState().isValidState())
       QueryMap[&AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
     return AA;

@@ -289,6 +289,9 @@ def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDT_X86WIN_ALLOCA,
                           [SDNPHasChain, SDNPOutGlue]>;
 
+def X86SehNoReturn : SDNode<"X86ISD::SEH_NORETURN", SDTX86Void,
+                            [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+
 def X86SegAlloca : SDNode<"X86ISD::SEG_ALLOCA", SDT_X86SEG_ALLOCA,
                           [SDNPHasChain]>;
 

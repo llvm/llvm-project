@@ -78,6 +78,13 @@ static cl::opt<int> ExperimentalPrefLoopAlignment(
              " of the loop header PC will be 0)."),
     cl::Hidden);
 
+// Added in 10.0.
+static cl::opt<bool> EnableOldKNLABI(
+    "x86-enable-old-knl-abi", cl::init(false),
+    cl::desc("Enables passing v32i16 and v64i8 in 2 YMM registers instead of "
+             "one ZMM register on AVX512F, but not AVX512BW targets."),
+    cl::Hidden);
+
 static cl::opt<bool> MulConstantOptimization(
     "mul-constant-optimization", cl::init(true),
     cl::desc("Replace 'mul x, Const' with more effective instructions like "
@@ -1960,6 +1967,10 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                      EVT VT) const {
   if (VT == MVT::v32i1 && Subtarget.hasAVX512() && !Subtarget.hasBWI())
     return MVT::v32i8;
+  // FIXME: Should we just make these types legal and custom split operations?
+  if ((VT == MVT::v32i16 || VT == MVT::v64i8) &&
+      Subtarget.hasAVX512() && !Subtarget.hasBWI() && !EnableOldKNLABI)
+    return MVT::v16i32;
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -1967,6 +1978,10 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                           CallingConv::ID CC,
                                                           EVT VT) const {
   if (VT == MVT::v32i1 && Subtarget.hasAVX512() && !Subtarget.hasBWI())
+    return 1;
+  // FIXME: Should we just make these types legal and custom split operations?
+  if ((VT == MVT::v32i16 || VT == MVT::v64i8) &&
+      Subtarget.hasAVX512() && !Subtarget.hasBWI() && !EnableOldKNLABI)
     return 1;
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
@@ -4111,6 +4126,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                DAG.getIntPtrConstant(NumBytesForCalleeToPop, dl,
                                                      true),
                                InFlag, dl);
+    InFlag = Chain.getValue(1);
+  }
+
+  // Insert a pseudo instruction after noreturn calls that expands to int3 if
+  // this would be the last instruction in the funclet. If the return address of
+  // a call refers to the last PC of a function, the Windows SEH machinery can
+  // get confused about which function or scope the return address belongs to.
+  // MSVC inserts int3 after every noreturn function call, but LLVM only places
+  // them when it would cause a problem otherwise.
+  if (CLI.DoesNotReturn && Subtarget.isTargetWin64()) {
+    Chain = DAG.getNode(X86ISD::SEH_NORETURN, dl, NodeTys, Chain, InFlag);
     InFlag = Chain.getValue(1);
   }
 
@@ -28696,6 +28722,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VASTART_SAVE_XMM_REGS: return "X86ISD::VASTART_SAVE_XMM_REGS";
   case X86ISD::VAARG_64:           return "X86ISD::VAARG_64";
   case X86ISD::WIN_ALLOCA:         return "X86ISD::WIN_ALLOCA";
+  case X86ISD::SEH_NORETURN:       return "X86ISD::SEH_NORETURN";
   case X86ISD::MEMBARRIER:         return "X86ISD::MEMBARRIER";
   case X86ISD::MFENCE:             return "X86ISD::MFENCE";
   case X86ISD::SEG_ALLOCA:         return "X86ISD::SEG_ALLOCA";

@@ -464,12 +464,7 @@ toELFSymbols(NameToIdxMap &SN2I, ArrayRef<ELFYAML::Symbol> Symbols,
     }
     // else Symbol.st_shndex == SHN_UNDEF (== 0), since it was zero'd earlier.
     Symbol.st_value = Sym.Value;
-
-    if (Sym.Other)
-      Symbol.st_other = *Sym.Other;
-    else if (Sym.StOther)
-      Symbol.st_other = *Sym.StOther;
-
+    Symbol.st_other = Sym.Other ? *Sym.Other : 0;
     Symbol.st_size = Sym.Size;
   }
 

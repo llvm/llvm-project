@@ -54,16 +54,10 @@ return:
   ret i32 %ret
 }
 
-define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) local_unnamed_addr #0 {
+define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-LABEL: foo:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mflr r0
-; CHECK-P9-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-P9-NEXT:    .cfi_offset lr, 16
-; CHECK-P9-NEXT:    .cfi_offset r27, -40
-; CHECK-P9-NEXT:    .cfi_offset r28, -32
-; CHECK-P9-NEXT:    .cfi_offset r29, -24
-; CHECK-P9-NEXT:    .cfi_offset r30, -16
 ; CHECK-P9-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
 ; CHECK-P9-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-P9-NEXT:    std r29, -24(r1) # 8-byte Folded Spill

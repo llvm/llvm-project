@@ -684,16 +684,10 @@ define <64 x i8> @test_v64i8(<64 x i8>* %V) {
 ; AVXONLY-NEXT:    vmovaps 32(%rdi), %ymm1
 ; AVXONLY-NEXT:    retq
 ;
-; KNL-LABEL: test_v64i8:
-; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vmovaps (%rdi), %ymm0
-; KNL-NEXT:    vmovaps 32(%rdi), %ymm1
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test_v64i8:
-; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
-; SKX-NEXT:    retq
+; AVX512-LABEL: test_v64i8:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-NEXT:    retq
 entry:
   %0 = load <64 x i8>, <64 x i8>* %V, align 64
   ret <64 x i8> %0
@@ -714,16 +708,10 @@ define <32 x i16> @test_v32i16(<32 x i16>* %V) {
 ; AVXONLY-NEXT:    vmovaps 32(%rdi), %ymm1
 ; AVXONLY-NEXT:    retq
 ;
-; KNL-LABEL: test_v32i16:
-; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vmovaps (%rdi), %ymm0
-; KNL-NEXT:    vmovaps 32(%rdi), %ymm1
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test_v32i16:
-; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
-; SKX-NEXT:    retq
+; AVX512-LABEL: test_v32i16:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-NEXT:    retq
 entry:
   %0 = load <32 x i16>, <32 x i16>* %V, align 64
   ret <32 x i16> %0
@@ -792,16 +780,10 @@ define <64 x i8> @test_v64i8_unaligned(<64 x i8>* %V) {
 ; AVXONLY-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVXONLY-NEXT:    retq
 ;
-; KNL-LABEL: test_v64i8_unaligned:
-; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vmovups (%rdi), %ymm0
-; KNL-NEXT:    vmovups 32(%rdi), %ymm1
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test_v64i8_unaligned:
-; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vmovdqu64 (%rdi), %zmm0
-; SKX-NEXT:    retq
+; AVX512-LABEL: test_v64i8_unaligned:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512-NEXT:    retq
 entry:
   %0 = load <64 x i8>, <64 x i8>* %V, align 4
   ret <64 x i8> %0
@@ -822,16 +804,10 @@ define <32 x i16> @test_v32i16_unaligned(<32 x i16>* %V) {
 ; AVXONLY-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVXONLY-NEXT:    retq
 ;
-; KNL-LABEL: test_v32i16_unaligned:
-; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vmovups (%rdi), %ymm0
-; KNL-NEXT:    vmovups 32(%rdi), %ymm1
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test_v32i16_unaligned:
-; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vmovdqu64 (%rdi), %zmm0
-; SKX-NEXT:    retq
+; AVX512-LABEL: test_v32i16_unaligned:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512-NEXT:    retq
 entry:
   %0 = load <32 x i16>, <32 x i16>* %V, align 4
   ret <32 x i16> %0

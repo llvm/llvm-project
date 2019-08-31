@@ -93,6 +93,10 @@ Changes to the X86 Target
   now stored in the lower bits of an xmm register and the upper bits are
   undefined. Previously the elements were spread apart with undefined bits in
   between them.
+* v32i8 and v64i8 vectors with AVX512F enabled, but AVX512BW disabled will now
+  be passed in ZMM registers for calls and returns. Previously they were passed
+  in two YMM registers. Old behavior can be enabled by passing
+  -x86-enable-old-knl-abi
 
 Changes to the AMDGPU Target
 -----------------------------

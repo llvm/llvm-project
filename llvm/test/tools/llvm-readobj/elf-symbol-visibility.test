@@ -39,17 +39,17 @@ FileHeader:
   Machine: EM_386
 Symbols:
   - Name: default
-    Visibility: STV_DEFAULT
+    Other: [ STV_DEFAULT ]
     Binding: STB_GLOBAL
   - Name: internal
-    Visibility: STV_INTERNAL
+    Other: [ STV_INTERNAL ]
     Binding: STB_GLOBAL
   - Name: hidden
-    Visibility: STV_HIDDEN
+    Other: [ STV_HIDDEN ]
     Binding: STB_GLOBAL
   - Name: protected
-    Visibility: STV_PROTECTED
+    Other: [ STV_PROTECTED ]
     Binding: STB_GLOBAL
   - Name: other
     Binding: STB_GLOBAL
-    StOther: 4
+    Other: [ 4 ]

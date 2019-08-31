@@ -25,6 +25,11 @@ def O : JoinedOrSeparate<["-"], "O">,
         Alias<output_target>,
         HelpText<"Alias for --output-target">;
 
+defm new_symbol_visibility : Eq<"new-symbol-visibility", "Visibility of "
+                                "symbols generated for binary input or added"
+                                " with --add-symbol unless otherwise"
+                                " specified. The default value is 'default'.">;
+
 def compress_debug_sections : Flag<["--"], "compress-debug-sections">;
 def compress_debug_sections_eq
     : Joined<["--"], "compress-debug-sections=">,

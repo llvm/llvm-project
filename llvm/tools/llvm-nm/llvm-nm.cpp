@@ -1099,7 +1099,7 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
 
       Expected<StringRef> NameOrErr = (*SecIOrErr)->getName();
       if (!NameOrErr) {
-        consumeError(SecIOrErr.takeError());
+        consumeError(NameOrErr.takeError());
         return '?';
       }
       SecName = *NameOrErr;

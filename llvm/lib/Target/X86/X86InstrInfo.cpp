@@ -3184,25 +3184,6 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(isKill));
 }
 
-void X86InstrInfo::storeRegToAddr(
-    MachineFunction &MF, unsigned SrcReg, bool isKill,
-    SmallVectorImpl<MachineOperand> &Addr, const TargetRegisterClass *RC,
-    ArrayRef<MachineMemOperand *> MMOs,
-    SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-  bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
-  unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
-  DebugLoc DL;
-  MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc));
-  for (unsigned i = 0, e = Addr.size(); i != e; ++i)
-    MIB.add(Addr[i]);
-  MIB.addReg(SrcReg, getKillRegState(isKill));
-  MIB.setMemRefs(MMOs);
-  NewMIs.push_back(MIB);
-}
-
-
 void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         unsigned DestReg, int FrameIdx,
@@ -3215,23 +3196,6 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       RI.canRealignStack(MF);
   unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
   addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx);
-}
-
-void X86InstrInfo::loadRegFromAddr(
-    MachineFunction &MF, unsigned DestReg,
-    SmallVectorImpl<MachineOperand> &Addr, const TargetRegisterClass *RC,
-    ArrayRef<MachineMemOperand *> MMOs,
-    SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-  bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
-  unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
-  DebugLoc DL;
-  MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc), DestReg);
-  for (unsigned i = 0, e = Addr.size(); i != e; ++i)
-    MIB.add(Addr[i]);
-  MIB.setMemRefs(MMOs);
-  NewMIs.push_back(MIB);
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
@@ -5365,6 +5329,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
 
   const MCInstrDesc &MCID = get(Opc);
   const TargetRegisterClass *RC = getRegClass(MCID, Index, &RI, MF);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   // TODO: Check if 32-byte or greater accesses are slow too?
   if (!MI.hasOneMemOperand() && RC == &X86::VR128RegClass &&
       Subtarget.isUnalignedMem16Slow())
@@ -5391,7 +5356,16 @@ bool X86InstrInfo::unfoldMemoryOperand(
   // Emit the load instruction.
   if (UnfoldLoad) {
     auto MMOs = extractLoadMMOs(MI.memoperands(), MF);
-    loadRegFromAddr(MF, Reg, AddrOps, RC, MMOs, NewMIs);
+    unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
+    bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
+    unsigned Opc = getLoadRegOpcode(Reg, RC, isAligned, Subtarget);
+    DebugLoc DL;
+    MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc), Reg);
+    for (unsigned i = 0, e = AddrOps.size(); i != e; ++i)
+      MIB.add(AddrOps[i]);
+    MIB.setMemRefs(MMOs);
+    NewMIs.push_back(MIB);
+
     if (UnfoldStore) {
       // Address operands cannot be marked isKill.
       for (unsigned i = 1; i != 1 + X86::AddrNumOperands; ++i) {
@@ -5457,7 +5431,16 @@ bool X86InstrInfo::unfoldMemoryOperand(
   if (UnfoldStore) {
     const TargetRegisterClass *DstRC = getRegClass(MCID, 0, &RI, MF);
     auto MMOs = extractStoreMMOs(MI.memoperands(), MF);
-    storeRegToAddr(MF, Reg, true, AddrOps, DstRC, MMOs, NewMIs);
+    unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*DstRC), 16);
+    bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
+    unsigned Opc = getStoreRegOpcode(Reg, DstRC, isAligned, Subtarget);
+    DebugLoc DL;
+    MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc));
+    for (unsigned i = 0, e = AddrOps.size(); i != e; ++i)
+      MIB.add(AddrOps[i]);
+    MIB.addReg(Reg, RegState::Kill);
+    MIB.setMemRefs(MMOs);
+    NewMIs.push_back(MIB);
   }
 
   return true;

@@ -4,14 +4,12 @@
 
 @.str.28 = external unnamed_addr constant [69 x i8], align 1
 
-define void @print_res() unnamed_addr {
+define void @print_res() nounwind {
 ; CHECK-LABEL: print_res:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -128(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    clrldi 4, 3, 32

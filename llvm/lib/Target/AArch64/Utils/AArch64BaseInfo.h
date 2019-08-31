@@ -635,6 +635,10 @@ namespace AArch64II {
 
     /// MO_TAGGED - With MO_PAGE, indicates that the page includes a memory tag
     /// in bits 56-63.
+    /// On a FrameIndex operand, indicates that the underlying memory is tagged
+    /// with an unknown tag value (MTE); this needs to be lowered either to an
+    /// SP-relative load or store instruction (which do not check tags), or to
+    /// an LDG instruction to obtain the tag value.
     MO_TAGGED = 0x400,
   };
 } // end namespace AArch64II

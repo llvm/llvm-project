@@ -29,6 +29,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -153,6 +154,11 @@ public:
                            std::vector<Record*> &ItinDataList,
                            int &maxStages,
                            raw_ostream &OS);
+
+  // Emit code for a subset of itineraries.
+  void emitForItineraries(raw_ostream &OS,
+                          std::vector<Record *> &ProcItinList,
+                          std::string DFAName);
 
   void run(raw_ostream &OS);
 };
@@ -545,14 +551,6 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
   LLVM_DEBUG(dbgs() << "writeTableAndAPI\n");
   LLVM_DEBUG(dbgs() << "Total states: " << numStates << "\n");
 
-  OS << "namespace llvm {\n";
-
-  OS << "\n// Input format:\n";
-  OS << "#define DFA_MAX_RESTERMS        " << DFA_MAX_RESTERMS
-     << "\t// maximum AND'ed resource terms\n";
-  OS << "#define DFA_MAX_RESOURCES       " << DFA_MAX_RESOURCES
-     << "\t// maximum resource bits in one term\n";
-
   OS << "\n// " << TargetName << "DFAStateInputTable[][2] = "
      << "pairs of <Input, NextState> for all valid\n";
   OS << "//                           transitions.\n";
@@ -626,21 +624,7 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
   // Print out the index to the sentinel entry in StateInputTable
   OS << ValidTransitions << ", ";
   OS << "   // states " << (lastState+1) << ":" << numStates << "\n";
-
   OS << "};\n";
-  OS << "} // end namespace llvm\n";
-
-  //
-  // Emit DFA Packetizer tables if the target is a VLIW machine.
-  //
-  std::string SubTargetClassName = TargetName + "GenSubtargetInfo";
-  OS << "\n" << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
-  OS << "namespace llvm {\n";
-  OS << "DFAPacketizer *" << SubTargetClassName << "::"
-     << "createDFAPacketizer(const InstrItineraryData *IID) const {\n"
-     << "   return new DFAPacketizer(IID, " << TargetName
-     << "DFAStateInputTable, " << TargetName << "DFAStateEntryTable);\n}\n\n";
-  OS << "} // end namespace llvm\n";
 }
 
 //
@@ -837,10 +821,32 @@ int DFAPacketizerEmitter::collectAllInsnClasses(const std::string &ProcName,
 // Run the worklist algorithm to generate the DFA.
 //
 void DFAPacketizerEmitter::run(raw_ostream &OS) {
+  OS << "\n"
+     << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
+  OS << "namespace llvm {\n";
+
+  OS << "\n// Input format:\n";
+  OS << "#define DFA_MAX_RESTERMS        " << DFA_MAX_RESTERMS
+     << "\t// maximum AND'ed resource terms\n";
+  OS << "#define DFA_MAX_RESOURCES       " << DFA_MAX_RESOURCES
+     << "\t// maximum resource bits in one term\n";
+
   // Collect processor iteraries.
   std::vector<Record*> ProcItinList =
     Records.getAllDerivedDefinitions("ProcessorItineraries");
 
+  std::unordered_map<std::string, std::vector<Record*>> ItinsByNamespace;
+  for (Record *R : ProcItinList)
+    ItinsByNamespace[R->getValueAsString("PacketizerNamespace")].push_back(R);
+
+  for (auto &KV : ItinsByNamespace)
+    emitForItineraries(OS, KV.second, KV.first);
+  OS << "} // end namespace llvm\n";
+}
+
+void DFAPacketizerEmitter::emitForItineraries(
+    raw_ostream &OS, std::vector<Record *> &ProcItinList,
+    std::string DFAName) {
   //
   // Collect the Functional units.
   //
@@ -982,8 +988,19 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
   }
 
   // Print out the table.
-  D.writeTableAndAPI(OS, TargetName,
-               numInsnClasses, maxResources, numCombos, maxStages);
+  D.writeTableAndAPI(OS, TargetName + DFAName, numInsnClasses, maxResources,
+                     numCombos, maxStages);
+
+  OS << "} // end namespace llvm\n";
+
+  std::string SubTargetClassName = TargetName + "GenSubtargetInfo";
+  OS << "namespace llvm {\n";
+  OS << "DFAPacketizer *" << SubTargetClassName << "::"
+     << "create" << DFAName
+     << "DFAPacketizer(const InstrItineraryData *IID) const {\n"
+     << "   return new DFAPacketizer(IID, " << TargetName << DFAName
+     << "DFAStateInputTable, " << TargetName << DFAName
+     << "DFAStateEntryTable);\n}\n\n";
 }
 
 namespace llvm {

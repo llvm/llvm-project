@@ -925,6 +925,15 @@ Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
   return *m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
 }
 
+Target &CommandObject::GetSelectedTarget() {
+  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
+                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
+                        eCommandRequiresThread | eCommandRequiresProcess |
+                        eCommandRequiresRegContext) &&
+         "GetSelectedTarget called from object that may have no target");
+  return *m_interpreter.GetDebugger().GetSelectedTarget();
+}
+
 Thread *CommandObject::GetDefaultThread() {
   Thread *thread_to_use = m_exe_ctx.GetThreadPtr();
   if (thread_to_use)

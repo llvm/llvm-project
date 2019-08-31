@@ -1922,7 +1922,7 @@ bool LoopIdiomRecognize::matchBCmpLoopStructure(
   }
   LLVM_DEBUG(dbgs() << "Recognized basic control-flow layout.\n");
   return true;
-};
+}
 
 bool LoopIdiomRecognize::matchBCmpOfLoads(Value *BCmpValue,
                                           CmpOfLoads &CmpOfLoads) const {

@@ -40,7 +40,7 @@ IO::IO(void *Context) : Ctxt(Context) {}
 
 IO::~IO() = default;
 
-void *IO::getContext() {
+void *IO::getContext() const {
   return Ctxt;
 }
 
@@ -79,7 +79,7 @@ void Input::ScalarHNode::anchor() {}
 void Input::MapHNode::anchor() {}
 void Input::SequenceHNode::anchor() {}
 
-bool Input::outputting() {
+bool Input::outputting() const {
   return false;
 }
 
@@ -440,7 +440,7 @@ Output::Output(raw_ostream &yout, void *context, int WrapColumn)
 
 Output::~Output() = default;
 
-bool Output::outputting() {
+bool Output::outputting() const {
   return true;
 }
 

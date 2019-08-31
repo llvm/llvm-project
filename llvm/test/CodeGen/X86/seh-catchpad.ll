@@ -87,11 +87,11 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK: .seh_proc main
 ; CHECK:         .seh_handler __C_specific_handler, @unwind, @except
 ; CHECK:         pushq   %rbp
-; CHECK:         .seh_pushreg 5
+; CHECK:         .seh_pushreg %rbp
 ; CHECK:         subq    $32, %rsp
 ; CHECK:         .seh_stackalloc 32
 ; CHECK:         leaq    32(%rsp), %rbp
-; CHECK:         .seh_setframe 5, 32
+; CHECK:         .seh_setframe %rbp, 32
 ; CHECK:         .seh_endprologue
 ; CHECK: .Ltmp0:
 ; CHECK:         movl    $1, %ecx
@@ -151,7 +151,7 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK: .LBB1_[[finbb]]:                                # %ehcleanup
 ; CHECK:         movq    %rdx, 16(%rsp)
 ; CHECK:         pushq   %rbp
-; CHECK:         .seh_pushreg 5
+; CHECK:         .seh_pushreg %rbp
 ; CHECK:         subq    $32, %rsp
 ; CHECK:         .seh_stackalloc 32
 ; CHECK:         leaq    32(%rdx), %rbp

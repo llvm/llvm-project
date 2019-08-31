@@ -735,6 +735,10 @@ public:
   /// CFG so that it branches to 'New' instead.
   void ReplaceUsesOfBlockWith(MachineBasicBlock *Old, MachineBasicBlock *New);
 
+  /// Update all phi nodes in this basic block to refer to basic block \p New
+  /// instead of basic block \p Old.
+  void replacePhiUsesWith(MachineBasicBlock *Old, MachineBasicBlock *New);
+
   /// Various pieces of code can cause excess edges in the CFG to be inserted.
   /// If we have proven that MBB can only branch to DestA and DestB, remove any
   /// other MBB successors from the CFG. DestA and DestB can be null. Besides

@@ -1088,9 +1088,14 @@ void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
     AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
     if (RenameAllUses) {
-      int PhiIndex = Phi->getBasicBlockIndex(BB);
-      assert(PhiIndex != -1 && "Incomplete phi during partial rename");
-      Phi->setIncomingValue(PhiIndex, IncomingVal);
+      bool ReplacementDone = false;
+      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+        if (Phi->getIncomingBlock(I) == BB) {
+          Phi->setIncomingValue(I, IncomingVal);
+          ReplacementDone = true;
+        }
+      (void) ReplacementDone;
+      assert(ReplacementDone && "Incomplete phi during partial rename");
     } else
       Phi->addIncoming(IncomingVal, BB);
   }

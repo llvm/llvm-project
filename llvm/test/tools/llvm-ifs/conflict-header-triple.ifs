@@ -1,0 +1,14 @@
+# RUN: not llvm-ifs -action write-ifs -o - %s %S/object.ifs 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# CHECK-IFS: error: Interface Stub: Triple Mismatch.
+# CHECK-IFS-NEXT: Filenames:
+# CHECK-IFS-NEXT: Triple Values: mips-unknown-linux x86_64-unknown-linux-gnu
+
+--- !experimental-ifs-v1
+IfsVersion:      1.0
+Triple:          mips-unknown-linux
+ObjectFileFormat: ELF
+Symbols:
+  a:               { Type: Func }
+...
