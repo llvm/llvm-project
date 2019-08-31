@@ -145,20 +145,20 @@ entry:
 ; WIN64-LABEL: foo5:
 ; WIN64: .seh_proc foo5
 ; WIN64: pushq %rbp
-; WIN64: .seh_pushreg 5
+; WIN64: .seh_pushreg %rbp
 ; WIN64: pushq %rdi
-; WIN64: .seh_pushreg 7
+; WIN64: .seh_pushreg %rdi
 ; WIN64: pushq %rbx
-; WIN64: .seh_pushreg 3
+; WIN64: .seh_pushreg %rbx
 ; NORM:  subq  $96, %rsp
 ; ATOM:  leaq -96(%rsp), %rsp
 ; WIN64: .seh_stackalloc 96
 ; WIN64: leaq  96(%rsp), %rbp
-; WIN64: .seh_setframe 5, 96
+; WIN64: .seh_setframe %rbp, 96
 ; WIN64: movaps  %xmm7, -16(%rbp)        # 16-byte Spill
-; WIN64: .seh_savexmm 7, 80
+; WIN64: .seh_savexmm %xmm7, 80
 ; WIN64: movaps  %xmm6, -32(%rbp)        # 16-byte Spill
-; WIN64: .seh_savexmm 6, 64
+; WIN64: .seh_savexmm %xmm6, 64
 ; WIN64: .seh_endprologue
 ; WIN64: andq  $-64, %rsp
 ; WIN64: movaps  -32(%rbp), %xmm6        # 16-byte Reload

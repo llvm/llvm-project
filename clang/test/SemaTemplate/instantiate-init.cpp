@@ -151,8 +151,8 @@ namespace InitListUpdate {
 
   // Check that an init list update doesn't "lose" the pack-ness of an expression.
   template <int... N> void f() {
-    g(AA{0, [0].n = N} ...); // expected-warning 3{{overrides prior init}} expected-note 3{{previous init}}
-    g(AA{N, [0].n = 0} ...); // expected-warning 3{{overrides prior init}} expected-note 3{{previous init}}
+    g(AA{0, [0].n = N} ...); // expected-warning 3{{extension}} expected-note {{here}} expected-warning 3{{overrides prior init}} expected-note 3{{previous init}}
+    g(AA{N, [0].n = 0} ...); // expected-warning 3{{extension}} expected-note {{here}} expected-warning 3{{overrides prior init}} expected-note 3{{previous init}}
   };
 
   void g(AA, AA);

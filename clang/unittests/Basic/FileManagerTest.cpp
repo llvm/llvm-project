@@ -397,4 +397,54 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   EXPECT_EQ((*file)->tryGetRealPathName(), ExpectedResult);
 }
 
+TEST_F(FileManagerTest, getBypassFile) {
+  SmallString<64> CustomWorkingDir;
+#ifdef _WIN32
+  CustomWorkingDir = "C:/";
+#else
+  CustomWorkingDir = "/";
+#endif
+
+  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
+      new llvm::vfs::InMemoryFileSystem);
+  // setCurrentworkingdirectory must finish without error.
+  ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
+
+  FileSystemOptions Opts;
+  FileManager Manager(Opts, FS);
+
+  // Inject fake files into the file system.
+  auto Cache = std::make_unique<FakeStatCache>();
+  Cache->InjectDirectory("/tmp", 42);
+  Cache->InjectFile("/tmp/test", 43);
+  Manager.setStatCache(std::move(Cache));
+
+  // Set up a virtual file with a different size than FakeStatCache uses.
+  const FileEntry *File = Manager.getVirtualFile("/tmp/test", /*Size=*/10, 0);
+  ASSERT_TRUE(File);
+  FileEntryRef Ref("/tmp/test", *File);
+  EXPECT_TRUE(Ref.isValid());
+  EXPECT_EQ(Ref.getSize(), 10);
+
+  // Calling a second time should not affect the UID or size.
+  unsigned VirtualUID = Ref.getUID();
+  EXPECT_EQ(*expectedToOptional(Manager.getFileRef("/tmp/test")), Ref);
+  EXPECT_EQ(Ref.getUID(), VirtualUID);
+  EXPECT_EQ(Ref.getSize(), 10);
+
+  // Bypass the file.
+  llvm::Optional<FileEntryRef> BypassRef = Manager.getBypassFile(Ref);
+  ASSERT_TRUE(BypassRef);
+  EXPECT_TRUE(BypassRef->isValid());
+  EXPECT_EQ(BypassRef->getName(), Ref.getName());
+
+  // Check that it's different in the right ways.
+  EXPECT_NE(&BypassRef->getFileEntry(), File);
+  EXPECT_NE(BypassRef->getUID(), VirtualUID);
+  EXPECT_NE(BypassRef->getSize(), Ref.getSize());
+
+  // The virtual file should still be returned when searching.
+  EXPECT_EQ(*expectedToOptional(Manager.getFileRef("/tmp/test")), Ref);
+}
+
 } // anonymous namespace

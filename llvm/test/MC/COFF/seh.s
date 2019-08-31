@@ -133,7 +133,7 @@ func:
     movups %xmm8, (%rsp)
     .seh_savexmm %xmm8, 0
     pushq %rbx
-    .seh_pushreg 3
+    .seh_pushreg %rbx
     mov %rsp, %rbx
     .seh_setframe 3, 0
     .seh_endprologue

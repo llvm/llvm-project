@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -Wno-c99-designator %s
 
 // PR5290
 int const f0();
@@ -80,22 +80,22 @@ namespace D5789 {
   struct P1 { char x[6]; } g1 = { "foo" };
   struct LP1 { struct P1 p1; };
 
-  // expected-warning@+3 {{subobject initialization overrides}}
+  // expected-warning@+3 {{initializer partially overrides}}
   // expected-note@+2 {{previous initialization}}
   // expected-note@+1 {{previous definition}}
   template<class T> void foo(decltype(T(LP1{ .p1 = g1, .p1.x[1] = 'x' }))) {}
 
-  // expected-warning@+3 {{subobject initialization overrides}}
+  // expected-warning@+3 {{initializer partially overrides}}
   // expected-note@+2 {{previous initialization}}
   template<class T>
   void foo(decltype(T(LP1{ .p1 = g1, .p1.x[1] = 'r' }))) {} // okay
 
-  // expected-warning@+3 {{subobject initialization overrides}}
+  // expected-warning@+3 {{initializer partially overrides}}
   // expected-note@+2 {{previous initialization}}
   template<class T>
   void foo(decltype(T(LP1{ .p1 = { "foo" }, .p1.x[1] = 'x'}))) {} // okay
 
-  // expected-warning@+3 {{subobject initialization overrides}}
+  // expected-warning@+3 {{initializer partially overrides}}
   // expected-note@+2 {{previous initialization}}
   // expected-error@+1 {{redefinition of 'foo'}}
   template<class T> void foo(decltype(T(LP1{ .p1 = g1, .p1.x[1] = 'x' }))) {}

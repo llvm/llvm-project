@@ -360,7 +360,7 @@ namespace LValueToRValueUnion {
   extern const U pu;
   constexpr const int *pua = &pu.a;
   constexpr const int *pub = &pu.b;
-  constexpr U pu = { .b = 1 }; // expected-warning {{C99 feature}}
+  constexpr U pu = { .b = 1 }; // expected-warning {{C++20 extension}}
   constexpr const int a2 = *pua; // expected-error {{constant expression}} expected-note {{read of member 'a' of union with active member 'b'}}
   constexpr const int b2 = *pub; // ok
 }

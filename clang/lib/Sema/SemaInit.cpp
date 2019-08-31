@@ -281,6 +281,7 @@ class InitListChecker {
   bool hadError = false;
   bool VerifyOnly; // No diagnostics.
   bool TreatUnavailableAsInvalid; // Used only in VerifyOnly mode.
+  bool InOverloadResolution;
   InitListExpr *FullyStructuredList = nullptr;
   NoInitExpr *DummyExpr = nullptr;
 
@@ -372,6 +373,63 @@ class InitListChecker {
   ExprResult PerformEmptyInit(SourceLocation Loc,
                               const InitializedEntity &Entity);
 
+  /// Diagnose that OldInit (or part thereof) has been overridden by NewInit.
+  void diagnoseInitOverride(Expr *OldInit, SourceRange NewInitRange,
+                            bool FullyOverwritten = true) {
+    // Overriding an initializer via a designator is valid with C99 designated
+    // initializers, but ill-formed with C++20 designated initializers.
+    unsigned DiagID = SemaRef.getLangOpts().CPlusPlus
+                          ? diag::ext_initializer_overrides
+                          : diag::warn_initializer_overrides;
+
+    if (InOverloadResolution && SemaRef.getLangOpts().CPlusPlus) {
+      // In overload resolution, we have to strictly enforce the rules, and so
+      // don't allow any overriding of prior initializers. This matters for a
+      // case such as:
+      //
+      //   union U { int a, b; };
+      //   struct S { int a, b; };
+      //   void f(U), f(S);
+      //
+      // Here, f({.a = 1, .b = 2}) is required to call the struct overload. For
+      // consistency, we disallow all overriding of prior initializers in
+      // overload resolution, not only overriding of union members.
+      hadError = true;
+    } else if (OldInit->getType().isDestructedType() && !FullyOverwritten) {
+      // If we'll be keeping around the old initializer but overwriting part of
+      // the object it initialized, and that object is not trivially
+      // destructible, this can leak. Don't allow that, not even as an
+      // extension.
+      //
+      // FIXME: It might be reasonable to allow this in cases where the part of
+      // the initializer that we're overriding has trivial destruction.
+      DiagID = diag::err_initializer_overrides_destructed;
+    } else if (!OldInit->getSourceRange().isValid()) {
+      // We need to check on source range validity because the previous
+      // initializer does not have to be an explicit initializer. e.g.,
+      //
+      // struct P { int a, b; };
+      // struct PP { struct P p } l = { { .a = 2 }, .p.b = 3 };
+      //
+      // There is an overwrite taking place because the first braced initializer
+      // list "{ .a = 2 }" already provides value for .p.b (which is zero).
+      //
+      // Such overwrites are harmless, so we don't diagnose them. (Note that in
+      // C++, this cannot be reached unless we've already seen and diagnosed a
+      // different conformance issue, such as a mixture of designated and
+      // non-designated initializers or a multi-level designator.)
+      return;
+    }
+
+    if (!VerifyOnly) {
+      SemaRef.Diag(NewInitRange.getBegin(), DiagID)
+          << NewInitRange << FullyOverwritten << OldInit->getType();
+      SemaRef.Diag(OldInit->getBeginLoc(), diag::note_previous_initializer)
+          << (OldInit->HasSideEffects(SemaRef.Context) && FullyOverwritten)
+          << OldInit->getSourceRange();
+    }
+  }
+
   // Explanation on the "FillWithNoInit" mode:
   //
   // Assume we have the following definitions (Case#1):
@@ -410,9 +468,9 @@ class InitListChecker {
                                SourceLocation Loc);
 
 public:
-  InitListChecker(Sema &S, const InitializedEntity &Entity,
-                  InitListExpr *IL, QualType &T, bool VerifyOnly,
-                  bool TreatUnavailableAsInvalid);
+  InitListChecker(Sema &S, const InitializedEntity &Entity, InitListExpr *IL,
+                  QualType &T, bool VerifyOnly, bool TreatUnavailableAsInvalid,
+                  bool InOverloadResolution = false);
   bool HadError() { return hadError; }
 
   // Retrieves the fully-structured initializer list used for
@@ -877,9 +935,11 @@ static bool hasAnyDesignatedInits(const InitListExpr *IL) {
 
 InitListChecker::InitListChecker(Sema &S, const InitializedEntity &Entity,
                                  InitListExpr *IL, QualType &T, bool VerifyOnly,
-                                 bool TreatUnavailableAsInvalid)
+                                 bool TreatUnavailableAsInvalid,
+                                 bool InOverloadResolution)
     : SemaRef(S), VerifyOnly(VerifyOnly),
-      TreatUnavailableAsInvalid(TreatUnavailableAsInvalid) {
+      TreatUnavailableAsInvalid(TreatUnavailableAsInvalid),
+      InOverloadResolution(InOverloadResolution) {
   if (!VerifyOnly || hasAnyDesignatedInits(IL)) {
     FullyStructuredList =
         createInitListExpr(T, IL->getSourceRange(), IL->getNumInits());
@@ -1959,7 +2019,8 @@ void InitListChecker::CheckStructUnionTypes(
       }
 
     // If there's a default initializer, use it.
-    if (isa<CXXRecordDecl>(RD) && cast<CXXRecordDecl>(RD)->hasInClassInitializer()) {
+    if (isa<CXXRecordDecl>(RD) &&
+        cast<CXXRecordDecl>(RD)->hasInClassInitializer()) {
       if (!StructuredList)
         return;
       for (RecordDecl::field_iterator FieldEnd = RD->field_end();
@@ -2276,7 +2337,9 @@ class FieldInitializerValidatorCCC final : public CorrectionCandidateCallback {
 ///
 /// @param NextField  If non-NULL and the first designator in @p DIE is
 /// a field, this will be set to the field declaration corresponding
-/// to the field named by the designator.
+/// to the field named by the designator. On input, this is expected to be
+/// the next field that would be initialized in the absence of designation,
+/// if the complete object being initialized is a struct.
 ///
 /// @param NextElementIndex  If non-NULL and the first designator in @p
 /// DIE is an array designator or GNU array-range designator, this
@@ -2304,6 +2367,29 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
                                             bool FinishSubobjectInit,
                                             bool TopLevelObject) {
   if (DesigIdx == DIE->size()) {
+    // C++20 designated initialization can result in direct-list-initialization
+    // of the designated subobject. This is the only way that we can end up
+    // performing direct initialization as part of aggregate initialization, so
+    // it needs special handling.
+    if (DIE->isDirectInit()) {
+      Expr *Init = DIE->getInit();
+      assert(isa<InitListExpr>(Init) &&
+             "designator result in direct non-list initialization?");
+      InitializationKind Kind = InitializationKind::CreateDirectList(
+          DIE->getBeginLoc(), Init->getBeginLoc(), Init->getEndLoc());
+      InitializationSequence Seq(SemaRef, Entity, Kind, Init,
+                                 /*TopLevelOfInitList*/ true);
+      if (StructuredList) {
+        ExprResult Result = VerifyOnly
+                                ? getDummyInit()
+                                : Seq.Perform(SemaRef, Entity, Kind, Init);
+        UpdateStructuredListElement(StructuredList, StructuredIndex,
+                                    Result.get());
+      }
+      ++Index;
+      return !Seq;
+    }
+
     // Check the actual initialization for the designated object type.
     bool prevHadError = hadError;
 
@@ -2344,53 +2430,41 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
             SourceRange(D->getBeginLoc(), DIE->getEndLoc()));
       else if (InitListExpr *Result = dyn_cast<InitListExpr>(ExistingInit))
         StructuredList = Result;
-      else if (!VerifyOnly) {
-        if (DesignatedInitUpdateExpr *E =
-                dyn_cast<DesignatedInitUpdateExpr>(ExistingInit))
-          StructuredList = E->getUpdater();
-        else {
-          DesignatedInitUpdateExpr *DIUE = new (SemaRef.Context)
-              DesignatedInitUpdateExpr(SemaRef.Context, D->getBeginLoc(),
-                                       ExistingInit, DIE->getEndLoc());
-          StructuredList->updateInit(SemaRef.Context, StructuredIndex, DIUE);
-          StructuredList = DIUE->getUpdater();
-        }
-
-        // We need to check on source range validity because the previous
-        // initializer does not have to be an explicit initializer. e.g.,
+      else {
+        // We are creating an initializer list that initializes the
+        // subobjects of the current object, but there was already an
+        // initialization that completely initialized the current
+        // subobject, e.g., by a compound literal:
         //
-        // struct P { int a, b; };
-        // struct PP { struct P p } l = { { .a = 2 }, .p.b = 3 };
+        // struct X { int a, b; };
+        // struct X xs[] = { [0] = (struct X) { 1, 2 }, [0].b = 3 };
         //
-        // There is an overwrite taking place because the first braced initializer
-        // list "{ .a = 2 }" already provides value for .p.b (which is zero).
-        if (ExistingInit->getSourceRange().isValid()) {
-          // We are creating an initializer list that initializes the
-          // subobjects of the current object, but there was already an
-          // initialization that completely initialized the current
-          // subobject, e.g., by a compound literal:
-          //
-          // struct X { int a, b; };
-          // struct X xs[] = { [0] = (struct X) { 1, 2 }, [0].b = 3 };
-          //
-          // Here, xs[0].a == 1 and xs[0].b == 3, since the second,
-          // designated initializer re-initializes only its current object
-          // subobject [0].b.
-          SemaRef.Diag(D->getBeginLoc(),
-                       diag::warn_subobject_initializer_overrides)
-              << SourceRange(D->getBeginLoc(), DIE->getEndLoc());
+        // Here, xs[0].a == 1 and xs[0].b == 3, since the second,
+        // designated initializer re-initializes only its current object
+        // subobject [0].b.
+        diagnoseInitOverride(ExistingInit,
+                             SourceRange(D->getBeginLoc(), DIE->getEndLoc()),
+                             /*FullyOverwritten=*/false);
 
-          SemaRef.Diag(ExistingInit->getBeginLoc(),
-                       diag::note_previous_initializer)
-              << /*FIXME:has side effects=*/0 << ExistingInit->getSourceRange();
+        if (!VerifyOnly) {
+          if (DesignatedInitUpdateExpr *E =
+                  dyn_cast<DesignatedInitUpdateExpr>(ExistingInit))
+            StructuredList = E->getUpdater();
+          else {
+            DesignatedInitUpdateExpr *DIUE = new (SemaRef.Context)
+                DesignatedInitUpdateExpr(SemaRef.Context, D->getBeginLoc(),
+                                         ExistingInit, DIE->getEndLoc());
+            StructuredList->updateInit(SemaRef.Context, StructuredIndex, DIUE);
+            StructuredList = DIUE->getUpdater();
+          }
+        } else {
+          // We don't need to track the structured representation of a
+          // designated init update of an already-fully-initialized object in
+          // verify-only mode. The only reason we would need the structure is
+          // to determine where the uninitialized "holes" are, and in this
+          // case, we know there aren't any and we can't introduce any.
+          StructuredList = nullptr;
         }
-      } else {
-        // We don't need to track the structured representation of a designated
-        // init update of an already-fully-initialized object in verify-only
-        // mode. The only reason we would need the structure is to determine
-        // where the uninitialized "holes" are, and in this case, we know there
-        // aren't any and we can't introduce any.
-        StructuredList = nullptr;
       }
     }
   }
@@ -2475,10 +2549,11 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       }
     }
 
-    unsigned FieldIndex = 0;
-
+    unsigned NumBases = 0;
     if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-      FieldIndex = CXXRD->getNumBases();
+      NumBases = CXXRD->getNumBases();
+
+    unsigned FieldIndex = NumBases;
 
     for (auto *FI : RT->getDecl()->fields()) {
       if (FI->isUnnamedBitfield())
@@ -2504,15 +2579,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
                  && "A union should never have more than one initializer!");
 
           Expr *ExistingInit = StructuredList->getInit(0);
-          if (ExistingInit && !VerifyOnly) {
+          if (ExistingInit) {
             // We're about to throw away an initializer, emit warning.
-            SemaRef.Diag(D->getFieldLoc(),
-                         diag::warn_initializer_overrides)
-              << D->getSourceRange();
-            SemaRef.Diag(ExistingInit->getBeginLoc(),
-                         diag::note_previous_initializer)
-                << /*FIXME:has side effects=*/0
-                << ExistingInit->getSourceRange();
+            diagnoseInitOverride(
+                ExistingInit, SourceRange(D->getBeginLoc(), DIE->getEndLoc()));
           }
 
           // remove existing initializer
@@ -2534,6 +2604,54 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       ++Index;
       return true;
     }
+
+    // C++20 [dcl.init.list]p3:
+    //   The ordered identifiers in the designators of the designated-
+    //   initializer-list shall form a subsequence of the ordered identifiers
+    //   in the direct non-static data members of T.
+    //
+    // Note that this is not a condition on forming the aggregate
+    // initialization, only on actually performing initialization,
+    // so it is not checked in VerifyOnly mode.
+    //
+    // FIXME: This is the only reordering diagnostic we produce, and it only
+    // catches cases where we have a top-level field designator that jumps
+    // backwards. This is the only such case that is reachable in an
+    // otherwise-valid C++20 program, so is the only case that's required for
+    // conformance, but for consistency, we should diagnose all the other
+    // cases where a designator takes us backwards too.
+    if (IsFirstDesignator && !VerifyOnly && SemaRef.getLangOpts().CPlusPlus &&
+        NextField &&
+        (*NextField == RT->getDecl()->field_end() ||
+         (*NextField)->getFieldIndex() > Field->getFieldIndex() + 1)) {
+      // Find the field that we just initialized.
+      FieldDecl *PrevField = nullptr;
+      for (auto FI = RT->getDecl()->field_begin();
+           FI != RT->getDecl()->field_end(); ++FI) {
+        if (FI->isUnnamedBitfield())
+          continue;
+        if (*NextField != RT->getDecl()->field_end() &&
+            declaresSameEntity(*FI, **NextField))
+          break;
+        PrevField = *FI;
+      }
+
+      if (PrevField &&
+          PrevField->getFieldIndex() > KnownField->getFieldIndex()) {
+        SemaRef.Diag(DIE->getBeginLoc(), diag::ext_designated_init_reordered)
+            << KnownField << PrevField << DIE->getSourceRange();
+
+        unsigned OldIndex = NumBases + PrevField->getFieldIndex();
+        if (StructuredList && OldIndex <= StructuredList->getNumInits()) {
+          if (Expr *PrevInit = StructuredList->getInit(OldIndex)) {
+            SemaRef.Diag(PrevInit->getBeginLoc(),
+                         diag::note_previous_field_init)
+                << PrevField << PrevInit->getSourceRange();
+          }
+        }
+      }
+    }
+
 
     // Update the designator with the field declaration.
     if (!VerifyOnly)
@@ -2875,7 +2993,7 @@ InitListChecker::getStructuredSubobjectInit(InitListExpr *IList, unsigned Index,
     if (!IsFullyOverwritten)
       return Result;
 
-  if (ExistingInit && !VerifyOnly) {
+  if (ExistingInit) {
     // We are creating an initializer list that initializes the
     // subobjects of the current object, but there was already an
     // initialization that completely initialized the current
@@ -2895,11 +3013,7 @@ InitListChecker::getStructuredSubobjectInit(InitListExpr *IList, unsigned Index,
     // struct X xs[] = { [0] = (struct X) { 1, 2 }, [0].b = 3 };
     //
     // This case is handled by CheckDesignatedInitializer.
-    SemaRef.Diag(InitRange.getBegin(),
-                 diag::warn_subobject_initializer_overrides)
-      << InitRange;
-    SemaRef.Diag(ExistingInit->getBeginLoc(), diag::note_previous_initializer)
-        << /*FIXME:has side effects=*/0 << ExistingInit->getSourceRange();
+    diagnoseInitOverride(ExistingInit, InitRange);
   }
 
   unsigned ExpectedNumInits = 0;
@@ -2968,22 +3082,21 @@ void InitListChecker::UpdateStructuredListElement(InitListExpr *StructuredList,
   if (Expr *PrevInit = StructuredList->updateInit(SemaRef.Context,
                                                   StructuredIndex, expr)) {
     // This initializer overwrites a previous initializer. Warn.
-    // We need to check on source range validity because the previous
-    // initializer does not have to be an explicit initializer.
-    // struct P { int a, b; };
-    // struct PP { struct P p } l = { { .a = 2 }, .p.b = 3 };
-    // There is an overwrite taking place because the first braced initializer
-    // list "{ .a = 2 }' already provides value for .p.b (which is zero).
-    if (PrevInit->getSourceRange().isValid() && !VerifyOnly) {
-      SemaRef.Diag(expr->getBeginLoc(), diag::warn_initializer_overrides)
-          << expr->getSourceRange();
-
-      SemaRef.Diag(PrevInit->getBeginLoc(), diag::note_previous_initializer)
-          << /*FIXME:has side effects=*/0 << PrevInit->getSourceRange();
-    }
+    diagnoseInitOverride(PrevInit, expr->getSourceRange());
   }
 
   ++StructuredIndex;
+}
+
+/// Determine whether we can perform aggregate initialization for the purposes
+/// of overload resolution.
+bool Sema::CanPerformAggregateInitializationForOverloadResolution(
+    const InitializedEntity &Entity, InitListExpr *From) {
+  QualType Type = Entity.getType();
+  InitListChecker Check(*this, Entity, From, Type, /*VerifyOnly=*/true,
+                        /*TreatUnavailableAsInvalid=*/false,
+                        /*InOverloadResolution=*/true);
+  return !Check.HadError();
 }
 
 /// Check that the given Index expression is a valid array designator
@@ -3011,7 +3124,7 @@ CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
 }
 
 ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
-                                            SourceLocation Loc,
+                                            SourceLocation EqualOrColonLoc,
                                             bool GNUSyntax,
                                             ExprResult Init) {
   typedef DesignatedInitExpr::Designator ASTDesignator;
@@ -3019,6 +3132,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
   bool Invalid = false;
   SmallVector<ASTDesignator, 32> Designators;
   SmallVector<Expr *, 32> InitExpressions;
+  bool HasArrayDesignator = false;
 
   // Build designators and check array designator expressions.
   for (unsigned Idx = 0; Idx < Desig.getNumDesignators(); ++Idx) {
@@ -3042,6 +3156,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
                                             D.getRBracketLoc()));
         InitExpressions.push_back(Index);
       }
+      HasArrayDesignator = true;
       break;
     }
 
@@ -3085,6 +3200,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
           InitExpressions.push_back(EndIndex);
         }
       }
+      HasArrayDesignator = true;
       break;
     }
     }
@@ -3096,17 +3212,9 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
   // Clear out the expressions within the designation.
   Desig.ClearExprs(*this);
 
-  DesignatedInitExpr *DIE
-    = DesignatedInitExpr::Create(Context,
-                                 Designators,
-                                 InitExpressions, Loc, GNUSyntax,
-                                 Init.getAs<Expr>());
-
-  if (!getLangOpts().C99)
-    Diag(DIE->getBeginLoc(), diag::ext_designated_init)
-        << DIE->getSourceRange();
-
-  return DIE;
+  return DesignatedInitExpr::Create(Context, Designators, InitExpressions,
+                                    EqualOrColonLoc, GNUSyntax,
+                                    Init.getAs<Expr>());
 }
 
 //===----------------------------------------------------------------------===//

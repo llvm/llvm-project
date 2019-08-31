@@ -10,9 +10,8 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/subframework_header_dir_symlink_cdb.json > %t.cdb
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1  -reuse-filemanager=0 | \
 // RUN:   FileCheck %s
-// FIXME: Make this work when the filemanager is reused:
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -reuse-filemanager=1 | \
-// RUN:   not FileCheck %s
+// RUN:   FileCheck %s
 
 #ifndef EMPTY
 #include "Framework/Framework.h"

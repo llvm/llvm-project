@@ -106,7 +106,7 @@ define void @f_non_leaf(i32 %x, i32 %y) optsize {
 ; WIN64-LABEL: f_non_leaf:
 ; WIN64:       # %bb.0: # %entry
 ; WIN64-NEXT:    pushq %rbx # encoding: [0x53]
-; WIN64-NEXT:    .seh_pushreg 3
+; WIN64-NEXT:    .seh_pushreg %rbx
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    #APP
 ; WIN64-NEXT:    #NO_APP

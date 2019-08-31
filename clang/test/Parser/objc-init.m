@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -pedantic -Wno-objc-root-class %s
-// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-objc-root-class %s
-// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-objc-root-class -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-objc-root-class -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-c99-designator -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-c99-designator -Wno-objc-root-class -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-fragile -verify -x objective-c++ -Wno-c99-designator -Wno-objc-root-class -std=c++11 %s
 // rdar://5707001
 
 @interface NSNumber;

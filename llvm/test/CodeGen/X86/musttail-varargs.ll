@@ -206,15 +206,15 @@ define void @f_thunk(i8* %this, ...) {
 ; WINDOWS-LABEL: f_thunk:
 ; WINDOWS:       # %bb.0:
 ; WINDOWS-NEXT:    pushq %r14
-; WINDOWS-NEXT:    .seh_pushreg 14
+; WINDOWS-NEXT:    .seh_pushreg %r14
 ; WINDOWS-NEXT:    pushq %rsi
-; WINDOWS-NEXT:    .seh_pushreg 6
+; WINDOWS-NEXT:    .seh_pushreg %rsi
 ; WINDOWS-NEXT:    pushq %rdi
-; WINDOWS-NEXT:    .seh_pushreg 7
+; WINDOWS-NEXT:    .seh_pushreg %rdi
 ; WINDOWS-NEXT:    pushq %rbp
-; WINDOWS-NEXT:    .seh_pushreg 5
+; WINDOWS-NEXT:    .seh_pushreg %rbp
 ; WINDOWS-NEXT:    pushq %rbx
-; WINDOWS-NEXT:    .seh_pushreg 3
+; WINDOWS-NEXT:    .seh_pushreg %rbx
 ; WINDOWS-NEXT:    subq $64, %rsp
 ; WINDOWS-NEXT:    .seh_stackalloc 64
 ; WINDOWS-NEXT:    .seh_endprologue
