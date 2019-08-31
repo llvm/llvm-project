@@ -382,6 +382,12 @@ main:
     # CHECK: f32x4.sqrt # encoding: [0xfd,0x97,0x01]
     f32x4.sqrt
 
+    # CHECK: f32x4.qfma # encoding: [0xfd,0x98,0x01]
+    f32x4.qfma
+
+    # CHECK: f32x4.qfms # encoding: [0xfd,0x99,0x01]
+    f32x4.qfms
+
     # CHECK: f32x4.add # encoding: [0xfd,0x9a,0x01]
     f32x4.add
 
@@ -408,6 +414,12 @@ main:
 
     # CHECK: f64x2.sqrt # encoding: [0xfd,0xa2,0x01]
     f64x2.sqrt
+
+    # CHECK: f64x2.qfma # encoding: [0xfd,0xa3,0x01]
+    f64x2.qfma
+
+    # CHECK: f64x2.qfms # encoding: [0xfd,0xa4,0x01]
+    f64x2.qfms
 
     # CHECK: f64x2.add # encoding: [0xfd,0xa5,0x01]
     f64x2.add

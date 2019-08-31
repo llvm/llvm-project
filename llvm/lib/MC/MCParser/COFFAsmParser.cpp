@@ -69,6 +69,7 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSecIdx>(".secidx");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveLinkOnce>(".linkonce");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveRVA>(".rva");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectiveSymbolAttribute>(".weak");
 
     // Win64 EH directives.
     addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveStartProc>(
@@ -87,7 +88,6 @@ class COFFAsmParser : public MCAsmParserExtension {
                                                              ".seh_stackalloc");
     addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveEndProlog>(
                                                             ".seh_endprologue");
-    addDirectiveHandler<&COFFAsmParser::ParseDirectiveSymbolAttribute>(".weak");
   }
 
   bool ParseSectionDirectiveText(StringRef, SMLoc) {

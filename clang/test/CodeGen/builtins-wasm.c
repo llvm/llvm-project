@@ -412,6 +412,34 @@ f64x2 sqrt_f64x2(f64x2 x) {
   // WEBASSEMBLY: ret
 }
 
+f32x4 qfma_f32x4(f32x4 a, f32x4 b, f32x4 c) {
+  return __builtin_wasm_qfma_f32x4(a, b, c);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.qfma.v4f32(
+  // WEBASSEMBLY-SAME: <4 x float> %a, <4 x float> %b, <4 x float> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f32x4 qfms_f32x4(f32x4 a, f32x4 b, f32x4 c) {
+  return __builtin_wasm_qfms_f32x4(a, b, c);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.qfms.v4f32(
+  // WEBASSEMBLY-SAME: <4 x float> %a, <4 x float> %b, <4 x float> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f64x2 qfma_f64x2(f64x2 a, f64x2 b, f64x2 c) {
+  return __builtin_wasm_qfma_f64x2(a, b, c);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.qfma.v2f64(
+  // WEBASSEMBLY-SAME: <2 x double> %a, <2 x double> %b, <2 x double> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f64x2 qfms_f64x2(f64x2 a, f64x2 b, f64x2 c) {
+  return __builtin_wasm_qfms_f64x2(a, b, c);
+  // WEBASSEMBLY: call <2 x double> @llvm.wasm.qfms.v2f64(
+  // WEBASSEMBLY-SAME: <2 x double> %a, <2 x double> %b, <2 x double> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i32x4 trunc_saturate_s_i32x4_f32x4(f32x4 f) {
   return __builtin_wasm_trunc_saturate_s_i32x4_f32x4(f);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.trunc.saturate.signed.v4i32.v4f32(<4 x float> %f)

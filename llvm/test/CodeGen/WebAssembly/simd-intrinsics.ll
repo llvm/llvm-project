@@ -290,9 +290,33 @@ define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
 declare <4 x float> @llvm.wasm.bitselect.v4f32(<4 x float>, <4 x float>, <4 x float>)
 define <4 x float> @bitselect_v4f32(<4 x float> %v1, <4 x float> %v2, <4 x float> %c) {
   %a = call <4 x float> @llvm.wasm.bitselect.v4f32(
-     <4 x float> %v1, <4 x float> %v2, <4 x float> %c
+    <4 x float> %v1, <4 x float> %v2, <4 x float> %c
   )
   ret <4 x float> %a
+}
+
+; CHECK-LABEL: qfma_v4f32:
+; SIMD128-NEXT: .functype qfma_v4f32 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.qfma $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.qfma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+define <4 x float> @qfma_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.qfma.v4f32(
+    <4 x float> %a, <4 x float> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
+}
+
+; CHECK-LABEL: qfms_v4f32:
+; SIMD128-NEXT: .functype qfms_v4f32 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.qfms $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.qfms.v4f32(<4 x float>, <4 x float>, <4 x float>)
+define <4 x float> @qfms_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.qfms.v4f32(
+    <4 x float> %a, <4 x float> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
 }
 
 ; ==============================================================================
@@ -308,4 +332,28 @@ define <2 x double> @bitselect_v2f64(<2 x double> %v1, <2 x double> %v2, <2 x do
     <2 x double> %v1, <2 x double> %v2, <2 x double> %c
   )
   ret <2 x double> %a
+}
+
+; CHECK-LABEL: qfma_v2f64:
+; SIMD128-NEXT: .functype qfma_v2f64 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.qfma $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.qfma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+define <2 x double> @qfma_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+  %v = call <2 x double> @llvm.wasm.qfma.v2f64(
+    <2 x double> %a, <2 x double> %b, <2 x double> %c
+  )
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: qfms_v2f64:
+; SIMD128-NEXT: .functype qfms_v2f64 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.qfms $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.qfms.v2f64(<2 x double>, <2 x double>, <2 x double>)
+define <2 x double> @qfms_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+  %v = call <2 x double> @llvm.wasm.qfms.v2f64(
+    <2 x double> %a, <2 x double> %b, <2 x double> %c
+  )
+  ret <2 x double> %v
 }

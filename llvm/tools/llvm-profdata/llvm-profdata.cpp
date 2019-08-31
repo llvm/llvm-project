@@ -433,14 +433,40 @@ static sampleprof::SampleProfileFormat FormatMap[] = {
     sampleprof::SPF_GCC,
     sampleprof::SPF_Binary};
 
-static void mergeSampleProfile(const WeightedFileVector &Inputs,
-                               SymbolRemapper *Remapper,
-                               StringRef OutputFilename,
-                               ProfileFormat OutputFormat) {
+static std::unique_ptr<MemoryBuffer>
+getInputFileBuf(const StringRef &InputFile) {
+  if (InputFile == "")
+    return {};
+
+  auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFile);
+  if (!BufOrError)
+    exitWithErrorCode(BufOrError.getError(), InputFile);
+
+  return std::move(*BufOrError);
+}
+
+static void populateProfileSymbolList(MemoryBuffer *Buffer,
+                                      sampleprof::ProfileSymbolList &PSL) {
+  if (!Buffer)
+    return;
+
+  SmallVector<StringRef, 32> SymbolVec;
+  StringRef Data = Buffer->getBuffer();
+  Data.split(SymbolVec, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+  for (StringRef symbol : SymbolVec)
+    PSL.add(symbol);
+}
+
+static void
+mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
+                   StringRef OutputFilename, ProfileFormat OutputFormat,
+                   StringRef ProfileSymbolListFile, bool CompressProfSymList) {
   using namespace sampleprof;
   StringMap<FunctionSamples> ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
   LLVMContext Context;
+  sampleprof::ProfileSymbolList WriterList;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context);
     if (std::error_code EC = ReaderOrErr.getError())
@@ -471,13 +497,28 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
         handleMergeWriterError(errorCodeToError(EC), Input.Filename, FName);
       }
     }
+
+    std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
+        Reader->getProfileSymbolList();
+    if (ReaderList)
+      WriterList.merge(*ReaderList);
   }
   auto WriterOrErr =
       SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);
   if (std::error_code EC = WriterOrErr.getError())
     exitWithErrorCode(EC, OutputFilename);
 
+  // WriterList will have StringRef refering to string in Buffer.
+  // Make sure Buffer lives as long as WriterList.
+  auto Buffer = getInputFileBuf(ProfileSymbolListFile);
+  populateProfileSymbolList(Buffer.get(), WriterList);
+  WriterList.setToCompress(CompressProfSymList);
+  if (WriterList.size() > 0 && OutputFormat != PF_Ext_Binary)
+    warn("Profile Symbol list is not empty but the output format is not "
+         "ExtBinary format. The list will be lost in the output. ");
+
   auto Writer = std::move(WriterOrErr.get());
+  Writer->setProfileSymbolList(&WriterList);
   Writer->write(ProfileMap);
 }
 
@@ -490,18 +531,6 @@ static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
     exitWithError("Input weight must be a positive integer.");
 
   return {FileName, Weight};
-}
-
-static std::unique_ptr<MemoryBuffer>
-getInputFilenamesFileBuf(const StringRef &InputFilenamesFile) {
-  if (InputFilenamesFile == "")
-    return {};
-
-  auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFilenamesFile);
-  if (!BufOrError)
-    exitWithErrorCode(BufOrError.getError(), InputFilenamesFile);
-
-  return std::move(*BufOrError);
 }
 
 static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
@@ -603,6 +632,13 @@ static int merge_main(int argc, const char *argv[]) {
       cl::desc("Number of merge threads to use (default: autodetect)"));
   cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
                         cl::aliasopt(NumThreads));
+  cl::opt<std::string> ProfileSymbolListFile(
+      "prof-sym-list", cl::init(""),
+      cl::desc("Path to file containing the list of function symbols "
+               "used to populate profile symbol list"));
+  cl::opt<bool> CompressProfSymList(
+      "compress-prof-sym-list", cl::init(false), cl::Hidden,
+      cl::desc("Compress profile symbol list before write it into profile. "));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
@@ -614,7 +650,7 @@ static int merge_main(int argc, const char *argv[]) {
 
   // Make sure that the file buffer stays alive for the duration of the
   // weighted input vector's lifetime.
-  auto Buffer = getInputFilenamesFileBuf(InputFilenamesFile);
+  auto Buffer = getInputFileBuf(InputFilenamesFile);
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
@@ -636,7 +672,8 @@ static int merge_main(int argc, const char *argv[]) {
                       OutputFormat, OutputSparse, NumThreads);
   else
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
-                       OutputFormat);
+                       OutputFormat, ProfileSymbolListFile,
+                       CompressProfSymList);
 
   return 0;
 }
@@ -954,7 +991,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 static int showSampleProfile(const std::string &Filename, bool ShowCounts,
                              bool ShowAllFunctions,
                              const std::string &ShowFunction,
-                             raw_fd_ostream &OS) {
+                             bool ShowProfileSymbolList, raw_fd_ostream &OS) {
   using namespace sampleprof;
   LLVMContext Context;
   auto ReaderOrErr = SampleProfileReader::create(Filename, Context);
@@ -969,6 +1006,12 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     Reader->dump(OS);
   else
     Reader->dumpFunctionProfile(ShowFunction, OS);
+
+  if (ShowProfileSymbolList) {
+    std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
+        Reader->getProfileSymbolList();
+    ReaderList->dump(OS);
+  }
 
   return 0;
 }
@@ -1022,6 +1065,10 @@ static int show_main(int argc, const char *argv[]) {
       "list-below-cutoff", cl::init(false),
       cl::desc("Only output names of functions whose max count values are "
                "below the cutoff value"));
+  cl::opt<bool> ShowProfileSymbolList(
+      "show-prof-sym-list", cl::init(false),
+      cl::desc("Show profile symbol list if it exists in the profile. "));
+
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
   if (OutputFilename.empty())
@@ -1049,7 +1096,7 @@ static int show_main(int argc, const char *argv[]) {
                             OnlyListBelow, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
-                             ShowFunction, OS);
+                             ShowFunction, ShowProfileSymbolList, OS);
 }
 
 int main(int argc, const char *argv[]) {

@@ -4,8 +4,6 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_subdirectory(Interp)
-
 add_clang_library(clangAST
   APValue.cpp
   ASTConsumer.cpp
@@ -83,6 +81,5 @@ add_clang_library(clangAST
 
   LINK_LIBS
   clangBasic
-  clangInterp
   clangLex
   )

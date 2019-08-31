@@ -539,3 +539,10 @@ namespace dependent_list_deduction {
 #endif
   }
 }
+
+namespace designators {
+  template<typename T, int N> constexpr int f(T (&&)[N]) { return N; } // expected-note 2{{couldn't infer template argument 'T'}}
+  static_assert(f({1, 2, [20] = 3}) == 3, ""); // expected-error {{no matching function}} expected-warning 2{{C99}} expected-note {{}}
+
+  static_assert(f({.a = 1, .b = 2}) == 3, ""); // expected-error {{no matching function}}
+}

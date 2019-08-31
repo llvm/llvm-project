@@ -1748,6 +1748,12 @@ void MCAsmStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   // We only do this so the section switch that terminates the handler
   // data block is visible.
   WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo();
+
+  // Do nothing if no frame is open. MCStreamer should've already reported an
+  // error.
+  if (!CurFrame)
+    return;
+
   MCSection *TextSec = &CurFrame->Function->getSection();
   MCSection *XData = getAssociatedXDataSection(TextSec);
   SwitchSectionNoChange(XData);
