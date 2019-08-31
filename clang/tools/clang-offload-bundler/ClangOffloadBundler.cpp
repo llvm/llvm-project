@@ -26,15 +26,17 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -42,6 +44,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -123,36 +126,37 @@ public:
   virtual ~FileHandler() {}
 
   /// Update the file handler with information from the header of the bundled
-  /// file
-  virtual void ReadHeader(MemoryBuffer &Input) = 0;
+  /// file.
+  virtual Error ReadHeader(MemoryBuffer &Input) = 0;
 
-  /// Read the marker of the next bundled to be read in the file. The triple of
-  /// the target associated with that bundle is returned. An empty string is
-  /// returned if there are no more bundles to be read.
-  virtual StringRef ReadBundleStart(MemoryBuffer &Input) = 0;
+  /// Read the marker of the next bundled to be read in the file. The bundle
+  /// name is returned if there is one in the file, or `None` if there are no
+  /// more bundles to be read.
+  virtual Expected<Optional<StringRef>>
+  ReadBundleStart(MemoryBuffer &Input) = 0;
 
   /// Read the marker that closes the current bundle.
-  virtual void ReadBundleEnd(MemoryBuffer &Input) = 0;
+  virtual Error ReadBundleEnd(MemoryBuffer &Input) = 0;
 
   /// Read the current bundle and write the result into the stream \a OS.
-  virtual void ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
+  virtual Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
 
   /// Write the header of the bundled file to \a OS based on the information
   /// gathered from \a Inputs.
-  virtual void WriteHeader(raw_fd_ostream &OS,
-                           ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) = 0;
+  virtual Error WriteHeader(raw_fd_ostream &OS,
+                            ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) = 0;
 
   /// Write the marker that initiates a bundle for the triple \a TargetTriple to
   /// \a OS.
-  virtual void WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) = 0;
+  virtual Error WriteBundleStart(raw_fd_ostream &OS,
+                                 StringRef TargetTriple) = 0;
 
   /// Write the marker that closes a bundle for the triple \a TargetTriple to \a
-  /// OS. Return true if any error was found.
-
-  virtual bool WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) = 0;
+  /// OS.
+  virtual Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) = 0;
 
   /// Write the bundle from \a Input into \a OS.
-  virtual void WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
+  virtual Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
 };
 
 /// Handler for binary files. The bundled file will have the following format
@@ -224,7 +228,7 @@ public:
 
   ~BinaryFileHandler() final {}
 
-  void ReadHeader(MemoryBuffer &Input) final {
+  Error ReadHeader(MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
 
     // Initialize the current bundle with the end of the container.
@@ -233,16 +237,16 @@ public:
     // Check if buffer is smaller than magic string.
     size_t ReadChars = sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1;
     if (ReadChars > FC.size())
-      return;
+      return Error::success();
 
     // Check if no magic was found.
     StringRef Magic(FC.data(), sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1);
     if (!Magic.equals(OFFLOAD_BUNDLER_MAGIC_STR))
-      return;
+      return Error::success();
 
     // Read number of bundles.
     if (ReadChars + 8 > FC.size())
-      return;
+      return Error::success();
 
     uint64_t NumberOfBundles = Read8byteIntegerFromBuffer(FC, ReadChars);
     ReadChars += 8;
@@ -252,35 +256,35 @@ public:
 
       // Read offset.
       if (ReadChars + 8 > FC.size())
-        return;
+        return Error::success();
 
       uint64_t Offset = Read8byteIntegerFromBuffer(FC, ReadChars);
       ReadChars += 8;
 
       // Read size.
       if (ReadChars + 8 > FC.size())
-        return;
+        return Error::success();
 
       uint64_t Size = Read8byteIntegerFromBuffer(FC, ReadChars);
       ReadChars += 8;
 
       // Read triple size.
       if (ReadChars + 8 > FC.size())
-        return;
+        return Error::success();
 
       uint64_t TripleSize = Read8byteIntegerFromBuffer(FC, ReadChars);
       ReadChars += 8;
 
       // Read triple.
       if (ReadChars + TripleSize > FC.size())
-        return;
+        return Error::success();
 
       StringRef Triple(&FC.data()[ReadChars], TripleSize);
       ReadChars += TripleSize;
 
       // Check if the offset and size make sense.
       if (!Offset || Offset + Size > FC.size())
-        return;
+        return Error::success();
 
       assert(BundlesInfo.find(Triple) == BundlesInfo.end() &&
              "Triple is duplicated??");
@@ -289,28 +293,31 @@ public:
     // Set the iterator to where we will start to read.
     CurBundleInfo = BundlesInfo.end();
     NextBundleInfo = BundlesInfo.begin();
+    return Error::success();
   }
 
-  StringRef ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
     if (NextBundleInfo == BundlesInfo.end())
-      return StringRef();
+      return None;
     CurBundleInfo = NextBundleInfo++;
     return CurBundleInfo->first();
   }
 
-  void ReadBundleEnd(MemoryBuffer &Input) final {
+  Error ReadBundleEnd(MemoryBuffer &Input) final {
     assert(CurBundleInfo != BundlesInfo.end() && "Invalid reader info!");
+    return Error::success();
   }
 
-  void ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
     assert(CurBundleInfo != BundlesInfo.end() && "Invalid reader info!");
     StringRef FC = Input.getBuffer();
     OS.write(FC.data() + CurBundleInfo->second.Offset,
              CurBundleInfo->second.Size);
+    return Error::success();
   }
 
-  void WriteHeader(raw_fd_ostream &OS,
-                   ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
+  Error WriteHeader(raw_fd_ostream &OS,
+                    ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
     // Compute size of the header.
     uint64_t HeaderSize = 0;
 
@@ -329,7 +336,7 @@ public:
 
     unsigned Idx = 0;
     for (auto &T : TargetNames) {
-      MemoryBuffer &MB = *Inputs[Idx++].get();
+      MemoryBuffer &MB = *Inputs[Idx++];
       // Bundle offset.
       Write8byteIntegerToBuffer(OS, HeaderSize);
       // Size of the bundle (adds to the next bundle's offset)
@@ -340,24 +347,25 @@ public:
       // Triple
       OS << T;
     }
+    return Error::success();
   }
 
-  void WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {}
-
-  bool WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
-    return false;
+  Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+    return Error::success();
   }
 
-  void WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
+    return Error::success();
+  }
+
+  Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
     OS.write(Input.getBufferStart(), Input.getBufferSize());
+    return Error::success();
   }
 };
 
 /// Handler for object files. The bundles are organized by sections with a
 /// designated name.
-///
-/// In order to bundle we create an IR file with the content of each section and
-/// use incremental linking to produce the resulting object.
 ///
 /// To unbundle, we just copy the contents of the designated section.
 class ObjectFileHandler final : public FileHandler {
@@ -368,26 +376,19 @@ class ObjectFileHandler final : public FileHandler {
   /// Return the input file contents.
   StringRef getInputFileContents() const { return Obj->getData(); }
 
-  /// Return true if the provided section is an offload section and return the
-  /// triple by reference.
-  static bool IsOffloadSection(SectionRef CurSection,
-                               StringRef &OffloadTriple) {
-    StringRef SectionName;
-    if (Expected<StringRef> NameOrErr = CurSection.getName())
-      SectionName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
-    if (SectionName.empty())
-      return false;
+  /// Return bundle name (<kind>-<triple>) if the provided section is an offload
+  /// section.
+  static Expected<Optional<StringRef>> IsOffloadSection(SectionRef CurSection) {
+    Expected<StringRef> NameOrErr = CurSection.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
 
     // If it does not start with the reserved suffix, just skip this section.
-    if (!SectionName.startswith(OFFLOAD_BUNDLER_MAGIC_STR))
-      return false;
+    if (!NameOrErr->startswith(OFFLOAD_BUNDLER_MAGIC_STR))
+      return None;
 
     // Return the triple that is right after the reserved prefix.
-    OffloadTriple = SectionName.substr(sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1);
-    return true;
+    return NameOrErr->substr(sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1);
   }
 
   /// Total number of inputs.
@@ -409,71 +410,67 @@ public:
 
   ~ObjectFileHandler() final {}
 
-  void ReadHeader(MemoryBuffer &Input) final {}
+  Error ReadHeader(MemoryBuffer &Input) final { return Error::success(); }
 
-  StringRef ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
     while (NextSection != Obj->section_end()) {
       CurrentSection = NextSection;
       ++NextSection;
 
-      StringRef OffloadTriple;
       // Check if the current section name starts with the reserved prefix. If
       // so, return the triple.
-      if (IsOffloadSection(*CurrentSection, OffloadTriple))
-        return OffloadTriple;
+      Expected<Optional<StringRef>> TripleOrErr =
+          IsOffloadSection(*CurrentSection);
+      if (!TripleOrErr)
+        return TripleOrErr.takeError();
+      if (*TripleOrErr)
+        return **TripleOrErr;
     }
-    return StringRef();
+    return None;
   }
 
-  void ReadBundleEnd(MemoryBuffer &Input) final {}
+  Error ReadBundleEnd(MemoryBuffer &Input) final { return Error::success(); }
 
-  void ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
-    // If the current section has size one, that means that the content we are
-    // interested in is the file itself. Otherwise it is the content of the
-    // section.
-    //
-    // TODO: Instead of copying the input file as is, deactivate the section
-    // that is no longer needed.
-
+  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
     Expected<StringRef> Content = CurrentSection->getContents();
-    if (!Content) {
-      consumeError(Content.takeError());
-      return;
-    }
+    if (!Content)
+      return Content.takeError();
 
     OS.write(Content->data(), Content->size());
+    return Error::success();
   }
 
-  void WriteHeader(raw_fd_ostream &OS,
-                   ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
+  Error WriteHeader(raw_fd_ostream &OS,
+                    ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
     assert(HostInputIndex != ~0u && "Host input index not defined.");
 
     // Record number of inputs.
     NumberOfInputs = Inputs.size();
+    return Error::success();
   }
 
-  void WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
     ++NumberOfProcessedInputs;
+    return Error::success();
   }
 
-  bool WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
     assert(NumberOfProcessedInputs <= NumberOfInputs &&
            "Processing more inputs that actually exist!");
     assert(HostInputIndex != ~0u && "Host input index not defined.");
 
     // If this is not the last output, we don't have to do anything.
     if (NumberOfProcessedInputs != NumberOfInputs)
-      return false;
+      return Error::success();
 
     // Find llvm-objcopy in order to create the bundle binary.
     ErrorOr<std::string> Objcopy = sys::findProgramByName(
         "llvm-objcopy", sys::path::parent_path(BundlerExecutable));
     if (!Objcopy)
       Objcopy = sys::findProgramByName("llvm-objcopy");
-    if (!Objcopy) {
-      errs() << "error: unable to find 'llvm-objcopy' in path.\n";
-      return true;
-    }
+    if (!Objcopy)
+      return createStringError(Objcopy.getError(),
+                               "unable to find 'llvm-objcopy' in path");
 
     // We write to the output file directly. So, we close it and use the name
     // to pass down to llvm-objcopy.
@@ -493,21 +490,22 @@ public:
     // If the user asked for the commands to be printed out, we do that instead
     // of executing it.
     if (PrintExternalCommands) {
-      errs() << "\"" << Objcopy.get() << "\"";
+      errs() << "\"" << *Objcopy << "\"";
       for (StringRef Arg : drop_begin(ObjcopyArgs, 1))
         errs() << " \"" << Arg << "\"";
       errs() << "\n";
     } else {
-      if (sys::ExecuteAndWait(Objcopy.get(), ObjcopyArgs)) {
-        errs() << "error: llvm-objcopy tool failed.\n";
-        return true;
-      }
+      if (sys::ExecuteAndWait(*Objcopy, ObjcopyArgs))
+        return createStringError(inconvertibleErrorCode(),
+                                 "'llvm-objcopy' tool failed");
     }
 
-    return false;
+    return Error::success();
   }
 
-  void WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {}
+  Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+    return Error::success();
+  }
 };
 
 /// Handler for text files. The bundled file will have the following format.
@@ -533,15 +531,15 @@ class TextFileHandler final : public FileHandler {
   size_t ReadChars = 0u;
 
 protected:
-  void ReadHeader(MemoryBuffer &Input) final {}
+  Error ReadHeader(MemoryBuffer &Input) final { return Error::success(); }
 
-  StringRef ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
 
     // Find start of the bundle.
     ReadChars = FC.find(BundleStartString, ReadChars);
     if (ReadChars == FC.npos)
-      return StringRef();
+      return None;
 
     // Get position of the triple.
     size_t TripleStart = ReadChars = ReadChars + BundleStartString.size();
@@ -549,7 +547,7 @@ protected:
     // Get position that closes the triple.
     size_t TripleEnd = ReadChars = FC.find("\n", ReadChars);
     if (TripleEnd == FC.npos)
-      return StringRef();
+      return None;
 
     // Next time we read after the new line.
     ++ReadChars;
@@ -557,21 +555,21 @@ protected:
     return StringRef(&FC.data()[TripleStart], TripleEnd - TripleStart);
   }
 
-  void ReadBundleEnd(MemoryBuffer &Input) final {
+  Error ReadBundleEnd(MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
 
     // Read up to the next new line.
     assert(FC[ReadChars] == '\n' && "The bundle should end with a new line.");
 
     size_t TripleEnd = ReadChars = FC.find("\n", ReadChars + 1);
-    if (TripleEnd == FC.npos)
-      return;
+    if (TripleEnd != FC.npos)
+      // Next time we read after the new line.
+      ++ReadChars;
 
-    // Next time we read after the new line.
-    ++ReadChars;
+    return Error::success();
   }
 
-  void ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
     size_t BundleStart = ReadChars;
 
@@ -580,22 +578,28 @@ protected:
 
     StringRef Bundle(&FC.data()[BundleStart], BundleEnd - BundleStart);
     OS << Bundle;
+
+    return Error::success();
   }
 
-  void WriteHeader(raw_fd_ostream &OS,
-                   ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {}
+  Error WriteHeader(raw_fd_ostream &OS,
+                    ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs) final {
+    return Error::success();
+  }
 
-  void WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
     OS << BundleStartString << TargetTriple << "\n";
+    return Error::success();
   }
 
-  bool WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
+  Error WriteBundleEnd(raw_fd_ostream &OS, StringRef TargetTriple) final {
     OS << BundleEndString << TargetTriple << "\n";
-    return false;
+    return Error::success();
   }
 
-  void WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
     OS << Input.getBuffer();
+    return Error::success();
   }
 
 public:
@@ -611,61 +615,60 @@ public:
 /// Return an appropriate object file handler. We use the specific object
 /// handler if we know how to deal with that format, otherwise we use a default
 /// binary file handler.
-static FileHandler *CreateObjectFileHandler(MemoryBuffer &FirstInput) {
+static std::unique_ptr<FileHandler>
+CreateObjectFileHandler(MemoryBuffer &FirstInput) {
   // Check if the input file format is one that we know how to deal with.
   Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(FirstInput);
 
   // We only support regular object files. If failed to open the input as a
   // known binary or this is not an object file use the default binary handler.
   if (errorToBool(BinaryOrErr.takeError()) || !isa<ObjectFile>(*BinaryOrErr))
-    return new BinaryFileHandler();
+    return std::make_unique<BinaryFileHandler>();
 
   // Otherwise create an object file handler. The handler will be owned by the
   // client of this function.
-  return new ObjectFileHandler(
+  return std::make_unique<ObjectFileHandler>(
       std::unique_ptr<ObjectFile>(cast<ObjectFile>(BinaryOrErr->release())));
 }
 
 /// Return an appropriate handler given the input files and options.
-static FileHandler *CreateFileHandler(MemoryBuffer &FirstInput) {
+static Expected<std::unique_ptr<FileHandler>>
+CreateFileHandler(MemoryBuffer &FirstInput) {
   if (FilesType == "i")
-    return new TextFileHandler(/*Comment=*/"//");
+    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   if (FilesType == "ii")
-    return new TextFileHandler(/*Comment=*/"//");
+    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   if (FilesType == "cui")
-    return new TextFileHandler(/*Comment=*/"//");
+    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   // TODO: `.d` should be eventually removed once `-M` and its variants are
   // handled properly in offload compilation.
   if (FilesType == "d")
-    return new TextFileHandler(/*Comment=*/"#");
+    return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "ll")
-    return new TextFileHandler(/*Comment=*/";");
+    return std::make_unique<TextFileHandler>(/*Comment=*/";");
   if (FilesType == "bc")
-    return new BinaryFileHandler();
+    return std::make_unique<BinaryFileHandler>();
   if (FilesType == "s")
-    return new TextFileHandler(/*Comment=*/"#");
+    return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "o")
     return CreateObjectFileHandler(FirstInput);
   if (FilesType == "gch")
-    return new BinaryFileHandler();
+    return std::make_unique<BinaryFileHandler>();
   if (FilesType == "ast")
-    return new BinaryFileHandler();
+    return std::make_unique<BinaryFileHandler>();
 
-  errs() << "error: invalid file type specified.\n";
-  return nullptr;
+  return createStringError(errc::invalid_argument,
+                           "'" + FilesType + "': invalid file type specified");
 }
 
 /// Bundle the files. Return true if an error was found.
-static bool BundleFiles() {
+static Error BundleFiles() {
   std::error_code EC;
 
   // Create output file.
   raw_fd_ostream OutputFile(OutputFileNames.front(), EC, sys::fs::OF_None);
-
-  if (EC) {
-    errs() << "error: Can't open file " << OutputFileNames.front() << ".\n";
-    return true;
-  }
+  if (EC)
+    return createFileError(OutputFileNames.front(), EC);
 
   // Open input files.
   SmallVector<std::unique_ptr<MemoryBuffer>, 8u> InputBuffers;
@@ -673,61 +676,62 @@ static bool BundleFiles() {
   for (auto &I : InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
         MemoryBuffer::getFileOrSTDIN(I);
-    if (std::error_code EC = CodeOrErr.getError()) {
-      errs() << "error: Can't open file " << I << ": " << EC.message() << "\n";
-      return true;
-    }
-    InputBuffers.emplace_back(std::move(CodeOrErr.get()));
+    if (std::error_code EC = CodeOrErr.getError())
+      return createFileError(I, EC);
+    InputBuffers.emplace_back(std::move(*CodeOrErr));
   }
 
   // Get the file handler. We use the host buffer as reference.
   assert(HostInputIndex != ~0u && "Host input index undefined??");
-  std::unique_ptr<FileHandler> FH;
-  FH.reset(CreateFileHandler(*InputBuffers[HostInputIndex].get()));
+  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+      CreateFileHandler(*InputBuffers[HostInputIndex]);
+  if (!FileHandlerOrErr)
+    return FileHandlerOrErr.takeError();
 
-  // Quit if we don't have a handler.
-  if (!FH.get())
-    return true;
+  std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
+  assert(FH);
 
   // Write header.
-  FH.get()->WriteHeader(OutputFile, InputBuffers);
+  if (Error Err = FH->WriteHeader(OutputFile, InputBuffers))
+    return Err;
 
   // Write all bundles along with the start/end markers. If an error was found
   // writing the end of the bundle component, abort the bundle writing.
   auto Input = InputBuffers.begin();
   for (auto &Triple : TargetNames) {
-    FH.get()->WriteBundleStart(OutputFile, Triple);
-    FH.get()->WriteBundle(OutputFile, *Input->get());
-    if (FH.get()->WriteBundleEnd(OutputFile, Triple))
-      return true;
+    if (Error Err = FH->WriteBundleStart(OutputFile, Triple))
+      return Err;
+    if (Error Err = FH->WriteBundle(OutputFile, **Input))
+      return Err;
+    if (Error Err = FH->WriteBundleEnd(OutputFile, Triple))
+      return Err;
     ++Input;
   }
-  return false;
+  return Error::success();
 }
 
 // Unbundle the files. Return true if an error was found.
-static bool UnbundleFiles() {
+static Error UnbundleFiles() {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFileNames.front());
-  if (std::error_code EC = CodeOrErr.getError()) {
-    errs() << "error: Can't open file " << InputFileNames.front() << ": "
-           << EC.message() << "\n";
-    return true;
-  }
+  if (std::error_code EC = CodeOrErr.getError())
+    return createFileError(InputFileNames.front(), EC);
 
-  MemoryBuffer &Input = *CodeOrErr.get();
+  MemoryBuffer &Input = **CodeOrErr;
 
   // Select the right files handler.
-  std::unique_ptr<FileHandler> FH;
-  FH.reset(CreateFileHandler(Input));
+  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+      CreateFileHandler(Input);
+  if (!FileHandlerOrErr)
+    return FileHandlerOrErr.takeError();
 
-  // Quit if we don't have a handler.
-  if (!FH.get())
-    return true;
+  std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
+  assert(FH);
 
   // Read the header of the bundled file.
-  FH.get()->ReadHeader(Input);
+  if (Error Err = FH->ReadHeader(Input))
+    return Err;
 
   // Create a work list that consist of the map triple/output file.
   StringMap<StringRef> Worklist;
@@ -741,29 +745,32 @@ static bool UnbundleFiles() {
   // assume the file is meant for the host target.
   bool FoundHostBundle = false;
   while (!Worklist.empty()) {
-    StringRef CurTriple = FH.get()->ReadBundleStart(Input);
+    Expected<Optional<StringRef>> CurTripleOrErr = FH->ReadBundleStart(Input);
+    if (!CurTripleOrErr)
+      return CurTripleOrErr.takeError();
 
     // We don't have more bundles.
-    if (CurTriple.empty())
+    if (!*CurTripleOrErr)
       break;
+
+    StringRef CurTriple = **CurTripleOrErr;
+    assert(!CurTriple.empty());
 
     auto Output = Worklist.find(CurTriple);
     // The file may have more bundles for other targets, that we don't care
     // about. Therefore, move on to the next triple
-    if (Output == Worklist.end()) {
+    if (Output == Worklist.end())
       continue;
-    }
 
     // Check if the output file can be opened and copy the bundle to it.
     std::error_code EC;
     raw_fd_ostream OutputFile(Output->second, EC, sys::fs::OF_None);
-    if (EC) {
-      errs() << "error: Can't open file " << Output->second << ": "
-             << EC.message() << "\n";
-      return true;
-    }
-    FH.get()->ReadBundle(OutputFile, Input);
-    FH.get()->ReadBundleEnd(Input);
+    if (EC)
+      return createFileError(Output->second, EC);
+    if (Error Err = FH->ReadBundle(OutputFile, Input))
+      return Err;
+    if (Error Err = FH->ReadBundleEnd(Input))
+      return Err;
     Worklist.erase(Output);
 
     // Record if we found the host bundle.
@@ -777,38 +784,31 @@ static bool UnbundleFiles() {
     for (auto &E : Worklist) {
       std::error_code EC;
       raw_fd_ostream OutputFile(E.second, EC, sys::fs::OF_None);
-      if (EC) {
-        errs() << "error: Can't open file " << E.second << ": " << EC.message()
-               << "\n";
-        return true;
-      }
+      if (EC)
+        return createFileError(E.second, EC);
 
       // If this entry has a host kind, copy the input file to the output file.
       if (hasHostKind(E.first()))
         OutputFile.write(Input.getBufferStart(), Input.getBufferSize());
     }
-    return false;
+    return Error::success();
   }
 
   // If we found elements, we emit an error if none of those were for the host
   // in case host bundle name was provided in command line.
-  if (!FoundHostBundle && HostInputIndex != ~0u) {
-    errs() << "error: Can't find bundle for the host target\n";
-    return true;
-  }
+  if (!FoundHostBundle && HostInputIndex != ~0u)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't find bundle for the host target");
 
   // If we still have any elements in the worklist, create empty files for them.
   for (auto &E : Worklist) {
     std::error_code EC;
     raw_fd_ostream OutputFile(E.second, EC, sys::fs::OF_None);
-    if (EC) {
-      errs() << "error: Can't open file " << E.second << ": "  << EC.message()
-             << "\n";
-      return true;
-    }
+    if (EC)
+      return createFileError(E.second, EC);
   }
 
-  return false;
+  return Error::success();
 }
 
 static void PrintVersion(raw_ostream &OS) {
@@ -832,26 +832,36 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
+  auto reportError = [argv](Error E) {
+    logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));
+  };
+
   bool Error = false;
   if (Unbundle) {
     if (InputFileNames.size() != 1) {
       Error = true;
-      errs() << "error: only one input file supported in unbundling mode.\n";
+      reportError(createStringError(
+          errc::invalid_argument,
+          "only one input file supported in unbundling mode"));
     }
     if (OutputFileNames.size() != TargetNames.size()) {
       Error = true;
-      errs() << "error: number of output files and targets should match in "
-                "unbundling mode.\n";
+      reportError(createStringError(errc::invalid_argument,
+                                    "number of output files and targets should "
+                                    "match in unbundling mode"));
     }
   } else {
     if (OutputFileNames.size() != 1) {
       Error = true;
-      errs() << "error: only one output file supported in bundling mode.\n";
+      reportError(createStringError(
+          errc::invalid_argument,
+          "only one output file supported in bundling mode"));
     }
     if (InputFileNames.size() != TargetNames.size()) {
       Error = true;
-      errs() << "error: number of input files and targets should match in "
-                "bundling mode.\n";
+      reportError(createStringError(
+          errc::invalid_argument,
+          "number of input files and targets should match in bundling mode"));
     }
   }
 
@@ -877,13 +887,15 @@ int main(int argc, const char **argv) {
 
     if (!KindIsValid || !TripleIsValid) {
       Error = true;
-      errs() << "error: invalid target '" << Target << "'";
 
+      SmallVector<char, 128u> Buf;
+      raw_svector_ostream Msg(Buf);
+      Msg << "invalid target '" << Target << "'";
       if (!KindIsValid)
-        errs() << ", unknown offloading kind '" << Kind << "'";
+        Msg << ", unknown offloading kind '" << Kind << "'";
       if (!TripleIsValid)
-        errs() << ", unknown target triple '" << Triple << "'";
-      errs() << ".\n";
+        Msg << ", unknown target triple '" << Triple << "'";
+      reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
 
     if (KindIsValid && Kind == "host") {
@@ -899,8 +911,9 @@ int main(int argc, const char **argv) {
   // treat missing host triple as error if we do unbundling.
   if ((Unbundle && HostTargetNum > 1) || (!Unbundle && HostTargetNum != 1)) {
     Error = true;
-    errs() << "error: expecting exactly one host target but got "
-           << HostTargetNum << ".\n";
+    reportError(createStringError(errc::invalid_argument,
+                                  "expecting exactly one host target but got " +
+                                      Twine(HostTargetNum)));
   }
 
   if (Error)
@@ -910,5 +923,9 @@ int main(int argc, const char **argv) {
   // tools.
   BundlerExecutable = sys::fs::getMainExecutable(argv[0], &BundlerExecutable);
 
-  return Unbundle ? UnbundleFiles() : BundleFiles();
+  if (llvm::Error Err = Unbundle ? UnbundleFiles() : BundleFiles()) {
+    reportError(std::move(Err));
+    return 1;
+  }
+  return 0;
 }
