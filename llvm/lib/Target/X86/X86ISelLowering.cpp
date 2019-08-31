@@ -7832,17 +7832,22 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     // IsConsecutiveLoadWithZeros - we need to create a shuffle of the loaded
     // vector and a zero vector to clear out the zero elements.
     if (!isAfterLegalize && VT.isVector()) {
-      SmallVector<int, 4> ClearMask(NumElems, -1);
-      for (unsigned i = 0; i < NumElems; ++i) {
-        if (ZeroMask[i])
-          ClearMask[i] = i + NumElems;
-        else if (LoadMask[i])
-          ClearMask[i] = i;
+      unsigned NumMaskElts = VT.getVectorNumElements();
+      if ((NumMaskElts % NumElems) == 0) {
+        unsigned Scale = NumMaskElts / NumElems;
+        SmallVector<int, 4> ClearMask(NumMaskElts, -1);
+        for (unsigned i = 0; i < NumElems; ++i) {
+          if (UndefMask[i])
+            continue;
+          int Offset = ZeroMask[i] ? NumMaskElts : 0;
+          for (unsigned j = 0; j != Scale; ++j)
+            ClearMask[(i * Scale) + j] = (i * Scale) + j + Offset;
+        }
+        SDValue V = CreateLoad(VT, LDBase);
+        SDValue Z = VT.isInteger() ? DAG.getConstant(0, DL, VT)
+                                   : DAG.getConstantFP(0.0, DL, VT);
+        return DAG.getVectorShuffle(VT, DL, V, Z, ClearMask);
       }
-      SDValue V = CreateLoad(VT, LDBase);
-      SDValue Z = VT.isInteger() ? DAG.getConstant(0, DL, VT)
-                                 : DAG.getConstantFP(0.0, DL, VT);
-      return DAG.getVectorShuffle(VT, DL, V, Z, ClearMask);
     }
   }
 
@@ -21133,8 +21138,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     CC = Cond.getOperand(0);
 
     SDValue Cmp = Cond.getOperand(1);
-    MVT VT = Op.getSimpleValueType();
-
     bool IllegalFPCMov = false;
     if (VT.isFloatingPoint() && !VT.isVector() &&
         !isScalarFPTypeInSSEReg(VT))  // FPStack?
@@ -21964,10 +21967,10 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
         if (Cmp == Cond.getOperand(1).getOperand(1) &&
             isX86LogicalCmp(Cmp) &&
             Op.getNode()->hasOneUse()) {
-          X86::CondCode CCode =
-            (X86::CondCode)Cond.getOperand(0).getConstantOperandVal(0);
-          CCode = X86::GetOppositeBranchCondition(CCode);
-          CC = DAG.getConstant(CCode, dl, MVT::i8);
+          X86::CondCode CCode0 =
+              (X86::CondCode)Cond.getOperand(0).getConstantOperandVal(0);
+          CCode0 = X86::GetOppositeBranchCondition(CCode0);
+          CC = DAG.getConstant(CCode0, dl, MVT::i8);
           SDNode *User = *Op.getNode()->use_begin();
           // Look for an unconditional branch following this conditional branch.
           // We need this because we need to reverse the successors in order
@@ -21980,12 +21983,12 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
             (void)NewBR;
             Dest = FalseBB;
 
-            Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
-                                Chain, Dest, CC, Cmp);
-            X86::CondCode CCode =
-              (X86::CondCode)Cond.getOperand(1).getConstantOperandVal(0);
-            CCode = X86::GetOppositeBranchCondition(CCode);
-            CC = DAG.getConstant(CCode, dl, MVT::i8);
+            Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(), Chain,
+                                Dest, CC, Cmp);
+            X86::CondCode CCode1 =
+                (X86::CondCode)Cond.getOperand(1).getConstantOperandVal(0);
+            CCode1 = X86::GetOppositeBranchCondition(CCode1);
+            CC = DAG.getConstant(CCode1, dl, MVT::i8);
             Cond = Cmp;
             addTest = false;
           }
@@ -31111,8 +31114,8 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
           DefRegs[MOp.getReg()] = true;
 
       MachineInstrBuilder MIB(*MF, &II);
-      for (unsigned RI = 0; SavedRegs[RI]; ++RI) {
-        unsigned Reg = SavedRegs[RI];
+      for (unsigned RegIdx = 0; SavedRegs[RegIdx]; ++RegIdx) {
+        unsigned Reg = SavedRegs[RegIdx];
         if (!DefRegs[Reg])
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
@@ -37539,12 +37542,13 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // Optimize cases that will turn into an LEA instruction.  This requires
       // an i32 or i64 and an efficient multiplier (1, 2, 3, 4, 5, 8, 9).
       if (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64) {
-        uint64_t Diff = TrueC->getZExtValue()-FalseC->getZExtValue();
-        if (N->getValueType(0) == MVT::i32) Diff = (unsigned)Diff;
+        APInt Diff = TrueC->getAPIntValue() - FalseC->getAPIntValue();
+        assert(Diff.getBitWidth() == N->getValueType(0).getSizeInBits() &&
+               "Implicit constant truncation");
 
         bool isFastMultiplier = false;
-        if (Diff < 10) {
-          switch ((unsigned char)Diff) {
+        if (Diff.ult(10)) {
+          switch (Diff.getZExtValue()) {
           default: break;
           case 1:  // result = add base, cond
           case 2:  // result = lea base(    , cond*2)
@@ -37559,7 +37563,6 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         }
 
         if (isFastMultiplier) {
-          APInt Diff = TrueC->getAPIntValue()-FalseC->getAPIntValue();
           Cond = getSETCC(CC, Cond, DL ,DAG);
           // Zero extend the condition if needed.
           Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, FalseC->getValueType(0),

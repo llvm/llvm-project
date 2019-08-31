@@ -1346,12 +1346,12 @@ private:
       if (ReuseShuffleIndices.empty())
         dbgs() << "Emtpy";
       else
-        for (unsigned Idx : ReuseShuffleIndices)
-          dbgs() << Idx << ", ";
+        for (unsigned ReuseIdx : ReuseShuffleIndices)
+          dbgs() << ReuseIdx << ", ";
       dbgs() << "\n";
       dbgs() << "ReorderIndices: ";
-      for (unsigned Idx : ReorderIndices)
-        dbgs() << Idx << ", ";
+      for (unsigned ReorderIdx : ReorderIndices)
+        dbgs() << ReorderIdx << ", ";
       dbgs() << "\n";
       dbgs() << "UserTreeIndices: ";
       for (const auto &EInfo : UserTreeIndices)
@@ -6579,10 +6579,9 @@ static bool findBuildVector(InsertElementInst *LastInsertElem,
 /// \return true if it matches.
 static bool findBuildAggregate(InsertValueInst *IV,
                                SmallVectorImpl<Value *> &BuildVectorOpds) {
-  Value *V;
   do {
     BuildVectorOpds.push_back(IV->getInsertedValueOperand());
-    V = IV->getAggregateOperand();
+    Value *V = IV->getAggregateOperand();
     if (isa<UndefValue>(V))
       break;
     IV = dyn_cast<InsertValueInst>(V);
