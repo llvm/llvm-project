@@ -6236,6 +6236,19 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
     }
   }
 
+  // Warn if the class has a final destructor but is not itself marked final.
+  if (!Record->hasAttr<FinalAttr>()) {
+    if (const CXXDestructorDecl *dtor = Record->getDestructor()) {
+      if (const FinalAttr *FA = dtor->getAttr<FinalAttr>()) {
+        Diag(FA->getLocation(), diag::warn_final_dtor_non_final_class)
+          << FA->isSpelledAsSealed();
+        Diag(Record->getLocation(), diag::note_final_dtor_non_final_class_silence)
+          << Context.getRecordType(Record)
+          << FA->isSpelledAsSealed();
+      }
+    }
+  }
+
   // See if trivial_abi has to be dropped.
   if (Record->hasAttr<TrivialABIAttr>())
     checkIllFormedTrivialABIStruct(*Record);

@@ -2230,6 +2230,11 @@ def err_class_marked_final_used_as_base : Error<
   "base %0 is marked '%select{final|sealed}1'">;
 def warn_abstract_final_class : Warning<
   "abstract class is marked '%select{final|sealed}0'">, InGroup<AbstractFinalClass>;
+def warn_final_dtor_non_final_class : Warning<
+  "class with destructor marked '%select{final|sealed}0' cannot be inherited from">,
+  InGroup<FinalDtorNonFinalClass>;
+def note_final_dtor_non_final_class_silence : Note<
+  "mark %0 as '%select{final|sealed}1' to silence this warning">;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;

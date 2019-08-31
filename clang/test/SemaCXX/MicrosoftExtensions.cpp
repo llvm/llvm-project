@@ -440,6 +440,11 @@ struct SealedType sealed : SomeBase {
 // expected-error@+1 {{base 'SealedType' is marked 'sealed'}}
 struct InheritFromSealed : SealedType {};
 
+class SealedDestructor { // expected-note {{mark 'SealedDestructor' as 'sealed' to silence this warning}}
+    // expected-warning@+1 {{'sealed' keyword is a Microsoft extension}}
+    virtual ~SealedDestructor() sealed; // expected-warning {{class with destructor marked 'sealed' cannot be inherited from}}
+};
+
 void AfterClassBody() {
   // expected-warning@+1 {{attribute 'deprecated' is ignored, place it after "struct" to apply attribute to type declaration}}
   struct D {} __declspec(deprecated);
