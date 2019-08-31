@@ -296,6 +296,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
 /// getName - Return the directory or filename corresponding to this lookup
 /// object.
 StringRef DirectoryLookup::getName() const {
+  // FIXME: Use the name from \c DirectoryEntryRef.
   if (isNormalDir())
     return getDir()->getName();
   if (isFramework())
@@ -496,7 +497,7 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 
   // FrameworkName = "/System/Library/Frameworks/"
   SmallString<1024> FrameworkName;
-  FrameworkName += getFrameworkDir()->getName();
+  FrameworkName += getFrameworkDirRef()->getName();
   if (FrameworkName.empty() || FrameworkName.back() != '/')
     FrameworkName.push_back('/');
 

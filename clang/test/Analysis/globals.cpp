@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -std=c++2a %s
 
 
 static const unsigned long long scull = 0;

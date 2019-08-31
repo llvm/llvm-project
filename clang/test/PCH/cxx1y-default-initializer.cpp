@@ -37,8 +37,8 @@ C<int> ci;
 
 static_assert(A{}.z == 3, "");
 static_assert(A{1}.z == 4, "");
-static_assert(A{.y = 5}.z == 5, ""); // expected-warning {{C99}}
-static_assert(A{3, .y = 1}.z == 4, ""); // expected-warning {{C99}}
+static_assert(A{.y = 5}.z == 5, ""); // expected-warning {{C++20}}
+static_assert(A{3, .y = 1}.z == 4, ""); // expected-warning {{C99}} expected-note {{here}}
 static_assert(make<int>().z == 3, "");
 static_assert(make<int>(12).z == 15, "");
 static_assert(C<int>().c == 0, "");

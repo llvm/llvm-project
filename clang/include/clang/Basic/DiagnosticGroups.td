@@ -100,7 +100,6 @@ def GNUComplexInteger : DiagGroup<"gnu-complex-integer">;
 def GNUConditionalOmittedOperand : DiagGroup<"gnu-conditional-omitted-operand">;
 def ConfigMacros : DiagGroup<"config-macros">;
 def : DiagGroup<"ctor-dtor-privacy">;
-def GNUDesignator : DiagGroup<"gnu-designator">;
 def GNUStringLiteralOperatorTemplate :
   DiagGroup<"gnu-string-literal-operator-template">;
 def UndefinedVarTemplate : DiagGroup<"undefined-var-template">;
@@ -145,6 +144,12 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAttributes,
                                           DeprecatedThisCapture,
                                           DeprecatedWritableStr]>,
                  DiagCategory<"Deprecations">;
+
+def CXX2aDesignator : DiagGroup<"c++20-designator">;
+// Allow -Wno-c99-designator to be used to turn off all warnings on valid C99
+// designators (including the warning controlled by -Wc++20-designator).
+def C99Designator : DiagGroup<"c99-designator", [CXX2aDesignator]>;
+def GNUDesignator : DiagGroup<"gnu-designator">;
 
 def DynamicExceptionSpec
     : DiagGroup<"dynamic-exception-spec", [DeprecatedDynamicExceptionSpec]>;
@@ -897,7 +902,7 @@ def CXX17 : DiagGroup<"c++17-extensions">;
 
 // A warning group for warnings about using C++2a features as extensions in
 // earlier C++ versions.
-def CXX2a : DiagGroup<"c++2a-extensions">;
+def CXX2a : DiagGroup<"c++2a-extensions", [CXX2aDesignator]>;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
@@ -910,7 +915,7 @@ def DelegatingCtorCycles :
 def C11 : DiagGroup<"c11-extensions">;
 
 // A warning group for warnings about using C99 features as extensions.
-def C99 : DiagGroup<"c99-extensions">;
+def C99 : DiagGroup<"c99-extensions", [C99Designator]>;
 
 // A warning group for warnings about GCC extensions.
 def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,

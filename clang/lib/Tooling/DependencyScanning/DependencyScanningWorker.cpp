@@ -87,7 +87,6 @@ public:
 
     // Use the dependency scanning optimized file system if we can.
     if (DepFS) {
-      // FIXME: Purge the symlink entries from the stat cache in the FM.
       const CompilerInvocation &CI = Compiler.getInvocation();
       // Add any filenames that were explicity passed in the build settings and
       // that might be opened, as we want to ensure we don't run source

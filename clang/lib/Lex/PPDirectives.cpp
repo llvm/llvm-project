@@ -1693,7 +1693,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
     // Give the clients a chance to recover.
     SmallString<128> RecoveryPath;
     if (Callbacks->FileNotFound(Filename, RecoveryPath)) {
-      if (auto DE = FileMgr.getDirectory(RecoveryPath)) {
+      if (auto DE = FileMgr.getOptionalDirectoryRef(RecoveryPath)) {
         // Add the recovery path to the list of search paths.
         DirectoryLookup DL(*DE, SrcMgr::C_User, false);
         HeaderInfo.AddSearchPath(DL, isAngled);

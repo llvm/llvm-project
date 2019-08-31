@@ -107,16 +107,8 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   addAncestorsAsVirtualDirs(DirName);
 }
 
-/// Converts a llvm::ErrorOr<T &> to an llvm::ErrorOr<T *> by promoting
-/// the address of the inner reference to a pointer or by propagating the error.
-template <typename T>
-static llvm::ErrorOr<T *> promoteInnerReference(llvm::ErrorOr<T &> value) {
-  if (value) return &*value;
-  return value.getError();
-}
-
-llvm::ErrorOr<const DirectoryEntry *>
-FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
+llvm::Expected<DirectoryEntryRef>
+FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   // stat doesn't like trailing separators except for root directory.
   // At least, on Win32 MSVCRT, stat() cannot strip trailing '/'.
   // (though it can strip '\\')
@@ -141,8 +133,11 @@ FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
   // contains both virtual and real directories.
   auto SeenDirInsertResult =
       SeenDirEntries.insert({DirName, std::errc::no_such_file_or_directory});
-  if (!SeenDirInsertResult.second)
-    return promoteInnerReference(SeenDirInsertResult.first->second);
+  if (!SeenDirInsertResult.second) {
+    if (SeenDirInsertResult.first->second)
+      return DirectoryEntryRef(&*SeenDirInsertResult.first);
+    return llvm::errorCodeToError(SeenDirInsertResult.first->second.getError());
+  }
 
   // We've not seen this before. Fill it in.
   ++NumDirCacheMisses;
@@ -163,7 +158,7 @@ FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
       NamedDirEnt.second = statError;
     else
       SeenDirEntries.erase(DirName);
-    return statError;
+    return llvm::errorCodeToError(statError);
   }
 
   // It exists.  See if we have already opened a directory with the
@@ -179,7 +174,15 @@ FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
     UDE.Name  = InterndDirName;
   }
 
-  return &UDE;
+  return DirectoryEntryRef(&NamedDirEnt);
+}
+
+llvm::ErrorOr<const DirectoryEntry *>
+FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
+  auto Result = getDirectoryRef(DirName, CacheFailure);
+  if (Result)
+    return &Result->getDirEntry();
+  return llvm::errorToErrorCode(Result.takeError());
 }
 
 llvm::ErrorOr<const FileEntry *>
@@ -390,6 +393,25 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
   return UFE;
 }
 
+llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
+  // Stat of the file and return nullptr if it doesn't exist.
+  llvm::vfs::Status Status;
+  if (getStatValue(VF.getName(), Status, /*isFile=*/true, /*F=*/nullptr))
+    return None;
+
+  // Fill it in from the stat.
+  BypassFileEntries.push_back(std::make_unique<FileEntry>());
+  const FileEntry &VFE = VF.getFileEntry();
+  FileEntry &BFE = *BypassFileEntries.back();
+  BFE.Name = VFE.getName();
+  BFE.Size = Status.getSize();
+  BFE.Dir = VFE.Dir;
+  BFE.ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  BFE.UID = NextFileUID++;
+  BFE.IsValid = true;
+  return FileEntryRef(VF.getName(), BFE);
+}
+
 bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
   StringRef pathRef(path.data(), path.size());
 
@@ -426,8 +448,7 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
-                              bool ShouldCloseOpenFile) {
+FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile) {
   uint64_t FileSize = Entry->getSize();
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
@@ -440,10 +461,7 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
     auto Result =
         Entry->File->getBuffer(Filename, FileSize,
                                /*RequiresNullTerminator=*/true, isVolatile);
-    // FIXME: we need a set of APIs that can make guarantees about whether a
-    // FileEntry is open or not.
-    if (ShouldCloseOpenFile)
-      Entry->closeFile();
+    Entry->closeFile();
     return Result;
   }
 
@@ -517,12 +535,6 @@ void FileManager::GetUniqueIDMapping(
   // Map virtual file entries
   for (const auto &VFE : VirtualFileEntries)
     UIDToFiles[VFE->getUID()] = VFE.get();
-}
-
-void FileManager::modifyFileEntry(FileEntry *File,
-                                  off_t Size, time_t ModificationTime) {
-  File->Size = Size;
-  File->ModTime = ModificationTime;
 }
 
 StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {

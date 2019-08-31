@@ -669,17 +669,19 @@ void SourceManager::overrideFileContents(const FileEntry *SourceFile,
   getOverriddenFilesInfo().OverriddenFiles[SourceFile] = NewFile;
 }
 
-void SourceManager::disableFileContentsOverride(const FileEntry *File) {
-  if (!isFileOverridden(File))
-    return;
+const FileEntry *
+SourceManager::bypassFileContentsOverride(const FileEntry &File) {
+  assert(isFileOverridden(&File));
+  llvm::Optional<FileEntryRef> BypassFile =
+      FileMgr.getBypassFile(FileEntryRef(File.getName(), File));
 
-  const SrcMgr::ContentCache *IR = getOrCreateContentCache(File);
-  const_cast<SrcMgr::ContentCache *>(IR)->replaceBuffer(nullptr);
-  const_cast<SrcMgr::ContentCache *>(IR)->ContentsEntry = IR->OrigEntry;
+  // If the file can't be found in the FS, give up.
+  if (!BypassFile)
+    return nullptr;
 
-  assert(OverriddenFilesInfo);
-  OverriddenFilesInfo->OverriddenFiles.erase(File);
-  OverriddenFilesInfo->OverriddenFilesWithBuffer.erase(File);
+  const FileEntry *FE = &BypassFile->getFileEntry();
+  (void)getOrCreateContentCache(FE);
+  return FE;
 }
 
 void SourceManager::setFileIsTransient(const FileEntry *File) {

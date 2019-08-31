@@ -2315,19 +2315,14 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   if ((!Overridden && !Transient) && SM.isFileOverridden(File)) {
     if (Complain)
       Error(diag::err_fe_pch_file_overridden, Filename);
-    // After emitting the diagnostic, recover by disabling the override so
-    // that the original file will be used.
-    //
-    // FIXME: This recovery is just as broken as the original state; there may
-    // be another precompiled module that's using the overridden contents, or
-    // we might be half way through parsing it. Instead, we should treat the
-    // overridden contents as belonging to a separate FileEntry.
-    SM.disableFileContentsOverride(File);
-    // The FileEntry is a virtual file entry with the size of the contents
-    // that would override the original contents. Set it to the original's
-    // size/time.
-    FileMgr.modifyFileEntry(const_cast<FileEntry*>(File),
-                            StoredSize, StoredTime);
+
+    // After emitting the diagnostic, bypass the overriding file to recover
+    // (this creates a separate FileEntry).
+    File = SM.bypassFileContentsOverride(*File);
+    if (!File) {
+      F.InputFilesLoaded[ID - 1] = InputFile::getNotFound();
+      return InputFile();
+    }
   }
 
   bool IsOutOfDate = false;
