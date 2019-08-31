@@ -486,9 +486,37 @@ SampleProfileReaderExtBinary::readOneSection(const uint8_t *Start,
         return EC;
     }
     break;
+  case SecProfileSymbolList:
+    if (std::error_code EC = readProfileSymbolList())
+      return EC;
+    break;
   default:
     break;
   }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinary::readProfileSymbolList() {
+  auto UncompressSize = readNumber<uint64_t>();
+  if (std::error_code EC = UncompressSize.getError())
+    return EC;
+
+  auto CompressSize = readNumber<uint64_t>();
+  if (std::error_code EC = CompressSize.getError())
+    return EC;
+
+  if (!ProfSymList)
+    ProfSymList = std::make_unique<ProfileSymbolList>();
+
+  if (std::error_code EC =
+          ProfSymList->read(*CompressSize, *UncompressSize, Data))
+    return EC;
+
+  // CompressSize is zero only when ProfileSymbolList is not compressed.
+  if (*CompressSize == 0)
+    Data = Data + *UncompressSize;
+  else
+    Data = Data + *CompressSize;
   return sampleprof_error::success;
 }
 
