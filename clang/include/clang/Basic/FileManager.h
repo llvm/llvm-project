@@ -45,10 +45,29 @@ class FileSystemStatCache;
 class DirectoryEntry {
   friend class FileManager;
 
+  // FIXME: We should not be storing a directory entry name here.
   StringRef Name; // Name of the directory.
 
 public:
   StringRef getName() const { return Name; }
+};
+
+/// A reference to a \c DirectoryEntry  that includes the name of the directory
+/// as it was accessed by the FileManager's client.
+class DirectoryEntryRef {
+public:
+  const DirectoryEntry &getDirEntry() const { return *Entry->getValue(); }
+
+  StringRef getName() const { return Entry->getKey(); }
+
+private:
+  friend class FileManager;
+
+  DirectoryEntryRef(
+      llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry)
+      : Entry(Entry) {}
+
+  const llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry;
 };
 
 /// Cached information about one file (either on disk
@@ -244,6 +263,29 @@ public:
 
   /// Lookup, cache, and verify the specified directory (real or
   /// virtual).
+  ///
+  /// This returns a \c std::error_code if there was an error reading the
+  /// directory. On success, returns the reference to the directory entry
+  /// together with the exact path that was used to access a file by a
+  /// particular call to getDirectoryRef.
+  ///
+  /// \param CacheFailure If true and the file does not exist, we'll cache
+  /// the failure to find this file.
+  llvm::Expected<DirectoryEntryRef> getDirectoryRef(StringRef DirName,
+                                                    bool CacheFailure = true);
+
+  /// Get a \c DirectoryEntryRef if it exists, without doing anything on error.
+  llvm::Optional<DirectoryEntryRef>
+  getOptionalDirectoryRef(StringRef DirName, bool CacheFailure = true) {
+    return llvm::expectedToOptional(getDirectoryRef(DirName, CacheFailure));
+  }
+
+  /// Lookup, cache, and verify the specified directory (real or
+  /// virtual).
+  ///
+  /// This function is deprecated and will be removed at some point in the
+  /// future, new clients should use
+  ///  \c getDirectoryRef.
   ///
   /// This returns a \c std::error_code if there was an error reading the
   /// directory. If there is no error, the DirectoryEntry is guaranteed to be
