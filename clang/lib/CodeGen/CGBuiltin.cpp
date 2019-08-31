@@ -14173,7 +14173,29 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::sqrt, Vec->getType());
     return Builder.CreateCall(Callee, {Vec});
   }
-
+  case WebAssembly::BI__builtin_wasm_qfma_f32x4:
+  case WebAssembly::BI__builtin_wasm_qfms_f32x4:
+  case WebAssembly::BI__builtin_wasm_qfma_f64x2:
+  case WebAssembly::BI__builtin_wasm_qfms_f64x2: {
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_qfma_f32x4:
+    case WebAssembly::BI__builtin_wasm_qfma_f64x2:
+      IntNo = Intrinsic::wasm_qfma;
+      break;
+    case WebAssembly::BI__builtin_wasm_qfms_f32x4:
+    case WebAssembly::BI__builtin_wasm_qfms_f64x2:
+      IntNo = Intrinsic::wasm_qfms;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    }
+    Function *Callee = CGM.getIntrinsic(IntNo, A->getType());
+    return Builder.CreateCall(Callee, {A, B, C});
+  }
   default:
     return nullptr;
   }

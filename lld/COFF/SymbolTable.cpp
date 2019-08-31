@@ -61,24 +61,6 @@ static void errorOrWarn(const Twine &s) {
     error(s);
 }
 
-// Causes the file associated with a lazy symbol to be linked in.
-static void forceLazy(Symbol *s) {
-  s->pendingArchiveLoad = true;
-  switch (s->kind()) {
-  case Symbol::Kind::LazyArchiveKind: {
-    auto *l = cast<LazyArchive>(s);
-    l->file->addMember(l->sym);
-    break;
-  }
-  case Symbol::Kind::LazyObjectKind:
-    cast<LazyObject>(s)->file->fetch();
-    break;
-  default:
-    llvm_unreachable(
-        "symbol passed to forceLazy is not a LazyArchive or LazyObject");
-  }
-}
-
 // Returns the symbol in SC whose value is <= Addr that is closest to Addr.
 // This is generally the global variable or function whose definition contains
 // Addr.
@@ -210,15 +192,16 @@ void SymbolTable::loadMinGWAutomaticImports() {
 
     if (name.startswith("__imp_"))
       continue;
-    // If we have an undefined symbol, but we have a lazy symbol we could
-    // load, load it.
-    Symbol *l = find(("__imp_" + name).str());
-    if (!l || l->pendingArchiveLoad || !l->isLazy())
+    // If we have an undefined symbol, but we have a Lazy representing a
+    // symbol we could load from file, make sure to load that.
+    Lazy *l = dyn_cast_or_null<Lazy>(find(("__imp_" + name).str()));
+    if (!l || l->pendingArchiveLoad)
       continue;
 
-    log("Loading lazy " + l->getName() + " from " + l->getFile()->getName() +
+    log("Loading lazy " + l->getName() + " from " + l->file->getName() +
         " for automatic import");
-    forceLazy(l);
+    l->pendingArchiveLoad = true;
+    l->file->addMember(l->sym);
   }
 }
 
@@ -452,22 +435,26 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, f);
-  if (wasInserted || (s->isLazy() && isWeakAlias)) {
+  if (wasInserted || (isa<Lazy>(s) && isWeakAlias)) {
     replaceSymbol<Undefined>(s, name);
     return s;
   }
-  if (s->isLazy())
-    forceLazy(s);
+  if (auto *l = dyn_cast<Lazy>(s)) {
+    if (!s->pendingArchiveLoad) {
+      s->pendingArchiveLoad = true;
+      l->file->addMember(l->sym);
+    }
+  }
   return s;
 }
 
-void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
+void SymbolTable::addLazy(ArchiveFile *f, const Archive::Symbol &sym) {
   StringRef name = sym.getName();
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
   if (wasInserted) {
-    replaceSymbol<LazyArchive>(s, f, sym);
+    replaceSymbol<Lazy>(s, f, sym);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
@@ -475,21 +462,6 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
     return;
   s->pendingArchiveLoad = true;
   f->addMember(sym);
-}
-
-void SymbolTable::addLazyObject(LazyObjFile *f, StringRef n) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(n, f);
-  if (wasInserted) {
-    replaceSymbol<LazyObject>(s, f, n);
-    return;
-  }
-  auto *u = dyn_cast<Undefined>(s);
-  if (!u || u->weakAlias || s->pendingArchiveLoad)
-    return;
-  s->pendingArchiveLoad = true;
-  f->fetch();
 }
 
 void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile) {
@@ -508,7 +480,7 @@ Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(n, nullptr);
   s->isUsedInRegularObj = true;
-  if (wasInserted || isa<Undefined>(s) || s->isLazy())
+  if (wasInserted || isa<Undefined>(s) || isa<Lazy>(s))
     replaceSymbol<DefinedAbsolute>(s, n, sym);
   else if (!isa<DefinedCOFF>(s))
     reportDuplicate(s, nullptr);
@@ -520,7 +492,7 @@ Symbol *SymbolTable::addAbsolute(StringRef n, uint64_t va) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(n, nullptr);
   s->isUsedInRegularObj = true;
-  if (wasInserted || isa<Undefined>(s) || s->isLazy())
+  if (wasInserted || isa<Undefined>(s) || isa<Lazy>(s))
     replaceSymbol<DefinedAbsolute>(s, n, va);
   else if (!isa<DefinedCOFF>(s))
     reportDuplicate(s, nullptr);
@@ -532,7 +504,7 @@ Symbol *SymbolTable::addSynthetic(StringRef n, Chunk *c) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(n, nullptr);
   s->isUsedInRegularObj = true;
-  if (wasInserted || isa<Undefined>(s) || s->isLazy())
+  if (wasInserted || isa<Undefined>(s) || isa<Lazy>(s))
     replaceSymbol<DefinedSynthetic>(s, n, c);
   else if (!isa<DefinedCOFF>(s))
     reportDuplicate(s, nullptr);
@@ -588,7 +560,7 @@ Symbol *SymbolTable::addImportData(StringRef n, ImportFile *f) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(n, nullptr);
   s->isUsedInRegularObj = true;
-  if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
+  if (wasInserted || isa<Undefined>(s) || isa<Lazy>(s)) {
     replaceSymbol<DefinedImportData>(s, n, f);
     return s;
   }
@@ -603,7 +575,7 @@ Symbol *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, nullptr);
   s->isUsedInRegularObj = true;
-  if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
+  if (wasInserted || isa<Undefined>(s) || isa<Lazy>(s)) {
     replaceSymbol<DefinedImportThunk>(s, name, id, machine);
     return s;
   }
@@ -617,12 +589,9 @@ void SymbolTable::addLibcall(StringRef name) {
   if (!sym)
     return;
 
-  if (auto *l = dyn_cast<LazyArchive>(sym)) {
+  if (Lazy *l = dyn_cast<Lazy>(sym)) {
     MemoryBufferRef mb = l->getMemberBuffer();
-    if (isBitcode(mb))
-      addUndefined(sym->getName());
-  } else if (LazyObject *o = dyn_cast<LazyObject>(sym)) {
-    if (isBitcode(o->file->mb))
+    if (identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode)
       addUndefined(sym->getName());
   }
 }

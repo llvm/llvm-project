@@ -29,9 +29,9 @@ namespace std {
     typedef const _E* iterator;
     typedef const _E* const_iterator;
 
-    initializer_list() : __begin_(nullptr), __size_(0) {}
+    constexpr initializer_list() : __begin_(nullptr), __size_(0) {}
 
-    size_t    size()  const {return __size_;}
+    constexpr size_t    size()  const {return __size_;}
     const _E* begin() const {return __begin_;}
     const _E* end()   const {return __begin_ + __size_;}
   };
@@ -353,4 +353,15 @@ namespace no_conversion_after_auto_list_deduction {
 
   struct Y { using T = std::initializer_list<Y>(*)(); operator T(); };
   auto (*y)() = { Y() }; // expected-error {{from initializer list}}
+}
+
+namespace designated_init {
+  constexpr auto a = {.a = 1, .b = 2}; // expected-error {{cannot deduce}}
+  constexpr auto b = {[0] = 1, [4] = 2}; // expected-error {{cannot deduce}} expected-warning {{C99}}
+  constexpr auto c = {1, [4] = 2}; // expected-error {{cannot deduce}} expected-warning 2{{C99}} expected-note {{here}}
+  constexpr auto d = {1, [0] = 2}; // expected-error {{cannot deduce}} expected-warning 2{{C99}} expected-note {{here}}
+
+  // If we ever start accepting the above, these assertions should pass.
+  static_assert(c.size() == 5, "");
+  static_assert(d.size() == 1, "");
 }

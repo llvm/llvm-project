@@ -952,11 +952,12 @@ public:
     return false;
   }
 
-  /// Disable overridding the contents of a file, previously enabled
-  /// with #overrideFileContents.
+  /// Bypass the overridden contents of a file.  This creates a new FileEntry
+  /// and initializes the content cache for it.  Returns nullptr if there is no
+  /// such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
-  void disableFileContentsOverride(const FileEntry *File);
+  const FileEntry *bypassFileContentsOverride(const FileEntry &File);
 
   /// Specify that a file is transient.
   void setFileIsTransient(const FileEntry *SourceFile);

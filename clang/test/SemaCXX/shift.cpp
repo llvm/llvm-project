@@ -82,8 +82,3 @@ void vect_shift_2(vec16 *x, vec16 y) { *x = *x << y; }
 void vect_shift_3(vec16 *x, vec8 y) {
   *x = *x << y; // expected-error {{vector operands do not have the same number of elements}}
 }
-static_assert(-1 >> 1 == -1);
-static_assert(-1 >> 31 == -1);
-static_assert(-2 >> 1 == -1);
-static_assert(-3 >> 1 == -2);
-static_assert(-4 >> 1 == -2);

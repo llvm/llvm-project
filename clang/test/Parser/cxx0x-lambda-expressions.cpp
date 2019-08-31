@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++11 %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++2a %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++11 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++2a -Wno-c99-designator %s
 
 enum E { e };
 

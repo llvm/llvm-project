@@ -3702,6 +3702,12 @@ static Sema::TemplateDeductionResult DeduceFromInitializerList(
     return Sema::TDK_Success;
   }
 
+  // Resolving a core issue: a braced-init-list containing any designators is
+  // a non-deduced context.
+  for (Expr *E : ILE->inits())
+    if (isa<DesignatedInitExpr>(E))
+      return Sema::TDK_Success;
+
   // Deduction only needs to be done for dependent types.
   if (ElTy->isDependentType()) {
     for (Expr *E : ILE->inits()) {
@@ -4508,6 +4514,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
     // references results in std::initializer_list<T>.
     if (!Type.getType().getNonReferenceType()->getAs<AutoType>())
       return DAR_Failed;
+
+    // Resolving a core issue: a braced-init-list containing any designators is
+    // a non-deduced context.
+    for (Expr *E : InitList->inits())
+      if (isa<DesignatedInitExpr>(E))
+        return DAR_Failed;
 
     SourceRange DeducedFromInitRange;
     for (unsigned i = 0, e = InitList->getNumInits(); i < e; ++i) {

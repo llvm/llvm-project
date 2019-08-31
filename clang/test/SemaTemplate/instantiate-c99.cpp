@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -Wno-c99-extensions -Wno-reorder -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-c99-extensions -Wno-reorder -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -Wno-c99-extensions -Wno-reorder -fsyntax-only -verify -std=c++11 %s
 
 // Test template instantiation for C99-specific features.
 

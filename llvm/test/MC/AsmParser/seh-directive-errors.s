@@ -1,5 +1,9 @@
 # RUN: not llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+# RUN: not llvm-mc -triple x86_64-windows-msvc %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 	.text
+
+# CHECK: error: .seh_ directive must appear within an active frame
+	.seh_handlerdata
 
 	.seh_pushreg %rsi
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame

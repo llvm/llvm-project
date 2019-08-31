@@ -170,7 +170,7 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
 }
 
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
-                             bool wholeArchive, bool lazy) {
+                             bool wholeArchive) {
   StringRef filename = mb->getBufferIdentifier();
 
   MemoryBufferRef mbref = takeBuffer(std::move(mb));
@@ -195,17 +195,11 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     symtab->addFile(make<ArchiveFile>(mbref));
     break;
   case file_magic::bitcode:
-    if (lazy)
-      symtab->addFile(make<LazyObjFile>(mbref));
-    else
-      symtab->addFile(make<BitcodeFile>(mbref, "", 0));
+    symtab->addFile(make<BitcodeFile>(mbref, "", 0));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
-    if (lazy)
-      symtab->addFile(make<LazyObjFile>(mbref));
-    else
-      symtab->addFile(make<ObjFile>(mbref));
+    symtab->addFile(make<ObjFile>(mbref));
     break;
   case file_magic::pdb:
     loadTypeServerSource(mbref);
@@ -226,7 +220,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   }
 }
 
-void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
+void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive) {
   auto future =
       std::make_shared<std::future<MBErrPair>>(createFutureForFile(path));
   std::string pathStr = path;
@@ -246,7 +240,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       else
         error(msg + "; did you mean '" + nearest + "'");
     } else
-      driver->addBuffer(std::move(mbOrErr.first), wholeArchive, lazy);
+      driver->addBuffer(std::move(mbOrErr.first), wholeArchive);
   });
 }
 
@@ -365,7 +359,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_defaultlib:
       if (Optional<StringRef> path = findLib(arg->getValue()))
-        enqueuePath(*path, false, false);
+        enqueuePath(*path, false);
       break;
     case OPT_entry:
       config->entry = addUndefined(mangle(arg->getValue()));
@@ -1559,45 +1553,19 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     return false;
   };
 
-  // Create a list of input files. These can be given as OPT_INPUT options
-  // and OPT_wholearchive_file options, and we also need to track OPT_start_lib
-  // and OPT_end_lib.
-  bool inLib = false;
-  for (auto *arg : args) {
-    switch (arg->getOption().getID()) {
-    case OPT_end_lib:
-      if (!inLib)
-        error("stray " + arg->getSpelling());
-      inLib = false;
-      break;
-    case OPT_start_lib:
-      if (inLib)
-        error("nested " + arg->getSpelling());
-      inLib = true;
-      break;
-    case OPT_wholearchive_file:
-      if (Optional<StringRef> path = findFile(arg->getValue()))
-        enqueuePath(*path, true, inLib);
-      break;
-    case OPT_INPUT:
-      if (Optional<StringRef> path = findFile(arg->getValue()))
-        enqueuePath(*path, isWholeArchive(*path), inLib);
-      break;
-    default:
-      // Ignore other options.
-      break;
-    }
-  }
+  // Create a list of input files. Files can be given as arguments
+  // for /defaultlib option.
+  for (auto *arg : args.filtered(OPT_INPUT, OPT_wholearchive_file))
+    if (Optional<StringRef> path = findFile(arg->getValue()))
+      enqueuePath(*path, isWholeArchive(*path));
 
-  // Process files specified as /defaultlib. These should be enequeued after
-  // other files, which is why they are in a separate loop.
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (Optional<StringRef> path = findLib(arg->getValue()))
-      enqueuePath(*path, false, false);
+      enqueuePath(*path, false);
 
   // Windows specific -- Create a resource file containing a manifest file.
   if (config->manifest == Configuration::Embed)
-    addBuffer(createManifestRes(), false, false);
+    addBuffer(createManifestRes(), false);
 
   // Read all input files given via the command line.
   run();
@@ -1814,7 +1782,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_include_optional)) {
     // Handle /includeoptional
     for (auto *arg : args.filtered(OPT_include_optional))
-      if (dyn_cast_or_null<LazyArchive>(symtab->find(arg->getValue())))
+      if (dyn_cast_or_null<Lazy>(symtab->find(arg->getValue())))
         addUndefined(arg->getValue());
     while (run());
   }

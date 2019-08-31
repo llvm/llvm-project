@@ -37,7 +37,7 @@ namespace pr33140_3 {
   struct X {
     Y_t a;
   };
-  struct X foo[2] = {[0 ... 1] = {.a = (Y_t){.c = 0}}};
+  struct X foo[2] = {[0 ... 1] = {.a = (Y_t){.c = 0}}}; // expected-warning {{C99 extension}}
 }
 
 namespace pr33140_6 {

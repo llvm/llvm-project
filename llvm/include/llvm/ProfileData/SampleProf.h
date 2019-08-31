@@ -18,12 +18,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
 #include <map>
@@ -50,7 +52,10 @@ enum class sampleprof_error {
   truncated_name_table,
   not_implemented,
   counter_overflow,
-  ostream_seek_unsupported
+  ostream_seek_unsupported,
+  compress_failed,
+  uncompress_failed,
+  zlib_unavailable
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -114,6 +119,7 @@ enum SecType {
   SecInValid = 0,
   SecProfSummary = 1,
   SecNameTable = 2,
+  SecProfileSymbolList = 3,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
   SecLBRProfile = SecFuncProfileFirst
@@ -593,6 +599,47 @@ public:
 
 private:
   SamplesWithLocList V;
+};
+
+/// ProfileSymbolList records the list of function symbols shown up
+/// in the binary used to generate the profile. It is useful to
+/// to discriminate a function being so cold as not to shown up
+/// in the profile and a function newly added.
+class ProfileSymbolList {
+public:
+  /// copy indicates whether we need to copy the underlying memory
+  /// for the input Name.
+  void add(StringRef Name, bool copy = false) {
+    if (!copy) {
+      Syms.insert(Name);
+      return;
+    }
+    Syms.insert(Name.copy(Allocator));
+  }
+
+  bool contains(StringRef Name) { return Syms.count(Name); }
+
+  void merge(const ProfileSymbolList &List) {
+    for (auto Sym : List.Syms)
+      add(Sym, true);
+  }
+
+  unsigned size() { return Syms.size(); }
+
+  void setToCompress(bool TC) { ToCompress = TC; }
+
+  std::error_code read(uint64_t CompressSize, uint64_t UncompressSize,
+                       const uint8_t *Data);
+  std::error_code write(raw_ostream &OS);
+  void dump(raw_ostream &OS = dbgs()) const;
+
+private:
+  // Determine whether or not to compress the symbol list when
+  // writing it into profile. The variable is unused when the symbol
+  // list is read from an existing profile.
+  bool ToCompress = false;
+  DenseSet<StringRef> Syms;
+  BumpPtrAllocator Allocator;
 };
 
 } // end namespace sampleprof

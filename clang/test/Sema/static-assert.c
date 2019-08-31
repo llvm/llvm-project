@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c11 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c99 -pedantic -fsyntax-only -verify=expected,ext %s
-// RUN: %clang_cc1 -xc++ -std=c++11 -pedantic -fsyntax-only -verify=expected,ext %s
+// RUN: %clang_cc1 -xc++ -std=c++11 -pedantic -fsyntax-only -verify=expected,ext,cxx %s
 
 _Static_assert("foo", "string is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
 #ifndef __cplusplus
@@ -42,10 +42,7 @@ struct A {
   }
 
 typedef UNION(unsigned, struct A) U1; // ext-warning 3 {{'_Static_assert' is a C11 extension}}
-UNION(char[2], short) u2 = { .one = { 'a', 'b' } }; // ext-warning 3 {{'_Static_assert' is a C11 extension}}
-#if defined(__cplusplus)
-// ext-warning@-2 {{designated initializers are a C99 feature}}
-#endif
+UNION(char[2], short) u2 = { .one = { 'a', 'b' } }; // ext-warning 3 {{'_Static_assert' is a C11 extension}} cxx-warning {{designated initializers are a C++20 extension}}
 typedef UNION(char, short) U3; // expected-error {{static_assert failed due to requirement 'sizeof(char) == sizeof(short)' "type size mismatch"}} \
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
 typedef UNION(float, 0.5f) U4; // expected-error {{expected a type}} \
