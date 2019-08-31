@@ -434,6 +434,8 @@ namespace {
       ValueLatticeElement &BBLV, WithOverflowInst *WO, BasicBlock *BB);
   bool solveBlockValueIntrinsic(ValueLatticeElement &BBLV, IntrinsicInst *II,
                                 BasicBlock *BB);
+  bool solveBlockValueExtractValue(ValueLatticeElement &BBLV,
+                                   ExtractValueInst *EVI, BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
                                                      ValueLatticeElement &BBLV,
                                                      Instruction *BBI);
@@ -648,9 +650,7 @@ bool LazyValueInfoImpl::solveBlockValueImpl(ValueLatticeElement &Res,
       return solveBlockValueBinaryOp(Res, BO, BB);
 
     if (auto *EVI = dyn_cast<ExtractValueInst>(BBI))
-      if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
-        if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 0)
-          return solveBlockValueOverflowIntrinsic(Res, WO, BB);
+      return solveBlockValueExtractValue(Res, EVI, BB);
 
     if (auto *II = dyn_cast<IntrinsicInst>(BBI))
       return solveBlockValueIntrinsic(Res, II, BB);
@@ -1133,6 +1133,18 @@ bool LazyValueInfoImpl::solveBlockValueIntrinsic(
     BBLV = ValueLatticeElement::getOverdefined();
     return true;
   }
+}
+
+bool LazyValueInfoImpl::solveBlockValueExtractValue(
+    ValueLatticeElement &BBLV, ExtractValueInst *EVI, BasicBlock *BB) {
+  if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
+    if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 0)
+      return solveBlockValueOverflowIntrinsic(BBLV, WO, BB);
+
+  LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                    << "' - overdefined (unknown extractvalue).\n");
+  BBLV = ValueLatticeElement::getOverdefined();
+  return true;
 }
 
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,

@@ -489,7 +489,7 @@ namespace {
     SDValue reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                            SDValue N1, SDNodeFlags Flags);
 
-    SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
+    SDValue visitShiftByConstant(SDNode *N);
 
     SDValue foldSelectOfConstants(SDNode *N);
     SDValue foldVSelectOfConstants(SDNode *N);
@@ -6023,6 +6023,9 @@ static bool matchRotateHalf(SelectionDAG &DAG, SDValue Op, SDValue &Shift,
 /// Otherwise, returns an expansion of \p ExtractFrom based on the following
 /// patterns:
 ///
+///   (or (add v v) (shrl v bitwidth-1)):
+///     expands (add v v) -> (shl v 1)
+///
 ///   (or (mul v c0) (shrl (mul v c1) c2)):
 ///     expands (mul v c0) -> (shl (mul v c1) c3)
 ///
@@ -6045,6 +6048,23 @@ static SDValue extractShiftForRotate(SelectionDAG &DAG, SDValue OppShift,
       "Existing shift must be valid as a rotate half");
 
   ExtractFrom = stripConstantMask(DAG, ExtractFrom, Mask);
+
+  // Value and Type of the shift.
+  SDValue OppShiftLHS = OppShift.getOperand(0);
+  EVT ShiftedVT = OppShiftLHS.getValueType();
+
+  // Amount of the existing shift.
+  ConstantSDNode *OppShiftCst = isConstOrConstSplat(OppShift.getOperand(1));
+
+  // (add v v) -> (shl v 1)
+  if (OppShift.getOpcode() == ISD::SRL && OppShiftCst &&
+      ExtractFrom.getOpcode() == ISD::ADD &&
+      ExtractFrom.getOperand(0) == ExtractFrom.getOperand(1) &&
+      ExtractFrom.getOperand(0) == OppShiftLHS &&
+      OppShiftCst->getAPIntValue() == ShiftedVT.getScalarSizeInBits() - 1)
+    return DAG.getNode(ISD::SHL, DL, ShiftedVT, OppShiftLHS,
+                       DAG.getShiftAmountConstant(1, ShiftedVT, DL));
+
   // Preconditions:
   //    (or (op0 v c0) (shiftl/r (op0 v c1) c2))
   //
@@ -6068,15 +6088,11 @@ static SDValue extractShiftForRotate(SelectionDAG &DAG, SDValue OppShift,
 
   // op0 must be the same opcode on both sides, have the same LHS argument,
   // and produce the same value type.
-  SDValue OppShiftLHS = OppShift.getOperand(0);
-  EVT ShiftedVT = OppShiftLHS.getValueType();
   if (OppShiftLHS.getOpcode() != ExtractFrom.getOpcode() ||
       OppShiftLHS.getOperand(0) != ExtractFrom.getOperand(0) ||
       ShiftedVT != ExtractFrom.getValueType())
     return SDValue();
 
-  // Amount of the existing shift.
-  ConstantSDNode *OppShiftCst = isConstOrConstSplat(OppShift.getOperand(1));
   // Constant mul/udiv/shift amount from the RHS of the shift's LHS op.
   ConstantSDNode *OppLHSCst = isConstOrConstSplat(OppShiftLHS.getOperand(1));
   // Constant mul/udiv/shift amount from the RHS of the ExtractFrom op.
@@ -7194,20 +7210,23 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 ///   shift (binop X, C0), C1
 /// And want to transform into:
 ///   binop (shift X, C1), (shift C0, C1)
-SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
+SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
+  assert(isConstOrConstSplat(N->getOperand(1)) && "Expected constant operand");
+
   // Do not turn a 'not' into a regular xor.
   if (isBitwiseNot(N->getOperand(0)))
     return SDValue();
 
   // The inner binop must be one-use, since we want to replace it.
-  SDNode *LHS = N->getOperand(0).getNode();
-  if (!LHS->hasOneUse()) return SDValue();
+  SDValue LHS = N->getOperand(0);
+  if (!LHS.hasOneUse() || !TLI.isDesirableToCommuteWithShift(N, Level))
+    return SDValue();
 
   // We want to pull some binops through shifts, so that we have (and (shift))
   // instead of (shift (and)), likewise for add, or, xor, etc.  This sort of
   // thing happens with address calculations, so it's important to canonicalize
   // it.
-  switch (LHS->getOpcode()) {
+  switch (LHS.getOpcode()) {
   default:
     return SDValue();
   case ISD::OR:
@@ -7221,14 +7240,14 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
   }
 
   // We require the RHS of the binop to be a constant and not opaque as well.
-  ConstantSDNode *BinOpCst = getAsNonOpaqueConstant(LHS->getOperand(1));
+  ConstantSDNode *BinOpCst = getAsNonOpaqueConstant(LHS.getOperand(1));
   if (!BinOpCst)
     return SDValue();
 
   // FIXME: disable this unless the input to the binop is a shift by a constant
   // or is copy/select. Enable this in other cases when figure out it's exactly
   // profitable.
-  SDValue BinOpLHSVal = LHS->getOperand(0);
+  SDValue BinOpLHSVal = LHS.getOperand(0);
   bool IsShiftByConstant = (BinOpLHSVal.getOpcode() == ISD::SHL ||
                             BinOpLHSVal.getOpcode() == ISD::SRA ||
                             BinOpLHSVal.getOpcode() == ISD::SRL) &&
@@ -7242,24 +7261,16 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
   if (IsCopyOrSelect && N->hasOneUse())
     return SDValue();
 
-  EVT VT = N->getValueType(0);
-
-  if (!TLI.isDesirableToCommuteWithShift(N, Level))
-    return SDValue();
-
   // Fold the constants, shifting the binop RHS by the shift amount.
-  SDValue NewRHS = DAG.getNode(N->getOpcode(), SDLoc(LHS->getOperand(1)),
-                               N->getValueType(0),
-                               LHS->getOperand(1), N->getOperand(1));
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue NewRHS = DAG.getNode(N->getOpcode(), DL, VT, LHS.getOperand(1),
+                               N->getOperand(1));
   assert(isa<ConstantSDNode>(NewRHS) && "Folding was not successful!");
 
-  // Create the new shift.
-  SDValue NewShift = DAG.getNode(N->getOpcode(),
-                                 SDLoc(LHS->getOperand(0)),
-                                 VT, LHS->getOperand(0), N->getOperand(1));
-
-  // Create the new binop.
-  return DAG.getNode(LHS->getOpcode(), SDLoc(N), VT, NewShift, NewRHS);
+  SDValue NewShift = DAG.getNode(N->getOpcode(), DL, VT, LHS.getOperand(0),
+                                 N->getOperand(1));
+  return DAG.getNode(LHS.getOpcode(), DL, VT, NewShift, NewRHS);
 }
 
 SDValue DAGCombiner::distributeTruncateThroughAnd(SDNode *N) {
@@ -7587,7 +7598,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   }
 
   if (N1C && !N1C->isOpaque())
-    if (SDValue NewSHL = visitShiftByConstant(N, N1C))
+    if (SDValue NewSHL = visitShiftByConstant(N))
       return NewSHL;
 
   return SDValue();
@@ -7778,7 +7789,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     return DAG.getNode(ISD::SRL, SDLoc(N), VT, N0, N1);
 
   if (N1C && !N1C->isOpaque())
-    if (SDValue NewSRA = visitShiftByConstant(N, N1C))
+    if (SDValue NewSRA = visitShiftByConstant(N))
       return NewSRA;
 
   return SDValue();
@@ -7959,7 +7970,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     return SDValue(N, 0);
 
   if (N1C && !N1C->isOpaque())
-    if (SDValue NewSRL = visitShiftByConstant(N, N1C))
+    if (SDValue NewSRL = visitShiftByConstant(N))
       return NewSRL;
 
   // Attempt to convert a srl of a load into a narrower zero-extending load.
@@ -14737,9 +14748,14 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
 
   // Check that it is legal on the target to do this.  It is legal if the new
   // VT we're shrinking to (i8/i16/i32) is legal or we're still before type
-  // legalization.
-  MVT VT = MVT::getIntegerVT(NumBytes*8);
+  // legalization (and the target doesn't explicitly think this is a bad idea).
+  MVT VT = MVT::getIntegerVT(NumBytes * 8);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!DC->isTypeLegal(VT))
+    return SDValue();
+  if (St->getMemOperand() &&
+      !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                              *St->getMemOperand()))
     return SDValue();
 
   // Okay, we can do this!  Replace the 'St' store with a store of IVal that is
