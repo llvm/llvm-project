@@ -28,7 +28,8 @@ else:
             self.child.expect_exact(self.PROMPT)
 
         def launch(self, executable=None, timeout=30, dimensions=None):
-            logfile = sys.stdout.buffer if self.TraceOn() else None
+            logfile = getattr(sys.stdout, 'buffer',
+                              sys.stdout) if self.TraceOn() else None
             args = ['--no-lldbinit', '--no-use-colors']
             for cmd in self.setUpCommands():
                 args += ['-O', cmd]
