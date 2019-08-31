@@ -212,20 +212,15 @@ CommandObjectDisassemble::CommandObjectDisassemble(
           "Disassemble specified instructions in the current target.  "
           "Defaults to the current function for the current thread and "
           "stack frame.",
-          "disassemble [<cmd-options>]"),
+          "disassemble [<cmd-options>]", eCommandRequiresTarget),
       m_options() {}
 
 CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 
 bool CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
-  Target *target = GetDebugger().GetSelectedTarget().get();
-  if (target == nullptr) {
-    result.AppendError("invalid target, create a debug target using the "
-                       "'target create' command");
-    result.SetStatus(eReturnStatusFailed);
-    return false;
-  }
+  Target *target = &GetSelectedTarget();
+
   if (!m_options.arch.IsValid())
     m_options.arch = target->GetArchitecture();
 
