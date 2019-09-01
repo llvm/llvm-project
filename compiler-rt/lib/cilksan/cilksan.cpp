@@ -263,9 +263,9 @@ inline void CilkSanImpl_t::return_from_detach() {
   // param: we are returning from a spawn
   merge_bag_from_returning_child(1);
   exit_function();
-  // Detacher frames do not have separate leave calls from the helpers
-  // containing them, so we manually call leave_cilk_function again.
-  leave_cilk_function();
+  // // Detacher frames do not have separate leave calls from the helpers
+  // // containing them, so we manually call leave_cilk_function again.
+  // leave_cilk_function();
 }
 
 /// Action performed immediately after passing a sync.
@@ -320,7 +320,8 @@ void CilkSanImpl_t::do_enter_helper_begin() {
   // WHEN_CILKSAN_DEBUG(entry_stack.head()->frame_id = frame_id+1;);
   // WHEN_CILKSAN_DEBUG(update_deque_for_entering_helper(););
   enter_cilk_function();
-  frame_stack.head()->frame_data.entry_type = HELPER;
+  // frame_stack.head()->frame_data.entry_type = HELPER;
+  frame_stack.head()->frame_data.entry_type = DETACHER;
   frame_stack.head()->frame_data.frame_type = SHADOW_FRAME;
 }
 
@@ -361,7 +362,7 @@ void CilkSanImpl_t::do_detach_end() {
   //     new DisjointSet_t<SPBagInterface *>(new PBag_t(parent->Sbag->get_node()));
   //   parent->set_pbag(parent_pbag);
   // }
-  enter_detach_child();
+  // enter_detach_child();
 }
 
 void CilkSanImpl_t::do_sync_begin() {
