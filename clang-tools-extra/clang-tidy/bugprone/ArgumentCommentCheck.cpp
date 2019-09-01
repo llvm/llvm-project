@@ -24,6 +24,8 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.getLocalOrGlobal("StrictMode", 0) != 0),
+      IgnoreSingleArgument(
+          Options.getLocalOrGlobal("IgnoreSingleArgument", 0) != 0),
       CommentBoolLiterals(Options.getLocalOrGlobal("CommentBoolLiterals", 0) !=
                           0),
       CommentIntegerLiterals(
@@ -41,6 +43,7 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreSingleArgument", IgnoreSingleArgument);
   Options.store(Opts, "CommentBoolLiterals", CommentBoolLiterals);
   Options.store(Opts, "CommentIntegerLiterals", CommentIntegerLiterals);
   Options.store(Opts, "CommentFloatLiterals", CommentFloatLiterals);
@@ -252,7 +255,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
   Callee = Callee->getFirstDecl();
   unsigned NumArgs = std::min<unsigned>(Args.size(), Callee->getNumParams());
-  if (NumArgs == 0)
+  if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
   auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
