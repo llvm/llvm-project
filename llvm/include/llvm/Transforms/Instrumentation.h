@@ -186,8 +186,8 @@ ModulePass *createSanitizerCoverageModulePass(
     const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
 
 // Insert CilkSanitizer (Cilk determinacy race detection) instrumentation
-ModulePass *createCilkSanitizerLegacyPass(bool JitMode = false,
-                                          bool CallsMayThrow = true);
+ModulePass *createCilkSanitizerLegacyPass(bool JitMode = false);
+ModulePass *createCilkSanitizerLegacyPass(bool JitMode, bool CallsMayThrow);
 
 // Options for comprehensive static instrumentation
 struct CSIOptions {

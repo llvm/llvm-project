@@ -377,6 +377,10 @@ void CilkSanitizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<BasicAAWrapperPass>();
 }
 
+ModulePass *llvm::createCilkSanitizerLegacyPass(bool JitMode) {
+  return new CilkSanitizerLegacyPass(JitMode);
+}
+
 ModulePass *llvm::createCilkSanitizerLegacyPass(bool JitMode,
                                                 bool CallsMayThrow) {
   return new CilkSanitizerLegacyPass(JitMode, CallsMayThrow);
@@ -2752,7 +2756,8 @@ bool CilkSanitizerLegacyPass::runOnModule(Module &M) {
   };
 
   return CilkSanitizerImpl(M, CG, GetDomTree, GetTaskInfo, GetLoopInfo,
-                           GetDepInfo, TLI, JitMode, CallsMayThrow).run();
+                           GetDepInfo, TLI, JitMode,
+                           CallsMayThrow).run();
 }
 
 PreservedAnalyses CilkSanitizerPass::run(Module &M, ModuleAnalysisManager &AM) {
