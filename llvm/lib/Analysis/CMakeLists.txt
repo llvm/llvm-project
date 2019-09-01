@@ -85,6 +85,7 @@ add_llvm_library(LLVMAnalysis
   StackSafetyAnalysis.cpp
   SyncDependenceAnalysis.cpp
   SyntheticCountsUtils.cpp
+  TapirRaceDetect.cpp
   TapirTaskInfo.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
