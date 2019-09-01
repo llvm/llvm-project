@@ -13,7 +13,9 @@
 
 extern List_t disjoint_set_list;
 
+#if CILKSAN_DEBUG
 static int64_t DS_ID = 0;
+#endif
 
 template <typename DISJOINTSET_DATA_T>
 class DisjointSet_t {
@@ -27,14 +29,17 @@ private:
 
   int64_t _ref_count;
 
+#if CILKSAN_DEBUG
   // HACK: The destructor calls a callback to free the set node, but in order
   // for that callback to get the set node, it needs to call find_set which has
   // assertions for ref counts. Thus, we don't dec our ref count if we're
   // destructing.
   bool _destructing;
+#endif
 
+  __attribute__((always_inline))
   void assert_not_freed() {
-    cilksan_assert(_destructing || _ref_count >= 0);
+    WHEN_CILKSAN_DEBUG(cilksan_assert(_destructing || _ref_count >= 0));
   }
 
   /*
@@ -52,6 +57,7 @@ private:
   }
 
   // Frees the old parent if it has no more references.
+  __attribute__((always_inline))
   void set_parent(DisjointSet_t *that) {
     assert_not_freed();
 
@@ -107,21 +113,24 @@ private:
   __attribute__((always_inline))
   DisjointSet_t* find_set() {
     assert_not_freed();
-
-    cilksan_assert(!_destructing);
+    WHEN_CILKSAN_DEBUG(cilksan_assert(!_destructing));
+    // std::forward_list<DisjointSet_t *> djsList;
     disjoint_set_list.lock();
     DisjointSet_t *node = this;
 
+#if CILKSAN_DEBUG
     int64_t tmp_ref_count = _ref_count;
+#endif
 
     node->assert_not_freed();
 
     while (node->_set_parent != node) {
       cilksan_assert(node->_set_parent);
 
-      if (__builtin_expect(!_destructing || node != this, 1)) {
-	disjoint_set_list.push(node);
-      }
+      // if (__builtin_expect(!_destructing || node != this, 1)) {
+      //   disjoint_set_list.push(node);
+      // }
+      disjoint_set_list.push(node);
       node = node->_set_parent;
     }
 
@@ -144,14 +153,19 @@ private:
 
   DisjointSet_t() = delete;
   DisjointSet_t(const DisjointSet_t &) = delete;
-  DisjointSet_t(const DisjointSet_t &&) = delete;
+  DisjointSet_t(DisjointSet_t &&) = delete;
 
 public:
+#if CILKSAN_DEBUG
   int64_t _ID;
+#endif
 
   explicit DisjointSet_t(DISJOINTSET_DATA_T node) :
-      _node(node), _set_node(node), _set_parent(NULL), _rank(0), _ref_count(0),
-      _destructing(false), _ID(DS_ID++) {
+      _node(node), _set_node(node), _set_parent(NULL), _rank(0), _ref_count(0)
+#if CILKSAN_DEBUG
+      , _destructing(false), _ID(DS_ID++)
+#endif
+  {
     this->_set_parent = this;
     this->inc_ref_count();
 
@@ -167,7 +181,7 @@ public:
   static void (*dtor_callback)(DisjointSet_t *);
 
   ~DisjointSet_t() {
-    _destructing = true;
+    WHEN_CILKSAN_DEBUG(_destructing = true);
     dtor_callback(this);
     if (this->_set_parent != this) {
       // Otherwise, we run the risk of double freeing.
@@ -175,30 +189,32 @@ public:
     }
     DBG_TRACE(DEBUG_DISJOINTSET, "Deleting DS %ld\n", _ID);
 
-#if CILKSAN_DEBUG
-    _destructing = false;
-    _set_parent = NULL;
-    _ref_count = -1;
+    WHEN_CILKSAN_DEBUG({
+        _destructing = false;
+        _set_parent = NULL;
+        _ref_count = -1;
 
-    debug_count--;
-#endif
+        debug_count--;
+      });
   }
 
   // Decrements the ref count.  Returns true if the node was deleted
   // as a result.
-  inline int64_t dec_ref_count(int64_t count = 1) {
+  __attribute__((always_inline))
+  int64_t dec_ref_count(int64_t count = 1) {
     assert_not_freed();
     assert(_ref_count >= count);
     _ref_count -= count;
+    DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld refcnt %ld\n", _ID, _ref_count);
     if (_ref_count == 0 || (_ref_count == 1 && this->_set_parent == this)) {
       delete this;
       return 0;
     }
-    DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld refcnt %ld\n", _ID, _ref_count);
     return _ref_count;
   }
 
-  inline void inc_ref_count(int64_t count = 1) {
+  __attribute__((always_inline))
+  void inc_ref_count(int64_t count = 1) {
     assert_not_freed();
 
     _ref_count += count;
@@ -238,6 +254,7 @@ public:
    * @param that that (younger) disjoint set.
    */
   // Called "combine," because "union" is a reserved keyword in C
+  __attribute__((always_inline))
   void combine(DisjointSet_t *that) {
     assert_not_freed();
 

@@ -3,7 +3,13 @@
 
 #include <assert.h>
 
+#ifndef CILKSAN_DEBUG
+#ifdef _DEBUG
 #define CILKSAN_DEBUG 1
+#else
+#define CILKSAN_DEBUG 0
+#endif
+#endif
 
 // if NULL, err_io is set to stderr
 #define ERROR_FILE NULL

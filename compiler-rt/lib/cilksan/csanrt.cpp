@@ -370,7 +370,6 @@ void __csirt_unit_init(const char * const name,
                        __csi_init_callsite_to_functions callsite_to_func_init) {
   // Make sure we don't instrument things in __csi_init or __csi_unit init.
   // __csi_disable_instrumentation = true;
-  std::cout << "In __csirt_unit_init\n";
 
   // TODO(ddoucet): threadsafety
   if (!csi_init_called) {
@@ -381,8 +380,6 @@ void __csirt_unit_init(const char * const name,
   int32_t acquired = 0;
   while (!(acquired = lock.compare_exchange_strong(
                acquired, 1, std::memory_order::memory_order_seq_cst))) {}
-
-  std::cout << "Acquired lock: lock = " << lock << ", acquired = " << acquired << "\n";
 
   assert(lock == acquired == 1);
 

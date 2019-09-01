@@ -7,6 +7,7 @@
 // #include <internal/abi.h>
 #include <malloc.h>
 #include <unistd.h>
+#include <map>
 #include <unordered_map>
 #include <sys/mman.h>
 
@@ -16,7 +17,6 @@
 
 #include "cilksan_internal.h"
 #include "debug_util.h"
-#include "mem_access.h"
 #include "stack.h"
 
 #define CILKSAN_API extern "C" __attribute__((visibility("default")))
@@ -182,6 +182,7 @@ static void init_internal() {
   }
   if (err_io == NULL) err_io = stderr;
 
+  // Force the number of Cilk workers to be 1.
   char *e = getenv("CILK_NWORKERS");
   if (!e || 0 != strcmp(e, "1")) {
     // fprintf(err_io, "Setting CILK_NWORKERS to be 1\n");
@@ -190,6 +191,7 @@ static void init_internal() {
       exit(1);
     }
   }
+
   // Force reductions.
   // XXX: Does not work with SP+ algorithm, but works with ordinary
   // SP bags.
@@ -276,11 +278,13 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
     return;
 
   CheckingRAII nocheck;
-  const csan_source_loc_t *srcloc = __csan_get_func_source_loc(func_id);
-  DBG_TRACE(DEBUG_CALLBACK, "__csan_func_entry(%d) at %s (%s:%d)\n",
-            func_id,
-            srcloc->name, srcloc->filename,
-            srcloc->line_number);
+  WHEN_CILKSAN_DEBUG({
+      const csan_source_loc_t *srcloc = __csan_get_func_source_loc(func_id);
+      DBG_TRACE(DEBUG_CALLBACK, "__csan_func_entry(%d) at %s (%s:%d)\n",
+                func_id,
+                srcloc->name, srcloc->filename,
+                srcloc->line_number);
+    });
   cilksan_assert(TOOL_INITIALIZED);
 
   // Propagate the parallel-execution state to the child.
@@ -312,7 +316,9 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
 
   CheckingRAII nocheck;
   cilksan_assert(TOOL_INITIALIZED);
+#if CILKSAN_DEBUG
   const csan_source_loc_t *srcloc = __csan_get_func_exit_source_loc(func_exit_id);
+#endif
   DBG_TRACE(DEBUG_CALLBACK, "__csan_func_exit(%ld, %ld) at %s (%s:%d)\n",
             func_exit_id, func_id,
             srcloc->name, srcloc->filename,
@@ -439,6 +445,7 @@ CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
                                   const csi_id_t detach_id) {
   if (!should_check())
     return;
+
   CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csan_task_exit(%ld, %ld, %ld)\n",
             task_exit_id, task_id, detach_id);
@@ -464,9 +471,10 @@ CILKSAN_API void __csan_detach_continue(const csi_id_t detach_continue_id,
 
   CilkSanImpl.record_call_return(detach_id, SPAWN);
 
-  if (last_event == LEAVE_FRAME_OR_HELPER)
-    CilkSanImpl.do_leave_end();
-
+  WHEN_CILKSAN_DEBUG({
+      if (last_event == LEAVE_FRAME_OR_HELPER)
+        CilkSanImpl.do_leave_end();
+    });
   WHEN_CILKSAN_DEBUG(last_event = NONE);
 }
 
