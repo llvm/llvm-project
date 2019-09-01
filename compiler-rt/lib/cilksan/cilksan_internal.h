@@ -4,19 +4,19 @@
 
 #include <cstdio>
 #include <iostream>
-#include <map>
 #include <unordered_map>
-#include <vector>
 
 #include "csan.h"
 
 #define UNINIT_VIEW_ID ((uint64_t)0LL)
 
 #include "cilksan.h"
-#include "stack.h"
+#include "dictionary.h"
+#include "disjointset.h"
 #include "frame_data.h"
 #include "shadow_mem.h"
-#include "disjointset.h"
+#include "shadow_mem_allocator.h"
+#include "stack.h"
 
 #define BT_OFFSET 1
 #define BT_DEPTH 2
@@ -26,6 +26,10 @@ class CilkSanImpl_t {
 public:
   CilkSanImpl_t() {}
   ~CilkSanImpl_t();
+
+  MALineAllocator &getMALineAllocator(unsigned Idx) {
+    return MAAlloc[Idx];
+  }
 
   // Initialization
   void init();
@@ -120,11 +124,13 @@ public:
   void clear_alloc(size_t start, size_t end);
 
   // defined in print_addr.cpp
-  void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
-                   uintptr_t addr, enum RaceType_t race_type);
-  void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
-                   const AccessLoc_t &alloc_inst, uintptr_t addr,
-                   enum RaceType_t race_type);
+  void report_race(
+      const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
+      uintptr_t addr, enum RaceType_t race_type);
+  void report_race(
+      const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
+      const AccessLoc_t &alloc_inst, uintptr_t addr,
+      enum RaceType_t race_type);
   void print_race_report();
   int get_num_races_found();
   void print_current_function_info();
@@ -158,9 +164,12 @@ private:
   call_stack_t call_stack;
   Stack_t<uintptr_t> sp_stack;
 
-  // Shadow memory, or the unordered hashmap that maps a memory address to its
-  // last reader and writer
+  // Shadow memory, which maps a memory address to its last reader and writer
+  // and allocation.
   Shadow_Memory shadow_memory;
+
+  // Use separate allocators for each dictionary in the shadow memory.
+  MALineAllocator MAAlloc[3];
 
   // A map keeping track of races found, keyed by the larger instruction address
   // involved in the race.  Races that have same instructions that made the same

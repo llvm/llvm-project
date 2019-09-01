@@ -331,7 +331,7 @@ static std::string get_info_on_call(const CallID_t &call) {
     break;
   }
 
-  if (UNKNOWN_CSI_ID == call.getID()) {
+  if (call.isUnknownID()) {
     convert << "<no information on source location>";
     return convert.str();
   }
@@ -395,7 +395,9 @@ get_call_stack(const AccessLoc_t &instrAddr) {
 }
 
 // static void print_race_info(const RaceInfo_t& race) {
-void RaceInfo_t::print() const {
+void RaceInfo_t::print(const AccessLoc_t &first_inst,
+                       const AccessLoc_t &second_inst,
+                       const AccessLoc_t &alloc_inst) const {
   std::cerr << "Race detected at address "
     // << (is_on_stack(race.addr) ? "stack address " : "address ")
             << std::hex << "0x" << addr << std::dec << std::endl;
@@ -505,14 +507,14 @@ void RaceInfo_t::print() const {
 
 // Log the race detected
 void CilkSanImpl_t::report_race(
-    const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
+    const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
     const AccessLoc_t &alloc_inst, uint64_t addr,
     enum RaceType_t race_type) {
   bool found = false;
+  // TODO: Make the key computation consistent with is_equivalent_race().
   uint64_t key = first_inst < second_inst ?
                               first_inst.getID() : second_inst.getID();
-  RaceInfo_t race(first_inst, std::move(second_inst), alloc_inst, addr,
-                  race_type);
+  RaceInfo_t race(first_inst, second_inst, alloc_inst, addr, race_type);
 
   std::pair<RaceMap_t::iterator, RaceMap_t::iterator> range;
   range = races_found.equal_range(key);
@@ -528,16 +530,15 @@ void CilkSanImpl_t::report_race(
     duplicated_races++;
   } else {
     // have to get the info before user program exits
-    race.print();
+    race.print(first_inst, second_inst, alloc_inst);
     races_found.insert(std::make_pair(key, race));
   }
 }
 
 void CilkSanImpl_t::report_race(
-    const AccessLoc_t &first_inst, AccessLoc_t &&second_inst, uint64_t addr,
-    enum RaceType_t race_type) {
-  report_race(first_inst, std::move(second_inst), AccessLoc_t(), addr,
-              race_type);
+    const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
+    uint64_t addr, enum RaceType_t race_type) {
+  report_race(first_inst, second_inst, AccessLoc_t(), addr, race_type);
 }
 
 // Report viewread race

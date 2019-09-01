@@ -2,6 +2,10 @@
 #ifndef __RACE_INFO_H__
 #define __RACE_INFO_H__
 
+#ifndef CHECK_EQUIVALENT_STACKS
+#define CHECK_EQUIVALENT_STACKS false
+#endif
+
 // The context in which the access is made; user = user code, update = update
 // methods for a reducer object; reduce = reduce method for a reducer object
 enum AccContextType_t { USER = 1, UPDATE = 2, REDUCE = 3 };
@@ -9,46 +13,57 @@ enum AccContextType_t { USER = 1, UPDATE = 2, REDUCE = 3 };
 enum RaceType_t { RW_RACE = 1, WW_RACE = 2, WR_RACE = 3 };
 
 // Class for representing a frame on the call stack.
-enum CallType_t { CALL, SPAWN };
+enum CallType_t : uint8_t { CALL, SPAWN };
 class CallID_t {
-  csi_id_t id;
-  CallType_t type;
+  // We assume that the top 16 bits of a CSI ID, after the sign bit, are unused.
+  // Since CSI ID's identify instructions in the program, this assumption bounds
+  // the number of CSI ID's based on the size of virtual memory.
+  const unsigned TYPE_SHIFT = 48;
+  const csi_id_t ID_MASK = ((1UL << TYPE_SHIFT) - 1);
+  const csi_id_t UNKNOWN_CSI_CALL_ID = UNKNOWN_CSI_ID & ID_MASK;
+
+  csi_id_t typed_id;
 
 public:
-  CallID_t() : id(UNKNOWN_CSI_ID), type(CALL) {}
-  CallID_t(CallType_t type, csi_id_t id) : id(id), type(type) {}
-  CallID_t(const CallID_t &copy) : id(copy.id), type(copy.type) {}
+  CallID_t() : typed_id((static_cast<csi_id_t>(CALL) << TYPE_SHIFT) |
+                        UNKNOWN_CSI_CALL_ID) {}
+  CallID_t(CallType_t type, csi_id_t id)
+      : typed_id((static_cast<csi_id_t>(type) << TYPE_SHIFT) | (id & ID_MASK))
+  {}
+  CallID_t(const CallID_t &copy) : typed_id(copy.typed_id) {}
 
   inline CallID_t &operator=(const CallID_t &copy) {
-    id = copy.id;
-    type = copy.type;
+    typed_id = copy.typed_id;
     return *this;
   }
 
   inline CallType_t getType() const {
-    return type;
+    return static_cast<CallType_t>(typed_id >> TYPE_SHIFT);
   }
 
   inline csi_id_t getID() const {
-    return id;
+    return (typed_id & ID_MASK);
   }
 
-  inline bool operator==(const CallID_t &that) {
-    return (id == that.id) && (type == that.type);
+  inline bool isUnknownID() const {
+    return getID() == UNKNOWN_CSI_CALL_ID;
   }
 
-  inline bool operator!=(const CallID_t &that) {
+  inline bool operator==(const CallID_t &that) const {
+    return typed_id == that.typed_id;
+  }
+  inline bool operator!=(const CallID_t &that) const {
     return !(*this == that);
   }
 
   inline friend
   std::ostream& operator<<(std::ostream &os, const CallID_t &id) {
-    switch (id.type) {
+    switch (id.getType()) {
     case CALL:
-      os << "CALL " << id.id;
+      os << "CALL " << id.getID();
       break;
     case SPAWN:
-      os << "SPAWN " << id.id;
+      os << "SPAWN " << id.getID();
       break;
     }
     return os;
@@ -157,6 +172,10 @@ public:
     }
   }
 
+  inline const call_stack_node_t *getTail() const {
+    return tail;
+  }
+
   inline bool tailMatches(const CallID_t &id) const {
     return tail->id == id;
   }
@@ -250,7 +269,7 @@ public:
       : acc_loc(copy.acc_loc), call_stack(copy.call_stack)// , ref_count(1)
   {}
 
-  AccessLoc_t(const AccessLoc_t &&move)
+  AccessLoc_t(AccessLoc_t &&move)
       : acc_loc(move.acc_loc)// , ref_count(1)
   {
     call_stack.overwrite(move.call_stack);
@@ -274,13 +293,19 @@ public:
     return acc_loc != UNKNOWN_CSI_ID;
   }
 
+  inline void invalidate() {
+    dec_ref_count();
+    call_stack.tail = nullptr;
+    acc_loc = UNKNOWN_CSI_ID;
+  }
+
   inline AccessLoc_t& operator=(const AccessLoc_t &copy) {
     acc_loc = copy.acc_loc;
     call_stack = copy.call_stack;
     return *this;
   }
 
-  inline AccessLoc_t& operator=(const AccessLoc_t &&move) {
+  inline AccessLoc_t& operator=(AccessLoc_t &&move) {
     acc_loc = move.acc_loc;
     call_stack = std::move(move.call_stack);
     return *this;
@@ -309,7 +334,7 @@ public:
   inline bool operator==(const AccessLoc_t &that) const {
     if (acc_loc != that.acc_loc)
       return false;
-
+#if CHECK_EQUIVALENT_STACKS
     call_stack_node_t *this_node = call_stack.tail;
     call_stack_node_t *that_node = that.call_stack.tail;
     while (this_node && that_node) {
@@ -320,6 +345,7 @@ public:
     }
     if (this_node || that_node)
       return false;
+#endif // CHECK_EQUIVALENT_STACKS
     return true;
   }
 
@@ -369,18 +395,20 @@ public:
 
 // Class representing a single race.
 class RaceInfo_t {
-  const AccessLoc_t first_inst;  // instruction addr of the first access
-  const AccessLoc_t second_inst; // instruction addr of the second access
-  const AccessLoc_t alloc_inst;  // instruction addr of memory allocation
+  // const AccessLoc_t first_inst;  // instruction addr of the first access
+  // const AccessLoc_t second_inst; // instruction addr of the second access
+  // const AccessLoc_t alloc_inst;  // instruction addr of memory allocation
+  csi_id_t first_id;
+  csi_id_t second_id;
+  csi_id_t alloc_id;
   uintptr_t addr;          // addr of memory location that got raced on
   enum RaceType_t type;    // type of race
 
 public:
-  RaceInfo_t(const AccessLoc_t &_first, AccessLoc_t &&_second,
-             const AccessLoc_t &_alloc,
-             uintptr_t _addr, enum RaceType_t _type)
-      : first_inst(_first), second_inst(_second), alloc_inst(_alloc),
-        addr(_addr), type(_type)
+  RaceInfo_t(const AccessLoc_t &_first, const AccessLoc_t &_second,
+             const AccessLoc_t &_alloc, uintptr_t _addr, enum RaceType_t _type)
+      : first_id(_first.getID()), second_id(_second.getID()),
+        alloc_id(_alloc.getID()), addr(_addr), type(_type)
   {}
 
   ~RaceInfo_t() {}
@@ -397,15 +425,16 @@ public:
     // Angelina: It turns out that Cilkscreen does not care about the race
     // types.  As long as the access instructions are the same, it's considered
     // as a duplicate.
-    if (((first_inst == other.first_inst && second_inst == other.second_inst) ||
-         (first_inst == other.second_inst && second_inst == other.first_inst)) &&
-        alloc_inst == other.alloc_inst) {
+    if (((first_id == other.first_id && second_id == other.second_id) ||
+         (first_id == other.second_id && second_id == other.first_id)) &&
+        alloc_id == other.alloc_id) {
       return true;
     }
     return false;
   }
 
-  inline void print() const;
+  inline void print(const AccessLoc_t &first, const AccessLoc_t &second,
+                    const AccessLoc_t &alloc) const;
 };
 
 #endif  // __RACE_INFO_H__

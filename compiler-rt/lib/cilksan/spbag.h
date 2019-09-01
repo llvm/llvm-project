@@ -12,6 +12,7 @@
 #include <inttypes.h>
 
 #include "debug_util.h"
+#include "race_info.h"
 
 #define UNINIT_STACK_PTR ((uintptr_t)0LL)
 
@@ -22,12 +23,13 @@ public:
   // http://stackoverflow.com/questions/461203/when-to-use-virtual-destructors
   // <stackoverflow>/3336499/virtual-desctructor-on-pure-abstract-base-class
   virtual ~SPBagInterface() { }
-  virtual bool is_SBag() = 0;
-  virtual bool is_PBag() = 0;
-  virtual uint64_t get_func_id() = 0;
-  virtual uint64_t get_rsp() = 0;
+  virtual bool is_SBag() const = 0;
+  virtual bool is_PBag() const = 0;
+  virtual uint64_t get_func_id() const = 0;
+  virtual uint64_t get_rsp() const = 0;
   virtual void set_rsp(uint64_t stack_ptr) = 0;
   // virtual std::string get_call_context() = 0;
+  virtual const call_stack_t *get_call_stack() const = 0;
 };
 
 
@@ -38,35 +40,44 @@ private:
   // SBag of the parent function (whether this function is called or spawned)
   // SPBagInterface *_parent;
   uintptr_t _stack_ptr;
+  call_stack_t _call_stack;
 
   SBag_t() {} // disable default constructor
 
 public:
-  SBag_t(uint64_t id, SPBagInterface *parent) :
+  SBag_t(uint64_t id, const call_stack_t &call_stack, SPBagInterface *parent) :
       _func_id(id),
       // _func_name(name),
       // _parent(parent),
-      _stack_ptr(UNINIT_STACK_PTR) {
+      _stack_ptr(UNINIT_STACK_PTR), _call_stack(call_stack) {
+    // std::cerr << "Constructing SBag_t " << (void*)this << "\n";
+    // std::cerr << "  call_stack " << (void*)_call_stack.getTail() << "\n";
     WHEN_CILKSAN_DEBUG(debug_count++);
   }
 
 #if CILKSAN_DEBUG
   static long debug_count;
   ~SBag_t() {
+    // std::cerr << "Destructing SBag_t " << (void*)this << "\n";
+    // std::cerr << "  call_stack " << (void*)_call_stack.getTail() << "\n";
     debug_count--;
   }
 #endif
 
-  bool is_SBag() { return true; }
-  bool is_PBag() { return false; }
+  bool is_SBag() const { return true; }
+  bool is_PBag() const { return false; }
 
-  uint64_t get_func_id() { return _func_id; }
+  uint64_t get_func_id() const { return _func_id; }
 
-  uint64_t get_rsp() {
+  uint64_t get_rsp() const {
     cilksan_assert(_stack_ptr != UNINIT_STACK_PTR);
     return _stack_ptr;
   }
   void set_rsp(uintptr_t stack_ptr) { _stack_ptr = stack_ptr; }
+
+  const call_stack_t *get_call_stack() const {
+    return &_call_stack;
+  }
 
   // Note to self: Apparently the compiler will generate a default inline
   // destructor, and it's better to let the compiler to that than define your
@@ -145,11 +156,19 @@ public:
   }
 #endif
 
-  bool is_SBag() { return false; }
-  bool is_PBag() { return true; }
-  uint64_t get_func_id() { return _sib_sbag->get_func_id(); }
-  uint64_t get_rsp() { return _sib_sbag->get_rsp(); }
-  void set_rsp(uint64_t stack_ptr) { cilksan_assert(0); /* Should never happen; */ }
+  bool is_SBag() const { return false; }
+  bool is_PBag() const { return true; }
+  uint64_t get_func_id() const { return _sib_sbag->get_func_id(); }
+  uint64_t get_rsp() const { return _sib_sbag->get_rsp(); }
+  void set_rsp(uint64_t stack_ptr) {
+     /* Should never happen; */
+    cilksan_assert(0 && "Called set_rsp on a Pbag");
+  }
+  const call_stack_t *get_call_stack() const {
+     /* Should never happen; */
+    cilksan_assert(0 && "Called get_call_stack on a Pbag");
+    return _sib_sbag->get_call_stack();
+  }
 
   /*
   std::string get_call_context() {

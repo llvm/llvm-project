@@ -4,39 +4,34 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
-#include <sstream>
-#include <cstdlib>
-#include <unordered_map>
-#include <map>
-
-#include <execinfo.h>
 #include <inttypes.h>
 
 #include "debug_util.h"
 #include "disjointset.h"
-#include "mem_access.h"
 #include "race_info.h"
 #include "spbag.h"
 
 class MemoryAccess_t {
 public:
   DisjointSet_t<SPBagInterface *> *func = nullptr;
-  AccessLoc_t loc;
+  // AccessLoc_t loc;
+  csi_id_t acc_id = UNKNOWN_CSI_ID;
 
-  MemoryAccess_t()
-      : func(nullptr), loc() { }
-
+  MemoryAccess_t() {}
   MemoryAccess_t(DisjointSet_t<SPBagInterface *> *func,
-                 csi_id_t acc_id, const call_stack_t &call_stack)
-      : func(func), loc(AccessLoc_t(acc_id, call_stack)) {
+                 csi_id_t acc_id/*, const call_stack_t &call_stack*/)
+      : func(func),
+        // loc(AccessLoc_t(acc_id, call_stack))
+        acc_id(acc_id) {
     if (func)
       func->inc_ref_count();
   }
 
   MemoryAccess_t(const MemoryAccess_t &copy)
-      : func(copy.func), loc(copy.loc) {
+      : func(copy.func),
+        // loc(copy.loc)
+        acc_id(copy.acc_id) {
     if (func)
       func->inc_ref_count();
     // if (loc)
@@ -44,18 +39,22 @@ public:
   }
 
   MemoryAccess_t(const MemoryAccess_t &&move)
-      : func(move.func), loc(std::move(move.loc)) {}
+      : func(move.func),
+        // loc(std::move(move.loc))
+        acc_id(move.acc_id) {}
 
   ~MemoryAccess_t() {
-    if (func)
+    if (func) {
       func->dec_ref_count();
+      func = nullptr;
+    }
     // if (loc)
     //   loc->dec_ref_count();
   }
 
   bool isValid() const {
-    if (nullptr == func)
-      assert(nullptr == loc.getCallStack());
+    // if (nullptr == func)
+    //   assert(nullptr == loc.getCallStack());
     return (nullptr != func);
   }
 
@@ -63,7 +62,9 @@ public:
     if (func)
       func->dec_ref_count();
     func = nullptr;
-    loc.dec_ref_count();
+    // loc.invalidate();
+    acc_id = UNKNOWN_CSI_ID;
+    // loc.dec_ref_count();
     // if (loc)
     //   loc->dec_ref_count();
     // loc = nullptr;
@@ -73,8 +74,16 @@ public:
     return func;
   }
 
-  const AccessLoc_t &getLoc() const {
-    return loc;
+  // const AccessLoc_t &getLoc() const {
+  //   return loc;
+  // }
+  csi_id_t getAccID() const {
+    return acc_id;
+  }
+  AccessLoc_t getLoc() const {
+    if (!isValid())
+      return AccessLoc_t();
+    return AccessLoc_t(acc_id, *func->get_node()->get_call_stack());
   }
 
   MemoryAccess_t &operator=(const MemoryAccess_t &copy) {
@@ -85,7 +94,9 @@ public:
         func->dec_ref_count();
       func = copy.func;
     }
-    loc = copy.loc;
+    // loc = copy.loc;
+    acc_id = copy.acc_id;
+
     // if (loc != copy.loc) {
     //   if (copy.loc)
     //     copy.loc->inc_ref_count();
@@ -96,13 +107,14 @@ public:
     return *this;
   }
 
-  MemoryAccess_t &operator=(const MemoryAccess_t &&move) {
+  MemoryAccess_t &operator=(MemoryAccess_t &&move) {
     if (func)
       func->dec_ref_count();
     // if (loc)
     //   loc->dec_ref_count();
     func = move.func;
-    loc = std::move(move.loc);
+    // loc = std::move(move.loc);
+    acc_id = move.acc_id;
     return *this;
   }
 
@@ -110,14 +122,16 @@ public:
     assert(func);
     // assert(loc);
     func->inc_ref_count(count);
-    loc.inc_ref_count(count);
+    // loc.inc_ref_count(count);
+
     // loc->inc_ref_count(count);
   }
 
   void dec_ref_counts(int64_t count) {
     if (!func->dec_ref_count(count))
       func = nullptr;
-    loc.dec_ref_count(count);
+    // loc.dec_ref_count(count);
+
     // if (!loc->dec_ref_count(count))
     //   loc = nullptr;
   }
@@ -126,27 +140,29 @@ public:
     if (func)
       func->dec_ref_count();
     func = copy.func;
-    loc.dec_ref_count();
+    // loc.dec_ref_count();
+
     // if (loc)
     //   loc->dec_ref_count();
-    loc = copy.loc;
+    acc_id = copy.acc_id;
+    // loc = copy.loc;
   }
 
-  // Unsafe method!  Only use this if you know what you're doing.
-  void overwrite(const MemoryAccess_t &copy) {
-    func = copy.func;
-    loc.overwrite(copy.loc);
-  }
+  // // Unsafe method!  Only use this if you know what you're doing.
+  // void overwrite(const MemoryAccess_t &copy) {
+  //   func = copy.func;
+  //   loc.overwrite(copy.loc);
+  // }
 
-  // Unsafe method!  Only use this if you know what you're doing.
-  void clear() {
-    func = nullptr;
-    loc.clear();
-  }
+  // // Unsafe method!  Only use this if you know what you're doing.
+  // void clear() {
+  //   func = nullptr;
+  //   loc.clear();
+  // }
 
-  bool sameAccessLocPtr(const MemoryAccess_t &that) const {
-    return loc.getCallStack() == that.loc.getCallStack();
-  }
+  // bool sameAccessLocPtr(const MemoryAccess_t &that) const {
+  //   return loc.getCallStack() == that.loc.getCallStack();
+  // }
 
   // TODO: Get rid of PC from these comparisons
   bool operator==(const MemoryAccess_t &that) const {
@@ -161,47 +177,52 @@ public:
   inline friend
   std::ostream& operator<<(std::ostream &os, const MemoryAccess_t &acc) {
     os << "function " << acc.func->get_node()->get_func_id() <<
-      ", " << acc.loc;
+      // ", " << acc.loc;
+      ", acc id " << acc.acc_id;
     return os;
   }
 
-  // Simple free-list allocator to conserve space and time in managing
-  // arrays of PAGE_SIZE MemoryAccess_t objects.
-  struct FreeNode_t {
-    static size_t FreeNode_ObjSize;
-    FreeNode_t *next;
-  };
-  static FreeNode_t *free_list;
+  // // Simple free-list allocator to conserve space and time in managing
+  // // arrays of PAGE_SIZE MemoryAccess_t objects.
+  // struct FreeNode_t {
+  //   // static size_t FreeNode_ObjSize;
+  //   FreeNode_t *next;
+  // };
+  // // TODO: Generalize this.
+  // static const unsigned numFreeLists = 6;
+  // static FreeNode_t *free_list[numFreeLists];
 
-  void *operator new[](size_t size) {
-    if (!FreeNode_t::FreeNode_ObjSize)
-      FreeNode_t::FreeNode_ObjSize = size;
-    if (free_list) {
-      assert(size == FreeNode_t::FreeNode_ObjSize);
-      FreeNode_t *new_node = free_list;
-      free_list = free_list->next;
-      return new_node;
-    }
-    // std::cerr << "MemoryAccess_t::new[] called, size " << size << "\n";
-    return ::operator new[](size);
-  }
+  // void *operator new[](size_t size) {
+  //   unsigned lgSize = __builtin_ctzl(size);
+  //   // if (!FreeNode_t::FreeNode_ObjSize)
+  //   //   FreeNode_t::FreeNode_ObjSize = size;
+  //   if (free_list[lgSize]) {
+  //     // assert(size == FreeNode_t::FreeNode_ObjSize);
+  //     FreeNode_t *new_node = free_list[lgSize];
+  //     free_list[lgSize] = free_list[lgSize]->next;
+  //     return new_node;
+  //   }
+  //   // std::cerr << "MemoryAccess_t::new[] called, size " << size << "\n";
+  //   return ::operator new[](size);
+  // }
 
-  void operator delete[](void *ptr) {
-    FreeNode_t *del_node = reinterpret_cast<FreeNode_t *>(ptr);
-    del_node->next = free_list;
-    free_list = del_node;
-  }
+  // void operator delete[](void *ptr) {
+  //   FreeNode_t *del_node = reinterpret_cast<FreeNode_t *>(ptr);
+  //   del_node->next = free_list;
+  //   free_list = del_node;
+  // }
 
-  static void cleanup_freelist() {
-    FreeNode_t *node = free_list;
-    FreeNode_t *next = nullptr;
-    while (node) {
-      next = node->next;
-      ::operator delete[](node);
-      node = next;
-    }
-  }
-
+  // static void cleanup_freelist() {
+  //   for (unsigned i = 0; i < numFreeLists; ++i) {
+  //     FreeNode_t *node = free_list[i];
+  //     FreeNode_t *next = nullptr;
+  //     while (node) {
+  //       next = node->next;
+  //       ::operator delete[](node);
+  //       node = next;
+  //     }
+  //   }
+  // }
 };
 
 // typedef DisjointSet_t<SPBagInterface *> * value_type00;

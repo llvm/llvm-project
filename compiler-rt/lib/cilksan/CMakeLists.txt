@@ -3,13 +3,13 @@
 set(CILKSAN_SOURCES
   cilksan.cpp
   debug_util.cpp
-  mem_access.cpp
   print_addr.cpp
   shadow_mem.cpp
-  compresseddict_shadow_mem.cpp
-  static_dictionary.cpp
   drivercsan.cpp
   csanrt.cpp)
+  # mem_access.cpp
+  # compresseddict_shadow_mem.cpp
+  # static_dictionary.cpp
 
 include_directories(${COMPILER_RT_SOURCE_DIR}/include)
 
@@ -25,7 +25,7 @@ set(CILKSAN_DYNAMIC_DEFINITIONS
 set(CILKSAN_DYNAMIC_CFLAGS ${CILKSAN_CFLAGS})
 
 set(CILKSAN_COMMON_LIBS ${SANITIZER_CXX_ABI_LIBRARY} ${SANITIZER_COMMON_LINK_LIBS})
-append_list_if(COMPILER_RT_HAS_SNAPPY snappy CILKSAN_COMMON_LIBS)
+# append_list_if(COMPILER_RT_HAS_SNAPPY snappy CILKSAN_COMMON_LIBS)
 
 set(CILKSAN_DYNAMIC_LIBS ${CILKSAN_COMMON_LIBS})
 #append_list_if(COMPILER_RT_HAS_LIBC c CILKSAN_DYNAMIC_LIBS)

@@ -50,9 +50,9 @@ long PBag_t::debug_count = 0;
 
 void free_bag(DisjointSet_t<SPBagInterface *> *ptr) {
   // TODO(ddoucet): ......
-  // delete ptr->get_node();
+  delete ptr->get_node();
   // TODO(denizokt): temporary fix, but introduces memory leak
-  delete ptr->get_my_set_node();
+  // delete ptr->get_my_set_node();
 }
 
 template<>
@@ -204,8 +204,8 @@ inline void CilkSanImpl_t::start_new_function() {
 
   DBG_TRACE(DEBUG_BAGS, "Creating SBag for frame %ld\n", frame_id);
   child_sbag =
-    new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id,
-						   parent_sbag->get_node()));
+    new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id, call_stack,
+                                                   parent_sbag->get_node()));
 
   child->init_new_function(child_sbag);
 
@@ -472,35 +472,11 @@ void CilkSanImpl_t::do_read(const csi_id_t load_id,
             load_id, mem_size, addr, load_pc[load_id]);
   ++num_reads_checked;
 
-  // for now we assume the stack doesn't change
   bool on_stack = is_on_stack(addr);
   if (on_stack)
     advance_stack_frame(addr);
 
-  // handle the prefix
-  uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
-  std::ptrdiff_t prefix_size = next_addr - addr;
-  cilksan_assert(prefix_size >= 0 && prefix_size < MAX_GRAIN_SIZE);
-
-  if ((size_t)prefix_size >= mem_size) {
-    // access falls within a max grain sized block
-    record_mem_helper(true, load_id, addr, mem_size, on_stack);
-  } else {
-    cilksan_assert( (size_t)prefix_size <= mem_size );
-    if (prefix_size) { // do the prefix first
-      record_mem_helper(true, load_id, addr, (size_t)prefix_size, on_stack);
-      mem_size -= prefix_size;
-    }
-    addr = next_addr;
-    // then do the rest of the max-grain size aligned blocks
-    uint32_t i = 0;
-    for (i = 0; (i + MAX_GRAIN_SIZE) < mem_size; i += MAX_GRAIN_SIZE) {
-      record_mem_helper(true, load_id, addr + i, MAX_GRAIN_SIZE,
-                        on_stack);
-    }
-    // trailing bytes
-    record_mem_helper(true, load_id, addr+i, mem_size-i, on_stack);
-  }
+  record_mem_helper(true, load_id, addr, mem_size, on_stack);
 }
 
 void CilkSanImpl_t::do_write(const csi_id_t store_id,
@@ -514,29 +490,7 @@ void CilkSanImpl_t::do_write(const csi_id_t store_id,
   if (on_stack)
     advance_stack_frame(addr);
 
-  // handle the prefix
-  uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
-  std::ptrdiff_t prefix_size = next_addr - addr;
-  cilksan_assert(prefix_size >= 0 && prefix_size < MAX_GRAIN_SIZE);
-
-  if ((size_t)prefix_size >= mem_size) { // access falls within a max grain sized block
-    record_mem_helper(false, store_id, addr, mem_size, on_stack);
-  } else {
-    cilksan_assert((size_t)prefix_size <= mem_size);
-    if (prefix_size) { // do the prefix first
-      record_mem_helper(false, store_id, addr, prefix_size, on_stack);
-      mem_size -= prefix_size;
-    }
-    addr = next_addr;
-    // then do the rest of the max-grain size aligned blocks
-    uint32_t i = 0;
-    for(i = 0; (i + MAX_GRAIN_SIZE) < mem_size; i += MAX_GRAIN_SIZE) {
-      record_mem_helper(false, store_id, addr + i, MAX_GRAIN_SIZE,
-                        on_stack);
-    }
-    // trailing bytes
-    record_mem_helper(false, store_id, addr+i, mem_size-i, on_stack);
-  }
+  record_mem_helper(false, store_id, addr, mem_size, on_stack);
 }
 
 // clear the memory block at [start,start+size) (end is exclusive).
@@ -642,7 +596,8 @@ void CilkSanImpl_t::init() {
   // for the main function before we enter the first Cilk context
   DisjointSet_t<SPBagInterface *> *sbag;
   DBG_TRACE(DEBUG_BAGS, "Creating SBag for frame %ld\n", frame_id);
-  sbag = new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id, NULL));
+  sbag = new DisjointSet_t<SPBagInterface *>(
+      new SBag_t(frame_id, call_stack, nullptr));
   cilksan_assert(sbag->get_set_node()->is_SBag());
   frame_stack.head()->set_sbag(sbag);
   WHEN_CILKSAN_DEBUG(frame_stack.head()->frame_data.frame_type = FULL_FRAME);
