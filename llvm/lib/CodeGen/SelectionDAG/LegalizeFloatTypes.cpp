@@ -201,7 +201,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::FMIN_F32,
                                            RTLIB::FMIN_F64,
@@ -216,7 +218,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMAXNUM(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::FMAX_F32,
                                            RTLIB::FMAX_F64,
@@ -231,7 +235,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::ADD_F32,
                                            RTLIB::ADD_F64,
@@ -245,7 +251,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCEIL(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::CEIL_F32,
                                            RTLIB::CEIL_F64,
@@ -310,7 +317,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOS(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::COS_F32,
                                            RTLIB::COS_F64,
@@ -325,7 +333,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FDIV(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::DIV_F32,
                                            RTLIB::DIV_F64,
@@ -339,7 +349,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FEXP(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::EXP_F32,
                                            RTLIB::EXP_F64,
@@ -353,7 +364,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FEXP2(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::EXP2_F32,
                                            RTLIB::EXP2_F64,
@@ -367,7 +379,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFLOOR(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::FLOOR_F32,
                                            RTLIB::FLOOR_F64,
@@ -381,7 +394,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FLOG(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::LOG_F32,
                                            RTLIB::LOG_F64,
@@ -395,7 +409,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FLOG2(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::LOG2_F32,
                                            RTLIB::LOG2_F64,
@@ -409,7 +424,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FLOG10(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::LOG10_F32,
                                            RTLIB::LOG10_F64,
@@ -425,7 +441,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMA(SDNode *N) {
                      GetSoftenedFloat(N->getOperand(1)),
                      GetSoftenedFloat(N->getOperand(2)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[3] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType(),
+                   N->getOperand(2).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::FMA_F32,
                                            RTLIB::FMA_F64,
@@ -440,7 +459,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FMUL(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::MUL_F32,
                                            RTLIB::MUL_F64,
@@ -454,7 +475,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEARBYINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::NEARBYINT_F32,
                                            RTLIB::NEARBYINT_F64,
@@ -517,7 +539,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, SDLoc(N)).first;
 }
 
@@ -527,7 +550,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
   EVT MidVT = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::f32);
   SDValue Op = N->getOperand(0);
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   SDValue Res32 = TLI.makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MidVT, Op,
                                   CallOptions, SDLoc(N)).first;
   if (N->getValueType(0) == MVT::f32)
@@ -551,7 +575,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
   RTLIB::Libcall LC = RTLIB::getFPROUND(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_ROUND!");
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, SDLoc(N)).first;
 }
 
@@ -560,7 +585,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::POW_F32,
                                            RTLIB::POW_F64,
@@ -576,7 +603,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOWI(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)), N->getOperand(1) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::POWI_F32,
                                            RTLIB::POWI_F64,
@@ -591,7 +620,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::REM_F32,
                                            RTLIB::REM_F64,
@@ -605,7 +636,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FRINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::RINT_F32,
                                            RTLIB::RINT_F64,
@@ -619,7 +651,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FROUND(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::ROUND_F32,
                                            RTLIB::ROUND_F64,
@@ -633,7 +666,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSIN(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::SIN_F32,
                                            RTLIB::SIN_F64,
@@ -647,7 +681,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSQRT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::SQRT_F32,
                                            RTLIB::SQRT_F64,
@@ -662,7 +697,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSUB(SDNode *N) {
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)),
                      GetSoftenedFloat(N->getOperand(1)) };
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[2] = { N->getOperand(0).getValueType(),
+                   N->getOperand(1).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::SUB_F32,
                                            RTLIB::SUB_F64,
@@ -679,7 +716,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FTRUNC(SDNode *N) {
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
                                            RTLIB::TRUNC_F32,
                                            RTLIB::TRUNC_F64,
@@ -793,7 +831,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
                            NVT, N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(Signed);
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, LC,
                          TLI.getTypeToTransformTo(*DAG.getContext(), RVT),
                          Op, CallOptions, dl).first;
@@ -931,7 +970,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_EXTEND(SDNode *N) {
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND libcall");
 
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N)).first;
 }
 
@@ -950,7 +990,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, SDLoc(N)).first;
 }
 
@@ -1030,7 +1071,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   SDValue Res = TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, dl).first;
 
   // Truncate the result if the libcall returns a larger type.
@@ -1119,7 +1161,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LROUND(SDNode *N) {
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LROUND_F32,
                                            RTLIB::LROUND_F64,
@@ -1135,7 +1178,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLROUND(SDNode *N) {
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LLROUND_F32,
                                            RTLIB::LLROUND_F64,
@@ -1151,7 +1195,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LRINT(SDNode *N) {
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LRINT_F32,
                                            RTLIB::LRINT_F64,
@@ -1167,7 +1212,8 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
   TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setNodeBeforeSoften(N);
+  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LLRINT_F32,
                                            RTLIB::LLRINT_F64,

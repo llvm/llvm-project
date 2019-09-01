@@ -4805,6 +4805,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (I != nullptr) {
     unsigned Opcode = I->DstOp;
     unsigned MinAlign = (I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT;
+    MinAlign = MinAlign ? 1 << (MinAlign - 1) : 0;
     if (Align < MinAlign)
       return nullptr;
     bool NarrowToMOV32rm = false;
