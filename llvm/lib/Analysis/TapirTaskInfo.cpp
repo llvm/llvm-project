@@ -40,10 +40,14 @@ using namespace llvm;
 #define DEBUG_TYPE "task-info"
 
 // Statistics
-STATISTIC(NumTasks, "Number of tasks found in this function.");
-STATISTIC(NumSpindles, "Number of spindles found in this function.");
+STATISTIC(NumBasicBlocks, "Number of basic blocks analyzed.");
+STATISTIC(NumTasks, "Number of tasks found.");
+STATISTIC(NumSpindles, "Number of spindles found.");
 STATISTIC(NumSharedEHSpindles, "Number of shared exception-handling spindles "
           "found in this function.");
+STATISTIC(NumBasicBlocksInPF, "Number of basic blocks analyzed in parallel functions.");
+STATISTIC(NumTasksInPF, "Number of tasks found in parallel functions.");
+STATISTIC(NumSpindlesInPF, "Number of spindles found in parallel functions.");
 
 // Always verify taskinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -230,7 +234,6 @@ AssociateWithTask(TaskInfo *TI, Task *T,
   assert(T->getNumSpindles() + T->getNumSharedEHSpindles() ==
          UnassocSpindles.size() + 1 &&
          "Not all unassociated spindles were associated with task.");
-  ++NumTasks;
 }
 
 // Add the unassociated blocks to the spindle S in order of a DFS CFG traversal
@@ -263,7 +266,6 @@ AssociateWithSpindle(TaskInfo *TI, Spindle *S,
 
   assert(S->getNumBlocks() == UnassocBlocks.size() + 1 &&
          "Not all unassociated blocks were associated with spindle.");
-  ++NumSpindles;
 }
 
 // Helper function to add spindle edges to spindles.
@@ -338,8 +340,8 @@ static void recordContinuationSpindles(TaskInfo *TI) {
       // PHI nodes in these blocks.
       while (TI->getSpindleFor(Unwind) == S) {
         assert(Unwind->getUniqueSuccessor() &&
-               "Unwind destination of detach has many successors, but belongs to"
-               " the same spindle as the detach.");
+               "Unwind destination of detach has many successors, but belongs to \
+               the same spindle as the detach.");
         Unwind = Unwind->getUniqueSuccessor();
         LPadVal = FindUserAmongPHIs(LPadVal, Unwind);
       }
@@ -367,31 +369,39 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
   // instructions.
   DenseMap<const BasicBlock *, unsigned int> BBNumbers;
   unsigned NextBBNum = 0;
+  int64_t BBCount = 0, SpindleCount = 0, TaskCount = 0;
   SmallPtrSet<BasicBlock *, 32> DefiningBlocks;
   // Go through each block to figure out where tasks begin and where sync
   // instructions occur.
   for (BasicBlock &B : F) {
+    BBCount++;
     BBNumbers[&B] = NextBBNum++;
     if (&F.getEntryBlock() == &B) {
       DefiningBlocks.insert(&B);
       // Create a spindle and root task for the entry block.
       Spindle *S = createSpindleWithEntry(&B, Spindle::SPType::Entry);
+      SpindleCount++;
       RootTask = createTaskWithEntry(S, DomTree);
+      TaskCount++;
     }
     if (DetachInst *DI = dyn_cast<DetachInst>(B.getTerminator())) {
       BasicBlock *TaskEntry = DI->getDetached();
       DefiningBlocks.insert(TaskEntry);
       // Create a new spindle and task.
       Spindle *S = createSpindleWithEntry(TaskEntry, Spindle::SPType::Detach);
+      SpindleCount++;
       createTaskWithEntry(S, DomTree);
+      TaskCount++;
 
       // Create a new Phi spindle for the task continuation.  We do this
       // explicitly to handle cases where the spawned task does not return
       // (reattach).
       BasicBlock *TaskContinue = DI->getContinue();
       DefiningBlocks.insert(TaskContinue);
-      if (!getSpindleFor(TaskContinue))
+      if (!getSpindleFor(TaskContinue)) {
         createSpindleWithEntry(TaskContinue, Spindle::SPType::Phi);
+        SpindleCount++;
+      }
     } else if (isa<SyncInst>(B.getTerminator())) {
       BasicBlock *SPEntry = B.getSingleSuccessor();
       // For sync instructions, we mark the block containing the sync
@@ -401,11 +411,22 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
       DefiningBlocks.insert(&B);
       // Create a new spindle.  The type of this spindle might change later, if
       // we discover it requires a phi.
-      if (!getSpindleFor(SPEntry))
+      if (!getSpindleFor(SPEntry)) {
         createSpindleWithEntry(SPEntry, Spindle::SPType::Sync);
+        SpindleCount++;
+      }
       assert(getSpindleFor(SPEntry)->isSync() &&
              "Before computing phis, discovered non-sync spindle after sync");
     }      
+  }
+  NumBasicBlocks += BBCount;
+  NumSpindles += SpindleCount;
+  NumTasks += TaskCount;
+  bool ParallelFunc = (DefiningBlocks.size() > 1);
+  if (ParallelFunc) {
+    NumBasicBlocksInPF += BBCount;
+    NumSpindlesInPF += SpindleCount;
+    NumTasksInPF += TaskCount;
   }
 
   // Compute IDFs to determine additional starting points of fibrils, e.g.,
@@ -427,9 +448,13 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
              "Phi spindle to be created on existing non-sync spindle");
       // Change the type of this spindle.
       S->Ty = Spindle::SPType::Phi;
-    } else
+    } else {
       // Create a new spindle.
       createSpindleWithEntry(B, Spindle::SPType::Phi);
+      ++NumSpindles;
+      if (ParallelFunc)
+        ++NumSpindlesInPF;
+    }
 
   // Use the following linear-time algorithm to partition the function's blocks
   // into spindles, partition the spindles into tasks, and compute the tree of

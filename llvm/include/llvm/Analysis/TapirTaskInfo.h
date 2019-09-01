@@ -960,6 +960,8 @@ using MPTaskListTy = DenseMap<const Spindle *, SmallPtrSet<const Task *, 2>>;
 struct MaybeParallelTasks {
   MPTaskListTy TaskList;
 
+  // TODO: Use a bitvector representation to perform the analysis.
+
   bool markDefiningSpindle(const Spindle *S);
   bool evaluate(const Spindle *S, unsigned EvalNum);
 };
@@ -1116,30 +1118,27 @@ public:
   void evaluateParallelState(StateT &State) const {
     SetVector<Spindle *> ToProcess;
 
-    // First walk the spindles in a depth-first order to mark all defining
-    // spindles (and spindles whose state is eagerly updated).
-    {
-      SmallPtrSet<Spindle *, 8> Visited;
-      SmallVector<Spindle *, 8> WorkList;
-      Spindle *Entry = getRootTask()->getEntrySpindle();
-      WorkList.push_back(Entry);
-      while (!WorkList.empty()) {
-        Spindle *Curr = WorkList.pop_back_val();
-        if (!Visited.insert(Curr).second)
-          continue;
+    // This method performs the work-list algorithm for data-flow analysis on
+    // spindles.
 
+    // First mark all defining spindles and spindles whose state is eagerly
+    // updated.
+    {
+      // Get the spindles in post order, so we can traverse them in RPO.
+      SmallVector<Spindle *, 16> POSpindles;
+      for (Spindle *S : post_order(getRootTask()->getEntrySpindle()))
+        POSpindles.push_back(S);
+      // SetVector<Spindle *> DefSpindles;
+      for (Spindle *S : llvm::reverse(POSpindles))
         // If we find a defining spindle (or a spindle with an eagerly-updated
         // state), add its successors for processing.
-        if (State.markDefiningSpindle(Curr))
-          for (Spindle *Succ : successors(Curr))
+        if (State.markDefiningSpindle(S))
+          for (Spindle *Succ : successors(S))
             ToProcess.insert(Succ);
-
-        for (Spindle *Succ : successors(Curr))
-          WorkList.push_back(Succ);
-      }
     }
 
-    // Process each non-defining spindle, and discover new spindles to process.
+    // Perform the work-list algorithm to propagate data-flow information among
+    // the spindles.
     {
       SmallVector<Spindle *, 8> NextToProcess;
       unsigned EvalNum = 0;
