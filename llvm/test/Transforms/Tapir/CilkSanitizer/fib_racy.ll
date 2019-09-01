@@ -87,9 +87,9 @@ if.end:                                           ; preds = %if.then, %entry
   %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %n.0, i32 %call1), !dbg !57
   ret i32 0, !dbg !58
 ; CHECK-LABEL: if.end:
-; CHECK: @__csi_before_call(
+; CHECK: @__csan_before_call(
 ; CHECK-NEXT: tail call i32 @fib(
-; CHECK-NEXT: @__csi_after_call(
+; CHECK-NEXT: @__csan_after_call(
 }
 
 ; Function Attrs: inlinehint nounwind readonly uwtable

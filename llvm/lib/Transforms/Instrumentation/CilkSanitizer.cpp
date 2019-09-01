@@ -29,6 +29,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TapirRaceDetect.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -206,15 +207,103 @@ static AccessType unionAccessType(const AccessType AT1, const AccessType AT2) {
 }
 
 struct CilkSanitizerImpl : public CSIImpl {
+  class SimpleInstrumentor {
+  public:
+    SimpleInstrumentor(CilkSanitizerImpl &CilkSanImpl, TaskInfo &TI,
+                       DominatorTree *DT)
+        : CilkSanImpl(CilkSanImpl), TI(TI), DT(DT) {}
+
+    bool InstrumentSimpleInstructions(
+        SmallVectorImpl<Instruction *> &Instructions);
+    bool InstrumentAnyMemIntrinsics(
+        SmallVectorImpl<Instruction *> &MemIntrinsics);
+    bool InstrumentCalls(SmallVectorImpl<Instruction *> &Calls);
+    bool InstrumentAncillaryInstructions(
+        SmallPtrSetImpl<Instruction *> &Allocas,
+        SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
+        SmallPtrSetImpl<Instruction *> &FreeCalls);
+
+  private:
+    void getDetachesForInstruction(Instruction *I);
+
+    CilkSanitizerImpl &CilkSanImpl;
+    TaskInfo &TI;
+    DominatorTree *DT;
+
+    SmallPtrSet<DetachInst *, 8> Detaches;
+
+    SmallVector<Instruction *, 8> DelayedSimpleInsts;
+    SmallVector<std::pair<Instruction *, unsigned>, 8> DelayedMemIntrinsics;
+    SmallVector<Instruction *, 8> DelayedCalls;
+  };
+
+  class Instrumentor {
+  public:
+    Instrumentor(CilkSanitizerImpl &CilkSanImpl, RaceInfo &RI, TaskInfo &TI,
+                 DominatorTree *DT)
+        : CilkSanImpl(CilkSanImpl), RI(RI), TI(TI), DT(DT) {}
+
+    void InsertArgSuppressionFlags(Function &F, Value *FuncId);
+    bool InstrumentSimpleInstructions(
+        SmallVectorImpl<Instruction *> &Instructions);
+    bool InstrumentAnyMemIntrinsics(
+        SmallVectorImpl<Instruction *> &MemIntrinsics);
+    bool InstrumentCalls(SmallVectorImpl<Instruction *> &Calls);
+    bool InstrumentAncillaryInstructions(
+        SmallPtrSetImpl<Instruction *> &Allocas,
+        SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
+        SmallPtrSetImpl<Instruction *> &FreeCalls);
+    bool PerformDelayedInstrumentation();
+
+  private:
+    void getDetachesForInstruction(Instruction *I);
+    enum SuppressionVal : uint8_t
+      {
+       NoAccess = 0,
+       Mod = 1,
+       Ref = 2,
+       ModRef = Mod | Ref,
+       NoAlias = 4,
+      };
+    static unsigned RaceTypeToFlagVal(RaceInfo::RaceType RT);
+    Value *getSuppressionValue(Instruction *I, IRBuilder<> &IRB,
+                               unsigned OperandNum = static_cast<unsigned>(-1),
+                               SuppressionVal DefaultSV = SuppressionVal::ModRef,
+                               bool CheckArgs = true);
+    Value *getNoAliasSuppressionValue(Instruction *I, IRBuilder<> &IRB,
+                                      unsigned OperandNum, MemoryLocation Loc,
+                                      const RaceInfo::RaceData &RD, Value *Obj,
+                                      Value *SupprVal);
+    Value *getSuppressionCheck(Instruction *I, IRBuilder<> &IRB,
+                               unsigned OperandNum = static_cast<unsigned>(-1));
+    Value *readSuppressionVal(Value *V, IRBuilder<> &IRB);
+
+    CilkSanitizerImpl &CilkSanImpl;
+    RaceInfo &RI;
+    TaskInfo &TI;
+    DominatorTree *DT;
+
+    SmallPtrSet<DetachInst *, 8> Detaches;
+
+    DenseMap<const Value *, Value *> LocalSuppressions;
+    SmallPtrSet<const Value *, 8> ArgSuppressionFlags;
+
+    SmallVector<Instruction *, 8> DelayedSimpleInsts;
+    SmallVector<std::pair<Instruction *, unsigned>, 8> DelayedMemIntrinsics;
+    SmallVector<Instruction *, 8> DelayedCalls;
+  };
+
   CilkSanitizerImpl(Module &M, CallGraph *CG,
                     function_ref<DominatorTree &(Function &)> GetDomTree,
                     function_ref<TaskInfo &(Function &)> GetTaskInfo,
                     function_ref<LoopInfo &(Function &)> GetLoopInfo,
                     function_ref<DependenceInfo &(Function &)> GetDepInfo,
+                    function_ref<RaceInfo &(Function &)> GetRaceInfo,
                     const TargetLibraryInfo *TLI, bool JitMode = false,
                     bool CallsMayThrow = !AssumeNoExceptions)
       : CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI),
-        GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo) {
+        GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo),
+        GetRaceInfo(GetRaceInfo) {
     // Even though we're doing our own instrumentation, we want the CSI setup
     // for the instrumentation of function entry/exit, memory accesses (i.e.,
     // loads and stores), atomics, memory intrinsics.  We also want call sites,
@@ -226,6 +315,7 @@ struct CilkSanitizerImpl : public CSIImpl {
     Options.InstrumentMemoryAccesses = false;
     Options.InstrumentMemIntrinsics = false;
     Options.InstrumentTapir = false;
+    Options.InstrumentCalls = false;
     Options.jitMode = JitMode;
     Options.CallsMayThrow = CallsMayThrow;
   }
@@ -257,6 +347,8 @@ struct CilkSanitizerImpl : public CSIImpl {
 
   // Initialize custom hooks for CilkSanitizer
   void initializeCsanHooks();
+
+  Value *GetCalleeFuncID(Function *Callee, IRBuilder<> &IRB);
 
   // Analyze the instructions in F to determine which instructions need to be
   // isntrumented for race detection.
@@ -303,7 +395,8 @@ struct CilkSanitizerImpl : public CSIImpl {
   bool instrumentMemIntrinsic(
       Instruction *I,
       DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes);
-  bool instrumentCallsite(Instruction *I);
+  bool instrumentCallsite(Instruction *I,
+                          SmallVectorImpl<Value *> *SupprVals = nullptr);
   bool suppressCallsite(Instruction *I);
   bool instrumentAllocationFn(Instruction *I, DominatorTree *DT);
   bool instrumentFree(Instruction *I);
@@ -311,10 +404,21 @@ struct CilkSanitizerImpl : public CSIImpl {
   bool instrumentSync(SyncInst *SI);
   bool instrumentAlloca(Instruction *I);
 
+  bool instrumentFunctionUsingRI(Function &F);
+  // Helper method for RI-based race detection for instrumenting an access by a
+  // memory intrinsic.
+  bool instrumentAnyMemIntrinAcc(Instruction *I, unsigned OperandNum,
+                                 IRBuilder<> &IRB);
+  bool instrumentAnyMemIntrinAcc(Instruction *I, unsigned OperandNum) {
+    IRBuilder<> IRB(I);
+    return instrumentAnyMemIntrinAcc(I, OperandNum, IRB);
+  }
+
 private:
   // Analysis results
   function_ref<LoopInfo &(Function &)> GetLoopInfo;
   function_ref<DependenceInfo &(Function &)> GetDepInfo;
+  function_ref<RaceInfo &(Function &)> GetRaceInfo;
 
   // Instrumentation hooks
   Function *CsanFuncEntry = nullptr;
@@ -323,6 +427,8 @@ private:
   Function *CsanWrite = nullptr;
   Function *CsanLargeRead = nullptr;
   Function *CsanLargeWrite = nullptr;
+  Function *CsanBeforeCallsite = nullptr;
+  Function *CsanAfterCallsite = nullptr;
   Function *CsanDetach = nullptr;
   Function *CsanDetachContinue = nullptr;
   Function *CsanTaskEntry = nullptr;
@@ -336,6 +442,9 @@ private:
   Function *CsanDisableChecking = nullptr;
   Function *CsanEnableChecking = nullptr;
 
+  Function *GetSuppressionFlag = nullptr;
+  Function *SetSuppressionFlag = nullptr;
+
   // CilkSanitizer custom forensic tables
   ObjectTable LoadObj, StoreObj, AllocaObj, AllocFnObj;
 
@@ -346,6 +455,24 @@ private:
   SmallVector<Instruction *, 8> Allocas;
   SmallPtrSet<Instruction *, 8> ToInstrument;
 
+  // Map of functions to updated race type, for interprocedural analysis of
+  // races.
+  DenseMap<const Function *, RaceInfo::RaceType> FunctionRaceType;
+  // TODO: Record information about what function arguments each function ref's
+  // and mod's.  When instrumenting norecurse callers, factor that information
+  // into the suppression flags.
+  // DenseMap<const Value *, ModRefInfo> FuncArgMR;
+  DenseMap<const Value *, ModRefInfo> ObjectMRForRace;
+
+  SmallPtrSet<Function *, 16> NoRecurseFunctions;
+  bool FnDoesNotRecur(Function &F) {
+    if (F.hasFnAttribute(Attribute::NoRecurse))
+      return true;
+    // dbgs() << "Checking if function " << F.getName()
+    //        << " is norecurse by custom analysis: "
+    //        << NoRecurseFunctions.count(&F) << "\n";
+    return NoRecurseFunctions.count(&F);
+  }
   DenseMap<MemTransferInst *, AccessType> MemTransferAccTypes;
   SmallVector<Instruction *, 8> NoRaceCallsites;
   SmallPtrSet<Function *, 8> MayRaceFunctions;
@@ -382,6 +509,7 @@ INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TapirRaceDetectWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(
@@ -394,6 +522,7 @@ void CilkSanitizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DependenceAnalysisWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<TapirRaceDetectWrapperPass>();
   AU.addRequired<TaskInfoWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
@@ -520,6 +649,180 @@ Constant *ObjectTable::insertIntoModule(Module &M) const {
   return ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
 }
 
+//------------------------------------------------------------------------------
+// Code copied from lib/Transforms/IPO/FunctionAttrs.cpp and adapted to perform
+// custom norecurse computation.
+
+static bool setDoesNotRecurse(Function &F,
+                              SmallPtrSetImpl<Function *> &NoRecurseFunctions) {
+  if (NoRecurseFunctions.count(&F))
+    return false;
+  NoRecurseFunctions.insert(&F);
+  // ++NumNoRecurse;
+  return true;
+}
+
+static bool checkNoRecurse(Function *F,
+                           SmallPtrSetImpl<Function *> &NoRecurseFunctions,
+                           const TargetLibraryInfo *TLI) {
+  if (F->doesNotRecurse() || NoRecurseFunctions.count(F))
+    return true;
+  if (AssumeLibCallsDontRecur) {
+    LibFunc LibF;
+    if (TLI->getLibFunc(*F, LibF))
+      // TODO: Pick the library functions we care about designating as
+      // norecurse.
+      return true;
+  }
+  return false;
+}
+
+static bool considerForRecurse(const Instruction *I) {
+  if (isDetachedRethrow(I))
+    return false;
+
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    switch (II->getIntrinsicID()) {
+    default: return true;
+    case Intrinsic::annotation:
+    case Intrinsic::assume:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
+    case Intrinsic::is_constant:
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::objectsize:
+    case Intrinsic::ptr_annotation:
+    case Intrinsic::var_annotation:
+    case Intrinsic::syncregion_start:
+    case Intrinsic::vastart:
+    case Intrinsic::vacopy:
+    case Intrinsic::vaend:
+      return false;
+    }
+  return true;
+}
+
+static bool addNoRecurse(const SmallSetVector<Function *, 8> &SCCNodes,
+                         SmallPtrSetImpl<Function *> &NoRecurseFunctions,
+                         SmallPtrSetImpl<Function *> &CallsUnknown,
+                         const TargetLibraryInfo *TLI) {
+  // Try and identify functions that do not recurse.
+
+  // If the SCC contains multiple nodes we know for sure there is recursion.
+  if (SCCNodes.size() != 1)
+    return false;
+
+  Function *F = *SCCNodes.begin();
+  if (!F || F->isDeclaration() ||
+      F->doesNotRecurse() || NoRecurseFunctions.count(F))
+    return false;
+
+  // If all of the calls in F are identifiable and are to norecurse functions, F
+  // is norecurse. This check also detects self-recursion as F is not currently
+  // marked norecurse, so any called from F to F will not be marked norecurse.
+  bool MightRecurse = false;
+  for (auto &BB : *F)
+    for (auto &I : BB.instructionsWithoutDebug()) {
+      if (!considerForRecurse(&I))
+        continue;
+      if (auto CS = CallSite(&I)) {
+        Function *Callee = CS.getCalledFunction();
+        LibFunc LibF;
+        if (!Callee ||
+            (Callee->isDeclaration() &&
+             !(AssumeLibCallsDontRecur && TLI->getLibFunc(*Callee, LibF)))) {
+          // dbgs() << "Function " << F->getName()
+          //        << " calls an unknown function "
+          //        << Callee->getName() << "\n";
+          CallsUnknown.insert(F);
+        }
+        if (!Callee || Callee == F ||
+            (!checkNoRecurse(Callee, NoRecurseFunctions, TLI) &&
+             CallsUnknown.count(Callee))) {
+          // dbgs() << "Function " << F->getName()
+          //        << " potentially recurs by calling function "
+          //        << Callee->getName() << "\n";
+          // Function calls a potentially recursive function.
+          MightRecurse = true;
+        }
+      }
+    }
+
+  if (MightRecurse)
+    return false;
+
+  // Every call was to a non-recursive function other than this function, and
+  // we have no indirect recursion as the SCC size is one. This function cannot
+  // recurse.
+  return setDoesNotRecurse(*F, NoRecurseFunctions);
+}
+
+static bool addNoRecurseAttrsTopDown(
+    Function &F, SmallPtrSetImpl<Function *> &NoRecurseFunctions,
+    const TargetLibraryInfo *TLI) {
+  // We check the preconditions for the function prior to calling this to avoid
+  // the cost of building up a reversible post-order list. We assert them here
+  // to make sure none of the invariants this relies on were violated.
+  assert(!F.isDeclaration() && "Cannot deduce norecurse without a definition!");
+  assert(!F.doesNotRecurse() &&
+         "This function has already been deduced as norecurs!");
+  assert(F.hasInternalLinkage() &&
+         "Can only do top-down deduction for internal linkage functions!");
+
+  // If F is internal and all of its uses are calls from a non-recursive
+  // functions, then none of its calls could in fact recurse without going
+  // through a function marked norecurse, and so we can mark this function too
+  // as norecurse. Note that the uses must actually be calls -- otherwise
+  // a pointer to this function could be returned from a norecurse function but
+  // this function could be recursively (indirectly) called. Note that this
+  // also detects if F is directly recursive as F is not yet marked as
+  // a norecurse function.
+  for (auto *U : F.users()) {
+    auto *I = dyn_cast<Instruction>(U);
+    if (!I)
+      return false;
+    CallSite CS(I);
+    if (!CS)
+      return false;
+
+    Function *Caller = CS.getParent()->getParent();
+    if (!checkNoRecurse(Caller, NoRecurseFunctions, TLI))
+      return false;
+  }
+  return setDoesNotRecurse(F, NoRecurseFunctions);
+}
+
+static bool deduceFunctionAttributeInRPO(
+    Module &M, CallGraph &CG, SmallPtrSetImpl<Function *> &NoRecurseFunctions,
+    const TargetLibraryInfo *TLI) {
+  // We only have a post-order SCC traversal (because SCCs are inherently
+  // discovered in post-order), so we accumulate them in a vector and then walk
+  // it in reverse. This is simpler than using the RPO iterator infrastructure
+  // because we need to combine SCC detection and the PO walk of the call
+  // graph. We can also cheat egregiously because we're primarily interested in
+  // synthesizing norecurse and so we can only save the singular SCCs as SCCs
+  // with multiple functions in them will clearly be recursive.
+  SmallVector<Function *, 16> Worklist;
+  for (scc_iterator<CallGraph *> I = scc_begin(&CG); !I.isAtEnd(); ++I) {
+    if (I->size() != 1)
+      continue;
+
+    Function *F = I->front()->getFunction();
+    if (F && !F->isDeclaration() && !F->doesNotRecurse() &&
+        F->hasInternalLinkage())
+      Worklist.push_back(F);
+  }
+
+  bool Changed = false;
+  for (auto *F : llvm::reverse(Worklist))
+    Changed |= addNoRecurseAttrsTopDown(*F, NoRecurseFunctions, TLI);
+
+  return Changed;
+}
+
 bool CilkSanitizerImpl::run() {
   // Initialize components of the CSI and Cilksan system.
   initializeCsi();
@@ -527,33 +830,68 @@ bool CilkSanitizerImpl::run() {
   initializeCsanObjectTables();
   initializeCsanHooks();
 
-  // Examine all functions in the module to find IR objects within each function
-  // that require instrumentation.
-  for (Function &F : M) {
-    LLVM_DEBUG(dbgs() << "Preparing to instrument " << F.getName() << "\n");
-    prepareToInstrumentFunction(F);
+  // // Traverse the callgraph SCC's in post order and deduce no-recurse
+  // // information.
+  // SmallPtrSet<Function *, 8> CallsUnknown;
+  // for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
+  //   const std::vector<CallGraphNode *> &SCC = *I;
+  //   assert(!SCC.empty() && "SCC with no functions!");
+  //   SmallSetVector<Function *, 8> SCCNodes;
+  //   for (auto *CGN : SCC)
+  //     if (Function *F = CGN->getFunction())
+  //       SCCNodes.insert(F);
+  //   addNoRecurse(SCCNodes, NoRecurseFunctions, CallsUnknown, TLI);
+  // }
+  // // Further refine the no-recurse information top-down
+  // deduceFunctionAttributeInRPO(M, *CG, NoRecurseFunctions, TLI);
+
+  // Evaluate the SCC's in the callgraph in post order to support
+  // interprocedural analysis of potential races in the module.
+  SmallVector<Function *, 16> InstrumentedFunctions;
+  for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
+    const std::vector<CallGraphNode *> &SCC = *I;
+    assert(!SCC.empty() && "SCC with no functions!");
+    for (auto *CGN : SCC) {
+      if (Function *F = CGN->getFunction()) {
+        if (instrumentFunctionUsingRI(*F))
+          InstrumentedFunctions.push_back(F);
+      }
+    }
+  }
+  // After all functions have been analyzed and instrumented, update their
+  // attributes.
+  for (Function *F : InstrumentedFunctions) {
+    updateInstrumentedFnAttrs(*F);
+    F->removeFnAttr(Attribute::SanitizeCilk);
   }
 
-  // Based on information of which functions might expose a race, determine
-  // which callsites in the function need to be instrumented.
-  determineCallSitesToInstrument();
+  // // Examine all functions in the module to find IR objects within each function
+  // // that require instrumentation.
+  // for (Function &F : M) {
+  //   LLVM_DEBUG(dbgs() << "Preparing to instrument " << F.getName() << "\n");
+  //   prepareToInstrumentFunction(F);
+  // }
 
-  // Determine which callsites can have instrumentation suppressed.
-  DenseMap<Function *, SmallPtrSet<Instruction *, 32>> ToInstrumentByFunction;
-  DenseMap<Function *, SmallPtrSet<Instruction *, 8>> NoRaceCallsitesByFunction;
-  for (Instruction *I : ToInstrument)
-    ToInstrumentByFunction[I->getParent()->getParent()].insert(I);
-  for (Instruction *I : NoRaceCallsites)
-    if (!ToInstrument.count(I))
-      NoRaceCallsitesByFunction[I->getParent()->getParent()].insert(I);
+  // // Based on information of which functions might expose a race, determine
+  // // which callsites in the function need to be instrumented.
+  // determineCallSitesToInstrument();
 
-  // Insert the necessary instrumentation throughout each function in the
-  // module.
-  for (Function &F : M) {
-    LLVM_DEBUG(dbgs() << "Instrumenting " << F.getName() << "\n");
-    instrumentFunction(F, ToInstrumentByFunction[&F],
-                       NoRaceCallsitesByFunction[&F]);
-  }
+  // // Determine which callsites can have instrumentation suppressed.
+  // DenseMap<Function *, SmallPtrSet<Instruction *, 32>> ToInstrumentByFunction;
+  // DenseMap<Function *, SmallPtrSet<Instruction *, 8>> NoRaceCallsitesByFunction;
+  // for (Instruction *I : ToInstrument)
+  //   ToInstrumentByFunction[I->getParent()->getParent()].insert(I);
+  // for (Instruction *I : NoRaceCallsites)
+  //   if (!ToInstrument.count(I))
+  //     NoRaceCallsitesByFunction[I->getParent()->getParent()].insert(I);
+
+  // // Insert the necessary instrumentation throughout each function in the
+  // // module.
+  // for (Function &F : M) {
+  //   LLVM_DEBUG(dbgs() << "Instrumenting " << F.getName() << "\n");
+  //   instrumentFunction(F, ToInstrumentByFunction[&F],
+  //                      NoRaceCallsitesByFunction[&F]);
+  // }
 
   CSIImpl::collectUnitFEDTables();
   collectUnitFEDTables();
@@ -654,6 +992,7 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   Type *FuncExitPropertyTy = CsiFuncExitProperty::getType(C);
   Type *LoadPropertyTy = CsiLoadStoreProperty::getType(C);
   Type *StorePropertyTy = CsiLoadStoreProperty::getType(C);
+  Type *CallPropertyTy = CsiCallProperty::getType(C);
   Type *AllocFnPropertyTy = CsiAllocFnProperty::getType(C);
   Type *FreePropertyTy = CsiFreeProperty::getType(C);
   Type *RetType = IRB.getVoidTy();
@@ -703,6 +1042,16 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   // CsanWrite = M.getOrInsertFunction("__csan_atomic_exchange", RetType,
   //                                   IDType, AddrType, NumBytesType,
   //                                   StorePropertyTy);
+
+  CsanBeforeCallsite = M.getOrInsertFunction("__csan_before_call",
+                                             IRB.getVoidTy(), IDType,
+                                             /*callee func_id*/ IDType,
+                                             IRB.getInt8Ty(), CallPropertyTy);
+  CsanBeforeCallsite->addFnAttr(Attribute::InaccessibleMemOnly);
+  CsanAfterCallsite = M.getOrInsertFunction("__csan_after_call",
+                                            IRB.getVoidTy(), IDType, IDType,
+                                            IRB.getInt8Ty(), CallPropertyTy);
+  CsanAfterCallsite->addFnAttr(Attribute::InaccessibleMemOnly);
 
   CsanDetach = M.getOrInsertFunction("__csan_detach", RetType,
                                      /* detach_id */ IDType);
@@ -761,6 +1110,19 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   CsanDisableChecking->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanEnableChecking = M.getOrInsertFunction("__cilksan_enable_checking",
                                              RetType);
+  CsanEnableChecking->addFnAttr(Attribute::InaccessibleMemOnly);
+
+  Type *SuppressionFlagTy = IRB.getInt64Ty();
+  GetSuppressionFlag = M.getOrInsertFunction(
+      "__csan_get_suppression_flag", RetType,
+      PointerType::get(SuppressionFlagTy, 0), IDType, IRB.getInt8Ty());
+  GetSuppressionFlag->addParamAttr(0, Attribute::NoCapture);
+  GetSuppressionFlag->addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+
+  SetSuppressionFlag = M.getOrInsertFunction("__csan_set_suppression_flag",
+                                             RetType, SuppressionFlagTy,
+                                             IDType);
+  SetSuppressionFlag->addFnAttr(Attribute::InaccessibleMemOnly);
 }
 
 static BasicBlock *SplitOffPreds(
@@ -1801,9 +2163,1082 @@ bool CilkSanitizerImpl::simpleCallCannotRace(const Instruction &I) {
   return callsPlaceholderFunction(I);
 }
 
+// Helper function to get the ID of a function being called.  These IDs are
+// stored in separate global variables in the program.  This method will create
+// a new global variable for the Callee's ID if necessary.
+Value *CilkSanitizerImpl::GetCalleeFuncID(Function *Callee, IRBuilder<> &IRB) {
+  if (!Callee)
+    // Unknown targets (i.e. indirect calls) are always unknown.
+    return IRB.getInt64(CsiCallsiteUnknownTargetId);
+
+  std::string GVName =
+    CsiFuncIdVariablePrefix + Callee->getName().str();
+  GlobalVariable *FuncIdGV = M.getNamedGlobal(GVName);
+  if (!FuncIdGV) {
+    FuncIdGV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(GVName,
+                                                            IRB.getInt64Ty()));
+    assert(FuncIdGV);
+    FuncIdGV->setConstant(false);
+    if (Options.jitMode && !Callee->empty())
+      FuncIdGV->setLinkage(Callee->getLinkage());
+    else
+      FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
+    FuncIdGV->setInitializer(IRB.getInt64(CsiCallsiteUnknownTargetId));
+  }
+  return IRB.CreateLoad(FuncIdGV);
+}
+
+//------------------------------------------------------------------------------
+// SimpleInstrumentor methods, which do not do static race detection.
+//------------------------------------------------------------------------------
+
+bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentSimpleInstructions(
+    SmallVectorImpl<Instruction *> &Instructions) {
+  bool Result = false;
+  for (Instruction *I : Instructions) {
+    bool LocalResult = false;
+    if (isa<LoadInst>(I) || isa<StoreInst>(I))
+      LocalResult |= CilkSanImpl.instrumentLoadOrStore(I);
+    else if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I))
+      LocalResult |= CilkSanImpl.instrumentAtomic(I);
+    else
+      dbgs() << "[Cilksan] Unknown simple instruction: " << *I << "\n";
+
+    if (LocalResult) {
+      Result |= LocalResult;
+      // Record the detaches for the task containing this instruction.  These
+      // detaches need to be instrumented.
+      getDetachesForInstruction(I);
+    }
+  }
+  return Result;
+}
+
+bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAnyMemIntrinsics(
+    SmallVectorImpl<Instruction *> &MemIntrinsics) {
+  bool Result = false;
+  for (Instruction *I : MemIntrinsics) {
+    bool LocalResult = false;
+    if (auto *MT = dyn_cast<AnyMemTransferInst>(I)) {
+      LocalResult |= CilkSanImpl.instrumentAnyMemIntrinAcc(I, /*Src*/1);
+      LocalResult |= CilkSanImpl.instrumentAnyMemIntrinAcc(I, /*Dst*/0);
+    } else {
+      assert(isa<AnyMemIntrinsic>(I) &&
+             "InstrumentAnyMemIntrinsics operating on not a memory intrinsic.");
+      LocalResult |= CilkSanImpl.instrumentAnyMemIntrinAcc(I, unsigned(-1));
+    }
+    if (LocalResult) {
+      Result |= LocalResult;
+      // Record the detaches for the task containing this instruction.  These
+      // detaches need to be instrumented.
+      getDetachesForInstruction(I);
+    }
+  }
+  return Result;
+}
+
+bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentCalls(
+    SmallVectorImpl<Instruction *> &Calls) {
+  bool Result = false;
+  for (Instruction *I : Calls) {
+    // Allocation-function and free calls are handled separately.
+    if (isAllocationFn(I, CilkSanImpl.TLI, false, true) ||
+        isFreeCall(I, CilkSanImpl.TLI))
+      continue;
+
+    bool LocalResult = false;
+    LocalResult |= CilkSanImpl.instrumentCallsite(I, /*SupprVals*/nullptr);
+    if (LocalResult) {
+      Result |= LocalResult;
+      // Record the detaches for the task containing this instruction.  These
+      // detaches need to be instrumented.
+      getDetachesForInstruction(I);
+    }
+  }
+  return Result;
+}
+
+bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
+    SmallPtrSetImpl<Instruction *> &Allocas,
+    SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
+    SmallPtrSetImpl<Instruction *> &FreeCalls) {
+  bool Result = false;
+  SmallPtrSet<SyncInst *, 4> Syncs;
+
+  // Instrument allocas and allocation-function calls that may be involved in a
+  // race.
+  for (Instruction *I : Allocas) {
+    // The simple instrumentor just instruments everyting
+    CilkSanImpl.instrumentAlloca(I);
+    getDetachesForInstruction(I);
+  }
+  for (Instruction *I : AllocationFnCalls) {
+    // The simple instrumentor just instruments everyting
+    CilkSanImpl.instrumentAllocationFn(I, DT);
+    getDetachesForInstruction(I);
+  }
+  for (Instruction *I : FreeCalls) {
+    // The first argument of the free call is the pointer.
+    Value *Ptr = I->getOperand(0);
+    // If the pointer corresponds to an allocation function call in this
+    // function, then instrument it.
+    if (Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+      if (AllocationFnCalls.count(PtrI)) {
+        CilkSanImpl.instrumentFree(I);
+        getDetachesForInstruction(I);
+        continue;
+      }
+    }
+    // The simple instrumentor just instruments everyting
+    CilkSanImpl.instrumentFree(I);
+    getDetachesForInstruction(I);
+  }
+
+  // Instrument detaches
+  for (DetachInst *DI : Detaches) {
+    CilkSanImpl.instrumentDetach(DI, DT, TI);
+    // Get syncs associated with this detach
+    for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
+      Syncs.insert(SI);
+  }
+
+  // Instrument associated syncs
+  for (SyncInst *SI : Syncs)
+    CilkSanImpl.instrumentSync(SI);
+
+  return Result;
+}
+
+// TODO: Combine this redundant logic with that in Instrumentor
+void CilkSanitizerImpl::SimpleInstrumentor::getDetachesForInstruction(
+    Instruction *I) {
+  // Get the Task for I.
+  Task *T = TI.getTaskFor(I->getParent());
+  // Add the ancestors of T to the set of detaches to instrument.
+  while (!T->isRootTask()) {
+    // Once we encounter a detach we've previously added to the set, we know
+    // that all its parents are also in the set.
+    if (!Detaches.insert(T->getDetach()).second)
+      return;
+    T = T->getParentTask();
+  }
+}
+
+//------------------------------------------------------------------------------
+// Instrumentor methods
+//------------------------------------------------------------------------------
+
+void CilkSanitizerImpl::Instrumentor::getDetachesForInstruction(
+    Instruction *I) {
+  // Get the Task for I.
+  Task *T = TI.getTaskFor(I->getParent());
+  // Add the ancestors of T to the set of detaches to instrument.
+  while (!T->isRootTask()) {
+    // Once we encounter a detach we've previously added to the set, we know
+    // that all its parents are also in the set.
+    if (!Detaches.insert(T->getDetach()).second)
+      return;
+    T = T->getParentTask();
+  }
+}
+
+unsigned CilkSanitizerImpl::Instrumentor::RaceTypeToFlagVal(
+    RaceInfo::RaceType RT) {
+  unsigned FlagVal = static_cast<unsigned>(SuppressionVal::NoAccess);
+  if (RaceInfo::isLocalRace(RT) || RaceInfo::isOpaqueRace(RT))
+    FlagVal = static_cast<unsigned>(SuppressionVal::ModRef);
+  if (RaceInfo::isRaceViaAncestorMod(RT))
+    FlagVal |= static_cast<unsigned>(SuppressionVal::Mod);
+  if (RaceInfo::isRaceViaAncestorRef(RT))
+    FlagVal |= static_cast<unsigned>(SuppressionVal::Ref);
+  return FlagVal;
+}
+
+static Value *getSuppressionIRValue(IRBuilder<> &IRB, unsigned SV) {
+  return IRB.getInt64(SV);
+}
+
+// Insert per-argument suppressions for this function
+void CilkSanitizerImpl::Instrumentor::InsertArgSuppressionFlags(
+    Function &F, Value *FuncId) {
+  LLVM_DEBUG(dbgs() << "InsertArgSuppressionFlags: " << F.getName() << "\n");
+  IRBuilder<> IRB(&*(++(cast<Instruction>(FuncId)->getIterator())));
+  unsigned ArgIdx = 0;
+  for (Argument &Arg : F.args()) {
+    if (!Arg.getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    // Create a new flag for this argument suppression.
+    Value *NewFlag = IRB.CreateAlloca(getSuppressionIRValue(IRB, 0)->getType(),
+                                      Arg.getType()->getPointerAddressSpace());
+    // If this function is main, then it has no ancestors that can create races.
+    if (F.getName() == "main")
+      IRB.CreateStore(
+          getSuppressionIRValue(IRB, RaceTypeToFlagVal(RaceInfo::None)),
+          NewFlag);
+    else {
+      // Call the runtime function to set the value of this flag.
+      IRB.CreateCall(CilkSanImpl.GetSuppressionFlag, {NewFlag, FuncId,
+                                                      IRB.getInt8(ArgIdx)});
+
+      // Incorporate local information into this suppression value.
+      unsigned LocalSV = static_cast<unsigned>(SuppressionVal::NoAccess);
+      if (Arg.hasNoAliasAttr())
+        LocalSV |= static_cast<unsigned>(SuppressionVal::NoAlias);
+
+      // if (!CilkSanImpl.FnDoesNotRecur(F) &&
+      if (!F.hasFnAttribute(Attribute::NoRecurse) &&
+          RI.ObjectInvolvedInRace(&Arg)) {
+        LLVM_DEBUG(dbgs() << "Setting local SV in may-recurse function " <<
+                   F.getName() << " for arg " << Arg << "\n");
+        // This function might recursively call itself, so incorporate
+        // information we have about how this function reads or writes its own
+        // arguments into these suppression flags.
+        ModRefInfo ArgMR = RI.GetObjectMRForRace(&Arg);
+        // TODO: Possibly make these checks more precise using information we
+        // get from instrumenting functions previously.
+        if (isRefSet(ArgMR))
+          // If ref is set, then race detection found a local instruction that
+          // might write arg, so we assume arg is modified.
+          LocalSV |= static_cast<unsigned>(SuppressionVal::Mod);
+        if (isModSet(ArgMR))
+          // If mod is set, then race detection found a local instruction that
+          // might read or write  arg, so we assume arg is read.
+          LocalSV |= static_cast<unsigned>(SuppressionVal::Ref);
+      }
+      // Store this local suppression value.
+      IRB.CreateStore(IRB.CreateOr(getSuppressionIRValue(IRB, LocalSV),
+                                   IRB.CreateLoad(NewFlag)), NewFlag);
+
+    }
+    // Associate this flag with the argument for future lookups.
+    LLVM_DEBUG(dbgs() << "Recording local suppression for arg " << Arg << ": "
+               << *NewFlag << "\n");
+    LocalSuppressions[&Arg] = NewFlag;
+    ArgSuppressionFlags.insert(NewFlag);
+    ++ArgIdx;
+  }
+
+  // Record other objects known to be involved in races.
+  for (auto &ObjRD : RI.getObjectMRForRace()) {
+    if (isa<Instruction>(ObjRD.first)) {
+      unsigned SupprVal = static_cast<unsigned>(SuppressionVal::NoAccess);
+      if (isModSet(ObjRD.second))
+        SupprVal |= static_cast<unsigned>(SuppressionVal::Mod);
+      if (isRefSet(ObjRD.second))
+        SupprVal |= static_cast<unsigned>(SuppressionVal::Ref);
+      // Determine if this object is no-alias.
+      //
+      // TODO: Figure out what "no-alias" information we can derive for allocas.
+      if (const CallBase *CB = dyn_cast<CallBase>(ObjRD.first))
+        if (CB->hasRetAttr(Attribute::NoAlias))
+          SupprVal |= static_cast<unsigned>(SuppressionVal::NoAlias);
+
+      LLVM_DEBUG(dbgs() << "Setting LocalSuppressions for " << *ObjRD.first
+                 << " = " << SupprVal << "\n");
+      LocalSuppressions[ObjRD.first] = getSuppressionIRValue(IRB, SupprVal);
+      // CilkSanImpl.ObjectMRForRace[ObjRD.first] = ObjRD.second;
+    }
+  }
+}
+
+bool CilkSanitizerImpl::Instrumentor::InstrumentSimpleInstructions(
+    SmallVectorImpl<Instruction *> &Instructions) {
+  bool Result = false;
+  for (Instruction *I : Instructions) {
+    bool LocalResult = false;
+    // Simple instructions, such as loads, stores, or atomics, have just one
+    // pointer operand, and therefore should have at most one entry of RaceData.
+
+    // If the instruction might participate in a local or opaque race,
+    // instrument it unconditionally.
+    if (RI.mightRaceOpaquely(I) || RI.mightRaceLocally(I)) {
+      if (isa<LoadInst>(I) || isa<StoreInst>(I))
+        LocalResult |= CilkSanImpl.instrumentLoadOrStore(I);
+      else if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I))
+        LocalResult |= CilkSanImpl.instrumentAtomic(I);
+      else
+        dbgs() << "[Cilksan] Unknown simple instruction: " << *I << "\n";
+    } else if (RI.mightRaceViaAncestor(I)) {
+      // Otherwise, if the instruction might participate in a race via an
+      // ancestor function instantiation, instrument it conditionally, based on
+      // the pointer.
+      //
+      // Delay handling this instruction.
+      DelayedSimpleInsts.push_back(I);
+      LocalResult |= true;
+    }
+
+    // If any instrumentation was inserted, collect associated instructions to
+    // instrument.
+    if (LocalResult) {
+      Result |= LocalResult;
+      // Record the detaches for the task containing this instruction.  These
+      // detaches need to be instrumented.
+      getDetachesForInstruction(I);
+    }
+  }
+  return Result;
+}
+
+bool CilkSanitizerImpl::Instrumentor::InstrumentAnyMemIntrinsics(
+    SmallVectorImpl<Instruction *> &MemIntrinsics) {
+  bool Result = false;
+  for (Instruction *I : MemIntrinsics) {
+    bool LocalResult = false;
+    // If this instruction cannot race, skip it.
+    if (!RI.mightRace(I))
+      continue;
+
+    for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
+      assert(RD.getPtr() && "No pointer for race with memory intrinsic.");
+      if (RaceInfo::isLocalRace(RD.Type) || RaceInfo::isOpaqueRace(RD.Type))
+        LocalResult |= CilkSanImpl.instrumentAnyMemIntrinAcc(I, RD.OperandNum);
+      else if (RaceInfo::isRaceViaAncestor(RD.Type)) {
+        // Delay handling this instruction.
+        DelayedMemIntrinsics.push_back(std::make_pair(I, RD.OperandNum));
+        LocalResult |= true;
+      }
+    }
+
+    // If any instrumentation was inserted, collect associated instructions to
+    // instrument.
+    if (LocalResult) {
+      Result |= LocalResult;
+      // Record the detaches for the task containing this instruction.  These
+      // detaches need to be instrumented.
+      getDetachesForInstruction(I);
+    }
+  }
+  return Result;
+}
+
+bool CilkSanitizerImpl::Instrumentor::InstrumentCalls(
+    SmallVectorImpl<Instruction *> &Calls) {
+  bool Result = false;
+  for (Instruction *I : Calls) {
+    // Allocation-function and free calls are handled separately.
+    if (isAllocationFn(I, CilkSanImpl.TLI, false, true) ||
+        isFreeCall(I, CilkSanImpl.TLI))
+      continue;
+
+    bool LocalResult = false;
+    bool GetDetaches = false;
+
+    // Get current race data for this call.
+    RaceInfo::RaceType CallRT = RI.getRaceType(I);
+    LLVM_DEBUG({
+        dbgs() << "Call " << *I << ":";
+        RaceInfo::printRaceType(CallRT, dbgs());
+        dbgs() << "\n";
+      });
+
+    // Get update race data, if it's available.
+    RaceInfo::RaceType FuncRT = CallRT;
+    CallBase *CB = dyn_cast<CallBase>(I);
+    if (Function *CF = CB->getCalledFunction())
+      if (CilkSanImpl.FunctionRaceType.count(CF))
+        FuncRT = CilkSanImpl.FunctionRaceType[CF];
+
+    LLVM_DEBUG({
+        dbgs() << "  FuncRT:";
+        RaceInfo::printRaceType(FuncRT, dbgs());
+        dbgs() << "\n";
+      });
+
+    // Propagate information about opaque races from function to call.
+    if (!RaceInfo::isOpaqueRace(FuncRT))
+      CallRT = RaceInfo::clearOpaqueRace(CallRT);
+
+    LLVM_DEBUG({
+        dbgs() << "  New CallRT:";
+        RaceInfo::printRaceType(CallRT, dbgs());
+        dbgs() << "\n";
+      });
+
+    // If this instruction cannot race, see if we can suppress it
+    if (!RaceInfo::isRace(CallRT)) {
+      // We can only suppress calls whose functions don't have local races.
+      if (!RaceInfo::isLocalRace(FuncRT)) {
+        if (!CB->doesNotAccessMemory())
+          LocalResult |= CilkSanImpl.suppressCallsite(I);
+        continue;
+      // } else {
+      //   GetDetaches |= CilkSanImpl.instrumentCallsite(I);
+      //   // SmallPtrSet<Value *, 1> Objects;
+      //   // RI.getObjectsFor(I, Objects);
+      //   // for (Value *Obj : Objects) {
+      //   //   CilkSanImpl.ObjectMRForRace[Obj] = ModRefInfo::ModRef;
+      //   // }
+      }
+      // continue;
+    }
+
+    // We're going to instrument this call for potential races.  First get
+    // suppression information for its arguments, if any races depend on the
+    // ancestor.
+    SmallVector<Value *, 8> SupprVals;
+    LLVM_DEBUG(dbgs() << "Getting suppression values for " << *CB << "\n");
+    IRBuilder<> IRB(I);
+    if (RaceInfo::isRaceViaAncestor(CallRT)) {
+      // Otherwise, if the instruction might participate in a race via an
+      // ancestor function instantiation, instrument it conditionally based on
+      // the pointer.
+      unsigned OpIdx = 0;
+      for (const Value *Op : CB->args()) {
+        if (!Op->getType()->isPtrOrPtrVectorTy()) {
+          ++OpIdx;
+          continue;
+        }
+        Value *SupprVal = getSuppressionValue(I, IRB, OpIdx);
+        LLVM_DEBUG({
+            dbgs() << "  Op: " << *CB->getArgOperand(OpIdx) << "\n";
+            dbgs() << "  Suppression value: " << *SupprVal << "\n";
+          });
+        SupprVals.push_back(SupprVal);
+        ++OpIdx;
+      }
+    } else {
+      // We have either an opaque race or a local race, but _not_ a race via an
+      // ancestor.  We want to propagate suppression information on pointer
+      // arguments, but we don't need to be pessimistic when a value can't be
+      // found.
+      unsigned OpIdx = 0;
+      for (const Value *Op : CB->args()) {
+        if (!Op->getType()->isPtrOrPtrVectorTy()) {
+          ++OpIdx;
+          continue;
+        }
+        // Value *SupprVal = IRB.getInt8(SuppressionVal::NoAccess);
+        Value *SupprVal = getSuppressionValue(I, IRB, OpIdx,
+                                              SuppressionVal::NoAccess,
+                                              /*CheckArgs=*/ false);
+        LLVM_DEBUG({
+            dbgs() << "  Op: " << *CB->getArgOperand(OpIdx) << "\n";
+            dbgs() << "  Suppression value: " << *SupprVal << "\n";
+          });
+        SupprVals.push_back(SupprVal);
+        ++OpIdx;
+      }
+    }
+    Value *CalleeID = CilkSanImpl.GetCalleeFuncID(CB->getCalledFunction(), IRB);
+    // We set the suppression flags in reverse order to support stack-like
+    // accesses of the flags by in-order calls to GetSuppressionFlag in the
+    // callee.
+    for (Value *SupprVal : reverse(SupprVals))
+      IRB.CreateCall(CilkSanImpl.SetSuppressionFlag, {SupprVal, CalleeID});
+
+    GetDetaches |= CilkSanImpl.instrumentCallsite(I, &SupprVals);
+
+    // If any instrumentation was inserted, collect associated instructions to
+    // instrument.
+    Result |= LocalResult;
+    if (GetDetaches) {
+      Result |= GetDetaches;
+      // Record the detaches for the task containing this instruction.  These
+      // detaches need to be instrumented.
+      getDetachesForInstruction(I);
+    }
+  }
+  return Result;
+}
+
+Value *CilkSanitizerImpl::Instrumentor::readSuppressionVal(Value *V,
+                                                           IRBuilder<> &IRB) {
+  if (!ArgSuppressionFlags.count(V))
+    return V;
+  // Marking the load as invariant is not technically correct, because the
+  // __csan_get_suppression_flag call sets the value.  But this call happens
+  // once, and all subsequent loads will return the same value.
+  //
+  // MDNode *MD = llvm::MDNode::get(IRB.getContext(), llvm::None);
+  // cast<Instruction>(Load)->setMetadata(LLVMContext::MD_invariant_load, MD);
+
+  // TODO: See if there's a better way to annotate this load for optimization.
+  return IRB.CreateLoad(V);
+}
+
+// Get the memory location for this instruction and operand.
+static MemoryLocation getMemoryLocation(Instruction *I, unsigned OperandNum,
+                                        const TargetLibraryInfo *TLI) {
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(I)) {
+    if (auto *MT = dyn_cast<AnyMemTransferInst>(I)) {
+      if (OperandNum == 1)
+        return MemoryLocation::getForSource(MT);
+    }
+    return MemoryLocation::getForDest(MI);
+  } else if (OperandNum == static_cast<unsigned>(-1)) {
+    return MemoryLocation::get(I);
+  } else {
+    assert(isa<CallBase>(I) &&
+           "Unknown instruction and operand ID for getting MemoryLocation.");
+    CallBase *CB = cast<CallBase>(I);
+    return MemoryLocation::getForArgument(CB, OperandNum, TLI);
+  }
+}
+
+Value *CilkSanitizerImpl::Instrumentor::getNoAliasSuppressionValue(
+    Instruction *I, IRBuilder<> &IRB, unsigned OperandNum,
+    MemoryLocation Loc, const RaceInfo::RaceData &RD, Value *Obj,
+    Value *ObjNoAliasFlag) {
+  AliasAnalysis *AA = RI.getAA();
+  for (const RaceInfo::RaceData &OtherRD : RI.getRaceData(I)) {
+    // Skip checking other accesses that don't involve a pointer
+    if (!OtherRD.Access.getPointer())
+      continue;
+    // Skip this operand when scanning for aliases
+    if (OperandNum == OtherRD.OperandNum)
+      continue;
+    // If we can tell statically that these two memory locations don't alias,
+    // move on.
+    if (!AA->alias(Loc, getMemoryLocation(I, OtherRD.OperandNum,
+                                          CilkSanImpl.TLI)))
+      continue;
+
+    // We trust that the suppression value in LocalSuppressions[] for this
+    // object Obj, set by InsertArgSuppressionFlags, is correct.  We need to
+    // check the underlying objects of the other arguments to see if they match
+    // this object.
+
+    // Otherwise we check the underlying objects.
+    SmallPtrSet<Value *, 1> OtherObjects;
+    RI.getObjectsFor(OtherRD.Access, OtherObjects);
+    for (Value *OtherObj : OtherObjects) {
+      // If we find another instance of this object in another argument,
+      // then we don't have "no alias".
+      if (Obj == OtherObj) {
+        LLVM_DEBUG({
+            dbgs() << "getNoAliasSuppressionValue: Matching objects found:\n";
+            dbgs() << "  Obj: " << *Obj << "\n";
+            dbgs() << "    I: " << *I << "\n";
+            dbgs() << " Operands " << OperandNum << ", " << OtherRD.OperandNum
+                   << "\n";
+          });
+        return getSuppressionIRValue(IRB, 0);
+      }
+
+      // We now know that Obj and OtherObj don't match.
+
+      // If the other object is an argument, then we trust the noalias value in
+      // the suppression for Obj.
+      if (isa<Argument>(OtherObj))
+        continue;
+
+      // // If the other object is something we can't reason about locally, then we
+      // // give up.
+      // if (!isa<Instruction>(OtherObj))
+      //   return getSuppressionIRValue(IRB, 0);
+
+      // Otherwise, check if the other object might alias this one.
+      if (AA->alias(Loc, MemoryLocation(OtherObj))) {
+        LLVM_DEBUG({
+            dbgs() << "getNoAliasSuppressionValue: Possible aliasing between:\n";
+            dbgs() << "  Obj: " << *Obj << "\n";
+            dbgs() << "  OtherObj: " << *OtherObj << "\n";
+          });
+        return getSuppressionIRValue(IRB, 0);
+      }
+    }
+  }
+  return ObjNoAliasFlag;
+}
+
+// TODO: Combine the logic of getSuppressionValue and getSuppressionCheck.
+Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
+    Instruction *I, IRBuilder<> &IRB, unsigned OperandNum,
+    SuppressionVal DefaultSV, bool CheckArgs) {
+  Function *F = I->getFunction();
+  AliasAnalysis *AA = RI.getAA();
+  MemoryLocation Loc = getMemoryLocation(I, OperandNum, CilkSanImpl.TLI);
+  Value *SuppressionVal = getSuppressionIRValue(IRB, SuppressionVal::NoAccess);
+  Value *DefaultSuppression = getSuppressionIRValue(IRB, DefaultSV);
+
+  // // Check the other operands of this call to check for aliasing, e.g., because
+  // // the same pointer is passed twice.
+  // bool OperandMayAlias = false;
+  // for (const RaceInfo::RaceData &OtherRD : RI.getRaceData(I)) {
+  //   // Skip this operand when scanning for aliases
+  //   if (OperandNum == OtherRD.OperandNum)
+  //     continue;
+  //   // Check for aliasing.
+  //   if (OtherRD.OperandNum != static_cast<unsigned>(-1))
+  //     if (AA->alias(Loc, getMemoryLocation(I, OtherRD.OperandNum,
+  //                                          CilkSanImpl.TLI)))
+  //       OperandMayAlias = true;
+  // }
+
+  // bool ObjectsDontAlias = true;
+  Value *NoAliasFlag = getSuppressionIRValue(IRB, SuppressionVal::NoAlias);
+  // Check the recorded race data for I.
+  for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
+    if (OperandNum != RD.OperandNum)
+      continue;
+
+    SmallPtrSet<Value *, 1> Objects;
+    RI.getObjectsFor(RD.Access, Objects);
+    // // Add objects to CilkSanImpl.ObjectMRForRace, to ensure ancillary
+    // // instrumentation is added.
+    // for (Value *Obj : Objects)
+    //   if (!CilkSanImpl.ObjectMRForRace.count(Obj))
+    //     CilkSanImpl.ObjectMRForRace[Obj] = ModRefInfo::ModRef;
+
+    // Get suppressions from objects
+    for (Value *Obj : Objects) {
+      // If we find an object with no suppression, give up.
+      if (!LocalSuppressions.count(Obj)) {
+        LLVM_DEBUG(dbgs() << "No local suppression found for obj " << *Obj
+                   << "\n");
+        return DefaultSuppression;
+      }
+
+      Value *FlagLoad = readSuppressionVal(LocalSuppressions[Obj], IRB);
+      Value *FlagCheck = IRB.CreateAnd(
+          FlagLoad, getSuppressionIRValue(IRB, RaceTypeToFlagVal(RD.Type)));
+      SuppressionVal = IRB.CreateOr(SuppressionVal, FlagCheck);
+      // SuppressionVal = IRB.CreateOr(SuppressionVal, FlagLoad);
+
+      // Get the dynamic no-alias bit from the suppression value.
+      Value *ObjNoAliasFlag = IRB.CreateAnd(
+          FlagLoad, getSuppressionIRValue(IRB, SuppressionVal::NoAlias));
+      Value *NoAliasCheck = IRB.CreateICmpNE(getSuppressionIRValue(IRB, 0),
+                                             ObjNoAliasFlag);
+
+      if (CheckArgs) {
+        // Check the function arguments that might alias this object.
+        for (Argument &Arg : F->args()) {
+          // Ignore non-pointer arguments
+          if (!Arg.getType()->isPtrOrPtrVectorTy())
+            continue;
+          // Ignore any arguments that match checked objects.
+          if (&Arg == Obj)
+            continue;
+          // Check if Loc and Arg may alias.
+          if (!AA->alias(Loc, MemoryLocation(&Arg)))
+            continue;
+          // If we have no local suppression information about the argument,
+          // give up.
+          if (!LocalSuppressions.count(&Arg)) {
+            LLVM_DEBUG(dbgs() << "No local suppression found for arg " << Arg
+                       << "\n");
+            return DefaultSuppression;
+          }
+
+          Value *FlagLoad = readSuppressionVal(LocalSuppressions[&Arg], IRB);
+          Value *FlagCheck = IRB.CreateSelect(
+              NoAliasCheck, getSuppressionIRValue(IRB, 0),
+              IRB.CreateAnd(
+                  FlagLoad, getSuppressionIRValue(IRB,
+                                                  RaceTypeToFlagVal(RD.Type))));
+          SuppressionVal = IRB.CreateOr(SuppressionVal, FlagCheck);
+          // Value *FlagCheck = IRB.CreateAnd(
+          //     FlagLoad, getSuppressionIRValue(IRB, RaceTypeToFlagVal(RD.Type)));
+          // SuppressionVal = IRB.CreateOr(SuppressionVal, FlagCheck);
+        }
+      }
+
+      // // Check for noalias attributes to determine if we can set the noalias
+      // // suppression bit in this value (at this call).
+      // bool ObjNoAlias = false;
+      // if (Argument *Arg = dyn_cast<Argument>(Obj))
+      //   ObjNoAlias = Arg->hasNoAliasAttr();
+      // else if (CallBase *CB = dyn_cast<CallBase>(Obj))
+      //   ObjNoAlias = CB->hasRetAttr(Attribute::NoAlias);
+      // ObjNoAliasFlag = IRB.CreateOr(
+      //     ObjNoAliasFlag,
+      //     getSuppressionIRValue(IRB, ObjNoAlias ? SuppressionVal::NoAlias : 0));
+
+      // // Look for instances of the same object
+      // //
+      // // TODO: Possibly optimize this quadratic algorithm, if it proves to be a
+      // // problem.
+      // for (const RaceInfo::RaceData &OtherRD : RI.getRaceData(I)) {
+      //   // Skip this operand when scanning for aliases
+      //   if (OperandNum == OtherRD.OperandNum)
+      //     continue;
+      //   SmallPtrSet<Value *, 1> OtherObjects;
+      //   RI.getObjectsFor(OtherRD.Access, OtherObjects);
+      //   for (Value *OtherObj : OtherObjects) {
+      //     // If we find another instance of this object in another argument,
+      //     // then we don't have "no alias".
+      //     if (Obj == OtherObj)
+      //       ObjNoAliasFlag = getSuppressionIRValue(IRB, 0);
+      //   }
+      // }
+
+      // Call getNoAliasSuppressionValue to evaluate the no-alias value in the
+      // suppression for Obj, and intersect that result with the noalias
+      // information for other objects.
+      NoAliasFlag = IRB.CreateAnd(NoAliasFlag, getNoAliasSuppressionValue(
+                                      I, IRB, OperandNum, Loc, RD, Obj,
+                                      ObjNoAliasFlag));
+    }
+  }
+  // Record the no-alias information.
+  SuppressionVal = IRB.CreateOr(SuppressionVal, NoAliasFlag);
+  return SuppressionVal;
+}
+
+Value *CilkSanitizerImpl::Instrumentor::getSuppressionCheck(
+    Instruction *I, IRBuilder<> &IRB, unsigned OperandNum) {
+  Function *F = I->getFunction();
+  AliasAnalysis *AA = RI.getAA();
+  MemoryLocation Loc = getMemoryLocation(I, OperandNum, CilkSanImpl.TLI);
+  Value *SuppressionChk = IRB.getTrue();
+  // Check the recorded race data for I.
+  for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
+    if (OperandNum != RD.OperandNum)
+      continue;
+
+    SmallPtrSet<Value *, 1> Objects;
+    RI.getObjectsFor(RD.Access, Objects);
+    for (Value *Obj : Objects) {
+      // Ignore objects that are not involved in races.
+      if (!RI.ObjectInvolvedInRace(Obj))
+        continue;
+
+      // If we find an object with no suppression, give up.
+      if (!LocalSuppressions.count(Obj)) {
+        dbgs() << "No local suppression found for obj " << *Obj << "\n";
+        dbgs() << "  I: " << *I << "\n";
+        dbgs() << "  Ptr: " << *RD.Access.getPointer() << "\n";
+        return IRB.getFalse();
+      }
+
+      Value *FlagLoad = readSuppressionVal(LocalSuppressions[Obj], IRB);
+      Value *FlagCheck = IRB.CreateAnd(
+          FlagLoad, getSuppressionIRValue(IRB, RaceTypeToFlagVal(RD.Type)));
+      SuppressionChk = IRB.CreateAnd(
+          SuppressionChk, IRB.CreateICmpEQ(getSuppressionIRValue(IRB, 0),
+                                           FlagCheck));
+      // Get the dynamic no-alias bit from the suppression value.
+      Value *NoAliasCheck = IRB.CreateICmpNE(
+          getSuppressionIRValue(IRB, 0), IRB.CreateAnd(
+              FlagLoad, getSuppressionIRValue(IRB, SuppressionVal::NoAlias)));
+
+      // Check the function arguments that might alias this object.
+      for (Argument &Arg : F->args()) {
+        // Ignore non-pointer arguments
+        if (!Arg.getType()->isPtrOrPtrVectorTy())
+          continue;
+        // Ignore any arguments that match checked objects.
+        if (&Arg == Obj)
+          continue;
+        // Check if Loc and Arg may alias.
+        if (!AA->alias(Loc, MemoryLocation(&Arg)))
+          continue;
+        // If we have no local suppression information about the argument, give up.
+        if (!LocalSuppressions.count(&Arg)) {
+          dbgs() << "No local suppression found for arg " << Arg << "\n";
+          return IRB.getFalse();
+        }
+
+        // Incorporate the suppression value for this argument if we don't have
+        // a dynamic no-alias bit set.
+        Value *FlagLoad = readSuppressionVal(LocalSuppressions[&Arg], IRB);
+        Value *FlagCheck = IRB.CreateAnd(
+            FlagLoad, getSuppressionIRValue(IRB, RaceTypeToFlagVal(RD.Type)));
+        SuppressionChk = IRB.CreateAnd(
+            SuppressionChk, IRB.CreateOr(
+                NoAliasCheck, IRB.CreateICmpEQ(getSuppressionIRValue(IRB, 0),
+                                               FlagCheck)));
+      }
+    }
+  }
+  return SuppressionChk;
+}
+
+bool CilkSanitizerImpl::Instrumentor::PerformDelayedInstrumentation() {
+  bool Result = false;
+  // Handle delayed simple instructions
+  for (Instruction *I : DelayedSimpleInsts) {
+    assert(RI.mightRaceViaAncestor(I) &&
+           "Delayed instrumentation is not race via ancestor");
+    IRBuilder<> IRB(I);
+
+    Value *SupprChk = getSuppressionCheck(I, IRB);
+    Instruction *CheckTerm = SplitBlockAndInsertIfThen(
+        IRB.CreateICmpEQ(SupprChk, IRB.getFalse()), I, false, nullptr, DT,
+        /*LI=*/nullptr);
+    IRB.SetInsertPoint(CheckTerm);
+    if (isa<LoadInst>(I) || isa<StoreInst>(I))
+      Result |= CilkSanImpl.instrumentLoadOrStore(I, IRB);
+    else if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I))
+      Result |= CilkSanImpl.instrumentAtomic(I, IRB);
+    else
+      dbgs() << "[Cilksan] Unknown simple instruction: " << *I << "\n";
+  }
+
+  // Handle delayed memory intrinsics
+  for (auto &MemIntrinOp : DelayedMemIntrinsics) {
+    Instruction *I = MemIntrinOp.first;
+    assert(RI.mightRaceViaAncestor(I) &&
+           "Delayed instrumentation is not race via ancestor");
+    unsigned OperandNum = MemIntrinOp.second;
+    IRBuilder<> IRB(I);
+
+    Value *SupprChk = getSuppressionCheck(I, IRB, OperandNum);
+    Instruction *CheckTerm = SplitBlockAndInsertIfThen(
+        IRB.CreateICmpEQ(SupprChk, IRB.getFalse()), I, false, nullptr, DT,
+        /*LI=*/nullptr);
+    IRB.SetInsertPoint(CheckTerm);
+    Result |= CilkSanImpl.instrumentAnyMemIntrinAcc(I, OperandNum, IRB);
+  }
+  return Result;
+}
+
+bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
+    SmallPtrSetImpl<Instruction *> &Allocas,
+    SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
+    SmallPtrSetImpl<Instruction *> &FreeCalls) {
+  bool Result = false;
+  SmallPtrSet<SyncInst *, 4> Syncs;
+
+  // Instrument allocas and allocation-function calls that may be involved in a
+  // race.
+  for (Instruction *I : Allocas) {
+    if (CilkSanImpl.ObjectMRForRace.count(I) ||
+        PointerMayBeCaptured(I, true, false)) {
+      CilkSanImpl.instrumentAlloca(I);
+      getDetachesForInstruction(I);
+    }
+  }
+  for (Instruction *I : AllocationFnCalls) {
+    if (CilkSanImpl.ObjectMRForRace.count(I) ||
+        PointerMayBeCaptured(I, true, false)) {
+      CilkSanImpl.instrumentAllocationFn(I, DT);
+      getDetachesForInstruction(I);
+    }
+  }
+  for (Instruction *I : FreeCalls) {
+    // The first argument of the free call is the pointer.
+    Value *Ptr = I->getOperand(0);
+    // If the pointer corresponds to an allocation function call in this
+    // function, or if the pointer is involved in a race, then instrument it.
+    if (Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+      if (AllocationFnCalls.count(PtrI)) {
+        CilkSanImpl.instrumentFree(I);
+        getDetachesForInstruction(I);
+        continue;
+      }
+    }
+    if (RI.ObjectInvolvedInRace(Ptr) ||
+        PointerMayBeCaptured(Ptr, true, false)) {
+      CilkSanImpl.instrumentFree(I);
+      getDetachesForInstruction(I);
+    }
+  }
+
+  // Instrument detaches
+  for (DetachInst *DI : Detaches) {
+    CilkSanImpl.instrumentDetach(DI, DT, TI);
+    // Get syncs associated with this detach
+    for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
+      Syncs.insert(SI);
+  }
+
+  // Instrument associated syncs
+  for (SyncInst *SI : Syncs)
+    CilkSanImpl.instrumentSync(SI);
+
+  return Result;
+}
+
+static bool CheckSanitizeCilkAttr(Function &F) {
+  if (IgnoreSanitizeCilkAttr)
+    return true;
+  return F.hasFnAttribute(Attribute::SanitizeCilk);
+}
+
+bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
+  if (F.empty() || shouldNotInstrumentFunction(F) ||
+      !CheckSanitizeCilkAttr(F)) {
+    LLVM_DEBUG(dbgs() << "Skipping " << F.getName() << "\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Instrumenting " << F.getName() << "\n");
+
+  if (Options.CallsMayThrow)
+    setupCalls(F);
+  setupBlocks(F);
+
+  SmallVector<Instruction *, 8> AllLoadsAndStores;
+  SmallVector<Instruction *, 8> LocalLoadsAndStores;
+  SmallVector<Instruction *, 8> AtomicAccesses;
+  SmallVector<Instruction *, 8> MemIntrinCalls;
+  SmallVector<Instruction *, 8> Callsites;
+  // Ancillary instructions
+  SmallPtrSet<Instruction *, 8> Allocas;
+  SmallPtrSet<Instruction *, 8> AllocationFnCalls;
+  SmallPtrSet<Instruction *, 8> FreeCalls;
+  SmallVector<SyncInst *, 8> Syncs;
+
+  DominatorTree *DT = &GetDomTree(F);
+  TaskInfo &TI = GetTaskInfo(F);
+  LoopInfo &LI = GetLoopInfo(F);
+  RaceInfo &RI = GetRaceInfo(F);
+  // Evaluate the tasks that might be in parallel with each spindle.
+  MaybeParallelTasks MPTasks;
+  TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
+
+  for (Spindle *S : depth_first(TI.getRootTask()->getEntrySpindle())) {
+    for (BasicBlock *BB : S->blocks()) {
+      // Record the Tapir sync instructions found
+      if (SyncInst *SI = dyn_cast<SyncInst>(BB->getTerminator()))
+        Syncs.push_back(SI);
+
+      // Record the memory accesses in the basic block
+      for (Instruction &Inst : *BB) {
+        // TODO: Handle VAArgInst
+        if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
+          LocalLoadsAndStores.push_back(&Inst);
+        else if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
+          AtomicAccesses.push_back(&Inst);
+        else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+          // if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+          //   maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
+
+          // Record this function call as either an allocation function, a call
+          // to free (or delete), a memory intrinsic, or an ordinary real
+          // function call.
+          if (isAllocationFn(&Inst, TLI, /*LookThroughBitCast=*/false,
+                             /*IgnoreBuiltinAttr=*/true))
+            AllocationFnCalls.insert(&Inst);
+          else if (isFreeCall(&Inst, TLI))
+            FreeCalls.insert(&Inst);
+          else if (isa<AnyMemIntrinsic>(Inst))
+            MemIntrinCalls.push_back(&Inst);
+          else if (!simpleCallCannotRace(Inst))
+            Callsites.push_back(&Inst);
+
+          // Add the current set of local loads and stores to be considered for
+          // instrumentation.
+          if (!simpleCallCannotRace(Inst)) {
+            chooseInstructionsToInstrument(LocalLoadsAndStores,
+                                           AllLoadsAndStores, TI, LI);
+          }
+        } else if (isa<AllocaInst>(Inst)) {
+          Allocas.insert(&Inst);
+        }
+      }
+      chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, TI,
+                                     LI);
+    }
+  }
+
+  // Map each detach instruction with the sync instructions that could sync it.
+  for (SyncInst *Sync : Syncs)
+    for (const Task *MPT :
+           MPTasks.TaskList[TI.getSpindleFor(Sync->getParent())])
+      DetachToSync[MPT->getDetach()].push_back(Sync);
+
+  // Record objects involved in races
+  for (auto &ObjRD : RI.getObjectMRForRace())
+    ObjectMRForRace[ObjRD.first] = ObjRD.second;
+
+  uint64_t LocalId = getLocalFunctionID(F);
+  IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
+  Value *FuncId = FunctionFED.localToGlobalId(LocalId, IRB);
+
+  bool Result = false;
+  if (!EnableStaticRaceDetection) {
+    SimpleInstrumentor FuncI(*this, TI, DT);
+    Result |= FuncI.InstrumentSimpleInstructions(AllLoadsAndStores);
+    Result |= FuncI.InstrumentSimpleInstructions(AtomicAccesses);
+    Result |= FuncI.InstrumentAnyMemIntrinsics(MemIntrinCalls);
+    Result |= FuncI.InstrumentCalls(Callsites);
+
+    // Instrument ancillary instructions including allocas, allocation-function
+    // calls, free calls, detaches, and syncs.
+    Result |= FuncI.InstrumentAncillaryInstructions(Allocas, AllocationFnCalls,
+                                                    FreeCalls);
+  } else {
+    Instrumentor FuncI(*this, RI, TI, DT);
+    // Insert suppression flags for each function argument.
+    FuncI.InsertArgSuppressionFlags(F, FuncId);
+
+    // TODO: Implement these instrumentation routines.
+    //
+    // -) Ancestor races: If pointer is a function argument, then make
+    // instrumentation conditional on ModRef bit inserted for that argument.
+    Result |= FuncI.InstrumentSimpleInstructions(AllLoadsAndStores);
+    Result |= FuncI.InstrumentSimpleInstructions(AtomicAccesses);
+    Result |= FuncI.InstrumentAnyMemIntrinsics(MemIntrinCalls);
+    // -) Set the correct ModRef bit for each pointer argument for the call.
+    Result |= FuncI.InstrumentCalls(Callsites);
+
+    // Instrument ancillary instructions including allocas, allocation-function
+    // calls, free calls, detaches, and syncs.
+    Result |= FuncI.InstrumentAncillaryInstructions(Allocas, AllocationFnCalls,
+                                                    FreeCalls);
+
+    // Once we have handled ancillary instructions, we've done the necessary
+    // analysis on this function.  We now perform delayed instrumentation, which
+    // can involve changing the CFG and thereby violating some analyses.
+    Result |= FuncI.PerformDelayedInstrumentation();
+  }
+
+  if (Result) {
+    IRBuilder<> IRB(&*(++(cast<Instruction>(FuncId)->getIterator())));
+    CsiFuncProperty FuncEntryProp;
+    bool MaySpawn = !TI.isSerial();
+    FuncEntryProp.setMaySpawn(MaySpawn);
+    // TODO: Determine if we actually want the frame pointer, not the stack
+    // pointer.
+    Value *FrameAddr = IRB.CreateCall(
+        Intrinsic::getDeclaration(&M, Intrinsic::frameaddress),
+        {IRB.getInt32(0)});
+    Value *StackSave = IRB.CreateCall(
+        Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
+    IRB.CreateCall(CsanFuncEntry,
+                   {FuncId, FrameAddr, StackSave, FuncEntryProp.getValue(IRB)});
+    // IRB.CreateCall(CsanFuncEntry,
+    //                {FuncId, FrameAddr, FuncEntryProp.getValue(IRB)});
+
+    EscapeEnumerator EE(F, "csan_cleanup", false);
+    while (IRBuilder<> *AtExit = EE.Next()) {
+      // uint64_t ExitLocalId = FunctionExitFED.add(F);
+      uint64_t ExitLocalId = FunctionExitFED.add(*AtExit->GetInsertPoint());
+      Value *ExitCsiId = FunctionExitFED.localToGlobalId(ExitLocalId, *AtExit);
+      CsiFuncExitProperty FuncExitProp;
+      FuncExitProp.setMaySpawn(MaySpawn);
+      FuncExitProp.setEHReturn(isa<ResumeInst>(AtExit->GetInsertPoint()));
+      AtExit->CreateCall(CsanFuncExit,
+                         {ExitCsiId, FuncId, FuncExitProp.getValue(*AtExit)});
+    }
+  }
+
+  // Record aggregate race information for the function and its arguments for
+  // interprocedural analysis.
+  //
+  // TODO: Clean this up
+  RaceInfo::RaceType FuncRT = RaceInfo::None;
+  for (Instruction *I : AllLoadsAndStores)
+    FuncRT = RaceInfo::unionRaceTypes(FuncRT, RI.getRaceType(I));
+  for (Instruction *I : AtomicAccesses)
+    FuncRT = RaceInfo::unionRaceTypes(FuncRT, RI.getRaceType(I));
+  for (Instruction *I : MemIntrinCalls)
+    FuncRT = RaceInfo::unionRaceTypes(FuncRT, RI.getRaceType(I));
+  for (Instruction *I : Callsites) {
+    if (const CallBase *CB = dyn_cast<CallBase>(I)) {
+      // Use updated information about the race type of the call, if it's
+      // available.
+      const Function *CF = CB->getCalledFunction();
+      if (FunctionRaceType.count(CF)) {
+        FuncRT = RaceInfo::unionRaceTypes(FuncRT, FunctionRaceType[CF]);
+        continue;
+      }
+    }
+    FuncRT = RaceInfo::unionRaceTypes(FuncRT, RI.getRaceType(I));
+  }
+  FunctionRaceType[&F] = FuncRT;
+
+  return Result;
+}
+
 bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F) ||
-      !F.hasFnAttribute(Attribute::SanitizeCilk))
+      !CheckSanitizeCilkAttr(F))
     return false;
 
   if (Options.CallsMayThrow)
@@ -1950,7 +3385,7 @@ bool CilkSanitizerImpl::instrumentFunction(
     Function &F, SmallPtrSetImpl<Instruction *> &ToInstrument,
     SmallPtrSetImpl<Instruction *> &NoRaceCallsites) {
   if (F.empty() || shouldNotInstrumentFunction(F) ||
-      !F.hasFnAttribute(Attribute::SanitizeCilk))
+      !CheckSanitizeCilkAttr(F))
     return false;
   bool Res = false;
 
@@ -2290,47 +3725,86 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(
   return false;
 }
 
-bool CilkSanitizerImpl::instrumentCallsite(Instruction *I) {
+bool CilkSanitizerImpl::instrumentCallsite(
+    Instruction *I, SmallVectorImpl<Value *> *SupprVals) {
   if (callsPlaceholderFunction(*I))
     return false;
 
   bool IsInvoke = isa<InvokeInst>(I);
-
-  Function *Called = NULL;
-  if (CallInst *CI = dyn_cast<CallInst>(I))
-    Called = CI->getCalledFunction();
-  else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
-    Called = II->getCalledFunction();
+  CallBase *CB = dyn_cast<CallBase>(I);
+  if (!CB)
+    return false;
+  Function *Called = CB->getCalledFunction();
 
   IRBuilder<> IRB(I);
   uint64_t LocalId = CallsiteFED.add(*I);
   Value *DefaultID = getDefaultID(IRB);
   Value *CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
-  Value *FuncId = NULL;
-  GlobalVariable *FuncIdGV = NULL;
-  if (Called) {
-    std::string GVName =
-      CsiFuncIdVariablePrefix + Called->getName().str();
-    FuncIdGV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(GVName,
-                                                            IRB.getInt64Ty()));
-    assert(FuncIdGV);
-    FuncIdGV->setConstant(false);
-    if (Options.jitMode && !Called->empty())
-      FuncIdGV->setLinkage(Called->getLinkage());
-    else
-      FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
-    FuncIdGV->setInitializer(IRB.getInt64(CsiCallsiteUnknownTargetId));
-    FuncId = IRB.CreateLoad(FuncIdGV);
-  } else {
-    // Unknown targets (i.e. indirect calls) are always unknown.
-    FuncId = IRB.getInt64(CsiCallsiteUnknownTargetId);
-  }
+  Value *FuncId = GetCalleeFuncID(Called, IRB);
+  // GlobalVariable *FuncIdGV = NULL;
+  // if (Called) {
+  //   std::string GVName =
+  //     CsiFuncIdVariablePrefix + Called->getName().str();
+  //   FuncIdGV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(GVName,
+  //                                                           IRB.getInt64Ty()));
+  //   assert(FuncIdGV);
+  //   FuncIdGV->setConstant(false);
+  //   if (Options.jitMode && !Called->empty())
+  //     FuncIdGV->setLinkage(Called->getLinkage());
+  //   else
+  //     FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
+  //   FuncIdGV->setInitializer(IRB.getInt64(CsiCallsiteUnknownTargetId));
+  //   FuncId = IRB.CreateLoad(FuncIdGV);
+  // } else {
+  //   // Unknown targets (i.e. indirect calls) are always unknown.
+  //   FuncId = IRB.getInt64(CsiCallsiteUnknownTargetId);
+  // }
   assert(FuncId != NULL);
+
+  // Type *SVArrayElTy = IRB.getInt8Ty();
+  // Value *SVArray = ConstantPointerNull::get(PointerType::get(SVArrayElTy, 0));
+  // Value *StackAddr = nullptr;
+  Value *NumSVVal = IRB.getInt8(0);
+  // ConstantInt *SVArraySize = nullptr;
+  if (SupprVals && !SupprVals->empty()) {
+    unsigned NumSV = SupprVals->size();
+    NumSVVal = IRB.getInt8(NumSV);
+  //   // Save information about the stack before allocating the index array.
+  //   StackAddr =
+  //     IRB.CreateCall(Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
+  //   // Allocate the index array.
+  //   SVArray = IRB.CreateAlloca(SVArrayElTy, NumSV);
+  //   SVArraySize =
+  //     IRB.getInt64(DL.getTypeAllocSize(
+  //                      cast<AllocaInst>(SVArray)->getAllocatedType())
+  //                  * NumSV);
+  //   IRB.CreateLifetimeStart(SVArray, SVArraySize);
+  //   // Populate the index array.
+  //   unsigned SVIdx = 0;
+  //   for (Value *SV : *SupprVals) {
+  //     IRB.CreateStore(IRB.CreateZExt(SV, SVArrayElTy),
+  //                     IRB.CreateInBoundsGEP(SVArray, { IRB.getInt32(SVIdx) }));
+  //     SVIdx++;
+  //   }
+  }
+
   CsiCallProperty Prop;
   Value *DefaultPropVal = Prop.getValue(IRB);
   Prop.setIsIndirect(!Called);
   Value *PropVal = Prop.getValue(IRB);
-  insertHookCall(I, CsiBeforeCallsite, {CallsiteId, FuncId, PropVal});
+  insertHookCall(I, CsanBeforeCallsite, {CallsiteId, FuncId,// SVArray, NumSVVal,
+                                        NumSVVal, PropVal});
+  // if (SupprVals && !SupprVals.empty()) {
+  //   // Clean up the suppression-values array.
+  //   IRB.CreateLifetimeEnd(SVArray, SVArraySize);
+  //   IRB.CreateCall(Intrinsic::getDeclaration(&M, Intrinsic::stackrestore),
+  //                  {StackAddr});
+  // }
+
+  // Don't bother adding after_call instrumentation for function calls that
+  // don't return.
+  if (CB->doesNotReturn())
+    return true;
 
   BasicBlock::iterator Iter(I);
   if (IsInvoke) {
@@ -2338,17 +3812,20 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I) {
     // exception block.
     InvokeInst *II = cast<InvokeInst>(I);
     insertHookCallInSuccessorBB(
-        II->getNormalDest(), II->getParent(), CsiAfterCallsite,
-        {CallsiteId, FuncId, PropVal}, {DefaultID, DefaultID, DefaultPropVal});
+        II->getNormalDest(), II->getParent(), CsanAfterCallsite,
+        {CallsiteId, FuncId, NumSVVal, PropVal},
+        {DefaultID, DefaultID, IRB.getInt8(0), DefaultPropVal});
     insertHookCallInSuccessorBB(
-        II->getUnwindDest(), II->getParent(), CsiAfterCallsite,
-        {CallsiteId, FuncId, PropVal}, {DefaultID, DefaultID, DefaultPropVal});
+        II->getUnwindDest(), II->getParent(), CsanAfterCallsite,
+        {CallsiteId, FuncId, NumSVVal, PropVal},
+        {DefaultID, DefaultID, IRB.getInt8(0), DefaultPropVal});
   } else {
     // Simple call instruction; there is only one "after" position.
     Iter++;
     IRB.SetInsertPoint(&*Iter);
     PropVal = Prop.getValue(IRB);
-    insertHookCall(&*Iter, CsiAfterCallsite, {CallsiteId, FuncId, PropVal});
+    insertHookCall(&*Iter, CsanAfterCallsite,
+                   {CallsiteId, FuncId, NumSVVal, PropVal});
   }
 
   return true;
@@ -2380,6 +3857,91 @@ bool CilkSanitizerImpl::suppressCallsite(Instruction *I) {
   }
 
   return true;
+}
+
+static bool IsMemTransferDstOperand(unsigned OperandNum) {
+  // This check should be kept in sync with TapirRaceDetect::GetGeneralAccesses.
+  return (OperandNum == 0);
+}
+
+static bool IsMemTransferSrcOperand(unsigned OperandNum) {
+  // This check should be kept in sync with TapirRaceDetect::GetGeneralAccesses.
+  return (OperandNum == 1);
+}
+
+bool CilkSanitizerImpl::instrumentAnyMemIntrinAcc(Instruction *I,
+                                                  unsigned OperandNum,
+                                                  IRBuilder<> &IRB) {
+  CsiLoadStoreProperty Prop;
+  if (AnyMemTransferInst *M = dyn_cast<AnyMemTransferInst>(I)) {
+    // Only instrument the large load and the large store components as
+    // necessary.
+    bool Instrumented = false;
+
+    if (IsMemTransferDstOperand(OperandNum)) {
+      Value *Addr = M->getDest();
+      Prop.setAlignment(M->getDestAlignment());
+      // Instrument the store
+      uint64_t StoreId = StoreFED.add(*I);
+
+      // TODO: Don't recalculate underlying objects
+      uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
+      assert(StoreId == StoreObjId &&
+             "Store received different ID's in FED and object tables.");
+
+      Value *CsiId = StoreFED.localToGlobalId(StoreId, IRB);
+      Value *Args[] = {CsiId, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                       IRB.CreateIntCast(M->getLength(), IntptrTy, false),
+                       Prop.getValue(IRB)};
+      Instruction *Call = IRB.CreateCall(CsanLargeWrite, Args);
+      IRB.SetInstDebugLocation(Call);
+      ++NumInstrumentedMemIntrinsicWrites;
+      Instrumented = true;
+    }
+
+    if (IsMemTransferSrcOperand(OperandNum)) {
+      Value *Addr = M->getSource();
+      Prop.setAlignment(M->getSourceAlignment());
+      // Instrument the load
+      uint64_t LoadId = LoadFED.add(*I);
+
+      // TODO: Don't recalculate underlying objects
+      uint64_t LoadObjId = LoadObj.add(*I, GetUnderlyingObject(Addr, DL));
+      assert(LoadId == LoadObjId &&
+             "Load received different ID's in FED and object tables.");
+
+      Value *CsiId = StoreFED.localToGlobalId(LoadId, IRB);
+      Value *Args[] = {CsiId, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                       IRB.CreateIntCast(M->getLength(), IntptrTy, false),
+                       Prop.getValue(IRB)};
+      Instruction *Call = IRB.CreateCall(CsanLargeRead, Args);
+      IRB.SetInstDebugLocation(Call);
+      ++NumInstrumentedMemIntrinsicReads;
+      Instrumented = true;
+    }
+    return Instrumented;
+  } else if (AnyMemIntrinsic *M = dyn_cast<AnyMemIntrinsic>(I)) {
+    // assert(IsMemIntrinDstOperand(OperandNum) &&
+    //        "Race on memset not on destination operand.");
+    Value *Addr = M->getDest();
+    Prop.setAlignment(M->getDestAlignment());
+    uint64_t LocalId = StoreFED.add(*I);
+
+    // TODO: Don't recalculate underlying objects
+    uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
+    assert(LocalId == StoreObjId &&
+           "Store received different ID's in FED and object tables.");
+
+    Value *CsiId = StoreFED.localToGlobalId(LocalId, IRB);
+    Value *Args[] = {CsiId, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                     IRB.CreateIntCast(M->getLength(), IntptrTy, false),
+                     Prop.getValue(IRB)};
+    Instruction *Call = IRB.CreateCall(CsanLargeWrite, Args);
+    IRB.SetInstDebugLocation(Call);
+    ++NumInstrumentedMemIntrinsicWrites;
+    return true;
+  }
+  return false;
 }
 
 static void getTaskExits(
@@ -2819,9 +4381,12 @@ bool CilkSanitizerLegacyPass::runOnModule(Module &M) {
   auto GetDepInfo = [this](Function &F) -> DependenceInfo & {
     return this->getAnalysis<DependenceAnalysisWrapperPass>(F).getDI();
   };
+  auto GetRaceInfo = [this](Function &F) -> RaceInfo & {
+    return this->getAnalysis<TapirRaceDetectWrapperPass>(F).getRaceInfo();
+  };
 
   return CilkSanitizerImpl(M, CG, GetDomTree, GetTaskInfo, GetLoopInfo,
-                           GetDepInfo, TLI, JitMode,
+                           GetDepInfo, GetRaceInfo, TLI, JitMode,
                            CallsMayThrow).run();
 }
 
@@ -2844,9 +4409,13 @@ PreservedAnalyses CilkSanitizerPass::run(Module &M, ModuleAnalysisManager &AM) {
     [&FAM](Function &F) -> DependenceInfo & {
       return FAM.getResult<DependenceAnalysis>(F);
     };
+  auto GetRI =
+    [&FAM](Function &F) -> RaceInfo & {
+      return FAM.getResult<TapirRaceDetect>(F);
+    };
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(M);
 
-  if (!CilkSanitizerImpl(M, &CG, GetDT, GetTI, GetLI, GetDI, TLI)
+  if (!CilkSanitizerImpl(M, &CG, GetDT, GetTI, GetLI, GetDI, GetRI, TLI)
       .run())
     return PreservedAnalyses::all();
 

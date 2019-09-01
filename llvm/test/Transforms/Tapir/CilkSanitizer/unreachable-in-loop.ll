@@ -379,7 +379,7 @@ if.then:                                          ; preds = %invoke.cont62
   %conv.i821 = sext i32 %add.i820 to i64, !dbg !2669
 ; CHECK: {{^if.then}}
 ; CHECK: load i64, i64* @__csi_func_id__ZN3OFM11print_arrayEm
-; CHECK: call void @__csi_before_call(
+; CHECK: call void @__csan_before_call(
 ; CHECK-NEXT: invoke void @_ZN3OFM11print_arrayEm(%class.OFM* nonnull
 ; CHECK-NEXT: to label %invoke.cont81
   invoke void @_ZN3OFM11print_arrayEm(%class.OFM* nonnull %49, i64 %conv.i821)
@@ -584,7 +584,7 @@ if.then197:                                       ; preds = %invoke.cont192
   %conv.i837 = sext i32 %add.i836 to i64, !dbg !2754
 ; CHECK: {{^if.then197}}
 ; CHECK: load i64, i64* @__csi_func_id__ZN3OFM11print_arrayEm
-; CHECK: call void @__csi_before_call(
+; CHECK: call void @__csan_before_call(
 ; CHECK-NEXT: invoke void @_ZN3OFM11print_arrayEm(%class.OFM* nonnull
 ; CHECK-NEXT: to label %invoke.cont212
   invoke void @_ZN3OFM11print_arrayEm(%class.OFM* nonnull %68, i64 %conv.i837)

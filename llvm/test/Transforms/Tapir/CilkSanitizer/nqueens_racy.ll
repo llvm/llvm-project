@@ -132,12 +132,10 @@ if.end:                                           ; preds = %entry
   %cmp762 = icmp sgt i32 %n, 0, !dbg !117
   br i1 %cmp762, label %for.body.lr.ph, label %for.cond.cleanup, !dbg !119
 ; CHECK: if.end:
-; CHECK: @__csi_after_alloca
-; CHECK: i8* %7
-; CHECK: @__csan_large_load
-; CHECK: i8* %a
-; CHECK: call void @llvm.memcpy
-; CHECL: i8* %a
+; CHECK: %[[ALLOCA:.+]] = alloca i8, i64 %conv3
+; CHECK: @__csi_after_alloca(i64 {{.+}}, i8* %[[ALLOCA]]
+; CHECK: @__csan_large_load(i64 {{.+}}, i8* %a
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.+}}%[[ALLOCA]], i8* {{.+}}%a
 
 for.body.lr.ph:                                   ; preds = %if.end
   %arrayidx = getelementptr inbounds i8, i8* %1, i64 %conv5
@@ -171,9 +169,9 @@ det.achd:                                         ; preds = %if.then11
   store i32 %call15, i32* %arrayidx13, align 4, !dbg !129, !tbaa !130
   reattach within %syncreg, label %for.inc, !dbg !129
 ; CHECK-LABEL: det.achd:
-; CHECK: @__csi_before_call
+; CHECK: @__csan_before_call
 ; CHECK-NEXT: call i32 @nqueens(
-; CHECK-NEXT: @__csi_after_call
+; CHECK-NEXT: @__csan_after_call
 
 for.inc:                                          ; preds = %for.body, %det.achd, %if.then11
   %indvars.iv.next65 = add nuw nsw i64 %indvars.iv64, 1, !dbg !132

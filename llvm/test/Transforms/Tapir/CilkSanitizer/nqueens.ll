@@ -149,10 +149,10 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %tobool = icmp eq i32 %call, 0, !dbg !124
   br i1 %tobool, label %for.inc, label %if.then11, !dbg !126
 ; CHECK: for.body:
-; CHECK-NOT: @__csi_after_alloca
-; CHECK: @__csan_large_load
-; CHECK-NEXT: call void @llvm.memcpy
-; CHECK: i8*{{.*}} %a,
+; CHECK: %[[ALLOCA:.+]] = alloca i8, i64 %conv5
+; CHECK-NOT: @__csi_after_alloca(i64 {{.+}}, i8* %[[ALLOCA]]
+; CHECK: @__csan_large_load(i64 {{.+}}, i8* %a
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.+}}%[[ALLOCA]], i8*{{.*}} %a,
 ; CHECK-NOT: @__csan_store
 ; CHECK: store i8 %conv9, i8* %arrayidx
 ; CHECK: @__cilksan_disable_checking
