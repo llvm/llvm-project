@@ -174,6 +174,10 @@ private:
   RaceMap_t races_found;
   // The number of duplicated races found
   uint32_t duplicated_races = 0;
+
+  // Basic statistics
+  uint64_t num_reads_checked = 0;
+  uint64_t num_writes_checked = 0;
 };
 
 #endif // __CILKSAN_INTERNAL_H__

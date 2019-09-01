@@ -469,6 +469,7 @@ void CilkSanImpl_t::do_read(const csi_id_t load_id,
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_MEMORY, "record read %lu: %lu bytes at addr %p and rip %p.\n",
             load_id, mem_size, addr, load_pc[load_id]);
+  ++num_reads_checked;
 
   // for now we assume the stack doesn't change
   bool on_stack = is_on_stack(addr);
@@ -506,6 +507,7 @@ void CilkSanImpl_t::do_write(const csi_id_t store_id,
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_MEMORY, "record write %ld: %lu bytes at addr %p and rip %p.\n",
             store_id, mem_size, addr, store_pc[store_id]);
+  ++num_writes_checked;
 
   bool on_stack = is_on_stack(addr);
   if (on_stack)
@@ -566,6 +568,8 @@ inline void CilkSanImpl_t::print_stats() {
   //           << std::endl;
   // std::cout << "max continuation depth seen: "
   //           << accounted_max_cont_depth << std::endl;
+  std::cout << "number of reads checked:  " << num_reads_checked << "\n";
+  std::cout << "number of writes checked: " << num_writes_checked << "\n";
 }
 
 void CilkSanImpl_t::deinit() {
@@ -575,7 +579,10 @@ void CilkSanImpl_t::deinit() {
   else return; // deinit-ed already
 
   print_race_report();
-  print_stats();
+  // Optionally print statistics.
+  char *e = getenv("CILKSAN_STATS");
+  if (e && 0 != strcmp(e, "0"))
+    print_stats();
 
   cilksan_assert(frame_stack.size() == 1);
 
