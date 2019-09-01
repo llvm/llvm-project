@@ -162,12 +162,18 @@ bool TapirToTargetImpl::processSimpleABI(Function &F) {
   // loop-grainsize calls.
   SmallVector<SyncInst *, 8> Syncs;
   SmallVector<CallInst *, 8> GrainsizeCalls;
+  SmallVector<CallInst *, 8> TaskFrameAddrCalls;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       // Record calls to get Tapir-loop grainsizes.
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
         if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
           GrainsizeCalls.push_back(II);
+
+      // Record calls to task_frameaddr intrinsics.
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+        if (Intrinsic::task_frameaddress == II->getIntrinsicID())
+          TaskFrameAddrCalls.push_back(II);
 
       // Record sync instructions in this function.
       if (SyncInst *SI = dyn_cast<SyncInst>(&I))
@@ -184,6 +190,15 @@ bool TapirToTargetImpl::processSimpleABI(Function &F) {
     CallInst *GrainsizeCall = GrainsizeCalls.pop_back_val();
     LLVM_DEBUG(dbgs() << "Lowering grainsize call " << *GrainsizeCall << "\n");
     Target->lowerGrainsizeCall(GrainsizeCall);
+    Changed = true;
+  }
+
+  // Lower calls to task_frameaddr intrinsics.
+  while (!TaskFrameAddrCalls.empty()) {
+    CallInst *TaskFrameAddrCall = TaskFrameAddrCalls.pop_back_val();
+    LLVM_DEBUG(dbgs() << "Lowering task_frameaddr call " << *TaskFrameAddrCall
+               << "\n");
+    Target->lowerTaskFrameAddrCall(TaskFrameAddrCall);
     Changed = true;
   }
 

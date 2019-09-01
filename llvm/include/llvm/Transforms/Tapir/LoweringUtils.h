@@ -167,6 +167,7 @@ public:
   TapirTarget(Module &M) : M(M) {}
   virtual ~TapirTarget() {}
   virtual Value *lowerGrainsizeCall(CallInst *GrainsizeCall) = 0;
+  virtual void lowerTaskFrameAddrCall(CallInst *TaskFrameAddrCall);
   virtual void lowerSync(SyncInst &inst) = 0;
 
   virtual bool shouldProcessFunction(const Function &F);

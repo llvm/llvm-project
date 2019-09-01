@@ -895,3 +895,10 @@ bool TapirTarget::shouldProcessFunction(const Function &F) {
 
   return false;
 }
+
+void TapirTarget::lowerTaskFrameAddrCall(CallInst *TaskFrameAddrCall) {
+  // By default, replace calls to task_frameaddress with ordinary calls to the
+  // frameaddress intrinsic.
+  TaskFrameAddrCall->setCalledFunction(
+      Intrinsic::getDeclaration(&M, Intrinsic::frameaddress));
+}
