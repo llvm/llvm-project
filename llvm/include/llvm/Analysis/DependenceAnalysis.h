@@ -269,9 +269,13 @@ template <typename T> class ArrayRef;
   struct GeneralAccess {
     Instruction *I = nullptr;
     Optional<MemoryLocation> Loc;
+    unsigned OperandNum = unsigned(-1);
     ModRefInfo ModRef = ModRefInfo::NoModRef;
 
     GeneralAccess() = default;
+    GeneralAccess(Instruction *I, Optional<MemoryLocation> Loc,
+                  unsigned OperandNum, ModRefInfo MRI)
+        : I(I), Loc(Loc), OperandNum(OperandNum), ModRef(MRI) {}
     GeneralAccess(Instruction *I, Optional<MemoryLocation> Loc, ModRefInfo MRI)
         : I(I), Loc(Loc), ModRef(MRI) {}
 
