@@ -62,6 +62,10 @@ STATISTIC(NumOmittedReadsFromConstants,
 STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
 STATISTIC(NumOmittedStaticNoRace,
           "Number of accesses proven statically to not race");
+STATISTIC(NumInstrumentedMemIntrinsicReads,
+          "Number of instrumented reads from memory intrinsics");
+STATISTIC(NumInstrumentedMemIntrinsicWrites,
+          "Number of instrumented writes from memory intrinsics");
 STATISTIC(NumInstrumentedDetaches, "Number of instrumented detaches");
 STATISTIC(NumInstrumentedDetachExits, "Number of instrumented detach exits");
 STATISTIC(NumInstrumentedSyncs, "Number of instrumented syncs");
@@ -89,6 +93,17 @@ static cl::opt<bool>
     AssumeNoExceptions(
         "cilksan-assume-no-exceptions", cl::init(false), cl::Hidden,
         cl::desc("Assume that ordinary calls cannot throw exceptions."));
+
+static cl::opt<bool>
+    AssumeLibCallsDontRecur(
+        "cilksan-assume-lib-calls-dont-recur", cl::init(true), cl::Hidden,
+        cl::desc("Assume that library calls do not recur."));
+
+static cl::opt<bool>
+    IgnoreSanitizeCilkAttr(
+        "ignore-sanitize-cilk-attr", cl::init(false), cl::Hidden,
+        cl::desc("Ignore the 'sanitize_cilk' attribute when choosing what to "
+                 "instrument."));
 
 static const char *const CsiUnitObjTableName = "__csi_unit_obj_table";
 static const char *const CsiUnitObjTableArrayName = "__csi_unit_obj_tables";
@@ -275,8 +290,16 @@ struct CilkSanitizerImpl : public CSIImpl {
                           SmallPtrSetImpl<Instruction *> &ToInstrument,
                           SmallPtrSetImpl<Instruction *> &NoRaceCallsites);
   // Helper methods for instrumenting different IR objects.
-  bool instrumentLoadOrStore(Instruction *I);
-  bool instrumentAtomic(Instruction *I);
+  bool instrumentLoadOrStore(Instruction *I, IRBuilder<> &IRB);
+  bool instrumentLoadOrStore(Instruction *I) {
+    IRBuilder<> IRB(I);
+    return instrumentLoadOrStore(I, IRB);
+  }
+  bool instrumentAtomic(Instruction *I, IRBuilder<> &IRB);
+  bool instrumentAtomic(Instruction *I) {
+    IRBuilder<> IRB(I);
+    return instrumentAtomic(I, IRB);
+  }
   bool instrumentMemIntrinsic(
       Instruction *I,
       DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes);
@@ -641,41 +664,72 @@ void CilkSanitizerImpl::initializeCsanHooks() {
 
   CsanFuncEntry = M.getOrInsertFunction("__csan_func_entry", RetType,
                                         /* func_id */ IDType,
+                                        /* frame_ptr */ AddrType,
                                         /* stack_ptr */ AddrType,
                                         FuncPropertyTy);
+  CsanFuncEntry->addParamAttr(1, Attribute::NoCapture);
+  CsanFuncEntry->addParamAttr(1, Attribute::ReadNone);
+  CsanFuncEntry->addParamAttr(2, Attribute::NoCapture);
+  CsanFuncEntry->addParamAttr(2, Attribute::ReadNone);
+  CsanFuncEntry->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanFuncExit = M.getOrInsertFunction("__csan_func_exit", RetType,
                                        /* func_exit_id */ IDType,
                                        /* func_id */ IDType,
                                        FuncExitPropertyTy);
+  CsanFuncExit->addFnAttr(Attribute::InaccessibleMemOnly);
 
   CsanRead = M.getOrInsertFunction("__csan_load", RetType, IDType,
                                    AddrType, NumBytesType, LoadPropertyTy);
+  CsanRead->addParamAttr(1, Attribute::NoCapture);
+  CsanRead->addParamAttr(1, Attribute::ReadNone);
+  CsanRead->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanWrite = M.getOrInsertFunction("__csan_store", RetType, IDType,
                                     AddrType, NumBytesType, StorePropertyTy);
+  CsanWrite->addParamAttr(1, Attribute::NoCapture);
+  CsanWrite->addParamAttr(1, Attribute::ReadNone);
+  CsanWrite->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanLargeRead = M.getOrInsertFunction("__csan_large_load", RetType, IDType,
                                         AddrType, LargeNumBytesType,
                                         LoadPropertyTy);
+  CsanLargeRead->addParamAttr(1, Attribute::NoCapture);
+  CsanLargeRead->addParamAttr(1, Attribute::ReadNone);
+  CsanLargeRead->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanLargeWrite = M.getOrInsertFunction("__csan_large_store", RetType, IDType,
                                          AddrType, LargeNumBytesType,
                                          StorePropertyTy);
+  CsanLargeWrite->addParamAttr(1, Attribute::NoCapture);
+  CsanLargeWrite->addParamAttr(1, Attribute::ReadNone);
+  CsanLargeWrite->addFnAttr(Attribute::InaccessibleMemOnly);
   // CsanWrite = M.getOrInsertFunction("__csan_atomic_exchange", RetType,
   //                                   IDType, AddrType, NumBytesType,
   //                                   StorePropertyTy);
 
   CsanDetach = M.getOrInsertFunction("__csan_detach", RetType,
                                      /* detach_id */ IDType);
+  CsanDetach->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanTaskEntry = M.getOrInsertFunction("__csan_task", RetType,
                                         /* task_id */ IDType,
                                         /* detach_id */ IDType,
+                                        /* frame_ptr */ AddrType,
                                         /* stack_ptr */ AddrType);
+  CsanTaskEntry->addParamAttr(2, Attribute::NoCapture);
+  CsanTaskEntry->addParamAttr(2, Attribute::ReadNone);
+  CsanTaskEntry->addParamAttr(3, Attribute::NoCapture);
+  CsanTaskEntry->addParamAttr(3, Attribute::ReadNone);
+  CsanTaskEntry->addFnAttr(Attribute::InaccessibleMemOnly);
+
   CsanTaskExit = M.getOrInsertFunction("__csan_task_exit", RetType,
                                        /* task_exit_id */ IDType,
                                        /* task_id */ IDType,
                                        /* detach_id */ IDType);
+  CsanTaskExit->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanDetachContinue = M.getOrInsertFunction("__csan_detach_continue", RetType,
                                              /* detach_continue_id */ IDType,
                                              /* detach_id */ IDType);
+  CsanDetachContinue->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanSync = M.getOrInsertFunction("__csan_sync", RetType, IDType);
+  CsanSync->addFnAttr(Attribute::InaccessibleMemOnly);
+
   // CsanBeforeAllocFn = M.getOrInsertFunction("__csan_before_allocfn", RetType,
   //                                           IDType, LargeNumBytesType,
   //                                           LargeNumBytesType,
@@ -688,14 +742,23 @@ void CilkSanitizerImpl::initializeCsanHooks() {
                                            /* alignment */ LargeNumBytesType,
                                            /* old ptr */ AddrType,
                                            /* property */ AllocFnPropertyTy);
+  CsanAfterAllocFn->addParamAttr(1, Attribute::NoCapture);
+  CsanAfterAllocFn->addParamAttr(1, Attribute::ReadNone);
+  CsanAfterAllocFn->addParamAttr(5, Attribute::NoCapture);
+  CsanAfterAllocFn->addParamAttr(5, Attribute::ReadNone);
+  CsanAfterAllocFn->addFnAttr(Attribute::InaccessibleMemOnly);
   // CsanBeforeFree = M.getOrInsertFunction("__csan_before_free", RetType, IDType,
   //                                        AddrType);
   CsanAfterFree = M.getOrInsertFunction("__csan_after_free", RetType, IDType,
                                         AddrType,
                                         /* property */ FreePropertyTy);
+  CsanAfterFree->addParamAttr(1, Attribute::NoCapture);
+  CsanAfterFree->addParamAttr(1, Attribute::ReadNone);
+  CsanAfterFree->addFnAttr(Attribute::InaccessibleMemOnly);
 
   CsanDisableChecking = M.getOrInsertFunction("__cilksan_disable_checking",
                                               RetType);
+  CsanDisableChecking->addFnAttr(Attribute::InaccessibleMemOnly);
   CsanEnableChecking = M.getOrInsertFunction("__cilksan_enable_checking",
                                              RetType);
 }
@@ -736,7 +799,7 @@ static void setupBlock(BasicBlock *BB, DominatorTree *DT,
       DetRethrowPreds.push_back(Pred);
     else if (isa<SyncInst>(Pred->getTerminator()))
       SyncPreds.push_back(Pred);
-    else if (isAllocationFn(Pred->getTerminator(), TLI))
+    else if (isAllocationFn(Pred->getTerminator(), TLI, false, true))
       AllocFnPreds.push_back(Pred);
     else if (isa<InvokeInst>(Pred->getTerminator()))
       InvokePreds.push_back(Pred);
@@ -1777,13 +1840,14 @@ bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
         else if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
           AtomicAccesses.push_back(&Inst);
         else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
-          if (CallInst *CI = dyn_cast<CallInst>(&Inst))
-            maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
+          // if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+          //   maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
 
           // Record this function call as either an allocation function, a call
           // to free (or delete), a memory intrinsic, or an ordinary real
           // function call.
-          if (isAllocationFn(&Inst, TLI))
+          if (isAllocationFn(&Inst, TLI, /*LookThroughBitCast=*/false,
+                             /*IgnoreBuiltinAttr=*/true))
             AllocationFnCalls.push_back(&Inst);
           else if (isFreeCall(&Inst, TLI))
             FreeCalls.push_back(&Inst);
@@ -1836,7 +1900,7 @@ bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
   else if (MayRaceInternally)
     MayRaceFunctions.insert(&F);
 
-  // While the maybe-parallel-task information is handy, use it to map each
+  // While we have the maybe-parallel-task information handy, use it to map each
   // detach instruction with the sync instructions that could sync it.
   for (SyncInst *Sync : Syncs)
     for (const Task *MPT :
@@ -1911,6 +1975,7 @@ bool CilkSanitizerImpl::instrumentFunction(
   // load or store, memory intrinsic, callsite, etc.
   SmallPtrSet<const Value *, 8> LocalAllocToInstrument;
   for (Instruction *I : ToInstrument) {
+    // TODO: Handle VAArgs
     if (isa<LoadInst>(I) || isa<StoreInst>(I))
       MayRaceLoadsAndStores.insert(I);
     else if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I))
@@ -1950,7 +2015,7 @@ bool CilkSanitizerImpl::instrumentFunction(
     }
     // Record any local allocations among the base objects.
     for (const Value *BaseObj : BaseObjs)
-      if (isa<AllocaInst>(BaseObj) || isAllocationFn(BaseObj, TLI))
+      if (isa<AllocaInst>(BaseObj) || isAllocationFn(BaseObj, TLI, false, true))
         LocalAllocToInstrument.insert(BaseObj);
   }
 
@@ -2066,8 +2131,8 @@ bool CilkSanitizerImpl::instrumentFunction(
   return Res;
 }
 
-bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I) {
-  IRBuilder<> IRB(I);
+bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
+                                              IRBuilder<> &IRB) {
   bool IsWrite = isa<StoreInst>(*I);
   Value *Addr = IsWrite
       ? cast<StoreInst>(I)->getPointerOperand()
@@ -2123,8 +2188,7 @@ bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I) {
   return true;
 }
 
-bool CilkSanitizerImpl::instrumentAtomic(Instruction *I) {
-  IRBuilder<> IRB(I);
+bool CilkSanitizerImpl::instrumentAtomic(Instruction *I, IRBuilder<> &IRB) {
   CsiLoadStoreProperty Prop;
   Value *Addr;
   if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I)) {
@@ -2385,13 +2449,14 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI,
     Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
     // TODO: Determine if we actually want the frame pointer, not the stack
     // pointer.
+    Value *FrameAddr = IRB.CreateCall(
+        Intrinsic::getDeclaration(&M, Intrinsic::task_frameaddress),
+        {IRB.getInt32(0)});
     Value *StackSave = IRB.CreateCall(
         Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
     Instruction *Call = IRB.CreateCall(CsanTaskEntry,
-                                       {TaskID, DetachID, StackSave});
-    // Value *FrameAddr = IRB.CreateCall(
-    //     Intrinsic::getDeclaration(&M, Intrinsic::frameaddress),
-    //     {IRB.getInt32(0)});
+                                       {TaskID, DetachID, FrameAddr,
+                                        StackSave});
     // Instruction *Call = IRB.CreateCall(CsanTaskEntry,
     //                                    {TaskID, DetachID, FrameAddr});
     IRB.SetInstDebugLocation(Call);
