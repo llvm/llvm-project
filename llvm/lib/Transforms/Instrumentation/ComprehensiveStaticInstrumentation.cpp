@@ -1251,6 +1251,19 @@ void CSIImpl::getAllocFnArgs(const Instruction *I,
     AllocFnArgs.push_back(CI->getArgOperand(0));
     return;
   }
+  case LibFunc_aligned_alloc:
+    {
+      const CallInst *CI = cast<CallInst>(I);
+      // Allocated size
+      AllocFnArgs.push_back(CI->getArgOperand(1));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment
+      AllocFnArgs.push_back(CI->getArgOperand(0));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+      return;
+    }
   }
 }
 

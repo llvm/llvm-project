@@ -72,6 +72,7 @@ struct AllocFnsTy {
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_malloc,              {MallocLike,  1, 0,  -1}},
   {LibFunc_valloc,              {MallocLike,  1, 0,  -1}},
+  {LibFunc_aligned_alloc,       {MallocLike,  2, 1,  -1}}, // aligned_alloc(align_val_t, size_t)
   {LibFunc_Znwj,                {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
   {LibFunc_ZnwjRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
   {LibFunc_ZnwjSt11align_val_t, {OpNewLike,   2, 0,  -1}}, // new(unsigned int, align_val_t)
