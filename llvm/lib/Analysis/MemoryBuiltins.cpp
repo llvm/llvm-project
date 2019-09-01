@@ -172,11 +172,12 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
 
 static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
                                               const TargetLibraryInfo *TLI,
-                                              bool LookThroughBitCast = false) {
+                                              bool LookThroughBitCast = false,
+                                              bool IgnoreBuiltinAttr = false) {
   bool IsNoBuiltinCall;
   if (const Function *Callee =
           getCalledFunction(V, LookThroughBitCast, IsNoBuiltinCall))
-    if (!IsNoBuiltinCall)
+    if (IgnoreBuiltinAttr || !IsNoBuiltinCall)
       return getAllocationDataForFunction(Callee, AllocTy, TLI);
   return None;
 }
@@ -221,8 +222,9 @@ static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
 bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI,
-                          bool LookThroughBitCast) {
-  return getAllocationData(V, AnyAlloc, TLI, LookThroughBitCast).hasValue();
+                          bool LookThroughBitCast, bool IgnoreBuiltinAttr) {
+  return getAllocationData(V, AnyAlloc, TLI, LookThroughBitCast,
+                           IgnoreBuiltinAttr).hasValue();
 }
 
 /// Tests if a value is a call or invoke to a function that returns a

@@ -57,7 +57,8 @@ class Value;
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
 bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI,
-                    bool LookThroughBitCast = false);
+                    bool LookThroughBitCast = false,
+                    bool IgnoreBuiltinAttr = false);
 
 /// Tests if a value is a call or invoke to a function that returns a
 /// NoAlias pointer (including malloc/calloc/realloc/strdup-like functions).
