@@ -92,14 +92,14 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
 };
 
 const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
-     /*32-bit op*/ {0, 32, SGPRRegBank},
-   /*2x32-bit op*/ {0, 32, SGPRRegBank},
-                   {32, 32, SGPRRegBank},
-/*<2x32-bit> op*/  {0, 64, SGPRRegBank},
+  {0, 32, SGPRRegBank}, // 32-bit op
+  {0, 32, SGPRRegBank}, // 2x32-bit op
+  {32, 32, SGPRRegBank},
+  {0, 64, SGPRRegBank}, // <2x32-bit> op
 
-    /*32-bit op*/  {0, 32, VGPRRegBank},
-  /*2x32-bit op*/  {0, 32, VGPRRegBank},
-                   {32, 32, VGPRRegBank},
+  {0, 32, VGPRRegBank}, // 32-bit op
+  {0, 32, VGPRRegBank}, // 2x32-bit op
+  {32, 32, VGPRRegBank},
 };
 
 
