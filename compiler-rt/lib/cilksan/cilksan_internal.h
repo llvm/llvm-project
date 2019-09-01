@@ -42,22 +42,46 @@ public:
     call_stack.pop();
   }
 
-  inline void push_stack_frame(uintptr_t sp) {
-    DBG_TRACE(DEBUG_BASIC, "push_stack_frame %p\n", sp);
+  // TODO: Fix this architecture-specific detail.
+  static const uintptr_t STACK_ALIGN = 16;
+#define NEXT_STACK_ALIGN(addr) \
+  ((uintptr_t) ((addr - (STACK_ALIGN-1)) & (~(STACK_ALIGN-1))))
+#define PREV_STACK_ALIGN(addr) (addr + STACK_ALIGN)
+
+  inline void push_stack_frame(uintptr_t bp, uintptr_t sp) {
+    DBG_TRACE(DEBUG_BASIC, "push_stack_frame %p--%p\n", bp, sp);
     // Record high location of the stack for this frame.
+    uintptr_t high_stack = bp;
+    // uintptr_t high_stack = PREV_STACK_ALIGN(bp);
+    // fprintf(stderr, "bp = %p, NEXT_STACK_ALIGN = %p, PREV_STACK_ALIGN = %p\n",
+    //         bp, NEXT_STACK_ALIGN(bp), PREV_STACK_ALIGN(bp));
+
+    // if (sp_stack.size() > 1) {
+    //   uintptr_t prev_stack = *sp_stack.head();
+
+    //   // fprintf(stderr, "  NEXT_STACK_ALIGN(prev_stack) = %p\n",
+    //   //         NEXT_STACK_ALIGN(prev_stack));
+    //   if (high_stack > NEXT_STACK_ALIGN(prev_stack))
+    //     high_stack = NEXT_STACK_ALIGN(prev_stack);
+    //   // low_stack = (low_stack < (uintptr_t)sp) ? sp : low_stack;
+    // }
+
     sp_stack.push();
-    *sp_stack.head() = (uintptr_t)sp;
+    *sp_stack.head() = high_stack;
     // Record low location of the stack for this frame.  This value will be
     // updated by reads and writes to the stack.
     sp_stack.push();
-    *sp_stack.head() = (uintptr_t)sp;
+    *sp_stack.head() = sp;
   }
 
   inline void advance_stack_frame(uintptr_t addr) {
     DBG_TRACE(DEBUG_BASIC, "advance_stack_frame %p to include %p\n",
               *sp_stack.head(), addr);
-    if (addr < *sp_stack.head())
+    if (addr < *sp_stack.head()) {
       *sp_stack.head() = addr;
+      FrameData_t *cilk_func = frame_stack.head();
+      cilk_func->Sbag->get_node()->set_rsp(addr);
+    }
   }
 
   inline void pop_stack_frame() {

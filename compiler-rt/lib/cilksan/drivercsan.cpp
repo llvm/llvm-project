@@ -250,7 +250,7 @@ void __csan_unit_init(const char * const file_name,
 
 // invoked whenever a function enters; no need for this
 CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
-                                   void *sp,
+                                   void *bp, void *sp,
                                    const func_prop_t prop) {
   { // Handle tool initialization as a special case.
     CheckingRAII nocheck_init;
@@ -265,8 +265,10 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
     }
   }
 
-  if (stack_high_addr < (uintptr_t)sp)
-    stack_high_addr = (uintptr_t)sp;
+  // fprintf(stderr, "__csan_func_entry: bp = %p, sp = %p\n",
+  //         (uintptr_t)bp, (uintptr_t)sp);
+  if (stack_high_addr < (uintptr_t)bp)
+    stack_high_addr = (uintptr_t)bp;
   if (stack_low_addr > (uintptr_t)sp)
     stack_low_addr = (uintptr_t)sp;
 
@@ -290,7 +292,7 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
   parallel_execution.push();
   *parallel_execution.head() = current_pe;
 
-  CilkSanImpl.push_stack_frame((uintptr_t)sp);
+  CilkSanImpl.push_stack_frame((uintptr_t)bp, (uintptr_t)sp);
 
   // if (!prop.may_spawn)
   //   // Ignore entry calls into non-Cilk functions.
@@ -400,9 +402,11 @@ CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
 }
 
 CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
-                            void *sp) {
+                             void *bp, void *sp) {
   if (!should_check())
     return;
+  // fprintf(stderr, "__csan_task: bp = %p, sp = %p\n",
+  //         (uintptr_t)bp, (uintptr_t)sp);
 
   if (stack_low_addr > (uintptr_t)sp)
     stack_low_addr = (uintptr_t)sp;
@@ -421,7 +425,7 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
   parallel_execution.push();
   *parallel_execution.head() = current_pe;
 
-  CilkSanImpl.push_stack_frame((uintptr_t)sp);
+  CilkSanImpl.push_stack_frame((uintptr_t)bp, (uintptr_t)sp);
 
   // Update tool for entering detach-helper function and performing detach.
   CilkSanImpl.do_enter_helper_begin();
