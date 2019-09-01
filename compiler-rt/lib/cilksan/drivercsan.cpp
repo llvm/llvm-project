@@ -117,6 +117,50 @@ static inline bool should_check() {
   return (instrumentation && (checking_disabled == 0));
 }
 
+Stack_t<uint8_t> parallel_execution;
+
+Stack_t<std::pair<csi_id_t, uint64_t>> suppressions;
+Stack_t<uint64_t> suppression_counts;
+
+CILKSAN_API void __csan_set_suppression_flag(uint64_t val, csi_id_t id) {
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_set_suppression_flag(%ld, %ld)\n",
+            val, id);
+  suppressions.push();
+  *suppressions.head() = std::make_pair(id, val);
+}
+
+CILKSAN_API void __csan_get_suppression_flag(uint64_t *ptr, csi_id_t id,
+                                             unsigned idx) {
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_get_suppression_flag(%x, %d, %d)\n",
+            ptr, id, idx);
+  // We presume that __csan_get_suppression_flag runs early in the function, so
+  // if instrumentation is disabled, it's disabled for the whole function.
+  if (!should_check()) {
+    *ptr = /*NoModRef*/0;
+    return;
+  }
+
+  unsigned suppression_count = *suppression_counts.head();
+  if (idx >= suppression_count) {
+    DBG_TRACE(DEBUG_CALLBACK, "  No suppression found: idx %d >= count %d\n",
+              idx, suppression_count);
+    // The stack doesn't have suppressions for us, so assume the worst.
+    *ptr = /*ModRef*/3;
+    return;
+  }
+
+  std::pair<csi_id_t, unsigned> suppression = *suppressions.ancestor(idx);
+  if (suppression.first == id) {
+    DBG_TRACE(DEBUG_CALLBACK, "  Found suppression: %d\n",
+              suppression.second);
+    *ptr = suppression.second;
+  } else {
+    DBG_TRACE(DEBUG_CALLBACK, "  No suppression found\n");
+    // The stack doesn't have suppressions for us, so assume the worst.
+    *ptr = /*ModRef*/3;
+  }
+}
+
 // called upon process exit
 static void csan_destroy(void) {
   disable_instrumentation();
@@ -214,6 +258,9 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
     if (first_call) {
       CilkSanImpl.init();
       enable_instrumentation();
+      // Note that we start executing the program in series.
+      parallel_execution.push();
+      *parallel_execution.head() = 0;
       first_call = false;
     }
   }
@@ -233,6 +280,15 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
             srcloc->name, srcloc->filename,
             srcloc->line_number);
   cilksan_assert(TOOL_INITIALIZED);
+
+  // Propagate the parallel-execution state to the child.
+  uint8_t current_pe = *parallel_execution.head();
+  // First we push the pe value on function entry.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
+  // We push a second copy to update aggressively on detaches.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
 
   CilkSanImpl.push_stack_frame((uintptr_t)sp);
 
@@ -265,15 +321,21 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
     CilkSanImpl.do_leave_begin();
     CilkSanImpl.do_leave_end();
   // }
+
+  // Pop both local copies of the parallel-execution state.
+  parallel_execution.pop();
+  parallel_execution.pop();
+
   CilkSanImpl.pop_stack_frame();
 
   // XXX Let's focus on Cilk function for now; maybe put it back later
   // cilksan_do_function_exit();
 }
 
-CILKSAN_API void __csi_before_call(const csi_id_t call_id,
-                                   const csi_id_t func_id,
-                                   const call_prop_t prop) {
+CILKSAN_API void __csan_before_call(const csi_id_t call_id,
+                                    const csi_id_t func_id,
+                                    unsigned suppression_count,
+                                    const call_prop_t prop) {
   if (!should_check())
     return;
 
@@ -285,19 +347,30 @@ CILKSAN_API void __csi_before_call(const csi_id_t call_id,
   if (!call_pc[call_id])
     call_pc[call_id] = CALLERPC;
 
+  // Push the suppression count onto the stack.
+  suppression_counts.push();
+  *suppression_counts.head() = suppression_count;
+  // fprintf(stderr, "suppression count %d\n", suppression_count);
+
   // Push the call onto the call stack.
   CilkSanImpl.record_call(call_id, CALL);
 }
 
-CILKSAN_API void __csi_after_call(const csi_id_t call_id,
-                                  const csi_id_t func_id,
-                                  const call_prop_t prop) {
+CILKSAN_API void __csan_after_call(const csi_id_t call_id,
+                                   const csi_id_t func_id,
+                                   unsigned suppression_count,
+                                   const call_prop_t prop) {
   if (!should_check())
     return;
 
   CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csi_after_call(%ld, %ld)\n",
             call_id, func_id);
+
+  // Pop any suppressions.
+  for (unsigned i = 0; i < suppression_count; ++i)
+    suppressions.pop();
+  suppression_counts.pop();
 
   // Pop the call off of the call stack.
   CilkSanImpl.record_call_return(call_id, CALL);
@@ -318,6 +391,10 @@ CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
   if (!spawn_pc[detach_id])
     spawn_pc[detach_id] = CALLERPC;
 
+  // Update the parallel-execution state to reflect this detach.  Essentially,
+  // this notes the change of peer sets.
+  *parallel_execution.head() = 1;
+
   // Push the detach onto the call stack.
   CilkSanImpl.record_call(detach_id, SPAWN);
 }
@@ -334,6 +411,15 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
   DBG_TRACE(DEBUG_CALLBACK, "__csan_task(%ld, %ld)\n",
             task_id, detach_id);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
+
+  // Propagate the parallel-execution state to the child.
+  uint8_t current_pe = *parallel_execution.head();
+  // First we push the pe value on function entry.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
+  // We push a second copy to update aggressively on detaches.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
 
   CilkSanImpl.push_stack_frame((uintptr_t)sp);
 
@@ -356,6 +442,10 @@ CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
   // Update tool for leaving a detach-helper function.
   CilkSanImpl.do_leave_begin();
   CilkSanImpl.do_leave_end();
+
+  // Pop the parallel-execution state.
+  parallel_execution.pop();
+  parallel_execution.pop();
 
   CilkSanImpl.pop_stack_frame();
 }
@@ -386,6 +476,9 @@ CILKSAN_API void __csan_sync(csi_id_t sync_id) {
   // to a sync.
   CilkSanImpl.do_sync_begin();
   CilkSanImpl.do_sync_end();
+
+  // Restore the parallel-execution state to that of the function/task entry.
+  *parallel_execution.head() = *parallel_execution.ancestor(1);
 }
 
 // Assuming __csan_load/store is inlined, the stack should look like this:
@@ -410,6 +503,11 @@ void __csan_load(csi_id_t load_id, void *addr, int32_t size, load_prop_t prop) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s read %p\n", __FUNCTION__, addr);
     return;
   }
+  if (!(*parallel_execution.head())) {
+    DBG_TRACE(DEBUG_MEMORY, "SKIP %s read %p during serial execution\n",
+              __FUNCTION__, addr);
+    return;
+  }
 
   CheckingRAII nocheck;
   // Record the address of this load.
@@ -428,6 +526,11 @@ void __csan_large_load(csi_id_t load_id, void *addr, size_t size,
   cilksan_assert(TOOL_INITIALIZED);
   if (!should_check()) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s read %p\n", __FUNCTION__, addr);
+    return;
+  }
+  if (!(*parallel_execution.head())) {
+    DBG_TRACE(DEBUG_MEMORY, "SKIP %s read %p during serial execution\n",
+              __FUNCTION__, addr);
     return;
   }
 
@@ -449,6 +552,11 @@ void __csan_store(csi_id_t store_id, void *addr, int32_t size, store_prop_t prop
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s wrote %p\n", __FUNCTION__, addr);
     return;
   }
+  if (!(*parallel_execution.head())) {
+    DBG_TRACE(DEBUG_MEMORY, "SKIP %s wrote %p during serial execution\n",
+              __FUNCTION__, addr);
+    return;
+  }
 
   CheckingRAII nocheck;
   // Record the address of this store.
@@ -467,6 +575,11 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
   cilksan_assert(TOOL_INITIALIZED);
   if (!should_check()) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s wrote %p\n", __FUNCTION__, addr);
+    return;
+  }
+  if (!(*parallel_execution.head())) {
+    DBG_TRACE(DEBUG_MEMORY, "SKIP %s wrote %p during serial execution\n",
+              __FUNCTION__, addr);
     return;
   }
 
