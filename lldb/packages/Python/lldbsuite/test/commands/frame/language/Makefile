@@ -1,4 +1,4 @@
-LEVEL = ../../make
+LEVEL = ../../../make
 
 CXX_SOURCES := main.cpp other.cpp other-2.cpp
 C_SOURCES := somefunc.c

@@ -83,16 +83,16 @@ class BreakpointCommandTestCase(TestBase):
             self, "./main.c", self.line,
             num_expected_locations=1, loc_exact=True)
         lldbutil.run_break_set_by_file_and_line(
-            self, "breakpoint_command/main.c", self.line,
+            self, "basic/main.c", self.line,
             num_expected_locations=1, loc_exact=True)
         lldbutil.run_break_set_by_file_and_line(
-            self, "./breakpoint_command/main.c", self.line,
+            self, "./basic/main.c", self.line,
             num_expected_locations=1, loc_exact=True)
         lldbutil.run_break_set_by_file_and_line(
-            self, "breakpoint/breakpoint_command/main.c", self.line,
+            self, "breakpoint/basic/main.c", self.line,
             num_expected_locations=1, loc_exact=True)
         lldbutil.run_break_set_by_file_and_line(
-            self, "./breakpoint/breakpoint_command/main.c", self.line,
+            self, "./breakpoint/basic/main.c", self.line,
             num_expected_locations=1, loc_exact=True)
         # Test relative breakpoints with incorrect paths and make sure we get
         # no breakpoint locations
