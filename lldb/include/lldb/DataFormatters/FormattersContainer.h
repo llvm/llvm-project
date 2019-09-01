@@ -89,7 +89,7 @@ public:
     MapIterator iter = m_map.find(name);
     if (iter == m_map.end())
       return false;
-    m_map.erase(name);
+    m_map.erase(iter);
     if (listener)
       listener->Changed();
     return true;
