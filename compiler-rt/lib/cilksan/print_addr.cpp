@@ -239,7 +239,7 @@ static std::string get_info_on_alloca(const csi_id_t alloca_id) {
 
   convert << get_obj_info_str(obj_src_loc);
 
-  convert << std::endl << "             from ";
+  convert << std::endl << "      from ";
   // Get PC for this access.
   if (alloca_id % 2)
     convert << "0x" << std::hex << allocfn_pc[alloca_id / 2];
@@ -258,29 +258,12 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
 
   switch (type) {
   case LOAD_ACC:
-    convert << "  Read access to  ";
+    convert << "   Read at ";
     break;
   case STORE_ACC:
-    convert << "  Write access to ";
+    convert << "  Write at ";
     break;
   }
-
-  // Get object information
-  const obj_source_loc_t *obj_src_loc = nullptr;
-  if (UNKNOWN_CSI_ID != acc_id) {
-    switch (type) {
-    case LOAD_ACC:
-      obj_src_loc = __csan_get_load_obj_source_loc(acc_id);
-      break;
-    case STORE_ACC:
-      obj_src_loc = __csan_get_store_obj_source_loc(acc_id);
-      break;
-    }
-  }
-
-  convert << get_obj_info_str(obj_src_loc);
-
-  convert << std::endl << "             from ";
 
   // Get PC for this access.
   if (UNKNOWN_CSI_ID != acc_id) {
@@ -317,6 +300,23 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
 
   convert << get_src_info_str(src_loc);
 
+  convert << std::endl << "        to variable ";
+
+  // Get object information
+  const obj_source_loc_t *obj_src_loc = nullptr;
+  if (UNKNOWN_CSI_ID != acc_id) {
+    switch (type) {
+    case LOAD_ACC:
+      obj_src_loc = __csan_get_load_obj_source_loc(acc_id);
+      break;
+    case STORE_ACC:
+      obj_src_loc = __csan_get_store_obj_source_loc(acc_id);
+      break;
+    }
+  }
+
+  convert << get_obj_info_str(obj_src_loc);
+
   return convert.str();
 }
 
@@ -324,10 +324,10 @@ static std::string get_info_on_call(const CallID_t &call) {
   std::ostringstream convert;
   switch (call.getType()) {
   case CALL:
-    convert << " Called from ";
+    convert << "   Call ";
     break;
   case SPAWN:
-    convert << "Spawned from ";
+    convert << "  Spawn ";
     break;
   }
 
@@ -446,12 +446,12 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
     std::cerr << first_acc_info << std::endl;
     for (int i = first_call_stack_size - 1;
          i >= divergence; --i)
-      std::cerr << "     " << get_info_on_call(first_call_stack[i])
+      std::cerr << "   " << get_info_on_call(first_call_stack[i])
                 << std::endl;
     std::cerr << second_acc_info << std::endl;
     for (int i = second_call_stack_size - 1;
          i >= divergence; --i)
-      std::cerr << "     " << get_info_on_call(second_call_stack[i])
+      std::cerr << "   " << get_info_on_call(second_call_stack[i])
                 << std::endl;
     break;
 
@@ -459,12 +459,12 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
     std::cerr << first_acc_info << std::endl;
     for (int i = first_call_stack_size - 1;
          i >= divergence; --i)
-      std::cerr << "     " << get_info_on_call(first_call_stack[i])
+      std::cerr << "   " << get_info_on_call(first_call_stack[i])
                 << std::endl;
     std::cerr << second_acc_info << std::endl;
     for (int i = second_call_stack_size - 1;
          i >= divergence; --i)
-      std::cerr << "     " << get_info_on_call(second_call_stack[i])
+      std::cerr << "   " << get_info_on_call(second_call_stack[i])
                 << std::endl;
     break;
 
@@ -472,12 +472,12 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
     std::cerr << first_acc_info << std::endl;
     for (int i = first_call_stack_size - 1;
          i >= divergence; --i)
-      std::cerr << "     " << get_info_on_call(first_call_stack[i])
+      std::cerr << "   " << get_info_on_call(first_call_stack[i])
                 << std::endl;
     std::cerr << second_acc_info << std::endl;
     for (int i = second_call_stack_size - 1;
          i >= divergence; --i)
-      std::cerr << "     " << get_info_on_call(second_call_stack[i])
+      std::cerr << "   " << get_info_on_call(second_call_stack[i])
                 << std::endl;
     break;
   }
@@ -485,18 +485,18 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
   if (divergence > 0) {
     std::cerr << "  Common calling context" << std::endl;
     for (int i = divergence - 1; i >= 0; --i)
-      std::cerr << "     " << get_info_on_call(first_call_stack[i])
+      std::cerr << "   " << get_info_on_call(first_call_stack[i])
                 << std::endl;
   }
 
   if (alloc_inst.isValid()) {
     std::cerr << "  Allocation context" << std::endl;
     const csi_id_t alloca_id = alloc_inst.getID();
-    std::cerr << "     " << get_info_on_alloca(alloca_id) << std::endl;
+    std::cerr << "   " << get_info_on_alloca(alloca_id) << std::endl;
 
     auto alloc_call_stack = get_call_stack(alloc_inst);
     for (int i = alloc_inst.getCallStackSize() - 1; i >= 0; --i)
-      std::cerr << "     " << get_info_on_call(alloc_call_stack[i])
+      std::cerr << "   " << get_info_on_call(alloc_call_stack[i])
                 << std::endl;
   }
 
