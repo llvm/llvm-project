@@ -10,7 +10,7 @@
 #include "__config"
 #if defined(_LIBCPP_WIN32API)
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <dirent.h>
 #endif
@@ -79,14 +79,14 @@ static file_type get_file_type(const WIN32_FIND_DATA& data) {
   return file_type::unknown;
 }
 static uintmax_t get_file_size(const WIN32_FIND_DATA& data) {
-  return (data.nFileSizeHight * (MAXDWORD + 1)) + data.nFileSizeLow;
+  return (data.nFileSizeHigh * (MAXDWORD + 1)) + data.nFileSizeLow;
 }
 static file_time_type get_write_time(const WIN32_FIND_DATA& data) {
   ULARGE_INTEGER tmp;
-  FILETIME& time = data.ftLastWriteTime;
+  const FILETIME& time = data.ftLastWriteTime;
   tmp.u.LowPart = time.dwLowDateTime;
   tmp.u.HighPart = time.dwHighDateTime;
-  return file_time_type(file_time_type::duration(time.QuadPart));
+  return file_time_type(file_time_type::duration(tmp.QuadPart));
 }
 
 #endif
@@ -110,7 +110,7 @@ public:
 
   __dir_stream(const path& root, directory_options opts, error_code& ec)
       : __stream_(INVALID_HANDLE_VALUE), __root_(root) {
-    __stream_ = ::FindFirstFileEx(root.c_str(), &__data_);
+    __stream_ = ::FindFirstFile(root.c_str(), &__data_);
     if (__stream_ == INVALID_HANDLE_VALUE) {
       ec = error_code(::GetLastError(), generic_category());
       const bool ignore_permission_denied =
@@ -140,7 +140,7 @@ public:
       //cdata.__write_time_ = get_write_time(__data_);
       __entry_.__assign_iter_entry(
           __root_ / __data_.cFileName,
-          directory_entry::__create_iter_result(get_file_type(__data)));
+          directory_entry::__create_iter_result(detail::get_file_type(__data)));
       return true;
     }
     ec = error_code(::GetLastError(), generic_category());
