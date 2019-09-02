@@ -6,9 +6,9 @@ EXPORTS
 ByOrdinalFunction @ 1 NONAME
 ByNameFunction
 
-; CHECK: Name type: ordinal
-; CHECK: Symbol: __imp__ByOrdinalFunction
-; CHECK: Symbol: _ByOrdinalFunction
-; CHECK: Name type: noprefix
-; CHECK: Symbol: __imp__ByNameFunction
-; CHECK: Symbol: _ByNameFunction
+; CHECK:      Name type: ordinal
+; CHECK-NEXT: Symbol: __imp__ByOrdinalFunction
+; CHECK-NEXT: Symbol: _ByOrdinalFunction
+; CHECK:      Name type: noprefix
+; CHECK-NEXT: Symbol: __imp__ByNameFunction
+; CHECK-NEXT: Symbol: _ByNameFunction

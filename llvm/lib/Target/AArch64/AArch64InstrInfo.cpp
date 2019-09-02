@@ -2484,6 +2484,16 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Copy a Z register by ORRing with itself.
+  if (AArch64::ZPRRegClass.contains(DestReg) &&
+      AArch64::ZPRRegClass.contains(SrcReg)) {
+    assert(Subtarget.hasSVE() && "Unexpected SVE register.");
+    BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ), DestReg)
+      .addReg(SrcReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   if (AArch64::GPR64spRegClass.contains(DestReg) &&
       (AArch64::GPR64spRegClass.contains(SrcReg) || SrcReg == AArch64::XZR)) {
     if (DestReg == AArch64::SP || SrcReg == AArch64::SP) {

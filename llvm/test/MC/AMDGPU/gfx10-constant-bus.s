@@ -2,7 +2,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX10-ERR %s
 
 //-----------------------------------------------------------------------------------------
-// On GFX10 we can use two scalar operands
+// On GFX10 we can use two scalar operands (except for 64-bit shift instructions)
 
 v_add_f32 v0, s0, s1
 // GFX10: v_add_f32_e64 v0, s0, s1        ; encoding: [0x00,0x00,0x03,0xd5,0x00,0x02,0x00,0x00]
@@ -12,6 +12,15 @@ v_madak_f32 v0, s0, v1, 42.42
 
 v_med3_f32 v0, s0, s0, s1
 // GFX10: v_med3_f32 v0, s0, s0, s1       ; encoding: [0x00,0x00,0x57,0xd5,0x00,0x00,0x04,0x00]
+
+//-----------------------------------------------------------------------------------------
+// 64-bit shift instructions can use only one scalar value input
+
+v_ashrrev_i64 v[0:1], 0x100, s[0:1]
+// GFX10-ERR: error: invalid operand (violates constant bus restrictions)
+
+v_ashrrev_i64 v[0:1], s2, s[0:1]
+// GFX10-ERR: error: invalid operand (violates constant bus restrictions)
 
 //-----------------------------------------------------------------------------------------
 // v_div_fmas implicitly reads VCC, so only one scalar operand is possible
@@ -38,8 +47,17 @@ v_div_fmas_f64 v[5:6], v[1:2], s[2:3], 0x123456
 // v_mad_u64_u32 has operands of different sizes.
 // When these operands are literals, they are counted as 2 scalar values even if literals are identical.
 
+v_lshlrev_b64 v[5:6], 0x3f717273, 0x3f717273
+// GFX10-ERR: error: invalid operand (violates constant bus restrictions)
+
 v_mad_u64_u32 v[5:6], s12, v1, 0x12345678, 0x12345678
 // GFX10: v_mad_u64_u32 v[5:6], s12, v1, 0x12345678, 0x12345678 ; encoding: [0x05,0x0c,0x76,0xd5,0x01,0xff,0xfd,0x03,0x78,0x56,0x34,0x12]
 
 v_mad_u64_u32 v[5:6], s12, s1, 0x12345678, 0x12345678
 // GFX10-ERR: error: invalid operand (violates constant bus restrictions)
+
+//-----------------------------------------------------------------------------------------
+// null is free
+
+v_bfe_u32 v5, s1, s2, null
+// GFX10: v_bfe_u32 v5, s1, s2, null      ; encoding: [0x05,0x00,0x48,0xd5,0x01,0x04,0xf4,0x01]

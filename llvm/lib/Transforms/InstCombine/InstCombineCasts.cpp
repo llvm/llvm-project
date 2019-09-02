@@ -2416,6 +2416,22 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
         return new ShuffleVectorInst(LHS, RHS, Shuf->getOperand(2));
       }
     }
+
+    // A bitcasted-to-scalar and byte-reversing shuffle is better recognized as
+    // a byte-swap:
+    // bitcast <N x i8> (shuf X, undef, <N, N-1,...0>) --> bswap (bitcast X)
+    // TODO: We should match the related pattern for bitreverse.
+    if (DestTy->isIntegerTy() &&
+        DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
+        SrcTy->getScalarSizeInBits() == 8 && NumShufElts % 2 == 0 &&
+        Shuf->hasOneUse() && Shuf->isReverse()) {
+      assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
+      assert(isa<UndefValue>(ShufOp1) && "Unexpected shuffle op");
+      Function *Bswap =
+          Intrinsic::getDeclaration(CI.getModule(), Intrinsic::bswap, DestTy);
+      Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);
+      return IntrinsicInst::Create(Bswap, { ScalarX });
+    }
   }
 
   // Handle the A->B->A cast, and there is an intervening PHI node.

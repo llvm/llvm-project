@@ -620,13 +620,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    if (SizeOp0 % NarrowTy.getSizeInBits() != 0)
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    uint64_t SizeOp1 = SrcTy.getSizeInBits();
+    if (SizeOp0 % SizeOp1 != 0)
       return UnableToLegalize;
 
     // Generate a merge where the bottom bits are taken from the source, and
     // zero everything else.
-    Register ZeroReg = MIRBuilder.buildConstant(NarrowTy, 0).getReg(0);
-    unsigned NumParts = SizeOp0 / NarrowTy.getSizeInBits();
+    Register ZeroReg = MIRBuilder.buildConstant(SrcTy, 0).getReg(0);
+    unsigned NumParts = SizeOp0 / SizeOp1;
     SmallVector<Register, 4> Srcs = {MI.getOperand(1).getReg()};
     for (unsigned Part = 1; Part < NumParts; ++Part)
       Srcs.push_back(ZeroReg);

@@ -74,6 +74,8 @@
 
 #include "ICF.h"
 #include "Config.h"
+#include "LinkerScript.h"
+#include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -304,10 +306,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
     return false;
 
   // If two sections have different output sections, we cannot merge them.
-  // FIXME: This doesn't do the right thing in the case where there is a linker
-  // script. We probably need to move output section assignment before ICF to
-  // get the correct behaviour here.
-  if (getOutputSectionName(a) != getOutputSectionName(b))
+  if (getOutputSectionName(a) != getOutputSectionName(b) ||
+      a->getParent() != b->getParent())
     return false;
 
   if (a->areRelocsRela)
@@ -499,6 +499,15 @@ template <class ELFT> void ICF<ELFT>::run() {
         isec->markDead();
     }
   });
+
+  // InputSectionDescription::sections is populated by processSectionCommands().
+  // ICF may fold some input sections assigned to output sections. Remove them.
+  for (BaseCommand *base : script->sectionCommands)
+    if (auto *sec = dyn_cast<OutputSection>(base))
+      for (BaseCommand *sub_base : sec->sectionCommands)
+        if (auto *isd = dyn_cast<InputSectionDescription>(sub_base))
+          llvm::erase_if(isd->sections,
+                         [](InputSection *isec) { return !isec->isLive(); });
 }
 
 // ICF entry point function.

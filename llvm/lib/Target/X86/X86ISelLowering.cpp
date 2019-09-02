@@ -26557,6 +26557,17 @@ static SDValue getPMOVMSKB(const SDLoc &DL, SDValue V, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
   MVT InVT = V.getSimpleValueType();
 
+  if (InVT == MVT::v64i8) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(V, DL);
+    Lo = getPMOVMSKB(DL, Lo, DAG, Subtarget);
+    Hi = getPMOVMSKB(DL, Hi, DAG, Subtarget);
+    Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Lo);
+    Hi = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Hi);
+    Hi = DAG.getNode(ISD::SHL, DL, MVT::i64, Hi,
+                     DAG.getConstant(32, DL, MVT::i8));
+    return DAG.getNode(ISD::OR, DL, MVT::i64, Lo, Hi);
+  }
   if (InVT == MVT::v32i8 && !Subtarget.hasInt256()) {
     SDValue Lo, Hi;
     std::tie(Lo, Hi) = DAG.SplitVector(V, DL);
@@ -35251,17 +35262,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
 
   SDValue V = DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
 
-  if (SExtVT == MVT::v64i8) {
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitVector(V, DL);
-    Lo = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Lo);
-    Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Lo);
-    Hi = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Hi);
-    Hi = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Hi);
-    Hi = DAG.getNode(ISD::SHL, DL, MVT::i64, Hi,
-                     DAG.getConstant(32, DL, MVT::i8));
-    V = DAG.getNode(ISD::OR, DL, MVT::i64, Lo, Hi);
-  } else if (SExtVT == MVT::v16i8 || SExtVT == MVT::v32i8) {
+  if (SExtVT == MVT::v16i8 || SExtVT == MVT::v32i8 || SExtVT == MVT::v64i8) {
     V = getPMOVMSKB(DL, V, DAG, Subtarget);
   } else {
     if (SExtVT == MVT::v8i16)
@@ -35800,12 +35801,13 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
   SDLoc DL(Extract);
   EVT MatchVT = Match.getValueType();
   unsigned NumElts = MatchVT.getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (ExtractVT == MVT::i1) {
     // Special case for (pre-legalization) vXi1 reductions.
     if (NumElts > 32)
       return SDValue();
-    if (DAG.getTargetLoweringInfo().isTypeLegal(MatchVT)) {
+    if (TLI.isTypeLegal(MatchVT)) {
       // If this is a legal AVX512 predicate type then we can just bitcast.
       EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
@@ -35887,7 +35889,6 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
 
   // The setcc produces an i8 of 0/1, so extend that to the result width and
   // negate to get the final 0/-1 mask value.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT SetccVT =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i32);
   SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);

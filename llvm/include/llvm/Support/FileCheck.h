@@ -98,11 +98,6 @@ private:
   /// Name of the numeric variable.
   StringRef Name;
 
-  /// Pointer to expression defining this numeric variable. Null for pseudo
-  /// variable whose value is known at parse time (e.g. @LINE pseudo variable)
-  /// or cleared local variable.
-  FileCheckExpressionAST *ExpressionAST;
-
   /// Value of numeric variable, if defined, or None otherwise.
   Optional<uint64_t> Value;
 
@@ -113,14 +108,10 @@ private:
 
 public:
   /// Constructor for a variable \p Name defined at line \p DefLineNumber or
-  /// defined before input is parsed if \p DefLineNumber is None. If not null,
-  /// the value set with setValue must match the result of evaluating
-  /// \p ExpressionAST.
-  FileCheckNumericVariable(StringRef Name,
-                           Optional<size_t> DefLineNumber = None,
-                           FileCheckExpressionAST *ExpressionAST = nullptr)
-      : Name(Name), ExpressionAST(ExpressionAST), DefLineNumber(DefLineNumber) {
-  }
+  /// defined before input is parsed if \p DefLineNumber is None.
+  explicit FileCheckNumericVariable(StringRef Name,
+                                    Optional<size_t> DefLineNumber = None)
+      : Name(Name), DefLineNumber(DefLineNumber) {}
 
   /// \returns name of this numeric variable.
   StringRef getName() const { return Name; }
@@ -128,25 +119,12 @@ public:
   /// \returns this variable's value.
   Optional<uint64_t> getValue() const { return Value; }
 
-  /// \returns the pointer to the expression defining this numeric variable, if
-  /// any, or null otherwise.
-  FileCheckExpressionAST *getExpressionAST() const { return ExpressionAST; }
-
-  /// \returns whether this variable's value is known when performing the
-  /// substitutions of the line where it is defined.
-  bool isValueKnownAtMatchTime() const;
-
-  /// Sets value of this numeric variable to \p NewValue. Triggers an assertion
-  /// failure if the variable is defined by an expression and the expression
-  /// cannot be evaluated to be equal to \p NewValue.
-  void setValue(uint64_t NewValue);
+  /// Sets value of this numeric variable to \p NewValue.
+  void setValue(uint64_t NewValue) { Value = NewValue; }
 
   /// Clears value of this numeric variable, regardless of whether it is
   /// currently defined or not.
-  void clearValue() {
-    Value = None;
-    ExpressionAST = nullptr;
-  }
+  void clearValue() { Value = None; }
 
   /// \returns the line number where this variable is defined, if any, or None
   /// if defined before input is parsed.
@@ -609,8 +587,7 @@ private:
   /// should defining such a variable be invalid.
   static Expected<FileCheckNumericVariable *> parseNumericVariableDefinition(
       StringRef &Expr, FileCheckPatternContext *Context,
-      Optional<size_t> LineNumber, FileCheckExpressionAST *ExpressionAST,
-      const SourceMgr &SM);
+      Optional<size_t> LineNumber, const SourceMgr &SM);
   /// Parses \p Name as a (pseudo if \p IsPseudo is true) numeric variable use
   /// at line \p LineNumber, or before input is parsed if \p LineNumber is
   /// None. Parameter \p Context points to the class instance holding the live

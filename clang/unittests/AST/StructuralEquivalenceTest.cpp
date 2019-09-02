@@ -1273,6 +1273,128 @@ TEST_F(
       classTemplateSpecializationDecl(hasName("Primary")));
   EXPECT_FALSE(testStructuralMatch(t));
 }
+struct StructuralEquivalenceCacheTest : public StructuralEquivalenceTest {
+  llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+
+  template <typename NodeType, typename MatcherType>
+  std::pair<NodeType *, NodeType *>
+  findDeclPair(std::tuple<TranslationUnitDecl *, TranslationUnitDecl *> TU,
+               MatcherType M) {
+    NodeType *D0 = FirstDeclMatcher<NodeType>().match(get<0>(TU), M);
+    NodeType *D1 = FirstDeclMatcher<NodeType>().match(get<1>(TU), M);
+    return {D0, D1};
+  }
+
+  template <typename NodeType>
+  bool isInNonEqCache(std::pair<NodeType *, NodeType *> D) {
+    return NonEquivalentDecls.count(D) > 0;
+  }
+};
+
+TEST_F(StructuralEquivalenceCacheTest, SimpleNonEq) {
+  auto TU = makeTuDecls(
+      R"(
+      class A {};
+      class B {};
+      void x(A, A);
+      )",
+      R"(
+      class A {};
+      class B {};
+      void x(A, B);
+      )",
+      Lang_CXX);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto X = findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")));
+  EXPECT_FALSE(Ctx.IsEquivalent(X.first, X.second));
+
+  EXPECT_FALSE(isInNonEqCache(findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("A"), unless(isImplicit())))));
+  EXPECT_FALSE(isInNonEqCache(findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("B"), unless(isImplicit())))));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, SpecialNonEq) {
+  auto TU = makeTuDecls(
+      R"(
+      class A {};
+      class B { int i; };
+      void x(A *);
+      void y(A *);
+      class C {
+        friend void x(A *);
+        friend void y(A *);
+      };
+      )",
+      R"(
+      class A {};
+      class B { int i; };
+      void x(A *);
+      void y(B *);
+      class C {
+        friend void x(A *);
+        friend void y(B *);
+      };
+      )",
+      Lang_CXX);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto C = findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("C"), unless(isImplicit())));
+  EXPECT_FALSE(Ctx.IsEquivalent(C.first, C.second));
+
+  EXPECT_FALSE(isInNonEqCache(C));
+  EXPECT_FALSE(isInNonEqCache(findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("A"), unless(isImplicit())))));
+  EXPECT_FALSE(isInNonEqCache(findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("B"), unless(isImplicit())))));
+  EXPECT_FALSE(isInNonEqCache(
+      findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")))));
+  EXPECT_FALSE(isInNonEqCache(
+      findDeclPair<FunctionDecl>(TU, functionDecl(hasName("y")))));
+}
+
+TEST_F(StructuralEquivalenceCacheTest, Cycle) {
+  auto TU = makeTuDecls(
+      R"(
+      class C;
+      class A { C *c; };
+      void x(A *);
+      class C {
+        friend void x(A *);
+      };
+      )",
+      R"(
+      class C;
+      class A { C *c; };
+      void x(A *);
+      class C {
+        friend void x(A *);
+      };
+      )",
+      Lang_CXX);
+
+  StructuralEquivalenceContext Ctx(
+      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
+      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+
+  auto C = findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("C"), unless(isImplicit())));
+  EXPECT_TRUE(Ctx.IsEquivalent(C.first, C.second));
+
+  EXPECT_FALSE(isInNonEqCache(C));
+  EXPECT_FALSE(isInNonEqCache(findDeclPair<CXXRecordDecl>(
+      TU, cxxRecordDecl(hasName("A"), unless(isImplicit())))));
+  EXPECT_FALSE(isInNonEqCache(
+      findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")))));
+}
 
 } // end namespace ast_matchers
 } // end namespace clang

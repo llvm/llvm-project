@@ -3811,8 +3811,9 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
-- ``w``: A 32, 64, or 128-bit floating-point/SIMD register.
-- ``x``: A lower 128-bit floating-point/SIMD register (``V0`` to ``V15``).
+- ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
+- ``x``: Like w, but restricted to registers 0 to 15 inclusive.
+- ``y``: Like w, but restricted to SVE vector registers Z0 to Z7 inclusive.
 
 AMDGPU:
 
