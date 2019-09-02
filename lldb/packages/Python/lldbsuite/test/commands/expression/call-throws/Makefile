@@ -1,4 +1,4 @@
-LEVEL = ../../make
+LEVEL = ../../../make
 
 OBJC_SOURCES := call-throws.m
 
