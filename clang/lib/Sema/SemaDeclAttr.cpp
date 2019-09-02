@@ -4832,8 +4832,13 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool ArmMveAliasValid(unsigned BuiltinID, StringRef AliasName) {
-  // FIXME: this will be filled in by Tablegen which isn't written yet
-  return false;
+  if (AliasName.startswith("__arm_"))
+    AliasName = AliasName.substr(6);
+  switch (BuiltinID) {
+#include "clang/Basic/arm_mve_builtin_aliases.inc"
+  default:
+    return false;
+  }
 }
 
 static void handleArmMveAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
