@@ -1702,7 +1702,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
   // Remove all declarations, which may be in wrong order in the
   // lexical DeclContext and then add them in the proper order.
   for (auto *D : FromRD->decls()) {
-    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
+    if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D) || isa<FriendDecl>(D)) {
       assert(D && "DC contains a null decl");
       Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
       // Remove only the decls which we successfully imported.
