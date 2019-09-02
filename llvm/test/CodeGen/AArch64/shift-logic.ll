@@ -4,8 +4,8 @@
 define i8 @shl_and(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: shl_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, w0, lsl #3
-; CHECK-NEXT:    lsl w0, w8, #2
+; CHECK-NEXT:    lsl w8, w0, #5
+; CHECK-NEXT:    and w0, w8, w1, lsl #2
 ; CHECK-NEXT:    ret
   %sh0 = shl i8 %x, 3
   %r = and i8 %sh0, %y
@@ -16,8 +16,8 @@ define i8 @shl_and(i8 %x, i8 %y) nounwind {
 define i16 @shl_or(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: shl_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w1, w0, lsl #5
-; CHECK-NEXT:    lsl w0, w8, #7
+; CHECK-NEXT:    lsl w8, w0, #12
+; CHECK-NEXT:    orr w0, w8, w1, lsl #7
 ; CHECK-NEXT:    ret
   %sh0 = shl i16 %x, 5
   %r = or i16 %y, %sh0
@@ -28,8 +28,8 @@ define i16 @shl_or(i16 %x, i16 %y) nounwind {
 define i32 @shl_xor(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: shl_xor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w1, w0, lsl #5
-; CHECK-NEXT:    lsl w0, w8, #7
+; CHECK-NEXT:    lsl w8, w0, #12
+; CHECK-NEXT:    eor w0, w8, w1, lsl #7
 ; CHECK-NEXT:    ret
   %sh0 = shl i32 %x, 5
   %r = xor i32 %sh0, %y
@@ -40,8 +40,8 @@ define i32 @shl_xor(i32 %x, i32 %y) nounwind {
 define i64 @lshr_and(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: lshr_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x1, x0, lsr #5
-; CHECK-NEXT:    lsr x0, x8, #7
+; CHECK-NEXT:    lsr x8, x0, #12
+; CHECK-NEXT:    and x0, x8, x1, lsr #7
 ; CHECK-NEXT:    ret
   %sh0 = lshr i64 %x, 5
   %r = and i64 %y, %sh0
@@ -52,9 +52,9 @@ define i64 @lshr_and(i64 %x, i64 %y) nounwind {
 define <4 x i32> @lshr_or(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: lshr_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #5
+; CHECK-NEXT:    ushr v1.4s, v1.4s, #7
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #12
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #7
 ; CHECK-NEXT:    ret
   %sh0 = lshr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
   %r = or <4 x i32> %sh0, %y
@@ -65,9 +65,9 @@ define <4 x i32> @lshr_or(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <8 x i16> @lshr_xor(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; CHECK-LABEL: lshr_xor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #5
-; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #7
+; CHECK-NEXT:    ushr v1.8h, v1.8h, #7
+; CHECK-NEXT:    ushr v0.8h, v0.8h, #12
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sh0 = lshr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
   %r = xor <8 x i16> %y, %sh0
@@ -79,9 +79,9 @@ define <8 x i16> @lshr_xor(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: ashr_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #3
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    sshr v0.16b, v0.16b, #2
+; CHECK-NEXT:    sshr v1.16b, v1.16b, #2
+; CHECK-NEXT:    sshr v0.16b, v0.16b, #5
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sh0 = ashr <16 x i8> %x, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   %r = and <16 x i8> %y, %sh0
@@ -92,9 +92,9 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 define <2 x i64> @ashr_or(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: ashr_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #5
+; CHECK-NEXT:    sshr v1.2d, v1.2d, #7
+; CHECK-NEXT:    sshr v0.2d, v0.2d, #12
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #7
 ; CHECK-NEXT:    ret
   %sh0 = ashr <2 x i64> %x, <i64 5, i64 5>
   %r = or <2 x i64> %sh0, %y
@@ -105,8 +105,8 @@ define <2 x i64> @ashr_or(<2 x i64> %x, <2 x i64> %y) nounwind {
 define i32 @ashr_xor(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ashr_xor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w1, w0, asr #5
-; CHECK-NEXT:    asr w0, w8, #7
+; CHECK-NEXT:    asr w8, w0, #12
+; CHECK-NEXT:    eor w0, w8, w1, asr #7
 ; CHECK-NEXT:    ret
   %sh0 = ashr i32 %x, 5
   %r = xor i32 %y, %sh0
