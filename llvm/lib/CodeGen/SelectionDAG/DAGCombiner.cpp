@@ -7204,6 +7204,72 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   return SDValue();
 }
 
+/// If we have a shift-by-constant of a bitwise logic op that itself has a
+/// shift-by-constant operand with identical opcode, we may be able to convert
+/// that into 2 independent shifts followed by the logic op. This is a
+/// throughput improvement.
+static SDValue combineShiftOfShiftedLogic(SDNode *Shift, SelectionDAG &DAG) {
+  // Match a one-use bitwise logic op.
+  SDValue LogicOp = Shift->getOperand(0);
+  if (!LogicOp.hasOneUse())
+    return SDValue();
+
+  unsigned LogicOpcode = LogicOp.getOpcode();
+  if (LogicOpcode != ISD::AND && LogicOpcode != ISD::OR &&
+      LogicOpcode != ISD::XOR)
+    return SDValue();
+
+  // Find a matching one-use shift by constant.
+  unsigned ShiftOpcode = Shift->getOpcode();
+  SDValue C1 = Shift->getOperand(1);
+  ConstantSDNode *C1Node = isConstOrConstSplat(C1);
+  assert(C1Node && "Expected a shift with constant operand");
+  const APInt &C1Val = C1Node->getAPIntValue();
+  auto matchFirstShift = [&](SDValue V, SDValue &ShiftOp,
+                             const APInt *&ShiftAmtVal) {
+    if (V.getOpcode() != ShiftOpcode || !V.hasOneUse())
+      return false;
+
+    ConstantSDNode *ShiftCNode = isConstOrConstSplat(V.getOperand(1));
+    if (!ShiftCNode)
+      return false;
+
+    // Capture the shifted operand and shift amount value.
+    ShiftOp = V.getOperand(0);
+    ShiftAmtVal = &ShiftCNode->getAPIntValue();
+
+    // Shift amount types do not have to match their operand type, so check that
+    // the constants are the same width.
+    if (ShiftAmtVal->getBitWidth() != C1Val.getBitWidth())
+      return false;
+
+    // The fold is not valid if the sum of the shift values exceeds bitwidth.
+    if ((*ShiftAmtVal + C1Val).uge(V.getScalarValueSizeInBits()))
+      return false;
+
+    return true;
+  };
+
+  // Logic ops are commutative, so check each operand for a match.
+  SDValue X, Y;
+  const APInt *C0Val;
+  if (matchFirstShift(LogicOp.getOperand(0), X, C0Val))
+    Y = LogicOp.getOperand(1);
+  else if (matchFirstShift(LogicOp.getOperand(1), X, C0Val))
+    Y = LogicOp.getOperand(0);
+  else
+    return SDValue();
+
+  // shift (logic (shift X, C0), Y), C1 -> logic (shift X, C0+C1), (shift Y, C1)
+  SDLoc DL(Shift);
+  EVT VT = Shift->getValueType(0);
+  EVT ShiftAmtVT = Shift->getOperand(1).getValueType();
+  SDValue ShiftSumC = DAG.getConstant(*C0Val + C1Val, DL, ShiftAmtVT);
+  SDValue NewShift1 = DAG.getNode(ShiftOpcode, DL, VT, X, ShiftSumC);
+  SDValue NewShift2 = DAG.getNode(ShiftOpcode, DL, VT, Y, C1);
+  return DAG.getNode(LogicOpcode, DL, VT, NewShift1, NewShift2);
+}
+
 /// Handle transforms common to the three shifts, when the shift amount is a
 /// constant.
 /// We are looking for: (shift being one of shl/sra/srl)
@@ -7221,6 +7287,14 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   if (!LHS.hasOneUse() || !TLI.isDesirableToCommuteWithShift(N, Level))
     return SDValue();
+
+  // TODO: This is limited to early combining because it may reveal regressions
+  //       otherwise. But since we just checked a target hook to see if this is
+  //       desirable, that should have filtered out cases where this interferes
+  //       with some other pattern matching.
+  if (!LegalTypes)
+    if (SDValue R = combineShiftOfShiftedLogic(N, DAG))
+      return R;
 
   // We want to pull some binops through shifts, so that we have (and (shift))
   // instead of (shift (and)), likewise for add, or, xor, etc.  This sort of

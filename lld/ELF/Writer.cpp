@@ -2223,13 +2223,21 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // the next maximum page size boundary on transitions between executable
       // and non-executable segments.
       //
+      // SHT_LLVM_PART_EHDR marks the start of a partition. The partition
+      // sections will be extracted to a separate file. Align to the next
+      // maximum page size boundary so that we can find the ELF header at the
+      // start. We cannot benefit from overlapping p_offset ranges with the
+      // previous segment anyway.
+      //
       // TODO Enable this technique on all targets.
       bool enable = config->emachine != EM_HEXAGON &&
                     config->emachine != EM_MIPS &&
                     config->emachine != EM_X86_64;
 
-      if (!enable || (config->zSeparateCode && prev &&
-                      (prev->p_flags & PF_X) != (p->p_flags & PF_X)))
+      if (!enable ||
+          (config->zSeparateCode && prev &&
+           (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
+          cmd->type == SHT_LLVM_PART_EHDR)
         cmd->addrExpr = [] {
           return alignTo(script->getDot(), config->maxPageSize);
         };
