@@ -1290,7 +1290,7 @@ public:
                             "Manage LLDB handling of OS signals for the "
                             "current target process.  Defaults to showing "
                             "current policy.",
-                            nullptr),
+                            nullptr, eCommandRequiresTarget),
         m_options() {
     SetHelpLong("\nIf no signals are specified, update them all.  If no update "
                 "option is specified, list the current values.");
@@ -1375,15 +1375,7 @@ public:
 
 protected:
   bool DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    TargetSP target_sp = GetDebugger().GetSelectedTarget();
-
-    if (!target_sp) {
-      result.AppendError("No current target;"
-                         " cannot handle signals until you have a valid target "
-                         "and process.\n");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target_sp = &GetSelectedTarget();
 
     ProcessSP process_sp = target_sp->GetProcessSP();
 
