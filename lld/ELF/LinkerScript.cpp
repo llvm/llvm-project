@@ -48,24 +48,22 @@ using namespace lld::elf;
 
 LinkerScript *elf::script;
 
-static uint64_t getOutputSectionVA(SectionBase *inputSec, StringRef loc) {
-  if (OutputSection *os = inputSec->getOutputSection())
-    return os->addr;
-  error(loc + ": unable to evaluate expression: input section " +
-        inputSec->name + " has no output section assigned");
-  return 0;
+static uint64_t getOutputSectionVA(SectionBase *sec) {
+  OutputSection *os = sec->getOutputSection();
+  assert(os && "input section has no output section assigned");
+  return os ? os->addr : 0;
 }
 
 uint64_t ExprValue::getValue() const {
   if (sec)
-    return alignTo(sec->getOffset(val) + getOutputSectionVA(sec, loc),
+    return alignTo(sec->getOffset(val) + getOutputSectionVA(sec),
                    alignment);
   return alignTo(val, alignment);
 }
 
 uint64_t ExprValue::getSecAddr() const {
   if (sec)
-    return sec->getOffset(0) + getOutputSectionVA(sec, loc);
+    return sec->getOffset(0) + getOutputSectionVA(sec);
   return 0;
 }
 
@@ -73,7 +71,7 @@ uint64_t ExprValue::getSectionOffset() const {
   // If the alignment is trivial, we don't have to compute the full
   // value to know the offset. This allows this function to succeed in
   // cases where the output section is not yet known.
-  if (alignment == 1 && (!sec || !sec->getOutputSection()))
+  if (alignment == 1 && !sec)
     return val;
   return getValue() - getSecAddr();
 }
@@ -157,8 +155,8 @@ static bool shouldDefineSym(SymbolAssignment *cmd) {
   return false;
 }
 
-// This function is called from processSectionCommands,
-// while we are fixing the output section layout.
+// Called by processSymbolAssignments() to assign definitions to
+// linker-script-defined symbols.
 void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   if (!shouldDefineSym(cmd))
     return;
@@ -478,36 +476,10 @@ LinkerScript::createInputSectionList(OutputSection &outCmd) {
   return ret;
 }
 
+// Create output sections described by SECTIONS commands.
 void LinkerScript::processSectionCommands() {
-  // A symbol can be assigned before any section is mentioned in the linker
-  // script. In an DSO, the symbol values are addresses, so the only important
-  // section values are:
-  // * SHN_UNDEF
-  // * SHN_ABS
-  // * Any value meaning a regular section.
-  // To handle that, create a dummy aether section that fills the void before
-  // the linker scripts switches to another section. It has an index of one
-  // which will map to whatever the first actual section is.
-  aether = make<OutputSection>("", 0, SHF_ALLOC);
-  aether->sectionIndex = 1;
-
-  // Ctx captures the local AddressState and makes it accessible deliberately.
-  // This is needed as there are some cases where we cannot just
-  // thread the current state through to a lambda function created by the
-  // script parser.
-  auto deleter = std::make_unique<AddressState>();
-  ctx = deleter.get();
-  ctx->outSec = aether;
-
   size_t i = 0;
-  // Add input sections to output sections.
   for (BaseCommand *base : sectionCommands) {
-    // Handle symbol assignments outside of any output section.
-    if (auto *cmd = dyn_cast<SymbolAssignment>(base)) {
-      addSymbol(cmd);
-      continue;
-    }
-
     if (auto *sec = dyn_cast<OutputSection>(base)) {
       std::vector<InputSection *> v = createInputSectionList(*sec);
 
@@ -533,12 +505,6 @@ void LinkerScript::processSectionCommands() {
         continue;
       }
 
-      // A directive may contain symbol definitions like this:
-      // ".foo : { ...; bar = .; }". Handle them.
-      for (BaseCommand *base : sec->sectionCommands)
-        if (auto *outCmd = dyn_cast<SymbolAssignment>(base))
-          addSymbol(outCmd);
-
       // Handle subalign (e.g. ".foo : SUBALIGN(32) { ... }"). If subalign
       // is given, input sections are aligned to that value, whether the
       // given value is larger or smaller than the original section alignment.
@@ -548,7 +514,7 @@ void LinkerScript::processSectionCommands() {
           s->alignment = subalign;
       }
 
-      // Add input sections to an output section.
+      // Some input sections may be removed from the list after ICF.
       for (InputSection *s : v)
         sec->addSection(s);
 
@@ -559,6 +525,32 @@ void LinkerScript::processSectionCommands() {
         sec->flags &= ~(uint64_t)SHF_ALLOC;
     }
   }
+}
+
+void LinkerScript::processSymbolAssignments() {
+  // Dot outside an output section still represents a relative address, whose
+  // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
+  // that fills the void outside a section. It has an index of one, which is
+  // indistinguishable from any other regular section index.
+  aether = make<OutputSection>("", 0, SHF_ALLOC);
+  aether->sectionIndex = 1;
+
+  // ctx captures the local AddressState and makes it accessible deliberately.
+  // This is needed as there are some cases where we cannot just thread the
+  // current state through to a lambda function created by the script parser.
+  AddressState state;
+  ctx = &state;
+  ctx->outSec = aether;
+
+  for (BaseCommand *base : sectionCommands) {
+    if (auto *cmd = dyn_cast<SymbolAssignment>(base))
+      addSymbol(cmd);
+    else
+      for (BaseCommand *sub_base : cast<OutputSection>(base)->sectionCommands)
+        if (auto *cmd = dyn_cast<SymbolAssignment>(sub_base))
+          addSymbol(cmd);
+  }
+
   ctx = nullptr;
 }
 

@@ -186,8 +186,12 @@ def  : WriteRes<WriteFStoreY,       [SLM_MEC_RSV]>;
 def  : WriteRes<WriteFStoreNT,      [SLM_MEC_RSV]>;
 def  : WriteRes<WriteFStoreNTX,     [SLM_MEC_RSV]>;
 def  : WriteRes<WriteFStoreNTY,     [SLM_MEC_RSV]>;
-def  : WriteRes<WriteFMaskedStore,  [SLM_MEC_RSV]>;
-def  : WriteRes<WriteFMaskedStoreY, [SLM_MEC_RSV]>;
+
+def  : WriteRes<WriteFMaskedStore32,    [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFMaskedStore32Y,   [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFMaskedStore64,    [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFMaskedStore64Y,   [SLM_MEC_RSV]>;
+
 def  : WriteRes<WriteFMove,         [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteFMoveX,        [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteFMoveY,        [SLM_FPC_RSV01]>;
