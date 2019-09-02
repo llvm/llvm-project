@@ -216,8 +216,10 @@ defm : X86WriteResUnsupported<WriteFStoreY>;
 def  : WriteRes<WriteFStoreNT,      [AtomPort0]>;
 def  : WriteRes<WriteFStoreNTX,     [AtomPort0]>;
 defm : X86WriteResUnsupported<WriteFStoreNTY>;
-defm : X86WriteResUnsupported<WriteFMaskedStore>;
-defm : X86WriteResUnsupported<WriteFMaskedStoreY>;
+defm : X86WriteResUnsupported<WriteFMaskedStore32>;
+defm : X86WriteResUnsupported<WriteFMaskedStore32Y>;
+defm : X86WriteResUnsupported<WriteFMaskedStore64>;
+defm : X86WriteResUnsupported<WriteFMaskedStore64Y>;
 
 def  : WriteRes<WriteFMove,         [AtomPort01]>;
 def  : WriteRes<WriteFMoveX,        [AtomPort01]>;

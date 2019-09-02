@@ -294,7 +294,7 @@ public:
 
   // Enable or disable colors. Once disable_colors() is called,
   // changeColor() has no effect until enable_colors() is called.
-  virtual void enable_colors(bool enable) {}
+  virtual void enable_colors(bool /*enable*/) {}
 
   //===--------------------------------------------------------------------===//
   // Subclass Interface

@@ -107,16 +107,8 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   addAncestorsAsVirtualDirs(DirName);
 }
 
-/// Converts a llvm::ErrorOr<T &> to an llvm::ErrorOr<T *> by promoting
-/// the address of the inner reference to a pointer or by propagating the error.
-template <typename T>
-static llvm::ErrorOr<T *> promoteInnerReference(llvm::ErrorOr<T &> value) {
-  if (value) return &*value;
-  return value.getError();
-}
-
-llvm::ErrorOr<const DirectoryEntry *>
-FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
+llvm::Expected<DirectoryEntryRef>
+FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   // stat doesn't like trailing separators except for root directory.
   // At least, on Win32 MSVCRT, stat() cannot strip trailing '/'.
   // (though it can strip '\\')
@@ -141,8 +133,11 @@ FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
   // contains both virtual and real directories.
   auto SeenDirInsertResult =
       SeenDirEntries.insert({DirName, std::errc::no_such_file_or_directory});
-  if (!SeenDirInsertResult.second)
-    return promoteInnerReference(SeenDirInsertResult.first->second);
+  if (!SeenDirInsertResult.second) {
+    if (SeenDirInsertResult.first->second)
+      return DirectoryEntryRef(&*SeenDirInsertResult.first);
+    return llvm::errorCodeToError(SeenDirInsertResult.first->second.getError());
+  }
 
   // We've not seen this before. Fill it in.
   ++NumDirCacheMisses;
@@ -163,7 +158,7 @@ FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
       NamedDirEnt.second = statError;
     else
       SeenDirEntries.erase(DirName);
-    return statError;
+    return llvm::errorCodeToError(statError);
   }
 
   // It exists.  See if we have already opened a directory with the
@@ -179,7 +174,15 @@ FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
     UDE.Name  = InterndDirName;
   }
 
-  return &UDE;
+  return DirectoryEntryRef(&NamedDirEnt);
+}
+
+llvm::ErrorOr<const DirectoryEntry *>
+FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
+  auto Result = getDirectoryRef(DirName, CacheFailure);
+  if (Result)
+    return &Result->getDirEntry();
+  return llvm::errorToErrorCode(Result.takeError());
 }
 
 llvm::ErrorOr<const FileEntry *>

@@ -2041,20 +2041,27 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
 
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+      // X - undef -> { undef, false }
+      // undef - X -> { undef, false }
+      // X + undef -> { undef, false }
+      // undef + x -> { undef, false }
+      if (!C0 || !C1) {
+        return ConstantStruct::get(
+            cast<StructType>(Ty),
+            {UndefValue::get(Ty->getStructElementType(0)),
+             Constant::getNullValue(Ty->getStructElementType(1))});
+      }
+      LLVM_FALLTHROUGH;
     case Intrinsic::smul_with_overflow:
-    case Intrinsic::umul_with_overflow:
-      // Even if both operands are undef, we cannot fold muls to undef
-      // in the general case. For example, on i2 there are no inputs
-      // that would produce { i2 -1, i1 true } as the result.
+    case Intrinsic::umul_with_overflow: {
+      // undef * X -> { 0, false }
+      // X * undef -> { 0, false }
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
-      LLVM_FALLTHROUGH;
-    case Intrinsic::sadd_with_overflow:
-    case Intrinsic::uadd_with_overflow:
-    case Intrinsic::ssub_with_overflow:
-    case Intrinsic::usub_with_overflow: {
-      if (!C0 || !C1)
-        return UndefValue::get(Ty);
 
       APInt Res;
       bool Overflow;

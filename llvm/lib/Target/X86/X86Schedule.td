@@ -102,6 +102,12 @@ class X86SchedWriteMoveLS<SchedWrite MoveRR,
   SchedWrite MR = StoreMR;
 }
 
+// Multiclass that wraps masked load/store writes for a vector width.
+class X86SchedWriteMaskMove<SchedWrite LoadRM, SchedWrite StoreMR> {
+  SchedWrite RM = LoadRM;
+  SchedWrite MR = StoreMR;
+}
+
 // Multiclass that wraps X86SchedWriteMoveLS for each vector width.
 class X86SchedWriteMoveLSWidths<X86SchedWriteMoveLS sScl,
                                 X86SchedWriteMoveLS s128,
@@ -218,8 +224,12 @@ def  WriteFStoreY       : SchedWrite;
 def  WriteFStoreNT      : SchedWrite;
 def  WriteFStoreNTX     : SchedWrite;
 def  WriteFStoreNTY     : SchedWrite;
-def  WriteFMaskedStore  : SchedWrite;
-def  WriteFMaskedStoreY : SchedWrite;
+
+def  WriteFMaskedStore32  : SchedWrite;
+def  WriteFMaskedStore64  : SchedWrite;
+def  WriteFMaskedStore32Y : SchedWrite;
+def  WriteFMaskedStore64Y : SchedWrite;
+
 def  WriteFMove         : SchedWrite;
 def  WriteFMoveX        : SchedWrite;
 def  WriteFMoveY        : SchedWrite;
@@ -529,6 +539,16 @@ def WriteVecMoveLSNTY
 def SchedWriteVecMoveLSNT
   : X86SchedWriteMoveLSWidths<WriteVecMoveLSNT, WriteVecMoveLSNTX,
                               WriteVecMoveLSNTY, WriteVecMoveLSNTY>;
+
+// Conditional SIMD Packed Loads and Stores wrappers.
+def WriteFMaskMove32
+  : X86SchedWriteMaskMove<WriteFMaskedLoad, WriteFMaskedStore32>;
+def WriteFMaskMove64
+  : X86SchedWriteMaskMove<WriteFMaskedLoad, WriteFMaskedStore64>;
+def WriteFMaskMove32Y
+  : X86SchedWriteMaskMove<WriteFMaskedLoadY, WriteFMaskedStore32Y>;
+def WriteFMaskMove64Y
+  : X86SchedWriteMaskMove<WriteFMaskedLoadY, WriteFMaskedStore64Y>;
 
 // Vector width wrappers.
 def SchedWriteFAdd

@@ -4831,6 +4831,10 @@ public:
   SourceLocation getEqualOrColonLoc() const { return EqualOrColonLoc; }
   void setEqualOrColonLoc(SourceLocation L) { EqualOrColonLoc = L; }
 
+  /// Whether this designated initializer should result in direct-initialization
+  /// of the designated subobject (eg, '{.foo{1, 2, 3}}').
+  bool isDirectInit() const { return EqualOrColonLoc.isInvalid(); }
+
   /// Determines whether this designated initializer used the
   /// deprecated GNU syntax for designated initializers.
   bool usesGNUSyntax() const { return GNUSyntax; }

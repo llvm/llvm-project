@@ -379,6 +379,10 @@ protected:
   /// Profile Summary Info computed from sample profile.
   ProfileSummaryInfo *PSI = nullptr;
 
+  /// Profle Symbol list tells whether a function name appears in the binary
+  /// used to generate the current profile.
+  std::unique_ptr<ProfileSymbolList> PSL;
+
   /// Total number of samples collected in this profile.
   ///
   /// This is the sum of all the samples collected in all the functions executed
@@ -1634,6 +1638,7 @@ bool SampleProfileLoader::doInitialization(Module &M) {
   Reader = std::move(ReaderOrErr.get());
   Reader->collectFuncsToUse(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
+  PSL = Reader->getProfileSymbolList();
 
   if (!RemappingFilename.empty()) {
     // Apply profile remappings to the loaded profile data if requested.
@@ -1725,11 +1730,15 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   // conservatively by getEntryCount as the same as unknown (None). This is
   // to avoid newly added code to be treated as cold. If we have samples
   // this will be overwritten in emitAnnotations.
+  //
+  // PSL -- profile symbol list include all the symbols in sampled binary.
   // If ProfileSampleAccurate is true or F has profile-sample-accurate
-  // attribute, initialize the entry count to 0 so callsites or functions
-  // unsampled will be treated as cold.
+  // attribute, and if there is no profile symbol list read in, initialize
+  // all the function entry counts to 0; if there is profile symbol list, only
+  // initialize the entry count to 0 when current function is in the list.
   uint64_t initialEntryCount =
-      (ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate"))
+      ((ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate")) &&
+       (!PSL || PSL->contains(F.getName())))
           ? 0
           : -1;
   F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));

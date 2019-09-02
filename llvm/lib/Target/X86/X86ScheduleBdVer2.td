@@ -726,8 +726,10 @@ defm : PdWriteRes<WriteFStoreNT,           [PdStore, PdFPU1,  PdFPSTO], 3>;
 defm : PdWriteRes<WriteFStoreNTX,          [PdStore, PdFPU1,  PdFPSTO], 3>;
 defm : PdWriteRes<WriteFStoreNTY,          [PdStore, PdFPU1,  PdFPSTO], 3, [2, 2, 2], 4>;
 
-defm : PdWriteRes<WriteFMaskedStore,       [PdStore, PdFPU01, PdFPFMA], 6, [1, 1, 188], 18>;
-defm : PdWriteRes<WriteFMaskedStoreY,      [PdStore, PdFPU01, PdFPFMA], 6, [2, 2, 376], 34>;
+defm : PdWriteRes<WriteFMaskedStore32,     [PdStore, PdFPU01, PdFPFMA], 6, [1, 1, 188], 18>;
+defm : PdWriteRes<WriteFMaskedStore64,     [PdStore, PdFPU01, PdFPFMA], 6, [1, 1, 188], 18>;
+defm : PdWriteRes<WriteFMaskedStore32Y,    [PdStore, PdFPU01, PdFPFMA], 6, [2, 2, 376], 34>;
+defm : PdWriteRes<WriteFMaskedStore64Y,    [PdStore, PdFPU01, PdFPFMA], 6, [2, 2, 376], 34>;
 
 defm : PdWriteRes<WriteFMove,              [PdFPU01, PdFPFMA]>;
 defm : PdWriteRes<WriteFMoveX,             [PdFPU01, PdFPFMA], 1, [1, 2]>;

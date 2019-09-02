@@ -512,8 +512,11 @@ defm : X86WriteRes<WriteFStoreY,       [JSAGU, JFPU1,  JSTC], 1, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [JSAGU, JFPU1,  JSTC], 3, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [JSAGU, JFPU1,  JSTC], 3, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [JSAGU, JFPU1,  JSTC], 3, [2, 2, 2], 1>;
-defm : X86WriteRes<WriteFMaskedStore,  [JSAGU, JFPU01, JFPX], 6, [1, 1, 4], 1>;
-defm : X86WriteRes<WriteFMaskedStoreY, [JSAGU, JFPU01, JFPX], 6, [2, 2, 4], 2>;
+
+defm : X86WriteRes<WriteFMaskedStore32,  [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 16, [1,1, 5, 5,4,4,4], 19>;
+defm : X86WriteRes<WriteFMaskedStore64,  [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 13, [1,1, 2, 2,2,2,2], 10>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 22, [1,1,10,10,8,8,8], 36>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 16, [1,1, 4, 4,4,4,4], 18>;
 
 defm : X86WriteRes<WriteFMove,         [JFPU01, JFPX], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [JFPU01, JFPX], 1, [1, 1], 1>;
@@ -817,6 +820,18 @@ def JWriteJVZEROUPPER: SchedWriteRes<[]> {
   let NumMicroOps = 37;
 }
 def : InstRW<[JWriteJVZEROUPPER], (instrs VZEROUPPER)>;
+
+///////////////////////////////////////////////////////////////////////////////
+//  SSE2/AVX Store Selected Bytes of Double Quadword - (V)MASKMOVDQ
+///////////////////////////////////////////////////////////////////////////////
+
+def JWriteMASKMOVDQU: SchedWriteRes<[JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01]> {
+  let Latency = 34;
+  let ResourceCycles = [1, 1, 2, 2, 2, 16, 42];
+  let NumMicroOps = 63;
+}
+def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64,
+                                         VMASKMOVDQU, VMASKMOVDQU64)>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  SchedWriteVariant definitions.

@@ -85,7 +85,7 @@ static uint64_t getLowPC(DWARFDie Die) {
 }
 
 /// Collect debug info quality metrics for one DIE.
-static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
+static void collectStatsForDie(DWARFDie Die, uint64_t UnitLowPC, std::string FnPrefix,
                                std::string VarPrefix, uint64_t ScopeLowPC,
                                uint64_t BytesInScope, uint32_t InlineDepth,
                                StringMap<PerFunctionStats> &FnStatMap,
@@ -147,7 +147,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
             BytesCovered += Entry.End - Entry.Begin;
           if (List->Entries.size()) {
             uint64_t FirstDef = List->Entries[0].Begin;
-            uint64_t UnitOfs = getLowPC(Die.getDwarfUnit()->getUnitDIE());
+            uint64_t UnitOfs = UnitLowPC; 
             // Ranges sometimes start before the lexical scope.
             if (UnitOfs + FirstDef >= ScopeLowPC)
               OffsetToFirstDefinition = UnitOfs + FirstDef - ScopeLowPC;
@@ -210,7 +210,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
 }
 
 /// Recursively collect debug info quality metrics.
-static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
+static void collectStatsRecursive(DWARFDie Die, uint64_t UnitLowPC, std::string FnPrefix,
                                   std::string VarPrefix, uint64_t ScopeLowPC,
                                   uint64_t BytesInScope, uint32_t InlineDepth,
                                   StringMap<PerFunctionStats> &FnStatMap,
@@ -282,7 +282,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
     }
   } else {
     // Not a scope, visit the Die itself. It could be a variable.
-    collectStatsForDie(Die, FnPrefix, VarPrefix, ScopeLowPC, BytesInScope,
+    collectStatsForDie(Die, UnitLowPC, FnPrefix, VarPrefix, ScopeLowPC, BytesInScope,
                        InlineDepth, FnStatMap, GlobalStats);
   }
 
@@ -300,7 +300,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
     if (Child.getTag() == dwarf::DW_TAG_lexical_block)
       ChildVarPrefix += toHex(LexicalBlockIndex++) + '.';
 
-    collectStatsRecursive(Child, FnPrefix, ChildVarPrefix, ScopeLowPC,
+    collectStatsRecursive(Child, UnitLowPC, FnPrefix, ChildVarPrefix, ScopeLowPC,
                           BytesInScope, InlineDepth, FnStatMap, GlobalStats);
     Child = Child.getSibling();
   }
@@ -334,7 +334,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   StringMap<PerFunctionStats> Statistics;
   for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units())
     if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false))
-      collectStatsRecursive(CUDie, "/", "g", 0, 0, 0, Statistics, GlobalStats);
+      collectStatsRecursive(CUDie, getLowPC(CUDie), "/", "g", 0, 0, 0, Statistics, GlobalStats);
 
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the

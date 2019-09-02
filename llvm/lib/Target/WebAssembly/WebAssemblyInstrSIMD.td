@@ -732,3 +732,24 @@ foreach t2 = !foldl(
   )
 ) in
 def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
+
+//===----------------------------------------------------------------------===//
+// Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
+//===----------------------------------------------------------------------===//
+multiclass SIMDQFM<ValueType vec_t, string vec, bits<32> baseInst> {
+  defm QFMA_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
+           (outs), (ins),
+           [(set (vec_t V128:$dst),
+             (int_wasm_qfma (vec_t V128:$a), (vec_t V128:$b), (vec_t V128:$c)))],
+           vec#".qfma\t$dst, $a, $b, $c", vec#".qfma", baseInst>;
+  defm QFMS_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
+           (outs), (ins),
+           [(set (vec_t V128:$dst),
+             (int_wasm_qfms (vec_t V128:$a), (vec_t V128:$b), (vec_t V128:$c)))],
+           vec#".qfms\t$dst, $a, $b, $c", vec#".qfms", !add(baseInst, 1)>;
+}
+
+defm "" : SIMDQFM<v4f32, "f32x4", 0x98>;
+defm "" : SIMDQFM<v2f64, "f64x2", 0xa3>;

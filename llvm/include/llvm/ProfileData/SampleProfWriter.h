@@ -56,6 +56,8 @@ public:
   static ErrorOr<std::unique_ptr<SampleProfileWriter>>
   create(std::unique_ptr<raw_ostream> &OS, SampleProfileFormat Format);
 
+  virtual void setProfileSymbolList(ProfileSymbolList *PSL) {}
+
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
       : OutputStream(std::move(OS)) {}
@@ -175,12 +177,19 @@ private:
 class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
   using SampleProfileWriterExtBinaryBase::SampleProfileWriterExtBinaryBase;
 
+public:
+  virtual void setProfileSymbolList(ProfileSymbolList *PSL) override {
+    ProfSymList = PSL;
+  };
+
 private:
   virtual void initSectionLayout() override {
-    SectionLayout = {SecProfSummary, SecNameTable, SecLBRProfile};
+    SectionLayout = {SecProfSummary, SecNameTable, SecLBRProfile,
+                     SecProfileSymbolList};
   };
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) override;
+  ProfileSymbolList *ProfSymList = nullptr;
 };
 
 // CompactBinary is a compact format of binary profile which both reduces

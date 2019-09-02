@@ -3539,19 +3539,19 @@ public:
 
   /// This structure is used to pass arguments to makeLibCall function.
   struct MakeLibCallOptions {
-    // By passing the node before soften to makeLibCall, the target hook
+    // By passing type list before soften to makeLibCall, the target hook
     // shouldExtendTypeInLibCall can get the original type before soften.
-    // It could be generalized by passing orignal type lists if necessary
-    // in the future.
-    SDNode *NodeBeforeSoften = nullptr;
+    ArrayRef<EVT> OpsVTBeforeSoften;
+    EVT RetVTBeforeSoften;
     bool IsSExt : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
     bool IsPostTypeLegalization : 1;
+    bool IsSoften : 1;
 
     MakeLibCallOptions()
         : IsSExt(false), DoesNotReturn(false), IsReturnValueUsed(true),
-          IsPostTypeLegalization(false) {}
+          IsPostTypeLegalization(false), IsSoften(false) {}
 
     MakeLibCallOptions &setSExt(bool Value = true) {
       IsSExt = Value;
@@ -3573,8 +3573,11 @@ public:
       return *this;
     }
 
-    MakeLibCallOptions &setNodeBeforeSoften(SDNode *N) {
-      NodeBeforeSoften = N;
+    MakeLibCallOptions &setTypeListBeforeSoften(ArrayRef<EVT> OpsVT, EVT RetVT,
+                                                bool Value = true) {
+      OpsVTBeforeSoften = OpsVT;
+      RetVTBeforeSoften = RetVT;
+      IsSoften = Value;
       return *this;
     }
   };

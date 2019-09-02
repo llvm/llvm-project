@@ -2,16 +2,9 @@
 Test that variable expressions of integer basic types are evaluated correctly.
 """
 
-from __future__ import print_function
-
-
 import AbstractBase
 
-import lldb
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-
 
 class IntegerTypesExprTestCase(AbstractBase.GenericTester):
 

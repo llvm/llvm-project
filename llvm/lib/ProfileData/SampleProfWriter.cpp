@@ -121,7 +121,12 @@ std::error_code SampleProfileWriterExtBinary::writeSections(
 
   if (std::error_code EC = writeFuncProfiles(ProfileMap))
     return EC;
-  addNewSection(SecLBRProfile, SectionStart);
+  SectionStart = addNewSection(SecLBRProfile, SectionStart);
+
+  if (ProfSymList && ProfSymList->size() > 0)
+    if (std::error_code EC = ProfSymList->write(*OutputStream))
+      return EC;
+  addNewSection(SecProfileSymbolList, SectionStart);
 
   return sampleprof_error::success;
 }

@@ -6,7 +6,7 @@
 },
 {
   "directory": "DIR",
-  "command": "clang -E DIR/subframework_header_dir_symlink2.m -FInputs/frameworks_symlink -iframework Inputs/frameworks",
+  "command": "clang -E DIR/subframework_header_dir_symlink2.m -FInputs/frameworks -iframework Inputs/frameworks_symlink",
   "file": "DIR/subframework_header_dir_symlink2.m"
 }
 ]
