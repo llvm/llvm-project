@@ -672,7 +672,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           if (!def.short_option)
             continue;
           opt_str[1] = def.short_option;
-          request.AddCompletion(opt_str);
+          request.AddCompletion(opt_str, def.usage_text);
         }
 
         return true;
@@ -684,7 +684,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
           full_name.erase(full_name.begin() + 2, full_name.end());
           full_name.append(def.long_option);
-          request.AddCompletion(full_name);
+          request.AddCompletion(full_name, def.usage_text);
         }
         return true;
       } else if (opt_defs_index != OptionArgElement::eUnrecognizedArg) {
@@ -692,9 +692,10 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         // anyway (getopt_long_only is happy with shortest unique string, but
         // it's still a nice thing to do.)  Otherwise return The string so the
         // upper level code will know this is a full match and add the " ".
-        llvm::StringRef long_option = opt_defs[opt_defs_index].long_option;
+        const OptionDefinition &opt = opt_defs[opt_defs_index];
+        llvm::StringRef long_option = opt.long_option;
         if (cur_opt_str.startswith("--") && cur_opt_str != long_option) {
-          request.AddCompletion("--" + long_option.str());
+          request.AddCompletion("--" + long_option.str(), opt.usage_text);
           return true;
         } else
           request.AddCompletion(request.GetCursorArgument());
@@ -710,7 +711,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           for (auto &def : opt_defs) {
             llvm::StringRef long_option(def.long_option);
             if (long_option.startswith(cur_opt_str))
-              request.AddCompletion("--" + long_option.str());
+              request.AddCompletion("--" + long_option.str(), def.usage_text);
           }
         }
         return true;

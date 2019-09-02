@@ -375,6 +375,30 @@ class CommandLineCompletionTestCase(TestBase):
         self.check_completion_with_desc("comman", [])
         self.check_completion_with_desc("non-existent-command", [])
 
+    def test_completion_description_command_options(self):
+        """Test descriptions of command options"""
+        # Short options
+        self.check_completion_with_desc("breakpoint set -", [
+            ["-h", "Set the breakpoint on exception catcH."],
+            ["-w", "Set the breakpoint on exception throW."]
+        ])
+
+        # Long options.
+        self.check_completion_with_desc("breakpoint set --", [
+            ["--on-catch", "Set the breakpoint on exception catcH."],
+            ["--on-throw", "Set the breakpoint on exception throW."]
+        ])
+
+        # Ambiguous long options.
+        self.check_completion_with_desc("breakpoint set --on-", [
+            ["--on-catch", "Set the breakpoint on exception catcH."],
+            ["--on-throw", "Set the breakpoint on exception throW."]
+        ])
+
+        # Unknown long option.
+        self.check_completion_with_desc("breakpoint set --Z", [
+        ])
+
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_symbol_name(self):
         self.build()
