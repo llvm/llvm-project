@@ -4,10 +4,10 @@
 define i8 @shl_and(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: shl_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (,%rdi,8), %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shlb $2, %sil
+; CHECK-NEXT:    shlb $5, %al
 ; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    shlb $2, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sh0 = shl i8 %x, 3
@@ -20,9 +20,9 @@ define i16 @shl_or(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: shl_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $5, %eax
+; CHECK-NEXT:    shll $7, %esi
+; CHECK-NEXT:    shll $12, %eax
 ; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    shll $7, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %sh0 = shl i16 %x, 5
@@ -35,9 +35,9 @@ define i32 @shl_xor(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: shl_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $5, %eax
+; CHECK-NEXT:    shll $7, %esi
+; CHECK-NEXT:    shll $12, %eax
 ; CHECK-NEXT:    xorl %esi, %eax
-; CHECK-NEXT:    shll $7, %eax
 ; CHECK-NEXT:    retq
   %sh0 = shl i32 %x, 5
   %r = xor i32 %sh0, %y
@@ -49,9 +49,9 @@ define i64 @lshr_and(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: lshr_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $5, %rax
+; CHECK-NEXT:    shrq $7, %rsi
+; CHECK-NEXT:    shrq $12, %rax
 ; CHECK-NEXT:    andq %rsi, %rax
-; CHECK-NEXT:    shrq $7, %rax
 ; CHECK-NEXT:    retq
   %sh0 = lshr i64 %x, 5
   %r = and i64 %y, %sh0
@@ -62,9 +62,9 @@ define i64 @lshr_and(i64 %x, i64 %y) nounwind {
 define <4 x i32> @lshr_or(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: lshr_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrld $5, %xmm0
+; CHECK-NEXT:    psrld $7, %xmm1
+; CHECK-NEXT:    psrld $12, %xmm0
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    psrld $7, %xmm0
 ; CHECK-NEXT:    retq
   %sh0 = lshr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
   %r = or <4 x i32> %sh0, %y
@@ -75,9 +75,9 @@ define <4 x i32> @lshr_or(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <8 x i16> @lshr_xor(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; CHECK-LABEL: lshr_xor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrlw $5, %xmm0
+; CHECK-NEXT:    psrlw $7, %xmm1
+; CHECK-NEXT:    psrlw $12, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    psrlw $7, %xmm0
 ; CHECK-NEXT:    retq
   %sh0 = lshr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
   %r = xor <8 x i16> %y, %sh0
@@ -89,17 +89,17 @@ define <8 x i16> @lshr_xor(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: ashr_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrlw $3, %xmm0
+; CHECK-NEXT:    psrlw $2, %xmm1
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; CHECK-NEXT:    pxor %xmm2, %xmm1
+; CHECK-NEXT:    psubb %xmm2, %xmm1
+; CHECK-NEXT:    psrlw $5, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NEXT:    psubb %xmm2, %xmm0
 ; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    psrlw $2, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
-; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    psubb %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %sh0 = ashr <16 x i8> %x, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   %r = and <16 x i8> %y, %sh0
@@ -110,19 +110,19 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 define <2 x i64> @ashr_or(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: ashr_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    psrad $5, %xmm2
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    psrad $7, %xmm2
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; CHECK-NEXT:    psrlq $5, %xmm0
+; CHECK-NEXT:    psrlq $7, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    psrad $12, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-NEXT:    psrlq $12, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrad $7, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-NEXT:    psrlq $7, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retq
   %sh0 = ashr <2 x i64> %x, <i64 5, i64 5>
   %r = or <2 x i64> %sh0, %y
@@ -134,9 +134,9 @@ define i32 @ashr_xor(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ashr_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarl $5, %eax
+; CHECK-NEXT:    sarl $7, %esi
+; CHECK-NEXT:    sarl $12, %eax
 ; CHECK-NEXT:    xorl %esi, %eax
-; CHECK-NEXT:    sarl $7, %eax
 ; CHECK-NEXT:    retq
   %sh0 = ashr i32 %x, 5
   %r = xor i32 %y, %sh0

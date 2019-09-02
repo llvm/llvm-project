@@ -1,4 +1,4 @@
-LEVEL := ../../make
+LEVEL := ../../../make
 
 LIB_PREFIX := load_
 

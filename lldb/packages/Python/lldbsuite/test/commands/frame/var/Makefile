@@ -1,4 +1,4 @@
-LEVEL = ../../make
+LEVEL = ../../../make
 
 C_SOURCES := main.c
 CFLAGS_EXTRAS += -std=c99

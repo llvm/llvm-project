@@ -1619,8 +1619,8 @@ public:
   /// Scan instructions following MI and collect any matching DBG_VALUEs.
   void collectDebugValues(SmallVectorImpl<MachineInstr *> &DbgValues);
 
-  /// Find all DBG_VALUEs immediately following this instruction that point
-  /// to a register def in this instruction and point them to \p Reg instead.
+  /// Find all DBG_VALUEs that point to the register def in this instruction
+  /// and point them to \p Reg instead.
   void changeDebugValuesDefReg(Register Reg);
 
   /// Returns the Intrinsic::ID for this instruction.

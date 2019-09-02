@@ -139,14 +139,6 @@ struct Section {
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
 
-  // This can be used to override the sh_offset field. It does not place the
-  // section data at the offset specified. Useful for creating invalid objects.
-  Optional<llvm::yaml::Hex64> ShOffset;
-
-  // This can be used to override the sh_size field. It does not affect the
-  // content written.
-  Optional<llvm::yaml::Hex64> ShSize;
-
   // Usually sections are not created implicitly, but loaded from YAML.
   // When they are, this flag is used to signal about that.
   bool IsImplicit;
@@ -154,6 +146,21 @@ struct Section {
   Section(SectionKind Kind, bool IsImplicit = false)
       : Kind(Kind), IsImplicit(IsImplicit) {}
   virtual ~Section();
+
+  // The following members are used to override section fields which is
+  // useful for creating invalid objects.
+
+  // This can be used to override the offset stored in the sh_name field.
+  // It does not affect the name stored in the string table.
+  Optional<llvm::yaml::Hex64> ShName;
+
+  // This can be used to override the sh_offset field. It does not place the
+  // section data at the offset specified.
+  Optional<llvm::yaml::Hex64> ShOffset;
+
+  // This can be used to override the sh_size field. It does not affect the
+  // content written.
+  Optional<llvm::yaml::Hex64> ShSize;
 };
 
 struct DynamicSection : Section {

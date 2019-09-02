@@ -292,8 +292,10 @@ bool ELFState<ELFT>::initImplicitHeader(ELFState<ELFT> &State,
   else
     return false;
 
-  // Override the sh_offset/sh_size fields if requested.
+  // Override the fields if requested.
   if (YAMLSec) {
+    if (YAMLSec->ShName)
+      Header.sh_name = *YAMLSec->ShName;
     if (YAMLSec->ShOffset)
       Header.sh_offset = *YAMLSec->ShOffset;
     if (YAMLSec->ShSize)
@@ -395,8 +397,10 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
     } else
       llvm_unreachable("Unknown section type");
 
-    // Override the sh_offset/sh_size fields if requested.
+    // Override the fields if requested.
     if (Sec) {
+      if (Sec->ShName)
+        SHeader.sh_name = *Sec->ShName;
       if (Sec->ShOffset)
         SHeader.sh_offset = *Sec->ShOffset;
       if (Sec->ShSize)

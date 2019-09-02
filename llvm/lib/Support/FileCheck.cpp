@@ -24,38 +24,12 @@
 
 using namespace llvm;
 
-bool FileCheckNumericVariable::isValueKnownAtMatchTime() const {
-  if (Value)
-    return true;
-
-  return ExpressionAST != nullptr;
-}
-
-void FileCheckNumericVariable::setValue(uint64_t NewValue) {
-  if (ExpressionAST != nullptr) {
-    // Caller is expected to call setValue only if substitution was successful.
-    assert(NewValue == cantFail(ExpressionAST->eval(),
-                                "Failed to evaluate associated expression when "
-                                "sanity checking value") &&
-           "Value being set to different from variable evaluation");
-  }
-  Value = NewValue;
-  // Clear pointer to AST to ensure it is not used after the numeric
-  // substitution defining this variable is processed since it's the
-  // substitution that owns the pointer.
-  ExpressionAST = nullptr;
-}
-
 Expected<uint64_t> FileCheckNumericVariableUse::eval() const {
   Optional<uint64_t> Value = NumericVariable->getValue();
   if (Value)
     return *Value;
 
-  FileCheckExpressionAST *ExpressionAST = NumericVariable->getExpressionAST();
-  if (!ExpressionAST)
-    return make_error<FileCheckUndefVarError>(Name);
-
-  return ExpressionAST->eval();
+  return make_error<FileCheckUndefVarError>(Name);
 }
 
 Expected<uint64_t> FileCheckASTBinop::eval() const {
@@ -141,8 +115,7 @@ char FileCheckNotFoundError::ID = 0;
 Expected<FileCheckNumericVariable *>
 FileCheckPattern::parseNumericVariableDefinition(
     StringRef &Expr, FileCheckPatternContext *Context,
-    Optional<size_t> LineNumber, FileCheckExpressionAST *ExpressionAST,
-    const SourceMgr &SM) {
+    Optional<size_t> LineNumber, const SourceMgr &SM) {
   Expected<VariableProperties> ParseVarResult = parseVariable(Expr, SM);
   if (!ParseVarResult)
     return ParseVarResult.takeError();
@@ -169,8 +142,7 @@ FileCheckPattern::parseNumericVariableDefinition(
   if (VarTableIter != Context->GlobalNumericVariableTable.end())
     DefinedNumericVariable = VarTableIter->second;
   else
-    DefinedNumericVariable =
-        Context->makeNumericVariable(Name, LineNumber, ExpressionAST);
+    DefinedNumericVariable = Context->makeNumericVariable(Name, LineNumber);
 
   return DefinedNumericVariable;
 }
@@ -202,12 +174,11 @@ FileCheckPattern::parseNumericVariableUse(StringRef Name, bool IsPseudo,
   }
 
   Optional<size_t> DefLineNumber = NumericVariable->getDefLineNumber();
-  if (DefLineNumber && LineNumber && *DefLineNumber == *LineNumber &&
-      !NumericVariable->isValueKnownAtMatchTime())
+  if (DefLineNumber && LineNumber && *DefLineNumber == *LineNumber)
     return FileCheckErrorDiagnostic::get(
         SM, Name,
         "numeric variable '" + Name +
-            "' defined from input on the same line as used");
+            "' defined earlier in the same CHECK directive");
 
   return std::make_unique<FileCheckNumericVariableUse>(Name, NumericVariable);
 }
@@ -334,8 +305,7 @@ FileCheckPattern::parseNumericSubstitutionBlock(
   if (DefEnd != StringRef::npos) {
     DefExpr = DefExpr.ltrim(SpaceChars);
     Expected<FileCheckNumericVariable *> ParseResult =
-        parseNumericVariableDefinition(DefExpr, Context, LineNumber,
-                                       ExpressionAST.get(), SM);
+        parseNumericVariableDefinition(DefExpr, Context, LineNumber, SM);
 
     if (!ParseResult)
       return ParseResult.takeError();

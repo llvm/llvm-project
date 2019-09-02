@@ -38,7 +38,7 @@ enum {
 
   TB_FOLDED_LOAD  = 1 << 5,
   TB_FOLDED_STORE = 1 << 6,
-  // Unused bit 7
+  TB_FOLDED_BCAST = 1 << 7,
 
   // Minimum alignment required for load/store.
   // Used for RegOp->MemOp conversion. Encoded as Log2(Align) + 1 to allow 0
@@ -51,7 +51,16 @@ enum {
   TB_ALIGN_64    =   7 << TB_ALIGN_SHIFT,
   TB_ALIGN_MASK  = 0xf << TB_ALIGN_SHIFT,
 
-  // Unused bits 12-15
+  // Broadcast type.
+  // (stored in bits 12 - 13)
+  TB_BCAST_TYPE_SHIFT = 12,
+  TB_BCAST_D    =   0 << TB_BCAST_TYPE_SHIFT,
+  TB_BCAST_Q    =   1 << TB_BCAST_TYPE_SHIFT,
+  TB_BCAST_SS   =   2 << TB_BCAST_TYPE_SHIFT,
+  TB_BCAST_SD   =   3 << TB_BCAST_TYPE_SHIFT,
+  TB_BCAST_MASK = 0x3 << TB_BCAST_TYPE_SHIFT,
+
+  // Unused bits 14-15
 };
 
 // This struct is used for both the folding and unfold tables. They KeyOp

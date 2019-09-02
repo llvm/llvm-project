@@ -1,4 +1,4 @@
-LEVEL = ../../make
+LEVEL = ../../../make
 
 CXX_SOURCES := wait-a-while.cpp
 

@@ -1,4 +1,4 @@
-LEVEL = ../../../make
+LEVEL = ../../../../make
 # We don't have any standard include directories, so we can't
 # parse the test_common.h header we usually inject as it includes
 # system headers.

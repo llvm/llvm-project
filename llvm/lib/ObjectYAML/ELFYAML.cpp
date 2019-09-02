@@ -986,10 +986,11 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   IO.mapOptional("EntSize", Section.EntSize);
 
   // obj2yaml does not dump these fields. They are expected to be empty when we
-  // are producing YAML, because yaml2obj sets appropriate values for sh_offset
-  // and sh_size automatically when they are not explicitly defined.
+  // are producing YAML, because yaml2obj sets appropriate values for them
+  // automatically when they are not explicitly defined.
   assert(!IO.outputting() ||
          (!Section.ShOffset.hasValue() && !Section.ShSize.hasValue()));
+  IO.mapOptional("ShName", Section.ShName);
   IO.mapOptional("ShOffset", Section.ShOffset);
   IO.mapOptional("ShSize", Section.ShSize);
 }
