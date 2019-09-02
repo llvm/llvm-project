@@ -1,26 +1,55 @@
 import re
+import sys
 import subprocess
 import os
 import lldb
 
+def set_debug_mode(debugger, rank, debug_mode):
+    debugger.HandleCommand(
+        "print (void) hw_set_debug_mode((dpu_rank_t *)"
+        + rank.GetValue()
+        + ", "
+        + str(debug_mode)
+        + ")")
+
+def get_dpu_from_command(command, debugger, target):
+    dpu_addr = 0
+    try:
+        dpu_addr = int(command, 16)
+    except:
+        print("Interpreting command: '" + command + "'")
+        return_obj = lldb.SBCommandReturnObject()
+        debugger.GetCommandInterpreter().HandleCommand("p " + command,
+                                                       return_obj)
+        if return_obj.GetStatus() != lldb.eReturnStatusSuccessFinishResult:
+            print("Could not interpret command '" + command + "'")
+            sys.exit(1)
+        dpu_addr = int(re.search('dpu_t \*.*= (.+)', return_obj.GetOutput())
+                       .group(1),16)
+    print("Attaching to dpu: '" + hex(dpu_addr) + "'")
+    return target.CreateValueFromExpression(
+        "dpu_to_attach","(struct dpu_t *)" + str(dpu_addr))
+
 
 def dpu_attach(debugger, command, result, internal_dict):
     '''
-    usage: dpu_attach <struct dpu_t *var>
+    usage: dpu_attach <struct dpu_t *>
     '''
     target = debugger.GetSelectedTarget()
-    dpu = target.GetProcess().GetSelectedThread().GetSelectedFrame() \
-        .FindVariable(command)
+    dpu = get_dpu_from_command(command, debugger, target)
     assert dpu.IsValid()
 
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
 
     rank = dpu.GetChildMemberWithName("rank")
+    assert rank.IsValid()
     slice_info = rank.GetChildMemberWithName("runtime") \
         .GetChildMemberWithName("control_interface") \
         .GetChildMemberWithName("slice_info").GetChildAtIndex(slice_id)
+    assert slice_info.IsValid()
     slice_target = slice_info.GetChildMemberWithName("slice_target")
+    assert slice_target.IsValid()
 
     structure_value = slice_info.GetChildMemberWithName("structure_value") \
         .GetValueAsUnsigned()
@@ -49,6 +78,8 @@ def dpu_attach(debugger, command, result, internal_dict):
                   str(dpu.GetChildMemberWithName("runtime_context")
                       .GetChildMemberWithName("program_path"))).group(1)
 
+    set_debug_mode(debugger, rank, 1)
+
     lldb_server_dpu_env = os.environ.copy()
     lldb_server_dpu_env["UPMEM_LLDB_STRUCTURE_VALUE"] = str(structure_value)
     lldb_server_dpu_env["UPMEM_LLDB_SLICE_TARGET"] = str(slice_target)
@@ -62,7 +93,7 @@ def dpu_attach(debugger, command, result, internal_dict):
     target_dpu = \
         debugger.CreateTargetWithFileAndTargetTriple(program_path,
                                                      "dpu-upmem-dpurte")
-    assert dpu.IsValid()
+    assert target_dpu.IsValid()
 
     listener = debugger.GetListener()
     error = lldb.SBError()
@@ -71,5 +102,8 @@ def dpu_attach(debugger, command, result, internal_dict):
                                            "gdb-remote",
                                            error)
     assert process_dpu.IsValid()
+
+    debugger.SetSelectedTarget(target)
+    set_debug_mode(debugger, rank, 0)
 
     debugger.SetSelectedTarget(target_dpu)
