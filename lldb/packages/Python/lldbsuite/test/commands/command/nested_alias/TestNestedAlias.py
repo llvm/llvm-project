@@ -88,3 +88,12 @@ class NestedAliasTestCase(TestBase):
                 'Show variables for the current',
                 'stack frame.'],
             matching=True)
+
+        # Check that foself was resolved and is now independent of 'fo'.
+        self.runCmd('command unalias fo')
+        self.expect(
+            'help foself',
+            substrs=[
+                'Show variables for the current',
+                'stack frame.'],
+            matching=True)
