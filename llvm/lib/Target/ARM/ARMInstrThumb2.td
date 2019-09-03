@@ -5257,6 +5257,25 @@ def t2CSINC : CS<"csinc", 0b1001>;
 def t2CSINV : CS<"csinv", 0b1010>;
 def t2CSNEG : CS<"csneg", 0b1011>;
 
+let Predicates = [HasV8_1MMainline] in {
+  def : T2Pat<(ARMcsinc GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
+              (t2CSINC GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
+  def : T2Pat<(ARMcsinv GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
+              (t2CSINV GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
+  def : T2Pat<(ARMcsneg GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
+              (t2CSNEG GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
+
+  multiclass ModifiedV8_1CSEL<Instruction Insn, dag modvalue> {
+    def : T2Pat<(ARMcmov modvalue, GPRwithZR:$tval, cmovpred:$imm),
+                (Insn GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
+    def : T2Pat<(ARMcmov GPRwithZR:$tval, modvalue, cmovpred:$imm),
+                (Insn GPRwithZR:$tval, GPRwithZR:$fval,
+                         (i32 (inv_cond_XFORM imm:$imm)))>;
+  }
+  defm : ModifiedV8_1CSEL<t2CSINC, (add rGPR:$fval, 1)>;
+  defm : ModifiedV8_1CSEL<t2CSINV, (xor rGPR:$fval, -1)>;
+  defm : ModifiedV8_1CSEL<t2CSNEG, (sub 0, rGPR:$fval)>;
+}
 
 // CS aliases.
 let Predicates = [HasV8_1MMainline] in {

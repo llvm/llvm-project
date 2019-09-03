@@ -710,39 +710,6 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
       std::move(VFS), Inputs.Index, Inputs.Opts);
 }
 
-SourceLocation getBeginningOfIdentifier(const ParsedAST &Unit,
-                                        const Position &Pos, const FileID FID) {
-  const ASTContext &AST = Unit.getASTContext();
-  const SourceManager &SourceMgr = AST.getSourceManager();
-  auto Offset = positionToOffset(SourceMgr.getBufferData(FID), Pos);
-  if (!Offset) {
-    log("getBeginningOfIdentifier: {0}", Offset.takeError());
-    return SourceLocation();
-  }
-
-  // GetBeginningOfToken(pos) is almost what we want, but does the wrong thing
-  // if the cursor is at the end of the identifier.
-  // Instead, we lex at GetBeginningOfToken(pos - 1). The cases are:
-  //  1) at the beginning of an identifier, we'll be looking at something
-  //  that isn't an identifier.
-  //  2) at the middle or end of an identifier, we get the identifier.
-  //  3) anywhere outside an identifier, we'll get some non-identifier thing.
-  // We can't actually distinguish cases 1 and 3, but returning the original
-  // location is correct for both!
-  SourceLocation InputLoc = SourceMgr.getComposedLoc(FID, *Offset);
-  if (*Offset == 0) // Case 1 or 3.
-    return SourceMgr.getMacroArgExpandedLocation(InputLoc);
-  SourceLocation Before = SourceMgr.getComposedLoc(FID, *Offset - 1);
-
-  Before = Lexer::GetBeginningOfToken(Before, SourceMgr, AST.getLangOpts());
-  Token Tok;
-  if (Before.isValid() &&
-      !Lexer::getRawToken(Before, Tok, SourceMgr, AST.getLangOpts(), false) &&
-      Tok.is(tok::raw_identifier))
-    return SourceMgr.getMacroArgExpandedLocation(Before); // Case 2.
-  return SourceMgr.getMacroArgExpandedLocation(InputLoc); // Case 1 or 3.
-}
-
 } // namespace clangd
 namespace tidy {
 // Force the linker to link in Clang-tidy modules.

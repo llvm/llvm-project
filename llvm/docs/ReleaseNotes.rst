@@ -50,10 +50,6 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
-* The Loop Idiom Recognition (``-loop-idiom``) pass has learned to recognize
-  ``bcmp`` pattern, and convert it into a call to ``bcmp`` (or ``memcmp``)
-  function.
-
 Changes to the LLVM IR
 ----------------------
 

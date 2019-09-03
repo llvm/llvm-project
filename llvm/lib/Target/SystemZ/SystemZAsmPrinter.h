@@ -46,6 +46,7 @@ public:
   }
 
 private:
+  void LowerFENTRY_CALL(const MachineInstr &MI, SystemZMCInstLower &MCIL);
   void LowerSTACKMAP(const MachineInstr &MI);
   void LowerPATCHPOINT(const MachineInstr &MI, SystemZMCInstLower &Lower);
 };

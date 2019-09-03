@@ -187,11 +187,6 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
          const ParseInputs &Inputs,
          std::shared_ptr<const PreambleData> Preamble);
 
-/// Get the beginning SourceLocation at a specified \p Pos.
-/// May be invalid if Pos is, or if there's no identifier.
-SourceLocation getBeginningOfIdentifier(const ParsedAST &Unit,
-                                        const Position &Pos, const FileID FID);
-
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.
 void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS);

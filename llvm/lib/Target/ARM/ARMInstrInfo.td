@@ -116,6 +116,16 @@ def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
 def ARMSmlsldx       : SDNode<"ARMISD::SMLSLDX", SDT_LongMac>;
 
+def SDT_ARMCSel      : SDTypeProfile<1, 3,
+                                   [SDTCisSameAs<0, 1>,
+                                    SDTCisSameAs<0, 2>,
+                                    SDTCisInt<3>,
+                                    SDTCisVT<3, i32>]>;
+
+def ARMcsinv         : SDNode<"ARMISD::CSINV", SDT_ARMCSel, [SDNPOptInGlue]>;
+def ARMcsneg         : SDNode<"ARMISD::CSNEG", SDT_ARMCSel, [SDNPOptInGlue]>;
+def ARMcsinc         : SDNode<"ARMISD::CSINC", SDT_ARMCSel, [SDNPOptInGlue]>;
+
 def SDT_MulHSR       : SDTypeProfile<1, 3, [SDTCisVT<0,i32>,
                                             SDTCisSameAs<0, 1>,
                                             SDTCisSameAs<0, 2>,

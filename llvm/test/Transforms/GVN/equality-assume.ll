@@ -27,6 +27,58 @@ define i32 @reverse(i32* %p, i32 %v) {
   ret i32 %v
 }
 
+define float @float_oeq(float* %p, float %v) {
+; CHECK-LABEL: @float_oeq(
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[LOAD]], [[V:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, float* %p
+  %c = fcmp oeq float %load, %v
+  call void @llvm.assume(i1 %c)
+  ret float %load
+}
+
+define float @float_ueq(float* %p, float %v) {
+; CHECK-LABEL: @float_ueq(
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp ueq float [[LOAD]], [[V:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, float* %p
+  %c = fcmp ueq float %load, %v
+  call void @llvm.assume(i1 %c)
+  ret float %load
+}
+
+define float @float_oeq_constant(float* %p) {
+; CHECK-LABEL: @float_oeq_constant(
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[LOAD]], 5.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret float 5.000000e+00
+;
+  %load = load float, float* %p
+  %c = fcmp oeq float %load, 5.0
+  call void @llvm.assume(i1 %c)
+  ret float %load
+}
+
+define float @float_ueq_constant(float* %p) {
+; CHECK-LABEL: @float_ueq_constant(
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp ueq float [[LOAD]], 5.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, float* %p
+  %c = fcmp ueq float %load, 5.0
+  call void @llvm.assume(i1 %c)
+  ret float %load
+}
+
 define i32 @test2(i32* %p, i32 %v) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P:%.*]]
@@ -40,6 +92,8 @@ define i32 @test2(i32* %p, i32 %v) {
   %load2 = load i32, i32* %p
   ret i32 %load2
 }
+
+
 
 define i32 @test3(i32* %p, i32 %v) {
 ; CHECK-LABEL: @test3(
@@ -62,5 +116,39 @@ merge:
   ret i32 %load
 }
 
+define i32 @trivial_constants(i32* %p) {
+; CHECK-LABEL: @trivial_constants(
+; CHECK-NEXT:    br i1 undef, label [[TAKEN:%.*]], label [[MERGE:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    ret i32 0
+;
+  %c = icmp eq i32 0, 0
+  call void @llvm.assume(i1 %c)
+  br i1 undef, label %taken, label %merge
+taken:
+  br label %merge
+merge:
+  ret i32 0
+}
+
+define i32 @conflicting_constants(i32* %p) {
+; CHECK-LABEL: @conflicting_constants(
+; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    br i1 undef, label [[TAKEN:%.*]], label [[MERGE:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    ret i32 1
+;
+  %c = icmp eq i32 0, 5
+  call void @llvm.assume(i1 %c)
+  br i1 undef, label %taken, label %merge
+taken:
+  br label %merge
+merge:
+  ret i32 1
+}
 
 declare void @llvm.assume(i1)

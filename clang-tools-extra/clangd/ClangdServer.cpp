@@ -315,7 +315,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
       return CB(Changes.takeError());
     }
     SourceLocation Loc = getBeginningOfIdentifier(
-        AST, Pos, AST.getSourceManager().getMainFileID());
+        Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
     if (auto Range = getTokenRange(AST.getSourceManager(),
                                    AST.getASTContext().getLangOpts(), Loc))
       return CB(*Range);

@@ -240,6 +240,11 @@ class VectorType;
       // instructions.
       MEMCPY,
 
+      // V8.1MMainline condition select
+      CSINV, // Conditional select invert.
+      CSNEG, // Conditional select negate.
+      CSINC, // Conditional select increment.
+
       // Vector load N-element structure to all lanes:
       VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
       VLD2DUP,
