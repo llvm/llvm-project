@@ -196,7 +196,7 @@ NonNullParamChecker::genReportNullAttrNonNull(const ExplodedNode *ErrorNode,
      << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
      << " parameter expecting 'nonnull'";
 
-  auto R = llvm::make_unique<BugReport>(*BTAttrNonNull, SBuf, ErrorNode);
+  auto R = std::make_unique<BugReport>(*BTAttrNonNull, SBuf, ErrorNode);
   if (ArgE)
     bugreporter::trackExpressionValue(ErrorNode, ArgE, *R);
 
