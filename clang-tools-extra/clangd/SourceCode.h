@@ -75,6 +75,13 @@ llvm::Optional<Range> getTokenRange(const SourceManager &SM,
 llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P);
 
+/// Get the beginning SourceLocation at a specified \p Pos in the main file.
+/// May be invalid if Pos is, or if there's no identifier.
+/// FIXME: this returns the macro-expansion location, but it shouldn't.
+SourceLocation getBeginningOfIdentifier(const Position &Pos,
+                                        const SourceManager &SM,
+                                        const LangOptions &LangOpts);
+
 /// Returns true iff \p Loc is inside the main file. This function handles
 /// file & macro locations. For macro locations, returns iff the macro is being
 /// expanded inside the main file.

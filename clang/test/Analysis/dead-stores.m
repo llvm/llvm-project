@@ -1,5 +1,4 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-checker=deadcode.DeadStores,osx.cocoa.RetainCount -fblocks -verify -Wno-objc-root-class %s
-// expected-no-diagnostics
 
 typedef signed char BOOL;
 typedef unsigned int NSUInteger;
@@ -72,7 +71,8 @@ void foo_rdar8527823();
 
 @implementation Rdar7947686_B
 - (id) init {
-  id x = (self = [super init]); // no-warning
+  id x = (self = [super init]);
+  // expected-warning@-1 {{Although the value stored to 'self'}}
   return x;
 }
 @end

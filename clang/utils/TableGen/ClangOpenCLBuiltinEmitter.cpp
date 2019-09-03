@@ -473,7 +473,7 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
            << T->getValueAsDef("QTName")->getValueAsString("Name") << ", ";
       }
     }
-    OS << "});\n;";
+    OS << "});\n";
     // GenTypeNumTypes is the number of types in the GenType
     // (e.g. float/double/half).
     OS << "      GenTypeNumTypes = "

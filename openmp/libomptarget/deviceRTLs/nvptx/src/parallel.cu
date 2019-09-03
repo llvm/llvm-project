@@ -53,7 +53,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
   uint32_t WorkRemaining = ConvergentMask >> (*LaneSource + 1);
   *LaneSource += __kmpc_impl_ffs(WorkRemaining);
   *IsFinal = __kmpc_impl_popc(WorkRemaining) == 1;
-  uint32_t lanemask_lt = __kmpc_impl_lanemask_lt();
+  __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
   *LaneId = __kmpc_impl_popc(ConvergentMask & lanemask_lt);
 
   int threadId = GetLogicalThreadIdInBlock(isSPMDMode());
@@ -126,7 +126,7 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
   uint32_t WorkRemaining = ConvergentMask >> (*LaneSource + 1);
   *LaneSource += __kmpc_impl_ffs(WorkRemaining);
   *IsFinal = __kmpc_impl_popc(WorkRemaining) == 1;
-  uint32_t lanemask_lt = __kmpc_impl_lanemask_lt();
+  __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
   uint32_t OmpId = __kmpc_impl_popc(ConvergentMask & lanemask_lt);
 
   int threadId = GetLogicalThreadIdInBlock(isSPMDMode());

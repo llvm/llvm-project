@@ -142,7 +142,7 @@ EXTERN void __kmpc_flush(kmp_Ident *loc) {
 
 EXTERN int32_t __kmpc_warp_active_thread_mask() {
   PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask\n");
-  return __ACTIVEMASK();
+  return __kmpc_impl_activemask();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

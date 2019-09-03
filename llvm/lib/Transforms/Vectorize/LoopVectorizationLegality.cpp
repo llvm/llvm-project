@@ -595,6 +595,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // Unsafe cyclic dependencies with header phis are identified during
           // legalization for reduction, induction and first order
           // recurrences.
+          AllowedExit.insert(&I);
           continue;
         }
 

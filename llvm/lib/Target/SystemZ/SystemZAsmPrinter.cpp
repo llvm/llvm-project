@@ -501,6 +501,10 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
     break;
 
+  case TargetOpcode::FENTRY_CALL:
+    LowerFENTRY_CALL(*MI, Lower);
+    return;
+
   case TargetOpcode::STACKMAP:
     LowerSTACKMAP(*MI);
     return;
@@ -544,6 +548,16 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
     OutStreamer.EmitLabel(DotSym);
     return 6;
   }
+}
+
+void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
+                                         SystemZMCInstLower &Lower) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
+  const MCSymbolRefExpr *Op =
+      MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_PLT, Ctx);
+  OutStreamer->EmitInstruction(MCInstBuilder(SystemZ::BRASL)
+                       .addReg(SystemZ::R0D).addExpr(Op), getSubtargetInfo());
 }
 
 void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {

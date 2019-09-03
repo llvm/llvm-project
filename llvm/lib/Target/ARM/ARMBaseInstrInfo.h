@@ -621,6 +621,20 @@ void addPredicatedMveVpredNOp(MachineInstrBuilder &MIB, unsigned Cond);
 void addPredicatedMveVpredROp(MachineInstrBuilder &MIB, unsigned Cond,
                               unsigned Inactive);
 
+/// Returns the number of instructions required to materialize the given
+/// constant in a register, or 3 if a literal pool load is needed.
+/// If ForCodesize is specified, an approximate cost in bytes is returned.
+unsigned ConstantMaterializationCost(unsigned Val,
+                                     const ARMSubtarget *Subtarget,
+                                     bool ForCodesize = false);
+
+/// Returns true if Val1 has a lower Constant Materialization Cost than Val2.
+/// Uses the cost from ConstantMaterializationCost, first with ForCodesize as
+/// specified. If the scores are equal, return the comparison for !ForCodesize.
+bool HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
+                                         const ARMSubtarget *Subtarget,
+                                         bool ForCodesize = false);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H

@@ -6,9 +6,6 @@ class ReproducerTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @no_debug_info_test
     def test_reproducer_generate_invalid_invocation(self):
         self.expect("reproducer generate f", error=True,

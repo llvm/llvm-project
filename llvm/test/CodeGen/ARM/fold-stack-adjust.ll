@@ -42,6 +42,19 @@ define void @check_simple() minsize {
   ret void
 }
 
+define i32 @check_simple_ret() minsize {
+; CHECK-FNSTART-LABEL: check_simple_ret:
+; CHECK: push {r5, r6, r7, lr}
+; CHECK-NOT: sub sp,
+; ...
+; CHECK-NOT: add sp,
+; CHECK: pop {r2, r3, r7, pc}
+
+  %var = alloca i8, i32 8
+  call void @bar(i8* %var)
+  ret i32 0
+}
+
 define void @check_simple_too_big() minsize {
 ; CHECK-FNSTART-LABEL: check_simple_too_big:
 ; CHECK: push {r7, lr}
