@@ -274,14 +274,29 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ; X86-NOSSE-NEXT:    .cfi_adjust_cfa_offset -56
 ; X86-NOSSE-NEXT:    retl
 ;
-; X64-LABEL: store_fp128:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __sync_lock_test_and_set_16
-; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    retq
+; X64-SSE-LABEL: store_fp128:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    subq $24, %rsp
+; X64-SSE-NEXT:    .cfi_def_cfa_offset 32
+; X64-SSE-NEXT:    movaps %xmm0, (%rsp)
+; X64-SSE-NEXT:    movq (%rsp), %rsi
+; X64-SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; X64-SSE-NEXT:    callq __sync_lock_test_and_set_16
+; X64-SSE-NEXT:    addq $24, %rsp
+; X64-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: store_fp128:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    subq $24, %rsp
+; X64-AVX-NEXT:    .cfi_def_cfa_offset 32
+; X64-AVX-NEXT:    vmovaps %xmm0, (%rsp)
+; X64-AVX-NEXT:    movq (%rsp), %rsi
+; X64-AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; X64-AVX-NEXT:    callq __sync_lock_test_and_set_16
+; X64-AVX-NEXT:    addq $24, %rsp
+; X64-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-NEXT:    retq
   store atomic fp128 %v, fp128* %fptr unordered, align 16
   ret void
 }
@@ -636,18 +651,37 @@ define fp128 @load_fp128(fp128* %fptr) {
 ; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOSSE-NEXT:    retl $4
 ;
-; X64-LABEL: load_fp128:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    xorl %r8d, %r8d
-; X64-NEXT:    callq __sync_val_compare_and_swap_16
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    retq
+; X64-SSE-LABEL: load_fp128:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    subq $24, %rsp
+; X64-SSE-NEXT:    .cfi_def_cfa_offset 32
+; X64-SSE-NEXT:    xorl %esi, %esi
+; X64-SSE-NEXT:    xorl %edx, %edx
+; X64-SSE-NEXT:    xorl %ecx, %ecx
+; X64-SSE-NEXT:    xorl %r8d, %r8d
+; X64-SSE-NEXT:    callq __sync_val_compare_and_swap_16
+; X64-SSE-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; X64-SSE-NEXT:    movq %rax, (%rsp)
+; X64-SSE-NEXT:    movaps (%rsp), %xmm0
+; X64-SSE-NEXT:    addq $24, %rsp
+; X64-SSE-NEXT:    .cfi_def_cfa_offset 8
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: load_fp128:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    subq $24, %rsp
+; X64-AVX-NEXT:    .cfi_def_cfa_offset 32
+; X64-AVX-NEXT:    xorl %esi, %esi
+; X64-AVX-NEXT:    xorl %edx, %edx
+; X64-AVX-NEXT:    xorl %ecx, %ecx
+; X64-AVX-NEXT:    xorl %r8d, %r8d
+; X64-AVX-NEXT:    callq __sync_val_compare_and_swap_16
+; X64-AVX-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    movq %rax, (%rsp)
+; X64-AVX-NEXT:    vmovaps (%rsp), %xmm0
+; X64-AVX-NEXT:    addq $24, %rsp
+; X64-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-NEXT:    retq
   %v = load atomic fp128, fp128* %fptr unordered, align 16
   ret fp128 %v
 }

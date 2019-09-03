@@ -221,14 +221,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::UINT_TO_FP       , MVT::i8   , Promote);
   setOperationAction(ISD::UINT_TO_FP       , MVT::i16  , Promote);
 
-  if (Subtarget.is64Bit()) {
-    if (!Subtarget.useSoftFloat() && Subtarget.hasAVX512())
-      // f32/f64 are legal, f80 is custom.
-      setOperationAction(ISD::UINT_TO_FP   , MVT::i32  , Custom);
-    else
-      setOperationAction(ISD::UINT_TO_FP   , MVT::i32  , Promote);
-    setOperationAction(ISD::UINT_TO_FP     , MVT::i64  , Custom);
-  } else if (!Subtarget.useSoftFloat()) {
+  if (!Subtarget.useSoftFloat()) {
     // We have an algorithm for SSE2->double, and we turn this into a
     // 64-bit FILD followed by conditional FADD for other targets.
     setOperationAction(ISD::UINT_TO_FP     , MVT::i64  , Custom);
@@ -645,9 +638,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FMA, MVT::f64, Expand);
   setOperationAction(ISD::FMA, MVT::f32, Expand);
 
-  // Long double always uses X87, except f128 in MMX.
+  // Long double always uses X87, except f128 in SSE.
   if (UseX87) {
-    if (Subtarget.is64Bit() && Subtarget.hasMMX()) {
+    if (Subtarget.is64Bit() && Subtarget.hasSSE1()) {
       addRegisterClass(MVT::f128, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                      : &X86::VR128RegClass);
       ValueTypeActions.setTypeAction(MVT::f128, TypeSoftenFloat);
@@ -18655,6 +18648,12 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     // Conversions from unsigned i32 to f32/f64 are legal,
     // using VCVTUSI2SS/SD.  Same for i64 in 64-bit mode.
     return Op;
+  }
+
+  // Promote i32 to i64 and use a signed conversion on 64-bit targets.
+  if (SrcVT == MVT::i32 && Subtarget.is64Bit()) {
+    N0 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
+    return DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, N0);
   }
 
   if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, DAG, Subtarget))
