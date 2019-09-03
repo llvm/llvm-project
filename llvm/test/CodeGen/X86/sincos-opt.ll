@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
 ; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS
 ; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
+; RUN: llc < %s -mtriple=x86_64-scei-ps4 -mcpu=btver2 | FileCheck %s --check-prefix=PS4_SINCOS
 
 ; Combine sin / cos into a single call unless they may write errno (as
 ; captured by readnone attrbiute, controlled by clang -fmath-errno
@@ -32,6 +33,11 @@ entry:
 ; OSX_NOOPT-LABEL: test1:
 ; OSX_NOOPT: callq _sinf
 ; OSX_NOOPT: callq _cosf
+
+; PS4_SINCOS-LABEL: test1:
+; PS4_SINCOS: callq sincosf
+; PS4_SINCOS: vmovss 4(%rsp), %xmm0
+; PS4_SINCOS: vaddss (%rsp), %xmm0, %xmm0
   %call = tail call float @sinf(float %x) readnone
   %call1 = tail call float @cosf(float %x) readnone
   %add = fadd float %call, %call1
@@ -55,6 +61,10 @@ entry:
 ; OSX_NOOPT-LABEL: test1_errno:
 ; OSX_NOOPT: callq _sinf
 ; OSX_NOOPT: callq _cosf
+
+; PS4_SINCOS-LABEL: test1_errno:
+; PS4_SINCOS: callq sinf
+; PS4_SINCOS: callq cosf
   %call = tail call float @sinf(float %x)
   %call1 = tail call float @cosf(float %x)
   %add = fadd float %call, %call1
@@ -80,6 +90,11 @@ entry:
 ; OSX_NOOPT-LABEL: test2:
 ; OSX_NOOPT: callq _sin
 ; OSX_NOOPT: callq _cos
+
+; PS4_SINCOS-LABEL: test2:
+; PS4_SINCOS: callq sincos
+; PS4_SINCOS: vmovsd 16(%rsp), %xmm0
+; PS4_SINCOS: vaddsd 8(%rsp), %xmm0, %xmm0
   %call = tail call double @sin(double %x) readnone
   %call1 = tail call double @cos(double %x) readnone
   %add = fadd double %call, %call1
@@ -103,6 +118,10 @@ entry:
 ; OSX_NOOPT-LABEL: test2_errno:
 ; OSX_NOOPT: callq _sin
 ; OSX_NOOPT: callq _cos
+
+; PS4_SINCOS-LABEL: test2_errno:
+; PS4_SINCOS: callq sin
+; PS4_SINCOS: callq cos
   %call = tail call double @sin(double %x)
   %call1 = tail call double @cos(double %x)
   %add = fadd double %call, %call1
@@ -122,6 +141,10 @@ entry:
 ; GNU_SINCOS_FASTMATH: fldt 16(%{{[re]}}sp)
 ; GNU_SINCOS_FASTMATH: fldt 32(%{{[re]}}sp)
 ; GNU_SINCOS_FASTMATH: faddp %st, %st(1)
+
+; PS4_SINCOS-LABEL: test3:
+; PS4_SINCOS: callq sinl
+; PS4_SINCOS: callq cosl
   %call = tail call x86_fp80 @sinl(x86_fp80 %x) readnone
   %call1 = tail call x86_fp80 @cosl(x86_fp80 %x) readnone
   %add = fadd x86_fp80 %call, %call1
@@ -137,6 +160,10 @@ entry:
 ; GNU_SINCOS_FASTMATH-LABEL: test3_errno:
 ; GNU_SINCOS_FASTMATH: callq sinl
 ; GNU_SINCOS_FASTMATH: callq cosl
+
+; PS4_SINCOS-LABEL: test3_errno:
+; PS4_SINCOS: callq sinl
+; PS4_SINCOS: callq cosl
   %call = tail call x86_fp80 @sinl(x86_fp80 %x)
   %call1 = tail call x86_fp80 @cosl(x86_fp80 %x)
   %add = fadd x86_fp80 %call, %call1

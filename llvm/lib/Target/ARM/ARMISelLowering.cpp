@@ -245,7 +245,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   const MVT IntTypes[] = { MVT::v16i8, MVT::v8i16, MVT::v4i32 };
 
   for (auto VT : IntTypes) {
-    addRegisterClass(VT, &ARM::QPRRegClass);
+    addRegisterClass(VT, &ARM::MQPRRegClass);
     setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -287,7 +287,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
 
   const MVT FloatTypes[] = { MVT::v8f16, MVT::v4f32 };
   for (auto VT : FloatTypes) {
-    addRegisterClass(VT, &ARM::QPRRegClass);
+    addRegisterClass(VT, &ARM::MQPRRegClass);
     if (!HasMVEFP)
       setAllExpand(VT);
 
@@ -334,7 +334,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   // vector types is inhibited at integer-only level.
   const MVT LongTypes[] = { MVT::v2i64, MVT::v2f64 };
   for (auto VT : LongTypes) {
-    addRegisterClass(VT, &ARM::QPRRegClass);
+    addRegisterClass(VT, &ARM::MQPRRegClass);
     setAllExpand(VT);
     setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);

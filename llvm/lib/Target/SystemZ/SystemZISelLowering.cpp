@@ -206,6 +206,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       // the default expansion.
       if (!Subtarget.hasFPExtension())
         setOperationAction(ISD::FP_TO_UINT, VT, Expand);
+
+      // Mirror those settings for STRICT_FP_TO_[SU]INT.  Note that these all
+      // default to Expand, so need to be modified to Legal where appropriate.
+      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Legal);
+      if (Subtarget.hasFPExtension())
+        setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Legal);
     }
   }
 
@@ -381,6 +387,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP, MVT::v2f64, Legal);
     setOperationAction(ISD::UINT_TO_FP, MVT::v2i64, Legal);
     setOperationAction(ISD::UINT_TO_FP, MVT::v2f64, Legal);
+
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2i64, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2f64, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2i64, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2f64, Legal);
   }
 
   if (Subtarget.hasVectorEnhancements2()) {
@@ -392,6 +403,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP, MVT::v4f32, Legal);
     setOperationAction(ISD::UINT_TO_FP, MVT::v4i32, Legal);
     setOperationAction(ISD::UINT_TO_FP, MVT::v4f32, Legal);
+
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v4f32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v4f32, Legal);
   }
 
   // Handle floating-point types.

@@ -1360,3 +1360,34 @@ using VariadicFnType2 = void (*)(int a, ...);
  */
 class EmptyNoteNoCrash {
 };
+
+namespace PR42844 { // Assertion failures when using typedefed function pointers
+typedef void (*AA)();
+typedef AA A();
+A *a; ///< \return none
+// expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
+
+typedef void B();
+B *b; ///< \return none
+// expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
+
+void CC();
+typedef void C();
+C &c = CC; ///< \return none
+// expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
+
+using DD = void(*)();
+using D = DD();
+D *d; ///< \return none
+// expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
+
+using E = void();
+E *e; ///< \return none
+// expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
+
+void FF();
+using F = void();
+F &f = FF; ///< \return none
+// expected-warning@-1 {{'\return' command used in a comment that is not attached to a function or method declaration}}
+
+} // namespace PR42844

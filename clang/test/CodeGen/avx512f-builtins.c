@@ -8575,6 +8575,12 @@ void test_mm512_stream_si512(__m512i * __P, __m512i __A) {
   _mm512_stream_si512(__P, __A); 
 }
 
+void test_mm512_stream_si512_2(void * __P, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_stream_si512
+  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  _mm512_stream_si512(__P, __A); 
+}
+
 __m512i test_mm512_stream_load_si512(void *__P) {
   // CHECK-LABEL: @test_mm512_stream_load_si512
   // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal
@@ -8593,12 +8599,23 @@ void test_mm512_stream_pd(double *__P, __m512d __A) {
   return _mm512_stream_pd(__P, __A); 
 }
 
+void test_mm512_stream_pd_2(void *__P, __m512d __A) {
+  // CHECK-LABEL: @test_mm512_stream_pd
+  // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal
+  return _mm512_stream_pd(__P, __A); 
+}
+
 void test_mm512_stream_ps(float *__P, __m512 __A) {
   // CHECK-LABEL: @test_mm512_stream_ps
   // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal
   _mm512_stream_ps(__P, __A); 
 }
 
+void test_mm512_stream_ps_2(void *__P, __m512 __A) {
+  // CHECK-LABEL: @test_mm512_stream_ps
+  // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal
+  _mm512_stream_ps(__P, __A); 
+}
 __m512d test_mm512_mask_compress_pd(__m512d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_compress_pd
   // CHECK: @llvm.x86.avx512.mask.compress
