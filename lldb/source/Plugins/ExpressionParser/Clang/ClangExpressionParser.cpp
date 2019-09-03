@@ -830,24 +830,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   clang::SourceManager &source_mgr = m_compiler->getSourceManager();
   bool created_main_file = false;
-  /* Swift only */
-  if (m_expr.GetOptions() &&
-      m_expr.GetOptions()->GetPoundLineFilePath() == NULL &&
-      m_compiler->getCodeGenOpts().getDebugInfo() ==
-          codegenoptions::FullDebugInfo) {
-    std::string temp_source_path;
-    if (ExpressionSourceCode::SaveExpressionTextToTempFile(
-            expr_text, *m_expr.GetOptions(), temp_source_path)) {
-      auto file = m_compiler->getFileManager().getFile(temp_source_path);
-      if (file) {
-        source_mgr.setMainFileID(
-            source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
-        created_main_file = true;
-      }
-    }
-  }
-  /* end swift only */
-
   // Clang wants to do completion on a real file known by Clang's file manager,
   // so we have to create one to make this work.
   // TODO: We probably could also simulate to Clang's file manager that there
