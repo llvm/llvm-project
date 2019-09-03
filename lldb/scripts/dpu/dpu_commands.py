@@ -120,7 +120,7 @@ def dpu_attach(debugger, command, result, internal_dict):
 
     region_id, rank_id = get_region_id_and_rank_id(rank, target)
     if region_id == -1 or rank_id == -1:
-        print("Could not attach to simulator (fpga only)")
+        print("Could not attach to simulator (hardware only)")
         sys.exit(1)
 
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
