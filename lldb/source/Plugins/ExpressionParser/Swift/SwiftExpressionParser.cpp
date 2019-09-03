@@ -1272,7 +1272,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   while (!done) {
     // Note, we disable delayed parsing for the swift expression parser.
     swift::parseIntoSourceFile(*source_file, buffer_id, &done, nullptr,
-                               &persistent_state, nullptr,
+                               &persistent_state,
                                /*DelayBodyParsing=*/false);
 
     if (swift_ast_context->HasErrors())
