@@ -1,2 +1,3 @@
 script import dpu_commands
 command script add -f dpu_commands.dpu_attach dpu_attach
+command script add -f dpu_commands.dpu_list dpu_list
