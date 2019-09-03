@@ -123,7 +123,7 @@ __builtin_logger_initialize()
                       pound_file, pound_line, orig_text);
     text = fixed_text.GetString().data();
   } else if (generate_debug_info) {
-    if (ExpressionSourceCode::SaveExpressionTextToTempFile(orig_text, options,
+    if (SwiftASTManipulator::SaveExpressionTextToTempFile(orig_text, options,
                                                            expr_source_path)) {
       fixed_text.Printf("#sourceLocation(file: \"%s\", line: 1)\n%s\n",
                         expr_source_path.c_str(), orig_text);
@@ -1395,4 +1395,63 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   }
 
   return type_alias_decl;
+}
+
+bool SwiftASTManipulator::SaveExpressionTextToTempFile(
+    llvm::StringRef text, const EvaluateExpressionOptions &options,
+    std::string &expr_source_path) {
+  bool success = false;
+
+  const uint32_t expr_number = options.GetExpressionNumber();
+
+  const bool playground = options.GetPlaygroundTransformEnabled();
+  const bool repl = options.GetREPLEnabled();
+
+  llvm::StringRef file_prefix;
+  if (playground)
+    file_prefix = "playground";
+  else if (repl)
+    file_prefix = "repl";
+  else
+    file_prefix = "expr";
+
+  llvm::Twine prefix = llvm::Twine(file_prefix).concat(llvm::Twine(expr_number));
+
+  llvm::StringRef suffix;
+  switch (options.GetLanguage()) {
+  default:
+    suffix = ".cpp";
+    break;
+
+  case lldb::eLanguageTypeSwift:
+    suffix = ".swift";
+    break;
+  }
+
+  int temp_fd;
+  llvm::SmallString<128> buffer;
+  std::error_code err =
+      llvm::sys::fs::createTemporaryFile(prefix, suffix, temp_fd, buffer);
+  if (!err) {
+    lldb_private::File file(temp_fd, true);
+    const size_t text_len = text.size();
+    size_t bytes_written = text_len;
+    if (file.Write(text.data(), bytes_written).Success()) {
+      if (bytes_written == text_len) {
+        // Make sure we have a newline in the file at the end
+        bytes_written = 1;
+        file.Write("\n", bytes_written);
+        if (bytes_written == 1)
+          success = true;
+      }
+    }
+    if (!success)
+      llvm::sys::fs::remove(expr_source_path);
+  }
+  if (!success)
+    expr_source_path.clear();
+  else
+    expr_source_path = buffer.str().str();
+
+  return success;
 }
