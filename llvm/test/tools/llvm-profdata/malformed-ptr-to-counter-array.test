@@ -1,0 +1,5 @@
+REQUIRES: zlib
+
+RUN: not llvm-profdata merge -o /dev/null %p/Inputs/malformed-ptr-to-counter-array.profraw 2>&1 | FileCheck %s
+
+CHECK: Malformed instrumentation profile data

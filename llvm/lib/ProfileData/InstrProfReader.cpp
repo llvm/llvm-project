@@ -413,13 +413,19 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   if (NumCounters == 0)
     return error(instrprof_error::malformed);
 
-  auto RawCounts = makeArrayRef(getCounter(CounterPtr), NumCounters);
   auto *NamesStartAsCounter = reinterpret_cast<const uint64_t *>(NamesStart);
+  ptrdiff_t MaxNumCounters = NamesStartAsCounter - CountersStart;
 
-  // Check bounds.
-  if (RawCounts.data() < CountersStart ||
-      RawCounts.data() + RawCounts.size() > NamesStartAsCounter)
+  // Check bounds. Note that the counter pointer embedded in the data record
+  // may itself be corrupt.
+  if (NumCounters > MaxNumCounters)
     return error(instrprof_error::malformed);
+  ptrdiff_t CounterOffset = getCounterOffset(CounterPtr);
+  if (CounterOffset < 0 || CounterOffset > MaxNumCounters ||
+      (CounterOffset + NumCounters) > MaxNumCounters)
+    return error(instrprof_error::malformed);
+
+  auto RawCounts = makeArrayRef(getCounter(CounterOffset), NumCounters);
 
   if (ShouldSwapBytes) {
     Record.Counts.clear();

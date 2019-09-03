@@ -268,8 +268,14 @@ private:
       return (const char *)ValueDataStart;
   }
 
-  const uint64_t *getCounter(IntPtrT CounterPtr) const {
-    ptrdiff_t Offset = (swap(CounterPtr) - CountersDelta) / sizeof(uint64_t);
+  /// Get the offset of \p CounterPtr from the start of the counters section of
+  /// the profile. The offset has units of "number of counters", i.e. increasing
+  /// the offset by 1 corresponds to an increase in the *byte offset* by 8.
+  ptrdiff_t getCounterOffset(IntPtrT CounterPtr) const {
+    return (swap(CounterPtr) - CountersDelta) / sizeof(uint64_t);
+  }
+
+  const uint64_t *getCounter(ptrdiff_t Offset) const {
     return CountersStart + Offset;
   }
 
