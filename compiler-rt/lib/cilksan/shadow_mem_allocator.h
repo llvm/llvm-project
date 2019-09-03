@@ -296,6 +296,18 @@ public:
       // Push Slab to the start of List.
       Slab->Back = nullptr;
       Slab->Head.setNext(List);
+      List->Back = Slab;
+      List = Slab;
+    } else if (List != Slab) {
+      // Remove Slab from its place in List.
+      Slab->Back->Head.setNext(Slab->Head.getNext());
+      if (Slab->Head.getNext())
+        Slab->Head.getNext()->Back = Slab->Back;
+
+      // Move Slab to the start of List.
+      Slab->Back = nullptr;
+      Slab->Head.setNext(List);
+      List->Back = Slab;
       List = Slab;
     }
 
@@ -347,8 +359,10 @@ public:
     if (Slab->isFull()) {
       if (!Slab->Head.getNext())
         List = new (aligned_alloc(SYS_PAGE_SIZE, sizeof(ST))) ST;
-      else
+      else {
+        Slab->Head.getNext()->Back = nullptr;
         List = Slab->Head.getNext();
+      }
       Slab->Head.setNext(Full);
       if (Full)
         Full->Back = Slab;
