@@ -48,6 +48,16 @@ INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
 #error CUDA_VERSION macro is undefined, something wrong with cuda.
 #endif
 
+// In Cuda 9.0, __ballot(1) from Cuda 8.0 is replaced with __activemask().
+
+INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
+#if CUDA_VERSION >= 9000
+  return __activemask();
+#else
+  return __ballot(1);
+#endif
+}
+
 // In Cuda 9.0, the *_sync() version takes an extra argument 'mask'.
 
 INLINE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
