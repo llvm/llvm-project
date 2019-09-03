@@ -91,6 +91,7 @@ class LogTestCase(TestBase):
         self.assertEquals(contents.find("bacon"), 0)
 
     # Enable all log options and check that nothing crashes.
+    @skipIfWindows
     def test_all_log_options(self):
         if (os.path.exists(self.log_file)):
             os.remove(self.log_file)
