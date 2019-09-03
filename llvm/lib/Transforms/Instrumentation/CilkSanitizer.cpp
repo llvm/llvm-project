@@ -301,14 +301,14 @@ struct CilkSanitizerImpl : public CSIImpl {
                     function_ref<RaceInfo &(Function &)> GetRaceInfo,
                     const TargetLibraryInfo *TLI, bool JitMode = false,
                     bool CallsMayThrow = !AssumeNoExceptions)
-      : CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI),
-        GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo),
-        GetRaceInfo(GetRaceInfo) {
+      : CSIImpl(M, CG, GetDomTree, GetLoopInfo, GetTaskInfo, TLI),
+        GetDepInfo(GetDepInfo), GetRaceInfo(GetRaceInfo) {
     // Even though we're doing our own instrumentation, we want the CSI setup
     // for the instrumentation of function entry/exit, memory accesses (i.e.,
     // loads and stores), atomics, memory intrinsics.  We also want call sites,
     // for extracting debug information.
     Options.InstrumentBasicBlocks = false;
+    Options.InstrumentLoops = false;
     // Cilksan defines its own hooks for instrumenting memory accesses, memory
     // intrinsics, and Tapir instructions, so we disable the default CSI
     // instrumentation hooks for these IR objects.
@@ -416,7 +416,6 @@ struct CilkSanitizerImpl : public CSIImpl {
 
 private:
   // Analysis results
-  function_ref<LoopInfo &(Function &)> GetLoopInfo;
   function_ref<DependenceInfo &(Function &)> GetDepInfo;
   function_ref<RaceInfo &(Function &)> GetRaceInfo;
 

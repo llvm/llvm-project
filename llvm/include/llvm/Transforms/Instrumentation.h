@@ -192,6 +192,7 @@ ModulePass *createCilkSanitizerLegacyPass(bool JitMode, bool CallsMayThrow);
 // Options for comprehensive static instrumentation
 struct CSIOptions {
   bool InstrumentFuncEntryExit = true;
+  bool InstrumentLoops = true;
   bool InstrumentBasicBlocks = true;
   bool InstrumentMemoryAccesses = true;
   bool InstrumentCalls = true;

@@ -20,7 +20,10 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -39,6 +42,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 
@@ -50,6 +54,9 @@ static cl::opt<bool>
     ClInstrumentFuncEntryExit("csi-instrument-func-entry-exit", cl::init(true),
                               cl::desc("Instrument function entry and exit"),
                               cl::Hidden);
+static cl::opt<bool>
+    ClInstrumentLoops("csi-instrument-loops", cl::init(true),
+                      cl::desc("Instrument loops"), cl::Hidden);
 static cl::opt<bool>
     ClInstrumentBasicBlocks("csi-instrument-basic-blocks", cl::init(true),
                             cl::desc("Instrument basic blocks"), cl::Hidden);
@@ -125,6 +132,7 @@ namespace {
 
 static CSIOptions OverrideFromCL(CSIOptions Options) {
   Options.InstrumentFuncEntryExit = ClInstrumentFuncEntryExit;
+  Options.InstrumentLoops = ClInstrumentLoops;
   Options.InstrumentBasicBlocks = ClInstrumentBasicBlocks;
   Options.InstrumentMemoryAccesses = ClInstrumentMemoryAccesses;
   Options.InstrumentCalls = ClInstrumentCalls;
@@ -514,6 +522,27 @@ void CSIImpl::initializeBasicBlockHooks() {
                                     IRB.getInt64Ty(), PropertyTy);
 }
 
+/// Loop hook initialization
+void CSIImpl::initializeLoopHooks() {
+  LLVMContext &C = M.getContext();
+  IRBuilder<> IRB(C);
+  Type *IDType = IRB.getInt64Ty();
+  Type *LoopPropertyTy = CsiLoopProperty::getType(C);
+  Type *LoopExitPropertyTy = CsiLoopExitProperty::getType(C);
+
+  CsiBeforeLoop = checkCsiInterfaceFunction(M.getOrInsertFunction(
+      "__csi_before_loop", IRB.getVoidTy(), IDType, IRB.getInt64Ty(),
+      LoopPropertyTy));
+  CsiAfterLoop = checkCsiInterfaceFunction(M.getOrInsertFunction(
+      "__csi_after_loop", IRB.getVoidTy(), IDType, LoopPropertyTy));
+
+  CsiLoopBodyEntry = checkCsiInterfaceFunction(M.getOrInsertFunction(
+      "__csi_loopbody_entry", IRB.getVoidTy(), IDType, LoopPropertyTy));
+  CsiLoopBodyExit = checkCsiInterfaceFunction(M.getOrInsertFunction(
+      "__csi_loopbody_exit", IRB.getVoidTy(), IDType, IDType,
+      LoopExitPropertyTy));
+}
+
 // Call-site hook initialization
 void CSIImpl::initializeCallsiteHooks() {
   LLVMContext &C = M.getContext();
@@ -862,6 +891,102 @@ void CSIImpl::instrumentBasicBlock(BasicBlock &BB) {
   insertHookCall(&*IRB.GetInsertPoint(), CsiBBEntry, {CsiId, PropVal});
   IRB.SetInsertPoint(TI);
   insertHookCall(TI, CsiBBExit, {CsiId, PropVal});
+}
+
+// Helper function to get a value for the runtime trip count of the given loop.
+static const SCEV *getRuntimeTripCount(Loop &L, ScalarEvolution *SE) {
+  BasicBlock *Latch = L.getLoopLatch();
+
+  const SCEV *BECountSC = SE->getExitCount(&L, Latch);
+  if (isa<SCEVCouldNotCompute>(BECountSC) ||
+      !BECountSC->getType()->isIntegerTy()) {
+    LLVM_DEBUG(dbgs() << "Could not compute exit block SCEV\n");
+    return SE->getCouldNotCompute();
+  }
+
+  // Add 1 since the backedge count doesn't include the first loop iteration.
+  const SCEV *TripCountSC =
+      SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
+  if (isa<SCEVCouldNotCompute>(TripCountSC)) {
+    LLVM_DEBUG(dbgs() << "Could not compute trip count SCEV.\n");
+    return SE->getCouldNotCompute();
+  }
+
+  return TripCountSC;
+}
+
+void CSIImpl::instrumentLoop(Loop &L, TaskInfo &TI, ScalarEvolution *SE) {
+  assert(L.isLoopSimplifyForm() && "CSI assumes loops are in simplified form.");
+  BasicBlock *Preheader = L.getLoopPreheader();
+  BasicBlock *Header = L.getHeader();
+  SmallVector<BasicBlock *, 4> ExitingBlocks, ExitBlocks;
+  L.getExitingBlocks(ExitingBlocks);
+  L.getUniqueExitBlocks(ExitBlocks);
+
+  // We assign a local ID for this loop here, so that IDs for loops follow a
+  // depth-first ordering.
+  csi_id_t LocalId = LoopFED.add(*Header);
+
+  // Recursively instrument each subloop.
+  for (Loop *SubL : L)
+    instrumentLoop(*SubL, TI, SE);
+
+  // Record properties of this loop.
+  CsiLoopProperty LoopProp;
+  LoopProp.setIsTapirLoop(static_cast<bool>(getTaskIfTapirLoop(&L, &TI)));
+  LoopProp.setHasUniqueExitingBlock((ExitingBlocks.size() == 1));
+
+  IRBuilder<> IRB(Preheader->getTerminator());
+  Value *LoopCsiId = LoopFED.localToGlobalId(LocalId, IRB);
+  Value *LoopPropVal = LoopProp.getValue(IRB);
+
+  // Try to evaluate the runtime trip count for this loop.  Default to a count
+  // of -1 for unknown trip counts.
+  Value *TripCount = IRB.getInt64(-1);
+  if (SE) {
+    const SCEV *TripCountSC = getRuntimeTripCount(L, SE);
+    if (!isa<SCEVCouldNotCompute>(TripCountSC)) {
+      // Extend the TripCount type if necessary.
+      if (TripCountSC->getType() != IRB.getInt64Ty())
+        TripCountSC = SE->getZeroExtendExpr(TripCountSC, IRB.getInt64Ty());
+      // Compute the trip count to pass to the CSI hook.
+      SCEVExpander Expander(*SE, DL, "csi");
+      TripCount = Expander.expandCodeFor(TripCountSC, IRB.getInt64Ty(),
+                                         &*IRB.GetInsertPoint());
+    }
+  }
+
+  // Insert before-loop hook.
+  insertHookCall(&*IRB.GetInsertPoint(), CsiBeforeLoop, {LoopCsiId, TripCount,
+                                                         LoopPropVal});
+
+  // Insert loop-body-entry hook.
+  IRB.SetInsertPoint(&*Header->getFirstInsertionPt());
+  // TODO: Pass IVs to hook?
+  insertHookCall(&*IRB.GetInsertPoint(), CsiLoopBodyEntry, {LoopCsiId,
+                                                            LoopPropVal});
+
+  // Insert hooks at the ends of the exiting blocks.
+  for (BasicBlock *BB : ExitingBlocks) {
+    // Record properties of this loop exit
+    CsiLoopExitProperty LoopExitProp;
+    LoopExitProp.setIsLatch(L.isLoopLatch(BB));
+
+    // Insert the loop-exit hook
+    IRB.SetInsertPoint(BB->getTerminator());
+    csi_id_t LocalExitId = LoopExitFED.add(*BB);
+    Value *ExitCsiId = LoopFED.localToGlobalId(LocalExitId, IRB);
+    Value *LoopExitPropVal = LoopExitProp.getValue(IRB);
+    // TODO: For latches, record whether the loop will repeat.
+    insertHookCall(&*IRB.GetInsertPoint(), CsiLoopBodyExit,
+                   {ExitCsiId, LoopCsiId, LoopExitPropVal});
+  }
+  // Insert after-loop hooks.
+  for (BasicBlock *BB : ExitBlocks) {
+    IRB.SetInsertPoint(&*BB->getFirstInsertionPt());
+    insertHookCall(&*IRB.GetInsertPoint(), CsiAfterLoop, {LoopCsiId,
+                                                          LoopPropVal});
+  }
 }
 
 void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
@@ -1512,6 +1637,10 @@ void CSIImpl::initializeFEDTables() {
   FunctionExitFED = FrontEndDataTable(M, CsiFunctionExitBaseIdName,
                                       "__csi_unit_fed_table_function_exit",
                                       "__csi_unit_function_name_");
+  LoopFED = FrontEndDataTable(M, CsiLoopBaseIdName,
+                              "__csi_unit_fed_table_loop");
+  LoopExitFED = FrontEndDataTable(M, CsiLoopExitBaseIdName,
+                                  "__csi_unit_fed_table_loop");
   BasicBlockFED = FrontEndDataTable(M, CsiBasicBlockBaseIdName,
                                     "__csi_unit_fed_table_basic_block");
   CallsiteFED = FrontEndDataTable(M, CsiCallsiteBaseIdName,
@@ -1584,6 +1713,8 @@ void CSIImpl::initializeCsi() {
     initializeFuncHooks();
   if (Options.InstrumentMemoryAccesses)
     initializeLoadStoreHooks();
+  if (Options.InstrumentLoops)
+    initializeLoopHooks();
   if (Options.InstrumentBasicBlocks)
     initializeBasicBlockHooks();
   if (Options.InstrumentCalls)
@@ -1645,6 +1776,10 @@ void CSIImpl::collectUnitFEDTables() {
       fedTableToUnitFedTable(M, UnitFedTableType, FunctionFED));
   UnitFedTables.push_back(
       fedTableToUnitFedTable(M, UnitFedTableType, FunctionExitFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, LoopFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, LoopExitFED));
   UnitFedTables.push_back(
       fedTableToUnitFedTable(M, UnitFedTableType, BasicBlockFED));
   UnitFedTables.push_back(
@@ -2011,6 +2146,12 @@ void CSIImpl::instrumentFunction(Function &F) {
 
   setupBlocks(F, TLI);
 
+  DominatorTree *DT = &GetDomTree(F);
+  LoopInfo &LI = GetLoopInfo(F);
+  if (Options.InstrumentLoops)
+    for (Loop *L : LI)
+      simplifyLoop(L, DT, &LI, nullptr, nullptr, /* PreserveLCSSA */false);
+
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
       LoadAndStoreProperties;
   SmallVector<Instruction *, 8> AllocationFnCalls;
@@ -2025,8 +2166,10 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<Instruction *, 8> AllCalls;
   bool MaySpawn = false;
 
-  DominatorTree *DT = &GetDomTree(F);
   TaskInfo &TI = GetTaskInfo(F);
+  ScalarEvolution *SE = nullptr;
+  if (GetScalarEvolution)
+    SE = &(*GetScalarEvolution)(F);
 
   // Compile lists of all instrumentation points before anything is modified.
   for (BasicBlock &BB : F) {
@@ -2094,6 +2237,11 @@ void CSIImpl::instrumentFunction(Function &F) {
         instrumentSync(SI, TrackVars);
     }
   }
+
+  if (Options.InstrumentLoops)
+    // Recursively instrument all loops
+    for (Loop *L : LI)
+      instrumentLoop(*L, TI, SE);
 
   // Do this work in a separate loop after copying the iterators so that we
   // aren't modifying the list as we're iterating.
@@ -2220,6 +2368,8 @@ void ComprehensiveStaticInstrumentationLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<CallGraphWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addRequired<TaskInfoWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
@@ -2234,11 +2384,18 @@ bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
   auto GetDomTree = [this](Function &F) -> DominatorTree & {
     return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   };
+  auto GetLoopInfo = [this](Function &F) -> LoopInfo & {
+    return this->getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  };
+  auto GetSE = [this](Function &F) -> ScalarEvolution & {
+    return this->getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
+  };
   auto GetTaskInfo = [this](Function &F) -> TaskInfo & {
     return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
   };
 
-  bool res = CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI, Options).run();
+  bool res = CSIImpl(M, CG, GetDomTree, GetLoopInfo, GetTaskInfo, TLI, GetSE,
+                     Options).run();
 
   verifyModule(M, &llvm::errs());
 
@@ -2260,12 +2417,18 @@ ComprehensiveStaticInstrumentationPass::run(Module &M,
   auto GetDT = [&FAM](Function &F) -> DominatorTree & {
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
+  auto GetLI = [&FAM](Function &F) -> LoopInfo & {
+    return FAM.getResult<LoopAnalysis>(F);
+  };
+  auto GetSE = [&FAM](Function &F) -> ScalarEvolution & {
+    return FAM.getResult<ScalarEvolutionAnalysis>(F);
+  };
   auto GetTI = [&FAM](Function &F) -> TaskInfo & {
     return FAM.getResult<TaskAnalysis>(F);
   };
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(M);
 
-  if (!CSIImpl(M, &CG, GetDT, GetTI, TLI, Options).run())
+  if (!CSIImpl(M, &CG, GetDT, GetLI, GetTI, TLI, GetSE, Options).run())
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

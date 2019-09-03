@@ -29,9 +29,11 @@
 
 namespace llvm {
 
+class LoopInfo;
 class Spindle;
 class Task;
 class TaskInfo;
+class ScalarEvolution;
 
 static const char *const CsiRtUnitInitName = "__csirt_unit_init";
 static const char *const CsiRtUnitCtorName = "csirt.unit_ctor";
@@ -39,6 +41,8 @@ static const char *const CsiFunctionBaseIdName = "__csi_unit_func_base_id";
 static const char *const CsiFunctionExitBaseIdName =
     "__csi_unit_func_exit_base_id";
 static const char *const CsiBasicBlockBaseIdName = "__csi_unit_bb_base_id";
+static const char *const CsiLoopBaseIdName = "__csi_unit_loop_base_id";
+static const char *const CsiLoopExitBaseIdName = "__csi_unit_loop_exit_base_id";
 static const char *const CsiCallsiteBaseIdName = "__csi_unit_callsite_base_id";
 static const char *const CsiLoadBaseIdName = "__csi_unit_load_base_id";
 static const char *const CsiStoreBaseIdName = "__csi_unit_store_base_id";
@@ -360,6 +364,124 @@ private:
   static constexpr PropertyBits PropBits = {1, 1, (64 - 1 - 1)};
 };
 
+class CsiLoopProperty : public CsiProperty {
+public:
+  CsiLoopProperty() { PropValue.Bits = 0; }
+
+  /// Return the Type of a property.
+  static StructType *getStructType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return StructType::get(IntegerType::get(C, PropBits.IsTapirLoop),
+                           IntegerType::get(C, PropBits.HasUniqueExitingBlock),
+                           IntegerType::get(C, PropBits.Padding));
+  }
+  static Type *getType(LLVMContext &C) {
+    return getCoercedType(C, getStructType(C));
+  }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csi.h
+    // StructType *StructTy = getType(C);
+    // return ConstantStruct::get(StructTy,
+    //                            ConstantInt::get(IntegerType::get(C, 64), 0),
+    //                            nullptr);
+    // TODO: This solution works for x86, but should be generalized to support
+    // other architectures in the future.
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the IsTapirLoop property.
+  void setIsTapirLoop(bool v) { PropValue.Fields.IsTapirLoop = v; }
+
+  /// Set the value of the HasUniqueExitingBlock property.
+  void setHasUniqueExitingBlock(bool v) {
+    PropValue.Fields.HasUniqueExitingBlock = v;
+  }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned IsTapirLoop : 1;
+      unsigned HasUniqueExitingBlock : 1;
+      uint64_t Padding : 62;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int IsTapirLoop;
+    int HasUniqueExitingBlock;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = {1, 1, (64 - 1 - 1)};
+};
+
+class CsiLoopExitProperty : public CsiProperty {
+public:
+  CsiLoopExitProperty() { PropValue.Bits = 0; }
+
+  /// Return the Type of a property.
+  static StructType *getStructType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return StructType::get(IntegerType::get(C, PropBits.IsLatch),
+                           IntegerType::get(C, PropBits.Padding));
+  }
+  static Type *getType(LLVMContext &C) {
+    return getCoercedType(C, getStructType(C));
+  }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csi.h
+    // StructType *StructTy = getType(C);
+    // return ConstantStruct::get(StructTy,
+    //                            ConstantInt::get(IntegerType::get(C, 64), 0),
+    //                            nullptr);
+    // TODO: This solution works for x86, but should be generalized to support
+    // other architectures in the future.
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the IsLandingPad property.
+  void setIsLatch(bool v) { PropValue.Fields.IsLatch = v; }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned IsLatch : 1;
+      uint64_t Padding : 63;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int IsLatch;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = {1, (64 - 1)};
+};
+
 class CsiBBProperty : public CsiProperty {
 public:
   CsiBBProperty() { PropValue.Bits = 0; }
@@ -609,7 +731,7 @@ public:
   }
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
-    // Must match the definition of property type in csan.h
+    // Must match the definition of property type in csi.h
     return ConstantInt::get(getType(C), PropValue.Bits);
   }
 
@@ -650,7 +772,7 @@ public:
   }
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
-    // Must match the definition of property type in csan.h
+    // Must match the definition of property type in csi.h
     return ConstantInt::get(getType(C), PropValue.Bits);
   }
 
@@ -683,11 +805,25 @@ struct CSIImpl {
 public:
   CSIImpl(Module &M, CallGraph *CG,
           function_ref<DominatorTree &(Function &)> GetDomTree,
+          function_ref<LoopInfo &(Function &)> GetLoopInfo,
+          function_ref<TaskInfo &(Function &)> GetTaskInfo,
+          const TargetLibraryInfo *TLI,
+          function_ref<ScalarEvolution &(Function &)> GetSE,
+          const CSIOptions &Options = CSIOptions())
+      : M(M), DL(M.getDataLayout()), CG(CG), GetDomTree(GetDomTree),
+        GetLoopInfo(GetLoopInfo), GetTaskInfo(GetTaskInfo), TLI(TLI),
+        GetScalarEvolution(GetSE), Options(Options) {
+    loadConfiguration();
+  }
+  CSIImpl(Module &M, CallGraph *CG,
+          function_ref<DominatorTree &(Function &)> GetDomTree,
+          function_ref<LoopInfo &(Function &)> GetLoopInfo,
           function_ref<TaskInfo &(Function &)> GetTaskInfo,
           const TargetLibraryInfo *TLI,
           const CSIOptions &Options = CSIOptions())
       : M(M), DL(M.getDataLayout()), CG(CG), GetDomTree(GetDomTree),
-        GetTaskInfo(GetTaskInfo), TLI(TLI), Options(Options) {
+        GetLoopInfo(GetLoopInfo), GetTaskInfo(GetTaskInfo), TLI(TLI),
+        Options(Options) {
     loadConfiguration();
   }
 
@@ -731,6 +867,7 @@ protected:
   void initializeLoadStoreHooks();
   void initializeFuncHooks();
   void initializeBasicBlockHooks();
+  void initializeLoopHooks();
   void initializeCallsiteHooks();
   void initializeAllocaHooks();
   void initializeMemIntrinsicsHooks();
@@ -783,6 +920,7 @@ protected:
   bool instrumentMemIntrinsic(Instruction *I);
   void instrumentCallsite(Instruction *I, DominatorTree *DT);
   void instrumentBasicBlock(BasicBlock &BB);
+  void instrumentLoop(Loop &L, TaskInfo &TI, ScalarEvolution *SE);
 
   void instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
                         const DenseMap<Value *, Value *> &TrackVars);
@@ -1075,13 +1213,15 @@ protected:
   const DataLayout &DL;
   CallGraph *CG;
   function_ref<DominatorTree &(Function &)> GetDomTree;
+  function_ref<LoopInfo &(Function &)> GetLoopInfo;
   function_ref<TaskInfo &(Function &)> GetTaskInfo;
   const TargetLibraryInfo *TLI;
+  Optional<function_ref<ScalarEvolution &(Function &)>> GetScalarEvolution;
   CSIOptions Options;
 
-  FrontEndDataTable FunctionFED, FunctionExitFED, BasicBlockFED, CallsiteFED,
-      LoadFED, StoreFED, AllocaFED, DetachFED, TaskFED, TaskExitFED,
-      DetachContinueFED, SyncFED, AllocFnFED, FreeFED;
+  FrontEndDataTable FunctionFED, FunctionExitFED, BasicBlockFED, LoopFED,
+    LoopExitFED, CallsiteFED, LoadFED, StoreFED, AllocaFED, DetachFED,
+    TaskFED, TaskExitFED, DetachContinueFED, SyncFED, AllocFnFED, FreeFED;
 
   SmallVector<Constant *, 12> UnitFedTables;
 
@@ -1092,6 +1232,8 @@ protected:
   Function *CsiFuncEntry = nullptr, *CsiFuncExit = nullptr;
   Function *CsiBBEntry = nullptr, *CsiBBExit = nullptr;
   Function *CsiBeforeCallsite = nullptr, *CsiAfterCallsite = nullptr;
+  Function *CsiBeforeLoop = nullptr, *CsiAfterLoop = nullptr;
+  Function *CsiLoopBodyEntry = nullptr, *CsiLoopBodyExit = nullptr;
   Function *CsiBeforeRead = nullptr, *CsiAfterRead = nullptr;
   Function *CsiBeforeWrite = nullptr, *CsiAfterWrite = nullptr;
   Function *CsiBeforeAlloca = nullptr, *CsiAfterAlloca = nullptr;
