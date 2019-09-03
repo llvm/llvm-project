@@ -45,17 +45,6 @@
 #define BARRIER_COUNTER 0
 #define ORDERED_COUNTER 1
 
-// Macros for Cuda intrinsics
-// In Cuda 9.0, the *_sync() version takes an extra argument 'mask'.
-// Also, __ballot(1) in Cuda 8.0 is replaced with __activemask().
-#ifndef CUDA_VERSION
-#error CUDA_VERSION macro is undefined, something wrong with cuda.
-#elif CUDA_VERSION >= 9000
-#define __ACTIVEMASK() __activemask()
-#else
-#define __ACTIVEMASK() __ballot(1)
-#endif // CUDA_VERSION
-
 // arguments needed for L0 parallelism only.
 class omptarget_nvptx_SharedArgs {
 public:
