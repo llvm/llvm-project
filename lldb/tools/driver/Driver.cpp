@@ -229,6 +229,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
+    m_option_data.m_debug_mode = true;
   }
 
   if (auto *arg = args.getLastArg(OPT_file)) {
@@ -260,14 +261,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   if (auto *arg = args.getLastArg(OPT_script_language)) {
     auto arg_value = arg->getValue();
     m_debugger.SetScriptLanguage(m_debugger.GetScriptingLanguage(arg_value));
-  }
-
-  if (args.hasArg(OPT_no_use_colors)) {
-    m_option_data.m_debug_mode = true;
-  }
-
-  if (args.hasArg(OPT_no_use_colors)) {
-    m_debugger.SetUseColor(false);
   }
 
   if (args.hasArg(OPT_source_quietly)) {
