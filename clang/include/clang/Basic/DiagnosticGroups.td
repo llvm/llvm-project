@@ -146,9 +146,9 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAttributes,
                                           DeprecatedWritableStr]>,
                  DiagCategory<"Deprecations">;
 
-def CXX2aDesignator : DiagGroup<"c++20-designator">;
+def CXX2aDesignator : DiagGroup<"c++2a-designator">;
 // Allow -Wno-c99-designator to be used to turn off all warnings on valid C99
-// designators (including the warning controlled by -Wc++20-designator).
+// designators (including the warning controlled by -Wc++2a-designator).
 def C99Designator : DiagGroup<"c99-designator", [CXX2aDesignator]>;
 def GNUDesignator : DiagGroup<"gnu-designator">;
 
@@ -634,7 +634,9 @@ def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
 def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
 def UserDefinedLiterals : DiagGroup<"user-defined-literals">;
 def UserDefinedWarnings : DiagGroup<"user-defined-warnings">;
-def Reorder : DiagGroup<"reorder">;
+def ReorderCtor : DiagGroup<"reorder-ctor">;
+def ReorderInitList : DiagGroup<"reorder-init-list">;
+def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
 def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
 def CustomAtomic : DiagGroup<"custom-atomic-properties">;

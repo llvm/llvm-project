@@ -1,17 +1,18 @@
-// RUN: %clang_cc1 -std=c++2a %s -verify=expected,pedantic,override,reorder -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a %s -verify=expected,pedantic -Werror=c99-designator -Wno-reorder -Wno-initializer-overrides
-// RUN: %clang_cc1 -std=c++2a %s -verify=expected,reorder -Wno-c99-designator -Werror=reorder -Wno-initializer-overrides
-// RUN: %clang_cc1 -std=c++2a %s -verify=expected,override -Wno-c99-designator -Wno-reorder -Werror=initializer-overrides
-// RUN: %clang_cc1 -std=c++2a %s -verify -Wno-c99-designator -Wno-reorder -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,pedantic,override,reorder -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,pedantic,override,reorder -Wno-c++2a-designator -pedantic-errors
+// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,reorder -Wno-c99-designator -Werror=reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected,override -Wno-c99-designator -Wno-reorder-init-list -Werror=initializer-overrides
+// RUN: %clang_cc1 -std=c++2a %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
 
 
 namespace class_with_ctor {
-  struct A { // expected-note 6{{candidate}}
-    A() = default; // expected-note 3{{candidate}}
+  struct A { // cxx20-note 6{{candidate}}
+    A() = default; // cxx20-note 3{{candidate}}
     int x;
     int y;
   };
-  A a = {1, 2}; // expected-error {{no matching constructor}}
+  A a = {1, 2}; // cxx20-error {{no matching constructor}}
 
   struct B {
     int x;
@@ -24,7 +25,7 @@ namespace class_with_ctor {
     A a;
   };
   C c1 = {{}, {}}; // ok, call default ctor twice
-  C c2 = {{1, 2}, {3, 4}}; // expected-error 2{{no matching constructor}}
+  C c2 = {{1, 2}, {3, 4}}; // cxx20-error 2{{no matching constructor}}
 }
 
 namespace designator {

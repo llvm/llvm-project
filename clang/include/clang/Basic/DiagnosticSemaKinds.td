@@ -208,7 +208,7 @@ def ext_designated_init_nested : ExtWarn<
   "nested designators are a C99 extension">, InGroup<C99Designator>;
 def ext_designated_init_reordered : ExtWarn<
   "ISO C++ requires field designators to be specified in declaration order; "
-  "field %1 will be initialized after field %0">, InGroup<Reorder>,
+  "field %1 will be initialized after field %0">, InGroup<ReorderInitList>,
   SFINAEFailure;
 def note_previous_field_init : Note<
   "previous initialization for field %0 is here">;
@@ -7714,7 +7714,7 @@ def err_mem_init_not_member_or_class : Error<
 def warn_initializer_out_of_order : Warning<
   "%select{field|base class}0 %1 will be initialized after "
   "%select{field|base}2 %3">,
-  InGroup<Reorder>, DefaultIgnore;
+  InGroup<ReorderCtor>, DefaultIgnore;
 def warn_abstract_vbase_init_ignored : Warning<
   "initializer for virtual base class %0 of abstract class %1 "
   "will never be used">,

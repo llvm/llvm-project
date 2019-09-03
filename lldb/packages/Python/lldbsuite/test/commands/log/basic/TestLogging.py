@@ -21,21 +21,19 @@ class LogTestCase(TestBase):
         super(LogTestCase, self).setUp()
         self.log_file = self.getBuildArtifact("log-file.txt")
 
-    def test(self):
+    def test_file_writing(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 
-        log_file = os.path.join(self.getBuildDir(), "lldb-commands-log.txt")
-
-        if (os.path.exists(log_file)):
-            os.remove(log_file)
+        if (os.path.exists(self.log_file)):
+            os.remove(self.log_file)
 
         # By default, Debugger::EnableLog() will set log options to
         # PREPEND_THREAD_NAME + OPTION_THREADSAFE. We don't want the
         # threadnames here, so we enable just threadsafe (-t).
-        self.runCmd("log enable -t -f '%s' lldb commands" % (log_file))
+        self.runCmd("log enable -t -f '%s' lldb commands" % (self.log_file))
 
         self.runCmd("command alias bp breakpoint")
 
@@ -45,12 +43,12 @@ class LogTestCase(TestBase):
 
         self.runCmd("log disable lldb")
 
-        self.assertTrue(os.path.isfile(log_file))
+        self.assertTrue(os.path.isfile(self.log_file))
 
-        f = open(log_file)
+        f = open(self.log_file)
         log_lines = f.readlines()
         f.close()
-        os.remove(log_file)
+        os.remove(self.log_file)
 
         self.assertGreater(
             len(log_lines),

@@ -27,9 +27,20 @@ static_assert(sizeof(SymbolUnion) <= 48,
 
 // Returns a symbol name for an error message.
 static std::string demangle(StringRef symName) {
-  if (config->demangle)
+  if (config->demangle) {
     if (Optional<std::string> s = demangleMSVC(symName))
       return *s;
+    if (config->mingw) {
+      StringRef demangleInput = symName;
+      std::string prefix;
+      if (demangleInput.consume_front("__imp_"))
+        prefix = "__declspec(dllimport) ";
+      if (config->machine == I386)
+        demangleInput.consume_front("_");
+      if (Optional<std::string> s = demangleItanium(demangleInput))
+        return prefix + *s;
+    }
+  }
   return symName;
 }
 std::string toString(coff::Symbol &b) { return demangle(b.getName()); }
