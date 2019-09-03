@@ -7,13 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ModuloSchedule.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "pipeliner"
 using namespace llvm;
+
+//===----------------------------------------------------------------------===//
+// ModuloScheduleExpander implementation
+//===----------------------------------------------------------------------===//
 
 /// Return the register values for  the operands of a Phi instruction.
 /// This function assume the instruction is a Phi.
@@ -1187,4 +1194,111 @@ bool ModuloScheduleExpander::isLoopCarried(MachineInstr &Phi) {
   unsigned LoopCycle = Schedule.getCycle(Use);
   int LoopStage = Schedule.getStage(Use);
   return (LoopCycle > DefCycle) || (LoopStage <= DefStage);
+}
+
+//===----------------------------------------------------------------------===//
+// ModuloScheduleTestPass implementation
+//===----------------------------------------------------------------------===//
+// This pass constructs a ModuloSchedule from its module and runs
+// ModuloScheduleExpander.
+//
+// The module is expected to contain a single-block analyzable loop.
+// The total order of instructions is taken from the loop as-is.
+// Instructions are expected to be annotated with a PostInstrSymbol.
+// This PostInstrSymbol must have the following format:
+//  "Stage=%d Cycle=%d".
+//===----------------------------------------------------------------------===//
+
+class ModuloScheduleTest : public MachineFunctionPass {
+public:
+  static char ID;
+
+  ModuloScheduleTest() : MachineFunctionPass(ID) {
+    initializeModuloScheduleTestPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void runOnLoop(MachineFunction &MF, MachineLoop &L);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<LiveIntervals>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+char ModuloScheduleTest::ID = 0;
+
+INITIALIZE_PASS_BEGIN(ModuloScheduleTest, "modulo-schedule-test",
+                      "Modulo Schedule test pass", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_END(ModuloScheduleTest, "modulo-schedule-test",
+                    "Modulo Schedule test pass", false, false)
+
+bool ModuloScheduleTest::runOnMachineFunction(MachineFunction &MF) {
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  for (auto *L : MLI) {
+    if (L->getTopBlock() != L->getBottomBlock())
+      continue;
+    runOnLoop(MF, *L);
+    return false;
+  }
+  return false;
+}
+
+static void parseSymbolString(StringRef S, int &Cycle, int &Stage) {
+  std::pair<StringRef, StringRef> StageAndCycle = getToken(S, "_");
+  std::pair<StringRef, StringRef> StageTokenAndValue =
+      getToken(StageAndCycle.first, "-");
+  std::pair<StringRef, StringRef> CycleTokenAndValue =
+      getToken(StageAndCycle.second, "-");
+  if (StageTokenAndValue.first != "Stage" ||
+      CycleTokenAndValue.first != "_Cycle") {
+    llvm_unreachable(
+        "Bad post-instr symbol syntax: see comment in ModuloScheduleTest");
+    return;
+  }
+
+  StageTokenAndValue.second.drop_front().getAsInteger(10, Stage);
+  CycleTokenAndValue.second.drop_front().getAsInteger(10, Cycle);
+
+  dbgs() << "  Stage=" << Stage << ", Cycle=" << Cycle << "\n";
+}
+
+void ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
+  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  MachineBasicBlock *BB = L.getTopBlock();
+  dbgs() << "--- ModuloScheduleTest running on BB#" << BB->getNumber() << "\n";
+
+  DenseMap<MachineInstr *, int> Cycle, Stage;
+  std::vector<MachineInstr *> Instrs;
+  for (MachineInstr &MI : *BB) {
+    if (MI.isTerminator())
+      continue;
+    Instrs.push_back(&MI);
+    if (MCSymbol *Sym = MI.getPostInstrSymbol()) {
+      dbgs() << "Parsing post-instr symbol for " << MI;
+      parseSymbolString(Sym->getName(), Cycle[&MI], Stage[&MI]);
+    }
+  }
+
+  ModuloSchedule MS(MF, &L, std::move(Instrs), std::move(Cycle), std::move(Stage));
+  ModuloScheduleExpander MSE(
+      MF, MS, LIS, /*InstrChanges=*/ModuloScheduleExpander::InstrChangesTy());
+  MSE.expand();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuloScheduleTestAnnotater implementation
+//===----------------------------------------------------------------------===//
+
+void ModuloScheduleTestAnnotater::annotate() {
+  for (MachineInstr *MI : S.getInstructions()) {
+    SmallVector<char, 16> SV;
+    raw_svector_ostream OS(SV);
+    OS << "Stage-" << S.getStage(MI) << "_Cycle-" << S.getCycle(MI);
+    MCSymbol *Sym = MF.getContext().getOrCreateSymbol(OS.str());
+    MI->setPostInstrSymbol(MF, Sym);
+  }
 }

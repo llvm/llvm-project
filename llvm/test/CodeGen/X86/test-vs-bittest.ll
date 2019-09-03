@@ -393,10 +393,9 @@ no:
 define i64 @is_upper_bit_clear_i64(i64 %x) {
 ; CHECK-LABEL: is_upper_bit_clear_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $37, %rax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    btq $37, %rdi
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %sh = lshr i64 %x, 37
   %m = and i64 %sh, 1
@@ -407,10 +406,9 @@ define i64 @is_upper_bit_clear_i64(i64 %x) {
 define i64 @is_lower_bit_clear_i64(i64 %x) {
 ; CHECK-LABEL: is_lower_bit_clear_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrl $27, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl $134217728, %edi # imm = 0x8000000
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %sh = lshr i64 %x, 27
   %m = and i64 %sh, 1
@@ -421,10 +419,9 @@ define i64 @is_lower_bit_clear_i64(i64 %x) {
 define i32 @is_bit_clear_i32(i32 %x) {
 ; CHECK-LABEL: is_bit_clear_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $27, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl $134217728, %edi # imm = 0x8000000
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %sh = lshr i32 %x, 27
   %n = xor i32 %sh, -1
@@ -435,10 +432,9 @@ define i32 @is_bit_clear_i32(i32 %x) {
 define i16 @is_bit_clear_i16(i16 %x) {
 ; CHECK-LABEL: is_bit_clear_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    shrl $7, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $-128, %dil
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %sh = lshr i16 %x, 7
@@ -450,17 +446,16 @@ define i16 @is_bit_clear_i16(i16 %x) {
 define i8 @is_bit_clear_i8(i8 %x) {
 ; CHECK-LABEL: is_bit_clear_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrb $3, %al
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    testb $8, %dil
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %sh = lshr i8 %x, 3
   %m = and i8 %sh, 1
   %r = xor i8 %m, 1
   ret i8 %r
 }
+
+; TODO: We could use bt/test on the 64-bit value.
 
 define i8 @overshift(i64 %x) {
 ; CHECK-LABEL: overshift:

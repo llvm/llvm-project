@@ -2259,44 +2259,36 @@ define <4 x i32> @fptosi_2f80_to_4i32(<2 x x86_fp80> %a) nounwind {
 define <4 x i32> @fptosi_2f128_to_4i32(<2 x fp128> %a) nounwind {
 ; SSE-LABEL: fptosi_2f128_to_4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    pushq %r14
 ; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    movq %rcx, %r14
-; SSE-NEXT:    movq %rdx, %rbx
+; SSE-NEXT:    subq $16, %rsp
+; SSE-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    callq __fixtfsi
-; SSE-NEXT:    movl %eax, %ebp
-; SSE-NEXT:    movq %rbx, %rdi
-; SSE-NEXT:    movq %r14, %rsi
+; SSE-NEXT:    movl %eax, %ebx
+; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixtfsi
 ; SSE-NEXT:    movd %eax, %xmm0
-; SSE-NEXT:    movd %ebp, %xmm1
+; SSE-NEXT:    movd %ebx, %xmm1
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; SSE-NEXT:    addq $16, %rsp
 ; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    popq %r14
-; SSE-NEXT:    popq %rbp
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fptosi_2f128_to_4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rbp
-; AVX-NEXT:    pushq %r14
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    movq %rcx, %r14
-; AVX-NEXT:    movq %rdx, %rbx
+; AVX-NEXT:    subq $16, %rsp
+; AVX-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    callq __fixtfsi
-; AVX-NEXT:    movl %eax, %ebp
-; AVX-NEXT:    movq %rbx, %rdi
-; AVX-NEXT:    movq %r14, %rsi
+; AVX-NEXT:    movl %eax, %ebx
+; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixtfsi
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vmovd %ebp, %xmm1
+; AVX-NEXT:    vmovd %ebx, %xmm1
 ; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    addq $16, %rsp
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    popq %r14
-; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
   %cvt = fptosi <2 x fp128> %a to <2 x i32>
   %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

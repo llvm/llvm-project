@@ -198,14 +198,16 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
     LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
     LLVM_DEBUG(dbgs() << "***     to: " << *MI);
 
-    // Update matching debug values.
-    DefMI->changeDebugValuesDefReg(SrcReg);
-
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
     MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
+      // If (and only if) we've eliminated all uses of the copy, also
+      // copy-propagate to any debug-users of MI, or they'll be left using
+      // an undefined value.
+      DefMI->changeDebugValuesDefReg(SrcReg);
+
       DefMI->eraseFromParent();
       ++NumCoalesces;
     }

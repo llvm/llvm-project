@@ -2420,7 +2420,8 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
     MachineOperand &MO = MI->getOperand(i);
     RegList.push_back(MO);
 
-    if (MO.isReg() && TRI->getEncodingValue(MO.getReg()) < FirstRegEnc)
+    if (MO.isReg() && !MO.isImplicit() &&
+        TRI->getEncodingValue(MO.getReg()) < FirstRegEnc)
       FirstRegEnc = TRI->getEncodingValue(MO.getReg());
   }
 
@@ -2430,7 +2431,7 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
   for (int CurRegEnc = FirstRegEnc - 1; CurRegEnc >= 0 && RegsNeeded;
        --CurRegEnc) {
     unsigned CurReg = RegClass->getRegister(CurRegEnc);
-    if (IsT1PushPop && CurReg > ARM::R7)
+    if (IsT1PushPop && CurRegEnc > TRI->getEncodingValue(ARM::R7))
       continue;
     if (!IsPop) {
       // Pushing any register is completely harmless, mark the register involved

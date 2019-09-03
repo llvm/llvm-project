@@ -1282,32 +1282,31 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
   return false;
 }
 
-template<unsigned Shift>
-bool ARMDAGToDAGISel::SelectT2AddrModeImm7(SDValue N,
-                                           SDValue &Base, SDValue &OffImm) {
-  if (N.getOpcode() == ISD::SUB ||
-      CurDAG->isBaseWithConstantOffset(N)) {
-    if (auto RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-      int RHSC = (int)RHS->getZExtValue();
+template <unsigned Shift>
+bool ARMDAGToDAGISel::SelectT2AddrModeImm7(SDValue N, SDValue &Base,
+                                           SDValue &OffImm) {
+  if (N.getOpcode() == ISD::SUB || CurDAG->isBaseWithConstantOffset(N)) {
+    int RHSC;
+    if (isScaledConstantInRange(N.getOperand(1), 1 << Shift, -0x7f, 0x80,
+                                RHSC)) {
+      Base = N.getOperand(0);
+      if (Base.getOpcode() == ISD::FrameIndex) {
+        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
+        Base = CurDAG->getTargetFrameIndex(
+            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+      }
+
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
-
-      if (isShiftedInt<7, Shift>(RHSC)) {
-        Base = N.getOperand(0);
-        if (Base.getOpcode() == ISD::FrameIndex) {
-          int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-          Base = CurDAG->getTargetFrameIndex(
-            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-        }
-        OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
-        return true;
-      }
+      OffImm =
+          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      return true;
     }
   }
 
   // Base only.
   Base = N;
-  OffImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
+  OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
   return true;
 }
 

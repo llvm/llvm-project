@@ -58,12 +58,10 @@ static void expectUndefError(const Twine &ExpectedUndefVarName, Error Err) {
 uint64_t doAdd(uint64_t OpL, uint64_t OpR) { return OpL + OpR; }
 
 TEST_F(FileCheckTest, NumericVariable) {
-  // Undefined variable: isValueKnownAtMatchTime returns false, getValue and
-  // eval fail, error returned by eval holds the name of the undefined
-  // variable.
+  // Undefined variable: getValue and eval fail, error returned by eval holds
+  // the name of the undefined variable.
   FileCheckNumericVariable FooVar = FileCheckNumericVariable("FOO", 1);
   EXPECT_EQ("FOO", FooVar.getName());
-  EXPECT_FALSE(FooVar.isValueKnownAtMatchTime());
   FileCheckNumericVariableUse FooVarUse =
       FileCheckNumericVariableUse("FOO", &FooVar);
   EXPECT_FALSE(FooVar.getValue());
@@ -73,9 +71,7 @@ TEST_F(FileCheckTest, NumericVariable) {
 
   FooVar.setValue(42);
 
-  // Defined variable: isValueKnownAtMatchTime returns true, getValue and eval
-  // return value set.
-  EXPECT_TRUE(FooVar.isValueKnownAtMatchTime());
+  // Defined variable: getValue and eval return value set.
   Optional<uint64_t> Value = FooVar.getValue();
   ASSERT_TRUE(bool(Value));
   EXPECT_EQ(42U, *Value);
@@ -83,43 +79,13 @@ TEST_F(FileCheckTest, NumericVariable) {
   ASSERT_TRUE(bool(EvalResult));
   EXPECT_EQ(42U, *EvalResult);
 
-  // Variable defined by numeric expression: isValueKnownAtMatchTime
-  // returns true, getValue and eval return value of expression, setValue
-  // clears expression.
-  std::unique_ptr<FileCheckNumericVariableUse> FooVarUsePtr =
-      std::make_unique<FileCheckNumericVariableUse>("FOO", &FooVar);
-  std::unique_ptr<FileCheckExpressionLiteral> One =
-      std::make_unique<FileCheckExpressionLiteral>(1);
-  FileCheckASTBinop Binop =
-      FileCheckASTBinop(doAdd, std::move(FooVarUsePtr), std::move(One));
-  FileCheckNumericVariable FoobarExprVar =
-      FileCheckNumericVariable("FOOBAR", 2, &Binop);
-  EXPECT_TRUE(FoobarExprVar.isValueKnownAtMatchTime());
-  ASSERT_FALSE(FoobarExprVar.getValue());
-  FileCheckNumericVariableUse FoobarExprVarUse =
-      FileCheckNumericVariableUse("FOOBAR", &FoobarExprVar);
-  EvalResult = FoobarExprVarUse.eval();
-  ASSERT_TRUE(bool(EvalResult));
-  EXPECT_EQ(43U, *EvalResult);
-  EXPECT_TRUE(FoobarExprVar.getExpressionAST());
-  FoobarExprVar.setValue(43);
-  EXPECT_FALSE(FoobarExprVar.getExpressionAST());
-  FoobarExprVar = FileCheckNumericVariable("FOOBAR", 2, &Binop);
-  EXPECT_TRUE(FoobarExprVar.getExpressionAST());
-
   // Clearing variable: getValue and eval fail. Error returned by eval holds
   // the name of the cleared variable.
   FooVar.clearValue();
-  FoobarExprVar.clearValue();
-  EXPECT_FALSE(FoobarExprVar.getExpressionAST());
   EXPECT_FALSE(FooVar.getValue());
-  EXPECT_FALSE(FoobarExprVar.getValue());
   EvalResult = FooVarUse.eval();
   ASSERT_FALSE(EvalResult);
   expectUndefError("FOO", EvalResult.takeError());
-  EvalResult = FoobarExprVarUse.eval();
-  ASSERT_FALSE(EvalResult);
-  expectUndefError("FOOBAR", EvalResult.takeError());
 }
 
 TEST_F(FileCheckTest, Binop) {
@@ -332,12 +298,12 @@ TEST_F(FileCheckTest, ParseExpr) {
   // Valid empty expression.
   EXPECT_FALSE(Tester.parseSubstExpect(""));
 
-  // Valid use of variable defined on the same line from expression. Note that
-  // the same pattern object is used for the parsePatternExpect and
+  // Invalid use of variable defined on the same line from expression. Note
+  // that the same pattern object is used for the parsePatternExpect and
   // parseSubstExpect since no initNextPattern is called, thus appearing as
   // being on the same line from the pattern's point of view.
   ASSERT_FALSE(Tester.parsePatternExpect("[[#LINE1VAR:FOO+1]]"));
-  EXPECT_FALSE(Tester.parseSubstExpect("LINE1VAR"));
+  EXPECT_TRUE(Tester.parseSubstExpect("LINE1VAR"));
 
   // Invalid use of variable defined on same line from input. As above, the
   // absence of a call to initNextPattern makes it appear to be on the same
@@ -354,8 +320,9 @@ TEST_F(FileCheckTest, ParseExpr) {
   // Valid expression.
   EXPECT_FALSE(Tester.parseSubstExpect("@LINE+5"));
   EXPECT_FALSE(Tester.parseSubstExpect("FOO+4"));
-  EXPECT_FALSE(Tester.parseSubstExpect("FOOBAR"));
   Tester.initNextPattern();
+  EXPECT_FALSE(Tester.parseSubstExpect("FOOBAR"));
+  EXPECT_FALSE(Tester.parseSubstExpect("LINE1VAR"));
   EXPECT_FALSE(Tester.parsePatternExpect("[[#FOO+FOO]]"));
   EXPECT_FALSE(Tester.parsePatternExpect("[[#FOO+3-FOO]]"));
 }

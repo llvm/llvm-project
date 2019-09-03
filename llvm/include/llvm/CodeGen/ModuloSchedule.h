@@ -254,6 +254,24 @@ public:
   void expand();
 };
 
+/// Expander that simply annotates each scheduled instruction with a post-instr
+/// symbol that can be consumed by the ModuloScheduleTest pass.
+///
+/// The post-instr symbol is a way of annotating an instruction that can be
+/// roundtripped in MIR. The syntax is:
+///   MYINST %0, post-instr-symbol <mcsymbol Stage-1_Cycle-5>
+class ModuloScheduleTestAnnotater {
+  MachineFunction &MF;
+  ModuloSchedule &S;
+
+public:
+  ModuloScheduleTestAnnotater(MachineFunction &MF, ModuloSchedule &S)
+      : MF(MF), S(S) {}
+
+  /// Performs the annotation.
+  void annotate();
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_MODULOSCHEDULE_H

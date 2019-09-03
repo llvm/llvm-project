@@ -123,8 +123,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_pos(i32* %ip) {
 ; CHECK-LE-LABEL: load_4xi32_a4_offset_pos:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    add.w r0, r0, #508
-; CHECK-LE-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-LE-NEXT:    vldrw.u32 q0, [r0, #508]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: load_4xi32_a4_offset_pos:
@@ -143,8 +142,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @load_4xi32_a4_offset_neg(i32* %ip) {
 ; CHECK-LE-LABEL: load_4xi32_a4_offset_neg:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    sub.w r0, r0, #508
-; CHECK-LE-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-LE-NEXT:    vldrw.u32 q0, [r0, #-508]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: load_4xi32_a4_offset_neg:

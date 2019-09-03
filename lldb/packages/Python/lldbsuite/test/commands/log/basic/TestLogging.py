@@ -89,3 +89,14 @@ class LogTestCase(TestBase):
 
         # check that it is still there
         self.assertEquals(contents.find("bacon"), 0)
+
+    # Enable all log options and check that nothing crashes.
+    def test_all_log_options(self):
+        if (os.path.exists(self.log_file)):
+            os.remove(self.log_file)
+
+        self.runCmd("log enable -v -t -s -T -p -n -S -F -f '%s' lldb commands" % self.log_file)
+        self.runCmd("help log")
+        self.runCmd("log disable lldb")
+
+        self.assertTrue(os.path.isfile(self.log_file))

@@ -154,6 +154,12 @@ static cl::opt<bool> SwpShowResMask("pipeliner-show-mask", cl::Hidden,
 static cl::opt<bool> SwpDebugResource("pipeliner-dbg-res", cl::Hidden,
                                       cl::init(false));
 
+static cl::opt<bool> EmitTestAnnotations(
+    "pipeliner-annotate-for-testing", cl::Hidden, cl::init(false),
+    cl::desc("Instead of emitting the pipelined code, annotate instructions "
+             "with the generated schedule for feeding into the "
+             "-modulo-schedule-test pass"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -536,6 +542,13 @@ void SwingSchedulerDAG::schedule() {
 
   ModuloSchedule MS(MF, &Loop, std::move(OrderedInsts), std::move(Cycles),
                     std::move(Stages));
+  if (EmitTestAnnotations) {
+    assert(NewInstrChanges.empty() &&
+           "Cannot serialize a schedule with InstrChanges!");
+    ModuloScheduleTestAnnotater MSTI(MF, MS);
+    MSTI.annotate();
+    return;
+  }
   ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
   MSE.expand();
   ++NumPipelined;
