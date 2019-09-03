@@ -50,7 +50,7 @@ typedef struct FrameData_t {
     set_pbag(nullptr);
   }
 
-  FrameData_t() { }
+  FrameData_t() {}
 
   ~FrameData_t() {
     // update ref counts
@@ -76,7 +76,6 @@ typedef struct FrameData_t {
     cilksan_assert(Pbag == NULL);
     set_sbag(_sbag);
   }
-
 } FrameData_t;
 
 #endif // __FRAME_DATA_H__

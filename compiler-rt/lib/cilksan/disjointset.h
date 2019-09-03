@@ -3,7 +3,6 @@
 #ifndef _DISJOINTSET_H
 #define _DISJOINTSET_H
 
-#include <assert.h>
 #include <cstdio>
 #include <cstdlib>
 #include <stdint.h>
@@ -38,7 +37,7 @@ private:
 #endif
 
   __attribute__((always_inline))
-  void assert_not_freed() {
+  void assert_not_freed() const {
     WHEN_CILKSAN_DEBUG(cilksan_assert(_destructing || _ref_count >= 0));
   }
 
@@ -71,7 +70,7 @@ private:
     // before setting this's parent and we had another reference besides the
     // parent relationship, dec_ref_count would incorrectly believe that this's
     // only reference is in having itself as a parent.
-    assert(old_parent != NULL);
+    cilksan_assert(old_parent != NULL);
 
     old_parent->dec_ref_count();
     DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld points to DS %ld\n", _ID, that->_ID);
@@ -203,7 +202,7 @@ public:
   __attribute__((always_inline))
   int64_t dec_ref_count(int64_t count = 1) {
     assert_not_freed();
-    assert(_ref_count >= count);
+    cilksan_assert(_ref_count >= count);
     _ref_count -= count;
     DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld refcnt %ld\n", _ID, _ref_count);
     if (_ref_count == 0 || (_ref_count == 1 && this->_set_parent == this)) {
@@ -221,7 +220,7 @@ public:
   }
 
   __attribute__((always_inline))
-  DISJOINTSET_DATA_T get_node() {
+  DISJOINTSET_DATA_T get_node() const {
     assert_not_freed();
 
     return _node;
@@ -234,12 +233,12 @@ public:
     return find_set()->_set_node;
   }
 
-  __attribute__((always_inline))
-  DISJOINTSET_DATA_T get_my_set_node() {
-    assert_not_freed();
+  // __attribute__((always_inline))
+  // DISJOINTSET_DATA_T get_my_set_node() const {
+  //   assert_not_freed();
 
-    return _set_node;
-  }
+  //   return _set_node;
+  // }
 
   /*
    * Unions this disjoint set and that disjoint set.

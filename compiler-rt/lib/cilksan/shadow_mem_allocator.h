@@ -59,8 +59,8 @@ struct SlabHead_t {
 
   // Method to set the next pointer in the slab header.
   void setNext(SlabType *Ptr) {
-    assert((reinterpret_cast<uintptr_t>(Ptr) & SYS_PAGE_DATA_MASK) == 0 &&
-           "Given pointer is not aligned.");
+    cilksan_assert((reinterpret_cast<uintptr_t>(Ptr) & SYS_PAGE_DATA_MASK) == 0
+                   && "Given pointer is not aligned.");
     NextAndSize = reinterpret_cast<SlabType *>(
         reinterpret_cast<uintptr_t>(Ptr) | getSize());
   }
@@ -128,8 +128,9 @@ struct Slab_t {
   // Returns a line to this slab, marking that line as available.
   void returnLine(LineType *Line) {
     uintptr_t LinePtr = reinterpret_cast<uintptr_t>(Line);
-    assert((LinePtr & SYS_PAGE_MASK) == reinterpret_cast<uintptr_t>(this) &&
-           "Line does not belong to this slab.");
+    cilksan_assert(
+        (LinePtr & SYS_PAGE_MASK) == reinterpret_cast<uintptr_t>(this) &&
+        "Line does not belong to this slab.");
 
     // Compute the index of this line in the array.
     uint64_t LineIdx = LinePtr & SYS_PAGE_DATA_MASK;
@@ -140,9 +141,9 @@ struct Slab_t {
     uint64_t MapIdx = LineIdx / 64;
     uint64_t MapBit = LineIdx % 64;
 
-    assert(MapIdx < UsedMapSize && "Invalid MapIdx.");
-    assert(0 != (UsedMap[MapIdx] & (1UL << MapBit)) &&
-           "Line is not marked used.");
+    cilksan_assert(MapIdx < UsedMapSize && "Invalid MapIdx.");
+    cilksan_assert(0 != (UsedMap[MapIdx] & (1UL << MapBit)) &&
+                   "Line is not marked used.");
     UsedMap[MapIdx] &= ~(1UL << MapBit);
   }
 };
@@ -255,10 +256,10 @@ public:
   }
 
   ~MALineAllocator() {
-    assert(!FullMA1 && "Full slabs remaining.");
-    assert(!FullMA2 && "Full slabs remaining.");
-    assert(!FullMA4 && "Full slabs remaining.");
-    assert(!FullMA8 && "Full slabs remaining.");
+    cilksan_assert(!FullMA1 && "Full slabs remaining.");
+    cilksan_assert(!FullMA2 && "Full slabs remaining.");
+    cilksan_assert(!FullMA4 && "Full slabs remaining.");
+    cilksan_assert(!FullMA8 && "Full slabs remaining.");
     freeSlabs<Slab1_t>(MA1Lines);
     freeSlabs<Slab2_t>(MA2Lines);
     freeSlabs<Slab4_t>(MA4Lines);
@@ -354,7 +355,7 @@ public:
       Full = Slab;
     }
 
-    assert(Line && "No line found.");
+    cilksan_assert(Line && "No line found.");
     return Line;
   }
 

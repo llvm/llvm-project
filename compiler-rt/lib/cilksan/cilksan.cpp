@@ -536,10 +536,10 @@ void CilkSanImpl_t::deinit() {
   shadow_memory.destruct();
 
   // Remove references to the disjoint set nodes so they can be freed.
-  assert(frame_stack.head()->Pbag == nullptr);
+  cilksan_assert(frame_stack.head()->Pbag == nullptr);
   frame_stack.head()->reset();
   frame_stack.pop();
-  assert(frame_stack.size() == 0);
+  cilksan_assert(frame_stack.size() == 0);
 
   WHEN_CILKSAN_DEBUG({
       if (DisjointSet_t<SPBagInterface *>::debug_count != 0)

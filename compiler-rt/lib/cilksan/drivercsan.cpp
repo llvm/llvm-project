@@ -207,7 +207,7 @@ static void init_internal() {
 
 CILKSAN_API void __csi_init() {
   // This method should only be called once.
-  assert(!TOOL_INITIALIZED && "__csi_init() called multiple times.");
+  cilksan_assert(!TOOL_INITIALIZED && "__csi_init() called multiple times.");
 
   // We use the automatic deallocation of the CilkSanImpl top-level tool object
   // to shutdown and cleanup the tool at program termination.
@@ -252,7 +252,7 @@ void __csan_unit_init(const char * const file_name,
 
 // invoked whenever a function enters; no need for this
 CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
-                                   void *bp, void *sp,
+                                   const void *bp, const void *sp,
                                    const func_prop_t prop) {
   { // Handle tool initialization as a special case.
     CheckingRAII nocheck_init;
@@ -408,7 +408,8 @@ CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
 }
 
 CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
-                             void *bp, void *sp) {
+                             const void *bp, const void *sp,
+                             const task_prop_t prop) {
   if (!should_check())
     return;
   // fprintf(stderr, "__csan_task: bp = %p, sp = %p\n",
@@ -442,7 +443,8 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
 
 CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
                                   const csi_id_t task_id,
-                                  const csi_id_t detach_id) {
+                                  const csi_id_t detach_id,
+                                  const task_exit_prop_t prop) {
   if (!should_check())
     return;
 

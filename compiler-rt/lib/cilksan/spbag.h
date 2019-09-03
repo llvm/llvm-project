@@ -42,7 +42,8 @@ private:
   uintptr_t _stack_ptr;
   call_stack_t _call_stack;
 
-  SBag_t() {} // disable default constructor
+  // SBag_t() {} // disable default constructor
+  SBag_t() = delete;
 
 public:
   SBag_t(uint64_t id, const call_stack_t &call_stack, SPBagInterface *parent) :

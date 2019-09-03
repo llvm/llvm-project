@@ -70,7 +70,7 @@ void read_proc_maps(void) {
   DBG_TRACE(DEBUG_BACKTRACE, "path = %s\n", path);
   FILE *f = fopen(path, "r");
   DBG_TRACE(DEBUG_BACKTRACE, "file = %p\n", f);
-  assert(f);
+  cilksan_assert(f);
 
   char *lineptr = NULL;
   size_t n;
@@ -92,7 +92,7 @@ void read_proc_maps(void) {
     ProcMapping_t m(start, end, paths);
     //if (paths.compare("[stack]") == 0) {
     if (paths.find("[stack") != std::string::npos) {
-      assert(stack_low_addr == 0);
+      cilksan_assert(stack_low_addr == 0);
       stack_low_addr = start;
       stack_high_addr = end;
       DBG_TRACE(DEBUG_BACKTRACE, " stack = %lx--%lx\n", start, end);

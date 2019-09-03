@@ -95,11 +95,11 @@ public:
   }
 
   ~call_stack_node_t() {
-    assert(!ref_count);
+    cilksan_assert(!ref_count);
     if (prev) {
       call_stack_node_t *old_prev = prev;
       prev = nullptr;
-      assert(old_prev->ref_count > 0);
+      cilksan_assert(old_prev->ref_count > 0);
       old_prev->ref_count--;
       if (!old_prev->ref_count)
         delete old_prev;
@@ -165,7 +165,7 @@ public:
     if (tail) {
       call_stack_node_t *old_tail = tail;
       tail = nullptr;
-      assert(old_tail->ref_count > 0);
+      cilksan_assert(old_tail->ref_count > 0);
       old_tail->ref_count--;
       if (!old_tail->ref_count)
         delete old_tail;
@@ -216,20 +216,20 @@ public:
     // tail's ref count.
     tail = new_node;
     if (tail->prev) {
-      assert(tail->prev->ref_count > 1);
+      cilksan_assert(tail->prev->ref_count > 1);
       tail->prev->ref_count--;
     }
     // now the ref_count's should reflect the pointer structure.
   }
 
   inline void pop() {
-    assert(tail);
+    cilksan_assert(tail);
     // size--;
     call_stack_node_t *old_node = tail;
     tail = tail->prev;
     if (tail)
       tail->ref_count++;
-    assert(old_node->ref_count > 0);
+    cilksan_assert(old_node->ref_count > 0);
     old_node->ref_count--;
     if (!old_node->ref_count)
       // Deleting the old node will decrement tail's ref count.
@@ -321,7 +321,7 @@ public:
   inline int64_t dec_ref_count(int64_t count = 1) {
     if (!call_stack.tail)
       return 0;
-    assert(call_stack.tail->ref_count >= count);
+    cilksan_assert(call_stack.tail->ref_count >= count);
     call_stack.tail->ref_count -= count;
     if (!call_stack.tail->ref_count) {
       delete call_stack.tail;

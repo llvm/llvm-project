@@ -109,8 +109,8 @@ private:
 
     // Get the chunk after this chunk whose address is grainsize-aligned.
     Chunk_t next(unsigned lgGrainsize) const {
-      assert(((lgGrainsize == (LG_PAGE_SIZE + LG_LINE_SIZE)) ||
-              (lgGrainsize <= LG_LINE_SIZE)) && "Invalid lgGrainsize");
+      cilksan_assert(((lgGrainsize == (LG_PAGE_SIZE + LG_LINE_SIZE)) ||
+                      (lgGrainsize <= LG_LINE_SIZE)) && "Invalid lgGrainsize");
       
       uintptr_t nextAddr = alignByNextGrainsize(addr, lgGrainsize);
       size_t chunkSize = nextAddr - addr;
@@ -135,7 +135,7 @@ private:
 
     // Computes a LgGrainsize for this Chunk_t based on its start and end.
     uintptr_t getLgGrainsize() const {
-      assert(0 != addr && "Chunk defined on null address.");
+      cilksan_assert(0 != addr && "Chunk defined on null address.");
       // Compute the lg grainsize implied by addr.
       unsigned lgGrainsize = __builtin_ctzl(addr);
       // Cap the lg grainsize at LG_LINE_SIZE.
@@ -225,8 +225,8 @@ private:
     // // By default, a Line_t contains entries of (1 << LG_LINE_SIZE) bytes.
     // Line_t() : LgGrainsize(LG_LINE_SIZE) { }
     Line_t(unsigned LgGrainsize) {
-      assert(LgGrainsize >= 0 && LgGrainsize <= LG_LINE_SIZE &&
-             "Invalid grainsize for Line_t");
+      cilksan_assert(LgGrainsize >= 0 && LgGrainsize <= LG_LINE_SIZE &&
+                     "Invalid grainsize for Line_t");
       setLgGrainsize(LgGrainsize);
     }
     Line_t() {
@@ -277,7 +277,7 @@ private:
     }
     __attribute__((always_inline))
     void decNumNonNullAccs() {
-      assert(!noNonNullAccs() && "Decrementing NumNonNullAccs below 0");
+      cilksan_assert(!noNonNullAccs() && "Decrementing NumNonNullAccs below 0");
       MemAccsPtr = reinterpret_cast<MemoryAccess_t *>(
           reinterpret_cast<uintptr_t>(MemAccsPtr) -
           (1UL << NumNonNullAccsRShift));
@@ -291,7 +291,7 @@ private:
 
     // Allocate the array of MemoryAccess_t's for this line.
     void materialize() {
-      assert(!getMemAccs() && "MemAccs already materialized.");
+      cilksan_assert(!getMemAccs() && "MemAccs already materialized.");
       int NumMemAccs = (1 << LG_LINE_SIZE) / (1 << getLgGrainsize());
       // MemAccs = MAAlloc.allocate(NumMemAccs);
       setMemAccs(MAAlloc.allocate(NumMemAccs));
@@ -300,8 +300,8 @@ private:
     // Reduce the grainsize of this line to newLgGrainsize, which must fall
     // within [0, LgGrainsize].
     void refine(unsigned newLgGrainsize) {
-      assert(newLgGrainsize < getLgGrainsize() &&
-             "Invalid grainsize for refining Line.");
+      cilksan_assert(newLgGrainsize < getLgGrainsize() &&
+                     "Invalid grainsize for refining Line.");
       // If MemAccs hasn't been materialzed yet, then just update LgGrainsize.
       if (!isMaterialized()) {
         // LgGrainsize = newLgGrainsize;
@@ -328,7 +328,7 @@ private:
         int oldNumNonNullAccs = getNumNonNullAccs();
 #endif
         scaleNumNonNullAccs(replFactor);
-        assert(oldNumNonNullAccs * replFactor == getNumNonNullAccs());
+        cilksan_assert(oldNumNonNullAccs * replFactor == getNumNonNullAccs());
       }
 
       // Replace the old MemAccs array and LgGrainsize value.
@@ -364,12 +364,12 @@ private:
     // Access the MemoryAccess_t object in this line for the byte address.
     __attribute__((always_inline))
     MemoryAccess_t &operator[] (uintptr_t byte) {
-      assert(getMemAccs() && "MemAccs not materialized");
+      cilksan_assert(getMemAccs() && "MemAccs not materialized");
       return getMemAccs()[getIdx(byte)];
     }
     __attribute__((always_inline))
     const MemoryAccess_t &operator[] (uintptr_t byte) const {
-      assert(getMemAccs() && "MemAccs not materialized");
+      cilksan_assert(getMemAccs() && "MemAccs not materialized");
       return getMemAccs()[getIdx(byte)];
     }
 
@@ -379,7 +379,7 @@ private:
     // TODO: Check if C++ copy elision avoid unneccesary calls to the copy
     // constructor for the MemoryAccess_t, either in C++11, C++14, or C++17.
     void set(Chunk_t &Accessed, const MemoryAccess_t &MA) {
-      assert(MA.isValid() && "Setting to invalid MemoryAccess_t");
+      cilksan_assert(MA.isValid() && "Setting to invalid MemoryAccess_t");
       // Get the grainsize of the access.
       unsigned AccessedLgGrainsize = Accessed.getLgGrainsize();
 
@@ -455,7 +455,7 @@ private:
     // TODO: Check if C++ copy elision avoid unneccesary calls to the copy
     // constructor for the MemoryAccess_t, either in C++11, C++14, or C++17.
     void insert(Chunk_t &Accessed, unsigned PrevIdx, const MemoryAccess_t &MA) {
-      assert(MA.isValid() && "Setting to invalid MemoryAccess_t");
+      cilksan_assert(MA.isValid() && "Setting to invalid MemoryAccess_t");
       // Get the grainsize of the access.
       unsigned AccessedLgGrainsize = Accessed.getLgGrainsize();
 
@@ -687,7 +687,7 @@ public:
       if (isEnd())
         return nullptr;
 
-      assert(Line && "Null Line for Query_iterator not at end.");
+      cilksan_assert(Line && "Null Line for Query_iterator not at end.");
       if (Line->isEmpty())
         return nullptr;
 
@@ -705,7 +705,8 @@ public:
     // Scan the entries from Accessed until an entry with a new non-null
     // MemoryAccess_t is found.
     void next() {
-      assert(!isEnd() && "Cannot call next() on an empty Line iterator");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call next() on an empty Line iterator");
       const Entry_t Previous = Entry;
       do {
         if (Line->isEmpty())
@@ -735,7 +736,7 @@ public:
     // Helper method to get the next non-null page covered by Accessed.  Returns
     // true if a page is found, false otherwise.
     bool nextPage() {
-      assert(!isEnd() && "Cannot call nextPage() on an empty Line iterator");
+      cilksan_assert(!isEnd() && "Cannot call nextPage() on an empty Line iterator");
       // Scan to find the non-null page.
       Page = Dict.Table[page(Accessed.addr)];
       while (!Page) {
@@ -751,8 +752,9 @@ public:
     // Helper method to get the next non-null line covered by Accessed.  Returns
     // true if a line is found, false otherwise.
     bool nextLine() {
-      assert(!isEnd() && "Cannot call nextLine() on an empty Line iterator");
-      assert(Page && "nextLine() called with null page");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call nextLine() on an empty Line iterator");
+      cilksan_assert(Page && "nextLine() called with null page");
       // Scan to find the non-null line.
       Line = &(*Page)[line(Accessed.addr)];
       while (!Line || Line->isEmpty()) {
@@ -828,9 +830,10 @@ public:
     // Scan the entries from Accessed until we find a location with an invalid
     // MemoryAccess_t or a MemoryAccess_t that does not match the previous one.
     void next() {
-      assert(!isEnd() && "Cannot call next() on an empty Line iterator");
-      assert(Page && "Cannot call next() with null Page");
-      assert(Line && "Cannot call next() with null Line");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call next() on an empty Line iterator");
+      cilksan_assert(Page && "Cannot call next() with null Page");
+      cilksan_assert(Line && "Cannot call next() with null Line");
 
       // Remember the previous Entry.
       const Entry_t Previous = Entry;
@@ -941,12 +944,14 @@ public:
     // In contrast to Query iterators, Update iterators should typically get
     // pointers to null pages and lines, not skip them.
     bool nextPage() {
-      assert(!isEnd() && "Cannot call nextPage() on an empty Line iterator");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call nextPage() on an empty Line iterator");
       Page = Dict.Table[page(Accessed.addr)];
       return true;
     }
     bool nextLine() {
-      assert(!isEnd() && "Cannot call nextLine() on an empty Line iterator");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call nextLine() on an empty Line iterator");
       if (!Page) {
         Line = nullptr;
         return false;
@@ -958,7 +963,8 @@ public:
     // Helper method to get the next non-null page, similar to the nextPage
     // method for Query_iterators.
     bool nextNonNullPage() {
-      assert(!isEnd() && "Cannot call nextPage() on an empty Line iterator");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call nextPage() on an empty Line iterator");
       // Scan to find the non-null page.
       Page = Dict.Table[page(Accessed.addr)];
       while (!Page) {
@@ -974,8 +980,9 @@ public:
     // Helper method to get the next non-null line, similar to the nextLine
     // method for Query_iterators.
     bool nextNonNullLine() {
-      assert(!isEnd() && "Cannot call nextLine() on an empty Line iterator");
-      assert(Page && "nextLine() called with null page");
+      cilksan_assert(!isEnd() &&
+                     "Cannot call nextLine() on an empty Line iterator");
+      cilksan_assert(Page && "nextLine() called with null page");
       // Scan to find the non-null line.
       Line = &(*Page)[line(Accessed.addr)];
       while (!Line || Line->isEmpty()) {

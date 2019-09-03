@@ -109,7 +109,7 @@ public:
    * where i = 0 indicates the head of the call stack.
    */
   STACK_DATA_T* ancestor(uint32_t i) const {
-    assert(i <= _head);
+    cilksan_assert(i <= _head);
     cilksan_assert(_head < _capacity);
     return &(_stack[_head - i]);
   }
@@ -122,7 +122,7 @@ public:
    * where element at index 0 is the oldest element.
    */
   STACK_DATA_T* at(uint32_t i) const {
-    assert(i >= 0 && i <= _head);
+    cilksan_assert(i >= 0 && i <= _head);
     cilksan_assert(_head < _capacity);
     return &(_stack[i]);
   }
