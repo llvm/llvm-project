@@ -52,6 +52,8 @@ static const char *const CsiSyncBaseIdName = "__csi_unit_sync_base_id";
 static const char *const CsiAllocFnBaseIdName = "__csi_unit_allocfn_base_id";
 static const char *const CsiFreeBaseIdName = "__csi_unit_free_base_id";
 
+static const char *const CsiDefaultDebugNamePrefix = "__csi_unit_function_name_";
+
 static const char *const CsiUnitSizeTableName = "__csi_unit_size_table";
 static const char *const CsiUnitFedTableName = "__csi_unit_fed_table";
 static const char *const CsiFuncIdVariablePrefix = "__csi_func_id_";
@@ -72,7 +74,7 @@ static const int CsiUnitCtorPriority = 0;
 class ForensicTable {
 public:
   ForensicTable() : BaseId(nullptr), IdCounter(0) {}
-  ForensicTable(Module &M, StringRef BaseIdName);
+  ForensicTable(Module &M, StringRef BaseIdName, StringRef TableName = "");
 
   /// The number of entries in this forensic table
   uint64_t size() const { return IdCounter; }
@@ -102,6 +104,7 @@ protected:
   uint64_t IdCounter;
   /// Map of Value to Local ID.
   DenseMap<const Value *, uint64_t> ValueToLocalIdMap;
+  StringRef TableName;
 };
 
 /// Maintains a mapping from CSI ID to front-end data for that ID.
@@ -111,8 +114,11 @@ protected:
 class FrontEndDataTable : public ForensicTable {
 public:
   FrontEndDataTable() : ForensicTable() {}
-  FrontEndDataTable(Module &M, StringRef BaseIdName)
-      : ForensicTable(M, BaseIdName) {}
+  FrontEndDataTable(Module &M, StringRef BaseIdName,
+                    StringRef TableName = CsiUnitFedTableName,
+                    StringRef DebugNamePrefix = CsiDefaultDebugNamePrefix)
+      : ForensicTable(M, BaseIdName, TableName),
+        DebugNamePrefix(DebugNamePrefix) {}
 
   /// The number of entries in this FED table
   uint64_t size() const { return LocalIdToSourceLocationMap.size(); }
@@ -149,6 +155,7 @@ private:
     StringRef Filename;
     StringRef Directory;
   };
+  StringRef DebugNamePrefix;
 
   /// Map of local ID to SourceLocation.
   DenseMap<uint64_t, SourceLocation> LocalIdToSourceLocationMap;
@@ -822,11 +829,12 @@ protected:
   // invalidated by the inserted instrumentation.
   void updateInstrumentedFnAttrs(Function &F);
   // List of all allocation function types.  This list needs to remain
-  // consistent with TargetLibraryInfo and with csan.h.
+  // consistent with TargetLibraryInfo and with csi.h.
   enum class AllocFnTy {
     malloc = 0,
     valloc,
     calloc,
+    aligned_alloc,
     realloc,
     reallocf,
     Znwj,
@@ -864,6 +872,9 @@ protected:
       return AllocFnTy::malloc;
     case LibFunc_valloc:
       return AllocFnTy::valloc;
+      // aligned_alloc(align_val_t, size_t)
+    case LibFunc_aligned_alloc:
+      return AllocFnTy::aligned_alloc;
     case LibFunc_calloc:
       return AllocFnTy::calloc;
     case LibFunc_realloc:

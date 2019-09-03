@@ -288,7 +288,9 @@ Constant *ForensicTable::getObjectStrGV(Module &M, StringRef Str,
   return ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
 }
 
-ForensicTable::ForensicTable(Module &M, StringRef BaseIdName) {
+ForensicTable::ForensicTable(Module &M, StringRef BaseIdName,
+                             StringRef TableName)
+    : TableName(TableName) {
   LLVMContext &C = M.getContext();
   IntegerType *Int64Ty = IntegerType::get(C, 64);
   IdCounter = 0;
@@ -1251,19 +1253,18 @@ void CSIImpl::getAllocFnArgs(const Instruction *I,
     AllocFnArgs.push_back(CI->getArgOperand(0));
     return;
   }
-  case LibFunc_aligned_alloc:
-    {
-      const CallInst *CI = cast<CallInst>(I);
-      // Allocated size
-      AllocFnArgs.push_back(CI->getArgOperand(1));
-      // Number of elements = 1
-      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
-      // Alignment
-      AllocFnArgs.push_back(CI->getArgOperand(0));
-      // Old pointer = NULL
-      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
-      return;
-    }
+  case LibFunc_aligned_alloc: {
+    const CallInst *CI = cast<CallInst>(I);
+    // Allocated size
+    AllocFnArgs.push_back(CI->getArgOperand(1));
+    // Number of elements = 1
+    AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+    // Alignment
+    AllocFnArgs.push_back(CI->getArgOperand(0));
+    // Old pointer = NULL
+    AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+    return;
+  }
   }
 }
 
@@ -1505,20 +1506,39 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
 }
 
 void CSIImpl::initializeFEDTables() {
-  FunctionFED = FrontEndDataTable(M, CsiFunctionBaseIdName);
-  FunctionExitFED = FrontEndDataTable(M, CsiFunctionExitBaseIdName);
-  BasicBlockFED = FrontEndDataTable(M, CsiBasicBlockBaseIdName);
-  CallsiteFED = FrontEndDataTable(M, CsiCallsiteBaseIdName);
-  LoadFED = FrontEndDataTable(M, CsiLoadBaseIdName);
-  StoreFED = FrontEndDataTable(M, CsiStoreBaseIdName);
-  AllocaFED = FrontEndDataTable(M, CsiAllocaBaseIdName);
-  DetachFED = FrontEndDataTable(M, CsiDetachBaseIdName);
-  TaskFED = FrontEndDataTable(M, CsiTaskBaseIdName);
-  TaskExitFED = FrontEndDataTable(M, CsiTaskExitBaseIdName);
-  DetachContinueFED = FrontEndDataTable(M, CsiDetachContinueBaseIdName);
-  SyncFED = FrontEndDataTable(M, CsiSyncBaseIdName);
-  AllocFnFED = FrontEndDataTable(M, CsiAllocFnBaseIdName);
-  FreeFED = FrontEndDataTable(M, CsiFreeBaseIdName);
+  FunctionFED = FrontEndDataTable(M, CsiFunctionBaseIdName,
+                                  "__csi_unit_fed_table_function",
+                                  "__csi_unit_function_name_");
+  FunctionExitFED = FrontEndDataTable(M, CsiFunctionExitBaseIdName,
+                                      "__csi_unit_fed_table_function_exit",
+                                      "__csi_unit_function_name_");
+  BasicBlockFED = FrontEndDataTable(M, CsiBasicBlockBaseIdName,
+                                    "__csi_unit_fed_table_basic_block");
+  CallsiteFED = FrontEndDataTable(M, CsiCallsiteBaseIdName,
+                                  "__csi_unit_fed_table_callsite",
+                                  "__csi_unit_function_name_");
+  LoadFED = FrontEndDataTable(M, CsiLoadBaseIdName,
+                              "__csi_unit_fed_table_load");
+  StoreFED = FrontEndDataTable(M, CsiStoreBaseIdName,
+                               "__csi_unit_fed_table_store");
+  AllocaFED = FrontEndDataTable(M, CsiAllocaBaseIdName,
+                                "__csi_unit_fed_table_alloca",
+                                "__csi_unit_variable_name_");
+  DetachFED = FrontEndDataTable(M, CsiDetachBaseIdName,
+                                "__csi_unit_fed_table_detach");
+  TaskFED = FrontEndDataTable(M, CsiTaskBaseIdName,
+                              "__csi_unit_fed_table_task");
+  TaskExitFED = FrontEndDataTable(M, CsiTaskExitBaseIdName,
+                                  "__csi_unit_fed_table_task_exit");
+  DetachContinueFED = FrontEndDataTable(M, CsiDetachContinueBaseIdName,
+                                        "__csi_unit_fed_table_detach_continue");
+  SyncFED = FrontEndDataTable(M, CsiSyncBaseIdName,
+                              "__csi_unit_fed_table_sync");
+  AllocFnFED = FrontEndDataTable(M, CsiAllocFnBaseIdName,
+                                 "__csi_unit_fed_table_allocfn",
+                                 "__csi_unit_variable_name_");
+  FreeFED = FrontEndDataTable(M, CsiFreeBaseIdName,
+                              "__csi_unit_fed_free");
 }
 
 void CSIImpl::initializeSizeTables() {
