@@ -12,6 +12,9 @@ static_assert(sizeof(func_exit_prop_t) == 8,
 static_assert(sizeof(loop_prop_t) == 8, "Size of loop_prop_t is not 64 bits.");
 static_assert(sizeof(loop_exit_prop_t) == 8,
               "Size of loop_exit_prop_t is not 64 bits.");
+static_assert(sizeof(task_prop_t) == 8, "Size of task_prop_t is not 64 bits.");
+static_assert(sizeof(task_exit_prop_t) == 8,
+              "Size of task_exit_prop_t is not 64 bits.");
 static_assert(sizeof(bb_prop_t) == 8, "Size of bb_prop_t is not 64 bits.");
 static_assert(sizeof(call_prop_t) == 8, "Size of call_prop_t is not 64 bits.");
 static_assert(sizeof(load_prop_t) == 8, "Size of load_prop_t is not 64 bits.");

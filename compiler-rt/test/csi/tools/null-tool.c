@@ -71,13 +71,13 @@ __attribute__((always_inline))
 WEAK void __csi_detach(const csi_id_t detach_id, const int32_t *has_spawned) {}
 
 __attribute__((always_inline))
-WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id)
-{}
+WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id,
+                     const task_prop_t prop) {}
 
 __attribute__((always_inline))
-WEAK void __csi_task_exit(const csi_id_t task_exit_id,
-                          const csi_id_t task_id,
-                          const csi_id_t detach_id) {}
+WEAK void __csi_task_exit(const csi_id_t task_exit_id, const csi_id_t task_id,
+                          const csi_id_t detach_id,
+                          const task_exit_prop_t prop) {}
 
 __attribute__((always_inline))
 WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,

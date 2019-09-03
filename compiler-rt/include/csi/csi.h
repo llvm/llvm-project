@@ -88,6 +88,18 @@ typedef struct {
 } loop_exit_prop_t;
 
 typedef struct {
+  // The task is the body of a Tapir loop
+  unsigned is_tapir_loop_body : 1;
+  uint64_t _padding : 63;
+} task_prop_t;
+
+typedef struct {
+  // The task is the body of a Tapir loop
+  unsigned is_tapir_loop_body : 1;
+  uint64_t _padding : 63;
+} task_exit_prop_t;
+
+typedef struct {
   // The call is indirect.
   unsigned is_indirect : 1;
   // Pad struct to 64 total bits.
@@ -212,10 +224,12 @@ WEAK void __csi_after_store(const csi_id_t store_id, const void *addr,
 /// Hooks for Tapir control flow.
 WEAK void __csi_detach(const csi_id_t detach_id, const int32_t *has_spawned);
 
-WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id);
+WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id,
+                     const task_prop_t prop);
 
 WEAK void __csi_task_exit(const csi_id_t task_exit_id, const csi_id_t task_id,
-                          const csi_id_t detach_id);
+                          const csi_id_t detach_id,
+                          const task_exit_prop_t prop);
 
 WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,
                                 const csi_id_t detach_id);
