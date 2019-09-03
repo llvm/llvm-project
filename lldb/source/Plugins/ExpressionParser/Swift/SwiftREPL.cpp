@@ -452,7 +452,7 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
     }
   }
 
-  const bool colorize_out = output_sp->GetFile().GetIsTerminalWithColors();
+  const bool colorize_out = debugger.GetUseColor();
 
   bool handled = false;
 
