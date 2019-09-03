@@ -22,24 +22,35 @@ from lldbsuite.test.decorators import no_debug_info_test, skipIfLinux
 from lldbsuite.test.decorators import swiftTest
 
 
-class REPLTest(PExpectTest):
+class REPLTest(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
+    PROMPT = re.compile('\\d+>')
+
+    def expect_prompt(self):
+        self.child.expect(self.PROMPT, timeout=30)
+
+    def launch(self, timeout=30):
+        logfile = getattr(sys.stdout, 'buffer',
+                          sys.stdout) if self.TraceOn() else None
+        args = [
+            '--no-lldbinit', '--no-use-colors', '-x',
+            '--repl=-enable-objc-interop -sdk %s'.format(
+                swift.getSwiftSDKRoot())
+        ]
+        self.child = pexpect.spawn(
+            lldbtest_config.lldbExec,
+            args=args,
+            logfile=logfile,
+            timeout=timeout)
+        self.child.expect('Welcome to.*Swift')
+        self.child.expect_exact('Type :help for assistance')
+        self.expect_prompt()
 
     @swiftTest
     @no_debug_info_test
     def testREPL(self):
-        # setup the regexp for the prompt
-        self.prompt = re.compile('\\d+>')
-        # launch the REPL..
         try:
             self.launch(timeout=30)
-            # and double check that it's there
-            self.expect('Welcome to.*Swift')
-            self.expect('Type :help for assistance')
-            # responsive
-            self.promptSync()
-            # then do user things
             self.doTest()
         finally:
             try:
@@ -48,34 +59,21 @@ class REPLTest(PExpectTest):
             except:
                 pass
 
-    def setUp(self):
-        # Call super's setUp().
-        PExpectTest.setUp(self)
-
-    def launchArgs(self):
-        return '-x "--repl=-enable-objc-interop -sdk %s"' % (
-            swift.getSwiftSDKRoot())
-
-    # run a REPL command and wait for the prompt
-    def command(
-            self,
-            command,
-            patterns=None,
-            timeout=None,
-            exact=None,
-            prompt_sync=True):
-        self.sendline(command)
+    def command(self,
+                cmd,
+                patterns=None,
+                timeout=30,
+                exact=False,
+                prompt_sync=True):
+        self.child.sendline(cmd)
         if patterns is not None:
-            if isinstance(patterns, list):
-                self.expectall(patterns, timeout, exact=exact)
-            else:
-                self.expect(patterns, timeout, exact=exact)
+            for pattern in patterns:
+                if exact:
+                    self.child.expect_exact(patterns, timeout=timeout)
+                else:
+                    self.child.expect(patterns, timeout=timeout)
         if prompt_sync:
-            self.promptSync(timeout=timeout)
-
-    # sync with the prompt
-    def promptSync(self, timeout=None):
-        self.expect(patterns=[self.prompt], timeout=timeout)
+            self.expect_prompt()
 
 
 def load_tests(x, y, z):
