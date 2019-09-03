@@ -210,7 +210,7 @@ struct CilkSanitizerImpl : public CSIImpl {
 
   private:
     void getDetachesForInstruction(Instruction *I);
-    enum SuppressionVal : uint8_t
+    enum class SuppressionVal : uint8_t
       {
        NoAccess = 0,
        Mod = 1,
@@ -1774,8 +1774,10 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
   Function *F = I->getFunction();
   AliasAnalysis *AA = RI.getAA();
   MemoryLocation Loc = getMemoryLocation(I, OperandNum, CilkSanImpl.TLI);
-  Value *SuppressionVal = getSuppressionIRValue(IRB, SuppressionVal::NoAccess);
-  Value *DefaultSuppression = getSuppressionIRValue(IRB, DefaultSV);
+  Value *SV = getSuppressionIRValue(
+      IRB, static_cast<unsigned>(SuppressionVal::NoAccess));
+  Value *DefaultSuppression = getSuppressionIRValue(
+      IRB, static_cast<unsigned>(DefaultSV));
 
   // // Check the other operands of this call to check for aliasing, e.g., because
   // // the same pointer is passed twice.
@@ -1792,7 +1794,8 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
   // }
 
   // bool ObjectsDontAlias = true;
-  Value *NoAliasFlag = getSuppressionIRValue(IRB, SuppressionVal::NoAlias);
+  Value *NoAliasFlag = getSuppressionIRValue(
+      IRB, static_cast<unsigned>(SuppressionVal::NoAlias));
   // Check the recorded race data for I.
   for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
     if (OperandNum != RD.OperandNum)
@@ -1818,12 +1821,13 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
       Value *FlagLoad = readSuppressionVal(LocalSuppressions[Obj], IRB);
       Value *FlagCheck = IRB.CreateAnd(
           FlagLoad, getSuppressionIRValue(IRB, RaceTypeToFlagVal(RD.Type)));
-      SuppressionVal = IRB.CreateOr(SuppressionVal, FlagCheck);
-      // SuppressionVal = IRB.CreateOr(SuppressionVal, FlagLoad);
+      SV = IRB.CreateOr(SV, FlagCheck);
+      // SV = IRB.CreateOr(SV, FlagLoad);
 
       // Get the dynamic no-alias bit from the suppression value.
       Value *ObjNoAliasFlag = IRB.CreateAnd(
-          FlagLoad, getSuppressionIRValue(IRB, SuppressionVal::NoAlias));
+          FlagLoad, getSuppressionIRValue(
+              IRB, static_cast<unsigned>(SuppressionVal::NoAlias)));
       Value *NoAliasCheck = IRB.CreateICmpNE(getSuppressionIRValue(IRB, 0),
                                              ObjNoAliasFlag);
 
@@ -1853,10 +1857,10 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
               IRB.CreateAnd(
                   FlagLoad, getSuppressionIRValue(IRB,
                                                   RaceTypeToFlagVal(RD.Type))));
-          SuppressionVal = IRB.CreateOr(SuppressionVal, FlagCheck);
+          SV = IRB.CreateOr(SV, FlagCheck);
           // Value *FlagCheck = IRB.CreateAnd(
           //     FlagLoad, getSuppressionIRValue(IRB, RaceTypeToFlagVal(RD.Type)));
-          // SuppressionVal = IRB.CreateOr(SuppressionVal, FlagCheck);
+          // SV = IRB.CreateOr(SV, FlagCheck);
         }
       }
 
@@ -1898,8 +1902,8 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
     }
   }
   // Record the no-alias information.
-  SuppressionVal = IRB.CreateOr(SuppressionVal, NoAliasFlag);
-  return SuppressionVal;
+  SV = IRB.CreateOr(SV, NoAliasFlag);
+  return SV;
 }
 
 Value *CilkSanitizerImpl::Instrumentor::getSuppressionCheck(
@@ -1937,7 +1941,8 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionCheck(
       // Get the dynamic no-alias bit from the suppression value.
       Value *NoAliasCheck = IRB.CreateICmpNE(
           getSuppressionIRValue(IRB, 0), IRB.CreateAnd(
-              FlagLoad, getSuppressionIRValue(IRB, SuppressionVal::NoAlias)));
+              FlagLoad, getSuppressionIRValue(
+                  IRB, static_cast<unsigned>(SuppressionVal::NoAlias))));
 
       // Check the function arguments that might alias this object.
       for (Argument &Arg : F->args()) {
