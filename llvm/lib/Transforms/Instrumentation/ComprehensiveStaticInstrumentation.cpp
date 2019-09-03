@@ -253,6 +253,11 @@ bool CSIImpl::callsPlaceholderFunction(const Instruction &I) {
   return false;
 }
 
+bool CSIImpl::spawnsTapirLoopBody(DetachInst *DI, LoopInfo &LI, TaskInfo &TI) {
+  Loop *L = LI.getLoopFor(DI->getParent());
+  return (TI.getTaskFor(DI->getDetached()) == getTaskIfTapirLoop(L, &TI));
+}
+
 bool CSIImpl::run() {
   initializeCsi();
 
@@ -647,6 +652,8 @@ void CSIImpl::initializeTapirHooks() {
   IRBuilder<> IRB(C);
   Type *IDType = IRB.getInt64Ty();
   Type *RetType = IRB.getVoidTy();
+  Type *TaskPropertyTy = CsiTaskProperty::getType(C);
+  Type *TaskExitPropertyTy = CsiTaskExitProperty::getType(C);
 
   CsiDetach = checkCsiInterfaceFunction(M.getOrInsertFunction(
       "__csi_detach", RetType,
@@ -654,12 +661,13 @@ void CSIImpl::initializeTapirHooks() {
   CsiTaskEntry =
       checkCsiInterfaceFunction(M.getOrInsertFunction("__csi_task", RetType,
                                                       /* task_id */ IDType,
-                                                      /* detach_id */ IDType));
+                                                      /* detach_id */ IDType,
+                                                      TaskPropertyTy));
   CsiTaskExit = checkCsiInterfaceFunction(
       M.getOrInsertFunction("__csi_task_exit", RetType,
                             /* task_exit_id */ IDType,
                             /* task_id */ IDType,
-                            /* detach_id */ IDType));
+                            /* detach_id */ IDType, TaskExitPropertyTy));
   CsiDetachContinue = checkCsiInterfaceFunction(
       M.getOrInsertFunction("__csi_detach_continue", RetType,
                             /* detach_continue_id */ IDType,
@@ -1133,7 +1141,9 @@ static void getTaskExits(DetachInst *DI,
 }
 
 void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
+                               LoopInfo &LI,
                                const DenseMap<Value *, Value *> &TrackVars) {
+  bool TapirLoopBody = spawnsTapirLoopBody(DI, LI, TI);
   // Instrument the detach instruction itself
   Value *DetachID;
   {
@@ -1161,9 +1171,10 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
     IRBuilder<> IRB(&*DetachedBlock->getFirstInsertionPt());
     uint64_t LocalID = TaskFED.add(*DetachedBlock);
     Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
-    // Value *StackSave = IRB.CreateCall(
-    //     Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
-    Instruction *Call = IRB.CreateCall(CsiTaskEntry, {TaskID, DetachID});
+    CsiTaskProperty Prop;
+    Prop.setIsTapirLoopBody(TapirLoopBody);
+    Instruction *Call = IRB.CreateCall(CsiTaskEntry, {TaskID, DetachID,
+                                                      Prop.getValue(IRB)});
     setInstrumentationDebugLoc(*DetachedBlock, Call);
 
     // Instrument the exit points of the detached tasks.
@@ -1171,24 +1182,33 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
       IRBuilder<> IRB(Exit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
       Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      CsiTaskExitProperty ExitProp;
+      ExitProp.setIsTapirLoopBody(TapirLoopBody);
       insertHookCall(Exit->getTerminator(), CsiTaskExit,
-                     {ExitID, TaskID, DetachID});
+                     {ExitID, TaskID, DetachID, ExitProp.getValue(IRB)});
     }
     // Instrument the EH exits of the detached task.
     for (BasicBlock *Exit : TaskResumes) {
       IRBuilder<> IRB(Exit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
       Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      CsiTaskExitProperty ExitProp;
+      ExitProp.setIsTapirLoopBody(TapirLoopBody);
       insertHookCall(Exit->getTerminator(), CsiTaskExit,
-                     {ExitID, TaskID, DetachID});
+                     {ExitID, TaskID, DetachID, ExitProp.getValue(IRB)});
     }
 
     Task *T = TI.getTaskFor(DetachedBlock);
     Value *DefaultID = getDefaultID(IRB);
-    for (Spindle *SharedEH : SharedEHExits)
-      insertHookCallAtSharedEHSpindleExits(SharedEH, T, CsiTaskExit,
-                                           TaskExitFED, {TaskID, DetachID},
-                                           {DefaultID, DefaultID});
+    for (Spindle *SharedEH : SharedEHExits) {
+      CsiTaskExitProperty ExitProp;
+      ExitProp.setIsTapirLoopBody(TapirLoopBody);
+      insertHookCallAtSharedEHSpindleExits(
+          SharedEH, T, CsiTaskExit, TaskExitFED,
+          {TaskID, DetachID, ExitProp.getValueImpl(DI->getContext())},
+          {DefaultID, DefaultID,
+           CsiTaskExitProperty::getDefaultValueImpl(DI->getContext())});
+    }
   }
 
   // Instrument the continuation of the detach.
@@ -1507,13 +1527,14 @@ CallInst *CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
 }
 
 bool CSIImpl::updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
-                            ArrayRef<Value *> HookArgs,
+                            Function *HookFunction, ArrayRef<Value *> HookArgs,
                             ArrayRef<Value *> DefaultArgs) {
   // If we've already created a PHI node in this block for the hook arguments,
   // just add the incoming arguments to the PHIs.
-  if (ArgPHIs.count(Succ)) {
+  auto Key = std::make_pair(Succ, HookFunction);
+  if (ArgPHIs.count(Key)) {
     unsigned HookArgNum = 0;
-    for (PHINode *ArgPHI : ArgPHIs[Succ]) {
+    for (PHINode *ArgPHI : ArgPHIs[Key]) {
       ArgPHI->setIncomingValue(ArgPHI->getBasicBlockIndex(BB),
                                HookArgs[HookArgNum]);
       ++HookArgNum;
@@ -1532,7 +1553,7 @@ bool CSIImpl::updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
       else
         ArgPHI->addIncoming(DefaultArgs[HookArgNum], Pred);
     }
-    ArgPHIs[Succ].push_back(ArgPHI);
+    ArgPHIs[Key].push_back(ArgPHI);
     ++HookArgNum;
   }
   return false;
@@ -1552,11 +1573,12 @@ CallInst *CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
                           HookArgs);
   }
 
-  if (updateArgPHIs(Succ, BB, HookArgs, DefaultArgs))
+  if (updateArgPHIs(Succ, BB, HookFunction, HookArgs, DefaultArgs))
     return nullptr;
 
+  auto Key = std::make_pair(Succ, HookFunction);
   SmallVector<Value *, 2> SuccessorHookArgs;
-  for (PHINode *ArgPHI : ArgPHIs[Succ])
+  for (PHINode *ArgPHI : ArgPHIs[Key])
     SuccessorHookArgs.push_back(ArgPHI);
 
   IRBuilder<> IRB(&*Succ->getFirstInsertionPt());
@@ -1581,7 +1603,7 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
   // hook-argument PHI's along the way.
   SmallPtrSet<Spindle *, 2> Visited;
   for (Spindle *S : llvm::reverse(WorkList)) {
-    bool NewPHINode = false;
+    bool NoNewPHINode = true;
     // If this spindle is the first shared-EH spindle in the traversal, use the
     // given hook arguments to update the PHI node.
     if (S == SharedEHSpindle) {
@@ -1589,8 +1611,9 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
         Spindle *SPred = InEdge.first;
         BasicBlock *Pred = InEdge.second;
         if (T->contains(SPred))
-          NewPHINode |=
-              updateArgPHIs(S->getEntry(), Pred, HookArgs, DefaultArgs);
+          NoNewPHINode &=
+            updateArgPHIs(S->getEntry(), Pred, HookFunction, HookArgs,
+                          DefaultArgs);
       }
     } else {
       // Otherwise update the PHI node based on the predecessor shared-eh
@@ -1599,30 +1622,31 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
         Spindle *SPred = InEdge.first;
         BasicBlock *Pred = InEdge.second;
         if (Visited.count(SPred)) {
+          auto Key = std::make_pair(SPred->getEntry(), HookFunction);
           SmallVector<Value *, 4> NewHookArgs(
-              ArgPHIs[SPred->getEntry()].begin(),
-              ArgPHIs[SPred->getEntry()].end());
-          NewPHINode |=
-              updateArgPHIs(S->getEntry(), Pred, NewHookArgs, DefaultArgs);
+              ArgPHIs[Key].begin(), ArgPHIs[Key].end());
+          NoNewPHINode &=
+            updateArgPHIs(S->getEntry(), Pred, HookFunction, NewHookArgs,
+                          DefaultArgs);
         }
       }
     }
     Visited.insert(S);
 
-    if (!NewPHINode)
+    if (NoNewPHINode)
       continue;
 
     // Detached-rethrow exits can appear in strange places within a task-exiting
     // spindle.  Hence we loop over all blocks in the spindle to find detached
     // rethrows.
+    auto Key = std::make_pair(S->getEntry(), HookFunction);
     for (BasicBlock *B : S->blocks()) {
       if (isDetachedRethrow(B->getTerminator())) {
         IRBuilder<> IRB(B->getTerminator());
         uint64_t LocalID = FED.add(*B->getTerminator());
         Value *HookID = FED.localToGlobalId(LocalID, IRB);
         SmallVector<Value *, 4> Args({HookID});
-        Args.append(ArgPHIs[S->getEntry()].begin(),
-                    ArgPHIs[S->getEntry()].end());
+        Args.append(ArgPHIs[Key].begin(), ArgPHIs[Key].end());
         Instruction *Call = IRB.CreateCall(HookFunction, Args);
         setInstrumentationDebugLoc(*B, Call);
       }
@@ -2229,7 +2253,7 @@ void CSIImpl::instrumentFunction(Function &F) {
     if (Config->DoesFunctionRequireInstrumentationForPoint(
             F.getName(), InstrumentationPoint::INSTR_TAPIR_DETACH)) {
       for (DetachInst *DI : Detaches)
-        instrumentDetach(DI, DT, TI, TrackVars);
+        instrumentDetach(DI, DT, TI, LI, TrackVars);
     }
     if (Config->DoesFunctionRequireInstrumentationForPoint(
             F.getName(), InstrumentationPoint::INSTR_TAPIR_SYNC)) {

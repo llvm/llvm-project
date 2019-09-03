@@ -273,6 +273,11 @@ public:
         C, StructType::get(IntegerType::get(C, PropBits.MaySpawn),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -322,6 +327,11 @@ public:
                            IntegerType::get(C, PropBits.EHReturn),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -494,6 +504,10 @@ public:
                            IntegerType::get(C, PropBits.IsEHPad),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
 
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
@@ -537,6 +551,116 @@ private:
   static constexpr PropertyBits PropBits = {1, 1, (64 - 1 - 1)};
 };
 
+class CsiTaskProperty : public CsiProperty {
+public:
+  CsiTaskProperty() { PropValue.Bits = 0; }
+
+  /// Return the Type of a property.
+  static StructType *getStructType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return StructType::get(IntegerType::get(C, PropBits.IsTapirLoopBody),
+                           IntegerType::get(C, PropBits.Padding));
+  }
+  static Type *getType(LLVMContext &C) {
+    return getCoercedType(C, getStructType(C));
+  }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csi.h
+    // StructType *StructTy = getType(C);
+    // return ConstantStruct::get(StructTy,
+    //                            ConstantInt::get(IntegerType::get(C, 64), 0),
+    //                            nullptr);
+    // TODO: This solution works for x86, but should be generalized to support
+    // other architectures in the future.
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the IsTapirLoop property.
+  void setIsTapirLoopBody(bool v) { PropValue.Fields.IsTapirLoopBody = v; }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned IsTapirLoopBody : 1;
+      uint64_t Padding : 63;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int IsTapirLoopBody;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = {1, (64 - 1)};
+};
+
+class CsiTaskExitProperty : public CsiProperty {
+public:
+  CsiTaskExitProperty() { PropValue.Bits = 0; }
+
+  /// Return the Type of a property.
+  static StructType *getStructType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return StructType::get(IntegerType::get(C, PropBits.IsTapirLoopBody),
+                           IntegerType::get(C, PropBits.Padding));
+  }
+  static Type *getType(LLVMContext &C) {
+    return getCoercedType(C, getStructType(C));
+  }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csi.h
+    // StructType *StructTy = getType(C);
+    // return ConstantStruct::get(StructTy,
+    //                            ConstantInt::get(IntegerType::get(C, 64), 0),
+    //                            nullptr);
+    // TODO: This solution works for x86, but should be generalized to support
+    // other architectures in the future.
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the IsTapirLoopBody property.
+  void setIsTapirLoopBody(bool v) { PropValue.Fields.IsTapirLoopBody = v; }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned IsTapirLoopBody : 1;
+      uint64_t Padding : 63;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int IsTapirLoopBody;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = {1, (64 - 1)};
+};
+
 class CsiCallProperty : public CsiProperty {
 public:
   CsiCallProperty() { PropValue.Bits = 0; }
@@ -548,6 +672,11 @@ public:
         C, StructType::get(IntegerType::get(C, PropBits.IsIndirect),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -604,6 +733,11 @@ public:
                         IntegerType::get(C, PropBits.LoadReadBeforeWriteInBB),
                         IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -686,6 +820,11 @@ public:
         C, StructType::get(IntegerType::get(C, PropBits.IsStatic),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -729,6 +868,11 @@ public:
         C, StructType::get(IntegerType::get(C, PropBits.AllocFnTy),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -770,6 +914,11 @@ public:
         C, StructType::get(IntegerType::get(C, PropBits.FreeTy),
                            IntegerType::get(C, PropBits.Padding)));
   }
+  /// Get the default value for this property.
+  static Constant *getDefaultValueImpl(LLVMContext &C) {
+    return Constant::getNullValue(getType(C));
+  }
+
   /// Return a constant value holding this property.
   Constant *getValueImpl(LLVMContext &C) const override {
     // Must match the definition of property type in csi.h
@@ -856,6 +1005,8 @@ public:
     return IRB.getInt64(CsiUnknownId);
   }
 
+  static bool spawnsTapirLoopBody(DetachInst *DI, LoopInfo &LI, TaskInfo &TI);
+
 protected:
   /// Initialize the CSI pass.
   void initializeCsi();
@@ -923,6 +1074,7 @@ protected:
   void instrumentLoop(Loop &L, TaskInfo &TI, ScalarEvolution *SE);
 
   void instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
+                        LoopInfo &LI,
                         const DenseMap<Value *, Value *> &TrackVars);
   void instrumentSync(SyncInst *SI,
                       const DenseMap<Value *, Value *> &TrackVars);
@@ -947,7 +1099,7 @@ protected:
   /// Insert a call to the given hook function before the given instruction.
   CallInst* insertHookCall(Instruction *I, Function *HookFunction,
                       ArrayRef<Value *> HookArgs);
-  bool updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
+  bool updateArgPHIs(BasicBlock *Succ, BasicBlock *BB, Function *HookFunction,
                      ArrayRef<Value *> HookArgs,
                      ArrayRef<Value *> DefaultHookArgs);
   CallInst *insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
@@ -1253,7 +1405,8 @@ protected:
   Type *IntptrTy;
   DenseMap<StringRef, uint64_t> FuncOffsetMap;
 
-  DenseMap<BasicBlock *, SmallVector<PHINode *, 4>> ArgPHIs;
+  DenseMap<std::pair<BasicBlock *, Function *>,
+           SmallVector<PHINode *, 4>> ArgPHIs;
   DenseMap<BasicBlock *, CallInst *> callsAfterSync;
   std::unique_ptr<InstrumentationConfig> Config;
 
