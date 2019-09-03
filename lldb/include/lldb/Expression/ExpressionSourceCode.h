@@ -45,10 +45,6 @@ public:
                const EvaluateExpressionOptions &options,
                ExecutionContext &exe_ctx, uint32_t &first_body_line) const;
 
-  static bool
-  SaveExpressionTextToTempFile(llvm::StringRef text,
-                               const EvaluateExpressionOptions &options,
-                               std::string &expr_source_path);
   // Given a string returned by GetText, find the beginning and end of the body
   // passed to CreateWrapped. Return true if the bounds could be found.  This
   // will also work on text with FixItHints applied.

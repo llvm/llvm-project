@@ -182,6 +182,11 @@ public:
     return "\n/*__LLDB_USER_END__*/";
   }
 
+  static bool
+  SaveExpressionTextToTempFile(llvm::StringRef text,
+                               const EvaluateExpressionOptions &options,
+                               std::string &expr_source_path);
+
 private:
   uint32_t m_tmpname_idx = 0;
 
