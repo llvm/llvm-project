@@ -657,8 +657,6 @@ enum SymbolType {
   eSymbolTypeObjCClass,
   eSymbolTypeObjCMetaClass,
   eSymbolTypeObjCIVar,
-  eSymbolTypeIVarOffset, // A symbol that contains an offset for an instance
-                         // variable
   eSymbolTypeReExported,
   eSymbolTypeASTFile   // A symbol whose name is the path to a compiler AST file
 };

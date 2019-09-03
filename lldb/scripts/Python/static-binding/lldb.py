@@ -523,7 +523,6 @@ eSymbolTypeUndefined = _lldb.eSymbolTypeUndefined
 eSymbolTypeObjCClass = _lldb.eSymbolTypeObjCClass
 eSymbolTypeObjCMetaClass = _lldb.eSymbolTypeObjCMetaClass
 eSymbolTypeObjCIVar = _lldb.eSymbolTypeObjCIVar
-eSymbolTypeIVarOffset = _lldb.eSymbolTypeIVarOffset
 eSymbolTypeReExported = _lldb.eSymbolTypeReExported
 eSymbolTypeASTFile = _lldb.eSymbolTypeASTFile
 eSectionTypeInvalid = _lldb.eSectionTypeInvalid

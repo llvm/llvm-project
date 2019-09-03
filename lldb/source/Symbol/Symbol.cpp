@@ -369,7 +369,6 @@ const char *Symbol::GetTypeAsString() const {
     ENUM_TO_CSTRING(ObjCClass);
     ENUM_TO_CSTRING(ObjCMetaClass);
     ENUM_TO_CSTRING(ObjCIVar);
-    ENUM_TO_CSTRING(IVarOffset);
     ENUM_TO_CSTRING(ReExported);
   default:
     break;
