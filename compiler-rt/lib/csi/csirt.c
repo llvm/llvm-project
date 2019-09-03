@@ -7,13 +7,17 @@
 
 // Compile-time assert the property structs are 64 bits.
 static_assert(sizeof(func_prop_t) == 8, "Size of func_prop_t is not 64 bits.");
-static_assert(sizeof(func_exit_prop_t) == 8, "Size of func_exit_prop_t is not 64 bits.");
+static_assert(sizeof(func_exit_prop_t) == 8,
+              "Size of func_exit_prop_t is not 64 bits.");
 static_assert(sizeof(bb_prop_t) == 8, "Size of bb_prop_t is not 64 bits.");
 static_assert(sizeof(call_prop_t) == 8, "Size of call_prop_t is not 64 bits.");
 static_assert(sizeof(load_prop_t) == 8, "Size of load_prop_t is not 64 bits.");
-static_assert(sizeof(store_prop_t) == 8, "Size of store_prop_t is not 64 bits.");
-static_assert(sizeof(alloca_prop_t) == 8, "Size of alloca_prop_t is not 64 bits.");
-static_assert(sizeof(allocfn_prop_t) == 8, "Size of allocfn_prop_t is not 64 bits.");
+static_assert(sizeof(store_prop_t) == 8,
+              "Size of store_prop_t is not 64 bits.");
+static_assert(sizeof(alloca_prop_t) == 8,
+              "Size of alloca_prop_t is not 64 bits.");
+static_assert(sizeof(allocfn_prop_t) == 8,
+              "Size of allocfn_prop_t is not 64 bits.");
 static_assert(sizeof(free_prop_t) == 8, "Size of free_prop_t is not 64 bits.");
 
 #define CSIRT_API __attribute__((visibility("default")))
@@ -78,6 +82,7 @@ const char *allocfn_str[] =
   {
    "void *malloc(size_t size)",
    "void *valloc(size_t size)",
+   "void *aligned_alloc(align_val_t, size)",
    "void *calloc(size_t count, size_t size)",
    "void *realloc(void *ptr, size_t size)",
    "void *reallocf(void *ptr, size_t size)",
@@ -431,88 +436,105 @@ CSIRT_API void __csirt_unit_init(
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_func_source_loc(const csi_id_t func_id) {
     return get_fed_entry(FED_TYPE_FUNCTIONS, func_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_func_exit_source_loc(const csi_id_t func_exit_id) {
     return get_fed_entry(FED_TYPE_FUNCTION_EXIT, func_exit_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_bb_source_loc(const csi_id_t bb_id) {
     return get_fed_entry(FED_TYPE_BASICBLOCK, bb_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_callsite_source_loc(const csi_id_t callsite_id) {
     return get_fed_entry(FED_TYPE_CALLSITE, callsite_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_load_source_loc(const csi_id_t load_id) {
     return get_fed_entry(FED_TYPE_LOAD, load_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_store_source_loc(const csi_id_t store_id) {
     return get_fed_entry(FED_TYPE_STORE, store_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_detach_source_loc(const csi_id_t detach_id) {
   return get_fed_entry(FED_TYPE_DETACH, detach_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_task_source_loc(const csi_id_t task_id) {
   return get_fed_entry(FED_TYPE_TASK, task_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_task_exit_source_loc(
     const csi_id_t task_exit_id) {
   return get_fed_entry(FED_TYPE_TASK_EXIT, task_exit_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_detach_continue_source_loc(
     const csi_id_t detach_continue_id) {
   return get_fed_entry(FED_TYPE_DETACH_CONTINUE, detach_continue_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_sync_source_loc(const csi_id_t sync_id) {
   return get_fed_entry(FED_TYPE_SYNC, sync_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id) {
   return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_allocfn_source_loc(const csi_id_t allocfn_id) {
   return get_fed_entry(FED_TYPE_ALLOCFN, allocfn_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const source_loc_t *__csi_get_free_source_loc(const csi_id_t free_id) {
   return get_fed_entry(FED_TYPE_FREE, free_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id) {
   return get_sizeinfo_entry(SIZEINFO_TYPE_BASICBLOCK, bb_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const char *__csi_get_allocfn_str(const allocfn_prop_t prop) {
   return allocfn_str[prop.allocfn_ty];
 }
 
 CSIRT_API
+__attribute__((const))
 const char *__csi_get_free_str(const free_prop_t prop) {
   return free_str[prop.free_ty];
 }

@@ -70,6 +70,7 @@ const char *allocfn_str[] =
   {
    "void *malloc(size_t size)",
    "void *valloc(size_t size)",
+   "void *aligned_alloc(align_val_t, size)",
    "void *calloc(size_t count, size_t size)",
    "void *realloc(void *ptr, size_t size)",
    "void *reallocf(void *ptr, size_t size)",
@@ -420,104 +421,124 @@ void __csirt_unit_init(const char * const name,
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_func_source_loc(const csi_id_t func_id) {
   return get_fed_entry(FED_TYPE_FUNCTIONS, func_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_func_exit_source_loc(
     const csi_id_t func_exit_id) {
   return get_fed_entry(FED_TYPE_FUNCTION_EXIT, func_exit_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_bb_source_loc(const csi_id_t bb_id) {
   return get_fed_entry(FED_TYPE_BASICBLOCK, bb_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_call_source_loc(const csi_id_t call_id) {
   return get_fed_entry(FED_TYPE_CALLSITE, call_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_load_source_loc(const csi_id_t load_id) {
   return get_fed_entry(FED_TYPE_LOAD, load_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_store_source_loc(const csi_id_t store_id) {
   return get_fed_entry(FED_TYPE_STORE, store_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_detach_source_loc(const csi_id_t detach_id) {
   return get_fed_entry(FED_TYPE_DETACH, detach_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_task_source_loc(const csi_id_t task_id) {
   return get_fed_entry(FED_TYPE_TASK, task_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_task_exit_source_loc(
     const csi_id_t task_exit_id) {
   return get_fed_entry(FED_TYPE_TASK_EXIT, task_exit_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_detach_continue_source_loc(
     const csi_id_t detach_continue_id) {
   return get_fed_entry(FED_TYPE_DETACH_CONTINUE, detach_continue_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_sync_source_loc(const csi_id_t sync_id) {
   return get_fed_entry(FED_TYPE_SYNC, sync_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_alloca_source_loc(const csi_id_t alloca_id) {
   return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_allocfn_source_loc(const csi_id_t allocfn_id) {
   return get_fed_entry(FED_TYPE_ALLOCFN, allocfn_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_free_source_loc(const csi_id_t free_id) {
   return get_fed_entry(FED_TYPE_FREE, free_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const obj_source_loc_t *__csan_get_load_obj_source_loc(const csi_id_t load_id) {
   return get_obj_entry(OBJ_TYPE_LOAD, load_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const obj_source_loc_t *__csan_get_store_obj_source_loc(const csi_id_t store_id) {
   return get_obj_entry(OBJ_TYPE_STORE, store_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const obj_source_loc_t *__csan_get_alloca_obj_source_loc(const csi_id_t alloca_id) {
   return get_obj_entry(OBJ_TYPE_ALLOCA, alloca_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const obj_source_loc_t *__csan_get_allocfn_obj_source_loc(const csi_id_t allocfn_id) {
   return get_obj_entry(OBJ_TYPE_ALLOCFN, allocfn_id);
 }
 
 CSIRT_API
+__attribute__((const))
 const char *__csan_get_allocfn_str(const allocfn_prop_t prop) {
   return allocfn_str[prop.allocfn_ty];
 }
 
 CSIRT_API
+__attribute__((const))
 const char *__csan_get_free_str(const free_prop_t prop) {
   return free_str[prop.free_ty];
 }
