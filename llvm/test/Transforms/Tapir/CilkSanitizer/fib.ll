@@ -84,9 +84,9 @@ if.end:                                           ; preds = %if.then, %entry
   %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i64 0, i64 0), i32 %n.0, i32 %call1), !dbg !59
   ret i32 0, !dbg !60
 ; CHECK-LABEL: if.end:
-; CHECK: @__cilksan_disable_checking(
-; CHECK-NEXT: tail call i32 @fib(
-; CHECK-NEXT: @__cilksan_enable_checking(
+; CHECK-NOT: call void @__cilksan_disable_checking(
+; CHECK: tail call i32 @fib(
+; CHECK-NOT: call void @__cilksan_enable_checking(
 }
 
 ; Function Attrs: inlinehint nounwind readonly uwtable
