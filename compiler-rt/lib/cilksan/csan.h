@@ -9,6 +9,8 @@
 typedef struct {
   csi_id_t num_func;
   csi_id_t num_func_exit;
+  csi_id_t num_loop;
+  csi_id_t num_loop_exit;
   csi_id_t num_bb;
   csi_id_t num_call;
   csi_id_t num_load;

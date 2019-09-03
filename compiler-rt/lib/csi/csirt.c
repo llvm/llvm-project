@@ -9,6 +9,9 @@
 static_assert(sizeof(func_prop_t) == 8, "Size of func_prop_t is not 64 bits.");
 static_assert(sizeof(func_exit_prop_t) == 8,
               "Size of func_exit_prop_t is not 64 bits.");
+static_assert(sizeof(loop_prop_t) == 8, "Size of loop_prop_t is not 64 bits.");
+static_assert(sizeof(loop_exit_prop_t) == 8,
+              "Size of loop_exit_prop_t is not 64 bits.");
 static_assert(sizeof(bb_prop_t) == 8, "Size of bb_prop_t is not 64 bits.");
 static_assert(sizeof(call_prop_t) == 8, "Size of call_prop_t is not 64 bits.");
 static_assert(sizeof(load_prop_t) == 8, "Size of load_prop_t is not 64 bits.");
@@ -46,6 +49,8 @@ typedef struct {
 typedef enum {
     FED_TYPE_FUNCTIONS,
     FED_TYPE_FUNCTION_EXIT,
+    FED_TYPE_LOOP,
+    FED_TYPE_LOOP_EXIT,
     FED_TYPE_BASICBLOCK,
     FED_TYPE_CALLSITE,
     FED_TYPE_LOAD,
@@ -445,6 +450,18 @@ CSIRT_API
 __attribute__((const))
 const source_loc_t *__csi_get_func_exit_source_loc(const csi_id_t func_exit_id) {
     return get_fed_entry(FED_TYPE_FUNCTION_EXIT, func_exit_id);
+}
+
+CSIRT_API
+__attribute__((const))
+const source_loc_t *__csi_get_loop_source_loc(const csi_id_t loop_id) {
+    return get_fed_entry(FED_TYPE_LOOP, loop_id);
+}
+
+CSIRT_API
+__attribute__((const))
+const source_loc_t *__csi_get_loop_exit_source_loc(const csi_id_t loop_exit_id) {
+    return get_fed_entry(FED_TYPE_LOOP_EXIT, loop_exit_id);
 }
 
 CSIRT_API

@@ -38,6 +38,22 @@ WEAK void __csi_func_exit(const csi_id_t func_exit_id,
                           const csi_id_t func_id, const func_exit_prop_t prop) {}
 
 __attribute__((always_inline))
+WEAK void __csi_before_loop(const csi_id_t loop_id, const int64_t trip_count,
+                            const loop_prop_t prop) {}
+
+__attribute__((always_inline))
+WEAK void __csi_after_loop(const csi_id_t loop_id, const loop_prop_t prop) {}
+
+__attribute__((always_inline))
+WEAK void __csi_loopbody_entry(const csi_id_t loop_id, const loop_prop_t prop)
+{}
+
+__attribute__((always_inline))
+WEAK void __csi_loopbody_exit(const csi_id_t loop_exit_id,
+                              const csi_id_t loop_id,
+                              const loop_exit_prop_t prop) {}
+
+__attribute__((always_inline))
 WEAK void __csi_bb_entry(const csi_id_t bb_id, const bb_prop_t prop) {}
 
 __attribute__((always_inline))
