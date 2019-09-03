@@ -36,7 +36,6 @@ TEST(ExpandAutoType, ShortenNamespace) {
                 "testns1::TestClass<testns1::OtherClass>", "testns1"));
 }
 
-
 } // namespace
 } // namespace clangd
 } // namespace clang

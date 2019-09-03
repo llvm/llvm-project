@@ -2297,6 +2297,8 @@ class MovFromVFP<bits<4> opc19_16, dag oops, dag iops, string opc, string asm,
   let Inst{6-5}   = 0b00;
   let Inst{4}     = 1;
   let Inst{3-0}   = 0b0000;
+  let Unpredictable{7-5} = 0b111;
+  let Unpredictable{3-0} = 0b1111;
 }
 
 let DecoderMethod = "DecodeForVMRSandVMSR" in {
@@ -2370,63 +2372,65 @@ class MovToVFP<bits<4> opc19_16, dag oops, dag iops, string opc, string asm,
   VFPAI<oops, iops, VFPMiscFrm, IIC_fpSTAT, opc, asm, pattern> {
 
   // Instruction operand.
-  bits<4> src;
-
-  // Encode instruction operand.
-  let Inst{15-12} = src;
+  bits<4> Rt;
 
   let Inst{27-20} = 0b11101110;
   let Inst{19-16} = opc19_16;
+  let Inst{15-12} = Rt;
   let Inst{11-8}  = 0b1010;
   let Inst{7}     = 0;
+  let Inst{6-5}   = 0b00;
   let Inst{4}     = 1;
+  let Inst{3-0}   = 0b0000;
   let Predicates = [HasVFP2];
+  let Unpredictable{7-5} = 0b111;
+  let Unpredictable{3-0} = 0b1111;
 }
 
 let DecoderMethod = "DecodeForVMRSandVMSR" in {
  let Defs = [FPSCR] in {
    let Predicates = [HasFPRegs] in
    // Application level GPR -> FPSCR
-   def VMSR : MovToVFP<0b0001 /* fpscr */, (outs), (ins GPRnopc:$src),
-                       "vmsr", "\tfpscr, $src",
-                       [(int_arm_set_fpscr GPRnopc:$src)]>;
+   def VMSR : MovToVFP<0b0001 /* fpscr */, (outs), (ins GPRnopc:$Rt),
+                       "vmsr", "\tfpscr, $Rt",
+                       [(int_arm_set_fpscr GPRnopc:$Rt)]>;
    // System level GPR -> FPEXC
-   def VMSR_FPEXC : MovToVFP<0b1000 /* fpexc */, (outs), (ins GPRnopc:$src),
-                               "vmsr", "\tfpexc, $src", []>;
+   def VMSR_FPEXC : MovToVFP<0b1000 /* fpexc */, (outs), (ins GPRnopc:$Rt),
+                               "vmsr", "\tfpexc, $Rt", []>;
    // System level GPR -> FPSID
-   def VMSR_FPSID : MovToVFP<0b0000 /* fpsid */, (outs), (ins GPRnopc:$src),
-                             "vmsr", "\tfpsid, $src", []>;
-   def VMSR_FPINST : MovToVFP<0b1001 /* fpinst */, (outs), (ins GPRnopc:$src),
-                              "vmsr", "\tfpinst, $src", []>;
-   def VMSR_FPINST2 : MovToVFP<0b1010 /* fpinst2 */, (outs), (ins GPRnopc:$src),
-                               "vmsr", "\tfpinst2, $src", []>;
+   def VMSR_FPSID : MovToVFP<0b0000 /* fpsid */, (outs), (ins GPRnopc:$Rt),
+                             "vmsr", "\tfpsid, $Rt", []>;
+   def VMSR_FPINST : MovToVFP<0b1001 /* fpinst */, (outs), (ins GPRnopc:$Rt),
+                              "vmsr", "\tfpinst, $Rt", []>;
+   def VMSR_FPINST2 : MovToVFP<0b1010 /* fpinst2 */, (outs), (ins GPRnopc:$Rt),
+                               "vmsr", "\tfpinst2, $Rt", []>;
  }
  let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
    // System level GPR -> FPSCR with context saving for security extensions
-   def VMSR_FPCXTNS : MovToVFP<0b1110 /* fpcxtns */, (outs), (ins GPR:$src),
-                               "vmsr", "\tfpcxtns, $src", []>;
+   def VMSR_FPCXTNS : MovToVFP<0b1110 /* fpcxtns */, (outs), (ins GPR:$Rt),
+                               "vmsr", "\tfpcxtns, $Rt", []>;
  }
  let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
    // System level GPR -> FPSCR with context saving for security extensions
-   def VMSR_FPCXTS : MovToVFP<0b1111 /* fpcxts */, (outs), (ins GPR:$src),
-                              "vmsr", "\tfpcxts, $src", []>;
+   def VMSR_FPCXTS : MovToVFP<0b1111 /* fpcxts */, (outs), (ins GPR:$Rt),
+                              "vmsr", "\tfpcxts, $Rt", []>;
  }
  let Predicates = [HasV8_1MMainline, HasFPRegs] in {
    // System level GPR -> FPSCR_NZCVQC
    def VMSR_FPSCR_NZCVQC
      : MovToVFP<0b0010 /* fpscr_nzcvqc */,
-                (outs cl_FPSCR_NZCV:$fpscr_out), (ins GPR:$src),
-                "vmsr", "\tfpscr_nzcvqc, $src", []>;
+                (outs cl_FPSCR_NZCV:$fpscr_out), (ins GPR:$Rt),
+                "vmsr", "\tfpscr_nzcvqc, $Rt", []>;
  }
 
  let Predicates = [HasV8_1MMainline, HasMVEInt] in {
    // System level GPR -> VPR/P0
    let Defs = [VPR] in
-   def VMSR_VPR : MovToVFP<0b1100 /* vpr */, (outs), (ins GPR:$src),
-                           "vmsr", "\tvpr, $src", []>;
+   def VMSR_VPR : MovToVFP<0b1100 /* vpr */, (outs), (ins GPR:$Rt),
+                           "vmsr", "\tvpr, $Rt", []>;
 
-   def VMSR_P0  : MovToVFP<0b1101 /* p0 */, (outs VCCR:$cond), (ins GPR:$src),
-                           "vmsr", "\tp0, $src", []>;
+   def VMSR_P0  : MovToVFP<0b1101 /* p0 */, (outs VCCR:$cond), (ins GPR:$Rt),
+                           "vmsr", "\tp0, $Rt", []>;
  }
 }
 

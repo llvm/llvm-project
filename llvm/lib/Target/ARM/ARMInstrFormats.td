@@ -188,6 +188,13 @@ def s_cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 CPSR))> {
   let DecoderMethod = "DecodeCCOutOperand";
 }
 
+// Transform to generate the inverse of a condition code during ISel
+def inv_cond_XFORM : SDNodeXForm<imm, [{
+  ARMCC::CondCodes CC = static_cast<ARMCC::CondCodes>(N->getZExtValue());
+  return CurDAG->getTargetConstant(ARMCC::getOppositeCondition(CC), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
 // VPT predicate
 
 def VPTPredNOperand : AsmOperandClass {

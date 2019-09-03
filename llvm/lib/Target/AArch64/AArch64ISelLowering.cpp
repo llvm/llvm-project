@@ -5834,6 +5834,7 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         return std::make_pair(0U, &AArch64::ZPR_4bRegClass);
       if (VT.getSizeInBits() == 128)
         return std::make_pair(0U, &AArch64::FPR128_loRegClass);
+      break;
     case 'y':
       if (!Subtarget->hasFPARMv8())
         break;

@@ -648,6 +648,14 @@ let ParentPackage = DeadCode in {
 def DeadStoresChecker : Checker<"DeadStores">,
   HelpText<"Check for values stored to variables that are never read "
            "afterwards">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "WarnForDeadNestedAssignments",
+                  "Warns for deadstores in nested assignments."
+                  "E.g.: if ((P = f())) where P is unused.",
+                  "true",
+                  Released>
+  ]>,
   Documentation<HasDocumentation>;
 
 } // end DeadCode

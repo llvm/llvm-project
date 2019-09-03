@@ -6,9 +6,6 @@ class InvalidArgsExpressionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @no_debug_info_test
     def test_invalid_lang(self):
         self.expect("expression -l foo --", error=True,

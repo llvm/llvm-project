@@ -11,7 +11,6 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "Cancellation.h"
-#include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FSProvider.h"
 #include "FormattedString.h"

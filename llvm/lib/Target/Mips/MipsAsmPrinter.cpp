@@ -56,6 +56,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
@@ -821,6 +822,9 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
   // option has changed the default (i.e. FPXX) and omit it otherwise.
   if (ABI.IsO32() && (!STI.useOddSPReg() || STI.isABI_FPXX()))
     TS.emitDirectiveModuleOddSPReg();
+
+  // Switch to the .text section.
+  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
 }
 
 void MipsAsmPrinter::emitInlineAsmStart() const {

@@ -229,6 +229,39 @@ llvm::Optional<Range> getTokenRange(const SourceManager &SM,
   return halfOpenToRange(SM, CharSourceRange::getCharRange(TokLoc, End));
 }
 
+SourceLocation getBeginningOfIdentifier(const Position &Pos,
+                                        const SourceManager &SM,
+                                        const LangOptions &LangOpts) {
+  FileID FID = SM.getMainFileID();
+  auto Offset = positionToOffset(SM.getBufferData(FID), Pos);
+  if (!Offset) {
+    log("getBeginningOfIdentifier: {0}", Offset.takeError());
+    return SourceLocation();
+  }
+
+  // GetBeginningOfToken(pos) is almost what we want, but does the wrong thing
+  // if the cursor is at the end of the identifier.
+  // Instead, we lex at GetBeginningOfToken(pos - 1). The cases are:
+  //  1) at the beginning of an identifier, we'll be looking at something
+  //  that isn't an identifier.
+  //  2) at the middle or end of an identifier, we get the identifier.
+  //  3) anywhere outside an identifier, we'll get some non-identifier thing.
+  // We can't actually distinguish cases 1 and 3, but returning the original
+  // location is correct for both!
+  SourceLocation InputLoc = SM.getComposedLoc(FID, *Offset);
+  if (*Offset == 0) // Case 1 or 3.
+    return SM.getMacroArgExpandedLocation(InputLoc);
+  SourceLocation Before = SM.getComposedLoc(FID, *Offset - 1);
+
+  Before = Lexer::GetBeginningOfToken(Before, SM, LangOpts);
+  Token Tok;
+  if (Before.isValid() &&
+      !Lexer::getRawToken(Before, Tok, SM, LangOpts, false) &&
+      Tok.is(tok::raw_identifier))
+    return SM.getMacroArgExpandedLocation(Before); // Case 2.
+  return SM.getMacroArgExpandedLocation(InputLoc); // Case 1 or 3.
+}
+
 bool isValidFileRange(const SourceManager &Mgr, SourceRange R) {
   if (!R.getBegin().isValid() || !R.getEnd().isValid())
     return false;

@@ -71,4 +71,5 @@
 
 ; CHECK: .section .mdebug.abi[[ABI]]
 ; CHECK: .nan [[NAN]]
+; CHECK: .text
 ; CHECK: .file

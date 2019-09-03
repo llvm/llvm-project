@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
-#include "ClangdUnit.h"
 #include "Logger.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -17,6 +16,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"

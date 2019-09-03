@@ -859,6 +859,7 @@ protected:
                                    "defined regular expression command names",
                                    GetCommandName().str().c_str());
       result.SetStatus(eReturnStatusFailed);
+      return false;
     }
 
     auto command_name = args[0].ref;
@@ -1724,6 +1725,12 @@ public:
   ~CommandObjectCommandsScriptList() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 0) {
+      result.AppendError("'command script list' doesn't take any arguments");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
     m_interpreter.GetHelp(result, CommandInterpreter::eCommandTypesUserDef);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1744,6 +1751,12 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 0) {
+      result.AppendError("'command script clear' doesn't take any arguments");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
     m_interpreter.RemoveAllUser();
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
