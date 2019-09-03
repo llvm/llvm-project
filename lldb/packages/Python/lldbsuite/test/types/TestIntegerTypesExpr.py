@@ -10,14 +10,6 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
 
     mydir = AbstractBase.GenericTester.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        AbstractBase.GenericTester.setUp(self)
-        # disable "There is a running process, kill it and restart?" prompt
-        self.runCmd("settings set auto-confirm true")
-        self.addTearDownHook(
-            lambda: self.runCmd("settings clear auto-confirm"))
-
     def test_char_type(self):
         """Test that char-type variable expressions are evaluated correctly."""
         self.build_and_run_expr('char.cpp', set(['char']), qd=True)
