@@ -1,0 +1,44 @@
+// Test that we can set breakpoints in the REPL.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+// Define some *DefinedInREPL things.
+var varDefinedInREPL: Int = 1
+func funcDefinedInREPL() -> Int { return 1 }
+struct StructDefinedInREPL { var field: Int = 1 }
+
+
+// Assert that the REPL can refer to the *DefinedInRepl things.
+varDefinedInREPL
+// CHECK: $R{{[0-9]+}}: Int = 1
+funcDefinedInREPL()
+// CHECK: $R{{[0-9]+}}: Int = 1
+StructDefinedInREPL().field
+// CHECK: $R{{[0-9]+}}: Int = 1
+
+// Redefine the *DefinedInREPL things.
+var varDefinedInREPL: Int = 2
+func funcDefinedInREPL() -> Int { return 2 }
+struct StructDefinedInREPL { var field: Int = 2 }
+
+// Assert that the REPL refers to the redefinitions of the *DefinedInREPL
+// things.
+varDefinedInREPL
+// CHECK: $R{{[0-9]+}}: Int = 2
+funcDefinedInREPL()
+// CHECK: $R{{[0-9]+}}: Int = 2
+StructDefinedInREPL().field
+// CHECK: $R{{[0-9]+}}: Int = 2
+
+
+// Redefine the *DefinedInREPL things, and refer to them in the same unit of
+// code. Assert that the references refer to the new redefinitions.
+var varDefinedInREPL: Int = 3
+varDefinedInREPL
+// CHECK: $R{{[0-9]+}}: Int = 3
+func funcDefinedInREPL() -> Int { return 3 }
+funcDefinedInREPL()
+// CHECK: $R{{[0-9]+}}: Int = 3
+struct StructDefinedInREPL { var field: Int = 3 }
+StructDefinedInREPL().field
+// CHECK: $R{{[0-9]+}}: Int = 3
