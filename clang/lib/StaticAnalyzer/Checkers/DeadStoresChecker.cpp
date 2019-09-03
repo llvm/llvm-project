@@ -130,6 +130,7 @@ class DeadStoreObs : public LiveVariables::Observer {
   std::unique_ptr<ReachableCode> reachableCode;
   const CFGBlock *currentBlock;
   std::unique_ptr<llvm::DenseSet<const VarDecl *>> InEH;
+  const bool WarnForDeadNestedAssignments;
 
   enum DeadStoreKind { Standard, Enclosing, DeadIncrement, DeadInit };
 
@@ -137,9 +138,11 @@ public:
   DeadStoreObs(const CFG &cfg, ASTContext &ctx, BugReporter &br,
                const CheckerBase *checker, AnalysisDeclContext *ac,
                ParentMap &parents,
-               llvm::SmallPtrSet<const VarDecl *, 20> &escaped)
+               llvm::SmallPtrSet<const VarDecl *, 20> &escaped,
+               bool warnForDeadNestedAssignments)
       : cfg(cfg), Ctx(ctx), BR(br), Checker(checker), AC(ac), Parents(parents),
-        Escaped(escaped), currentBlock(nullptr) {}
+        Escaped(escaped), currentBlock(nullptr),
+        WarnForDeadNestedAssignments(warnForDeadNestedAssignments) {}
 
   ~DeadStoreObs() override {}
 
@@ -217,11 +220,16 @@ public:
         os << "Value stored to '" << *V << "' is never read";
         break;
 
+      // eg.: f((x = foo()))
       case Enclosing:
-        // Don't report issues in this case, e.g.: "if (x = foo())",
-        // where 'x' is unused later.  We have yet to see a case where
-        // this is a real bug.
-        return;
+        if (!WarnForDeadNestedAssignments)
+          return;
+        BugType = "Dead nested assignment";
+        os << "Although the value stored to '" << *V
+           << "' is used in the enclosing expression, the value is never "
+              "actually read from '"
+           << *V << "'";
+        break;
     }
 
     BR.EmitBasicReport(AC->getDecl(), Checker, BugType, "Dead store", os.str(),
@@ -474,6 +482,8 @@ public:
 namespace {
 class DeadStoresChecker : public Checker<check::ASTCodeBody> {
 public:
+  bool WarnForDeadNestedAssignments = true;
+
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
 
@@ -491,15 +501,20 @@ public:
       ParentMap &pmap = mgr.getParentMap(D);
       FindEscaped FS;
       cfg.VisitBlockStmts(FS);
-      DeadStoreObs A(cfg, BR.getContext(), BR, this, AC, pmap, FS.Escaped);
+      DeadStoreObs A(cfg, BR.getContext(), BR, this, AC, pmap, FS.Escaped,
+                     WarnForDeadNestedAssignments);
       L->runOnAllBlocks(A);
     }
   }
 };
 }
 
-void ento::registerDeadStoresChecker(CheckerManager &mgr) {
-  mgr.registerChecker<DeadStoresChecker>();
+void ento::registerDeadStoresChecker(CheckerManager &Mgr) {
+  auto Chk = Mgr.registerChecker<DeadStoresChecker>();
+
+  const AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
+  Chk->WarnForDeadNestedAssignments =
+      AnOpts.getCheckerBooleanOption(Chk, "WarnForDeadNestedAssignments");
 }
 
 bool ento::shouldRegisterDeadStoresChecker(const LangOptions &LO) {
