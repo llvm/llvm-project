@@ -470,6 +470,8 @@ public:
   ///     Returns the number of symbol context objects in the list.
   uint32_t GetSize() const;
 
+  bool IsEmpty() const;
+
   uint32_t NumLineEntriesWithLine(uint32_t line) const;
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
