@@ -305,9 +305,9 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                            SecName.str().c_str());
 }
 
-static bool isCompressable(const SectionBase &Section) {
-  return !(Section.Flags & ELF::SHF_COMPRESSED) &&
-         StringRef(Section.Name).startswith(".debug");
+static bool isCompressable(const SectionBase &Sec) {
+  return !(Sec.Flags & ELF::SHF_COMPRESSED) &&
+         StringRef(Sec.Name).startswith(".debug");
 }
 
 static void replaceDebugSections(
@@ -398,8 +398,8 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   // symbols are still 'needed' and which are not.
   if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty() ||
       !Config.OnlySection.empty()) {
-    for (auto &Section : Obj.sections())
-      Section.markSymbols();
+    for (SectionBase &Sec : Obj.sections())
+      Sec.markSymbols();
   }
 
   auto RemoveSymbolsPred = [&](const Symbol &Sym) {
@@ -756,7 +756,7 @@ Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
                                 Buffer &Out) {
   uint8_t NewSymbolVisibility =
-      Config.NewSymbolVisibility.getValueOr(ELF::STV_DEFAULT);
+      Config.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT);
   BinaryReader Reader(Config.BinaryArch, &In, NewSymbolVisibility);
   std::unique_ptr<Object> Obj = Reader.create();
 

@@ -1,9 +1,7 @@
-LEVEL := ../../make
-
 C_SOURCES := a.c b.c
 a.o: CFLAGS_EXTRAS += -gsplit-dwarf
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 .PHONY: clean
 clean::

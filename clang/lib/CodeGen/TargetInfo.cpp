@@ -7915,8 +7915,9 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
 
   const bool IsOpenCLKernel = M.getLangOpts().OpenCL &&
                               FD->hasAttr<OpenCLKernelAttr>();
-  if ((IsOpenCLKernel ||
-       (M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>())) &&
+  const bool IsHIPKernel = M.getLangOpts().HIP &&
+                           FD->hasAttr<CUDAGlobalAttr>();
+  if ((IsOpenCLKernel || IsHIPKernel) &&
       (M.getTriple().getOS() == llvm::Triple::AMDHSA))
     F->addFnAttr("amdgpu-implicitarg-num-bytes", "56");
 
@@ -7942,7 +7943,7 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
       F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
     } else
       assert(Max == 0 && "Max must be zero");
-  } else if (IsOpenCLKernel) {
+  } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to 256.
     F->addFnAttr("amdgpu-flat-work-group-size", "1,256");
   }

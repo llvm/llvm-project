@@ -1921,20 +1921,6 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  case X86::SEH_NoReturn: {
-    // Materialize an int3 if this instruction is in the last basic block in the
-    // function. The int3 serves the same purpose as the noop emitted above for
-    // SEH_Epilogue, which is to make the Win64 unwinder happy. If the return
-    // address of the preceding call appears to precede an epilogue or a new
-    // function, then the unwinder may get lost.
-    const MachineBasicBlock *MBB = MI->getParent();
-    const MachineBasicBlock *NextMBB = MBB->getNextNode();
-    if (!NextMBB || NextMBB->isEHPad()) {
-      EmitAndCountInstruction(MCInstBuilder(X86::INT3));
-    }
-    return;
-  }
-
   // Lower PSHUFB and VPERMILP normally but add a comment if we can find
   // a constant shuffle mask. We won't be able to do this at the MC layer
   // because the mask isn't an immediate.

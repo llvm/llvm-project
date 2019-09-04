@@ -43,9 +43,9 @@ struct PerFunctionStats {
   unsigned NumVars = 0;
   /// Number of variables with source location.
   unsigned NumVarSourceLocations = 0;
-  /// Number of variables wtih type.
+  /// Number of variables with type.
   unsigned NumVarTypes = 0;
-  /// Number of variables wtih DW_AT_location.
+  /// Number of variables with DW_AT_location.
   unsigned NumVarLocations = 0;
 };
 

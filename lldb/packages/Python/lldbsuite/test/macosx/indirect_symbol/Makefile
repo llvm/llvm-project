@@ -1,6 +1,4 @@
-LEVEL = ../../make
-
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 LIB_PREFIX := lib
 

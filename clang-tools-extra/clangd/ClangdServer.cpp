@@ -7,12 +7,13 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
-#include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Format.h"
 #include "FormattedString.h"
 #include "Headers.h"
+#include "ParsedAST.h"
+#include "Preamble.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -315,7 +316,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
       return CB(Changes.takeError());
     }
     SourceLocation Loc = getBeginningOfIdentifier(
-        AST, Pos, AST.getSourceManager().getMainFileID());
+        Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
     if (auto Range = getTokenRange(AST.getSourceManager(),
                                    AST.getASTContext().getLangOpts(), Loc))
       return CB(*Range);

@@ -55,3 +55,9 @@ v_mad_u64_u32 v[5:6], s12, v1, 0x12345678, 0x12345678
 
 v_mad_u64_u32 v[5:6], s12, s1, 0x12345678, 0x12345678
 // GFX10-ERR: error: invalid operand (violates constant bus restrictions)
+
+//-----------------------------------------------------------------------------------------
+// null is free
+
+v_bfe_u32 v5, s1, s2, null
+// GFX10: v_bfe_u32 v5, s1, s2, null      ; encoding: [0x05,0x00,0x48,0xd5,0x01,0x04,0xf4,0x01]

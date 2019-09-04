@@ -754,7 +754,7 @@ void *MachTask::ExceptionThread(void *arg) {
       // to get all currently available exceptions for this task
       err = exception_message.Receive(
           mach_task->ExceptionPort(),
-          MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT, 0);
+          MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT, 1);
     } else if (periodic_timeout > 0) {
       // We need to stop periodically in this loop, so try and get a mach
       // message with a valid timeout (ms)

@@ -1,6 +1,5 @@
-LEVEL = ../../../make
 OBJCXX_SOURCES := main.mm myobject.mm
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 CFLAGS_NO_DEBUG =
 ifeq "$(OS)" "Darwin"
 		CFLAGS_NO_DEBUG += -arch $(ARCH)

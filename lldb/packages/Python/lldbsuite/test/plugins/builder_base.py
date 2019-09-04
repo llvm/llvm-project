@@ -75,6 +75,7 @@ def getMake(test_subdir, test_name):
             "VPATH="+src_dir,
             "-C", build_dir,
             "-I", src_dir,
+            "-I", os.path.join(lldb_test, "make"),
             "-f", makefile]
 
 

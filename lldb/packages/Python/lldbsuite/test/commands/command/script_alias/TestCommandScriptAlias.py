@@ -13,10 +13,7 @@ class CommandScriptAliasTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def test(self):
-        self.pycmd_tests()
-
-    def pycmd_tests(self):
+    def test_pycmd(self):
         self.runCmd("command script import tcsacmd.py")
         self.runCmd("command script add -f tcsacmd.some_command_here attach")
 

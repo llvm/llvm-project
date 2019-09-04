@@ -15,7 +15,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
-#include "ClangdUnit.h"
 #include "Headers.h"
 #include "Logger.h"
 #include "Path.h"
@@ -23,7 +22,6 @@
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
-#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -36,6 +34,7 @@
 namespace clang {
 class NamedDecl;
 namespace clangd {
+struct PreambleData;
 
 struct CodeCompleteOptions {
   /// Returns options that can be passed to clang's completion engine.

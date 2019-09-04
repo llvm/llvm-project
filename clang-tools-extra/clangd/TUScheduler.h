@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 
-#include "ClangdUnit.h"
+#include "Compiler.h"
 #include "Diagnostics.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
@@ -20,10 +20,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include <future>
 
 namespace clang {
 namespace clangd {
+class ParsedAST;
+struct PreambleData;
 
 /// Returns a number of a default async threads to use for TUScheduler.
 /// Returned value is always >= 1 (i.e. will not cause requests to be processed
@@ -256,19 +257,6 @@ private:
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
   std::chrono::steady_clock::duration UpdateDebounce;
 };
-
-/// Runs \p Action asynchronously with a new std::thread. The context will be
-/// propagated.
-template <typename T>
-std::future<T> runAsync(llvm::unique_function<T()> Action) {
-  return std::async(
-      std::launch::async,
-      [](llvm::unique_function<T()> &&Action, Context Ctx) {
-        WithContext WithCtx(std::move(Ctx));
-        return Action();
-      },
-      std::move(Action), Context::current().clone());
-}
 
 } // namespace clangd
 } // namespace clang

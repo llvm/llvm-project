@@ -61,12 +61,12 @@ INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   uint32_t size, remote_id, physical_lane_id;
   physical_lane_id = GetThreadIdInBlock() % WARPSIZE;
-  uint32_t lanemask_lt = __kmpc_impl_lanemask_lt();
-  uint32_t Liveness = __ACTIVEMASK();
+  __kmpc_impl_lanemask_t lanemask_lt = __kmpc_impl_lanemask_lt();
+  __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
   uint32_t logical_lane_id = __kmpc_impl_popc(Liveness & lanemask_lt) * 2;
-  uint32_t lanemask_gt = __kmpc_impl_lanemask_gt();
+  __kmpc_impl_lanemask_t lanemask_gt = __kmpc_impl_lanemask_gt();
   do {
-    Liveness = __ACTIVEMASK();
+    Liveness = __kmpc_impl_activemask();
     remote_id = __kmpc_impl_ffs(Liveness & lanemask_gt);
     size = __kmpc_impl_popc(Liveness);
     logical_lane_id /= 2;
@@ -81,7 +81,7 @@ int32_t __kmpc_nvptx_simd_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                         size_t reduce_size, void *reduce_data,
                                         kmp_ShuffleReductFctPtr shflFct,
                                         kmp_InterWarpCopyFctPtr cpyFct) {
-  uint32_t Liveness = __ACTIVEMASK();
+  __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
   if (Liveness == 0xffffffff) {
     gpu_regular_warp_reduce(reduce_data, shflFct);
     return GetThreadIdInBlock() % WARPSIZE ==
@@ -142,7 +142,7 @@ static int32_t nvptx_parallel_reduce_nowait(
   }
   return BlockThreadId == 0;
 #else
-  uint32_t Liveness = __ACTIVEMASK();
+  __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
   if (Liveness == 0xffffffff) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
@@ -317,7 +317,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
     ldFct(reduce_data, scratchpad, i, NumTeams, /*Load and reduce*/ 1);
 
   // Reduce across warps to the warp master.
-  uint32_t Liveness = __ACTIVEMASK();
+  __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
   if (Liveness == 0xffffffff) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else // Partial warp but contiguous lanes

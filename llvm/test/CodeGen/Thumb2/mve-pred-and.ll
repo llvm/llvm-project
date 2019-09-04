@@ -612,18 +612,16 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, s10
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q3[0], r0
 ; CHECK-NEXT:    vmov.32 q3[1], r0
 ; CHECK-NEXT:    vmov r0, s11
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q3[2], r0
 ; CHECK-NEXT:    vmov.32 q3[3], r0
 ; CHECK-NEXT:    vbic q1, q1, q3
@@ -650,10 +648,9 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, s7
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q3[0], r0
 ; CHECK-NEXT:    vmov.32 q3[1], r0
 ; CHECK-NEXT:    vmov r0, s11
@@ -662,27 +659,24 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    eors r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q3[2], r0
 ; CHECK-NEXT:    vmov.32 q3[3], r0
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q2[0], r0
 ; CHECK-NEXT:    vmov.32 q2[1], r0
 ; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q2[2], r0
 ; CHECK-NEXT:    vmov.32 q2[3], r0
 ; CHECK-NEXT:    vand q2, q2, q3
@@ -706,10 +700,9 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqr_v2i1(<2 x i64> %a, <2 x i64> %b, i64 %c
 ; CHECK-NEXT:    eors r2, r1
 ; CHECK-NEXT:    eors r3, r0
 ; CHECK-NEXT:    orrs r2, r3
-; CHECK-NEXT:    clz r2, r2
-; CHECK-NEXT:    lsrs r2, r2, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r2, #-1
+; CHECK-NEXT:    cset r2, eq
+; CHECK-NEXT:    tst.w r2, #1
+; CHECK-NEXT:    csetm r2, ne
 ; CHECK-NEXT:    vmov.32 q2[0], r2
 ; CHECK-NEXT:    vmov.32 q2[1], r2
 ; CHECK-NEXT:    vmov r2, s7
@@ -718,27 +711,24 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqr_v2i1(<2 x i64> %a, <2 x i64> %b, i64 %c
 ; CHECK-NEXT:    eors r0, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q2[2], r0
 ; CHECK-NEXT:    vmov.32 q2[3], r0
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q3[0], r0
 ; CHECK-NEXT:    vmov.32 q3[1], r0
 ; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    clz r0, r0
-; CHECK-NEXT:    lsrs r0, r0, #5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    cset r0, eq
+; CHECK-NEXT:    tst.w r0, #1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q3[2], r0
 ; CHECK-NEXT:    vmov.32 q3[3], r0
 ; CHECK-NEXT:    vand q2, q3, q2

@@ -21,6 +21,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
@@ -91,21 +92,27 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
   }
 
   FormValue.dump(OS, DumpOpts);
+  const auto &DumpLL = [&](auto ExpectedLL) {
+    if (ExpectedLL) {
+      uint64_t BaseAddr = 0;
+      if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
+        BaseAddr = BA->Address;
+      ExpectedLL->dump(OS, BaseAddr, Ctx.isLittleEndian(), Obj.getAddressSize(),
+                       MRI, U, Indent);
+    } else {
+      OS << '\n';
+      OS.indent(Indent);
+      OS << formatv("error extracting location list: {0}",
+                    fmt_consume(ExpectedLL.takeError()));
+    }
+  };
   if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
     uint64_t Offset = *FormValue.getAsSectionOffset();
     if (!U->isDWOUnit() && !U->getLocSection()->Data.empty()) {
       DWARFDebugLoc DebugLoc;
       DWARFDataExtractor Data(Obj, *U->getLocSection(), Ctx.isLittleEndian(),
                               Obj.getAddressSize());
-      auto LL = DebugLoc.parseOneLocationList(Data, &Offset);
-      if (LL) {
-        uint64_t BaseAddr = 0;
-        if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
-          BaseAddr = BA->Address;
-        LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, U,
-                 BaseAddr, Indent);
-      } else
-        OS << "error extracting location list.";
+      DumpLL(DebugLoc.parseOneLocationList(Data, &Offset));
       return;
     }
 
@@ -121,18 +128,8 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
       // Modern locations list (.debug_loclists) are used starting from v5.
       // Ideally we should take the version from the .debug_loclists section
       // header, but using CU's version for simplicity.
-      auto LL = DWARFDebugLoclists::parseOneLocationList(
-          Data, &Offset, UseLocLists ? U->getVersion() : 4);
-
-      uint64_t BaseAddr = 0;
-      if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
-        BaseAddr = BA->Address;
-
-      if (LL)
-        LL->dump(OS, BaseAddr, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI,
-                 U, Indent);
-      else
-        OS << "error extracting location list.";
+      DumpLL(DWARFDebugLoclists::parseOneLocationList(
+          Data, &Offset, UseLocLists ? U->getVersion() : 4));
     }
   }
 }

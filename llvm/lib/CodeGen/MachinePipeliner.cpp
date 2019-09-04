@@ -154,6 +154,17 @@ static cl::opt<bool> SwpShowResMask("pipeliner-show-mask", cl::Hidden,
 static cl::opt<bool> SwpDebugResource("pipeliner-dbg-res", cl::Hidden,
                                       cl::init(false));
 
+static cl::opt<bool> EmitTestAnnotations(
+    "pipeliner-annotate-for-testing", cl::Hidden, cl::init(false),
+    cl::desc("Instead of emitting the pipelined code, annotate instructions "
+             "with the generated schedule for feeding into the "
+             "-modulo-schedule-test pass"));
+
+static cl::opt<bool> ExperimentalCodeGen(
+    "pipeliner-experimental-cg", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Use the experimental peeling code generator for software pipelining"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -536,8 +547,25 @@ void SwingSchedulerDAG::schedule() {
 
   ModuloSchedule MS(MF, &Loop, std::move(OrderedInsts), std::move(Cycles),
                     std::move(Stages));
-  ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
-  MSE.expand();
+  if (EmitTestAnnotations) {
+    assert(NewInstrChanges.empty() &&
+           "Cannot serialize a schedule with InstrChanges!");
+    ModuloScheduleTestAnnotater MSTI(MF, MS);
+    MSTI.annotate();
+    return;
+  }
+  // The experimental code generator can't work if there are InstChanges.
+  if (ExperimentalCodeGen && NewInstrChanges.empty()) {
+    PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
+    // Experimental code generation isn't complete yet, but it can partially
+    // validate the code it generates against the original
+    // ModuloScheduleExpander.
+    MSE.validateAgainstModuloScheduleExpander();
+  } else {
+    ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
+    MSE.expand();
+    MSE.cleanup();
+  }
   ++NumPipelined;
 }
 

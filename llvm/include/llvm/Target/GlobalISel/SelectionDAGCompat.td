@@ -50,6 +50,7 @@ def : GINodeEquiv<G_BITCAST, bitconvert>;
 // G_PTRTOINT - SelectionDAG has no equivalent.
 def : GINodeEquiv<G_CONSTANT, imm>;
 def : GINodeEquiv<G_FCONSTANT, fpimm>;
+def : GINodeEquiv<G_IMPLICIT_DEF, undef>;
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;

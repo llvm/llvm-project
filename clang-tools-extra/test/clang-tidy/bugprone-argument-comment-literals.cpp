@@ -15,10 +15,12 @@ struct A {
 };
 
 #define FOO 1
+#define X(x) (x)
 
 void g(int a);
 void h(double b);
 void i(const char *c);
+void j(int a, int b, int c);
 
 double operator"" _km(long double);
 
@@ -105,6 +107,39 @@ void test() {
   // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
   // CHECK-FIXES: h(/*b=*/1.0f);
   i(__FILE__);
+
+  j(1, X(1), X(1));
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'a' [bugprone-argument-comment]
+  // CHECK-FIXES: j(/*a=*/1, X(1), X(1));
+  j(/*a=*/1, X(1), X(1));
+
+  j(X(1), 1, X(1));
+  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-FIXES: j(X(1), /*b=*/1, X(1));
+  j(X(1), /*b=*/1, X(1));
+
+  j(X(1), X(1), 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: argument comment missing for literal argument 'c' [bugprone-argument-comment]
+  // CHECK-FIXES: j(X(1), X(1), /*c=*/1);
+  j(X(1), X(1), /*c=*/1);
+
+  j(X(1), 1, 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:14: warning: argument comment missing for literal argument 'c' [bugprone-argument-comment]
+  // CHECK-FIXES: j(X(1), /*b=*/1, /*c=*/1);
+  j(X(1), /*b=*/1, /*c=*/1);
+
+  j(1, X(1), 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'a' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:14: warning: argument comment missing for literal argument 'c' [bugprone-argument-comment]
+  // CHECK-FIXES: j(/*a=*/1, X(1), /*c=*/1);
+  j(/*a=*/1, X(1), /*c=*/1);
+
+  j(1, 1, X(1));
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'a' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-FIXES: j(/*a=*/1, /*b=*/1, X(1));
+  j(/*a=*/1, /*b=*/1, X(1));
 
   // FIXME Would like the below to add argument comments.
   g((1));

@@ -17,7 +17,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 
-#include "ClangdUnit.h"
+#include "ParsedAST.h"
 #include "Path.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringMap.h"

@@ -55,12 +55,12 @@ BUILTIN(__builtin_altivec_vcfux, "V4fV4iIi", "")
 BUILTIN(__builtin_altivec_vctsxs, "V4SiV4fIi", "")
 BUILTIN(__builtin_altivec_vctuxs, "V4UiV4fIi", "")
 
-BUILTIN(__builtin_altivec_dss, "vUi", "")
+BUILTIN(__builtin_altivec_dss, "vUIi", "")
 BUILTIN(__builtin_altivec_dssall, "v", "")
-BUILTIN(__builtin_altivec_dst, "vvC*iUi", "")
-BUILTIN(__builtin_altivec_dstt, "vvC*iUi", "")
-BUILTIN(__builtin_altivec_dstst, "vvC*iUi", "")
-BUILTIN(__builtin_altivec_dststt, "vvC*iUi", "")
+BUILTIN(__builtin_altivec_dst, "vvC*iUIi", "")
+BUILTIN(__builtin_altivec_dstt, "vvC*iUIi", "")
+BUILTIN(__builtin_altivec_dstst, "vvC*iUIi", "")
+BUILTIN(__builtin_altivec_dststt, "vvC*iUIi", "")
 
 BUILTIN(__builtin_altivec_vexptefp, "V4fV4f", "")
 

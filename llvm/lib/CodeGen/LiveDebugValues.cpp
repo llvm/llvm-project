@@ -189,8 +189,16 @@ private:
       }
     };
 
+    /// Identity of the variable at this location.
     const DebugVariable Var;
-    const MachineInstr &MI; ///< Only used for cloning a new DBG_VALUE.
+
+    /// The expression applied to this location.
+    const DIExpression *Expr;
+
+    /// DBG_VALUE to clone var/expr information from if this location
+    /// is moved.
+    const MachineInstr &MI;
+
     mutable UserValueScopes UVS;
     enum VarLocKind {
       InvalidKind = 0,
@@ -212,8 +220,9 @@ private:
     } Loc;
 
     VarLoc(const MachineInstr &MI, LexicalScopes &LS,
-          VarLocKind K = InvalidKind)
-        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS){
+           VarLocKind K = InvalidKind)
+        : Var(MI), Expr(MI.getDebugExpression()), MI(MI),
+          UVS(MI.getDebugLoc(), LS) {
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
@@ -238,7 +247,8 @@ private:
     /// The constructor for spill locations.
     VarLoc(const MachineInstr &MI, unsigned SpillBase, int SpillOffset,
            LexicalScopes &LS, const MachineInstr &OrigMI)
-        : Var(MI), MI(OrigMI), UVS(MI.getDebugLoc(), LS) {
+        : Var(MI), Expr(MI.getDebugExpression()), MI(OrigMI),
+          UVS(MI.getDebugLoc(), LS) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       Kind = SpillLocKind;
@@ -266,13 +276,13 @@ private:
 
     bool operator==(const VarLoc &Other) const {
       return Kind == Other.Kind && Var == Other.Var &&
-             Loc.Hash == Other.Loc.Hash;
+             Loc.Hash == Other.Loc.Hash && Expr == Other.Expr;
     }
 
     /// This operator guarantees that VarLocs are sorted by Variable first.
     bool operator<(const VarLoc &Other) const {
-      return std::tie(Var, Kind, Loc.Hash) <
-             std::tie(Other.Var, Other.Kind, Other.Loc.Hash);
+      return std::tie(Var, Kind, Loc.Hash, Expr) <
+             std::tie(Other.Var, Other.Kind, Other.Loc.Hash, Other.Expr);
     }
   };
 
@@ -1172,6 +1182,7 @@ void LiveDebugValues::flushPendingLocs(VarLocInMBB &PendingInLocs,
                      DebugInstr->getDesc(), IsIndirect, Reg,
                      DebugInstr->getDebugVariable(), DebugExpr);
       }
+      (void)MI;
       LLVM_DEBUG(dbgs() << "Inserted: "; MI->dump(););
     }
   }

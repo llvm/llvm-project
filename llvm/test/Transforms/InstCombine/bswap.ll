@@ -233,8 +233,8 @@ define i16 @test10(i32 %a) {
 
 define i32 @shuf_4bytes(<4 x i8> %x) {
 ; CHECK-LABEL: @shuf_4bytes(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[X:%.*]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %bswap = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -244,9 +244,9 @@ define i32 @shuf_4bytes(<4 x i8> %x) {
 
 define i32 @shuf_load_4bytes(<4 x i8>* %p) {
 ; CHECK-LABEL: @shuf_load_4bytes(
-; CHECK-NEXT:    [[X:%.*]] = load <4 x i8>, <4 x i8>* [[P:%.*]], align 4
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 undef, i32 0>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8>* [[P:%.*]] to i32*
+; CHECK-NEXT:    [[X1:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[CAST:%.*]] = call i32 @llvm.bswap.i32(i32 [[X1]])
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %x = load <4 x i8>, <4 x i8>* %p
@@ -257,9 +257,7 @@ define i32 @shuf_load_4bytes(<4 x i8>* %p) {
 
 define i32 @shuf_bitcast_twice_4bytes(i32 %x) {
 ; CHECK-LABEL: @shuf_bitcast_twice_4bytes(
-; CHECK-NEXT:    [[CAST1:%.*]] = bitcast i32 [[X:%.*]] to <4 x i8>
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <4 x i8> [[CAST1]], <4 x i8> undef, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CAST2:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
+; CHECK-NEXT:    [[CAST2:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[CAST2]]
 ;
   %cast1 = bitcast i32 %x to <4 x i8>
@@ -268,6 +266,7 @@ define i32 @shuf_bitcast_twice_4bytes(i32 %x) {
   ret i32 %cast2
 }
 
+; Negative test - extra use
 declare void @use(<4 x i8>)
 
 define i32 @shuf_4bytes_extra_use(<4 x i8> %x) {
@@ -283,6 +282,8 @@ define i32 @shuf_4bytes_extra_use(<4 x i8> %x) {
   ret i32 %cast
 }
 
+; Negative test - scalar type is not in the data layout
+
 define i128 @shuf_16bytes(<16 x i8> %x) {
 ; CHECK-LABEL: @shuf_16bytes(
 ; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -293,6 +294,8 @@ define i128 @shuf_16bytes(<16 x i8> %x) {
   %cast = bitcast <16 x i8> %bswap to i128
   ret i128 %cast
 }
+
+; Negative test - don't touch widening shuffles (for now)
 
 define i32 @shuf_2bytes_widening(<2 x i8> %x) {
 ; CHECK-LABEL: @shuf_2bytes_widening(

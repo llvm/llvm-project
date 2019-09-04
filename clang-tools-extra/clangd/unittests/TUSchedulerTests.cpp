@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "ClangdUnit.h"
 #include "Context.h"
 #include "Diagnostics.h"
 #include "Matchers.h"
+#include "ParsedAST.h"
 #include "Path.h"
+#include "Preamble.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
 #include "Threading.h"
@@ -740,12 +741,14 @@ TEST_F(TUSchedulerTests, CommandLineErrors) {
   // We should see errors from command-line parsing inside the main file.
   CDB.ExtraClangFlags = {"-fsome-unknown-flag"};
 
+  // (!) 'Ready' must live longer than TUScheduler.
+  Notification Ready;
+
   TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
                 /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/captureDiags(),
                 /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
                 ASTRetentionPolicy());
 
-  Notification Ready;
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
                   WantDiagnostics::Yes, [&](std::vector<Diag> D) {

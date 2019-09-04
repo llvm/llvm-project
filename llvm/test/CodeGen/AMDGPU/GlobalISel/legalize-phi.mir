@@ -1259,13 +1259,12 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY2]](s32), %bb.0, [[COPY3]](s32), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY2]](s32), %bb.0, [[DEF]](s32), %bb.1
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[PHI]](s32)
-  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[PHI]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C1]]
   ; CHECK:   $vgpr0 = COPY [[AND]](s32)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:

@@ -67,8 +67,10 @@ Error ObjectFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
 uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }
 
 bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
-  if (Expected<StringRef> NameOrErr = getSectionName(Sec))
+  Expected<StringRef> NameOrErr = getSectionName(Sec);
+  if (NameOrErr)
     return *NameOrErr == ".llvmbc";
+  consumeError(NameOrErr.takeError());
   return false;
 }
 

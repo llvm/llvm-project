@@ -4,13 +4,13 @@
 
 ; CHECK: Relocations [
 ; CHECK: Section (3) .rel.text {
-; CHECK: 0x58 R_AMDGPU_ABS32 .text 0x0
+; CHECK: 0x58 R_AMDGPU_ABS32 arr 0x0
 ; CHECK: }
 ; CHECK: ]
 
 ; CHECK: Symbol {
 ; CHECK: Name: arr (11)
-; CHECK: Value: 0x70
+; CHECK: Value: 0x0
 ; CHECK: Size: 16
 ; CHECK: Binding: Local (0x0)
 ; CHECK: Type: Object (0x1)

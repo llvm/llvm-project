@@ -85,10 +85,10 @@ CHECK-NEXT: [[#VAR1+VAR2]]
 ; Numeric expression using a variable defined from a numeric expression.
 DEF EXPR GOOD MATCH
 42
-41 43
+41
 ; CHECK-LABEL: DEF EXPR GOOD MATCH
 ; CHECK-NEXT: [[# VAR42:VAR1+31]]
-; CHECK-NEXT: [[# VAR41: VAR42-1]] [[# VAR41 + 2]]
+; CHECK-NEXT: [[# VAR42-1]]
 
 ; Empty numeric expression.
 EMPTY NUM EXPR
@@ -189,3 +189,27 @@ DEF-EXPR-FAIL-NEXT: [[# VAR42: VAR20+22]]
 DEF-EXPR-FAIL-MSG: numeric-expression.txt:[[#@LINE-1]]:21: error: {{D}}EF-EXPR-FAIL-NEXT: is not on the line after the previous match
 DEF-EXPR-FAIL-MSG-NEXT: {{D}}EF-EXPR-FAIL-NEXT: {{\[\[# VAR42: VAR20\+22\]\]}}
 DEF-EXPR-FAIL-MSG-NEXT:   {{^}}                    ^{{$}}
+
+; Verify that using a numeric variable defined on the same line (whether from
+; input or from an expression) is rejected.
+RUN: not FileCheck --check-prefix SAME-LINE-USE1 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix SAME-LINE-USE-MSG1 %s
+RUN: not FileCheck --check-prefix SAME-LINE-USE2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix SAME-LINE-USE-MSG2 %s
+
+SAME LINE USE
+3
+4 5
+SAME-LINE-USE1-LABEL: SAME LINE USE
+SAME-LINE-USE1-NEXT: [[#]]
+SAME-LINE-USE1-NEXT: [[#VAR1:]] [[#VAR1+1]]
+SAME-LINE-USE-MSG1: numeric-expression.txt:[[#@LINE-1]]:36: error: numeric variable 'VAR1' defined earlier in the same CHECK directive
+SAME-LINE-USE-MSG1-NEXT: {{S}}AME-LINE-USE1-NEXT: {{\[\[#VAR1:\]\] \[\[#VAR1\+1\]\]}}
+SAME-LINE-USE-MSG1-NEXT:        {{^}}                                   ^{{$}}
+
+SAME-LINE-USE2-LABEL: SAME LINE USE
+SAME-LINE-USE2-NEXT: [[#VAR1:]]
+SAME-LINE-USE2-NEXT: [[#VAR2:VAR1+1]] [[#VAR2+1]]
+SAME-LINE-USE-MSG2: numeric-expression.txt:[[#@LINE-1]]:42: error: numeric variable 'VAR2' defined earlier in the same CHECK directive
+SAME-LINE-USE-MSG2-NEXT: {{S}}AME-LINE-USE2-NEXT: {{\[\[#VAR2:VAR1\+1\]\] \[\[#VAR2\+1\]\]}}
+SAME-LINE-USE-MSG2-NEXT:        {{^}}                                         ^{{$}}
