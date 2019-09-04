@@ -40,8 +40,8 @@ public:
     /// All the locations in which the variable is stored.
     SmallVector<Entry, 2> Entries;
     /// Dump this list on OS.
-    void dump(raw_ostream &OS, bool IsLittleEndian, unsigned AddressSize,
-              const MCRegisterInfo *MRI, DWARFUnit *U, uint64_t BaseAddress,
+    void dump(raw_ostream &OS, uint64_t BaseAddress, bool IsLittleEndian,
+              unsigned AddressSize, const MCRegisterInfo *MRI, DWARFUnit *U,
               unsigned Indent) const;
   };
 

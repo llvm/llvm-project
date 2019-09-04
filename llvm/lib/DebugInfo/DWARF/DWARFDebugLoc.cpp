@@ -35,11 +35,10 @@ static void dumpExpression(raw_ostream &OS, ArrayRef<uint8_t> Data,
   DWARFExpression(Extractor, dwarf::DWARF_VERSION, AddressSize).print(OS, MRI, U);
 }
 
-void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
+void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, uint64_t BaseAddress,
+                                       bool IsLittleEndian,
                                        unsigned AddressSize,
-                                       const MCRegisterInfo *MRI,
-                                       DWARFUnit *U,
-                                       uint64_t BaseAddress,
+                                       const MCRegisterInfo *MRI, DWARFUnit *U,
                                        unsigned Indent) const {
   for (const Entry &E : Entries) {
     OS << '\n';
@@ -67,7 +66,7 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
                          Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8" PRIx64 ": ", L.Offset);
-    L.dump(OS, IsLittleEndian, AddressSize, MRI, nullptr, 0, 12);
+    L.dump(OS, 0, IsLittleEndian, AddressSize, MRI, nullptr, 12);
     OS << "\n\n";
   };
 
