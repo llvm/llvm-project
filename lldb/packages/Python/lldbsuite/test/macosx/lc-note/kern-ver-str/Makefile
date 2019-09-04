@@ -1,5 +1,3 @@
-LEVEL = ../../../make
-
 MAKE_DSYM := NO
 
 C_SOURCES := main.c
@@ -12,4 +10,4 @@ create-empty-corefile:
 clean::
 	$(MAKE) -f create-empty-corefile.mk clean
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

@@ -1,11 +1,9 @@
-LEVEL := ../../../make
-
 LIB_PREFIX := load_
 
 LD_EXTRAS := -L. -l$(LIB_PREFIX)a
 CXX_SOURCES := main.cpp
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 a.out: lib_a
 

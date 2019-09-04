@@ -1,6 +1,4 @@
-LEVEL = ../../../make
-
 OBJC_SOURCES := call-throws.m
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 LDFLAGS += -framework Foundation

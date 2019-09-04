@@ -1,4 +1,3 @@
-LEVEL = ../../make
 C_SOURCES := main.c
 
 all: dirsymlink
@@ -17,4 +16,4 @@ dirsymlink: dirreal
 clean::
 	$(RM) -r dirreal dirsymlink
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
