@@ -1009,8 +1009,6 @@ enum PathType {
                          // mach-o file in LLDB.framework (MacOSX) exists
   ePathTypeSupportExecutableDir, // Find LLDB support executable directory
                                  // (debugserver, etc)
-  ePathTypeSupportFileDir,       // Find LLDB support file directory
-                                 // (non-executable files)
   ePathTypeHeaderDir,            // Find LLDB header file directory
   ePathTypePythonDir,            // Find Python modules (PYTHONPATH) directory
   ePathTypeLLDBSystemPlugins,    // System plug-ins directory
