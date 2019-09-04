@@ -49,7 +49,12 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
                                 target.FindFirstGlobalVariable("obj"),
                                 typename="Swift.Optional<__ObjC.ObjCClass>",
                                 num_children=0)
-        self.expect("target var obj", substrs=["ObjCClass", "private_ivar", "42"])
+        self.expect("target var obj", substrs=["ObjCClass",
+                                               "private_ivar", "42"])
+        # FIXME: This triggers an assertion in ClangImporter:
+        #        "ObjC property without getter"
+        #self.expect("target var swiftChild", substrs=["ObjCClass",
+        #                                              "private_ivar", "42"])
         # This is a Clang type, since Clang doesn't generate DWARF for protocols.
         self.expect("target var -d no-dyn proto", substrs=["(id)", "proto"])
         # This is a Swift type.

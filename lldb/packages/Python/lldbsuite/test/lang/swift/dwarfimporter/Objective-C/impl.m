@@ -8,6 +8,8 @@
   int private_ivar;
 }
 
+@synthesize number = private_ivar;
+
 - (instancetype)init {
   self = [super init];
   if (self) {

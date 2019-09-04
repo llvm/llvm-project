@@ -9,6 +9,7 @@
 @end
 
 @interface ObjCClass : NSObject
+@property (readonly) int number;
 - (instancetype)init;
 @end
 
