@@ -160,6 +160,11 @@ static cl::opt<bool> EmitTestAnnotations(
              "with the generated schedule for feeding into the "
              "-modulo-schedule-test pass"));
 
+static cl::opt<bool> ExperimentalCodeGen(
+    "pipeliner-experimental-cg", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Use the experimental peeling code generator for software pipelining"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -549,8 +554,18 @@ void SwingSchedulerDAG::schedule() {
     MSTI.annotate();
     return;
   }
-  ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
-  MSE.expand();
+  // The experimental code generator can't work if there are InstChanges.
+  if (ExperimentalCodeGen && NewInstrChanges.empty()) {
+    PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
+    // Experimental code generation isn't complete yet, but it can partially
+    // validate the code it generates against the original
+    // ModuloScheduleExpander.
+    MSE.validateAgainstModuloScheduleExpander();
+  } else {
+    ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
+    MSE.expand();
+    MSE.cleanup();
+  }
   ++NumPipelined;
 }
 

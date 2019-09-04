@@ -17,11 +17,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 
-#include "ClangdUnit.h"
 #include "Protocol.h"
 
 namespace clang {
 namespace clangd {
+class ParsedAST;
 
 enum class HighlightingKind {
   Variable = 0,

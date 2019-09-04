@@ -1,4 +1,3 @@
-LEVEL = ../../make
 CXX_SOURCES := main.cpp
 LD_EXTRAS += -Wl,--build-id=none
 
@@ -10,4 +9,4 @@ stripped.out : a.out
 clean::
 	$(RM) stripped.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

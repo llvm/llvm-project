@@ -502,9 +502,7 @@ if (MSVC)
       # Disabled warnings.
       -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
       -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
-      -wd4180 # Suppress 'qualifier applied to function type has no meaning; ignored'
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
-      -wd4258 # Suppress ''var' : definition from the for loop is ignored; the definition from the enclosing scope is used'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
       -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'

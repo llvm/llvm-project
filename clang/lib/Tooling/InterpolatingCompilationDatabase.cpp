@@ -149,17 +149,17 @@ struct TransferableCommand {
     // We parse each argument individually so that we can retain the exact
     // spelling of each argument; re-rendering is lossy for aliased flags.
     // E.g. in CL mode, /W4 maps to -Wall.
-    auto OptTable = clang::driver::createDriverOptTable();
+    auto &OptTable = clang::driver::getDriverOptTable();
     if (!OldArgs.empty())
       Cmd.CommandLine.emplace_back(OldArgs.front());
     for (unsigned Pos = 1; Pos < OldArgs.size();) {
       using namespace driver::options;
 
       const unsigned OldPos = Pos;
-      std::unique_ptr<llvm::opt::Arg> Arg(OptTable->ParseOneArg(
+      std::unique_ptr<llvm::opt::Arg> Arg(OptTable.ParseOneArg(
           ArgList, Pos,
-          /* Include */ClangCLMode ? CoreOption | CLOption : 0,
-          /* Exclude */ClangCLMode ? 0 : CLOption));
+          /* Include */ ClangCLMode ? CoreOption | CLOption : 0,
+          /* Exclude */ ClangCLMode ? 0 : CLOption));
 
       if (!Arg)
         continue;

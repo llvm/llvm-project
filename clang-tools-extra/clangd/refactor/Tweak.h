@@ -19,7 +19,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_ACTIONS_TWEAK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_ACTIONS_TWEAK_H
 
-#include "ClangdUnit.h"
+#include "ParsedAST.h"
 #include "Protocol.h"
 #include "Selection.h"
 #include "clang/Tooling/Core/Replacement.h"

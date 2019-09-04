@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
-#include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Matchers.h"
+#include "ParsedAST.h"
 #include "Protocol.h"
 #include "SyncAPI.h"
 #include "TestFS.h"

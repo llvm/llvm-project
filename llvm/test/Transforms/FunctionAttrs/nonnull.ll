@@ -1,6 +1,6 @@
 ; RUN: opt -S -functionattrs -enable-nonnull-arg-prop %s | FileCheck %s --check-prefixes=BOTH,FNATTR
 ; RUN: opt -S -passes=function-attrs -enable-nonnull-arg-prop %s | FileCheck %s --check-prefixes=BOTH,FNATTR
-; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=9 -S < %s | FileCheck %s --check-prefixes=BOTH,ATTRIBUTOR
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=8 -S < %s | FileCheck %s --check-prefixes=BOTH,ATTRIBUTOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -456,6 +456,18 @@ define internal i32* @g2() {
 define  i32* @g1() {
  %c = call i32* @g2()
   ret i32* %c
+}
+
+; ATTRIBUTOR: define internal void @called_by_weak(i32* nocapture nonnull %a)
+define internal void @called_by_weak(i32* %a) {
+  ret void
+}
+
+; Check we do not annotate the function interface of this weak function.
+; ATTRIBUTOR: define weak_odr void @weak_caller(i32* nonnull %a)
+define weak_odr void @weak_caller(i32* nonnull %a) {
+  call void @called_by_weak(i32* %a)
+  ret void
 }
 
 attributes #0 = { "null-pointer-is-valid"="true" }

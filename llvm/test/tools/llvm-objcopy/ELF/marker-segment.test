@@ -43,7 +43,7 @@ ProgramHeaders:
     Align: 0x1000
     Sections:
       - Section: .data
-  - Type: 0x6474e551 # GNU_STACK
+  - Type: PT_GNU_STACK
     Flags: [ PF_R, PF_W ]
     VAddr: 0x0000
     PAddr: 0x0000

@@ -716,7 +716,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
     Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(
         Arg->getValue(),
-        Config.NewSymbolVisibility.getValueOr(ELF::STV_DEFAULT));
+        Config.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT));
     if (!NSI)
       return NSI.takeError();
     Config.SymbolsToAdd.push_back(*NSI);

@@ -649,18 +649,27 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     if (MulCand->Paired)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Accumulating unpaired mul: " << *MulCand->Root
-               << "\n");
+    Value *Mul = MulCand->Root;
+    LLVM_DEBUG(dbgs() << "Accumulating unpaired mul: " << *Mul << "\n");
+
+    if (R.getRoot()->getType() != Mul->getType()) {
+      assert(R.is64Bit() && "expected 64-bit result");
+      Mul = Builder.CreateSExt(Mul, R.getRoot()->getType());
+    }
+
     if (!Acc) {
-      Acc = MulCand->Root;
+      Acc = Mul;
       continue;
     }
-    Acc = Builder.CreateAdd(MulCand->Root, Acc);
+
+    Acc = Builder.CreateAdd(Mul, Acc);
     InsertAfter = cast<Instruction>(Acc);
   }
 
   if (!Acc)
-    Acc = ConstantInt::get(IntegerType::get(M->getContext(), 32), 0);
+    Acc = R.is64Bit() ?
+      ConstantInt::get(IntegerType::get(M->getContext(), 64), 0) :
+      ConstantInt::get(IntegerType::get(M->getContext(), 32), 0);
 
   IntegerType *Ty = IntegerType::get(M->getContext(), 32);
   for (auto &Pair : R.getMulPairs()) {

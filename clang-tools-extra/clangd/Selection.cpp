@@ -19,6 +19,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
@@ -205,6 +206,11 @@ public:
   bool dataTraverseStmtPre(Stmt *X) {
     if (!X)
       return false;
+    // Implicit this in a MemberExpr is not filtered out by RecursiveASTVisitor.
+    // It would be nice if RAV handled this (!shouldTRaverseImplicitCode()).
+    if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(X))
+      if (CTI->isImplicit())
+        return false;
     auto N = DynTypedNode::create(*X);
     if (canSafelySkipNode(N))
       return false;

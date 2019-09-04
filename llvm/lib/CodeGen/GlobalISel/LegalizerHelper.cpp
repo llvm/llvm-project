@@ -619,12 +619,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    if (NarrowTy.getSizeInBits() != SizeOp0 / 2) {
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    // FIXME: support the general case where the requested NarrowTy may not be
+    // the same as the source type. E.g. s128 = sext(s32)
+    if ((SrcTy.getSizeInBits() != SizeOp0 / 2) ||
+        SrcTy.getSizeInBits() != NarrowTy.getSizeInBits()) {
       LLVM_DEBUG(dbgs() << "Can't narrow sext to type " << NarrowTy << "\n");
       return UnableToLegalize;
     }
-
-    Register SrcReg = MI.getOperand(1).getReg();
 
     // Shift the sign bit of the low register through the high register.
     auto ShiftAmt =

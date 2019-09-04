@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndex.h"
-#include "ClangdUnit.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "SymbolCollector.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"

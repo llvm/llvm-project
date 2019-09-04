@@ -8,6 +8,7 @@
 
 #include "SemanticHighlighting.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"

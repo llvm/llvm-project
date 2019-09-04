@@ -3375,11 +3375,11 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   bool Success = true;
 
   // Parse the arguments.
-  std::unique_ptr<OptTable> Opts = createDriverOptTable();
+  const OptTable &Opts = getDriverOptTable();
   const unsigned IncludedFlagsBitmask = options::CC1Option;
   unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args = Opts->ParseArgs(CommandLineArgs, MissingArgIndex,
-                                      MissingArgCount, IncludedFlagsBitmask);
+  InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
+                                     MissingArgCount, IncludedFlagsBitmask);
   LangOptions &LangOpts = *Res.getLangOpts();
 
   // Check for missing argument error.
@@ -3393,7 +3393,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   for (const auto *A : Args.filtered(OPT_UNKNOWN)) {
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
-    if (Opts->findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1)
+    if (Opts.findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1)
       Diags.Report(diag::err_drv_unknown_argument) << ArgString;
     else
       Diags.Report(diag::err_drv_unknown_argument_with_suggestion)

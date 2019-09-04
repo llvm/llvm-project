@@ -1194,6 +1194,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       break;
     case Intrinsic::bswap:
       return TargetOpcode::G_BSWAP;
+  case Intrinsic::bitreverse:
+      return TargetOpcode::G_BITREVERSE;
     case Intrinsic::ceil:
       return TargetOpcode::G_FCEIL;
     case Intrinsic::cos:
