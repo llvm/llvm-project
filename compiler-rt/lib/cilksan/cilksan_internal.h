@@ -113,6 +113,18 @@ public:
   void do_enter_end(uintptr_t stack_ptr);
   void do_detach_begin();
   void do_detach_end();
+  void do_loop_begin() {
+    start_new_loop = true;
+  }
+  void do_loop_iteration_begin(uintptr_t stack_ptr);
+  void do_loop_iteration_end();
+  void do_loop_end();
+  bool in_loop() const {
+    return LOOP_FRAME == frame_stack.head()->frame_data.frame_type;
+  }
+  bool handle_loop() const {
+    return in_loop() || (true == start_new_loop);
+  }
   void do_sync_begin();
   void do_sync_end();
   void do_return();
@@ -168,6 +180,8 @@ private:
   Stack_t<FrameData_t> frame_stack;
   call_stack_t call_stack;
   Stack_t<uintptr_t> sp_stack;
+
+  bool start_new_loop = false;
 
   // Shadow memory, which maps a memory address to its last reader and writer
   // and allocation.

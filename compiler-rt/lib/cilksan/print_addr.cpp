@@ -41,6 +41,7 @@
 // Mappings from CSI ID to associated program counter.
 uintptr_t *call_pc = nullptr;
 uintptr_t *spawn_pc = nullptr;
+uintptr_t *loop_pc = nullptr;
 uintptr_t *load_pc = nullptr;
 uintptr_t *store_pc = nullptr;
 uintptr_t *alloca_pc = nullptr;
@@ -329,6 +330,9 @@ static std::string get_info_on_call(const CallID_t &call) {
   case SPAWN:
     convert << "  Spawn ";
     break;
+  case LOOP:
+    convert << " Parfor ";
+    break;
   }
 
   if (call.isUnknownID()) {
@@ -344,6 +348,9 @@ static std::string get_info_on_call(const CallID_t &call) {
   case SPAWN:
     pc = spawn_pc[call.getID()];
     break;
+  case LOOP:
+    pc = loop_pc[call.getID()];
+    break;
   }
   convert << "0x" << std::hex << pc;
 
@@ -354,6 +361,9 @@ static std::string get_info_on_call(const CallID_t &call) {
     break;
   case SPAWN:
     src_loc = __csan_get_detach_source_loc(call.getID());
+    break;
+  case LOOP:
+    src_loc = __csan_get_loop_source_loc(call.getID());
     break;
   }
 
@@ -373,6 +383,8 @@ int get_call_stack_divergence_pt(
     first_call_stack_size : second_call_stack_size;
   for (i = 0; i < end; ++i)
     if (first_call_stack[i] != second_call_stack[i])
+      // TODO: For Loop entries in the call stack, use versioning to distinguish
+      // different iterations of the loop.
       break;
   return i;
 }

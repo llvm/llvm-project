@@ -1069,9 +1069,9 @@ public:
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size
     //           << ", func node " << (void*)f->Sbag->get_node() << "\n";
     if (is_read)
-      Reads.set(addr, mem_size, MemoryAccess_t(f->Sbag, acc_id/*, call_stack*/));
+      Reads.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id));
     else
-      Writes.set(addr, mem_size, MemoryAccess_t(f->Sbag, acc_id/*, call_stack*/));
+      Writes.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id));
   }
 
   template<typename QITy>
@@ -1091,7 +1091,8 @@ public:
         // Get the bag for the previous access
         SPBagInterface *LCA = Func->get_set_node();
         // If it's a P-bag, then we have a race.
-        if (LCA->is_PBag()) {
+        if (LCA->is_PBag() ||
+            f->check_parallel_iter(LCA, PrevAccess->getVersion())) {
           uintptr_t AccAddr = QI.getAddress();
           // If memory is allocated on stack, the accesses race with each other
           // only if the mem location is allocated in shared ancestor's stack.
@@ -1161,21 +1162,24 @@ public:
         // std::cerr << "update::insert: " << reinterpret_cast<void*>(UI.getAddress())
         //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
         // This is the first access to this location.
-        UI.insert(MemoryAccess_t(f->Sbag, acc_id/*, call_stack*/));
+        UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
       } else {
         auto Func = PrevAccess->getFunc();
         cilksan_assert(Func);
         SPBagInterface *lastRSet = Func->get_set_node();
         uintptr_t AccAddr = UI.getAddress();
+
         // replace it only if it is in series with this access, i.e., if it's
         // one of the following:
         // a) in a SBag
         // b) in a PBag but should have been replaced because the access is
         // actually on the newly allocated stack frame (i.e., cactus stack abstraction)
-        if (lastRSet->is_SBag() || (on_stack && lastRSet->get_rsp() >= AccAddr)) {
+        if ((lastRSet->is_SBag() &&
+             !f->check_parallel_iter(lastRSet, PrevAccess->getVersion())) ||
+            (on_stack && lastRSet->get_rsp() >= AccAddr)) {
           // std::cerr << "update::insert: " << reinterpret_cast<void*>(UI.getAddress())
           //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
-          UI.insert(MemoryAccess_t(f->Sbag, acc_id/*, call_stack*/));
+          UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
         } else
           UI.next();
       }
@@ -1213,7 +1217,7 @@ public:
         // std::cerr << "CAUW::insert: " << reinterpret_cast<void*>(UI.getAddress())
         //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
         // This is the first access to this location.
-        UI.insert(MemoryAccess_t(f->Sbag, acc_id/*, call_stack*/));
+        UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
       } else {
         auto Func = PrevAccess->getFunc();
         cilksan_assert(Func);
@@ -1222,7 +1226,8 @@ public:
         uintptr_t AccAddr = UI.getAddress();
 
         // Check for races
-        if (LCA->is_PBag()) {
+        if (LCA->is_PBag() ||
+            f->check_parallel_iter(LCA, PrevAccess->getVersion())) {
           // If memory is allocated on stack, the accesses race with each other
           // only if the mem location is allocated in shared ancestor's stack.
           // We don't need to check for this because we clear shadow memory;
@@ -1255,10 +1260,12 @@ public:
         // a) in a SBag
         // b) in a PBag but should have been replaced because the access is
         // actually on the newly allocated stack frame (i.e., cactus stack abstraction)
-        if (LCA->is_SBag() || (on_stack && LCA->get_rsp() >= AccAddr)) {
+        if ((LCA->is_SBag() &&
+             !f->check_parallel_iter(LCA, PrevAccess->getVersion())) ||
+            (on_stack && LCA->get_rsp() >= AccAddr)) {
           // std::cerr << "CAUW::insert: " << reinterpret_cast<void*>(UI.getAddress())
           //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
-          UI.insert(MemoryAccess_t(f->Sbag, acc_id/*, call_stack*/));
+          UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
         } else
           UI.next();
       }
@@ -1272,7 +1279,8 @@ public:
 
   void record_alloc(size_t start, size_t size, FrameData_t *f,
                     const call_stack_t &call_stack, csi_id_t alloca_id) {
-    Allocs.set(start, size, MemoryAccess_t(f->Sbag, alloca_id/*, call_stack*/));
+    Allocs.set(start, size,
+               MemoryAccess_t(f->getSbagForAccess(), alloca_id));
   }
 
   void clear_alloc(size_t start, size_t size) {

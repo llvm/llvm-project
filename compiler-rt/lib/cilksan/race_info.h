@@ -13,14 +13,14 @@ enum AccContextType_t { USER = 1, UPDATE = 2, REDUCE = 3 };
 enum RaceType_t { RW_RACE = 1, WW_RACE = 2, WR_RACE = 3 };
 
 // Class for representing a frame on the call stack.
-enum CallType_t : uint8_t { CALL, SPAWN };
+enum CallType_t : uint8_t { CALL, SPAWN, LOOP };
 class CallID_t {
   // We assume that the top 16 bits of a CSI ID, after the sign bit, are unused.
   // Since CSI ID's identify instructions in the program, this assumption bounds
   // the number of CSI ID's based on the size of virtual memory.
-  const unsigned TYPE_SHIFT = 48;
-  const csi_id_t ID_MASK = ((1UL << TYPE_SHIFT) - 1);
-  const csi_id_t UNKNOWN_CSI_CALL_ID = UNKNOWN_CSI_ID & ID_MASK;
+  static constexpr unsigned TYPE_SHIFT = 48;
+  static constexpr csi_id_t ID_MASK = ((1UL << TYPE_SHIFT) - 1);
+  static constexpr csi_id_t UNKNOWN_CSI_CALL_ID = UNKNOWN_CSI_ID & ID_MASK;
 
   csi_id_t typed_id;
 
@@ -64,6 +64,9 @@ public:
       break;
     case SPAWN:
       os << "SPAWN " << id.getID();
+      break;
+    case LOOP:
+      os << "LOOP " << id.getID();
       break;
     }
     return os;
@@ -384,6 +387,9 @@ public:
         break;
       case SPAWN:
         os << " SPAWN";
+        break;
+      case LOOP:
+        os << " LOOP";
         break;
       }
       os << " " << std::dec << node->getCallID().getID();

@@ -98,10 +98,6 @@ CilkSanImpl_t::merge_bag_from_returning_child(bool returning_from_detach) {
   if (returning_from_detach) {
     // We are returning from a detach.  Merge the child S- and P-bags
     // into the parent P-bag.
-    DBG_TRACE(DEBUG_BAGS,
-        "Merge S-bag from detached child %ld to P-bag from parent %ld.\n",
-        child->Sbag->get_set_node()->get_func_id(),
-        parent->Sbag->get_set_node()->get_func_id());
 
     // Get the parent P-bag.
     DisjointSet_t<SPBagInterface *> *parent_pbag = parent->Pbag;
@@ -118,30 +114,45 @@ CilkSanImpl_t::merge_bag_from_returning_child(bool returning_from_detach) {
     cilksan_assert(parent_pbag && parent_pbag->get_set_node()->is_PBag());
     // Combine child S-bag into parent P-bag.
     cilksan_assert(child->Sbag->get_set_node()->is_SBag());
-    parent_pbag->combine(child->Sbag);
-    // Combine might destroy child->Sbag
-    cilksan_assert(child->Sbag->get_set_node()->is_PBag());
+    if (child->is_Sbag_used()) {
+      DBG_TRACE(
+          DEBUG_BAGS,
+          "Merge S-bag from detached child %ld to P-bag from parent %ld.\n",
+          child->Sbag->get_set_node()->get_func_id(),
+          parent->Sbag->get_set_node()->get_func_id());
+      parent_pbag->combine(child->Sbag);
+      parent->set_Pbag_used();
+      // The child entry of frame_stack keeps child->Sbag alive until its bags
+      // are reset at the end of this function.
+      cilksan_assert(child->Sbag->get_set_node()->is_PBag());
+    }
 
     // Combine child P-bag into parent P-bag.
     if (child->Pbag) {
+      cilksan_assert(child->Pbag->get_set_node()->is_PBag());
+      // if (child->is_Pbag_used()) {
       DBG_TRACE(DEBUG_BAGS,
                 "Merge P-bag from spawned child %ld to P-bag from parent %ld.\n",
                 child->Sbag->get_set_node()->get_func_id(),
                 parent->Sbag->get_set_node()->get_func_id());
-      cilksan_assert(child->Pbag->get_set_node()->is_PBag());
       parent_pbag->combine(child->Pbag);
+      parent->set_Pbag_used();
       cilksan_assert(child->Pbag->get_set_node()->is_PBag());
+      // }
     }
 
   } else {
     // We are returning from a call.  Merge the child S-bag into the
     // parent S-bag, and merge the child P-bag into the parent P-bag.
-    DBG_TRACE(DEBUG_BAGS,
-              "Merge S-bag from called child %ld to S-bag from parent %ld.\n",
-              child->Sbag->get_set_node()->get_func_id(),
-              parent->Sbag->get_set_node()->get_func_id());
     cilksan_assert(parent->Sbag->get_set_node()->is_SBag());
-    parent->Sbag->combine(child->Sbag);
+    if (child->is_Sbag_used()) {
+      DBG_TRACE(DEBUG_BAGS,
+                "Merge S-bag from called child %ld to S-bag from parent %ld.\n",
+                child->Sbag->get_set_node()->get_func_id(),
+                parent->Sbag->get_set_node()->get_func_id());
+      parent->Sbag->combine(child->Sbag);
+      parent->set_Sbag_used();
+    }
 
     // Combine child P-bag into parent P-bag.
     if (child->Pbag) {
@@ -157,16 +168,19 @@ CilkSanImpl_t::merge_bag_from_returning_child(bool returning_from_detach) {
         DBG_TRACE(DEBUG_BAGS, "%p\n", parent_pbag);
       }
 
-      DBG_TRACE(DEBUG_BAGS,
-                "Merge P-bag from called child %ld to P-bag from parent %ld.\n",
-                child->frame_data.frame_id,
-                parent->Sbag->get_set_node()->get_func_id());
       cilksan_assert(parent_pbag && parent_pbag->get_set_node()->is_PBag());
 
       // Combine child P-bag into parent P-bag.
       cilksan_assert(child->Pbag->get_set_node()->is_PBag());
+      // if (child->is_Pbag_used()) {
+      DBG_TRACE(DEBUG_BAGS,
+                "Merge P-bag from called child %ld to P-bag from parent %ld.\n",
+                child->frame_data.frame_id,
+                parent->Sbag->get_set_node()->get_func_id());
       parent_pbag->combine(child->Pbag);
+      parent->set_Pbag_used();
       cilksan_assert(child->Pbag->get_set_node()->is_PBag());
+      // }
     }
   }
   DBG_TRACE(DEBUG_BAGS, "After merge, parent set node func id: %ld.\n",
@@ -174,6 +188,7 @@ CilkSanImpl_t::merge_bag_from_returning_child(bool returning_from_detach) {
   cilksan_assert(parent->Sbag->get_node()->get_func_id() ==
                  parent->Sbag->get_set_node()->get_func_id());
 
+  // Reset child's bags.
   child->set_sbag(NULL);
   child->set_pbag(NULL);
 }
@@ -191,7 +206,7 @@ inline void CilkSanImpl_t::start_new_function() {
   // pointer may no longer be valid due to resize.
   FrameData_t *parent = frame_stack.ancestor(1);
   DBG_TRACE(DEBUG_CALLBACK, "parent frame %ld.\n", parent->frame_data.frame_id);
-  DisjointSet_t<SPBagInterface *> *child_sbag, *parent_sbag = parent->Sbag;
+  DisjointSet_t<SPBagInterface *> *child_sbag;
 
   FrameData_t *child = frame_stack.head();
   cilksan_assert(child->Sbag == NULL);
@@ -199,8 +214,7 @@ inline void CilkSanImpl_t::start_new_function() {
 
   DBG_TRACE(DEBUG_BAGS, "Creating SBag for frame %ld\n", frame_id);
   child_sbag =
-    new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id, call_stack,
-                                                   parent_sbag->get_node()));
+    new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id, call_stack));
 
   child->init_new_function(child_sbag);
 
@@ -273,9 +287,15 @@ inline void CilkSanImpl_t::complete_sync() {
   // Pbag could be NULL if we encounter a sync without any spawn (i.e., any Cilk
   // function that executes the base case)
   if (f->Pbag) {
+    DBG_TRACE(DEBUG_BAGS,
+              "Merge P-bag in frame %ld into S-bag.\n",
+              f->Sbag->get_set_node()->get_func_id());
     cilksan_assert(f->Pbag->get_set_node()->is_PBag());
+    // if (f->is_Pbag_used()) {
     f->Sbag->combine(f->Pbag);
     cilksan_assert(f->Pbag->get_set_node()->is_SBag());
+    f->set_Sbag_used();
+    // }
     cilksan_assert(f->Sbag->get_node()->get_func_id() ==
                    f->Sbag->get_set_node()->get_func_id());
     f->set_pbag(NULL);
@@ -359,6 +379,134 @@ void CilkSanImpl_t::do_detach_end() {
   //   parent->set_pbag(parent_pbag);
   // }
   // enter_detach_child();
+}
+
+void CilkSanImpl_t::do_loop_iteration_begin(uintptr_t stack_ptr) {
+  DBG_TRACE(DEBUG_CALLBACK, "do_loop_iteration_begin()\n");
+  if (start_new_loop) {
+    // The first time we enter the loop, create a LOOP_FRAME at the head of
+    // frame_stack.
+    DBG_TRACE(DEBUG_CALLBACK, "starting new loop\n");
+    // Start a new frame.
+    do_enter_helper_begin();
+    // Set this frame's type as LOOP_FRAME.
+    FrameData_t *func = frame_stack.head();
+    func->frame_data.frame_type = LOOP_FRAME;
+    // Create a new iteration bag for this frame.
+    DBG_TRACE(DEBUG_BAGS,
+              "frame %ld creates an Iter-bag ",
+              func->Sbag->get_set_node()->get_func_id());
+    func->create_iterbag();
+    DBG_TRACE(DEBUG_BAGS, "%p\n", func->Iterbag);
+    // Finish initializing the frame.
+    do_enter_end(stack_ptr);
+    func->Iterbag->get_node()->set_rsp(stack_ptr);
+    do_detach_begin();
+    do_detach_end();
+    start_new_loop = false;
+  } else {
+    FrameData_t *func = frame_stack.head();
+    cilksan_assert(in_loop());
+    func->Sbag->get_set_node()->set_rsp(stack_ptr);
+    func->Iterbag->get_node()->set_rsp(stack_ptr);
+  }
+}
+
+void CilkSanImpl_t::do_loop_iteration_end() {
+  // frame_stack.head()->Sbag->set_version(
+  //     frame_stack.head()->Sbag->get_node()->get_version());
+
+  // At the end of each iteration, update the LOOP_FRAME for reuse.
+  DBG_TRACE(DEBUG_CALLBACK, "do_loop_iteration_end()\n");
+  FrameData_t *func = frame_stack.head();
+  cilksan_assert(in_loop());
+  // Get this frame's P-bag, creating it if necessary.
+  DisjointSet_t<SPBagInterface *> *my_pbag = func->Pbag;
+  if (!my_pbag) {
+    DBG_TRACE(DEBUG_BAGS,
+              "frame %ld creates a P-bag ",
+              func->Sbag->get_set_node()->get_func_id());
+    my_pbag =
+      new DisjointSet_t<SPBagInterface *>(
+          new PBag_t(func->Sbag->get_node()));
+    func->set_pbag(my_pbag);
+    DBG_TRACE(DEBUG_BAGS, "%p\n", my_pbag);
+  }
+  cilksan_assert(my_pbag && my_pbag->get_set_node()->is_PBag());
+
+  // Merge the S-bag into the P-bag.
+  //
+  // TODO: Make the combine and recreation of the S-bag conditional on the S-bag
+  // having references to it.
+  DisjointSet_t<SPBagInterface *> *my_sbag = func->Sbag;
+  uint64_t func_id = my_sbag->get_set_node()->get_func_id();
+  if (func->is_Sbag_used()) {
+    DBG_TRACE(DEBUG_BAGS,
+              "Merge S-bag in loop frame %ld into P-bag.\n", func_id);
+    my_pbag->combine(my_sbag);
+    func->set_Pbag_used();
+    cilksan_assert(func->Sbag->get_set_node()->is_PBag());
+
+    // Create a new S-bag for the frame.
+    DBG_TRACE(DEBUG_BAGS, "frame %ld creates an S-bag ", func_id);
+    func->set_sbag(new DisjointSet_t<SPBagInterface *>(
+                       new SBag_t(func_id, call_stack)));
+    my_pbag->get_node()->update_sibling(func->Sbag->get_node());
+    DBG_TRACE(DEBUG_BAGS, "%p\n", func->Sbag);
+  }
+
+  // Increment the Iter-frame.
+  if (!func->inc_version()) {
+    // Combine the Iter-bag into this P-bag.
+    if (func->is_Iterbag_used()) {
+      DBG_TRACE(DEBUG_BAGS,
+                "Merge Iter-bag in loop frame %ld into P-bag.\n", func_id);
+      my_pbag->combine(func->Iterbag);
+      func->set_Pbag_used();
+      cilksan_assert(func->Iterbag->get_set_node()->is_PBag());
+
+      // Create a new Iter-bag.
+      DBG_TRACE(DEBUG_BAGS, "frame %ld creates an Iter-bag ", func_id);
+      func->create_iterbag();
+      DBG_TRACE(DEBUG_BAGS, "%p\n", func->Iterbag);
+    }
+  }
+}
+
+void CilkSanImpl_t::do_loop_end() {
+  DBG_TRACE(DEBUG_CALLBACK, "do_loop_end()\n");
+  // frame_stack.head()->Sbag->get_node()->clear_version();
+  FrameData_t *func = frame_stack.head();
+  cilksan_assert(in_loop());
+  // Get this frame's P-bag, creating it if necessary.
+  DisjointSet_t<SPBagInterface *> *my_pbag = func->Pbag;
+  if (!my_pbag) {
+    DBG_TRACE(DEBUG_BAGS,
+              "frame %ld creates a P-bag ",
+              func->Sbag->get_set_node()->get_func_id());
+    my_pbag =
+      new DisjointSet_t<SPBagInterface *>(
+          new PBag_t(func->Sbag->get_node()));
+    func->set_pbag(my_pbag);
+    DBG_TRACE(DEBUG_BAGS, "%p\n", my_pbag);
+  }
+  cilksan_assert(my_pbag && my_pbag->get_set_node()->is_PBag());
+
+  // Combine the Iter-bag into this S-bag.
+  if (func->is_Iterbag_used()) {
+    DBG_TRACE(DEBUG_BAGS,
+              "Merge Iter-bag in loop frame %ld into P-bag.\n",
+              my_pbag->get_set_node()->get_func_id());
+    my_pbag->combine(func->Iterbag);
+    func->set_Pbag_used();
+    cilksan_assert(func->Iterbag->get_set_node()->is_PBag());
+  }
+  // The loop frame is done, so clear the Iter-bag.
+  func->set_iterbag(nullptr);
+
+  // Return from the frame.
+  do_leave_begin();
+  do_leave_end();
 }
 
 void CilkSanImpl_t::do_sync_begin() {
@@ -593,8 +741,7 @@ void CilkSanImpl_t::init() {
   // for the main function before we enter the first Cilk context
   DisjointSet_t<SPBagInterface *> *sbag;
   DBG_TRACE(DEBUG_BAGS, "Creating SBag for frame %ld\n", frame_id);
-  sbag = new DisjointSet_t<SPBagInterface *>(
-      new SBag_t(frame_id, call_stack, nullptr));
+  sbag = new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id, call_stack));
   cilksan_assert(sbag->get_set_node()->is_SBag());
   frame_stack.head()->set_sbag(sbag);
   WHEN_CILKSAN_DEBUG(frame_stack.head()->frame_data.frame_type = FULL_FRAME);

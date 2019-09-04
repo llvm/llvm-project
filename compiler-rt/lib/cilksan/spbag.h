@@ -28,8 +28,11 @@ public:
   virtual uint64_t get_func_id() const = 0;
   virtual uint64_t get_rsp() const = 0;
   virtual void set_rsp(uint64_t stack_ptr) = 0;
+  virtual uint16_t get_version() const = 0;
+  virtual bool inc_version() = 0;
   // virtual std::string get_call_context() = 0;
   virtual const call_stack_t *get_call_stack() const = 0;
+  virtual void update_sibling(SPBagInterface *) = 0;
 };
 
 
@@ -39,28 +42,29 @@ private:
   // std::string _func_name;
   // SBag of the parent function (whether this function is called or spawned)
   // SPBagInterface *_parent;
-  uintptr_t _stack_ptr;
+  static constexpr unsigned VERSION_SHIFT = 48;
+  static constexpr uintptr_t STACK_PTR_MASK = ((1UL << VERSION_SHIFT) - 1);
+  static constexpr uintptr_t VERSION_MASK = ~STACK_PTR_MASK;
+  uintptr_t _ver_stack_ptr;
   call_stack_t _call_stack;
 
-  // SBag_t() {} // disable default constructor
-  SBag_t() = delete;
+  SBag_t() = delete;  // disable default constructor
 
 public:
-  SBag_t(uint64_t id, const call_stack_t &call_stack, SPBagInterface *parent) :
+  SBag_t(uint64_t id, const call_stack_t &call_stack) :
       _func_id(id),
       // _func_name(name),
       // _parent(parent),
-      _stack_ptr(UNINIT_STACK_PTR), _call_stack(call_stack) {
-    // std::cerr << "Constructing SBag_t " << (void*)this << "\n";
-    // std::cerr << "  call_stack " << (void*)_call_stack.getTail() << "\n";
+      // _stack_ptr(UNINIT_STACK_PTR),
+      _ver_stack_ptr(UNINIT_STACK_PTR), _call_stack(call_stack) {
+    // std::cerr << "  Constructing SBag_t " << (void*)this << "\n";
     WHEN_CILKSAN_DEBUG(debug_count++);
   }
 
 #if CILKSAN_DEBUG
   static long debug_count;
   ~SBag_t() {
-    // std::cerr << "Destructing SBag_t " << (void*)this << "\n";
-    // std::cerr << "  call_stack " << (void*)_call_stack.getTail() << "\n";
+    // std::cerr << "  Destructing SBag_t " << (void*)this << "\n";
     debug_count--;
   }
 #endif
@@ -71,10 +75,27 @@ public:
   uint64_t get_func_id() const { return _func_id; }
 
   uint64_t get_rsp() const {
-    cilksan_assert(_stack_ptr != UNINIT_STACK_PTR);
-    return _stack_ptr;
+    cilksan_assert((_ver_stack_ptr & STACK_PTR_MASK) != UNINIT_STACK_PTR);
+    return (_ver_stack_ptr & STACK_PTR_MASK);
   }
-  void set_rsp(uintptr_t stack_ptr) { _stack_ptr = stack_ptr; }
+  void set_rsp(uintptr_t stack_ptr) {
+    // _stack_ptr = stack_ptr;
+    _ver_stack_ptr = (stack_ptr & STACK_PTR_MASK) |
+      (_ver_stack_ptr & VERSION_MASK);
+  }
+
+  uint16_t get_version() const {
+    // return _version;
+    return (_ver_stack_ptr >> VERSION_SHIFT);
+  }
+  bool inc_version() {
+    // std::cerr << "inc_version(): was version = " << _version << "\n";
+    // return (0 != ++_version);
+    uintptr_t new_version =
+      (_ver_stack_ptr & VERSION_MASK) + (1UL << VERSION_SHIFT);
+    _ver_stack_ptr = (_ver_stack_ptr & STACK_PTR_MASK) | new_version;
+    return (0 != new_version);
+  }
 
   const call_stack_t *get_call_stack() const {
     return &_call_stack;
@@ -97,6 +118,10 @@ public:
     }
     return res;
   }*/
+
+  void update_sibling(SPBagInterface *) {
+    cilksan_assert(0 && "update_sibling called from SBag_t");
+  }
 
   // Simple free-list allocator to conserve space and time in managing
   // SBag_t objects.
@@ -141,17 +166,18 @@ private:
   // the SBag that corresponds to the function instance that holds this PBag
   SPBagInterface *_sib_sbag = nullptr;
 
-  PBag_t() {} // disable default constructor
+  PBag_t() = delete; // disable default constructor
 
 public:
-  PBag_t(SPBagInterface *sib) :
-    _sib_sbag(sib) {
+  PBag_t(SPBagInterface *sib) : _sib_sbag(sib) {
+    // std::cerr << "  Constructing PBag_t " << (void*)this << "\n";
     WHEN_CILKSAN_DEBUG( debug_count++; );
   }
 
 #if CILKSAN_DEBUG
   static long debug_count;
   ~PBag_t() {
+    // std::cerr << "  Destructing PBag_t " << (void*)this << "\n";
     debug_count--;
     _sib_sbag = nullptr;
   }
@@ -165,6 +191,14 @@ public:
      /* Should never happen; */
     cilksan_assert(0 && "Called set_rsp on a Pbag");
   }
+  uint16_t get_version() const {
+    cilksan_assert(0 && "Called get_version on a Pbag");
+    return _sib_sbag->get_version();
+  }
+  bool inc_version() {
+    cilksan_assert(0 && "Called inc_version on a Pbag");
+    return _sib_sbag->inc_version();
+  }
   const call_stack_t *get_call_stack() const {
      /* Should never happen; */
     cilksan_assert(0 && "Called get_call_stack on a Pbag");
@@ -175,6 +209,10 @@ public:
   std::string get_call_context() {
     return _sib_sbag->get_call_context();
   } */
+
+  void update_sibling(SPBagInterface *new_sib) {
+    _sib_sbag = new_sib;
+  }
 
   // Simple free-list allocator to conserve space and time in managing
   // PBag_t objects.

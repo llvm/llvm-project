@@ -437,6 +437,19 @@ const csan_source_loc_t *__csan_get_func_exit_source_loc(
 
 CSIRT_API
 __attribute__((const))
+const csan_source_loc_t *__csan_get_loop_source_loc(const csi_id_t loop_id) {
+  return get_fed_entry(FED_TYPE_LOOP, loop_id);
+}
+
+CSIRT_API
+__attribute__((const))
+const csan_source_loc_t *__csan_get_loop_exit_source_loc(
+    const csi_id_t loop_exit_id) {
+  return get_fed_entry(FED_TYPE_LOOP_EXIT, loop_exit_id);
+}
+
+CSIRT_API
+__attribute__((const))
 const csan_source_loc_t *__csan_get_bb_source_loc(const csi_id_t bb_id) {
   return get_fed_entry(FED_TYPE_BASICBLOCK, bb_id);
 }

@@ -43,12 +43,14 @@ extern enum EventType_t last_event;
 // Defined in print_addr.cpp
 extern uintptr_t *call_pc;
 extern uintptr_t *spawn_pc;
+extern uintptr_t *loop_pc;
 extern uintptr_t *load_pc;
 extern uintptr_t *store_pc;
 extern uintptr_t *alloca_pc;
 extern uintptr_t *allocfn_pc;
 static csi_id_t total_call = 0;
 static csi_id_t total_spawn = 0;
+static csi_id_t total_loop = 0;
 static csi_id_t total_load = 0;
 static csi_id_t total_store = 0;
 static csi_id_t total_alloca = 0;
@@ -240,6 +242,8 @@ void __csan_unit_init(const char * const file_name,
     grow_pc_table(call_pc, total_call, counts.num_call);
   if (counts.num_detach)
     grow_pc_table(spawn_pc, total_spawn, counts.num_detach);
+  if (counts.num_loop)
+    grow_pc_table(loop_pc, total_loop, counts.num_loop);
   if (counts.num_load)
     grow_pc_table(load_pc, total_load, counts.num_load);
   if (counts.num_store)
@@ -340,6 +344,51 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
   // cilksan_do_function_exit();
 }
 
+CILKSAN_API void __csi_before_loop(const csi_id_t loop_id,
+                                   const int64_t trip_count,
+                                   const loop_prop_t prop) {
+  if (!should_check())
+    return;
+
+  if (!prop.is_tapir_loop)
+    return;
+
+  CheckingRAII nocheck;
+  DBG_TRACE(DEBUG_CALLBACK, "__csi_before_loop(%ld)\n", loop_id);
+
+  // Record the address of this detach.
+  if (!loop_pc[loop_id])
+    loop_pc[loop_id] = CALLERPC;
+
+  // Push the detach onto the call stack.
+  CilkSanImpl.record_call(loop_id, LOOP);
+
+  CilkSanImpl.do_loop_begin();
+}
+
+CILKSAN_API void __csi_after_loop(const csi_id_t loop_id,
+                                  const loop_prop_t prop) {
+  if (!should_check())
+    return;
+
+  if (!prop.is_tapir_loop)
+    return;
+
+  CheckingRAII nocheck;
+  DBG_TRACE(DEBUG_CALLBACK, "__csi_after_loop(%ld)\n", loop_id);
+
+  CilkSanImpl.do_loop_end();
+
+  // // Pop the parallel-execution state.
+  // parallel_execution.pop();
+  // parallel_execution.pop();
+
+  // CilkSanImpl.pop_stack_frame();
+
+  // Pop the call off of the call stack.
+  CilkSanImpl.record_call_return(loop_id, LOOP);
+}
+
 CILKSAN_API void __csan_before_call(const csi_id_t call_id,
                                     const csi_id_t func_id,
                                     unsigned suppression_count,
@@ -403,8 +452,9 @@ CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
   // this notes the change of peer sets.
   *parallel_execution.head() = 1;
 
-  // Push the detach onto the call stack.
-  CilkSanImpl.record_call(detach_id, SPAWN);
+  if (!CilkSanImpl.handle_loop())
+    // Push the detach onto the call stack.
+    CilkSanImpl.record_call(detach_id, SPAWN);
 }
 
 CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
@@ -419,8 +469,8 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
     stack_low_addr = (uintptr_t)sp;
 
   CheckingRAII nocheck;
-  DBG_TRACE(DEBUG_CALLBACK, "__csan_task(%ld, %ld)\n",
-            task_id, detach_id);
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_task(%ld, %ld, %d)\n",
+            task_id, detach_id, prop.is_tapir_loop_body);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
 
   // Propagate the parallel-execution state to the child.
@@ -433,6 +483,11 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
   *parallel_execution.head() = current_pe;
 
   CilkSanImpl.push_stack_frame((uintptr_t)bp, (uintptr_t)sp);
+
+  if (prop.is_tapir_loop_body && CilkSanImpl.handle_loop()) {
+    CilkSanImpl.do_loop_iteration_begin((uintptr_t)sp);
+    return;
+  }
 
   // Update tool for entering detach-helper function and performing detach.
   CilkSanImpl.do_enter_helper_begin();
@@ -449,8 +504,20 @@ CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
     return;
 
   CheckingRAII nocheck;
-  DBG_TRACE(DEBUG_CALLBACK, "__csan_task_exit(%ld, %ld, %ld)\n",
-            task_exit_id, task_id, detach_id);
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_task_exit(%ld, %ld, %ld, %d)\n",
+            task_exit_id, task_id, detach_id, prop.is_tapir_loop_body);
+
+  if (prop.is_tapir_loop_body && CilkSanImpl.handle_loop()) {
+    // Update tool for leaving the parallel iteration.
+    CilkSanImpl.do_loop_iteration_end();
+
+    // Pop the parallel-execution state.
+    parallel_execution.pop();
+    parallel_execution.pop();
+
+    CilkSanImpl.pop_stack_frame();
+    return;
+  }
 
   // Update tool for leaving a detach-helper function.
   CilkSanImpl.do_leave_begin();
@@ -471,7 +538,8 @@ CILKSAN_API void __csan_detach_continue(const csi_id_t detach_continue_id,
   DBG_TRACE(DEBUG_CALLBACK, "__csan_detach_continue(%ld)\n",
             detach_id);
 
-  CilkSanImpl.record_call_return(detach_id, SPAWN);
+  if (!CilkSanImpl.handle_loop())
+    CilkSanImpl.record_call_return(detach_id, SPAWN);
 
   WHEN_CILKSAN_DEBUG({
       if (last_event == LEAVE_FRAME_OR_HELPER)

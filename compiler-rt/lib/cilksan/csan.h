@@ -45,6 +45,10 @@ const csan_source_loc_t *__csan_get_func_source_loc(const csi_id_t func_id);
 __attribute__((const))
 const csan_source_loc_t *__csan_get_func_exit_source_loc(const csi_id_t func_exit_id);
 __attribute__((const))
+const csan_source_loc_t *__csan_get_loop_source_loc(const csi_id_t loop_id);
+__attribute__((const))
+const csan_source_loc_t *__csan_get_loop_exit_source_loc(const csi_id_t loop_exit_id);
+__attribute__((const))
 const csan_source_loc_t *__csan_get_bb_source_loc(const csi_id_t bb_id);
 __attribute__((const))
 const csan_source_loc_t *__csan_get_call_source_loc(const csi_id_t call_id);

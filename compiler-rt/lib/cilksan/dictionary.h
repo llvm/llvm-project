@@ -13,25 +13,29 @@
 #include "spbag.h"
 
 class MemoryAccess_t {
+  static constexpr unsigned VERSION_SHIFT = 48;
+  static constexpr csi_id_t ID_MASK = ((1UL << VERSION_SHIFT) - 1);
+  static constexpr csi_id_t UNKNOWN_CSI_ACC_ID = UNKNOWN_CSI_ID & ID_MASK;
 public:
   DisjointSet_t<SPBagInterface *> *func = nullptr;
   // AccessLoc_t loc;
-  csi_id_t acc_id = UNKNOWN_CSI_ID;
+  csi_id_t ver_acc_id = UNKNOWN_CSI_ACC_ID;
 
   MemoryAccess_t() {}
-  MemoryAccess_t(DisjointSet_t<SPBagInterface *> *func,
-                 csi_id_t acc_id/*, const call_stack_t &call_stack*/)
-      : func(func),
-        // loc(AccessLoc_t(acc_id, call_stack))
-        acc_id(acc_id) {
-    if (func)
+  MemoryAccess_t(DisjointSet_t<SPBagInterface *> *func, csi_id_t acc_id)
+      : func(func), ver_acc_id((acc_id & ID_MASK))
+  {
+    if (func) {
       func->inc_ref_count();
+      ver_acc_id |=
+        static_cast<csi_id_t>(func->get_node()->get_version()) << VERSION_SHIFT;
+    }
   }
 
   MemoryAccess_t(const MemoryAccess_t &copy)
       : func(copy.func),
         // loc(copy.loc)
-        acc_id(copy.acc_id) {
+        ver_acc_id(copy.ver_acc_id) {
     if (func)
       func->inc_ref_count();
     // if (loc)
@@ -41,7 +45,7 @@ public:
   MemoryAccess_t(const MemoryAccess_t &&move)
       : func(move.func),
         // loc(std::move(move.loc))
-        acc_id(move.acc_id) {}
+        ver_acc_id(move.ver_acc_id) {}
 
   ~MemoryAccess_t() {
     if (func) {
@@ -63,7 +67,7 @@ public:
       func->dec_ref_count();
     func = nullptr;
     // loc.invalidate();
-    acc_id = UNKNOWN_CSI_ID;
+    ver_acc_id = UNKNOWN_CSI_ACC_ID;
     // loc.dec_ref_count();
     // if (loc)
     //   loc->dec_ref_count();
@@ -78,12 +82,17 @@ public:
   //   return loc;
   // }
   csi_id_t getAccID() const {
-    return acc_id;
+    if ((ver_acc_id & ID_MASK) == UNKNOWN_CSI_ACC_ID)
+      return UNKNOWN_CSI_ID;
+    return (ver_acc_id & ID_MASK);
+  }
+  uint16_t getVersion() const {
+    return static_cast<uint16_t>(ver_acc_id >> VERSION_SHIFT);
   }
   AccessLoc_t getLoc() const {
     if (!isValid())
       return AccessLoc_t();
-    return AccessLoc_t(acc_id, *func->get_node()->get_call_stack());
+    return AccessLoc_t(getAccID(), *func->get_node()->get_call_stack());
   }
 
   MemoryAccess_t &operator=(const MemoryAccess_t &copy) {
@@ -95,7 +104,7 @@ public:
       func = copy.func;
     }
     // loc = copy.loc;
-    acc_id = copy.acc_id;
+    ver_acc_id = copy.ver_acc_id;
 
     // if (loc != copy.loc) {
     //   if (copy.loc)
@@ -114,7 +123,7 @@ public:
     //   loc->dec_ref_count();
     func = move.func;
     // loc = std::move(move.loc);
-    acc_id = move.acc_id;
+    ver_acc_id = move.ver_acc_id;
     return *this;
   }
 
@@ -144,7 +153,7 @@ public:
 
     // if (loc)
     //   loc->dec_ref_count();
-    acc_id = copy.acc_id;
+    ver_acc_id = copy.ver_acc_id;
     // loc = copy.loc;
   }
 
@@ -178,7 +187,7 @@ public:
   std::ostream& operator<<(std::ostream &os, const MemoryAccess_t &acc) {
     os << "function " << acc.func->get_node()->get_func_id() <<
       // ", " << acc.loc;
-      ", acc id " << acc.acc_id;
+      ", acc id " << acc.getAccID() << ", version " << acc.getVersion();
     return os;
   }
 
