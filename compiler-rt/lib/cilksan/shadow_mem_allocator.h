@@ -87,7 +87,8 @@ struct Slab_t {
   uint64_t UsedMap[UsedMapSize] = { 0 };
 
   // Line data structures.
-  LineType Lines[NumLines];
+  // LineType Lines[NumLines];
+  char Lines[NumLines * sizeof(LineType)];
 
   static_assert(sizeof(Lines) == sizeof(LineType) * NumLines,
                 "Unexpected sizeof(Lines)");
@@ -115,7 +116,10 @@ struct Slab_t {
         continue;
 
       // Get the free line.
-      LineType *Line = &Lines[64 * i + __builtin_ctzl(UsedMap[i] + 1)];
+      // LineType *Line = &Lines[64 * i + __builtin_ctzl(UsedMap[i] + 1)];
+      LineType *Line = reinterpret_cast<LineType *>(
+          &Lines[(64 * i + __builtin_ctzl(UsedMap[i] + 1)) * sizeof(LineType)]);
+
       // Mark the line as used.
       UsedMap[i] |= UsedMap[i] + 1;
 
