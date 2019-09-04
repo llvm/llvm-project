@@ -244,27 +244,28 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
-  if (disasm_range.GetByteSize()) {
-    lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
-        exe_ctx.GetTargetSP(), arch, flavor, plugin_name));
+  if (!disasm_range.GetByteSize())
+    return false;
 
-    if (disasm_sp) {
-      AddressRange range;
-      ResolveAddress(exe_ctx, disasm_range.GetBaseAddress(),
-                     range.GetBaseAddress());
-      range.SetByteSize(disasm_range.GetByteSize());
-      const bool prefer_file_cache = false;
-      size_t bytes_disassembled = disasm_sp->ParseInstructions(
-          &exe_ctx, range, &strm, prefer_file_cache);
-      if (bytes_disassembled == 0)
-        return false;
+  lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
+      exe_ctx.GetTargetSP(), arch, flavor, plugin_name));
 
-      return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
-                               num_instructions, mixed_source_and_assembly,
-                               num_mixed_context_lines, options, strm);
-    }
-  }
-  return false;
+  if (!disasm_sp)
+    return false;
+
+  AddressRange range;
+  ResolveAddress(exe_ctx, disasm_range.GetBaseAddress(),
+                 range.GetBaseAddress());
+  range.SetByteSize(disasm_range.GetByteSize());
+  const bool prefer_file_cache = false;
+  size_t bytes_disassembled =
+      disasm_sp->ParseInstructions(&exe_ctx, range, &strm, prefer_file_cache);
+  if (bytes_disassembled == 0)
+    return false;
+
+  return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
+                           num_instructions, mixed_source_and_assembly,
+                           num_mixed_context_lines, options, strm);
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
@@ -275,42 +276,51 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
-  if (num_instructions > 0) {
-    lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
-        exe_ctx.GetTargetSP(), arch, flavor, plugin_name));
-    if (disasm_sp) {
-      Address addr;
-      ResolveAddress(exe_ctx, start_address, addr);
-      const bool prefer_file_cache = false;
-      size_t bytes_disassembled = disasm_sp->ParseInstructions(
-          &exe_ctx, addr, num_instructions, prefer_file_cache);
-      if (bytes_disassembled == 0)
-        return false;
-      return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
-                               num_instructions, mixed_source_and_assembly,
-                               num_mixed_context_lines, options, strm);
-    }
-  }
-  return false;
+  if (num_instructions == 0)
+    return false;
+
+  lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
+      exe_ctx.GetTargetSP(), arch, flavor, plugin_name));
+  if (!disasm_sp)
+    return false;
+
+  Address addr;
+  ResolveAddress(exe_ctx, start_address, addr);
+
+  const bool prefer_file_cache = false;
+  size_t bytes_disassembled = disasm_sp->ParseInstructions(
+      &exe_ctx, addr, num_instructions, prefer_file_cache);
+  if (bytes_disassembled == 0)
+    return false;
+
+  return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
+                           num_instructions, mixed_source_and_assembly,
+                           num_mixed_context_lines, options, strm);
 }
 
 Disassembler::SourceLine
 Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
+  if (!sc.function)
+    return {};
+
+  if (!sc.line_entry.IsValid())
+    return {};
+
+  LineEntry prologue_end_line = sc.line_entry;
+  FileSpec func_decl_file;
+  uint32_t func_decl_line;
+  sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
+
+  if (func_decl_file != prologue_end_line.file &&
+      func_decl_file != prologue_end_line.original_file)
+    return {};
+
   SourceLine decl_line;
-  if (sc.function && sc.line_entry.IsValid()) {
-    LineEntry prologue_end_line = sc.line_entry;
-    FileSpec func_decl_file;
-    uint32_t func_decl_line;
-    sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
-    if (func_decl_file == prologue_end_line.file ||
-        func_decl_file == prologue_end_line.original_file) {
-      decl_line.file = func_decl_file;
-      decl_line.line = func_decl_line;
-      // TODO do we care about column on these entries?  If so, we need to
-      // plumb that through GetStartLineSourceInfo.
-      decl_line.column = 0;
-    }
-  }
+  decl_line.file = func_decl_file;
+  decl_line.line = func_decl_line;
+  // TODO: Do we care about column on these entries?  If so, we need to plumb
+  // that through GetStartLineSourceInfo.
+  decl_line.column = 0;
   return decl_line;
 }
 
