@@ -29,7 +29,7 @@ class Stream {
 public:
   /// \a m_flags bit values.
   enum {
-    eBinary = (1 << 0) ///< Get and put data as binary instead of as the default
+    eBinary = (1 << 0), ///< Get and put data as binary instead of as the default
                        /// string mode.
   };
 

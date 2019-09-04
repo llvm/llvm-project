@@ -297,7 +297,7 @@ lldb::StackFrameSP Thread::GetSelectedFrame() {
   StackFrameListSP stack_frame_list_sp(GetStackFrameList());
   StackFrameSP frame_sp = stack_frame_list_sp->GetFrameAtIndex(
       stack_frame_list_sp->GetSelectedFrameIndex());
-  FunctionOptimizationWarning(frame_sp.get());
+  FrameSelectedCallback(frame_sp.get());
   return frame_sp;
 }
 
@@ -306,7 +306,7 @@ uint32_t Thread::SetSelectedFrame(lldb_private::StackFrame *frame,
   uint32_t ret_value = GetStackFrameList()->SetSelectedFrame(frame);
   if (broadcast)
     BroadcastSelectedFrameChange(frame->GetStackID());
-  FunctionOptimizationWarning(frame);
+  FrameSelectedCallback(frame);
   return ret_value;
 }
 
@@ -316,7 +316,7 @@ bool Thread::SetSelectedFrameByIndex(uint32_t frame_idx, bool broadcast) {
     GetStackFrameList()->SetSelectedFrame(frame_sp.get());
     if (broadcast)
       BroadcastSelectedFrameChange(frame_sp->GetStackID());
-    FunctionOptimizationWarning(frame_sp.get());
+    FrameSelectedCallback(frame_sp.get());
     return true;
   } else
     return false;
@@ -340,7 +340,7 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
 
       bool show_frame_info = true;
       bool show_source = !already_shown;
-      FunctionOptimizationWarning(frame_sp.get());
+      FrameSelectedCallback(frame_sp.get());
       return frame_sp->GetStatus(output_stream, show_frame_info, show_source);
     }
     return false;
@@ -348,13 +348,21 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
     return false;
 }
 
-void Thread::FunctionOptimizationWarning(StackFrame *frame) {
-  if (frame && frame->HasDebugInformation() &&
-      GetProcess()->GetWarningsOptimization()) {
+void Thread::FrameSelectedCallback(StackFrame *frame) {
+  if (!frame)
+      return;
+  if (frame->HasDebugInformation() && GetProcess()->GetWarningsOptimization()) {
     SymbolContext sc =
         frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
     GetProcess()->PrintWarningOptimization(sc);
   }
+  SymbolContext msc = frame->GetSymbolContext(eSymbolContextModule);
+  if (msc.module_sp)
+    msc.module_sp->ForEachTypeSystem([&](TypeSystem *ts) {
+      if (ts)
+        ts->DiagnoseWarnings(*GetProcess(), *msc.module_sp);
+      return true;
+    });
 }
 
 lldb::StopInfoSP Thread::GetStopInfo() {
@@ -382,8 +390,12 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   if (have_valid_stop_info && !plan_overrides_trace && !plan_failed) {
     return m_stop_info_sp;
   } else if (completed_plan_sp) {
+    bool is_swift_error_value;
+    lldb::ValueObjectSP return_value_sp =
+        GetReturnValueObject(&is_swift_error_value);
     return StopInfo::CreateStopReasonWithPlan(
-        completed_plan_sp, GetReturnValueObject(), GetExpressionVariable());
+        completed_plan_sp, return_value_sp, GetExpressionVariable(),
+        is_swift_error_value);
   } else {
     GetPrivateStopInfo();
     return m_stop_info_sp;
@@ -1082,13 +1094,20 @@ ThreadPlanSP Thread::GetCompletedPlan() {
   return empty_plan_sp;
 }
 
-ValueObjectSP Thread::GetReturnValueObject() {
+ValueObjectSP Thread::GetReturnValueObject(bool *is_swift_error_value) {
+  if (is_swift_error_value)
+    *is_swift_error_value = false;
+
   if (!m_completed_plan_stack.empty()) {
     for (int i = m_completed_plan_stack.size() - 1; i >= 0; i--) {
       ValueObjectSP return_valobj_sp;
       return_valobj_sp = m_completed_plan_stack[i]->GetReturnValueObject();
-      if (return_valobj_sp)
+      if (return_valobj_sp) {
+        if (is_swift_error_value)
+          *is_swift_error_value =
+              m_completed_plan_stack[i]->IsReturnValueSwiftErrorValue();
         return return_valobj_sp;
+      }
     }
   }
   return ValueObjectSP();
@@ -1396,6 +1415,28 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 
   if (step_in_target)
     plan->SetStepInTarget(step_in_target);
+
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
+}
+
+ThreadPlanSP Thread::QueueThreadPlanForStepInRangeNoShouldStop(
+    bool abort_other_plans, const AddressRange &range,
+    const SymbolContext &addr_context, const char *step_in_target,
+    lldb::RunMode stop_other_threads, Status &status,
+    LazyBool step_in_avoids_code_without_debug_info,
+    LazyBool step_out_avoids_code_without_debug_info) {
+  ThreadPlanSP thread_plan_sp(
+      new ThreadPlanStepInRange(*this, range, addr_context, stop_other_threads,
+                                step_in_avoids_code_without_debug_info,
+                                step_out_avoids_code_without_debug_info));
+  ThreadPlanStepInRange *plan =
+      static_cast<ThreadPlanStepInRange *>(thread_plan_sp.get());
+
+  if (step_in_target)
+    plan->SetStepInTarget(step_in_target);
+
+  plan->ClearShouldStopHereCallbacks();
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;

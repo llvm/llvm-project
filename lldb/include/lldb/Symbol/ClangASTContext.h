@@ -54,6 +54,8 @@ public:
   // Constructors and Destructors
   ClangASTContext(const char *triple = nullptr);
 
+  ClangASTContext(clang::ASTContext *ast_ctx);
+
   ~ClangASTContext() override;
 
   void Finalize() override;
@@ -66,7 +68,8 @@ public:
   static ConstString GetPluginNameStatic();
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module *module, Target *target);
+                                           Module *module, Target *target,
+                                           const char *compiler_options);
 
   static LanguageSet GetSupportedLanguagesForTypes();
   static LanguageSet GetSupportedLanguagesForExpressions();
@@ -190,6 +193,9 @@ public:
     return GetTranslationUnitDecl(getASTContext());
   }
 
+  // Copy "src" into this ClangASTContext.
+  CompilerType CopyType(const CompilerType &src);
+
   static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
                                clang::ASTContext *source_context,
                                clang::Decl *source_decl);
@@ -262,6 +268,11 @@ public:
 
   static uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                                     bool omit_empty_base_classes);
+
+  static uint32_t
+  GetIndexForRecordBase(const clang::RecordDecl *record_decl,
+                        const clang::CXXBaseSpecifier *base_spec,
+                        bool omit_empty_base_classes);
 
   CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
                                 lldb::AccessType access_type, const char *name,
@@ -582,7 +593,8 @@ public:
 
   bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                              CompilerType *target_type, // Can pass nullptr
-                             bool check_cplusplus, bool check_objc) override;
+                             bool check_cplusplus, bool check_objc,
+                             bool check_swift) override;
 
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override;
 
@@ -645,6 +657,8 @@ public:
 
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
+
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
 
@@ -664,14 +678,14 @@ public:
   GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
                            size_t idx) override;
 
+  CompilerType
+  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override;
+
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetPointeeType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetPointerType(lldb::opaque_compiler_type_t type) override;
-
-  CompilerType
-  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType
   GetRValueReferenceType(lldb::opaque_compiler_type_t type) override;
@@ -689,6 +703,10 @@ public:
   // If the current object represents a typedef type, get the underlying type
   CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
+
+  static CompilerType RemoveFastQualifiers(const CompilerType &type);
+
   // Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
@@ -704,6 +722,10 @@ public:
   llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
+
+  llvm::Optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type,
+                ExecutionContextScope *exe_scope) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
@@ -904,7 +926,8 @@ public:
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope) override;
+                     ExecutionContextScope *exe_scope,
+                     bool is_base_class) override;
 
   void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
                    Stream *s, const DataExtractor &data,

@@ -61,6 +61,7 @@ protected:
   friend class SBData;
   friend class SBDebugger;
   friend class SBHostOS;
+  friend class SBModule;
   friend class SBPlatform;
   friend class SBProcess;
   friend class SBReproducer;

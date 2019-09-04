@@ -9,6 +9,13 @@ let Definition = "modulelist" in {
     Global,
     DefaultStringValue<"">,
     Desc<"The path to the clang modules cache directory (-fmodules-cache-path).">;
+  def UseDWARFImporter: Property<"use-swift-dwarfimporter", "Boolean">,
+    DefaultTrue,
+    Desc<"Reconstruct Clang module dependencies from DWARF when debugging Swift code">;
+  def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
+    DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
+    EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
+    Desc<"The module loading mode to use when loading modules for Swift.">;
 }
 
 let Definition = "debugger" in {

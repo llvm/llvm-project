@@ -504,6 +504,8 @@ public:
     return lldb::ValueObjectSP();
   }
 
+  virtual bool IsReturnValueSwiftErrorValue() { return false; }
+
   // If the thread plan managing the evaluation of a user expression lives
   // longer than the command that instigated the expression (generally because
   // the expression evaluation hit a breakpoint, and the user regained control

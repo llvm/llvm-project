@@ -21,6 +21,7 @@
 class SymbolFileDWARF;
 class DWARFDebugAranges;
 class DWARFDeclContext;
+class DebugMapModule;
 
 class SymbolFileDWARFDebugMap : public lldb_private::SymbolFile {
 public:
@@ -110,6 +111,9 @@ public:
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
+  size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
+                   lldb_private::LanguageSet langauges, bool append,
+                   lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
@@ -118,6 +122,9 @@ public:
                   lldb_private::TypeList &type_list) override;
   std::vector<lldb_private::CallEdge>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
+
+  std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language) override;
 
   void DumpClangAST(lldb_private::Stream &s) override;
 
@@ -131,6 +138,7 @@ protected:
 
   friend class DebugMapModule;
   friend class DWARFASTParserClang;
+  friend class DWARFASTParserSwift;
   friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;
   struct OSOInfo {

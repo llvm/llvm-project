@@ -21,6 +21,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -79,8 +80,12 @@ ConstString ValueObjectVariable::GetTypeName() {
 
 ConstString ValueObjectVariable::GetDisplayTypeName() {
   Type *var_type = m_variable_sp->GetType();
-  if (var_type)
-    return var_type->GetForwardCompilerType().GetDisplayTypeName();
+  if (var_type) {
+      const SymbolContext *sc = nullptr;
+      if (GetFrameSP())
+        sc = &GetFrameSP()->GetSymbolContext(lldb::eSymbolContextFunction);
+      return var_type->GetForwardCompilerType().GetDisplayTypeName(sc);
+  }
   return ConstString();
 }
 
@@ -125,17 +130,34 @@ bool ValueObjectVariable::UpdateValue() {
   m_error.Clear();
 
   Variable *variable = m_variable_sp.get();
+  // Check if the type has size 0. If so, there is nothing to update,
+  // unless the type is C++ where even empty structs have a non-zero
+  // size.
+  CompilerType var_type(GetCompilerTypeImpl());
+  if (var_type.IsValid() && var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    llvm::Optional<uint64_t> size =
+      var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+    if (size && *size == 0) {
+      m_value.SetCompilerType(var_type);
+      return m_error.Success();
+    }
+  }
+
   DWARFExpression &expr = variable->LocationExpression();
 
   if (variable->GetLocationIsConstantValueData()) {
     // expr doesn't contain DWARF bytes, it contains the constant variable
     // value bytes themselves...
-    if (expr.GetExpressionData(m_data))
+    if (expr.GetExpressionData(m_data)) {
+      if (m_data.GetDataStart() && m_data.GetByteSize())
+        m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::eContextTypeVariable, variable);
-    else
+    } else
       m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::eContextTypeInvalid, nullptr);
+    SetAddressTypeOfChildren(eAddressTypeInvalid);
   } else {
     lldb::addr_t loclist_base_load_addr = LLDB_INVALID_ADDRESS;
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -168,9 +190,29 @@ bool ValueObjectVariable::UpdateValue() {
 
       Process *process = exe_ctx.GetProcessPtr();
       const bool process_is_alive = process && process->IsAlive();
-      const uint32_t type_info = compiler_type.GetTypeInfo();
+      const uint32_t type_info =
+          compiler_type.IsValid() ? compiler_type.GetTypeInfo() : 0;
       const bool is_pointer_or_ref =
           (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
+
+      // BEGIN Swift
+      if (variable->GetType() && variable->GetType()->IsSwiftFixedValueBuffer())
+        if (auto process_sp = GetProcessSP())
+          if (auto runtime = process_sp->GetLanguageRuntime(
+                  compiler_type.GetMinimumLanguage())) {
+            if (!runtime->IsStoredInlineInBuffer(compiler_type)) {
+              lldb::addr_t addr =
+                  m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+              if (addr != LLDB_INVALID_ADDRESS) {
+                Target &target = process_sp->GetTarget();
+                size_t ptr_size = process_sp->GetAddressByteSize();
+                lldb::addr_t deref_addr;
+                target.ReadMemory(addr, false, &deref_addr, ptr_size, m_error);
+                m_value.GetScalar() = deref_addr;
+              }
+            }
+          }
+      // END Swift
 
       switch (value_type) {
       case Value::eValueTypeFileAddress:

@@ -109,7 +109,7 @@ ConstString InlineFunctionInfo::GetName(LanguageType language) const {
 ConstString InlineFunctionInfo::GetDisplayName(LanguageType language) const {
   if (m_mangled)
     return m_mangled.GetDisplayDemangledName(language);
-  return m_name;
+  return GetName(language);
 }
 
 Declaration &InlineFunctionInfo::GetCallSite() { return m_call_decl; }
@@ -141,6 +141,8 @@ void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
            lazy_callee.symbol_name);
 
   auto resolve_lazy_callee = [&]() -> Function * {
+    if (!lazy_callee.symbol_name)
+      return nullptr;
     ConstString callee_name{lazy_callee.symbol_name};
     SymbolContextList sc_list;
     size_t num_matches =
@@ -180,11 +182,14 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   const AddressRange &range)
+                   const AddressRange &range, bool canThrow)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_block(func_uid), m_range(range),
       m_frame_base(), m_flags(), m_prologue_byte_size(0) {
   m_block.SetParentScope(this);
+  if (canThrow)
+    m_flags.Set(flagsFunctionCanThrow);
+    
   assert(comp_unit != nullptr);
 }
 
@@ -419,8 +424,10 @@ bool Function::IsTopLevelFunction() {
   return result;
 }
 
-ConstString Function::GetDisplayName() const {
-  return m_mangled.GetDisplayDemangledName(GetLanguage());
+ConstString Function::GetDisplayName(const SymbolContext *sc) const {
+  if (!m_mangled)
+    return GetName();
+  return m_mangled.GetDisplayDemangledName(GetLanguage(), sc);
 }
 
 CompilerDeclContext Function::GetDeclContext() {
@@ -587,16 +594,17 @@ lldb::LanguageType Function::GetLanguage() const {
   return lldb::eLanguageTypeUnknown;
 }
 
-ConstString Function::GetName() const {
+ConstString Function::GetName(const SymbolContext *sc) const {
   LanguageType language = lldb::eLanguageTypeUnknown;
   if (m_comp_unit)
     language = m_comp_unit->GetLanguage();
-  return m_mangled.GetName(language);
+  return m_mangled.GetName(language, Mangled::ePreferDemangled, sc);
 }
 
-ConstString Function::GetNameNoArguments() const {
+ConstString Function::GetNameNoArguments(const SymbolContext *sc) const {
   LanguageType language = lldb::eLanguageTypeUnknown;
   if (m_comp_unit)
     language = m_comp_unit->GetLanguage();
-  return m_mangled.GetName(language, Mangled::ePreferDemangledWithoutArguments);
+  return m_mangled.GetName(language, Mangled::ePreferDemangledWithoutArguments,
+                           sc);
 }

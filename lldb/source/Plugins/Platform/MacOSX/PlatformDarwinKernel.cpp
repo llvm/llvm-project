@@ -672,8 +672,8 @@ Status PlatformDarwinKernel::GetSharedModule(
       }
     }
 
-    // Give the generic methods, including possibly calling into  DebugSymbols
-    // framework on macOS systems, a chance.
+    // Give the generic methods, including possibly calling into
+    // DebugSymbols framework on macOS systems, a chance.
     error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
                                            module_search_paths_ptr,
                                            old_module_sp_ptr, did_create_ptr);
@@ -726,8 +726,8 @@ Status PlatformDarwinKernel::GetSharedModule(
       }
     }
 
-    // Give the generic methods, including possibly calling into  DebugSymbols
-    // framework on macOS systems, a chance.
+    // Give the generic methods, including possibly calling into
+    // DebugSymbols framework on macOS systems, a chance.
     error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
                                             module_search_paths_ptr,
                                             old_module_sp_ptr, did_create_ptr);

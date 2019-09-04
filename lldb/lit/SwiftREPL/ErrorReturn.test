@@ -1,0 +1,11 @@
+// XFAIL: powerpc64le
+// SR-10212
+// Test that we can handle errors.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+enum VagueProblem: Error { case SomethingWentWrong }
+func foo() throws -> Int { throw VagueProblem.SomethingWentWrong }
+foo()
+
+// CHECK: $E0: VagueProblem = SomethingWentWrong

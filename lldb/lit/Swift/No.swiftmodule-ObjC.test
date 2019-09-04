@@ -1,0 +1,20 @@
+# REQUIRES: system-darwin
+# This tests debugging without the presence of a .swiftmodule.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %clang -c -fmodules -gmodules -I%S/Inputs \
+# RUN:          %S/Inputs/ObjCStuff.m -o %t/ObjCStuff.o
+# RUN: %target-swift-frontend -c -g -serialize-debugging-options \
+# RUN:          -module-cache-path %t/cache \
+# RUN:          -primary-file %S/Inputs/No.swiftmodule-ObjC.swift \
+# RUN:          -module-name main -o %t/main.o -I%S/Inputs
+# RUN: %target-swiftc -o %t/a.out %t/main.o %t/ObjCStuff.o
+# RUN: %lldb %t/a.out -s %s | FileCheck %S/Inputs/No.swiftmodule-ObjC.swift
+
+breakpoint set -p "break here"
+run
+frame variable -d no-dynamic
+frame variable object
+# FIXME: (fails creating the expression context)  frame variable -O object
+target var globalFloat
+quit

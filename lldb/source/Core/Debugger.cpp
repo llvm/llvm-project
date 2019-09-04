@@ -8,6 +8,15 @@
 
 #include "lldb/Core/Debugger.h"
 
+#include <map>
+#include <mutex>
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Threading.h"
+
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
@@ -23,6 +32,7 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -32,6 +42,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StructuredDataPlugin.h"
@@ -257,7 +268,14 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
                                   llvm::StringRef value) {
   bool is_load_script =
       (property_path == "target.load-script-from-symbol-file");
-  bool is_escape_non_printables = (property_path == "escape-non-printables");
+  // These properties might change how we visualize data.
+  bool invalidate_data_vis = (property_path == "escape-non-printables");
+  invalidate_data_vis |=
+      (property_path == "target.max-zero-padding-in-float-format");
+  if (invalidate_data_vis) {
+    DataVisualization::ForceUpdate();
+  }
+
   TargetSP target_sp;
   LoadScriptFromSymFile load_script_old_value;
   if (is_load_script && exe_ctx->GetTargetSP()) {
@@ -300,8 +318,6 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
           }
         }
       }
-    } else if (is_escape_non_printables) {
-      DataVisualization::ForceUpdate();
     }
   }
   return error;
@@ -1060,6 +1076,42 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp,
   }
 }
 
+// Pop 2 IOHandlers and don't active the second one after the first is popped
+uint32_t Debugger::PopIOHandlers(const IOHandlerSP &reader1_sp,
+                                 const IOHandlerSP &reader2_sp) {
+  uint32_t result = 0;
+
+  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
+
+  // The reader on the stop of the stack is done, so let the next
+  // read on the stack refresh its prompt and if there is one...
+  if (!m_input_reader_stack.IsEmpty()) {
+    IOHandlerSP reader_sp(m_input_reader_stack.Top());
+
+    if (!reader1_sp || reader1_sp.get() == reader_sp.get()) {
+      reader_sp->Deactivate();
+      reader_sp->Cancel();
+      m_input_reader_stack.Pop();
+      ++result;
+
+      reader_sp = m_input_reader_stack.Top();
+
+      if (reader2_sp && reader2_sp.get() == reader_sp.get()) {
+        m_input_reader_stack.Pop();
+        ++result;
+        reader_sp = m_input_reader_stack.Top();
+      }
+
+      if (reader_sp)
+        reader_sp->Activate();
+
+    } else if (PopIOHandler(reader2_sp)) {
+      ++result;
+    }
+  }
+  return result;
+}
+
 bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   if (!pop_reader_sp)
     return false;
@@ -1328,6 +1380,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
   if (!gui_enabled) {
     bool pop_process_io_handler = false;
+    bool pop_command_interpreter = false;
     assert(process_sp);
 
     bool state_is_stopped = false;
@@ -1347,7 +1400,8 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Display running state changes first before any STDIO
     if (got_state_changed && !state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              pop_command_interpreter);
     }
 
     // Now display STDOUT and STDERR
@@ -1387,14 +1441,15 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Now display any stopped state changes after any STDIO
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              pop_command_interpreter);
     }
 
     output_stream_sp->Flush();
     error_stream_sp->Flush();
 
     if (pop_process_io_handler)
-      process_sp->PopProcessIOHandler();
+      process_sp->PopProcessIOHandler(pop_command_interpreter);
   }
 }
 

@@ -17,6 +17,7 @@
 # FRAMEWORK_INCLUDES (Darwin only) :=
 # CFLAGS_EXTRAS :=
 # LD_EXTRAS :=
+# SWIFTFLAGS_EXTRAS :=
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 #
@@ -88,6 +89,8 @@ ifneq "$(TRIPLE)" ""
 	triple_os_and_version =$(shell echo $(word 3, $(triple_space)) | sed 's/\([a-z]*\)\(.*\)/\1 \2/')
 	TRIPLE_OS =$(word 1, $(triple_os_and_version))
 	TRIPLE_VERSION =$(word 2, $(triple_os_and_version))
+	TRIPLE_ENV =$(word 4, $(triple_space))
+	TRIPLE_SWIFTFLAGS :=-target $(TRIPLE)
 	ifeq "$(TRIPLE_VENDOR)" "apple"
 		ifeq "$(TRIPLE_OS)" "ios"
 			CODESIGN := codesign
@@ -100,12 +103,23 @@ ifneq "$(TRIPLE)" ""
 					endif
 					ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
 				else
-					SDKROOT = $(shell xcrun --sdk iphonesimulator --show-sdk-path)
+					ifeq "$(TRIPLE_ENV)" "macabi"
+						SDKROOT = $(shell xcrun --sdk macosx --show-sdk-path)
+					else
+						SDKROOT = $(shell xcrun --sdk iphonesimulator --show-sdk-path)
+					endif
 					ifeq "$(TRIPLE_VERSION)" ""
 						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
 					endif
-					ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					TRIPLE_SWIFTFLAGS :=-target $(TRIPLE) -sdk "$(SDKROOT)"
+					ifeq "$(TRIPLE_ENV)" "macabi"
+						ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					else
+						ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					endif
 				endif
+				# Add in the SDKROOT to the swift flags.
+				TRIPLE_SWIFTFLAGS +=-sdk "$(SDKROOT)"
 			endif
 		endif
 		ifeq "$(TRIPLE_OS)" "watchos"
@@ -155,7 +169,13 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-CC ?= clang
+
+# On Darwin, we default to specifying the default toolchain.
+ifeq "$(OS)" "Darwin"
+    CC ?= xcrun -toolchain default clang
+else
+    CC ?= clang
+endif
 ifeq "$(CC)" "cc"
 	ifneq "$(shell which clang)" ""
 		CC = clang
@@ -175,6 +195,24 @@ ifeq "$(OS)" "Darwin"
         # We haven't otherwise set the SDKROOT, so set it now to macosx
         SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
     endif
+endif
+
+#----------------------------------------------------------------------
+# SWIFTC defaults to swift.
+# TODO:
+# If you change the defaults of SWIFTC, be sure to also change it in the file
+# test/plugins/builder_base.py, which provides a Python way to return the
+# value of the make variable SWIFTC -- getSwiftCompiler().
+#
+# See also these functions:
+#   o cxx_compiler
+#   o cxx_linker
+#----------------------------------------------------------------------
+SWIFTC ?= $(shell $(VPATH)/$(LEVEL)/find-swift.py)
+ifeq "$(SDKROOT)" ""
+	SWIFTSDKROOT = $(shell $(VPATH)/$(LEVEL)/find-swift.py -s)
+else
+	SWIFTSDKROOT = $(SDKROOT)
 endif
 
 #----------------------------------------------------------------------
@@ -223,8 +261,8 @@ else
 	ifeq "$(ARCH)" "powerpc64"
 		override ARCH := $(subst powerpc64,64,$(ARCH))
 	endif
-	ifeq "$(ARCH)" "powerpc64le"
-		override ARCH := $(subst powerpc64le,64,$(ARCH))
+	ifeq "$(ARCH)" "ppc64le"
+		override ARCH := $(subst ppc64le,64,$(ARCH))
 	endif
 	ifeq "$(ARCH)" "aarch64"
 		override ARCH :=
@@ -259,6 +297,12 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
+SWIFTFLAGS ?= $(DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
+
+STATIC_STDLIB =
+ifneq (,$(findstring arm,$(ARCH)))
+	STATIC_STDLIB = -static-stdlib
+endif
 
 ifeq "$(OS)" "Darwin"
 	ifneq "$(SDKROOT)" ""
@@ -279,6 +323,8 @@ ifndef NO_TEST_COMMON_H
 endif
 
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
+SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
+SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
 # with codeview by default but all the tests rely on dwarf.
@@ -304,6 +350,9 @@ ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
 $(warning failed to set the shared clang module cache dir)
 endif
+
+SWIFT_MODULE_CACHE_FLAGS ?= -module-cache-path $(CLANG_MODULE_CACHE_DIR)
+SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
 MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
 MANDATORY_MODULE_BUILD_CFLAGS := $(MODULE_BASE_FLAGS) -gmodules
@@ -505,6 +554,53 @@ ifneq "$(strip $(OBJC_SOURCES))" ""
 endif
 
 #----------------------------------------------------------------------
+# Check if we have any Swift source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(SWIFT_SOURCES))" ""
+	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifneq "$(strip $(DYLIB_SWIFT_SOURCES))" ""
+	DYLIB_OBJECTS +=$(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifeq "$(USESWIFTDRIVER)" "1"
+	LDFLAGS +=-L"$(SWIFTLIBS)"
+	ifneq "$(TRIPLE)" ""
+		SWIFTFLAGS += -target $(TRIPLE)
+	endif
+	ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
+	endif
+endif
+
+#----------------------------------------------------------------------
+# Check if we need the Swift/ObjC interop features
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_OBJC_INTEROP)" "1"
+        ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -framework Foundation -framework CoreGraphics
+		LDFLAGS += -lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+        else
+                # CFLAGS_EXTRAS is used via "dotest.py -E" to pass the -I and -L paths
+                # for Foundation and libdispatch on Linux.
+                SWIFTFLAGS += $(CFLAGS_EXTRAS)
+                LDFLAGS += $(CFLAGS_EXTRAS)
+        endif
+
+endif
+
+
+#----------------------------------------------------------------------
+# Set up variables to run the Swift frontend directly.
+#----------------------------------------------------------------------
+SWIFT=$(shell dirname $(SWIFTC))/swift
+SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g') -enable-anonymous-context-mangled-names
+SWIFT_FE=$(SWIFT) -frontend
+
+#----------------------------------------------------------------------
 # Check if we have any ObjC++ source files
 #----------------------------------------------------------------------
 ifneq "$(strip $(OBJCXX_SOURCES))" ""
@@ -585,6 +681,61 @@ endif
 #----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
+ifeq "$(USESWIFTDRIVER)" "1"
+#----------------------------------------------------------------------
+ifeq "$(DYLIB_NAME)" ""
+MODULENAME?=$(shell basename $(EXE) .out)
+else
+EXE = $(DYLIB_FILENAME)
+MODULENAME?=$(DYLIB_NAME)
+SWIFT_FEFLAGS += -parse-as-library
+endif
+
+VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
+%.o: %.swift
+	@echo "### Compiling" $<
+	$(SWIFT_FE) -c -primary-file $^ \
+	  $(filter-out $(VPATH)/$^,$(filter-out $^,$(VPATHSOURCES))) \
+	  $(SWIFT_FEFLAGS) -module-name $(MODULENAME) -emit-module-path \
+	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@) \
+	  -o $(BUILDDIR)/$@
+
+ifeq "$(OS)" "Darwin"
+$(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
+	@echo "### Linking" $(EXE)
+	$(SWIFTC) -toolchain-stdlib-rpath $(STATIC_STDLIB) $(LD_EXTRAS) \
+	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
+	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
+else # OS = Linux
+$(EXE): $(MODULENAME).swiftmodule.o $(OBJECTS)
+	@echo "### Linking" $(EXE)
+ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
+	$(SWIFTC) $(LD_EXTRAS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+else
+	$(SWIFTC) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+endif
+
+$(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
+	@echo "### Wrapping swift module"
+	$(SWIFT) -modulewrap $^ -o $(BUILDDIR)/$@
+endif
+
+$(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
+	@echo "### Merging swift modules for $(MODULENAME)"
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
+	  -emit-module $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
+	  -emit-parseable-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface \
+	  -sil-merge-partial-modules \
+	  -disable-diagnostic-passes -disable-sil-perf-optzns \
+	  -module-name $(MODULENAME) \
+	  -o $(BUILDDIR)/$@
+
+else # USESWIFTDRIVER = 0
+#----------------------------------------------------------------------
+
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
@@ -599,7 +750,7 @@ ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
 endif
-
+endif
 #----------------------------------------------------------------------
 # Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
 #----------------------------------------------------------------------
@@ -622,6 +773,7 @@ endif
 ifneq "$(ARCHIVE_NAME)" ""
 ifeq "$(OS)" "Darwin"
 $(ARCHIVE_NAME) : $(ARCHIVE_OBJECTS)
+	@echo "### Creating archive $(ARCHIVE_NAME)"
 	$(AR) $(ARFLAGS) $(ARCHIVE_NAME) $(ARCHIVE_OBJECTS)
 	$(RM) $(ARCHIVE_OBJECTS)
 else
@@ -631,6 +783,36 @@ endif
 
 #----------------------------------------------------------------------
 # Make the dylib
+#----------------------------------------------------------------------
+#----------------------------------------------------------------------
+ifeq "$(USESWIFTDRIVER)" "1"
+#----------------------------------------------------------------------
+ifeq "$(OS)" "Darwin"
+DYLIB_SWIFT_FLAGS=  \
+	 -toolchain-stdlib-rpath \
+	 -Xlinker -dylib \
+	 -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
+	 $(LD_EXTRAS)
+else
+DYLIB_SWIFT_FLAGS=$(LD_EXTRAS)
+endif
+$(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
+	@echo "### Linking dynamic library $(DYLIB_NAME)"
+ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
+	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
+            $(patsubst %.swiftmodule.o,,$^)
+else
+	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
+endif
+ifneq "$(MAKE_DSYM)" "NO"
+ifneq "$(DS)" ""
+	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"
+endif
+endif
+
+#----------------------------------------------------------------------
+else # Non-Swift llvm.org part.
 #----------------------------------------------------------------------
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
 
@@ -657,7 +839,7 @@ ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
 endif
 endif
-
+endif
 #----------------------------------------------------------------------
 # Make the precompiled header and compile C++ sources against it
 #----------------------------------------------------------------------

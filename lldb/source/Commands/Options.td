@@ -4,6 +4,8 @@ let Command = "target modules dump symtab" in {
   def tm_sort : Option<"sort", "s">, Group<1>,
     Desc<"Supply a sort order when dumping the symbol table.">,
     EnumArg<"SortOrder", "OptionEnumValues(g_sort_option_enumeration)">;
+  def tm_smn : Option<"show-mangled-names", "m">, Group<1>,
+    Desc<"Do not demangle symbol names before showing them.">;
 }
 
 let Command = "help" in {
@@ -182,6 +184,14 @@ let Command = "breakpoint set" in {
     Arg<"Boolean">, Desc<"Set the breakpoint on exception throW.">;
   def breakpoint_set_on_catch : Option<"on-catch", "h">, Group<10>,
     Arg<"Boolean">, Desc<"Set the breakpoint on exception catcH.">;
+  def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
+    Group<10>,
+    Arg<"TypeName">, Desc<"The breakpoint will only stop if an exception "
+    "Object of this type is thrown. Can be repeated multiple times to stop for "
+    "multiple object types. If you just specify the type's base name it will "
+    "match against that type in all modules, or you can specify the full type "
+    "name including modules. Other submatches are not supported at present."
+    "Only supported for Swift at present.">;
   def breakpoint_set_language : Option<"language", "L">, GroupRange<3, 8>,
     Arg<"Language">,
     Desc<"Specifies the Language to use when interpreting the breakpoint's "

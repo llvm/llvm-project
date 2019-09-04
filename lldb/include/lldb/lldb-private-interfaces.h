@@ -97,7 +97,8 @@ typedef lldb::InstrumentationRuntimeType (*InstrumentationRuntimeGetType)();
 typedef lldb::InstrumentationRuntimeSP (*InstrumentationRuntimeCreateInstance)(
     const lldb::ProcessSP &process_sp);
 typedef lldb::TypeSystemSP (*TypeSystemCreateInstance)(
-    lldb::LanguageType language, Module *module, Target *target);
+    lldb::LanguageType language, Module *module, Target *target,
+    const char *compiler_options);
 typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            lldb::LanguageType language,
                                            Debugger *debugger, Target *target,

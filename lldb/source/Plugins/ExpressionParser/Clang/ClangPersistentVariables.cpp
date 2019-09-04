@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangPersistentVariables.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -15,6 +16,11 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
+#include "lldb/Symbol/TypeSystem.h"
+
+#include "swift/AST/Decl.h"
+#include "swift/AST/Pattern.h"
 #include "clang/AST/Decl.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -40,28 +46,40 @@ ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
 
 void ClangPersistentVariables::RemovePersistentVariable(
     lldb::ExpressionVariableSP variable) {
+  if (!variable)
+    return;
+
   RemoveVariable(variable);
 
-  // Check if the removed variable was the last one that was created. If yes,
-  // reuse the variable id for the next variable.
+  const char *name = variable->GetName().AsCString();
 
-  // Nothing to do if we have not assigned a variable id so far.
-  if (m_next_persistent_variable_id == 0)
+  if (*name != '$')
     return;
+  name++;
 
-  llvm::StringRef name = variable->GetName().GetStringRef();
-  // Remove the prefix from the variable that only the indes is left.
-  if (!name.consume_front(GetPersistentVariablePrefix(false)))
-    return;
+  bool is_error = false;
 
-  // Check if the variable contained a variable id.
-  uint32_t variable_id;
-  if (name.getAsInteger(10, variable_id))
-    return;
-  // If it's the most recent variable id that was assigned, make sure that this
-  // variable id will be used for the next persistent variable.
-  if (variable_id == m_next_persistent_variable_id - 1)
-    m_next_persistent_variable_id--;
+  if (llvm::isa<SwiftASTContext>(variable->GetCompilerType().GetTypeSystem())) {
+    switch (*name) {
+    case 'R':
+      break;
+    case 'E':
+      is_error = true;
+      break;
+    default:
+      return;
+    }
+    name++;
+  }
+
+  uint32_t value = strtoul(name, nullptr, 0);
+  if (is_error) {
+    if (value == m_next_persistent_error_id - 1)
+      m_next_persistent_error_id--;
+  } else {
+    if (value == m_next_persistent_variable_id - 1)
+      m_next_persistent_variable_id--;
+  }
 }
 
 llvm::Optional<CompilerType>

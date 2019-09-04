@@ -412,7 +412,8 @@ class XunitFormatter(ResultsFormatter):
             with self.lock:
                 self.elements["expected_failures"].append(result)
         elif self.options.xfail == XunitFormatter.RM_SUCCESS:
-            result = self._common_add_testcase_entry(test_event)
+            result = self._common_add_testcase_entry(
+                test_event, test_name_suffix="XFAIL:")
             with self.lock:
                 self.elements["successes"].append(result)
         elif self.options.xfail == XunitFormatter.RM_FAILURE:
@@ -453,7 +454,8 @@ class XunitFormatter(ResultsFormatter):
                 self.elements["unexpected_successes"].append(result)
         elif self.options.xpass == XunitFormatter.RM_SUCCESS:
             # Treat the xpass as a success.
-            result = self._common_add_testcase_entry(test_event)
+            result = self._common_add_testcase_entry(
+                test_event, test_name_suffix="XPASS:")
             with self.lock:
                 self.elements["successes"].append(result)
         elif self.options.xpass == XunitFormatter.RM_FAILURE:
@@ -495,7 +497,11 @@ class XunitFormatter(ResultsFormatter):
         # Call the status handler for the test result.
         self.status_handlers[status](test_event)
 
-    def _common_add_testcase_entry(self, test_event, inner_content=None):
+    def _common_add_testcase_entry(
+            self,
+            test_event,
+            inner_content=None,
+            test_name_suffix=None):
         """Registers a testcase result, and returns the text created.
 
         The caller is expected to manage failure/skip/success counts
@@ -516,6 +522,8 @@ class XunitFormatter(ResultsFormatter):
         # Get elapsed time.
         test_class = test_event.get("test_class", "<no_class>")
         test_name = test_event.get("test_name", "<no_test_method>")
+        if test_name_suffix is not None:
+            test_name = test_name_suffix + test_name
         event_time = test_event["event_time"]
         time_taken = self.elapsed_time_for_test(
             test_class, test_name, event_time)

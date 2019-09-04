@@ -159,6 +159,7 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file,
   m_flags.compiler_type_resolve_state =
       (compiler_type ? compiler_type_resolve_state : eResolveStateUnresolved);
   m_flags.is_complete_objc_class = false;
+  m_flags.is_swift_fixed_value_buffer = false;
 }
 
 Type::Type()
@@ -332,7 +333,7 @@ Type *Type::GetEncodingType() {
   return m_encoding_type;
 }
 
-llvm::Optional<uint64_t> Type::GetByteSize() {
+llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
     return m_byte_size;
 
@@ -347,14 +348,15 @@ llvm::Optional<uint64_t> Type::GetByteSize() {
   case eEncodingIsTypedefUID: {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
-      if (llvm::Optional<uint64_t> size = encoding_type->GetByteSize()) {
+      if (llvm::Optional<uint64_t> size =
+              encoding_type->GetByteSize(exe_scope)) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return m_byte_size;
       }
 
     if (llvm::Optional<uint64_t> size =
-            GetLayoutCompilerType().GetByteSize(nullptr)) {
+            GetLayoutCompilerType().GetByteSize(exe_scope)) {
       m_byte_size = *size;
       m_byte_size_has_value = true;
         return m_byte_size;
@@ -425,7 +427,9 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
     return false;
   }
 
-  const uint64_t byte_size = GetByteSize().getValueOr(0);
+  const uint64_t byte_size =
+      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+          .getValueOr(0);
   if (data.GetByteSize() < byte_size) {
     lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));
     data.SetData(data_sp);

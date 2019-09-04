@@ -72,6 +72,10 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_SHARED_LIBS
   LLDB_IS_64_BITS)
 
+# This should be inherited from the `check-lldb` target. We currently don't run
+# it for swift, but we might consider removing this code once we're done.
+set(LIT_ARGS "-sv")
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

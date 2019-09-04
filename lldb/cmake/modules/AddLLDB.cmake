@@ -116,6 +116,12 @@ function(add_lldb_library name)
   # headers without negatively impacting much of anything.
   if(NOT LLDB_BUILT_STANDALONE)
     add_dependencies(${name} clang-tablegen-targets)
+
+    # BEGIN Swift Mods
+	if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+      add_dependencies(${name} swift-syntax-generated-headers)
+    endif()
+    # END Swift Mods
   endif()
 
   # Add in any extra C++ compilation flags for this library.
@@ -246,19 +252,22 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
   endif()
 
   # Generate dSYM
-  set(dsym_name ${output_name}.dSYM)
-  if(is_framework)
-    set(dsym_name ${output_name}.framework.dSYM)
-  endif()
-  if(LLDB_DEBUGINFO_INSTALL_PREFIX)
-    # This makes the path absolute, so we must respect DESTDIR.
-    set(dsym_name "\$ENV\{DESTDIR\}${LLDB_DEBUGINFO_INSTALL_PREFIX}/${dsym_name}")
-  endif()
+  # TODO: Add an option to skip dSYM creation
+  if(NOT ${name} STREQUAL "repl_swift")
+    set(dsym_name ${output_name}.dSYM)
+    if(is_framework)
+      set(dsym_name ${output_name}.framework.dSYM)
+    endif()
+    if(LLDB_DEBUGINFO_INSTALL_PREFIX)
+      # This makes the path absolute, so we must respect DESTDIR.
+      set(dsym_name "\$ENV\{DESTDIR\}${LLDB_DEBUGINFO_INSTALL_PREFIX}/${dsym_name}")
+    endif()
 
-  set(buildtree_name ${buildtree_dir}/${bundle_subdir}${output_name})
-  install(CODE "message(STATUS \"Externalize debuginfo: ${dsym_name}\")" COMPONENT ${name})
-  install(CODE "execute_process(COMMAND xcrun dsymutil -o=${dsym_name} ${buildtree_name})"
-          COMPONENT ${name})
+    set(buildtree_name ${buildtree_dir}/${bundle_subdir}${output_name})
+    install(CODE "message(STATUS \"Externalize debuginfo: ${dsym_name}\")" COMPONENT ${name})
+    install(CODE "execute_process(COMMAND xcrun dsymutil -o=${dsym_name} ${buildtree_name})"
+            COMPONENT ${name})
+  endif()
 
   # Strip distribution binary with -ST (removing debug symbol table entries and
   # Swift symbols). Avoid CMAKE_INSTALL_DO_STRIP and llvm_externalize_debuginfo()

@@ -895,6 +895,21 @@ public:
   bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
+  void ClearModuleDependentCaches();
+
+  void SetTypeSystemMap(const TypeSystemMap &type_system_map) {
+    m_type_system_map = type_system_map;
+  }
+
+  /// Call \p callback for each \p TypeSystem in this \p Module.
+  /// Return true from callback to keep iterating, false to stop iterating.
+  void ForEachTypeSystem(std::function<bool(TypeSystem *)> const &callback);
+
+  std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
+
+  /// Update the ArchSpec to a more specific variant.
+  bool MergeArchitecture(const ArchSpec &arch_spec);
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///

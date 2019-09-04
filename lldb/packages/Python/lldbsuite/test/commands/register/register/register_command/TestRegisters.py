@@ -28,6 +28,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureNetBSD
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
@@ -58,6 +59,7 @@ class RegisterCommandsTestCase(TestBase):
     # problem
     @skipIfTargetAndroid(archs=["i386"])
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     @expectedFailureNetBSD
     def test_fp_register_write(self):
@@ -80,6 +82,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
+    @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
@@ -109,6 +112,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
+    @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_convenience_registers(self):
         """Test convenience registers."""
@@ -117,6 +121,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
+    @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     @expectedFailureNetBSD
     def test_convenience_registers_with_process_attach(self):
@@ -126,6 +131,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
+    @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     @expectedFailureNetBSD
     def test_convenience_registers_16bit_with_process_attach(self):

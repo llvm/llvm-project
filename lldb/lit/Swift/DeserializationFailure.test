@@ -1,0 +1,18 @@
+# REQUIRES: system-darwin
+# Tests that error messages from deserializing Swift modules are
+# printed to the error stream. Architecturally it is not possible to
+# write this as a dotest.py test.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: cp %p/../../packages/Python/lldbsuite/test/lang/swift/deserialization_failure/Inputs/main.swift %t/main.swift
+# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options -c %t/main.swift -o %t/a.o
+# RUN: rm %t/main.swift
+# RUN: echo "I am damaged." >%t/a.swiftmodule
+# RUN: %target-swiftc %t/a.o -Xlinker -add_ast_path -Xlinker %t/a.swiftmodule -o %t/a.out
+# RUN: %lldb %t/a.out -s %s -o quit 2>&1 | FileCheck %s
+
+b main
+run
+
+# The {{ }} avoids accidentally matching the input script!
+# CHECK: a.out:{{ }}{{.*}}The serialized module is corrupted.

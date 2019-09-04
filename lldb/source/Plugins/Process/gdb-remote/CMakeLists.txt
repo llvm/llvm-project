@@ -8,6 +8,8 @@ lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   include_directories(${LIBXML2_INCLUDE_DIR})
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
 endif()
 
 set(LLDB_PLUGINS

@@ -272,6 +272,7 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up.reset(new Editline(editline_name, GetInputFILE(),
                                      GetOutputFILE(), GetErrorFILE(),
                                      m_color_prompts));
+    SetBaseLineNumber(m_base_line_number);
     m_editline_up->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
     m_editline_up->SetAutoCompleteCallback(AutoCompleteCallback, this);
     // See if the delegate supports fixing indentation
@@ -510,6 +511,7 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
 #ifndef LLDB_DISABLE_LIBEDIT
   }
 #endif
+  m_current_lines_ptr = NULL;
   return success;
 }
 

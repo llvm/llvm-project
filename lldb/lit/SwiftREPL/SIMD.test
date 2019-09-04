@@ -1,0 +1,189 @@
+// Test formatters for SIMD.
+// REQUIRES: system-darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import simd
+
+simd_int2(-1, 2)
+// CHECK: $R{{.*}}: simd_int2 = (-1, 2)
+
+simd_int3(-1, 2, 3)
+// CHECK: $R{{.*}}: simd_int3 = (-1, 2, 3)
+
+simd_int4(-1, 2, 3, 4)
+// CHECK: $R{{.*}}: simd_int4 = (-1, 2, 3, 4)
+
+simd_uint2(1, 2)
+// CHECK: $R{{.*}}: simd_uint2 = (1, 2)
+
+simd_uint3(1, 2, 3)
+// CHECK: $R{{.*}}: simd_uint3 = (1, 2, 3)
+
+simd_uint4(1, 2, 3, 4)
+// CHECK: $R{{.*}}: simd_uint4 = (1, 2, 3, 4)
+
+let colf2 = simd_float2(1.5, 2)
+// CHECK: colf2: simd_float2 = (1.500000e+00, 2.000000e+00)
+
+let colf3 = simd_float3(1.5, 2, 3)
+// CHECK: colf3: simd_float3 = (1.500000e+00, 2.000000e+00, 3.000000e+00)
+
+let colf4 = simd_float4(1.5, 2, 3, 4)
+// CHECK: colf4: simd_float4 = (1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00)
+
+let cold2 = simd_double2(1.5, 2)
+// CHECK: cold2: simd_double2 = (1.500000e+00, 2.000000e+00)
+
+let cold3 = simd_double3(1.5, 2, 3)
+// CHECK: cold3: simd_double3 = (1.500000e+00, 2.000000e+00, 3.000000e+00)
+
+let cold4 = simd_double4(1.5, 2, 3, 4)
+// CHECK: cold4: simd_double4 = (1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00)
+
+simd_float2x2([colf2, colf2])
+// CHECK: $R{{.*}}: simd_float2x2 =
+// CHECK: [ [1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00] ]
+
+simd_float3x2([colf2, colf2, colf2])
+// CHECK: $R{{.*}}: simd_float3x2 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00] ]
+
+simd_float4x2([colf2, colf2, colf2, colf2])
+// CHECK: $R{{.*}}: simd_float4x2 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00] ]
+
+simd_float2x3([colf3, colf3])
+// CHECK: $R{{.*}}: simd_float2x3 =
+// CHECK: [ [1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00] ]
+
+simd_float3x3([colf3, colf3, colf3])
+// CHECK: $R{{.*}}: simd_float3x3 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00] ]
+
+simd_float4x3([colf3, colf3, colf3, colf3])
+// CHECK: $R{{.*}}: simd_float4x3 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00, 3.000000e+00] ]
+
+simd_float2x4([colf4, colf4])
+// CHECK: $R{{.*}}: simd_float2x4 =
+// CHECK: [ [1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00],
+// CHECK:   [4.000000e+00, 4.000000e+00] ]
+
+simd_float3x4([colf4, colf4, colf4])
+// CHECK: $R{{.*}}: simd_float3x4 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00],
+// CHECK:   [4.000000e+00, 4.000000e+00, 4.000000e+00] ]
+
+simd_float4x4([colf4, colf4, colf4, colf4])
+// CHECK: $R{{.*}}: simd_float4x4 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00, 3.000000e+00],
+// CHECK:   [4.000000e+00, 4.000000e+00, 4.000000e+00, 4.000000e+00] ]
+
+simd_float4x4(rows: [colf4, colf4, colf4, colf4])
+// CHECK: $R{{.*}}: simd_float4x4 =
+// CHECK: [ [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00],
+// CHECK:   [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00],
+// CHECK:   [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00],
+// CHECK:   [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00] ]
+
+simd_double2x2([cold2, cold2])
+// CHECK: $R{{.*}}: simd_double2x2 =
+// CHECK: [ [1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00] ]
+
+simd_double3x2([cold2, cold2, cold2])
+// CHECK: $R{{.*}}: simd_double3x2 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00] ]
+
+simd_double4x2([cold2, cold2, cold2, cold2])
+// CHECK: $R{{.*}}: simd_double4x2 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00] ]
+
+simd_double2x3([cold3, cold3])
+// CHECK: $R{{.*}}: simd_double2x3 =
+// CHECK: [ [1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00] ]
+
+simd_double3x3([cold3, cold3, cold3])
+// CHECK: $R{{.*}}: simd_double3x3 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00] ]
+
+simd_double4x3([cold3, cold3, cold3, cold3])
+// CHECK: $R{{.*}}: simd_double4x3 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00, 3.000000e+00] ]
+
+simd_double2x4([cold4, cold4])
+// CHECK: $R{{.*}}: simd_double2x4 =
+// CHECK: [ [1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00],
+// CHECK:   [4.000000e+00, 4.000000e+00] ]
+
+simd_double3x4([cold4, cold4, cold4])
+// CHECK: $R{{.*}}: simd_double3x4 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00],
+// CHECK:   [4.000000e+00, 4.000000e+00, 4.000000e+00] ]
+
+simd_double4x4([cold4, cold4, cold4, cold4])
+// CHECK: $R{{.*}}: simd_double4x4 =
+// CHECK: [ [1.500000e+00, 1.500000e+00, 1.500000e+00, 1.500000e+00],
+// CHECK:   [2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00],
+// CHECK:   [3.000000e+00, 3.000000e+00, 3.000000e+00, 3.000000e+00],
+// CHECK:   [4.000000e+00, 4.000000e+00, 4.000000e+00, 4.000000e+00] ]
+
+simd_double4x4(rows: [cold4, cold4, cold4, cold4])
+// CHECK: $R{{.*}}: simd_double4x4 =
+// CHECK: [ [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00],
+// CHECK:   [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00],
+// CHECK:   [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00],
+// CHECK:   [1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00] ]
+
+simd_quatf(vector: colf4)
+// CHECK: $R{{.*}}: simd_quatf = (1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00)
+
+simd_quatd(vector: cold4)
+// CHECK: $R{{.*}}: simd_quatd = (1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00)
+
+// Test the new SIMD types
+let tinky = SIMD2<Int>(1, 2)
+// CHECK: {{tinky}}: SIMD2<Int> = (1, 2)
+
+let patatino = SIMD4<Double>(1.5, 2.5, 3.5, 4.5)
+// CHECK: {{patatino}}: SIMD4<Double> = (1.5, 2.5, 3.5, 4.5)
+
+// Make sure we don't print the padding for SIMD3
+let claude = SIMD3(1, 2, 3)
+// CHECK: {{claude}}: SIMD3<Int> = (1, 2, 3)
+
+// Make sure we handle typealiasing correctly.
+typealias Tinky = SIMD3<Int>
+let winky = Tinky()
+// CHECK: {{winky}}: Tinky = (0, 0, 0)
+
+let ohmy = SIMD32<UInt8>(repeating: 0)
+// CHECK: {{ohmy}}: SIMD32<UInt8> = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)

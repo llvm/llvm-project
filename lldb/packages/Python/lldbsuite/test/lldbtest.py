@@ -1264,13 +1264,13 @@ class Base(unittest2.TestCase):
         """Returns the compiler binary the test suite is running with."""
         return self.getCompiler().split()[0]
 
-    def getCompilerVersion(self):
+    def getCompilerVersion(self, compiler=None):
         """ Returns a string that represents the compiler version.
             Supports: llvm, clang.
         """
+        if not compiler:
+          compiler = self.getCompilerBinary()
         version = 'unknown'
-
-        compiler = self.getCompilerBinary()
         version_output = system([[compiler, "-v"]])[1]
         for line in version_output.split(os.linesep):
             m = re.search('version ([0-9\.]+)', line)
@@ -1572,6 +1572,11 @@ class Base(unittest2.TestCase):
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
+            # Begin Swift modifications
+            "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin/clang",
+            # End Swift modifications
             "llvm-build/Release+Asserts/x86_64/bin/clang",
             "llvm-build/Debug+Asserts/x86_64/bin/clang",
             "llvm-build/Release/x86_64/bin/clang",

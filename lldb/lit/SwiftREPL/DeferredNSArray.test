@@ -1,0 +1,13 @@
+// Test that NSDeferredArray data formatter works.
+// REQUIRES: system-darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import Foundation
+let patatino = [1,2,3,4] as AnyObject
+// CHECK: patatino: __SwiftDeferredNSArray = 4 values {
+// CHECK-NEXT:  [0] = 1
+// CHECK-NEXT:  [1] = 2
+// CHECK-NEXT:  [2] = 3
+// CHECK-NEXT:  [3] = 4
+// CHECK-NEXT: }

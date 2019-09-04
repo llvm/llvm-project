@@ -66,6 +66,7 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
+  friend class DWARFASTParserSwift;
 
   // Static Functions
   static void Initialize();
@@ -198,6 +199,15 @@ public:
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
+
+  bool GetCompileOption(const char *option, std::string &value,
+                        lldb_private::CompileUnit *cu = nullptr) override;
+
+  int GetCompileOptions(const char *option, std::vector<std::string> &value,
+                        lldb_private::CompileUnit *cu = nullptr) override;
+
+  void GetLoadedModules(lldb::LanguageType language,
+                        lldb_private::FileSpecList &modules) override;
 
   void PreloadSymbols() override;
 
@@ -425,6 +435,15 @@ protected:
 
   void UpdateExternalModuleListIfNeeded();
 
+  lldb_private::ClangASTImporter &GetClangASTImporter();
+
+  lldb_private::SwiftASTContext *
+  GetSwiftASTContextForCU(lldb_private::Status *error, DWARFCompileUnit &cu);
+
+  lldb::user_id_t GetTypeUIDFromTypeAttribute(const DWARFFormValue &type_attr);
+
+  lldb::TypeSP ResolveTypeFromAttribute(const DWARFFormValue &type_attr);
+
   virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
 
   virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
@@ -466,6 +485,7 @@ protected:
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
+  std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
       DebugMacrosMap;

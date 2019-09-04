@@ -1,0 +1,52 @@
+# REQUIRES: system-darwin
+
+# This tests that RemoteAST querying the dynamic type of a variable
+# doesn't import any modules into a module SwiftASTContext that
+# weren't imported by that module in the source code.  Unfortunately
+# this test is extremely sensitive to the side effects of the command
+# interpreter and the debug info format, which is why it is written as
+# a LIT test.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swift-frontend -c -g -serialize-debugging-options \
+# RUN:          -module-cache-path %t/cache \
+# RUN:          -primary-file %S/Inputs/Library.swift \
+# RUN:          -emit-module-path Library.part.swiftmodule \
+# RUN:          -parse-as-library -module-name Library -o Library.o -I.
+# RUN: %target-swift-frontend -serialize-debugging-options \
+# RUN:          -module-cache-path %t/cache \
+# RUN:          -merge-modules -emit-module \
+# RUN:          -parse-as-library -sil-merge-partial-modules \
+# RUN:          -disable-diagnostic-passes -disable-sil-perf-optzns \
+# RUN:          -module-name Library Library.part.swiftmodule \
+# RUN:          -o Library.swiftmodule -I%t
+# RUN: %target-swiftc -Xlinker -dylib -o libLibrary.dylib Library.o \
+# RUN:          -Xlinker -add_ast_path -Xlinker Library.swiftmodule \
+# RUN:          -Xlinker -install_name -Xlinker @executable_path/libLibrary.dylib
+# RUN: %target-swift-frontend -c -g -serialize-debugging-options \
+# RUN:          -module-cache-path %t/cache \
+# RUN:          -primary-file %S/Inputs/RemoteASTImport.swift \
+# RUN:          -module-name RemoteASTImport -o RemoteASTImport.o \
+# RUN:          -emit-module-path RemoteASTImport.part.swiftmodule \
+# RUN:          -import-objc-header %S/Inputs/BridgingHeader.h \
+# RUN:          -I. -Xcc -DSYNTAX_ERROR=1
+# RUN: %target-swift-frontend -serialize-debugging-options  -merge-modules \
+# RUN:          -module-cache-path %t/cache \
+# RUN:          -emit-module RemoteASTImport.part.swiftmodule \
+# RUN:          -parse-as-library -sil-merge-partial-modules \
+# RUN:          -disable-diagnostic-passes -disable-sil-perf-optzns \
+# RUN:          -import-objc-header %S/Inputs/BridgingHeader.h \
+# RUN:          -I%t -Xcc -DSYNTAX_ERROR=1 \
+# RUN:          -module-name RemoteASTImport -o RemoteASTImport.swiftmodule
+# RUN: %target-swiftc -o a.out RemoteASTImport.o -Xlinker -add_ast_path \
+# RUN:          -Xlinker RemoteASTImport.swiftmodule  -L. -lLibrary
+# RUN: %lldb a.out -s %s | FileCheck %s
+
+b Library.swift:10
+run
+p input
+
+# The {{ }} avoids accidentally matching the input script!
+# CHECK-NOT: undeclared identifier {{'SYNTAX_ERROR'}}
+# This is the dynamic type of 'input'.
+# CHECK: (RemoteASTImport.FromMainModule) ${{R0}}{{.*}}(i = 1)

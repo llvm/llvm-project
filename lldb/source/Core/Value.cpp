@@ -322,6 +322,12 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   AddressType address_type = eAddressTypeFile;
   Address file_so_addr;
   const CompilerType &ast_type = GetCompilerType();
+  llvm::Optional<uint64_t> type_size = ast_type.GetByteSize(
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+  // Nothing to be done for a zero-sized type.
+  if (type_size && *type_size == 0)
+    return error;
+
   switch (m_value_type) {
   case eValueTypeVector:
     if (ast_type.IsValid())
@@ -340,9 +346,8 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
     uint32_t limit_byte_size = UINT32_MAX;
 
-    if (llvm::Optional<uint64_t> size = ast_type.GetByteSize(
-            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
-      limit_byte_size = *size;
+    if (type_size)
+      limit_byte_size = *type_size;
 
     if (limit_byte_size <= m_value.GetByteSize()) {
       if (m_value.GetData(data, limit_byte_size))
@@ -507,10 +512,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     return error;
   }
 
-  // If we got here, we need to read the value from memory
+  // If we got here, we need to read the value from memory.
   size_t byte_size = GetValueByteSize(&error, exe_ctx);
 
-  // Bail if we encountered any errors getting the byte size
+  // Bail if we encountered any errors getting the byte size.
   if (error.Fail())
     return error;
 

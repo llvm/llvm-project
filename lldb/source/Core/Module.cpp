@@ -23,6 +23,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -35,6 +36,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -650,6 +652,8 @@ Module::LookupInfo::LookupInfo(ConstString name,
               Language::LanguageIsObjC(language)) &&
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(name_cstr))
+      m_name_type_mask = eFunctionNameTypeFull;
     else if (Language::LanguageIsC(language)) {
       m_name_type_mask = eFunctionNameTypeFull;
     } else {
@@ -659,7 +663,19 @@ Module::LookupInfo::LookupInfo(ConstString name,
         m_name_type_mask |= eFunctionNameTypeSelector;
 
       CPlusPlusLanguage::MethodName cpp_method(name);
-      basename = cpp_method.GetBasename();
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+
+      if ((language == eLanguageTypeUnknown ||
+           language == eLanguageTypeSwift) &&
+          swift_method.IsValid())
+        basename = swift_method.GetBasename();
+      else if ((language == eLanguageTypeUnknown ||
+                Language::LanguageIsCPlusPlus(language) ||
+                Language::LanguageIsC(language) ||
+                language == eLanguageTypeObjC_plus_plus) &&
+               cpp_method.IsValid())
+        basename = cpp_method.GetBasename();
+
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
                                                            basename))
@@ -677,9 +693,12 @@ Module::LookupInfo::LookupInfo(ConstString name,
       // If they've asked for a CPP method or function name and it can't be
       // that, we don't even need to search for CPP methods or names.
       CPlusPlusLanguage::MethodName cpp_method(name);
-      if (cpp_method.IsValid()) {
+      SwiftLanguageRuntime::MethodName swift_method(name, true);
+      if (swift_method.IsValid())
+        basename = swift_method.GetBasename();
+      if (cpp_method.IsValid())
         basename = cpp_method.GetBasename();
-
+      if (!basename.empty()) {
         if (!cpp_method.GetQualifiers().empty()) {
           // There is a "const" or other qualifier following the end of the
           // function parens, this can't be a eFunctionNameTypeBase
@@ -1568,6 +1587,14 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
+    auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return true;
+    }
+
+    if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
+      swift_ast->SetTriple(new_arch.GetTriple());
     return true;
   }
   return m_arch.IsCompatibleMatch(new_arch);
@@ -1634,10 +1661,41 @@ bool Module::RemapSourceFile(llvm::StringRef path,
   return m_source_mappings.RemapPath(path, new_path);
 }
 
+bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
+  if (!arch_spec.IsValid())
+    return false;
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
+           "module has arch %s, merging/replacing with arch %s",
+           m_arch.GetTriple().getTriple().c_str(),
+           arch_spec.GetTriple().getTriple().c_str());
+  if (!m_arch.IsCompatibleMatch(arch_spec)) {
+    // The new architecture is different, we just need to replace it.
+    return SetArchitecture(arch_spec);
+  }
+
+  // Merge bits from arch_spec into "merged_arch" and set our architecture.
+  ArchSpec merged_arch(m_arch);
+  merged_arch.MergeFrom(arch_spec);
+  // SetArchitecture() is a no-op if m_arch is already valid.
+  m_arch = ArchSpec();
+  return SetArchitecture(merged_arch);
+}
+
 llvm::VersionTuple Module::GetVersion() {
   if (ObjectFile *obj_file = GetObjectFile())
     return obj_file->GetVersion();
   return llvm::VersionTuple();
+}
+
+void Module::ClearModuleDependentCaches() {
+  auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return;
+  }
+
+  if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
+    swift_ast->ClearModuleDependentCaches();
 }
 
 bool Module::GetIsDynamicLinkEditor() {
@@ -1647,4 +1705,43 @@ bool Module::GetIsDynamicLinkEditor() {
     return obj_file->GetIsDynamicLinkEditor();
 
   return false;
+}
+
+void Module::ForEachTypeSystem(
+    std::function<bool(TypeSystem *)> const &callback) {
+  m_type_system_map.ForEach(callback);
+}
+
+std::vector<DataBufferSP>
+Module::GetASTData(lldb::LanguageType language) {
+  std::vector<DataBufferSP> ast_datas;
+
+  if (language != eLanguageTypeSwift)
+    return ast_datas;
+
+  // Sometimes the AST Section data is found from the module, so look there
+  // first:
+  SectionList *section_list = GetSectionList();
+
+  if (section_list) {
+    SectionSP section_sp(
+        section_list->FindSectionByType(eSectionTypeSwiftModules, true));
+    if (section_sp) {
+      DataExtractor section_data;
+
+      if (section_sp->GetSectionData(section_data)) {
+        ast_datas.push_back(DataBufferSP(
+            new DataBufferHeap((const char *)section_data.GetDataStart(),
+                               section_data.GetByteSize())));
+        return ast_datas;
+      }
+    }
+  }
+
+  // If we couldn't find it in the Module, then look for it in the SymbolFile:
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    ast_datas = sym_file->GetASTData(language);
+
+  return ast_datas;
 }

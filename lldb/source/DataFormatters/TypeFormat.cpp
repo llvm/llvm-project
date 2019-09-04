@@ -65,6 +65,11 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
     } else {
       CompilerType compiler_type = value.GetCompilerType();
       if (compiler_type) {
+        ExecutionContextScope *exe_scope =
+            exe_ctx.GetBestExecutionContextScope();
+        auto size = compiler_type.GetByteSize(exe_scope);
+        if (!size)
+          return false;
         // put custom bytes to display in the DataExtractor to override the
         // default value logic
         if (GetFormat() == eFormatCString) {
@@ -86,18 +91,13 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
                 data.SetData(buffer_sp);
             }
           }
-        } else {
+        } else if (!size || *size > 0) {
           Status error;
           valobj->GetData(data, error);
           if (error.Fail())
             return false;
         }
 
-        ExecutionContextScope *exe_scope =
-            exe_ctx.GetBestExecutionContextScope();
-        llvm::Optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
-        if (!size)
-          return false;
         StreamString sstr;
         compiler_type.DumpTypeValue(
             &sstr,                          // The stream to use for display
@@ -107,7 +107,8 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             *size,                          // Byte size of item in "m_data"
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
-            exe_scope);
+            exe_scope,
+            valobj->IsBaseClass());
         // Given that we do not want to set the ValueObject's m_error for a
         // formatting error (or else we wouldn't be able to reformat until a
         // next update), an empty string is treated as a "false" return from
@@ -187,9 +188,9 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     return false;
   ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
   StreamString sstr;
-  valobj_enum_type.DumpTypeValue(&sstr, lldb::eFormatEnum, data, 0,
-                                 data.GetByteSize(), 0, 0,
-                                 exe_ctx.GetBestExecutionContextScope());
+  valobj_enum_type.DumpTypeValue(
+      &sstr, lldb::eFormatEnum, data, 0, data.GetByteSize(), 0, 0,
+      exe_ctx.GetBestExecutionContextScope(), valobj->IsBaseClass());
   if (!sstr.GetString().empty())
     dest = sstr.GetString();
   return !dest.empty();

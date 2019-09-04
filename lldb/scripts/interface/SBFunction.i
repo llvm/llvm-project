@@ -103,6 +103,9 @@ public:
     GetIsOptimized();
 
     bool
+    GetCanThrow();
+
+    bool
     GetDescription (lldb::SBStream &description);
 
     bool

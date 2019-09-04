@@ -17,6 +17,7 @@ import sys
 import tempfile
 import time
 from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.support import seven
 from lldbgdbserverutils import *

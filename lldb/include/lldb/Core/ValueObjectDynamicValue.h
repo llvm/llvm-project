@@ -114,6 +114,10 @@ protected:
 
   bool HasDynamicValueTypeInfo() override { return true; }
 
+  /// Determine whether the scratch AST context has been replaced
+  /// since this dynamic type has been created.
+  bool DynamicValueTypeInfoNeedsUpdate();
+
   CompilerType GetCompilerTypeImpl() override;
 
   Address m_address; ///< The variable that this value object is based upon

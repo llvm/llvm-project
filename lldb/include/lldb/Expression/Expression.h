@@ -15,8 +15,11 @@
 
 
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
+
+#include "llvm/ADT/SmallVector.h"
 
 namespace lldb_private {
 
@@ -39,6 +42,7 @@ public:
     eKindUserExpression,
     eKindLLVMUserExpression,
     eKindClangUserExpression,
+    eKindSwiftUserExpression,
     eKindUtilityFunction,
     eKindClangUtilityFunction,
   };
@@ -63,6 +67,12 @@ public:
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
   virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
+
+  /// Return the object that the parser should use when registering external
+  /// values (assuming it doesn't use a ClangExpressionDeclMap).  May be
+  /// NULL if there is a ClangExpressionDeclMap or everything should be
+  /// self-contained.
+  virtual Materializer *GetMaterializer() { return NULL; }
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.

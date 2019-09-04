@@ -1,0 +1,8 @@
+// Test target.swift-framework-search-paths works in the REPL.
+// REQUIRES: system-darwin
+
+// RUN: %lldb -O "settings set target.swift-framework-search-paths %S/Inputs/Frameworks" --repl < %s | FileCheck %s
+
+import SomeClangFramework
+var myFoo = Foo(i: 23)
+// CHECK: {{i}} = 23

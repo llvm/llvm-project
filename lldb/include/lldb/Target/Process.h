@@ -383,7 +383,7 @@ public:
   };
 
   /// Process warning types.
-  enum Warnings { eWarningsOptimization = 1 };
+  enum Warnings { eWarningsOptimization = 1, eWarningsSwiftImport };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to access the process
@@ -1196,6 +1196,9 @@ public:
   ///     VersionTuple is returner.
   virtual llvm::VersionTuple GetHostOSVersion() { return llvm::VersionTuple(); }
 
+  /// \return the macCatalyst version of the host OS.
+  virtual llvm::VersionTuple GetHostMacCatalystVersion() { return {}; }
+
   /// Get the target object pointer for this module.
   ///
   /// \return
@@ -1316,6 +1319,15 @@ public:
   ///     A SymbolContext with eSymbolContextFunction and eSymbolContextModule
   ///     pre-computed.
   void PrintWarningOptimization(const SymbolContext &sc);
+
+  /// Prints a async warning message to the user one time per Process
+  /// for a Module whose Swift AST sections couldn't be loaded because
+  /// they aren't buildable on the current machine.
+  ///
+  /// @param [in] module
+  ///     The affected Module.
+  void PrintWarningCantLoadSwiftModule(const Module &module,
+                                       std::string details);
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
@@ -2137,12 +2149,18 @@ public:
   ///     the process
   ///     needs to have its process IOHandler popped.
   ///
+  /// \param[out] pop_command_interpreter
+  ///     This variable will be set to \b true or \b false ot indicate if the
+  ///     process needs
+  ///     to have its command interpreter popped.
+  ///
   /// \return
   ///     \b true if the event describes a process state changed event, \b false
   ///     otherwise.
   static bool HandleProcessStateChangedEvent(const lldb::EventSP &event_sp,
                                              Stream *stream,
-                                             bool &pop_process_io_handler);
+                                             bool &pop_process_io_handler,
+                                             bool &pop_command_interpreter);
 
   Event *PeekAtStateChangedEvents();
 
@@ -2726,11 +2744,12 @@ protected:
   bool m_finalize_called; // This is set at the end of Process::Finalize()
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
+  bool m_destroy_in_process;
+  bool m_destroy_complete;
   lldb::StateType m_last_broadcast_state; /// This helps with the Public event
                                           /// coalescing in
                                           /// ShouldBroadcastEvent.
   std::map<lldb::addr_t, lldb::addr_t> m_resolved_indirect_addresses;
-  bool m_destroy_in_process;
   bool m_can_interpret_function_calls;  // Some targets, e.g the OSX kernel,
                                         // don't support the ability to modify
                                         // the stack.
@@ -2812,7 +2831,7 @@ protected:
 
   bool PushProcessIOHandler();
 
-  bool PopProcessIOHandler();
+  bool PopProcessIOHandler(bool pop_command_interpreter);
 
   bool ProcessIOHandlerIsActive();
 

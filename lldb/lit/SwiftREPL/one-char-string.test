@@ -1,0 +1,7 @@
+// rdar://30147367
+// Make sure that single character strings are displayed correctly.
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=STRING
+
+let one_char_string = "-"
+// STRING: one_char_string: String = "-"

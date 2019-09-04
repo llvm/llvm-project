@@ -3631,7 +3631,7 @@ void ProcessGDBRemote::KillDebugserverProcess() {
 }
 
 void ProcessGDBRemote::Initialize() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -4318,6 +4318,10 @@ void ProcessGDBRemote::PrefetchModuleSpecs(
 
 llvm::VersionTuple ProcessGDBRemote::GetHostOSVersion() {
   return m_gdb_comm.GetOSVersion();
+}
+
+llvm::VersionTuple ProcessGDBRemote::GetHostMacCatalystVersion() {
+  return m_gdb_comm.GetMacCatalystVersion();
 }
 
 namespace {

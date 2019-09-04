@@ -1,0 +1,14 @@
+// Test that subclassing works in the repl.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+class A {init(a: Int) {}}
+class B : A {let x: Int; init() { x = 5 + 5; super.init(a: x) } }
+B().x
+
+// CHECK: ${{R0}}: Int = 10
+
+extension B : CustomStringConvertible { public var description:String { return "class B\(x) is a subclass of class A"} }
+B().description
+
+// CHECK: ${{R1}}: String = "class B10 is a subclass of class A"

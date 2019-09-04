@@ -14,6 +14,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
@@ -1211,6 +1212,23 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
   return types.GetSize() - initial_types_size;
 }
 
+size_t
+SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
+                                   LanguageSet languages, bool append,
+                                   TypeMap &types) {
+  if (!append)
+    types.Clear();
+
+  const uint32_t initial_types_size = types.GetSize();
+
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    oso_dwarf->FindTypes(context, languages, true, types);
+    return false;
+  });
+
+  return types.GetSize() - initial_types_size;
+}
+
 //
 // uint32_t
 // SymbolFileDWARFDebugMap::FindTypes (const SymbolContext& sc, const
@@ -1452,4 +1470,83 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
     }
   }
   return num_line_entries_added;
+}
+
+std::vector<DataBufferSP>
+SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
+  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
+
+  std::vector<DataBufferSP> ast_datas;
+  if (language != eLanguageTypeSwift) {
+    if (log)
+      log->Printf("SymbolFileDWARFDebugMap::%s() - ignoring because not Swift",
+                  __FUNCTION__);
+    return ast_datas;
+  }
+
+  Symtab *symtab = m_objfile_sp->GetSymtab();
+  if (!symtab) {
+    if (log)
+      log->Printf("SymbolFileDWARFDebugMap::%s() - ignoring because the obj "
+                  "file has no symbol table",
+                  __FUNCTION__);
+    return ast_datas;
+  }
+
+  uint32_t next_idx = 0;
+  bool done = false;
+  do {
+    Symbol *symbol =
+        symtab->FindSymbolWithType(eSymbolTypeASTFile, Symtab::eDebugAny,
+                                   Symtab::eVisibilityAny, next_idx);
+    if (symbol == nullptr) {
+      // We didn't find any more symbols of type eSymbolTypeASTFile.  We are
+      // done looping for them.
+      done = true;
+    } else {
+      // Try to load the specified file.
+      FileSpec file_spec(symbol->GetName().GetCString());
+      bool exists = FileSystem::Instance().Exists(file_spec);
+      if (!exists)
+        if (file_spec.GetDirectory().IsEmpty() && m_objfile_sp) {
+          // For relative paths, search next to the binary.
+          file_spec.GetDirectory() = m_objfile_sp->GetFileSpec().GetDirectory();
+          exists = FileSystem::Instance().Exists(file_spec);
+        }
+      if (exists) {
+        // We found the source data for the AST data blob.
+        // Read it in and add it to our return vector.
+        std::shared_ptr<DataBufferLLVM> data_buf_sp 
+                = FileSystem::Instance().CreateDataBuffer(file_spec.GetPath());
+        if (data_buf_sp) {
+          ast_datas.push_back(data_buf_sp);
+          if (log)
+            log->Printf("SymbolFileDWARFDebugMap::%s() - found and loaded AST "
+                        "data from file %s",
+                        __FUNCTION__, file_spec.GetPath().c_str());
+        } else if (log) {
+          if (log)
+            log->Printf("SymbolFileDWARFDebugMap::%s() - got empty data buffer "
+                        "SP from extant file %s",
+                        __FUNCTION__, file_spec.GetPath().c_str());        
+        }
+      } else {
+        if (log)
+          log->Printf("SymbolFileDWARFDebugMap::%s() - found reference to AST "
+                      "file %s, but could not find the file, ignoring",
+                      __FUNCTION__, file_spec.GetPath().c_str());
+      }
+
+      // Regardless of whether we could find the specified file, start the next
+      // symbol search at the index past the one we just found.
+      ++next_idx;
+    }
+  } while (!done);
+
+  // Return the vector of AST data blobs
+  if (log)
+    log->Printf("SymbolFileDWARFDebugMap::%s() - returning %d AST data blobs",
+                __FUNCTION__, (int)ast_datas.size());
+
+  return ast_datas;
 }

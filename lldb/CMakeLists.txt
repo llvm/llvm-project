@@ -16,10 +16,21 @@ set(CMAKE_MODULE_PATH
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
   include(LLDBStandalone)
+else()
+  set(SWIFT_BINARY_DIR ${CMAKE_BINARY_DIR})
+  set(SWIFT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 endif()
 
 include(LLDBConfig)
 include(AddLLDB)
+
+# BEGIN - Swift Mods
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
+   list(APPEND CMAKE_MODULE_PATH
+        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
+endif()
+# END - Swift Mods
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
 if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
@@ -52,12 +63,15 @@ endif()
 if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
   set(LLVM_USE_HOST_TOOLS ON)
   include(CrossCompile)
-  if (NOT NATIVE_LLVM_DIR OR NOT NATIVE_Clang_DIR)
+  if (NOT LLDB_PATH_TO_NATIVE_SWIFT_BUILD OR
+      NOT NATIVE_LLVM_DIR OR
+      NOT NATIVE_Clang_DIR)
     message(FATAL_ERROR
-      "Crosscompiling standalone requires the variables NATIVE_{CLANG,LLVM}_DIR
+      "Crosscompiling standalone requires the variables LLDB_PATH_TO_NATIVE_{SWIFT,CLANG,LLVM}_BUILD
       for building the native lldb-tblgen used during the build process.")
   endif()
   llvm_create_cross_target(lldb NATIVE "" Release
+    -DSwift_DIR=${LLDB_PATH_TO_NATIVE_SWIFT_BUILD}
     -DLLVM_DIR=${NATIVE_LLVM_DIR}
     -DClang_DIR=${NATIVE_Clang_DIR})
 endif()
@@ -80,13 +94,10 @@ if(LLDB_INCLUDE_TESTS)
   set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
   set(LLDB_DEFAULT_TEST_FILECHECK "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck${CMAKE_EXECUTABLE_SUFFIX}")
 
-  if (TARGET clang)
-    set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_C_COMPILER "")
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
-  endif()
+  # BEGIN - Swift Mods
+  set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  # END - Swift Mods
 
   set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
   set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
@@ -129,6 +140,10 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS liblldb)
   endif()
 
+  if(TARGET repl_swift)
+    list(APPEND LLDB_TEST_DEPS repl_swift)
+  endif()
+
   # Add dependencies if we test with the in-tree clang.
   # This works with standalone builds as they import the clang target.
   if(TARGET clang)
@@ -166,6 +181,12 @@ if(LLDB_INCLUDE_TESTS)
     endif()
   endif()
 
+  # BEGIN Swift Mods
+  if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+    list(APPEND LLDB_TEST_DEPS swift)
+  endif()
+  # END Swift Mods
+
   if(TARGET dsymutil)
     list(APPEND LLDB_TEST_DEPS dsymutil)
   endif()
@@ -196,7 +217,7 @@ if (NOT LLDB_DISABLE_PYTHON)
     get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
 
     # Add a Post-Build Event to copy over Python files and create the symlink
-    # to liblldb.so for the Python API(hardlink on Windows).
+    # to liblldb.so for the Python API(hardlink on Windows)
     add_custom_target(finish_swig ALL
         COMMAND
            ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py

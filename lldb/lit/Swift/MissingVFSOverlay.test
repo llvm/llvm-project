@@ -1,0 +1,18 @@
+# Test that error messages from constructing ClangImporter
+# are surfaced to the user.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: cp %p/../../packages/Python/lldbsuite/test/lang/swift/deserialization_failure/Inputs/main.swift %t/main.swift
+# RUN: echo "{ 'version': 0, 'roots': [] }" >%t/overlay.yaml
+# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %t/main.swift -o %t/a.out -Xcc -ivfsoverlay -Xcc %t/overlay.yaml
+# RUN: rm %t/overlay.yaml
+# RUN: %lldb %t/a.out -s %s -o quit 2>&1 | FileCheck %s
+
+b main
+run
+
+# The {{ }} avoids accidentally matching the input script!
+# CHECK: a.out:{{ }}
+# CHECK-SAME: error:
+# CHECK-SAME: overlay.yaml
+# CHECK-SAME: not found

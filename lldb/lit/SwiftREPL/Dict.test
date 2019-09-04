@@ -1,0 +1,87 @@
+// Test that the dictionary data formatter works in the REPL.
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=DICT
+
+// The dictionary order isn't deterministic, so print the dictionary
+// once per element.
+
+[1:2, 2:3, 3:9]
+// DICT-LABEL: $R0: [Int : Int] = 3 key/value pairs {
+// DICT:      [{{[0-3]}}] = {
+// DICT:         key = 1
+// DICT-NEXT:    value = 2
+// DICT-NEXT:  }
+[1:2, 2:3, 3:9]
+// DICT-LABEL: $R1: [Int : Int] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 3
+// DICT-NEXT:     value = 9
+// DICT-NEXT:  }
+[1:2, 2:3, 3:9]
+// DICT-LABEL: $R2: [Int : Int] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 2
+// DICT-NEXT:     value = 3
+// DICT-NEXT:  }
+
+$R0.count
+// DICT-LABEL: $R3: Int = 3
+
+var x = $R0
+// DICT-LABEL: x: [Int : Int] = 3 key/value pairs {
+// DICT:        [{{[0-3]}}] = {
+// DICT:          key = 1
+// DICT-NEXT:     value = 2
+// DICT-NEXT:   }
+
+x.updateValue(8, forKey : 4)
+x
+// DICT-LABEL: $R5: [Int : Int] = 4 key/value pairs
+// DICT: key = 4
+// DICT-NEXT: value = 8
+
+x[3] = 5
+x
+// DICT-LABEL: $R6: [Int : Int] = 4 key/value pairs
+// DICT: key = 3
+// DICT-NEXT: value = 5
+
+[1:2.1, 2:3.1, 3:9.1]
+// DICT-LABEL: $R7: [Int : Double] = 3 key/value pairs {
+// DICT:      [{{[0-3]}}] = {
+// DICT:         key = 1
+// DICT-NEXT:    value = 2.1000000000000001
+// DICT-NEXT:  }
+[1:2.1, 2:3.1, 3:9.1]
+// DICT-LABEL: $R8: [Int : Double] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 3
+// DICT-NEXT:     value = 9.0999999999999996
+// DICT-NEXT:  }
+[1:2.1, 2:3.1, 3:9.1]
+// DICT-LABEL: $R9: [Int : Double] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 2
+// DICT-NEXT:     value = 3.1000000000000001
+// DICT-NEXT:  }
+
+let objects: [Int: Float] = [1 :2001.3, 2 : 2002.2, 3: 2000.1 ]
+// DICT-LABEL: {{objects}}: [Int : Float] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 1
+// DICT-NEXT:     value = 2001.30005
+// DICT-NEXT:  }
+
+let objects: [Int: Float] = [1 :2001.3, 2 : 2002.2, 3: 2000.1 ]
+// DICT-LABEL: {{objects}}: [Int : Float] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 2
+// DICT-NEXT:     value = 2002.19995
+// DICT-NEXT:  }
+
+let objects: [Int: Float] = [1 :2001.3, 2 : 2002.2, 3: 2000.1 ]
+// DICT-LABEL: {{objects}}: [Int : Float] = 3 key/value pairs {
+// DICT:       [{{[0-3]}}] = {
+// DICT:          key = 3
+// DICT-NEXT:     value = 2000.09998
+// DICT-NEXT:  }

@@ -1,0 +1,46 @@
+// Test that we can correctly print (resilient) Foundation
+// types when they're stored in REPL-defined globals.
+
+// REQUIRES: system-darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import Foundation
+
+let u = URL(string: "http://www.apple.com")!
+// CHECK:      {{u}}: URL = "http://www.apple.com"
+
+// Test a non-literal.
+var str = "http://www.patatino."
+str += "com"
+let u2 = URL(string: str)!
+// CHECK: {{u2}}: URL = "http://www.patatino.com"
+
+let u3 = URL(string: "invalid.com")!
+// CHECK: {{u3}}: URL = "invalid.com"
+
+let n = Notification(name: Notification.Name("abc"), object: Double(42.0), userInfo: ["hello":"world"])
+
+// CHECK:      {{n}}: Notification = {
+// CHECK-NEXT:   name = "abc"
+// CHECK-NEXT:   object = 42
+// CHECK-NEXT:   userInfo = 1 key/value pair {
+// CHECK-NEXT:     [0] = {
+// CHECK-NEXT:       key = {
+// CHECK-NEXT:         _box = {
+// CHECK-NEXT:           _baseHashable = "hello"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:       value = "world"
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+
+n
+
+// CHECK:      {{.*R.*}}: Notification = {
+// CHECK-NEXT:   name = "abc"
+// CHECK-NEXT:   object = 42
+
+let tinky : Optional<UUID> = nil
+// CHECK: {{tinky}}: UUID? = nil

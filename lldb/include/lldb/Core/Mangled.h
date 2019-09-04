@@ -152,13 +152,15 @@ public:
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  ConstString GetDemangledName(lldb::LanguageType language) const;
+  ConstString GetDemangledName(lldb::LanguageType language,
+                               const SymbolContext *sc = nullptr) const;
 
   /// Display demangled name get accessor.
   ///
   /// \return
   ///     A const reference to the display demangled name string object.
-  ConstString GetDisplayDemangledName(lldb::LanguageType language) const;
+  ConstString GetDisplayDemangledName(lldb::LanguageType language,
+                                      const SymbolContext *sc = nullptr) const;
 
   void SetDemangledName(ConstString name) { m_demangled = name; }
 
@@ -186,7 +188,8 @@ public:
   ///     object has a valid name of that kind, else a const reference to the
   ///     other name is returned.
   ConstString GetName(lldb::LanguageType language,
-                      NamePreference preference = ePreferDemangled) const;
+                      NamePreference preference = ePreferDemangled,
+                      const SymbolContext *sc = nullptr) const;
 
   /// Check if "name" matches either the mangled or demangled name.
   ///

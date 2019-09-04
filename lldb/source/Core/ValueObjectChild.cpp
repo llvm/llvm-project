@@ -11,6 +11,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Scalar.h"
@@ -83,7 +84,10 @@ ConstString ValueObjectChild::GetQualifiedTypeName() {
 }
 
 ConstString ValueObjectChild::GetDisplayTypeName() {
-  ConstString display_name = GetCompilerType().GetDisplayTypeName();
+  const SymbolContext *sc = nullptr;
+  if (GetFrameSP())
+    sc = &GetFrameSP()->GetSymbolContext(lldb::eSymbolContextFunction);
+  ConstString display_name = GetCompilerType().GetDisplayTypeName(sc);
   AdjustForBitfieldness(display_name, m_bitfield_bit_size);
   return display_name;
 }
@@ -128,6 +132,24 @@ bool ValueObjectChild::UpdateValue() {
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
         lldb::addr_t addr = parent->GetPointerValue();
+
+        // BEGIN Swift
+        if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
+          if (auto process_sp = GetProcessSP())
+            if (auto runtime = process_sp->GetLanguageRuntime(
+                    parent_type.GetMinimumLanguage())) {
+              bool deref;
+              std::tie(addr, deref) =
+                  runtime->FixupPointerValue(addr, parent_type);
+              if (deref) {
+                // Read the pointer to the Objective-C object.
+                Target &target = process_sp->GetTarget();
+                size_t ptr_size = process_sp->GetAddressByteSize();
+                target.ReadMemory(addr, false, &addr, ptr_size, m_error);
+              }
+            }
+        // END Swift
+
         m_value.GetScalar() = addr;
 
         if (addr == LLDB_INVALID_ADDRESS) {
@@ -147,9 +169,17 @@ bool ValueObjectChild::UpdateValue() {
               m_value.SetValueType(Value::eValueTypeFileAddress);
           } break;
           case eAddressTypeLoad:
-            m_value.SetValueType(is_instance_ptr_base
-                                     ? Value::eValueTypeScalar
-                                     : Value::eValueTypeLoadAddress);
+            // BEGIN SWIFT MOD
+            // We need to detect when we cross TypeSystem boundaries,
+            // e.g. when we try to print Obj-C fields of a Swift object.
+            if (parent->GetCompilerType().GetTypeSystem()->getKind() ==
+                GetCompilerType().GetTypeSystem()->getKind())
+                m_value.SetValueType(is_instance_ptr_base
+                                    ? Value::eValueTypeScalar
+                                    : Value::eValueTypeLoadAddress);
+            else
+              m_value.SetValueType(Value::eValueTypeLoadAddress);
+            // END SWIFT MOD
             break;
           case eAddressTypeHost:
             m_value.SetValueType(Value::eValueTypeHostAddress);

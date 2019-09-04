@@ -258,6 +258,90 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
             sys.exit(-10)
 
 
+def static_binding_paths(options):
+    """Returns the full VCS path to the Python .cpp and .py static bindings."""
+    lldb_wrap_python_src_path = os.path.join(
+        options.src_root,
+        "scripts",
+        "Python",
+        options.static_binding_dir,
+        "LLDBWrapPython.cpp")
+    lldb_py_src_path = os.path.join(
+        options.src_root,
+        "scripts",
+        "Python",
+        options.static_binding_dir,
+        "lldb.py")
+    return (lldb_wrap_python_src_path, lldb_py_src_path)
+
+
+def copy_static_bindings(options, config_build_dir, settings):
+    """Copies the static Python bindings over to the build dir.
+    """
+    lldb_wrap_python_src_path, lldb_py_src_path = static_binding_paths(options)
+    # Copy the LLDBWrapPython.cpp C++ binding file impl over.
+    if not os.path.exists(lldb_wrap_python_src_path):
+        logging.error(
+            "failed to find static Python binding .cpp file at '%s'",
+            lldb_wrap_python_src_path)
+        sys.exit(-12)
+    shutil.copyfile(lldb_wrap_python_src_path, settings.output_file)
+
+    # Copy the lldb.py impl over.
+    if not os.path.exists(lldb_py_src_path):
+        logging.error(
+            "failed to find static Python binding .py file at '%s'",
+            lldb_py_src_path)
+        sys.exit(-13)
+    lldb_py_dest_path = os.path.join(
+        os.path.dirname(settings.output_file),
+        "lldb.py")
+    shutil.copyfile(lldb_py_src_path, lldb_py_dest_path)
+
+
+def static_bindings_require_refresh(options, config_build_dir, settings):
+    """Returns whether existing static bindings require an update."""
+    lldb_wrap_python_src_path, lldb_py_src_path = static_binding_paths(options)
+    # Check if LLDBWrapPython.cpp C++ static binding is different than
+    # in the build dir.
+    if not os.path.exists(lldb_wrap_python_src_path):
+        logging.error(
+            "failed to find static Python binding .cpp file at '%s'",
+            lldb_wrap_python_src_path)
+        sys.exit(-12)
+    if not os.path.exists(settings.output_file):
+        # We for sure need an update.
+        # Note this should already be True - we don't check
+        # for a refresh if we already know we have to generate them.
+        return True
+    import filecmp
+    if not filecmp.cmp(
+            lldb_wrap_python_src_path, settings.output_file, shallow=False):
+        return True
+
+    # Check if the lldb.py Python static binding is different than
+    # in the build dir.
+    if not os.path.exists(lldb_py_src_path):
+        logging.error(
+            "failed to find static Python binding .py file at '%s'",
+            lldb_py_src_path)
+        sys.exit(-13)
+    lldb_py_dest_path = os.path.join(
+        os.path.dirname(settings.output_file),
+        "lldb.py")
+    if not os.path.exists(lldb_py_dest_path):
+        # We for sure need an update.
+        # Note this should already be True - we don't check
+        # for a refresh if we already know we have to generate them.
+        return True
+    if not filecmp.cmp(
+            lldb_py_src_path, lldb_py_dest_path, shallow=False):
+        return True
+
+    # If we made it here, we don't need to update.
+    return False
+
+
 def get_python_module_path(options):
     """Returns the location where the lldb Python module should be placed.
 
@@ -296,7 +380,7 @@ def main(options):
     # Setup generated dependency file options.
     if options.generate_dependency_file:
         dependency_file = os.path.normcase(os.path.join(
-            options.target_dir, "LLDBWrapPython.cpp.d"))
+            options.config_build_dir, "LLDBWrapPython.cpp.d"))
     else:
         dependency_file = None
 
@@ -305,7 +389,7 @@ def main(options):
 
     # Determine the final binding file path.
     settings.output_file = os.path.normcase(
-        os.path.join(options.target_dir, "LLDBWrapPython.cpp"))
+        os.path.join(options.config_build_dir, "LLDBWrapPython.cpp"))
 
     # Touch the output file (but don't really generate it) if python
     # is disabled.
@@ -377,14 +461,36 @@ def main(options):
             logging.info("__init__.py doesn't exist")
             generate_output = True
 
+    # Figure out if we would be using static bindings
+    use_static_bindings = (
+        not options.swig_executable or
+        not os.path.exists(options.swig_executable))
+    if use_static_bindings and not generate_output:
+        # If the contents of the VCS static binding are different from what
+        # we have in the build dir, we should copy them regardless.
+        if static_bindings_require_refresh(
+                options, config_build_dir, settings):
+            # Force the static bindings to be copied later on, thus preventing
+            # early exit from this method.
+            logging.info("updating static binding due to VCS binding changes")
+            generate_output = True
+
     if not generate_output:
         logging.info(
             "Skipping Python binding generation: everything is up to date")
         return
 
-    # Generate the Python binding with swig.
-    logging.info("Python binding is out of date, regenerating")
-    do_swig_rebuild(options, dependency_file, config_build_dir, settings)
+    # Generate the Python binding with swig, or use the static bindings if
+    # no swig.
+    if use_static_bindings:
+        # Copy over the static bindings.  We capture the the modified (
+        # i.e. post-processed) binding, so we don't do the modify step
+        # here - the modifications have already been applied.
+        copy_static_bindings(options, config_build_dir, settings)
+    else:
+        # Generate the Python binding with swig.
+        logging.info("Python binding is out of date, regenerating")
+        do_swig_rebuild(options, dependency_file, config_build_dir, settings)
 
 
 # This script can be called by another Python script by calling the main()

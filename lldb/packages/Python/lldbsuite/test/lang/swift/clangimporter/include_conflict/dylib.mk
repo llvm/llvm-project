@@ -1,0 +1,7 @@
+LEVEL = ../../../../make
+DYLIB_ONLY := YES
+DYLIB_NAME := $(BASENAME)
+DYLIB_SWIFT_SOURCES := $(DYLIB_NAME).swift
+SWIFT_OBJC_INTEROP := 1
+SWIFTFLAGS_EXTRAS = -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/Foo
+include $(LEVEL)/Makefile.rules

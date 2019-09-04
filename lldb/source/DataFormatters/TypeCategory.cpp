@@ -33,6 +33,12 @@ static bool IsApplicable(lldb::LanguageType category_lang,
   default:
     return category_lang == valobj_lang;
 
+  // Swift knows about itself, and about ObjC++ bridgings
+  case eLanguageTypeSwift:
+    return valobj_lang == eLanguageTypeSwift ||
+           valobj_lang == eLanguageTypeObjC ||
+           valobj_lang == eLanguageTypeObjC_plus_plus;
+
   // the C family, we consider it as one
   case eLanguageTypeC89:
   case eLanguageTypeC:

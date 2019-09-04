@@ -245,6 +245,13 @@ bool SBFunction::GetIsOptimized() {
   return false;
 }
 
+bool SBFunction::GetCanThrow() {
+  if (m_opaque_ptr) {
+      return m_opaque_ptr->CanThrow();
+  }
+  return false;
+}
+
 namespace lldb_private {
 namespace repro {
 

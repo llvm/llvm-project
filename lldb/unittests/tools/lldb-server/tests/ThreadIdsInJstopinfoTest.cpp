@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#if 0
 #include "TestBase.h"
 #include "TestClient.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -51,3 +51,5 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
                 Pointee(Eq(stop_reply_pc.second)));
   }
 }
+
+#endif

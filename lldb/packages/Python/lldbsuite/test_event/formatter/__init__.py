@@ -38,6 +38,9 @@ class CreatedFormatter(object):
         self.cleanup_func = cleanup_func
 
 
+SOCKET_ACK_BYTE_VALUE = b'*'  # ASCII for chr(42)
+
+
 def create_results_formatter(config):
     """Sets up a test results formatter.
 

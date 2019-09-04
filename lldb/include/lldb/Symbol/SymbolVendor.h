@@ -41,10 +41,22 @@ public:
 
   SymbolFile *GetSymbolFile() { return m_sym_file_up.get(); }
 
+  void GetLoadedModules(lldb::LanguageType language, FileSpecList &modules);
+
+  /// Notify the SymbolVendor that the file addresses in the Sections
+  /// for this module have been changed.
+  virtual void SectionFileAddressesChanged();
+
   // PluginInterface protocol
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
+
+  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                             uint32_t actual_line);
+
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
 
 protected:
   std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses

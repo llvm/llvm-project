@@ -679,6 +679,12 @@ public:
                                    bool throw_bp);
 
     lldb::SBBreakpoint
+    BreakpointCreateForException  (lldb::LanguageType language,
+                                   bool catch_bp,
+                                   bool throw_bp,
+                                   SBStringList &extra_args);
+
+    lldb::SBBreakpoint
     BreakpointCreateByAddress (addr_t address);
 
     lldb::SBBreakpoint

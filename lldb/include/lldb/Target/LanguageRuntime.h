@@ -101,6 +101,23 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// This allows a language runtime to adjust references depending on the type.
+  /// \return true if the resulting address needs to be dereferenced.
+  virtual std::pair<lldb::addr_t, bool> FixupPointerValue(lldb::addr_t addr,
+                                                          CompilerType type) {
+    return {addr, false};
+  }
+
+  /// This allows a language runtime to adjust references depending on the type.
+  virtual lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
+                                    Status &error) {
+    return addr;
+  }
+
+  /// \return whether the dynamic value stored in a Swift fixed buffer
+  /// fits into that buffer or is indirect and allocated on the heap.
+  virtual bool IsStoredInlineInBuffer(CompilerType type) { return true; }
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}
@@ -176,6 +193,11 @@ public:
     return false;
   }
 
+  // FIXME: This should be upstreamed into llvm.org, but only
+  // SwiftLanguageRuntime overrides this. That means that upstreaming in its
+  // current form would be introducing dead code into llvm.org
+  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
+
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
   // would be. Useful when the underlying binary is stripped.
@@ -186,6 +208,11 @@ public:
   virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
   static char ID;
 
+  virtual void FindFunctionPointersInCall(StackFrame &frame,
+                                          std::vector<Address> &addresses,
+                                          bool debug_only = true,
+                                          bool resolve_thunks = true){};
+
 protected:
   // Classes that inherit from LanguageRuntime can see and modify these
 
@@ -194,7 +221,7 @@ protected:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
-};
+  };
 
 } // namespace lldb_private
 

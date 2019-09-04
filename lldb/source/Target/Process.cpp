@@ -239,7 +239,7 @@ bool ProcessProperties::GetStopOnExec() const {
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_process_properties[idx].default_uint_value != 0);
 }
-
+  
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
   uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
@@ -495,7 +495,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_finalizing(false), m_finalize_called(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
-      m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
+      m_destroy_in_process(false), m_destroy_complete(false),
+      m_last_broadcast_state(eStateInvalid),
       m_can_interpret_function_calls(false), m_warnings_issued(),
       m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow) {
   CheckInWithManager();
@@ -754,8 +755,9 @@ StateType Process::WaitForProcessToStop(const Timeout<std::micro> &timeout,
       *event_sp_ptr = event_sp;
 
     bool pop_process_io_handler = (hijack_listener_sp.get() != nullptr);
-    Process::HandleProcessStateChangedEvent(event_sp, stream,
-                                            pop_process_io_handler);
+    bool pop_command_interpreter = false;
+    Process::HandleProcessStateChangedEvent(
+        event_sp, stream, pop_process_io_handler, pop_command_interpreter);
 
     switch (state) {
     case eStateCrashed:
@@ -784,36 +786,62 @@ StateType Process::WaitForProcessToStop(const Timeout<std::micro> &timeout,
   return state;
 }
 
+static bool
+BreakpointSiteMatchesREPLBreakpoint(const BreakpointSiteSP &bp_site_sp) {
+  if (bp_site_sp) {
+    size_t owner_idx = 0;
+    BreakpointLocationSP bp_loc_sp = bp_site_sp->GetOwnerAtIndex(owner_idx);
+    while (bp_loc_sp) {
+      Breakpoint &bp = bp_loc_sp->GetBreakpoint();
+      if (bp.IsInternal()) {
+        const char *kind = bp.GetBreakpointKind();
+        if (kind && strcmp(kind, "REPL") == 0)
+          return true;
+      }
+      bp_loc_sp = bp_site_sp->GetOwnerAtIndex(++owner_idx);
+    }
+  }
+  return false;
+}
+
 bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
                                              Stream *stream,
-                                             bool &pop_process_io_handler) {
+                                             bool &pop_process_io_handler,
+                                             bool &pop_command_interpreter) {
   const bool handle_pop = pop_process_io_handler;
 
   pop_process_io_handler = false;
   ProcessSP process_sp =
       Process::ProcessEventData::GetProcessFromEvent(event_sp.get());
+  pop_command_interpreter = false;
 
   if (!process_sp)
     return false;
 
-  StateType event_state =
+  StateType state =
       Process::ProcessEventData::GetStateFromEvent(event_sp.get());
-  if (event_state == eStateInvalid)
+  if (state == eStateInvalid)
     return false;
 
-  switch (event_state) {
+  const bool repl_is_active =
+      process_sp->GetTarget().GetDebugger().REPLIsActive();
+  const bool repl_is_enabled =
+      process_sp->GetTarget().GetDebugger().REPLIsEnabled();
+
+  switch (state) {
   case eStateInvalid:
   case eStateUnloaded:
   case eStateAttaching:
   case eStateLaunching:
   case eStateStepping:
-  case eStateDetached:
-    if (stream)
+  case eStateDetached: {
+    if (!repl_is_active && stream)
       stream->Printf("Process %" PRIu64 " %s\n", process_sp->GetID(),
-                     StateAsCString(event_state));
-    if (event_state == eStateDetached)
+                     StateAsCString(state));
+
+    if (state == eStateDetached)
       pop_process_io_handler = true;
-    break;
+  } break;
 
   case eStateConnected:
   case eStateRunning:
@@ -821,17 +849,18 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
     break;
 
   case eStateExited:
-    if (stream)
+    if (!repl_is_active && stream)
       process_sp->GetStatus(*stream);
     pop_process_io_handler = true;
     break;
 
   case eStateStopped:
   case eStateCrashed:
-  case eStateSuspended:
+  case eStateSuspended: {
     // Make sure the program hasn't been auto-restarted:
-    if (Process::ProcessEventData::GetRestartedFromEvent(event_sp.get())) {
-      if (stream) {
+    if (event_sp &&
+        Process::ProcessEventData::GetRestartedFromEvent(event_sp.get())) {
+      if (!repl_is_active && stream) {
         size_t num_reasons =
             Process::ProcessEventData::GetNumRestartedReasons(event_sp.get());
         if (num_reasons > 0) {
@@ -859,6 +888,9 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
         }
       }
     } else {
+      bool check_for_repl_breakpoint = false;
+      bool is_repl_breakpoint = false;
+      ThreadSP curr_thread;
       StopInfoSP curr_thread_stop_info_sp;
       // Lock the thread list so it doesn't change on us, this is the scope for
       // the locker:
@@ -866,7 +898,7 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
         ThreadList &thread_list = process_sp->GetThreadList();
         std::lock_guard<std::recursive_mutex> guard(thread_list.GetMutex());
 
-        ThreadSP curr_thread(thread_list.GetSelectedThread());
+        curr_thread = thread_list.GetSelectedThread();
         ThreadSP thread;
         StopReason curr_thread_stop_reason = eStopReasonInvalid;
         if (curr_thread) {
@@ -905,6 +937,8 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
             case eStopReasonTrace:
             case eStopReasonBreakpoint:
             case eStopReasonWatchpoint:
+              check_for_repl_breakpoint = repl_is_enabled;
+              LLVM_FALLTHROUGH;
             case eStopReasonException:
             case eStopReasonExec:
             case eStopReasonThreadExiting:
@@ -913,26 +947,80 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
                 other_thread = thread;
               break;
             case eStopReasonPlanComplete:
+              check_for_repl_breakpoint = repl_is_enabled;
               if (!plan_thread)
                 plan_thread = thread;
               break;
             }
           }
-          if (plan_thread)
+          if (plan_thread) {
             thread_list.SetSelectedThreadByID(plan_thread->GetID());
-          else if (other_thread)
+            curr_thread = plan_thread;
+          } else if (other_thread) {
             thread_list.SetSelectedThreadByID(other_thread->GetID());
-          else {
+            curr_thread = other_thread;
+          } else {
             if (curr_thread && curr_thread->IsValid())
               thread = curr_thread;
-            else
+            else {
               thread = thread_list.GetThreadAtIndex(0);
+              curr_thread = thread;
+            }
 
             if (thread)
               thread_list.SetSelectedThreadByID(thread->GetID());
           }
+        } else {
+          switch (curr_thread_stop_reason) {
+          case eStopReasonBreakpoint:
+          case eStopReasonWatchpoint:
+            check_for_repl_breakpoint = repl_is_enabled;
+            break;
+          case eStopReasonPlanComplete:
+            // We might have hit a breakpoint during our REPL evaluation and be
+            // stopped
+            // at the REPL breakpoint
+            check_for_repl_breakpoint = repl_is_enabled;
+            break;
+          default:
+            break;
+          }
         }
       }
+
+      BreakpointSiteSP bp_site_sp;
+      if (check_for_repl_breakpoint) {
+        // Make sure this isn't the internal "REPL" breakpoint
+        if (curr_thread) {
+          StopInfoSP stop_info_sp = curr_thread->GetStopInfo();
+          if (stop_info_sp) {
+            bp_site_sp = process_sp->GetBreakpointSiteList().FindByID(
+                stop_info_sp->GetValue());
+            if (bp_site_sp) {
+              is_repl_breakpoint =
+                  BreakpointSiteMatchesREPLBreakpoint(bp_site_sp);
+            }
+          }
+
+          // Only check the breakpoint site for the current PC if the stop
+          // reason didn't have
+          // a valid breakpoint site
+          if (!bp_site_sp) {
+            // We might have stopped with a eStopReasonPlanComplete, see the PC
+            // is at
+
+            lldb::StackFrameSP frame_sp = curr_thread->GetStackFrameAtIndex(0);
+            if (frame_sp) {
+              bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(
+                  frame_sp->GetStackID().GetPC());
+              if (bp_site_sp)
+                is_repl_breakpoint =
+                    BreakpointSiteMatchesREPLBreakpoint(bp_site_sp);
+            }
+          }
+        }
+      }
+
       // Drop the ThreadList mutex by here, since GetThreadStatus below might
       // have to run code, e.g. for Data formatters, and if we hold the
       // ThreadList mutex, then the process is going to have a hard time
@@ -951,7 +1039,7 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
                                       start_frame, num_frames,
                                       num_frames_with_source,
                                       stop_format);
-          if (curr_thread_stop_info_sp) {
+          if (false && curr_thread_stop_info_sp) {
             lldb::addr_t crashing_address;
             ValueObjectSP valobj_sp = StopInfo::GetCrashingDereference(
                 curr_thread_stop_info_sp, &crashing_address);
@@ -966,27 +1054,33 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
                                            format);
               stream->Printf(" accessed 0x%" PRIx64 "\n", crashing_address);
             }
+          } else {
+            uint32_t target_idx = debugger.GetTargetList().GetIndexOfTarget(
+                process_sp->GetTarget().shared_from_this());
+            if (target_idx != UINT32_MAX)
+              stream->Printf("Target %d: (", target_idx);
+            else
+              stream->Printf("Target <unknown index>: (");
+            process_sp->GetTarget().Dump(stream, eDescriptionLevelBrief);
+            stream->Printf(") stopped.\n");
           }
-        } else {
-          uint32_t target_idx = debugger.GetTargetList().GetIndexOfTarget(
-              process_sp->GetTarget().shared_from_this());
-          if (target_idx != UINT32_MAX)
-            stream->Printf("Target %d: (", target_idx);
-          else
-            stream->Printf("Target <unknown index>: (");
-          process_sp->GetTarget().Dump(stream, eDescriptionLevelBrief);
-          stream->Printf(") stopped.\n");
         }
       }
 
       // Pop the process IO handler
       pop_process_io_handler = true;
+
+      // If the REPL is enabled, but not active, and we hit the REPL breakpoint,
+      // we need to pop
+      // off the command interpreter after the process IO Handler
+      if (repl_is_enabled && !repl_is_active && is_repl_breakpoint)
+        pop_command_interpreter = true;
     }
-    break;
+  } break;
   }
 
   if (handle_pop && pop_process_io_handler)
-    process_sp->PopProcessIOHandler();
+    process_sp->PopProcessIOHandler(pop_command_interpreter);
 
   return true;
 }
@@ -1133,6 +1227,12 @@ bool Process::SetExitStatus(int status, const char *cstr) {
 
 bool Process::IsAlive() {
   switch (m_private_state.GetValue()) {
+  case eStateInvalid:
+  case eStateUnloaded:
+  case eStateDetached:
+  case eStateExited:
+    return false;
+
   case eStateConnected:
   case eStateAttaching:
   case eStateLaunching:
@@ -1142,8 +1242,6 @@ bool Process::IsAlive() {
   case eStateCrashed:
   case eStateSuspended:
     return true;
-  default:
-    return false;
   }
 }
 
@@ -1200,7 +1298,7 @@ void Process::UpdateThreadListIfNeeded() {
         // requiring the API lock which is already held by whoever is shutting
         // us down, causing a deadlock.
         OperatingSystem *os = GetOperatingSystem();
-        if (os && !m_destroy_in_process) {
+        if (os && !m_destroy_in_process && !m_destroy_complete) {
           // Clear any old backing threads where memory threads might have been
           // backed by actual threads from the lldb_private::Process subclass
           size_t num_old_threads = old_thread_list.GetSize(false);
@@ -1542,6 +1640,10 @@ bool Process::IsPossibleDynamicValue(ValueObject &in_value) {
 
   if (in_value.IsDynamic())
     return false;
+
+  if (!in_value.GetCompilerType().IsValid())
+    return false;
+
   LanguageType known_type = in_value.GetObjectRuntimeLanguage();
 
   if (known_type != eLanguageTypeUnknown && known_type != eLanguageTypeC) {
@@ -3215,6 +3317,7 @@ Status Process::Detach(bool keep_stopped) {
     }
   }
   m_destroy_in_process = false;
+  m_destroy_complete = true;
 
   // If we exited when we were waiting for a process to stop, then forward the
   // event here so we don't lose the event
@@ -3300,6 +3403,7 @@ Status Process::Destroy(bool force_kill) {
   }
 
   m_destroy_in_process = false;
+  m_destroy_complete = true;
 
   return error;
 }
@@ -3709,7 +3813,7 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
         // correctly.
 
         if (is_hijacked || !GetTarget().GetDebugger().IsHandlingEvents())
-          PopProcessIOHandler();
+          PopProcessIOHandler(false);
       }
     }
 
@@ -4474,10 +4578,16 @@ bool Process::PushProcessIOHandler() {
   return false;
 }
 
-bool Process::PopProcessIOHandler() {
+bool Process::PopProcessIOHandler(bool pop_command_interpreter) {
   IOHandlerSP io_handler_sp(m_process_input_reader);
-  if (io_handler_sp)
-    return GetTarget().GetDebugger().PopIOHandler(io_handler_sp);
+  if (io_handler_sp) {
+    if (pop_command_interpreter)
+      return GetTarget().GetDebugger().PopIOHandlers(
+          io_handler_sp,
+          GetTarget().GetDebugger().GetCommandInterpreter().GetIOHandler());
+    else
+      return GetTarget().GetDebugger().PopIOHandler(io_handler_sp);
+  }
   return false;
 }
 
@@ -4610,7 +4720,20 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
-  std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock);
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP |
+                                                  LIBLLDB_LOG_PROCESS));
+
+  if (!m_run_thread_plan_lock.try_lock()) {
+    if (log)
+      log->Printf("RunThreadPlan could not acquire the RunThreadPlan lock.");
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "RunThreadPlan could not acquire the RunThreadPlan lock.");
+    return eExpressionSetupError;
+  }
+
+  std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock,
+                                                     std::adopt_lock_t());
 
   if (!thread_plan_sp) {
     diagnostic_manager.PutString(
@@ -4716,8 +4839,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   lldb::StateType old_state = eStateInvalid;
   lldb::ThreadPlanSP stopper_base_plan_sp;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP |
-                                                  LIBLLDB_LOG_PROCESS));
   if (m_private_state_thread.EqualsThread(Host::GetCurrentThread())) {
     // Yikes, we are running on the private state thread!  So we can't wait for
     // public events on this thread, since we are the thread that is generating
@@ -4759,6 +4880,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // is only cosmetic, and this functionality is only of use to lldb
     // developers who can live with not pretty...
     thread->Flush();
+    BroadcastEvent(eBroadcastBitStateChanged,
+                   new ProcessEventData(shared_from_this(), eStateStopped));
     return eExpressionStoppedForDebug;
   }
 
@@ -5699,6 +5822,13 @@ void Process::PrintWarningOptimization(const SymbolContext &sc) {
                  "oddly; variables may not be available.\n",
                  sc.module_sp->GetFileSpec().GetFilename().GetCString());
   }
+}
+
+void Process::PrintWarningCantLoadSwiftModule(const Module &module,
+                                              std::string details) {
+  PrintWarning(Process::Warnings::eWarningsSwiftImport, (void *)&module,
+               "%s: Cannot load Swift type information; %s\n",
+               module.GetFileSpec().GetCString(), details.c_str());
 }
 
 bool Process::GetProcessInfo(ProcessInstanceInfo &info) {

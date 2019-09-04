@@ -1,0 +1,37 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests replaying a Swift reproducer with bridging.
+
+# Start clean.
+# RUN: rm -rf %t.build && mkdir %t.build && cd %t.build
+# RUN: cp %S/Inputs/Module.swift %t.build/Module.swift
+# RUN: cp %S/Inputs/module.modulemap %t.build/module.modulemap
+# RUN: cp %S/Inputs/Foo.h %t.build/Foo.h
+
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t.build/cache %t.build/Module.swift \
+# RUN:          -I. \
+# RUN:          -module-name main -o %t.out
+
+# Change to run directory.
+# RUN: rm -rf %t.repro
+# RUN: rm -rf %t.run && mkdir %t.run && cd %t.run
+
+# Capture the reproducer.
+# RUN: %lldb -x -b -s %S/Inputs/Module.in \
+# RUN:          --capture \
+# RUN:          --capture-path %t.repro \
+# RUN:          %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+
+# Cleanup build directory.
+# RUN: rm -rf %t.build
+
+# Replay the reproducer in place.
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK
+
+# CHECK: Breakpoint 1
+# CHECK: Process {{.*}} stopped
+# CHECK: thread {{.*}} stop reason = breakpoint
+# CHECK: frame {{.*}} Module.swift
+# CHECK: $R0 = 95126
+

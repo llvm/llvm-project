@@ -1,0 +1,47 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests replaying a simple reproducer.
+
+# Start clean.
+# RUN: rm -rf %t.repro.moved
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: cp %S/Inputs/Simple.swift %t/Simple.swift
+
+# Build the Swift binary.
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t/cache %t/Simple.swift \
+# RUN:          -module-name main -o %t.out
+
+# Capture the debug session.
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in \
+# RUN:          --capture \
+# RUN:          --capture-path %t.repro \
+# RUN:          %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+
+# Remove anything that could be reused.
+# RUN: rm -rf %t.out
+# RUN: rm -rf %t/Simple.swift
+# RUN: rm -rf %t/cache
+
+# Replay the reproducer in place.
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+
+# Replay the reproducer from a different location.
+# RUN: mv %t.repro %t.repro.moved
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in --replay %t.repro.moved | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+
+# Verify the debug session.
+# CHECK: Breakpoint 1
+# CHECK: Process {{.*}} stopped
+# CHECK: Process {{.*}} launched
+# CHECK: thread {{.*}} stop reason = breakpoint
+# CHECK: frame {{.*}} Simple.swift
+
+# CAPTURE: testing
+# REPLAY-NOT: testing
+
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} exited
+
+# CAPTURE: Reproducer is in capture mode.
+# CAPTURE: Reproducer written

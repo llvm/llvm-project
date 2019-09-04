@@ -219,8 +219,18 @@ lldb::ExpressionResults UserExpression::Evaluate(
       language = frame->GetLanguage();
   }
 
+  // If the language was not specified in the expression command,
+  // set it to the language in the target's properties if
+  // specified, else default to the langage for the frame.
+  if (language == lldb::eLanguageTypeUnknown) {
+    if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
+      language = target->GetLanguage();
+    else if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GetLanguage();
+  }
+
   lldb::UserExpressionSP user_expression_sp(
-      target->GetUserExpressionForLanguage(expr, full_prefix, language,
+      target->GetUserExpressionForLanguage(exe_ctx, expr, full_prefix, language,
                                            desired_type, options, ctx_obj,
                                            error));
   if (error.Fail()) {
@@ -264,8 +274,14 @@ lldb::ExpressionResults UserExpression::Evaluate(
     execution_results = lldb::eExpressionParseError;
     if (fixed_expression && !fixed_expression->empty() &&
         options.GetAutoApplyFixIts()) {
+      // Swift: temporarily release scratch context lock held by
+      // SwiftUserExpression, so the context can be restored if necessary.
+      if (expr == *fixed_expression)
+        user_expression_sp = nullptr;
+
       lldb::UserExpressionSP fixed_expression_sp(
-          target->GetUserExpressionForLanguage(fixed_expression->c_str(),
+          target->GetUserExpressionForLanguage(exe_ctx,
+                                               fixed_expression->c_str(),
                                                full_prefix, language,
                                                desired_type, options, ctx_obj,
                                                error));
@@ -396,8 +412,13 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
   if (options.GetResultIsInternal() && result_var && target) {
-    target->GetPersistentExpressionStateForLanguage(m_language)
-        ->RemovePersistentVariable(result_var);
+    if (m_language == lldb::eLanguageTypeSwift) {
+      if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
+        target->GetSwiftPersistentExpressionState(*exe_scope)
+          ->RemovePersistentVariable(result_var);
+    } else
+      target->GetPersistentExpressionStateForLanguage(m_language)
+          ->RemovePersistentVariable(result_var);
   }
   return expr_result;
 }

@@ -90,6 +90,18 @@ public:
     %feature("docstring", "Sets whether to abort expression evaluation if an exception is thrown while executing.  Don't set this to false unless you know the function you are calling traps all exceptions itself.") SetTryAllThreads;
     void
     SetTrapExceptions (bool trap_exceptions = true);
+    
+    bool
+    GetPlaygroundTransformEnabled () const;
+    
+    void
+    SetPlaygroundTransformEnabled (bool enable_playground_transform = true);
+
+    bool
+    GetREPLMode () const;
+    
+    void
+    SetREPLMode (bool enable_repl = true);
 
     %feature ("docstring", "Sets the language that LLDB should assume the expression is written in") SetLanguage;
     void

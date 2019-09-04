@@ -410,6 +410,25 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 SBValue SBThread::GetStopReturnValue() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValue, SBThread, GetStopReturnValue);
 
+  bool is_swift_error_value = false;
+  SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
+  if (is_swift_error_value)
+    return SBValue();
+  else
+    return return_value;
+}
+
+SBValue SBThread::GetStopErrorValue() {
+  bool is_swift_error_value = false;
+  SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
+  if (!is_swift_error_value)
+    return SBValue();
+  else
+    return return_value;
+}
+
+SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
+  LLDB_RECORD_METHOD(lldb::SBValue, SBThread, GetStopReturnOrErrorValue, (bool&), is_swift_error_value);
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -419,7 +438,8 @@ SBValue SBThread::GetStopReturnValue() {
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
       if (stop_info_sp) {
-        return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
+        return_valobj_sp =
+            StopInfo::GetReturnValueObject(stop_info_sp, is_swift_error_value);
       }
     }
   }

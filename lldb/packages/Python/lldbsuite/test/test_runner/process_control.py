@@ -422,7 +422,7 @@ class UnixProcessHelper(ProcessHelper):
         signo = -popen_status
         signal_names_by_number = self._signal_names_by_number()
         signal_name = signal_names_by_number.get(signo, "")
-        return (signo, signal_name)
+        return signo, signal_name
 
 
 class WindowsProcessHelper(ProcessHelper):

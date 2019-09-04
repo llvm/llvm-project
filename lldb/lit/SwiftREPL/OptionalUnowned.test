@@ -1,0 +1,9 @@
+// RUN: %lldb --repl < %s | FileCheck %s
+
+class C
+{ unowned var patatino : C? }
+
+C()
+// CHECK: $R0: {{C}} = {
+// CHECK-NEXT:   patatino = nil
+// CHECK-NEXT: }

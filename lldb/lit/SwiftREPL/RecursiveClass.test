@@ -1,0 +1,24 @@
+// Test that recursive class instances work in the REPL.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+class Foo {
+  var aFoo: Foo!
+  var x: String = "Hello World"
+
+  init() {
+  }
+}
+
+var a = Foo()
+// CHECK: a: Foo = {
+// CHECK-NEXT:   aFoo = nil
+// CHECK-NEXT:   x = "Hello World"
+// CHECK-NEXT: }
+
+a.aFoo = a
+a
+// CHECK: $R0: Foo = {
+// CHECK-NEXT:   aFoo = 0x{{[0-9a-fA-F]+}} {...}
+// CHECK-NEXT:   x = "Hello World"
+// CHECK-NEXT: }

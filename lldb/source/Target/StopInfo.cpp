@@ -1021,10 +1021,12 @@ public:
 class StopInfoThreadPlan : public StopInfo {
 public:
   StopInfoThreadPlan(ThreadPlanSP &plan_sp, ValueObjectSP &return_valobj_sp,
-                     ExpressionVariableSP &expression_variable_sp)
+                     ExpressionVariableSP &expression_variable_sp,
+                     bool return_is_swift_error_value)
       : StopInfo(plan_sp->GetThread(), LLDB_INVALID_UID), m_plan_sp(plan_sp),
         m_return_valobj_sp(return_valobj_sp),
-        m_expression_variable_sp(expression_variable_sp) {}
+        m_expression_variable_sp(expression_variable_sp),
+        m_return_value_is_swift_error_value(return_is_swift_error_value) {}
 
   ~StopInfoThreadPlan() override = default;
 
@@ -1039,7 +1041,10 @@ public:
     return m_description.c_str();
   }
 
-  ValueObjectSP GetReturnValueObject() { return m_return_valobj_sp; }
+  ValueObjectSP GetReturnValueObject(bool &is_swift_error_result) {
+    is_swift_error_result = m_return_value_is_swift_error_value;
+    return m_return_valobj_sp;
+  }
 
   ExpressionVariableSP GetExpressionVariable() {
     return m_expression_variable_sp;
@@ -1057,6 +1062,7 @@ private:
   ThreadPlanSP m_plan_sp;
   ValueObjectSP m_return_valobj_sp;
   ExpressionVariableSP m_expression_variable_sp;
+  bool m_return_value_is_swift_error_value;
 };
 
 // StopInfoExec
@@ -1121,11 +1127,14 @@ StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
   return StopInfoSP(new StopInfoTrace(thread));
 }
 
-StopInfoSP StopInfo::CreateStopReasonWithPlan(
-    ThreadPlanSP &plan_sp, ValueObjectSP return_valobj_sp,
-    ExpressionVariableSP expression_variable_sp) {
+StopInfoSP
+StopInfo::CreateStopReasonWithPlan(ThreadPlanSP &plan_sp,
+                                   ValueObjectSP return_valobj_sp,
+                                   ExpressionVariableSP expression_variable_sp,
+                                   bool return_is_swift_error_value) {
   return StopInfoSP(new StopInfoThreadPlan(plan_sp, return_valobj_sp,
-                                           expression_variable_sp));
+                                           expression_variable_sp,
+                                           return_is_swift_error_value));
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
@@ -1137,12 +1146,13 @@ StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
   return StopInfoSP(new StopInfoExec(thread));
 }
 
-ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
+ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp,
+                                             bool &is_swift_error_result) {
   if (stop_info_sp &&
       stop_info_sp->GetStopReason() == eStopReasonPlanComplete) {
     StopInfoThreadPlan *plan_stop_info =
         static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
-    return plan_stop_info->GetReturnValueObject();
+    return plan_stop_info->GetReturnValueObject(is_swift_error_result);
   } else
     return ValueObjectSP();
 }

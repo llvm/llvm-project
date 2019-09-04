@@ -36,6 +36,15 @@ SBTypeToSWIGWrapper (unsigned int* c_int)
 
 template <>
 PyObject*
+SBTypeToSWIGWrapper (lldb::LanguageType* lang_type)
+{
+    if (!lang_type)
+        return NULL;
+    return PyInt_FromLong((long)(*lang_type));
+}
+
+template <>
+PyObject*
 SBTypeToSWIGWrapper (lldb::SBEvent* event_sb)
 {
     return SWIG_NewPointerObj((void *) event_sb, SWIGTYPE_p_lldb__SBEvent, 0);

@@ -10,9 +10,11 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -73,6 +75,19 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   }
 }
 
+void SymbolVendor::GetLoadedModules(lldb::LanguageType language,
+                                    FileSpecList &modules) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    sym_file->GetLoadedModules(language, modules);
+}
+
+void SymbolVendor::SectionFileAddressesChanged() {
+  if (m_sym_file_up)
+    m_sym_file_up->SectionFileAddressesChanged();
+}
+
 // PluginInterface protocol
 lldb_private::ConstString SymbolVendor::GetPluginName() {
   static ConstString g_name("vendor-default");
@@ -80,3 +95,47 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
 }
 
 uint32_t SymbolVendor::GetPluginVersion() { return 1; }
+
+bool SymbolVendor::SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                                 uint32_t actual_line) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    return sym_file->SymbolContextShouldBeExcluded(sc, actual_line);
+
+  return false;
+}
+
+std::vector<DataBufferSP>
+SymbolVendor::GetASTData(lldb::LanguageType language) {
+  std::vector<DataBufferSP> ast_datas;
+
+  if (language != eLanguageTypeSwift)
+    return ast_datas;
+
+  // Sometimes the AST Section data is found from the module, so look there
+  // first:
+  SectionList *section_list = GetModule()->GetSectionList();
+
+  if (section_list) {
+    SectionSP section_sp(
+        section_list->FindSectionByType(eSectionTypeSwiftModules, true));
+    if (section_sp) {
+      DataExtractor section_data;
+
+      if (section_sp->GetSectionData(section_data)) {
+        ast_datas.push_back(DataBufferSP(
+            new DataBufferHeap((const char *)section_data.GetDataStart(),
+                               section_data.GetByteSize())));
+        return ast_datas;
+      }
+    }
+  }
+
+  // If we couldn't find it in the Module, then look for it in the SymbolFile:
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    ast_datas = sym_file->GetASTData(language);
+
+  return ast_datas;
+}

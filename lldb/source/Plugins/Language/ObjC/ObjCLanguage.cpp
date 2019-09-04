@@ -744,6 +744,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 "NSNotification summary provider",
                 ConstString("NSConcreteNotification"), appkit_flags);
 
+  // AddStringSummary(objc_category_sp, "domain: ${var._domain} - code:
+  // ${var._code}", ConstString("NSError"), appkit_flags);
+  // AddStringSummary(objc_category_sp,"name:${var.name%S}
+  // reason:${var.reason%S}",ConstString("NSException"),appkit_flags);
+
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
@@ -858,7 +863,7 @@ static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
 }
 
 lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
@@ -883,8 +888,9 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
 
   const bool check_cpp = false;
   const bool check_objc = true;
-  bool canBeObjCDynamic =
-      compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
+  const bool check_swift = false;
+  bool canBeObjCDynamic = compiler_type.IsPossibleDynamicType(
+      nullptr, check_cpp, check_objc, check_swift);
 
   if (canBeObjCDynamic) {
     do {
@@ -933,16 +939,27 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
                    ResultSet &results) override {
       bool result = false;
 
-      if (auto *process = exe_scope->CalculateProcess().get()) {
-        if (auto *objc_runtime = ObjCLanguageRuntime::Get(*process)) {
-          if (auto *decl_vendor = objc_runtime->GetDeclVendor()) {
+      Process *process = exe_scope->CalculateProcess().get();
+      if (process) {
+        auto objc_runtime = ObjCLanguageRuntime::Get(*process);
+        if (objc_runtime) {
+          auto decl_vendor = objc_runtime->GetDeclVendor();
+          if (decl_vendor) {
+            std::vector<CompilerDecl> decls;
             ConstString name(key);
-            for (const CompilerType &type :
-                 decl_vendor->FindTypes(name, /*max_matches*/ UINT32_MAX)) {
-              result = true;
-              std::unique_ptr<Language::TypeScavenger::Result> result(
-                  new ObjCScavengerResult(type));
-              results.insert(std::move(result));
+            decl_vendor->FindDecls(name, true, UINT32_MAX, decls);
+            for (auto decl : decls) {
+              if (decl) {
+                auto *ctx = llvm::dyn_cast<ClangASTContext>(decl.GetTypeSystem());
+                if (ctx)
+                  if (CompilerType candidate =
+                          ctx->GetTypeForDecl(decl.GetOpaqueDecl())) {
+                    result = true;
+                    std::unique_ptr<Language::TypeScavenger::Result> result(
+                        new ObjCScavengerResult(candidate));
+                    results.insert(std::move(result));
+                  }
+              }
             }
           }
         }
@@ -960,16 +977,21 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
                    ResultSet &results) override {
       bool result = false;
 
-      if (auto *target = exe_scope->CalculateTarget().get()) {
-        if (auto *clang_modules_decl_vendor =
+      Target *target = exe_scope->CalculateTarget().get();
+      if (target) {
+        if (auto clang_modules_decl_vendor =
                 target->GetClangModulesDeclVendor()) {
+          std::vector<clang::NamedDecl *> decls;
           ConstString key_cs(key);
-          auto types = clang_modules_decl_vendor->FindTypes(
-              key_cs, /*max_matches*/ UINT32_MAX);
-          if (!types.empty()) {
+
+          if (clang_modules_decl_vendor->FindDecls(key_cs, false, UINT32_MAX,
+                                                   decls) > 0 &&
+              !decls.empty()) {
+            CompilerType module_type =
+                ClangASTContext::GetTypeForDecl(decls.front());
             result = true;
             std::unique_ptr<Language::TypeScavenger::Result> result(
-                new ObjCScavengerResult(types.front()));
+                new ObjCScavengerResult(module_type));
             results.insert(std::move(result));
           }
         }

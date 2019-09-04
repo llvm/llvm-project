@@ -185,7 +185,6 @@ public:
   ///     parent.
   Block *GetInlinedParent();
 
-  //------------------------------------------------------------------
   /// Get the inlined block at the given call site that contains this block.
   ///
   /// @param[in] find_call_site
@@ -197,7 +196,6 @@ public:
   ///     it will return this block, otherwise the parent blocks will be
   ///     searched to see if any is at the call site. nullptr will be returned
   ///     if no block is found at the call site.
-  //------------------------------------------------------------------
   Block *
   GetContainingInlinedBlockWithCallSite(const Declaration &find_call_site);
 

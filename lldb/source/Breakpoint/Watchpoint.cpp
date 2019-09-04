@@ -286,7 +286,9 @@ void Watchpoint::SetCondition(const char *condition) {
   } else {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
     Status error;
+    ExecutionContext exe_scope(m_target);
     m_condition_up.reset(m_target.GetUserExpressionForLanguage(
+        exe_scope,
         condition, llvm::StringRef(), lldb::eLanguageTypeUnknown,
         UserExpression::eResultTypeAny, EvaluateExpressionOptions(), nullptr,
         error));

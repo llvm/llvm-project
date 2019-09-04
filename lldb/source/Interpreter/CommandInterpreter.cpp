@@ -135,9 +135,9 @@ bool CommandInterpreter::GetPromptOnQuit() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
-void CommandInterpreter::SetPromptOnQuit(bool b) {
+void CommandInterpreter::SetPromptOnQuit(bool enable) {
   const uint32_t idx = ePropertyPromptOnQuit;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
 bool CommandInterpreter::GetEchoCommands() const {
@@ -354,12 +354,16 @@ void CommandInterpreter::Initialize() {
     AddAlias("p", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("print", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
+
     if (auto po = AddAlias("po", cmd_obj_sp, "-O --")) {
       po->SetHelp("Evaluate an expression on the current thread.  Displays any "
                   "returned value with formatting "
                   "controlled by the type's author.");
       po->SetHelpLong("");
     }
+
+    AddAlias("repl", cmd_obj_sp, "--repl -- ");
+
     AddAlias("parray", cmd_obj_sp, "--element-count %1 --")->SetHelpLong("");
     AddAlias("poarray", cmd_obj_sp,
              "--object-description --element-count %1 --")
@@ -779,6 +783,8 @@ void CommandInterpreter::LoadCommandDictionary() {
         list_regex_cmd_up->AddRegexCommand(
             "^-([[:digit:]]+)[[:space:]]*$",
             "source list --reverse --count %1") &&
+        list_regex_cmd_up->AddRegexCommand("^([^.]+)\\.([^.]+)$",
+                                           "source list --file \"%1.%2\"") &&
         list_regex_cmd_up->AddRegexCommand("^(.+)$",
                                            "source list --name \"%1\"") &&
         list_regex_cmd_up->AddRegexCommand("^$", "source list")) {

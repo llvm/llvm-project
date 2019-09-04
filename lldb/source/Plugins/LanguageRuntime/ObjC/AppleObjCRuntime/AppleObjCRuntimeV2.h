@@ -53,6 +53,12 @@ public:
                                 Address &address,
                                 Value::ValueType &value_type) override;
 
+  bool GetDynamicTypeAndAddress(ValueObject &in_value,
+                                lldb::DynamicValueType use_dynamic,
+                                TypeAndOrName &class_type_or_name,
+                                Address &address, Value::ValueType &value_type,
+                                bool allow_swift) override;
+
   UtilityFunction *CreateObjectChecker(const char *) override;
 
   // PluginInterface protocol
@@ -315,6 +321,7 @@ private:
   bool GetCFBooleanValuesIfNeeded();
 
   friend class ClassDescriptorV2;
+  friend class SwiftLanguageRuntime;
 
   std::unique_ptr<UtilityFunction> m_get_class_info_code;
   lldb::addr_t m_get_class_info_args;

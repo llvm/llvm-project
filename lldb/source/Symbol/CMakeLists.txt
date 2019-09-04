@@ -21,7 +21,6 @@ add_lldb_library(lldbSymbol
   DWARFCallFrameInfo.cpp
   DebugMacros.cpp
   Declaration.cpp
-  DeclVendor.cpp
   FuncUnwinders.cpp
   Function.cpp
   LineEntry.cpp
@@ -29,6 +28,7 @@ add_lldb_library(lldbSymbol
   LocateSymbolFile.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
+  SwiftASTContext.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp
@@ -46,6 +46,13 @@ add_lldb_library(lldbSymbol
   ${PLATFORM_SOURCES}
 
   LINK_LIBS
+    swiftAST
+    swiftASTSectionImporter
+    swiftBasic
+    swiftClangImporter
+    swiftFrontend
+    swiftSIL
+    swiftSerialization
     clangAST
     clangBasic
     clangFrontend
@@ -55,11 +62,16 @@ add_lldb_library(lldbSymbol
     lldbTarget
     lldbUtility
     lldbPluginExpressionParserClang
+    lldbPluginExpressionParserSwift
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginObjCLanguage
+    lldbPluginPlatformMacOSX
     lldbPluginObjCRuntime
 
   LINK_COMPONENTS
     Support
   )
+if(CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT SWIFT_COMPILER_IS_MSVC_LIKE)
+  target_compile_options(lldbSymbol PRIVATE -Wno-dollar-in-identifier-extension)
+endif()

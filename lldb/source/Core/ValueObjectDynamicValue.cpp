@@ -28,6 +28,7 @@ class Declaration;
 }
 
 using namespace lldb_private;
+using namespace lldb;
 
 ValueObjectDynamicValue::ValueObjectDynamicValue(
     ValueObject &parent, lldb::DynamicValueType use_dynamic)
@@ -54,6 +55,8 @@ CompilerType ValueObjectDynamicValue::GetCompilerTypeImpl() {
 ConstString ValueObjectDynamicValue::GetTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
+    if (m_dynamic_type_info.HasType())
+      return GetCompilerType().GetConstTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -71,6 +74,8 @@ TypeImpl ValueObjectDynamicValue::GetTypeImpl() {
 ConstString ValueObjectDynamicValue::GetQualifiedTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
+    if (m_dynamic_type_info.HasType())
+      return GetCompilerType().GetConstQualifiedTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -80,8 +85,12 @@ ConstString ValueObjectDynamicValue::GetQualifiedTypeName() {
 ConstString ValueObjectDynamicValue::GetDisplayTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
-    if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetDisplayTypeName();
+    if (m_dynamic_type_info.HasType()) {
+      const SymbolContext *sc = nullptr;
+      if (GetFrameSP())
+        sc = &GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
+      return GetCompilerType().GetDisplayTypeName(sc);
+    }
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -112,6 +121,8 @@ lldb::ValueType ValueObjectDynamicValue::GetValueType() const {
 }
 
 bool ValueObjectDynamicValue::UpdateValue() {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
   SetValueIsValid(false);
   m_error.Clear();
 
@@ -136,6 +147,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
   }
 
+  auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+
   // First make sure our Type and/or Address haven't changed:
   Process *process = exe_ctx.GetProcessPtr();
   if (!process)
@@ -147,16 +160,27 @@ bool ValueObjectDynamicValue::UpdateValue() {
   Value::ValueType value_type;
 
   LanguageRuntime *runtime = nullptr;
-
   lldb::LanguageType known_type = m_parent->GetObjectRuntimeLanguage();
-  if (known_type != lldb::eLanguageTypeUnknown &&
+
+  // An Objective-C object inside a Swift frame.
+  if (known_type == eLanguageTypeObjC)
+    if (StackFrame *frame = exe_ctx.GetFramePtr())
+      if (frame->GetLanguage() == lldb::eLanguageTypeSwift) {
+        runtime = process->GetLanguageRuntime(lldb::eLanguageTypeSwift);
+        if (runtime)
+          found_dynamic_type = runtime->GetDynamicTypeAndAddress(
+              *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
+              value_type);
+      }
+  if (!found_dynamic_type &&
+      known_type != lldb::eLanguageTypeUnknown &&
       known_type != lldb::eLanguageTypeC) {
     runtime = process->GetLanguageRuntime(known_type);
     if (runtime)
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
           value_type);
-  } else {
+  } else if (!found_dynamic_type) {
     runtime = process->GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus);
     if (runtime)
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
@@ -178,11 +202,25 @@ bool ValueObjectDynamicValue::UpdateValue() {
   m_update_point.SetUpdated();
 
   if (runtime && found_dynamic_type) {
+    if (log)
+      log->Printf("[%s %p] might have a dynamic type", GetName().GetCString(),
+                  (void *)this);
     if (class_type_or_name.HasType()) {
-      m_type_impl =
-          TypeImpl(m_parent->GetCompilerType(),
-                   runtime->FixUpDynamicType(class_type_or_name, *m_parent)
-                       .GetCompilerType());
+      // TypeSP are always generated from debug info
+      const bool prefer_parent_type = false;
+
+      if (prefer_parent_type) {
+        m_type_impl =
+            TypeImpl(m_parent->GetCompilerType(),
+                     runtime->FixUpDynamicType(class_type_or_name, *m_parent)
+                         .GetCompilerType());
+        class_type_or_name.SetCompilerType(CompilerType());
+      } else {
+        m_type_impl =
+            TypeImpl(m_parent->GetCompilerType(),
+                     runtime->FixUpDynamicType(class_type_or_name, *m_parent)
+                         .GetCompilerType());
+      }
     } else {
       m_type_impl.Clear();
     }
@@ -204,8 +242,6 @@ bool ValueObjectDynamicValue::UpdateValue() {
   }
 
   Value old_value(m_value);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   bool has_changed_type = false;
 
@@ -386,4 +422,16 @@ void ValueObjectDynamicValue::SetLanguageFlags(uint64_t flags) {
     m_parent->SetLanguageFlags(flags);
   else
     this->ValueObject::SetLanguageFlags(flags);
+}
+
+bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
+  if (GetPreferredDisplayLanguage() != eLanguageTypeSwift)
+    return false;
+
+  if (!m_dynamic_type_info.HasType())
+    return false;
+
+  auto *cached_ctx =
+      static_cast<SwiftASTContext *>(m_value.GetCompilerType().GetTypeSystem());
+  return cached_ctx == GetScratchSwiftASTContext().get();
 }

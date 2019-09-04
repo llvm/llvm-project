@@ -247,6 +247,11 @@ public:
   ///     If the argument was originally quoted, put in the quote char here.
   void Unshift(llvm::StringRef arg_str, char quote_char = '\0');
 
+  bool GetOptionValueAsString(const char *option, std::string &value);
+
+  int GetOptionValuesAsStrings(const char *option,
+                               std::vector<std::string> &values);
+
   // Clear the arguments.
   //
   // For re-setting or blanking out the list of arguments.

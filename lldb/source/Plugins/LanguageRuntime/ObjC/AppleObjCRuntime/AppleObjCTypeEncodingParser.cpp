@@ -237,19 +237,25 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
     if (!decl_vendor)
       return clang::QualType();
 
-    auto types = decl_vendor->FindTypes(ConstString(name), /*max_matches*/ 1);
+    const bool append = false;
+    const uint32_t max_matches = 1;
+    std::vector<CompilerDecl> decls;
+
+    uint32_t num_types =
+        decl_vendor->FindDecls(ConstString(name), append, max_matches, decls);
 
 // The user can forward-declare something that has no definition.  The runtime
 // doesn't prohibit this at all. This is a rare and very weird case.  We keep
 // this assert in debug builds so we catch other weird cases.
 #ifdef LLDB_CONFIGURATION_DEBUG
-    assert(!types.empty());
+    assert(num_types);
 #else
-    if (types.empty())
+    if (!num_types)
       return ast_ctx.getObjCIdType();
 #endif
-
-    return ClangUtil::GetQualType(types.front().GetPointerType());
+    if (auto *ctx = llvm::dyn_cast<ClangASTContext>(decls[0].GetTypeSystem()))
+      return ClangUtil::GetQualType(
+          ctx->GetTypeForDecl(decls[0].GetOpaqueDecl()).GetPointerType());
   } else {
     // We're going to resolve this dynamically anyway, so just smile and wave.
     return ast_ctx.getObjCIdType();

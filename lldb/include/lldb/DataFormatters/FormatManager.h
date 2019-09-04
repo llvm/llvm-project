@@ -219,6 +219,7 @@ private:
   ConstString m_default_category_name;
   ConstString m_system_category_name;
   ConstString m_vectortypes_category_name;
+  ConstString m_runtime_synths_category_name;
 
   lldb::TypeFormatImplSP GetHardcodedFormat(FormattersMatchData &);
 

@@ -126,12 +126,12 @@ int dotest()
     // Actions are triggered immediately after the thread is spawned
     unsigned num_breakpoint_threads = 1;
     unsigned num_watchpoint_threads = 0;
-    unsigned num_signal_threads = 1;
+    unsigned num_signal_threads = 0;
     unsigned num_crash_threads = 0;
 
     // Actions below are triggered after a 1-second delay
     unsigned num_delay_breakpoint_threads = 0;
-    unsigned num_delay_watchpoint_threads = 0;
+    unsigned num_delay_watchpoint_threads = 1;
     unsigned num_delay_signal_threads = 0;
     unsigned num_delay_crash_threads = 0;
 

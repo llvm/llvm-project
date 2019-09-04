@@ -99,6 +99,28 @@ def use_support_substitutions(config):
     elif platform.system() in ['NetBSD', 'OpenBSD', 'Linux']:
         flags = ['-pthread']
 
+    config.target_shared_library_suffix = '.dylib' if platform.system() in ['Darwin'] else '.so'
+    config.substitutions.append(('%target-shared-library-suffix', config.target_shared_library_suffix))
+
+    # Swift support
+    swift_args = ['-module-cache-path',
+                  os.path.join(os.path.dirname(config.lldb_libs_dir),
+                               'lldb-test-build.noindex',
+                               'module-cache-clang')]
+    swift_driver_args = []
+    if platform.system() in ['Darwin']:
+        swift_args += ['-sdk', sdk_path]
+        swift_driver_args += ['-toolchain-stdlib-rpath']
+    tools = [
+        ToolSubst(
+            '%target-swiftc', command=config.swiftc,
+            extra_args=swift_args + swift_driver_args),
+        ToolSubst(
+            '%target-swift-frontend', command=config.swiftc[:-1],
+            extra_args=(['-frontend'] + swift_args))
+    ]
+    llvm_config.add_tool_substitutions(tools)
+
     if sys.platform.startswith('netbsd'):
         # needed e.g. to use freshly built libc++
         flags += ['-L' + config.llvm_libs_dir,

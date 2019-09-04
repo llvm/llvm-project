@@ -98,6 +98,10 @@ public:
                                            Module *module);
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target *target,
+                                           const char *compiler_options);
+
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Target *target);
 
   // Free up any resources associated with this TypeSystem.  Done before
@@ -193,7 +197,8 @@ public:
 
   virtual bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                      CompilerType *target_type, // Can pass NULL
-                                     bool check_cplusplus, bool check_objc) = 0;
+                                     bool check_cplusplus, bool check_objc,
+                                     bool check_swift) = 0;
 
   virtual bool IsPointerType(lldb::opaque_compiler_type_t type,
                              CompilerType *pointee_type) = 0;
@@ -207,6 +212,15 @@ public:
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
 
+  // Check if the current module or target that was used to create this
+  // type system is compatible with the TypeSystem plug-in.
+  //
+  // Sometimes as languages are being developed the language can change
+  // and the version of the runtime information in a module is out of date
+  // with this type system. For such cases, languages can check and return
+  // an error.
+  virtual Status IsCompatible();
+
   // Type Completion
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
@@ -218,6 +232,16 @@ public:
   // Accessors
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
+
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  // \param sc  An optional symbol context of the function the type appears in.
+  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                         const SymbolContext *sc = nullptr);
+
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  virtual ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type);
 
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -237,6 +261,8 @@ public:
                                     uint64_t size);
 
   virtual CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) = 0;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype Returns a value >= 0 if there is a prototype.
@@ -279,6 +305,10 @@ public:
   virtual llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
+
+  virtual llvm::Optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type,
+                ExecutionContextScope *exe_scope) = 0;
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                                      uint64_t &count) = 0;
@@ -357,6 +387,9 @@ public:
   virtual llvm::Optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx);
 
+  virtual lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx);
+  virtual CompilerType GetGenericArgumentType(void *type, size_t idx);
+
   // Dumping types
 
 #ifndef NDEBUG
@@ -378,7 +411,8 @@ public:
                              lldb::offset_t data_offset, size_t data_byte_size,
                              uint32_t bitfield_bit_size,
                              uint32_t bitfield_bit_offset,
-                             ExecutionContextScope *exe_scope) = 0;
+                             ExecutionContextScope *exe_scope,
+                             bool is_base_class) = 0;
 
   virtual void
   DumpTypeDescription(lldb::opaque_compiler_type_t type) = 0; // Dump to stdout
@@ -429,6 +463,8 @@ public:
 
   // If the current object represents a typedef type, get the underlying type
   virtual CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsVectorType(lldb::opaque_compiler_type_t type,
                             CompilerType *element_type, uint64_t *size) = 0;
@@ -490,6 +526,11 @@ public:
   // meaningless type itself, instead preferring to use the dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
 
+  /// A TypeSystem may belong to more than one debugger, so it doesn't
+  /// have a way to communicate errors. This method can be called by a
+  /// process to tell the TypeSystem to send any diagnostics to the
+  /// process so they can be surfaced to the user.
+  virtual void DiagnoseWarnings(Process &process, Module &module) const;
 protected:
   const LLVMCastKind m_kind; // Support for llvm casting
   SymbolFile *m_sym_file;
@@ -498,7 +539,12 @@ protected:
 class TypeSystemMap {
 public:
   TypeSystemMap();
+  TypeSystemMap(const TypeSystemMap &rhs);
   ~TypeSystemMap();
+
+  // Clear calls Finalize on all the TypeSystems managed by this map, and then
+  // empties the map.
+  void operator=(const TypeSystemMap &rhs);
 
   // Clear calls Finalize on all the TypeSystems managed by this map, and then
   // empties the map.
@@ -508,13 +554,15 @@ public:
   // callback to keep iterating, false to stop iterating.
   void ForEach(std::function<bool(TypeSystem *)> const &callback);
 
+  void RemoveTypeSystemsForLanguage(lldb::LanguageType language);
+
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language, Module *module,
                            bool can_create);
 
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
-                           bool can_create);
+                           bool can_create, const char *compiler_options);
 
 protected:
   typedef std::map<lldb::LanguageType, lldb::TypeSystemSP> collection;

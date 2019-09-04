@@ -218,6 +218,11 @@ FileSpecList SymbolFileDWARF::GetSymlinkPaths() {
   return GetGlobalPluginProperties()->GetSymLinkPaths();
 }
 
+static inline bool IsSwiftLanguage(LanguageType language) {
+  return language == eLanguageTypePLI || language == eLanguageTypeSwift ||
+         ((uint32_t)language == (uint32_t)llvm::dwarf::DW_LANG_Swift);
+}
+
 void SymbolFileDWARF::Initialize() {
   LogChannelDWARF::Initialize();
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -911,8 +916,9 @@ bool SymbolFileDWARF::ParseImportedModules(
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (!dwarf_cu)
     return false;
-  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(
-          sc.comp_unit->GetLanguage()))
+  auto lang = sc.comp_unit->GetLanguage();
+  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) &&
+      !IsSwiftLanguage(lang))
     return false;
   UpdateExternalModuleListIfNeeded();
 
@@ -922,7 +928,8 @@ bool SymbolFileDWARF::ParseImportedModules(
 
   for (DWARFDIE child_die = die.GetFirstChild(); child_die;
        child_die = child_die.GetSibling()) {
-    if (child_die.Tag() != DW_TAG_imported_declaration)
+    if (child_die.Tag() != DW_TAG_imported_declaration &&
+        child_die.Tag() != DW_TAG_imported_module)
       continue;
 
     DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import);
@@ -2528,6 +2535,16 @@ size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
       m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
     }
   }
+
+  // Next search through the reachable Clang modules. This only applies for
+  // DWARF objects compiled with -gmodules that haven't been processed by
+  // dsymutil.
+  UpdateExternalModuleListIfNeeded();
+
+  for (const auto &pair : m_external_type_modules)
+    if (ModuleSP external_module_sp = pair.second)
+      num_matches +=
+          external_module_sp->FindTypes(pattern, languages, true, types);
   return num_matches;
 }
 
@@ -3004,6 +3021,135 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
   return type_sp;
 }
 
+bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
+                                       CompileUnit *cu) {
+  value.clear();
+
+  DWARFDebugInfo *debug_info = DebugInfo();
+
+  if (debug_info) {
+    const uint32_t num_compile_units = GetNumCompileUnits();
+
+    if (cu) {
+      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+
+      if (dwarf_cu) {
+        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+        if (die) {
+          const char *flags =
+              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+          if (flags) {
+            if (strstr(flags, option)) {
+              Args compiler_args(flags);
+
+              return compiler_args.GetOptionValueAsString(option, value);
+            }
+          }
+        }
+      }
+    } else {
+      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+        DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
+
+        if (dwarf_cu) {
+          const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+          if (die) {
+            const char *flags =
+                die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+            if (flags) {
+              if (strstr(flags, option)) {
+                Args compiler_args(flags);
+
+                return compiler_args.GetOptionValueAsString(option, value);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+int SymbolFileDWARF::GetCompileOptions(const char *option,
+                                       std::vector<std::string> &values,
+                                       CompileUnit *cu) {
+  DWARFDebugInfo *debug_info = DebugInfo();
+
+  if (debug_info) {
+    if (cu) {
+      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+
+      if (dwarf_cu) {
+        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+        if (die) {
+          const char *flags =
+              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+          if (flags) {
+            if (strstr(flags, option)) {
+              Args compiler_args(flags);
+
+              return compiler_args.GetOptionValuesAsStrings(option, values);
+            }
+          }
+        }
+      }
+    } else {
+      const uint32_t num_compile_units = GetNumCompileUnits();
+
+      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+        DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
+
+        if (dwarf_cu) {
+          const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+          if (die) {
+            const char *flags =
+                die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+            if (flags) {
+              if (strstr(flags, option)) {
+                Args compiler_args(flags);
+
+                return compiler_args.GetOptionValuesAsStrings(option, values);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+void SymbolFileDWARF::GetLoadedModules(lldb::LanguageType language,
+                                       lldb_private::FileSpecList &modules) {
+  ModuleSP module_sp(m_objfile_sp->GetModule());
+
+  if (IsSwiftLanguage(language)) {
+    const uint32_t num_cus = module_sp->GetNumCompileUnits();
+    for (uint32_t i = 0; i < num_cus; ++i) {
+      CompileUnit *cu = module_sp->GetCompileUnitAtIndex(i).get();
+      if (cu) {
+        const FileSpecList &files = cu->GetSupportFiles();
+        const size_t num_files = files.GetSize();
+        static ConstString g_swift_module_extension("swiftmodule");
+        for (uint32_t pass = 0; pass < 2; ++pass) {
+          for (size_t file_idx = 0; file_idx < num_files; ++file_idx) {
+            const FileSpec &file = files.GetFileSpecAtIndex(file_idx);
+            if (file.GetFileNameExtension() == g_swift_module_extension)
+              modules.AppendIfUnique(file);
+          }
+        }
+      }
+    }
+  }
+}
+
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
                                   bool *type_is_new_ptr) {
   if (!die)
@@ -3339,6 +3485,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         }
       }
 
+      if (tag == DW_TAG_variable && mangled &&
+          IsSwiftLanguage(sc.comp_unit->GetLanguage()))
+        mangled = NULL;
+
       const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
       const dw_tag_t parent_tag = die.GetParent().Tag();
       bool is_static_member =
@@ -3478,7 +3628,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           }
         } else {
-          if (location_is_const_value_data)
+          if (location_is_const_value_data &&
+              !IsSwiftLanguage(sc.comp_unit->GetLanguage()))
             scope = eValueTypeVariableStatic;
           else {
             scope = eValueTypeVariableLocal;

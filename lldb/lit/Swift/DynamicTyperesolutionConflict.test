@@ -1,0 +1,30 @@
+# REQUIRES: system-darwin
+# REQUIRES: rdar50667488
+
+# This testcase causes the scratch context to get destroyed by a
+# conflict that is triggered via dynamic type resolution. The conflict
+# is triggered by "frame variable" alone. The final "expr" command is
+# just there to test that after "fr var" has destroyed the scratch
+# context we can recover.
+
+# Unfortunately this test is extremely sensitive to the side effects
+# of the command interpreter and the debug info format, which is why
+# it is written as a LIT test.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/Dylib.swift -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/libDylib.dylib
+# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/Conflict.swift -Xcc -I%p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/hidden/Foo -emit-library -module-name Conflict -emit-module -Xlinker -install_name -Xlinker @executable_path/libConflict.dylib
+# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/main.swift -lDylib -lConflict -L%t -o a.out -Xcc -I%p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/hidden/Bar -I. -import-objc-header %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/bridging.h
+# RUN: %lldb a.out -s %s 2>&1 | FileCheck %s
+
+b Dylib.swift:9
+run
+target v foofoo
+p input
+p input
+
+# The {{ }} avoids accidentally matching the input script!
+# CHECK: {{Swift}} error in fallback scratch context
+# CHECK: {{This}} error message is displayed only once.
+# CHECK: (Dylib.LibraryProtocol) ${{R0}} =
+# CHECK: (Dylib.LibraryProtocol) ${{R2}} =

@@ -52,6 +52,15 @@ option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 
+# BEGIN SWIFT CODE
+option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
+
+if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
+  set(LLDB_SWIFTC ${LLVM_RUNTIME_OUTPUT_INTDIR}/swiftc CACHE STRING "Path to swift compiler")
+  set(LLDB_SWIFT_LIBS ${LLVM_LIBRARY_OUTPUT_INTDIR}/swift CACHE STRING "Path to swift libraries")
+endif()
+# END SWIFT CODE
+
 if(LLDB_BUILD_FRAMEWORK)
   if(NOT APPLE)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
@@ -260,6 +269,17 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
+if(NOT LLDB_BUILT_STANDALONE)
+  if (LLVM_EXTERNAL_SWIFT_SOURCE_DIR)
+    include_directories(${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/include)
+  else ()
+    include_directories(${CMAKE_SOURCE_DIR}/tools/swift/include)
+  endif ()
+  include_directories("${CMAKE_CURRENT_BINARY_DIR}/../swift/include")
+else ()
+  include_directories("${SWIFT_INCLUDE_DIRS}")
+endif()
+
 # Disable GCC warnings
 check_cxx_compiler_flag("-Wno-deprecated-declarations"
                         CXX_SUPPORTS_NO_DEPRECATED_DECLARATIONS)
@@ -387,7 +407,7 @@ if (APPLE)
        ${CORE_SERVICES_LIBRARY}
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
-  include_directories(${LIBXML2_INCLUDE_DIR})
+  include_directories(AFTER "${CMAKE_OSX_SYSROOT}/usr/include/libxml2")
 elseif(LIBXML2_FOUND AND LIBXML2_VERSION_STRING VERSION_GREATER 2.8)
   add_definitions( -DLIBXML2_DEFINED )
   list(APPEND system_libs ${LIBXML2_LIBRARIES})

@@ -114,7 +114,7 @@ class CPP11EnumTypesTestCase(TestBase):
         # Look up information about the 'DayType' enum type.
         # Check for correct display.
         self.expect("image lookup -t DayType", DATA_TYPES_DISPLAYED_CORRECTLY,
-                    patterns=['enum( struct| class) DayType {'],
+                    patterns=['enum( struct| class)? DayType {'],
                     substrs=['Monday',
                              'Tuesday',
                              'Wednesday',

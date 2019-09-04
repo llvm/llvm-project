@@ -877,9 +877,18 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           }
         } else if (valobj_sp->GetCompilerType().IsArrayType(
                        nullptr, nullptr, &is_incomplete_array)) {
-          // Pass false to dynamic_value here so we can tell the difference
-          // between no dynamic value and no member of this type...
-          child_valobj_sp = valobj_sp->GetChildAtIndex(child_index, true);
+          // BEGIN SWIFT MOD
+          // This is a workaround for value-providing synthetic
+          // children like the one used for Swift.Int.
+          if (!no_synth_child) {
+            ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
+            if (synthetic)
+              child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+          }
+          if (!child_valobj_sp)
+            child_valobj_sp = valobj_sp->GetChildAtIndex(child_index, true);
+          // END SWIFT MOD
+
           if (!child_valobj_sp && (is_incomplete_array || !no_synth_child))
             child_valobj_sp =
                 valobj_sp->GetSyntheticArrayMember(child_index, true);

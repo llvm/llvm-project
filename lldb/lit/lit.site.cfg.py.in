@@ -14,6 +14,7 @@ config.lldb_tools_dir = "@LLDB_TOOLS_DIR@"
 config.lldb_lit_tools_dir = r"@LLDB_LIT_TOOLS_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
+config.swiftc = "@LLDB_SWIFTC@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.lldb_bitness = 64 if @LLDB_IS_64_BITS@ else 32

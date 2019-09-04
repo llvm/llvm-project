@@ -8,6 +8,7 @@
 
 #include "lldb/Core/ValueObject.h"
 
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObjectCast.h"
@@ -28,6 +29,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
@@ -76,6 +78,13 @@ using namespace lldb_private;
 
 static user_id_t g_value_obj_uid = 0;
 
+static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
+  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
+             ? &valobj.GetExecutionContextRef()
+             : nullptr;
+}
+
+//----------------------------------------------------------------------
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
@@ -100,6 +109,8 @@ ValueObject::ValueObject(ValueObject &parent)
       m_did_calculate_complete_objc_class_type(false),
       m_is_synthetic_children_generated(
           parent.m_is_synthetic_children_generated) {
+  m_data.SetByteOrder(parent.GetDataExtractor().GetByteOrder());
+  m_data.SetAddressByteSize(parent.GetDataExtractor().GetAddressByteSize());
   m_manager->ManageObject(this);
 }
 
@@ -126,6 +137,14 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
       m_is_getting_summary(false),
       m_did_calculate_complete_objc_class_type(false),
       m_is_synthetic_children_generated(false) {
+  if (exe_scope) {
+    TargetSP target_sp(exe_scope->CalculateTarget());
+    if (target_sp) {
+      const ArchSpec &arch = target_sp->GetArchitecture();
+      m_data.SetByteOrder(arch.GetByteOrder());
+      m_data.SetAddressByteSize(arch.GetAddressByteSize());
+    }
+  }
   m_manager = new ValueObjectManager();
   m_manager->ManageObject(this);
 }
@@ -137,6 +156,15 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
   bool did_change_formats = false;
 
+  // Swift: Check whether the dynamic type system became stale.
+  if (m_dynamic_value) {
+    auto *dyn_val = static_cast<ValueObjectDynamicValue *>(m_dynamic_value);
+    if (dyn_val->DynamicValueTypeInfoNeedsUpdate()) {
+      dyn_val->SetNeedsUpdate();
+      SetNeedsUpdate();
+    }
+  }
+  
   if (update_format)
     did_change_formats = UpdateFormatsIfNeeded();
 
@@ -234,7 +262,8 @@ bool ValueObject::UpdateFormatsIfNeeded() {
 
   bool any_change = false;
 
-  if ((m_last_format_mgr_revision != DataVisualization::GetCurrentRevision())) {
+  if (GetCompilerType().IsValid() &&
+      (m_last_format_mgr_revision != DataVisualization::GetCurrentRevision())) {
     m_last_format_mgr_revision = DataVisualization::GetCurrentRevision();
     any_change = true;
 
@@ -294,6 +323,58 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
       if (m_override_type.IsValid())
         return m_override_type;
     }
+  }
+
+  std::vector<clang::NamedDecl *> decls;
+  CompilerType class_type;
+  bool is_pointer_type = false;
+  if (ClangASTContext::IsObjCObjectPointerType(compiler_type, &class_type))
+    is_pointer_type = true;
+  else if (ClangASTContext::IsObjCObjectOrInterfaceType(compiler_type))
+    class_type = compiler_type;
+  else
+    return compiler_type;
+
+  ConstString class_name(class_type.GetConstTypeName());
+  if (!class_name)
+    return compiler_type;
+
+  // try the modules
+  if (TargetSP target_sp = GetTargetSP()) {
+    if (auto clang_modules_decl_vendor =
+            target_sp->GetClangModulesDeclVendor()) {
+      if (clang_modules_decl_vendor->FindDecls(class_name, false,
+                                               UINT32_MAX, decls) > 0 &&
+          decls.size() > 0) {
+        CompilerType module_type =
+            ClangASTContext::GetTypeForDecl(decls.front());
+        m_override_type =
+            is_pointer_type ? module_type.GetPointerType() : module_type;
+      }
+
+      if (m_override_type.IsValid())
+        return m_override_type;
+    }
+  }
+
+  // then try the runtime
+  std::vector<CompilerDecl> compiler_decls;
+  auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp);
+  if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
+    if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
+                                  compiler_decls) > 0 &&
+        compiler_decls.size() > 0) {
+      auto *ctx = llvm::dyn_cast<ClangASTContext>(compiler_decls[0].GetTypeSystem());
+      if (ctx) {
+        CompilerType runtime_type =
+            ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
+        m_override_type =
+          is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
+      }
+    }
+
+    if (m_override_type.IsValid())
+      return m_override_type;
   }
   return compiler_type;
 }
@@ -526,6 +607,10 @@ ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
 
   std::vector<uint32_t> child_indexes;
   bool omit_empty_base_classes = true;
+
+  if (!GetCompilerType().IsValid())
+    return ValueObjectSP();
+
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
           name.GetCString(), omit_empty_base_classes, child_indexes);
@@ -1603,6 +1688,10 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
+ConstString ValueObject::GetMangledTypeName() {
+  return GetCompilerType().GetMangledTypeName();
+}
+
 ConstString ValueObject::GetTypeName() {
   return GetCompilerType().GetConstTypeName();
 }
@@ -1614,7 +1703,19 @@ ConstString ValueObject::GetQualifiedTypeName() {
 }
 
 LanguageType ValueObject::GetObjectRuntimeLanguage() {
-  return GetCompilerType().GetMinimumLanguage();
+  if (GetCompilerType().IsValid())
+    return GetCompilerType().GetMinimumLanguage();
+  return lldb::eLanguageTypeUnknown;
+}
+
+SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
+  lldb::TargetSP target_sp(GetTargetSP());
+  if (!target_sp)
+    return {};
+  Status error;
+  ExecutionContext ctx = GetExecutionContextRef().Lock(false);
+  auto *exe_scope = ctx.GetBestExecutionContextScope();
+  return target_sp->GetScratchSwiftASTContext(error, *exe_scope);
 }
 
 void ValueObject::AddSyntheticChild(ConstString key,
@@ -1658,7 +1759,7 @@ bool ValueObject::IsPossibleDynamicType() {
   if (process)
     return process->IsPossibleDynamicValue(*this);
   else
-    return GetCompilerType().IsPossibleDynamicType(nullptr, true, true);
+    return GetCompilerType().IsPossibleDynamicType(nullptr, true, true, true);
 }
 
 bool ValueObject::IsRuntimeSupportValue() {
@@ -2700,6 +2801,7 @@ void ValueObject::LogValueObject(Log *log,
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
+  auto swift_scratch_ctx_lock = SwiftASTContextLock(GetSwiftExeCtx(*this));
   ValueObjectPrinter printer(this, &s, options);
   printer.PrintValueObject();
 }
@@ -3241,9 +3343,16 @@ ValueObjectSP ValueObject::Persist() {
   if (!target_sp)
     return nullptr;
 
-  PersistentExpressionState *persistent_state =
-      target_sp->GetPersistentExpressionStateForLanguage(
-          GetPreferredDisplayLanguage());
+  PersistentExpressionState *persistent_state;
+  if (GetPreferredDisplayLanguage() == eLanguageTypeSwift) {
+    ExecutionContext ctx = GetExecutionContextRef().Lock(false);
+    auto *exe_scope = ctx.GetBestExecutionContextScope();
+    if (!exe_scope)
+      return nullptr;
+    persistent_state = target_sp->GetSwiftPersistentExpressionState(*exe_scope);
+  } else
+    persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
+        GetPreferredDisplayLanguage());
 
   if (!persistent_state)
     return nullptr;

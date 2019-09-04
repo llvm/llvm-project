@@ -73,6 +73,9 @@ public:
 
   lldb_private::FileSpec LocateExecutable(const char *basename) override;
 
+  static bool IsUnitTestExecutable(lldb_private::Module &module);
+  static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules);
+
   lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 

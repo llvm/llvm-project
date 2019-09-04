@@ -49,8 +49,11 @@ class ModuleListProperties : public Properties {
 public:
   ModuleListProperties();
 
+  bool GetUseDWARFImporter() const;
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(llvm::StringRef path);
+  SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
+  bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
 }; 
@@ -503,6 +506,8 @@ public:
   
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
+
+  void ClearModuleDependentCaches();
 
 protected:
   // Class typedefs.

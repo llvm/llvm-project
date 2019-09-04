@@ -15,6 +15,10 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
+
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-private.h"
+
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -757,17 +761,20 @@ bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(CompileUnit &compUnit) {
+  // If it comes from "<stdin>" then we should check it
+  static ConstString g_stdin_filename("<stdin>");
   bool in_cu_list =
-      m_cu_spec_list.FindFileIndex(0, compUnit, false) != UINT32_MAX;
+      (m_cu_spec_list.FindFileIndex(0, compUnit, false) != UINT32_MAX) ||
+      (compUnit.GetFilename() == g_stdin_filename);
   if (in_cu_list) {
     ModuleSP module_sp(compUnit.GetModule());
     if (module_sp) {
-      bool module_passes = SearchFilterByModuleList::ModulePasses(module_sp);
+      bool module_passes = ModulePasses(module_sp);
       return module_passes;
     } else
       return true;
-  } else
-    return false;
+  }
+  return false;
 }
 
 void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
@@ -784,7 +791,6 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   // filespec that passes.  Otherwise, we need to go through all modules and
   // find the ones that match the file name.
 
-  ModuleList matching_modules;
   const ModuleList &target_images = m_target_sp->GetImages();
   std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
 
@@ -792,7 +798,7 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   bool no_modules_in_filter = m_module_spec_list.GetSize() == 0;
   for (size_t i = 0; i < num_modules; i++) {
     lldb::ModuleSP module_sp = target_images.GetModuleAtIndexUnlocked(i);
-    if (no_modules_in_filter ||
+    if (no_modules_in_filter || ModulePasses(module_sp) ||
         m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) !=
             UINT32_MAX) {
       SymbolContext matchingContext(m_target_sp, module_sp);

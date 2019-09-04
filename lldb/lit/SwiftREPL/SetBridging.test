@@ -1,0 +1,84 @@
+// -*- mode: swift; -*-
+// Test formatters on bridged sets in the REPL.
+// REQUIRES: system-darwin
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=SET
+
+import Foundation
+
+// Baseline case: empty Set
+let s0: Set<Int> = []
+// DICT-LABEL: s0: Set<Int> = 0 values
+
+// All empty sets use the same type-punned storage class.
+let s0b = s0 as NSSet
+// DICT-LABEL: s0b: {{(__RawNativeSetStorage|__EmptySetSingleton)}} = 0 values
+
+// Baseline case: native Set of non-verbatim bridged elements
+let s1: Set<Int> = [1]
+// SET-LABEL: s1: Set<Int> = 1 value {
+// SET-NEXT:    [0] = 1
+// SET-NEXT:  }
+
+// Non-verbatim bridging from Swift to Objective-C
+let s1b = s1 as NSSet
+// SET-LABEL: s1b: _SwiftDeferredNSSet<Int> = 1 value {
+// SET-NEXT:    [0] = 1
+// SET-NEXT:  }
+
+// Baseline case: native Set of verbatim bridged elements
+let s2: Set<NSObject> = [NSNumber(value: 1)]
+// SET-LABEL: s2: Set<NSObject> = 1 value {
+// SET-NEXT:    [0] = Int64(1)
+// SET-NEXT:  }
+
+// Verbatim bridging from Swift to Objective-C
+let s2b = s2 as NSSet
+// SET-LABEL: s2b: {{(_HashableTypedNativeSetStorage|_SetStorage)}}<NSObject> = 1 value {
+// SET-NEXT:    [0] = Int64(1)
+// SET-NEXT:  }
+
+// Baseline case: NSSet
+let s3 = NSSet(array: [NSNumber(value: 1), NSNumber(value: 2)])
+// FIXME: NSSet's synthetic children formatters are currently broken.
+// DISABLED-SET-LABEL: s3: NSSet = 2 elements {
+// DISABLED-SET-NEXT:    [0] = Int64({{[12]}})
+// DISABLED-SET-NEXT:    [1] = Int64({{[12]}})
+// DISABLED-SET-NEXT:  }
+
+// Verbatim bridging from Objective-C to Swift
+let s3b = s3 as! Set<NSObject>
+// SET-LABEL: s3b: Set<NSObject> = 2 values {
+// SET-NEXT:    [0] = Int64({{[12]}})
+// SET-NEXT:    [1] = Int64({{[12]}})
+// SET-NEXT:  }
+
+// Non-verbatim bridging from Objective-C to Swift
+let s3b2 = s3 as! Set<Int>
+// SET-LABEL: s3b2: Set<Int> = 2 values {
+// SET-NEXT:    [0] = {{[12]}}
+// SET-NEXT:    [1] = {{[12]}}
+// SET-NEXT:  }
+
+// Test formatters in Objective-C context.
+
+// Empty singleton
+let s4 = NSArray(object: [] as Set<NSNumber> as NSSet)
+// SET-LABEL: s4: NSArray = 1 element {
+// SET-NEXT:    [0] = 0 values
+// SET-NEXT:  }
+
+// Verbatim bridging
+let s5 = NSArray(object: [1] as Set<NSNumber> as NSSet)
+// SET-LABEL: s5: NSArray = 1 element {
+// SET-NEXT:    [0] = 1 value {
+// SET-NEXT:      [0] = Int64(1)
+// SET-NEXT:    }
+// SET-NEXT:  }
+
+// Non-verbatim bridging
+let s6 = NSArray(object: [1] as Set<Int> as NSSet)
+// SET-LABEL: s6: NSArray = 1 element {
+// SET-NEXT:    [0] = 1 value {
+// SET-NEXT:      [0] = 1
+// SET-NEXT:    }
+// SET-NEXT:  }

@@ -40,6 +40,10 @@ public:
     return m_return_valobj_sp;
   }
 
+  bool IsReturnValueSwiftErrorValue() override {
+    return m_is_swift_error_value;
+  }
+
 protected:
   void SetFlagsToDefault() override {
     GetFlags().Set(ThreadPlanStepOut::s_default_flag_values);
@@ -58,6 +62,8 @@ private:
   StackID m_immediate_step_from_id;
   lldb::break_id_t m_return_bp_id;
   lldb::addr_t m_return_addr;
+  llvm::Optional<Value> m_swift_error_return;
+  bool m_swift_error_check_after_return;
   bool m_stop_others;
   lldb::ThreadPlanSP m_step_out_to_inline_plan_sp; // This plan implements step
                                                    // out to the real function
@@ -71,6 +77,7 @@ private:
   Function *m_immediate_step_from_function;
   std::vector<lldb::StackFrameSP> m_stepped_past_frames;
   lldb::ValueObjectSP m_return_valobj_sp;
+  bool m_is_swift_error_value;
   bool m_calculate_return_value;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(

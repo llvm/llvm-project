@@ -61,9 +61,14 @@ void ManualDWARFIndex::Index() {
   // parsed and remember this.  If no DIEs were parsed prior to this index
   // function call, we are going to want to clear the CU dies after we are
   // done indexing to make sure we don't pull in all DWARF dies, but we need
-  // to wait until all units have been indexed in case a DIE in one
-  // unit refers to another and the indexes accesses those DIEs.
-  TaskMapOverInt(0, units_to_index.size(), extract_fn);
+  // to wait until all compile units have been indexed in case a DIE in one
+  // compile unit refers to another and the indexes accesses those DIEs.
+  //----------------------------------------------------------------------
+  for (int i=0; i<units_to_index.size(); ++i) {
+     extract_fn(i);
+  }
+  // This call can deadlock because we are sometimes holding the module lock.
+  //TaskMapOverInt(0, units_to_index.size(), extract_fn);
 
   // Now create a task runner that can index each DWARF unit in a
   // separate thread so we can index quickly.

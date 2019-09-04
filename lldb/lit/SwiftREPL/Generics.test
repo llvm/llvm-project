@@ -1,0 +1,22 @@
+// Test that generics work in the REPL.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+class Foo<T,U> {
+  var t: T?
+  var u: U?
+  init() { t = nil; u = nil }
+  init(_ x: T, _ y: U) { t = x; u = y }
+}
+
+(Foo<String, Double>(), Foo<Double, String>(3.14, "hello"))
+// CHECK: $R0: (Foo<String, Double>, Foo<Double, String>) = {
+// CHECK-NEXT:   0 = {
+// CHECK-NEXT:     t = nil
+// CHECK-NEXT:     u = nil
+// CHECK-NEXT:   }
+// CHECK-NEXT:   1 = {
+// CHECK-NEXT:     t = 3.14{{[0-9]+}}
+// CHECK-NEXT:     u = "hello"
+// CHECK-NEXT:   }
+// CHECK-NEXT: }

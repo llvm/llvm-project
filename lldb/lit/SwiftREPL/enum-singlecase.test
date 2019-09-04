@@ -1,0 +1,8 @@
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+
+enum Foo: String {
+  case patatino
+}
+
+Foo(rawValue:"patatino")
+// CHECK: $R0: Foo? = patatino

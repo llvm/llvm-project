@@ -1,0 +1,16 @@
+// Basic sanity checking of the REPL.
+
+// RUN: %lldb --repl --repl-language swift | FileCheck %s --check-prefix=SWIFT
+// SWIFT: Welcome to {{.*}}Swift
+
+// RUN: %lldb --repl --repl-language c++ 2>&1 | FileCheck %s --check-prefix=CPP
+// CPP: error: couldn't find a REPL for c++
+
+// RUN: not %lldb --repl --repl-language patatino 2>&1 | FileCheck %s \
+// RUN:  --check-prefix=INVALID
+// INVALID: error: Unrecognized language name: "patatino"
+
+// RUN: echo '2 + 3' | %lldb --repl | FileCheck %s --check-prefix=INT
+// INT: Welcome to {{.*}}Swift
+// INT-NEXT: Type :help
+// INT-NEXT: $R0: Int = 5

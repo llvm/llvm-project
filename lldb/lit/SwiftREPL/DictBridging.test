@@ -1,0 +1,109 @@
+// -*- mode: swift; -*-
+// Test formatters on bridged dictionaries in the REPL.
+// REQUIRES: system-darwin
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=DICT
+
+import Foundation
+
+// Baseline case: empty Dictionary
+let d0: Dictionary<Int, Int> = [:]
+// DICT-LABEL: d0: [Int : Int] = 0 key/value pairs
+
+// All empty dictionaries use the same type-punned storage class.
+let d0b = d0 as NSDictionary
+// DICT-LABEL: d0b: {{(__RawNativeDictionaryStorage|__EmptyDictionarySingleton)}} = 0 key/value pairs
+
+// Baseline case: native Dictionary of non-verbatim bridged elements
+let d1: Dictionary<Int,Int> = [1:2]
+// DICT-LABEL: d1: [Int : Int] = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = 1
+// DICT-NEXT:      value = 2
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Non-verbatim bridging from Swift to Objective-C
+let d1b = d1 as NSDictionary
+// DICT-LABEL: d1b: _SwiftDeferredNSDictionary<Int, Int> = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = 1
+// DICT-NEXT:      value = 2
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Baseline case: native Dictionary of verbatim bridged elements
+let d2: Dictionary<NSObject,AnyObject> = [
+  NSNumber(value: 1): NSNumber(value: 2),
+]
+// DICT-LABEL: d2: [NSObject : AnyObject] = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = Int64(1)
+// DICT-NEXT:      value = Int64(2)
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Verbatim bridging from Swift to Objective-C
+let d2b = d2 as NSDictionary
+// DICT-LABEL: d2b: {{(_HashableTypedNativeDictionaryStorage|_DictionaryStorage)}}<NSObject, AnyObject> = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = Int64(1)
+// DICT-NEXT:      value = Int64(2)
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Baseline case: NSDictionary
+let d3 = NSDictionary(
+  object: NSNumber(value: 2),
+  forKey: NSNumber(value: 1)
+)
+// DICT-LABEL: d3: NSDictionary = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = Int64(1)
+// DICT-NEXT:      value = Int64(2)
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Verbatim bridging from Objective-C to Swift
+let d3b = d3 as! [NSObject: NSObject]
+// DICT-LABEL: d3b: [NSObject : NSObject] = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = Int64(1)
+// DICT-NEXT:      value = Int64(2)
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Non-verbatim bridging from Objective-C to Swift
+let d3b2 = d3 as! [Int: Int]
+// DICT-LABEL: d3b2: [Int : Int] = 1 key/value pair {
+// DICT-NEXT:    [0] = {
+// DICT-NEXT:      key = 1
+// DICT-NEXT:      value = 2
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Test formatters in Objective-C context.
+
+// Empty singleton
+let d4 = NSArray(object: [:] as [NSNumber: NSNumber] as NSDictionary)
+// DICT-LABEL: d4: NSArray = 1 element {
+// DICT-NEXT:    [0] = 0 key/value pairs
+// DICT-NEXT:  }
+
+// Verbatim bridging
+let d5 = NSArray(object: [1: 2] as [NSNumber: NSNumber] as NSDictionary)
+// DICT-LABEL: d5: NSArray = 1 element {
+// DICT-NEXT:    [0] = 1 key/value pair {
+// DICT-NEXT:      [0] = {
+// DICT-NEXT:        key = Int64(1)
+// DICT-NEXT:        value = Int64(2)
+// DICT-NEXT:      }
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Non-verbatim bridging
+let d6 = NSArray(object: [1: 2] as [Int: Int] as NSDictionary)
+// DICT-LABEL: d6: NSArray = 1 element {
+// DICT-NEXT:    [0] = 1 key/value pair {
+// DICT-NEXT:      [0] = (key = 1, value = 2)
+// DICT-NEXT:    }
+// DICT-NEXT:  }

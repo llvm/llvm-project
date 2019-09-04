@@ -140,6 +140,9 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-gnu-debugaltlink";
   case eSectionTypeOther:
     return "regular";
+
+  case eSectionTypeSwiftModules:
+    break;
   }
   return "unknown";
 }

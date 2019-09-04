@@ -992,7 +992,13 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_type_formatter_list_options);
+      static constexpr OptionDefinition g_option_table[] = {
+          // clang-format off
+            {LLDB_OPT_SET_1, false, "category-regex", 'w', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeName,     "Only show categories matching this filter."},
+            {LLDB_OPT_SET_2, false, "language",       'l', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeLanguage, "Only show the category for a specific language."}
+          // clang-format on
+      };
+      return llvm::ArrayRef<OptionDefinition>(g_option_table);
     }
 
     // Instance variables to hold the values for command options.

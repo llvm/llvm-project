@@ -1197,7 +1197,7 @@ Editline::Editline(const char *editline_name, FILE *input_file,
     if (term_fd != -1) {
       static std::mutex *g_init_terminal_fds_mutex_ptr = nullptr;
       static std::set<int> *g_init_terminal_fds_ptr = nullptr;
-      static llvm::once_flag g_once_flag;
+      static std::once_flag g_once_flag;
       llvm::call_once(g_once_flag, [&]() {
         g_init_terminal_fds_mutex_ptr =
             new std::mutex(); // NOTE: Leak to avoid C++ destructor chain issues
@@ -1388,7 +1388,8 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   interrupted = m_editor_status == EditorStatus::Interrupted;
   if (!interrupted) {
     // Save the completed entry in history before returning
-    m_history_sp->Enter(CombineLines(m_input_lines).c_str());
+    if (m_input_lines.size() > 1 || !m_input_lines[0].empty())
+      m_history_sp->Enter(CombineLines(m_input_lines).c_str());
 
     lines = GetInputAsStringList();
   }
