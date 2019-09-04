@@ -724,12 +724,14 @@ public:
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
     assert(IsSorted());
 #endif
-
-    if (!m_entries.empty()) {
-      for (const auto &entry : m_entries) {
-        if (entry.Contains(addr))
-          indexes.push_back(entry.data);
-      }
+    // Search the entries until the first entry that has a larger base address
+    // than `addr`. As m_entries is sorted by their base address, all following
+    // entries can't contain `addr` as their base address is already larger.
+    for (const auto &entry : m_entries) {
+      if (entry.Contains(addr))
+        indexes.push_back(entry.data);
+      else if (entry.GetRangeBase() > addr)
+        break;
     }
     return indexes.size();
   }
