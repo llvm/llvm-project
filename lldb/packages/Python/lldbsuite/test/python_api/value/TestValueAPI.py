@@ -169,6 +169,13 @@ class ValueAPITestCase(TestBase):
         self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex')))
                         == -526164208, 'sinthex == -526164208')
 
+        # Check value_iter works correctly.
+        for v in [
+                lldb.value(frame0.FindVariable('uinthex')),
+                lldb.value(frame0.FindVariable('sinthex'))
+        ]:
+            self.assertTrue(v)
+
         self.assertTrue(
             frame0.FindVariable('uinthex').GetValueAsUnsigned() == 3768803088,
             'unsigned uinthex == 3768803088')

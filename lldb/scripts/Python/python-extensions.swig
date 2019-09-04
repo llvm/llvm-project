@@ -946,12 +946,15 @@ class value_iter(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.index >= self.length:
             raise StopIteration()
         child_sbvalue = self.sbvalue.GetChildAtIndex(self.index)
         self.index += 1
         return value(child_sbvalue)
+
+    def next(self):
+        return self.__next__()
 
     def __init__(self,value):
         self.index = 0
