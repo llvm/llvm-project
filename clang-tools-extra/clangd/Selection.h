@@ -40,7 +40,6 @@
 
 namespace clang {
 namespace clangd {
-class ParsedAST;
 
 // A selection can partially or completely cover several AST nodes.
 // The SelectionTree contains nodes that are covered, and their parents.

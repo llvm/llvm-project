@@ -47,6 +47,8 @@
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
 #include "Logger.h"
+#include "ParsedAST.h"
+#include "Preamble.h"
 #include "Trace.h"
 #include "index/CanonicalIncludes.h"
 #include "clang/Frontend/CompilerInvocation.h"

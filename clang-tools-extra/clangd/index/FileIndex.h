@@ -15,10 +15,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
-#include "ClangdUnit.h"
 #include "Index.h"
 #include "MemIndex.h"
 #include "Merge.h"
+#include "Path.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Symbol.h"
 #include "clang/Lex/Preprocessor.h"
@@ -26,6 +26,7 @@
 
 namespace clang {
 namespace clangd {
+class ParsedAST;
 
 /// Select between in-memory index implementations, which have tradeoffs.
 enum class IndexType {

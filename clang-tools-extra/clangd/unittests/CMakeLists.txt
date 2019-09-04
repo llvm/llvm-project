@@ -28,7 +28,6 @@ add_unittest(ClangdUnitTests ClangdTests
   CancellationTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
-  ClangdUnitTests.cpp
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
   ContextTests.cpp
@@ -39,6 +38,7 @@ add_unittest(ClangdUnitTests ClangdTests
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
+  FindTargetTests.cpp
   FormattedStringTests.cpp
   FormatTests.cpp
   FSTests.cpp
@@ -49,6 +49,7 @@ add_unittest(ClangdUnitTests ClangdTests
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
+  ParsedASTTests.cpp
   PrintASTTests.cpp
   QualityTests.cpp
   RenameTests.cpp

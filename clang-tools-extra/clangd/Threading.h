@@ -14,6 +14,7 @@
 #include "llvm/ADT/Twine.h"
 #include <cassert>
 #include <condition_variable>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -116,6 +117,19 @@ private:
   mutable std::condition_variable TasksReachedZero;
   std::size_t InFlightTasks = 0;
 };
+
+/// Runs \p Action asynchronously with a new std::thread. The context will be
+/// propagated.
+template <typename T>
+std::future<T> runAsync(llvm::unique_function<T()> Action) {
+  return std::async(
+      std::launch::async,
+      [](llvm::unique_function<T()> &&Action, Context Ctx) {
+        WithContext WithCtx(std::move(Ctx));
+        return Action();
+      },
+      std::move(Action), Context::current().clone());
+}
 
 } // namespace clangd
 } // namespace clang

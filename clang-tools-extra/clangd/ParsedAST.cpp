@@ -1,4 +1,4 @@
-//===--- ClangdUnit.cpp ------------------------------------------*- C++-*-===//
+//===--- ParsedAST.cpp -------------------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangdUnit.h"
+#include "ParsedAST.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
@@ -53,13 +53,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
-                             const tooling::CompileCommand &RHS) {
-  // We don't check for Output, it should not matter to clangd.
-  return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
-         llvm::makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
-}
-
 template <class T> std::size_t getUsedBytes(const std::vector<T> &Vec) {
   return Vec.capacity() * sizeof(T);
 }
@@ -105,10 +98,9 @@ private:
   std::vector<Decl *> TopLevelDecls;
 };
 
-// CollectMainFileMacroExpansions and CollectMainFileMacros are two different
-// classes as CollectMainFileMacroExpansions is only used when building the AST
-// for the main file. CollectMainFileMacros is only used when building the
-// preamble.
+// This collects macro expansions in the main file.
+// (Contrast with CollectMainFileMacros in Preamble.cpp, which collects macro
+// *definitions* in the preamble region of the main file).
 class CollectMainFileMacroExpansions : public PPCallbacks {
   const SourceManager &SM;
   std::vector<SourceLocation> &MainFileMacroLocs;
@@ -125,83 +117,6 @@ public:
     if (!L.isMacroID() && isInsideMainFile(L, SM))
       MainFileMacroLocs.push_back(L);
   }
-};
-
-class CollectMainFileMacros : public PPCallbacks {
-public:
-  explicit CollectMainFileMacros(const SourceManager &SM,
-                                 std::vector<std::string> *Out)
-      : SM(SM), Out(Out) {}
-
-  void FileChanged(SourceLocation Loc, FileChangeReason,
-                   SrcMgr::CharacteristicKind, FileID Prev) {
-    InMainFile = SM.isWrittenInMainFile(Loc);
-  }
-
-  void MacroDefined(const Token &MacroName, const MacroDirective *MD) {
-    if (InMainFile)
-      MainFileMacros.insert(MacroName.getIdentifierInfo()->getName());
-  }
-
-  void EndOfMainFile() {
-    for (const auto &Entry : MainFileMacros)
-      Out->push_back(Entry.getKey());
-    llvm::sort(*Out);
-  }
-
-private:
-  const SourceManager &SM;
-  bool InMainFile = true;
-  llvm::StringSet<> MainFileMacros;
-  std::vector<std::string> *Out;
-};
-
-class CppFilePreambleCallbacks : public PreambleCallbacks {
-public:
-  CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
-      : File(File), ParsedCallback(ParsedCallback) {
-  }
-
-  IncludeStructure takeIncludes() { return std::move(Includes); }
-
-  std::vector<std::string> takeMainFileMacros() {
-    return std::move(MainFileMacros);
-  }
-
-  CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
-
-  void AfterExecute(CompilerInstance &CI) override {
-    if (!ParsedCallback)
-      return;
-    trace::Span Tracer("Running PreambleCallback");
-    ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(), CanonIncludes);
-  }
-
-  void BeforeExecute(CompilerInstance &CI) override {
-    addSystemHeadersMapping(&CanonIncludes, CI.getLangOpts());
-    SourceMgr = &CI.getSourceManager();
-  }
-
-  std::unique_ptr<PPCallbacks> createPPCallbacks() override {
-    assert(SourceMgr && "SourceMgr must be set at this point");
-    return std::make_unique<PPChainedCallbacks>(
-        collectIncludeStructureCallback(*SourceMgr, &Includes),
-        std::make_unique<CollectMainFileMacros>(*SourceMgr, &MainFileMacros));
-  }
-
-  CommentHandler *getCommentHandler() override {
-    IWYUHandler = collectIWYUHeaderMaps(&CanonIncludes);
-    return IWYUHandler.get();
-  }
-
-private:
-  PathRef File;
-  PreambleParsedCallback ParsedCallback;
-  IncludeStructure Includes;
-  CanonicalIncludes CanonIncludes;
-  std::vector<std::string> MainFileMacros;
-  std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
-  SourceManager *SourceMgr = nullptr;
 };
 
 // When using a preamble, only preprocessor events outside its bounds are seen.
@@ -585,16 +500,6 @@ const CanonicalIncludes &ParsedAST::getCanonicalIncludes() const {
   return CanonIncludes;
 }
 
-PreambleData::PreambleData(PrecompiledPreamble Preamble,
-                           std::vector<Diag> Diags, IncludeStructure Includes,
-                           std::vector<std::string> MainFileMacros,
-                           std::unique_ptr<PreambleFileStatusCache> StatCache,
-                           CanonicalIncludes CanonIncludes)
-    : Preamble(std::move(Preamble)), Diags(std::move(Diags)),
-      Includes(std::move(Includes)), MainFileMacros(std::move(MainFileMacros)),
-      StatCache(std::move(StatCache)), CanonIncludes(std::move(CanonIncludes)) {
-}
-
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
@@ -611,79 +516,6 @@ ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
   assert(this->Clang);
   assert(this->Action);
-}
-
-std::shared_ptr<const PreambleData>
-buildPreamble(PathRef FileName, CompilerInvocation &CI,
-              std::shared_ptr<const PreambleData> OldPreamble,
-              const tooling::CompileCommand &OldCompileCommand,
-              const ParseInputs &Inputs, bool StoreInMemory,
-              PreambleParsedCallback PreambleCallback) {
-  // Note that we don't need to copy the input contents, preamble can live
-  // without those.
-  auto ContentsBuffer =
-      llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds =
-      ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
-
-  if (OldPreamble &&
-      compileCommandsAreEqual(Inputs.CompileCommand, OldCompileCommand) &&
-      OldPreamble->Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
-                                     Inputs.FS.get())) {
-    vlog("Reusing preamble for file {0}", llvm::Twine(FileName));
-    return OldPreamble;
-  }
-  vlog("Preamble for file {0} cannot be reused. Attempting to rebuild it.",
-       FileName);
-
-  trace::Span Tracer("BuildPreamble");
-  SPAN_ATTACH(Tracer, "File", FileName);
-  StoreDiags PreambleDiagnostics;
-  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
-      CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
-                                          &PreambleDiagnostics, false);
-
-  // Skip function bodies when building the preamble to speed up building
-  // the preamble and make it smaller.
-  assert(!CI.getFrontendOpts().SkipFunctionBodies);
-  CI.getFrontendOpts().SkipFunctionBodies = true;
-  // We don't want to write comment locations into PCH. They are racy and slow
-  // to read back. We rely on dynamic index for the comments instead.
-  CI.getPreprocessorOpts().WriteCommentListToPCH = false;
-
-  CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
-  if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
-    log("Couldn't set working directory when building the preamble.");
-    // We proceed anyway, our lit-tests rely on results for non-existing working
-    // dirs.
-  }
-
-  llvm::SmallString<32> AbsFileName(FileName);
-  Inputs.FS->makeAbsolute(AbsFileName);
-  auto StatCache = std::make_unique<PreambleFileStatusCache>(AbsFileName);
-  auto BuiltPreamble = PrecompiledPreamble::Build(
-      CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
-      StatCache->getProducingFS(Inputs.FS),
-      std::make_shared<PCHContainerOperations>(), StoreInMemory,
-      SerializedDeclsCollector);
-
-  // When building the AST for the main file, we do want the function
-  // bodies.
-  CI.getFrontendOpts().SkipFunctionBodies = false;
-
-  if (BuiltPreamble) {
-    vlog("Built preamble of size {0} for file {1}", BuiltPreamble->getSize(),
-         FileName);
-    std::vector<Diag> Diags = PreambleDiagnostics.take();
-    return std::make_shared<PreambleData>(
-        std::move(*BuiltPreamble), std::move(Diags),
-        SerializedDeclsCollector.takeIncludes(),
-        SerializedDeclsCollector.takeMainFileMacros(), std::move(StatCache),
-        SerializedDeclsCollector.takeCanonicalIncludes());
-  } else {
-    elog("Could not build a preamble for file {0}", FileName);
-    return nullptr;
-  }
 }
 
 llvm::Optional<ParsedAST>
@@ -708,39 +540,6 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
       CompilerInvocationDiags, Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, FileName),
       std::move(VFS), Inputs.Index, Inputs.Opts);
-}
-
-SourceLocation getBeginningOfIdentifier(const ParsedAST &Unit,
-                                        const Position &Pos, const FileID FID) {
-  const ASTContext &AST = Unit.getASTContext();
-  const SourceManager &SourceMgr = AST.getSourceManager();
-  auto Offset = positionToOffset(SourceMgr.getBufferData(FID), Pos);
-  if (!Offset) {
-    log("getBeginningOfIdentifier: {0}", Offset.takeError());
-    return SourceLocation();
-  }
-
-  // GetBeginningOfToken(pos) is almost what we want, but does the wrong thing
-  // if the cursor is at the end of the identifier.
-  // Instead, we lex at GetBeginningOfToken(pos - 1). The cases are:
-  //  1) at the beginning of an identifier, we'll be looking at something
-  //  that isn't an identifier.
-  //  2) at the middle or end of an identifier, we get the identifier.
-  //  3) anywhere outside an identifier, we'll get some non-identifier thing.
-  // We can't actually distinguish cases 1 and 3, but returning the original
-  // location is correct for both!
-  SourceLocation InputLoc = SourceMgr.getComposedLoc(FID, *Offset);
-  if (*Offset == 0) // Case 1 or 3.
-    return SourceMgr.getMacroArgExpandedLocation(InputLoc);
-  SourceLocation Before = SourceMgr.getComposedLoc(FID, *Offset - 1);
-
-  Before = Lexer::GetBeginningOfToken(Before, SourceMgr, AST.getLangOpts());
-  Token Tok;
-  if (Before.isValid() &&
-      !Lexer::getRawToken(Before, Tok, SourceMgr, AST.getLangOpts(), false) &&
-      Tok.is(tok::raw_identifier))
-    return SourceMgr.getMacroArgExpandedLocation(Before); // Case 2.
-  return SourceMgr.getMacroArgExpandedLocation(InputLoc); // Case 1 or 3.
 }
 
 } // namespace clangd

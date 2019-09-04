@@ -31,6 +31,8 @@ class N {};
 template <int T> class P {};
 const int Constant = 0;
 
+template <typename T> class Q {};
+
 class Base {
  public:
   void f();
@@ -169,6 +171,8 @@ using n::N;
 using n::Constant;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'Constant' is unused
 
+using n::Q;
+
 // ----- Usages -----
 void f(B b);
 void g() {
@@ -202,3 +206,8 @@ template void h(n::M<N>* t);
 template <int T>
 void i(n::P<T>* t) {}
 template void i(n::P<Constant>* t);
+
+template <typename T, template <typename> class U> class Bar {};
+// We used to report Q unsued, because we only checked the first template
+// argument.
+Bar<int, Q> *bar;

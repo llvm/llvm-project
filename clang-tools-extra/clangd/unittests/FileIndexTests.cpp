@@ -8,8 +8,8 @@
 
 #include "AST.h"
 #include "Annotations.h"
-#include "ClangdUnit.h"
 #include "Compiler.h"
+#include "ParsedAST.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
