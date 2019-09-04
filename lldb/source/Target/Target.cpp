@@ -3789,6 +3789,12 @@ bool TargetProperties::GetEnableSyntheticValue() const {
       nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
+uint32_t TargetProperties::GetMaxZeroPaddingInFloatFormat() const {
+  const uint32_t idx = ePropertyMaxZeroPaddingInFloatFormat;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
 uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenCount;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(

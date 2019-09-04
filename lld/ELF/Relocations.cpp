@@ -697,7 +697,7 @@ static std::vector<UndefinedDiag> undefs;
 static const Symbol *getAlternativeSpelling(const Undefined &sym) {
   // Build a map of local defined symbols.
   DenseMap<StringRef, const Symbol *> map;
-  if (sym.file) {
+  if (sym.file && !isa<SharedFile>(sym.file)) {
     for (const Symbol *s : sym.file->getSymbols())
       if (s->isLocal() && s->isDefined())
         map.try_emplace(s->getName(), s);
