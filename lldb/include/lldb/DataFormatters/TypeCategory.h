@@ -26,7 +26,7 @@ namespace lldb_private {
 template <typename FormatterImpl> class FormatterContainerPair {
 public:
   typedef FormattersContainer<ConstString, FormatterImpl> ExactMatchContainer;
-  typedef FormattersContainer<lldb::RegularExpressionSP, FormatterImpl>
+  typedef FormattersContainer<RegularExpression, FormatterImpl>
       RegexMatchContainer;
 
   typedef typename ExactMatchContainer::MapType ExactMatchMap;
