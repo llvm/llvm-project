@@ -77,7 +77,7 @@ public:
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive);
+  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
 private:
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
@@ -124,7 +124,8 @@ private:
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
 
-  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive);
+  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
+                 bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);
 
