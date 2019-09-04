@@ -3,10 +3,8 @@
 #ifndef _SPBAG_H
 #define _SPBAG_H
 
-#include <assert.h>
-#include <stdint.h>
-
 #include <cstdio>
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 #include <inttypes.h>

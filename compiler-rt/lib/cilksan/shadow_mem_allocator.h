@@ -31,11 +31,11 @@
 // Constants for the memory-access-line allocator.
 //
 // System-page size.
-const unsigned SYS_PAGE_SIZE = 4096;
+static constexpr unsigned SYS_PAGE_SIZE = 4096;
 // Mask to get sub-system-page portion of a memory address.
-const uintptr_t SYS_PAGE_DATA_MASK = SYS_PAGE_SIZE - 1;
+static constexpr uintptr_t SYS_PAGE_DATA_MASK = SYS_PAGE_SIZE - 1;
 // Mask to get the system page of a memory address.
-const uintptr_t SYS_PAGE_MASK = ~SYS_PAGE_DATA_MASK;
+static constexpr uintptr_t SYS_PAGE_MASK = ~SYS_PAGE_DATA_MASK;
 
 // Helper macro to get the size of a struct field.
 #define member_size(type, member) sizeof(((type *)0)->member)

@@ -41,10 +41,7 @@ long PBag_t::debug_count = 0;
 #endif
 
 void free_bag(DisjointSet_t<SPBagInterface *> *ptr) {
-  // TODO(ddoucet): ......
   delete ptr->get_node();
-  // TODO(denizokt): temporary fix, but introduces memory leak
-  // delete ptr->get_my_set_node();
 }
 
 template<>

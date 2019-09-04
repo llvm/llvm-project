@@ -101,7 +101,8 @@ public:
     sp_stack.pop();
     DBG_TRACE(DEBUG_BASIC, "pop_stack_frame %p--%p\n", high_stack, low_stack);
     assert(low_stack <= high_stack);
-    // Clear shadow memory of stack locations.
+    // Clear shadow memory of stack locations.  This seems to be necessary right
+    // now, in order to handle functions that dynamically allocate stack memory.
     // if (high_stack != low_stack) {
       clear_shadow_memory(low_stack, high_stack - low_stack + 1);
       clear_alloc(low_stack, high_stack - low_stack + 1);

@@ -13,9 +13,9 @@
 #include "shadow_mem_allocator.h"
 
 extern CilkSanImpl_t CilkSanImpl;
-const unsigned ReadMAAllocator = 0;
-const unsigned WriteMAAllocator = 1;
-const unsigned AllocMAAllocator = 2;
+static const unsigned ReadMAAllocator = 0;
+static const unsigned WriteMAAllocator = 1;
+static const unsigned AllocMAAllocator = 2;
 
 // A simple dictionary implementation that uses a two-level table structure.
 // The table structure involves a table of pages, where each page represents a
@@ -32,25 +32,25 @@ class SimpleDictionary {
 private:
   // Constant parameters for the table structure.
   // log_2 of bytes per line.
-  static const unsigned LG_LINE_SIZE = 3;
+  static constexpr unsigned LG_LINE_SIZE = 3;
   // log_2 of lines per page.
-  static const unsigned LG_PAGE_SIZE = 24 - LG_LINE_SIZE;
+  static constexpr unsigned LG_PAGE_SIZE = 24 - LG_LINE_SIZE;
   // log_2 of number of pages in the top-level table.
-  static const unsigned LG_TABLE_SIZE = 48 - LG_PAGE_SIZE - LG_LINE_SIZE;
+  static constexpr unsigned LG_TABLE_SIZE = 48 - LG_PAGE_SIZE - LG_LINE_SIZE;
 
   // Bytes per line.
-  static const uintptr_t LINE_SIZE = (1 << LG_LINE_SIZE);
+  static constexpr uintptr_t LINE_SIZE = (1 << LG_LINE_SIZE);
   // Low-order bit of address identifying the page.
-  static const uintptr_t PAGE_OFF = (1 << (LG_PAGE_SIZE + LG_LINE_SIZE));
+  static constexpr uintptr_t PAGE_OFF = (1 << (LG_PAGE_SIZE + LG_LINE_SIZE));
 
   // Mask to identify the byte within a line.
-  static const uintptr_t BYTE_MASK = (LINE_SIZE - 1);
+  static constexpr uintptr_t BYTE_MASK = (LINE_SIZE - 1);
   // Mask to identify the line.
-  static const uintptr_t LINE_MASK = ~BYTE_MASK;
+  static constexpr uintptr_t LINE_MASK = ~BYTE_MASK;
   // Mask to identify the page.
-  static const uintptr_t PAGE_MASK = ~(PAGE_OFF - 1);
+  static constexpr uintptr_t PAGE_MASK = ~(PAGE_OFF - 1);
   // Mask to identify the index of a line in a page.
-  static const uintptr_t LINE_IDX_MASK = LINE_MASK ^ PAGE_MASK;
+  static constexpr uintptr_t LINE_IDX_MASK = LINE_MASK ^ PAGE_MASK;
 
   // Helper methods to get the indices into the dictionary from a given address.
   // We used these helper methods, rather than a bitfiled struct, because the
