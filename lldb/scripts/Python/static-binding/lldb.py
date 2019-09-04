@@ -731,7 +731,6 @@ eGdbSignalSoftware = _lldb.eGdbSignalSoftware
 eGdbSignalBreakpoint = _lldb.eGdbSignalBreakpoint
 ePathTypeLLDBShlibDir = _lldb.ePathTypeLLDBShlibDir
 ePathTypeSupportExecutableDir = _lldb.ePathTypeSupportExecutableDir
-ePathTypeSupportFileDir = _lldb.ePathTypeSupportFileDir
 ePathTypeHeaderDir = _lldb.ePathTypeHeaderDir
 ePathTypePythonDir = _lldb.ePathTypePythonDir
 ePathTypeLLDBSystemPlugins = _lldb.ePathTypeLLDBSystemPlugins

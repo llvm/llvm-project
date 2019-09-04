@@ -82270,7 +82270,6 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eGdbSignalBreakpoint",SWIG_From_int(static_cast< int >(lldb::eGdbSignalBreakpoint)));
   SWIG_Python_SetConstant(d, "ePathTypeLLDBShlibDir",SWIG_From_int(static_cast< int >(lldb::ePathTypeLLDBShlibDir)));
   SWIG_Python_SetConstant(d, "ePathTypeSupportExecutableDir",SWIG_From_int(static_cast< int >(lldb::ePathTypeSupportExecutableDir)));
-  SWIG_Python_SetConstant(d, "ePathTypeSupportFileDir",SWIG_From_int(static_cast< int >(lldb::ePathTypeSupportFileDir)));
   SWIG_Python_SetConstant(d, "ePathTypeHeaderDir",SWIG_From_int(static_cast< int >(lldb::ePathTypeHeaderDir)));
   SWIG_Python_SetConstant(d, "ePathTypePythonDir",SWIG_From_int(static_cast< int >(lldb::ePathTypePythonDir)));
   SWIG_Python_SetConstant(d, "ePathTypeLLDBSystemPlugins",SWIG_From_int(static_cast< int >(lldb::ePathTypeLLDBSystemPlugins)));
