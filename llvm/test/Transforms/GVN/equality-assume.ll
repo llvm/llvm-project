@@ -6,7 +6,7 @@ define i32 @test(i32* %p, i32 %v) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[LOAD]], [[V:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %load = load i32, i32* %p
   %c = icmp eq i32 %load, %v
@@ -27,8 +27,9 @@ define i32 @reverse(i32* %p, i32 %v) {
   ret i32 %v
 }
 
-define float @float_oeq(float* %p, float %v) {
-; CHECK-LABEL: @float_oeq(
+; Lack of equivalance due to +0.0 vs -0.0
+define float @neg_float_oeq(float* %p, float %v) {
+; CHECK-LABEL: @neg_float_oeq(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[LOAD]], [[V:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
@@ -40,8 +41,9 @@ define float @float_oeq(float* %p, float %v) {
   ret float %load
 }
 
-define float @float_ueq(float* %p, float %v) {
-; CHECK-LABEL: @float_ueq(
+; Lack of equivalance due to +0.0 vs -0.0
+define float @neg_float_ueq(float* %p, float %v) {
+; CHECK-LABEL: @neg_float_ueq(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = fcmp ueq float [[LOAD]], [[V:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
@@ -66,8 +68,9 @@ define float @float_oeq_constant(float* %p) {
   ret float %load
 }
 
-define float @float_ueq_constant(float* %p) {
-; CHECK-LABEL: @float_ueq_constant(
+; Lack of equivalance due to Nan
+define float @neq_float_ueq_constant(float* %p) {
+; CHECK-LABEL: @neq_float_ueq_constant(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = fcmp ueq float [[LOAD]], 5.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
@@ -79,12 +82,25 @@ define float @float_ueq_constant(float* %p) {
   ret float %load
 }
 
+define float @float_ueq_constant_nnas(float* %p) {
+; CHECK-LABEL: @float_ueq_constant_nnas(
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[P:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp nnan ueq float [[LOAD]], 5.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret float 5.000000e+00
+;
+  %load = load float, float* %p
+  %c = fcmp nnan ueq float %load, 5.0
+  call void @llvm.assume(i1 %c)
+  ret float %load
+}
+
 define i32 @test2(i32* %p, i32 %v) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[LOAD]], [[V:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %load = load i32, i32* %p
   %c = icmp eq i32 %load, %v
@@ -92,8 +108,6 @@ define i32 @test2(i32* %p, i32 %v) {
   %load2 = load i32, i32* %p
   ret i32 %load2
 }
-
-
 
 define i32 @test3(i32* %p, i32 %v) {
 ; CHECK-LABEL: @test3(

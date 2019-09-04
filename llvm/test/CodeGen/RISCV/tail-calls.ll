@@ -47,14 +47,14 @@ entry:
   ret void
 }
 
-; Do not tail call optimize functions with varargs.
+; Do not tail call optimize functions with varargs passed by stack.
 declare i32 @callee_varargs(i32, ...)
 define void @caller_varargs(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: caller_varargs
 ; CHECK-NOT: tail callee_varargs
 ; CHECK: call callee_varargs
 entry:
-  %call = tail call i32 (i32, ...) @callee_varargs(i32 %a, i32 %b, i32 %b, i32 %a)
+  %call = tail call i32 (i32, ...) @callee_varargs(i32 %a, i32 %b, i32 %b, i32 %a, i32 %a, i32 %b, i32 %b, i32 %a, i32 %a)
   ret void
 }
 

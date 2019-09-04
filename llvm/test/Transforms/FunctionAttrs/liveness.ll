@@ -15,7 +15,7 @@ declare i32 @bar() nosync readnone
 ; This internal function has no live call sites, so all its BBs are considered dead,
 ; and nothing should be deduced for it.
 
-; CHECK: define internal i32 @dead_internal_func(i32 %0)
+; CHECK-NOT: define internal i32 @dead_internal_func(i32 %0)
 define internal i32 @dead_internal_func(i32 %0) {
   %2 = icmp slt i32 %0, 1
   br i1 %2, label %3, label %5
@@ -40,7 +40,7 @@ define i32 @volatile_load(i32*) norecurse nounwind uwtable {
 }
 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn
-; CHECK-NEXT: define internal i32 @internal_load(i32* nonnull %0)
+; CHECK-NEXT: define internal i32 @internal_load(i32* nocapture nonnull %0)
 define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
   %2 = load i32, i32* %0, align 4
   ret i32 %2
@@ -48,22 +48,21 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 ; TEST 1: Only first block is live.
 
 ; CHECK: Function Attrs: nofree noreturn nosync nounwind
-; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2)
+; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nonnull %ptr1, i32* nocapture %ptr2)
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:
   call i32 @internal_load(i32* %ptr1)
-  ; CHECK: call i32 @internal_load(i32* nonnull %ptr1)
+  ; CHECK: call i32 @internal_load(i32* nocapture nonnull %ptr1)
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
+  ; CHECK-NEXT: }
   call i32 @dead_internal_func(i32 10)
-  ; CHECK call i32 undef(i32 10)
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %cond.true, label %cond.false
 
 cond.true:                                        ; preds = %entry
   call i32 @internal_load(i32* %ptr2)
-  ; CHECK: call i32 @internal_load(i32* %ptr2)
   %load = call i32 @volatile_load(i32* %ptr1)
   call void @normal_call()
   %call = call i32 @foo()
@@ -85,7 +84,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; dead block and check if it is deduced.
 
 ; CHECK: Function Attrs: nosync
-; CHECK-NEXT: define i32 @dead_block_present(i32 %a, i32* %ptr1)
+; CHECK-NEXT: define i32 @dead_block_present(i32 %a, i32* nocapture %ptr1)
 define i32 @dead_block_present(i32 %a, i32* %ptr1) #0 {
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -104,6 +103,8 @@ cond.false:                                       ; preds = %entry
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
+; CHECK:      cond.end:
+; CHECK-NEXT:   ret i32 %call1
   %cond = phi i32 [ %call, %cond.true ], [ %call1, %cond.false ]
   ret i32 %cond
 }
@@ -120,7 +121,7 @@ cond.true:                                        ; preds = %entry
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
   call i32 @dead_internal_func(i32 10)
-  ; CHECK call i32 undef(i32 10)
+  ; CHECK-NOT: call
   %call = call i32 @foo()
   br label %cond.end
 
@@ -129,7 +130,7 @@ cond.false:                                       ; preds = %entry
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
   call i32 @dead_internal_func(i32 10)
-  ; CHECK call i32 undef(i32 10)
+  ; CHECK-NEXT: }
   %call1 = call i32 @bar()
   br label %cond.end
 
@@ -215,9 +216,7 @@ cond.true:                                        ; preds = %entry
   ; CHECK-NEXT: call i32 @foo_noreturn_nounwind()
   ; CHECK-NEXT: unreachable
 
-  ; We keep the invoke around as other attributes might have references to it.
-  ; CHECK:       cond.true.split:                                  ; No predecessors!
-  ; CHECK-NEXT:      invoke i32 @foo_noreturn_nounwind()
+  ; CHECK-NOT:      @foo_noreturn_nounwind()
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()
@@ -240,7 +239,7 @@ cleanup:
 ; TEST 6: Undefined behvior, taken from LangRef.
 ; FIXME: Should be able to detect undefined behavior.
 
-; CHECK: define void @ub(i32* %0)
+; CHECK: define void @ub(i32* nocapture %0)
 define void @ub(i32* %0) {
   %poison = sub nuw i32 0, 1           ; Results in a poison value.
   %still_poison = and i32 %poison, 0   ; 0, but also poison.

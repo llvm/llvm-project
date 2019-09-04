@@ -22,19 +22,9 @@ public:
                      std::unique_ptr<MCObjectWriter> OW)
       : MCWinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW)) {}
 
-  void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitThumbFunc(MCSymbol *Symbol) override;
   void FinishImpl() override;
 };
-
-void ARMWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  default: llvm_unreachable("not implemented");
-  case MCAF_SyntaxUnified:
-  case MCAF_Code16:
-    break;
-  }
-}
 
 void ARMWinCOFFStreamer::EmitThumbFunc(MCSymbol *Symbol) {
   getAssembler().setIsThumbFunc(Symbol);

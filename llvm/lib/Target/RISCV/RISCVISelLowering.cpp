@@ -1946,7 +1946,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
 
   auto &Callee = CLI.Callee;
   auto CalleeCC = CLI.CallConv;
-  auto IsVarArg = CLI.IsVarArg;
   auto &Outs = CLI.Outs;
   auto &Caller = MF.getFunction();
   auto CallerCC = Caller.getCallingConv();
@@ -1961,10 +1960,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   // TODO: The "interrupt" attribute isn't currently defined by RISC-V. This
   // should be expanded as new function attributes are introduced.
   if (Caller.hasFnAttribute("interrupt"))
-    return false;
-
-  // Do not tail call opt functions with varargs.
-  if (IsVarArg)
     return false;
 
   // Do not tail call opt if the stack is used to pass parameters.

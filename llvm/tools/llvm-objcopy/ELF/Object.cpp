@@ -1869,7 +1869,7 @@ static void orderSegments(std::vector<Segment *> &Segments) {
 }
 
 // This function finds a consistent layout for a list of segments starting from
-// an Offset. It assumes that Segments have been sorted by OrderSegments and
+// an Offset. It assumes that Segments have been sorted by orderSegments and
 // returns an Offset one past the end of the last segment.
 static uint64_t layoutSegments(std::vector<Segment *> &Segments,
                                uint64_t Offset) {
@@ -2139,7 +2139,7 @@ Error BinaryWriter::finalize() {
   llvm::stable_sort(OrderedSegments, compareSegmentsByPAddr);
 
   // Because we add a ParentSegment for each section we might have duplicate
-  // segments in OrderedSegments. If there were duplicates then LayoutSegments
+  // segments in OrderedSegments. If there were duplicates then layoutSegments
   // would do very strange things.
   auto End =
       std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
@@ -2167,9 +2167,9 @@ Error BinaryWriter::finalize() {
     }
   }
 
-  // TODO: generalize LayoutSections to take a range. Pass a special range
+  // TODO: generalize layoutSections to take a range. Pass a special range
   // constructed from an iterator that skips values for which a predicate does
-  // not hold. Then pass such a range to LayoutSections instead of constructing
+  // not hold. Then pass such a range to layoutSections instead of constructing
   // AllocatedSections here.
   std::vector<SectionBase *> AllocatedSections;
   for (SectionBase &Section : Obj.sections())
@@ -2179,7 +2179,7 @@ Error BinaryWriter::finalize() {
 
   // Now that every section has been laid out we just need to compute the total
   // file size. This might not be the same as the offset returned by
-  // LayoutSections, because we want to truncate the last segment to the end of
+  // layoutSections, because we want to truncate the last segment to the end of
   // its last section, to match GNU objcopy's behaviour.
   TotalSize = 0;
   for (SectionBase *Section : AllocatedSections)

@@ -1,6 +1,11 @@
 // RUN: %clang_cc1 -verify %s
 // REQUIRES: thread_support
 
+// FIXME: Detection of, or recovery from, stack exhaustion does not work on
+// NetBSD at the moment. Since this is a best-effort mitigation for exceeding
+// implementation limits, just disable the test.
+// UNSUPPORTED: system-netbsd
+
 // expected-warning@* 0-1{{stack nearly exhausted}}
 // expected-note@* 0+{{}}
 

@@ -240,11 +240,29 @@ void LegalizerHelper::insertParts(Register DstReg,
 static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   switch (Opcode) {
   case TargetOpcode::G_SDIV:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::SDIV_I64 : RTLIB::SDIV_I32;
+    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
+    switch (Size) {
+    case 32:
+      return RTLIB::SDIV_I32;
+    case 64:
+      return RTLIB::SDIV_I64;
+    case 128:
+      return RTLIB::SDIV_I128;
+    default:
+      llvm_unreachable("unexpected size");
+    }
   case TargetOpcode::G_UDIV:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::UDIV_I64 : RTLIB::UDIV_I32;
+    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
+    switch (Size) {
+    case 32:
+      return RTLIB::UDIV_I32;
+    case 64:
+      return RTLIB::UDIV_I64;
+    case 128:
+      return RTLIB::UDIV_I128;
+    default:
+      llvm_unreachable("unexpected size");
+    }
   case TargetOpcode::G_SREM:
     assert((Size == 32 || Size == 64) && "Unsupported size");
     return Size == 64 ? RTLIB::SREM_I64 : RTLIB::SREM_I32;

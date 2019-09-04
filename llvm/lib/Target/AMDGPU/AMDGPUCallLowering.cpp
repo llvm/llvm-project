@@ -64,8 +64,9 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
   bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info,
+                 ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+    return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
   }
 };
 

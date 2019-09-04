@@ -29,6 +29,17 @@ define i8* @return_noalias(){
   ret i8* %1
 }
 
+define void @nocapture(i8* %a){
+  ret void
+}
+
+; CHECK: define noalias i8* @return_noalias_looks_like_capture()
+define i8* @return_noalias_looks_like_capture(){
+  %1 = tail call noalias i8* @malloc(i64 4)
+  call void @nocapture(i8* %1)
+  ret i8* %1
+}
+
 declare i8* @alias()
 
 ; TEST 3
@@ -142,7 +153,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 ; TEST 9
 ; Simple Argument Test
 define internal void @test9(i8* %a, i8* %b) {
-; CHECK: define internal void @test9(i8* noalias %a, i8* %b)
+; CHECK: define internal void @test9(i8* noalias nocapture %a, i8* nocapture %b)
   ret void
 }
 define void @test9_helper(i8* %a, i8* %b) {

@@ -117,6 +117,11 @@ static cl::opt<bool> DisableAttributor(
     cl::desc("Disable the attributor inter-procedural deduction pass."),
     cl::init(true));
 
+static cl::opt<bool> ManifestInternal(
+    "attributor-manifest-internal", cl::Hidden,
+    cl::desc("Manifest Attributor internal string attributes."),
+    cl::init(false));
+
 static cl::opt<bool> VerifyAttributor(
     "attributor-verify", cl::Hidden,
     cl::desc("Verify the Attributor deduction and "
@@ -1760,19 +1765,13 @@ struct AANoAliasReturned final : AANoAliasImpl {
       if (!ICS)
         return false;
 
-      const auto &NoAliasAA =
-          A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(ICS));
+      const IRPosition &RVPos = IRPosition::value(RV);
+      const auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, RVPos);
       if (!NoAliasAA.isAssumedNoAlias())
         return false;
 
-      /// FIXME: We can improve capture check in two ways:
-      /// 1. Use the AANoCapture facilities.
-      /// 2. Use the location of return insts for escape queries.
-      if (PointerMayBeCaptured(&RV, /* ReturnCaptures */ false,
-                               /* StoreCaptures */ true))
-        return false;
-
-      return true;
+      const auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, RVPos);
+      return NoCaptureAA.isAssumedNoCaptureMaybeReturned();
     };
 
     if (!A.checkForAllReturnedValues(CheckReturnValue, *this))
@@ -1869,7 +1868,7 @@ struct AAIsDeadImpl : public AAIsDead {
     Function &F = *getAssociatedFunction();
 
     if (AssumedLiveBlocks.empty()) {
-      F.replaceAllUsesWith(UndefValue::get(F.getType()));
+      A.deleteAfterManifest(F);
       return ChangeStatus::CHANGED;
     }
 
@@ -1919,6 +1918,9 @@ struct AAIsDeadImpl : public AAIsDead {
             }
           }
         }
+
+        if (SplitPos == &NormalDestBB->front())
+          AssumedLiveBlocks.insert(NormalDestBB);
       }
 
       BB = SplitPos->getParent();
@@ -1926,6 +1928,10 @@ struct AAIsDeadImpl : public AAIsDead {
       changeToUnreachable(BB->getTerminator(), /* UseLLVMTrap */ false);
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    for (BasicBlock &BB : F)
+      if (!AssumedLiveBlocks.count(&BB))
+        A.deleteAfterManifest(BB);
 
     return HasChanged;
   }
@@ -2585,6 +2591,347 @@ struct AANoReturnCallSite final : AANoReturnImpl {
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noreturn); }
 };
 
+/// ----------------------- Variable Capturing ---------------------------------
+
+/// A class to hold the state of for no-capture attributes.
+struct AANoCaptureImpl : public AANoCapture {
+  AANoCaptureImpl(const IRPosition &IRP) : AANoCapture(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    if (hasAttr(Attribute::NoCapture)) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    const IRPosition &IRP = getIRPosition();
+    const Function *F =
+        getArgNo() >= 0 ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
+
+    // Check what state the associated function can actually capture.
+    if (F)
+      determineFunctionCaptureCapabilities(*F, *this);
+
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+
+  /// see AbstractAttribute::isAssumedNoCaptureMaybeReturned(...).
+  virtual void
+  getDeducedAttributes(LLVMContext &Ctx,
+                       SmallVectorImpl<Attribute> &Attrs) const override {
+    if (!isAssumedNoCaptureMaybeReturned())
+      return;
+
+    if (isAssumedNoCapture())
+      Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
+    else if (ManifestInternal)
+      Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
+  }
+
+  /// Set the NOT_CAPTURED_IN_MEM and NOT_CAPTURED_IN_RET bits in \p Known
+  /// depending on the ability of the function associated with \p IRP to capture
+  /// state in memory and through "returning/throwing", respectively.
+  static void determineFunctionCaptureCapabilities(const Function &F,
+                                                   IntegerState &State) {
+    // TODO: Once we have memory behavior attributes we should use them here.
+
+    // If we know we cannot communicate or write to memory, we do not care about
+    // ptr2int anymore.
+    if (F.onlyReadsMemory() && F.doesNotThrow() &&
+        F.getReturnType()->isVoidTy()) {
+      State.addKnownBits(NO_CAPTURE);
+      return;
+    }
+
+    // A function cannot capture state in memory if it only reads memory, it can
+    // however return/throw state and the state might be influenced by the
+    // pointer value, e.g., loading from a returned pointer might reveal a bit.
+    if (F.onlyReadsMemory())
+      State.addKnownBits(NOT_CAPTURED_IN_MEM);
+
+    // A function cannot communicate state back if it does not through
+    // exceptions and doesn not return values.
+    if (F.doesNotThrow() && F.getReturnType()->isVoidTy())
+      State.addKnownBits(NOT_CAPTURED_IN_RET);
+  }
+
+  /// See AbstractState::getAsStr().
+  const std::string getAsStr() const override {
+    if (isKnownNoCapture())
+      return "known not-captured";
+    if (isAssumedNoCapture())
+      return "assumed not-captured";
+    if (isKnownNoCaptureMaybeReturned())
+      return "known not-captured-maybe-returned";
+    if (isAssumedNoCaptureMaybeReturned())
+      return "assumed not-captured-maybe-returned";
+    return "assumed-captured";
+  }
+};
+
+/// Attributor-aware capture tracker.
+struct AACaptureUseTracker final : public CaptureTracker {
+
+  /// Create a capture tracker that can lookup in-flight abstract attributes
+  /// through the Attributor \p A.
+  ///
+  /// If a use leads to a potential capture, \p CapturedInMemory is set and the
+  /// search is stopped. If a use leads to a return instruction,
+  /// \p CommunicatedBack is set to true and \p CapturedInMemory is not changed.
+  /// If a use leads to a ptr2int which may capture the value,
+  /// \p CapturedInInteger is set. If a use is found that is currently assumed
+  /// "no-capture-maybe-returned", the user is added to the \p PotentialCopies
+  /// set. All values in \p PotentialCopies are later tracked as well. For every
+  /// explored use we decrement \p RemainingUsesToExplore. Once it reaches 0,
+  /// the search is stopped with \p CapturedInMemory and \p CapturedInInteger
+  /// conservatively set to true.
+  AACaptureUseTracker(Attributor &A, AANoCapture &NoCaptureAA,
+                      const AAIsDead &IsDeadAA, IntegerState &State,
+                      SmallVectorImpl<const Value *> &PotentialCopies,
+                      unsigned &RemainingUsesToExplore)
+      : A(A), NoCaptureAA(NoCaptureAA), IsDeadAA(IsDeadAA), State(State),
+        PotentialCopies(PotentialCopies),
+        RemainingUsesToExplore(RemainingUsesToExplore) {}
+
+  /// Determine if \p V maybe captured. *Also updates the state!*
+  bool valueMayBeCaptured(const Value *V) {
+    if (V->getType()->isPointerTy()) {
+      PointerMayBeCaptured(V, this);
+    } else {
+      State.indicatePessimisticFixpoint();
+    }
+    return State.isAssumed(AANoCapture::NO_CAPTURE_MAYBE_RETURNED);
+  }
+
+  /// See CaptureTracker::tooManyUses().
+  void tooManyUses() override {
+    State.removeAssumedBits(AANoCapture::NO_CAPTURE);
+  }
+
+  bool isDereferenceableOrNull(Value *O, const DataLayout &DL) override {
+    if (CaptureTracker::isDereferenceableOrNull(O, DL))
+      return true;
+    const auto &DerefAA =
+        A.getAAFor<AADereferenceable>(NoCaptureAA, IRPosition::value(*O));
+    return DerefAA.getAssumedDereferenceableBytes();
+  }
+
+  /// See CaptureTracker::captured(...).
+  bool captured(const Use *U) override {
+    Instruction *UInst = cast<Instruction>(U->getUser());
+    LLVM_DEBUG(dbgs() << "Check use: " << *U->get() << " in " << *UInst
+                      << "\n");
+
+    // Because we may reuse the tracker multiple times we keep track of the
+    // number of explored uses ourselves as well.
+    if (RemainingUsesToExplore-- == 0) {
+      LLVM_DEBUG(dbgs() << " - too many uses to explore!\n");
+      return isCapturedIn(/* Memory */ true, /* Integer */ true,
+                          /* Return */ true);
+    }
+
+    // Deal with ptr2int by following uses.
+    if (isa<PtrToIntInst>(UInst)) {
+      LLVM_DEBUG(dbgs() << " - ptr2int assume the worst!\n");
+      return valueMayBeCaptured(UInst);
+    }
+
+    // Explicitly catch return instructions.
+    if (isa<ReturnInst>(UInst))
+      return isCapturedIn(/* Memory */ false, /* Integer */ false,
+                          /* Return */ true);
+
+    // For now we only use special logic for call sites. However, the tracker
+    // itself knows about a lot of other non-capturing cases already.
+    CallSite CS(UInst);
+    if (!CS || !CS.isArgOperand(U))
+      return isCapturedIn(/* Memory */ true, /* Integer */ true,
+                          /* Return */ true);
+
+    unsigned ArgNo = CS.getArgumentNo(U);
+    const IRPosition &CSArgPos = IRPosition::callsite_argument(CS, ArgNo);
+    // If we have a abstract no-capture attribute for the argument we can use
+    // it to justify a non-capture attribute here. This allows recursion!
+    auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(NoCaptureAA, CSArgPos);
+    if (ArgNoCaptureAA.isAssumedNoCapture())
+      return isCapturedIn(/* Memory */ false, /* Integer */ false,
+                          /* Return */ false);
+    if (ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
+      addPotentialCopy(CS);
+      return isCapturedIn(/* Memory */ false, /* Integer */ false,
+                          /* Return */ false);
+    }
+
+    // Lastly, we could not find a reason no-capture can be assumed so we don't.
+    return isCapturedIn(/* Memory */ true, /* Integer */ true,
+                        /* Return */ true);
+  }
+
+  /// Register \p CS as potential copy of the value we are checking.
+  void addPotentialCopy(CallSite CS) {
+    PotentialCopies.push_back(CS.getInstruction());
+  }
+
+  /// See CaptureTracker::shouldExplore(...).
+  bool shouldExplore(const Use *U) override {
+    // Check liveness.
+    return !IsDeadAA.isAssumedDead(cast<Instruction>(U->getUser()));
+  }
+
+  /// Update the state according to \p CapturedInMem, \p CapturedInInt, and
+  /// \p CapturedInRet, then return the appropriate value for use in the
+  /// CaptureTracker::captured() interface.
+  bool isCapturedIn(bool CapturedInMem, bool CapturedInInt,
+                    bool CapturedInRet) {
+    LLVM_DEBUG(dbgs() << " - captures [Mem " << CapturedInMem << "|Int "
+                      << CapturedInInt << "|Ret " << CapturedInRet << "]\n");
+    if (CapturedInMem)
+      State.removeAssumedBits(AANoCapture::NOT_CAPTURED_IN_MEM);
+    if (CapturedInInt)
+      State.removeAssumedBits(AANoCapture::NOT_CAPTURED_IN_INT);
+    if (CapturedInRet)
+      State.removeAssumedBits(AANoCapture::NOT_CAPTURED_IN_RET);
+    return !State.isAssumed(AANoCapture::NO_CAPTURE_MAYBE_RETURNED);
+  }
+
+private:
+  /// The attributor providing in-flight abstract attributes.
+  Attributor &A;
+
+  /// The abstract attribute currently updated.
+  AANoCapture &NoCaptureAA;
+
+  /// The abstract liveness state.
+  const AAIsDead &IsDeadAA;
+
+  /// The state currently updated.
+  IntegerState &State;
+
+  /// Set of potential copies of the tracked value.
+  SmallVectorImpl<const Value *> &PotentialCopies;
+
+  /// Global counter to limit the number of explored uses.
+  unsigned &RemainingUsesToExplore;
+};
+
+ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
+  const IRPosition &IRP = getIRPosition();
+  const Value *V =
+      getArgNo() >= 0 ? IRP.getAssociatedArgument() : &IRP.getAssociatedValue();
+  if (!V)
+    return indicatePessimisticFixpoint();
+
+  const Function *F =
+      getArgNo() >= 0 ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
+  assert(F && "Expected a function!");
+  const auto &IsDeadAA = A.getAAFor<AAIsDead>(*this, IRPosition::function(*F));
+
+  AANoCapture::StateType T;
+  // TODO: Once we have memory behavior attributes we should use them here
+  // similar to the reasoning in
+  // AANoCaptureImpl::determineFunctionCaptureCapabilities(...).
+
+  // TODO: Use the AAReturnedValues to learn if the argument can return or
+  // not.
+
+  // Use the CaptureTracker interface and logic with the specialized tracker,
+  // defined in AACaptureUseTracker, that can look at in-flight abstract
+  // attributes and directly updates the assumed state.
+  SmallVector<const Value *, 4> PotentialCopies;
+  unsigned RemainingUsesToExplore = DefaultMaxUsesToExplore;
+  AACaptureUseTracker Tracker(A, *this, IsDeadAA, T, PotentialCopies,
+                              RemainingUsesToExplore);
+
+  // Check all potential copies of the associated value until we can assume
+  // none will be captured or we have to assume at least one might be.
+  unsigned Idx = 0;
+  PotentialCopies.push_back(V);
+  while (T.isAssumed(NO_CAPTURE_MAYBE_RETURNED) && Idx < PotentialCopies.size())
+    Tracker.valueMayBeCaptured(PotentialCopies[Idx++]);
+
+  AAAlign::StateType &S = getState();
+  auto Assumed = S.getAssumed();
+  S.intersectAssumedBits(T.getAssumed());
+  return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
+                                   : ChangeStatus::CHANGED;
+}
+
+/// NoCapture attribute for function arguments.
+struct AANoCaptureArgument final : AANoCaptureImpl {
+  AANoCaptureArgument(const IRPosition &IRP) : AANoCaptureImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nocapture) }
+};
+
+/// NoCapture attribute for call site arguments.
+struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
+  AANoCaptureCallSiteArgument(const IRPosition &IRP) : AANoCaptureImpl(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Argument *Arg = getAssociatedArgument();
+    if (!Arg)
+      return indicatePessimisticFixpoint();
+    const IRPosition &ArgPos = IRPosition::argument(*Arg);
+    auto &ArgAA = A.getAAFor<AANoCapture>(*this, ArgPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AANoCapture::StateType &>(ArgAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nocapture)};
+};
+
+/// NoCapture attribute for floating values.
+struct AANoCaptureFloating final : AANoCaptureImpl {
+  AANoCaptureFloating(const IRPosition &IRP) : AANoCaptureImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FLOATING_ATTR(nocapture)
+  }
+};
+
+/// NoCapture attribute for function return value.
+struct AANoCaptureReturned final : AANoCaptureImpl {
+  AANoCaptureReturned(const IRPosition &IRP) : AANoCaptureImpl(IRP) {
+    llvm_unreachable("NoCapture is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    llvm_unreachable("NoCapture is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    llvm_unreachable("NoCapture is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
+
+/// NoCapture attribute deduction for a call site return value.
+struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
+  AANoCaptureCallSiteReturned(const IRPosition &IRP) : AANoCaptureImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(nocapture)
+  }
+};
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -2969,14 +3316,18 @@ ChangeStatus Attributor::run() {
                     << " blocks and " << ToBeDeletedInsts.size()
                     << " instructions\n");
   for (Instruction *I : ToBeDeletedInsts) {
-    if (I->hasNUsesOrMore(1))
+    if (!I->use_empty())
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
     I->eraseFromParent();
   }
-  for (BasicBlock *BB : ToBeDeletedBlocks) {
-    // TODO: Check if we need to replace users (PHIs, indirect branches?)
-    BB->eraseFromParent();
+
+  if (unsigned NumDeadBlocks = ToBeDeletedBlocks.size()) {
+    SmallVector<BasicBlock *, 8> ToBeDeletedBBs;
+    ToBeDeletedBBs.reserve(NumDeadBlocks);
+    ToBeDeletedBBs.append(ToBeDeletedBlocks.begin(), ToBeDeletedBlocks.end());
+    DeleteDeadBlocks(ToBeDeletedBBs);
   }
+
   for (Function *Fn : ToBeDeletedFunctions) {
     Fn->replaceAllUsesWith(UndefValue::get(Fn->getType()));
     Fn->eraseFromParent();
@@ -3075,6 +3426,9 @@ void Attributor::identifyDefaultAbstractAttributes(
 
       // Every argument with pointer type might be marked align.
       checkAndRegisterAA<AAAlignArgument>(ArgPos, *this, Whitelist);
+
+      // Every argument with pointer type might be marked nocapture.
+      checkAndRegisterAA<AANoCaptureArgument>(ArgPos, *this, Whitelist);
     }
   }
 
@@ -3295,6 +3649,7 @@ const char AANoReturn::ID = 0;
 const char AAIsDead::ID = 0;
 const char AADereferenceable::ID = 0;
 const char AAAlign::ID = 0;
+const char AANoCapture::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -3355,6 +3710,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonNull)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoAlias)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AADereferenceable)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAlign)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 
 #undef CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION
