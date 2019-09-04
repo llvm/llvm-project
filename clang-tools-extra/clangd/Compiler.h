@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Shared utilities for invoking the clang compiler.
-// ClangdUnit takes care of much of this, but some features like CodeComplete
-// run their own compile actions that share logic.
+// Most callers will use this through Preamble/ParsedAST, but some features like
+// CodeComplete run their own compile actions that share these low-level pieces.
 //
 //===----------------------------------------------------------------------===//
 

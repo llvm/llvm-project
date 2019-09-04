@@ -1,4 +1,4 @@
-; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -stop-after=irtranslator -global-isel -global-isel-abort=1 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linux-gnu"
@@ -94,5 +94,40 @@ declare void @stack_ext_needed([8 x i64], i8 signext %in)
 ; CHECK: ADJCALLSTACKUP 8
 define void @test_stack_ext_needed() {
   call void @stack_ext_needed([8 x i64] undef, i8 signext 42)
+  ret void
+}
+
+; Check that we can lower incoming i128 types into constituent s64 gprs.
+; CHECK-LABEL: name: callee_s128
+; CHECK: liveins: $x0, $x1, $x2, $x3, $x4
+; CHECK: [[A1_P1:%[0-9]+]]:_(s64) = COPY $x0
+; CHECK: [[A1_P2:%[0-9]+]]:_(s64) = COPY $x1
+; CHECK: [[A1_MERGE:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[A1_P1]](s64), [[A1_P2]](s64)
+; CHECK: [[A2_P1:%[0-9]+]]:_(s64) = COPY $x2
+; CHECK: [[A2_P2:%[0-9]+]]:_(s64) = COPY $x3
+; CHECK: [[A2_MERGE:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[A2_P1]](s64), [[A2_P2]](s64)
+; CHECK: G_STORE [[A2_MERGE]](s128)
+define void @callee_s128(i128 %a, i128 %b, i128 *%ptr) {
+  store i128 %b, i128 *%ptr
+  ret void
+}
+
+; Check we can lower outgoing s128 arguments into s64 gprs.
+; CHECK-LABEL: name: caller_s128
+; CHECK: [[PTR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK: [[LARGE_VAL:%[0-9]+]]:_(s128) = G_LOAD [[PTR]](p0)
+; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+; CHECK: [[A1_P1:%[0-9]+]]:_(s64), [[A1_P2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LARGE_VAL]](s128)
+; CHECK: [[A2_P1:%[0-9]+]]:_(s64), [[A2_P2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES %1(s128)
+; CHECK: $x0 = COPY [[A1_P1]](s64)
+; CHECK: $x1 = COPY [[A1_P2]](s64)
+; CHECK: $x2 = COPY [[A2_P1]](s64)
+; CHECK: $x3 = COPY [[A2_P2]](s64)
+; CHECK: $x4 = COPY [[PTR]](p0)
+; CHECK: BL @callee_s128, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4
+; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+define void @caller_s128(i128 *%ptr) {
+  %v = load i128, i128 *%ptr
+  call void @callee_s128(i128 %v, i128 %v, i128 *%ptr)
   ret void
 }

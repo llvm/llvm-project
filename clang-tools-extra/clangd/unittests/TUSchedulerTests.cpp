@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "ClangdUnit.h"
 #include "Context.h"
 #include "Diagnostics.h"
 #include "Matchers.h"
+#include "ParsedAST.h"
 #include "Path.h"
+#include "Preamble.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
 #include "Threading.h"

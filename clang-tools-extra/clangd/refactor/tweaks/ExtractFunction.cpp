@@ -47,8 +47,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
-#include "ClangdUnit.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"

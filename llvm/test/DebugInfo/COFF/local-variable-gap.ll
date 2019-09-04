@@ -54,7 +54,7 @@
 ; ASM: [[p_b2:\.Ltmp[0-9]+]]:
 ; ASM:         #DEBUG_VALUE: p <- $esi
 ; ASM:         callq   call_noreturn
-; ASM:         int3
+; ASM:         ud2
 ; ASM: .Lfunc_end0:
 
 ; ASM:         .short  {{.*}}         # Record length

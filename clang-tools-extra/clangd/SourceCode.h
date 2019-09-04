@@ -77,7 +77,8 @@ llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
 
 /// Get the beginning SourceLocation at a specified \p Pos in the main file.
 /// May be invalid if Pos is, or if there's no identifier.
-/// FIXME: this returns the macro-expansion location, but it shouldn't.
+/// The returned position is in the main file, callers may prefer to
+/// obtain the macro expansion location.
 SourceLocation getBeginningOfIdentifier(const Position &Pos,
                                         const SourceManager &SM,
                                         const LangOptions &LangOpts);

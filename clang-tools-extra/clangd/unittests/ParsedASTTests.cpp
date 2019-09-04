@@ -1,16 +1,21 @@
-//===-- ClangdUnitTests.cpp - ClangdUnit tests ------------------*- C++ -*-===//
+//===-- ParsedASTTests.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// These tests cover clangd's logic to build a TU, which generally uses the APIs
+// in ParsedAST and Preamble, via the TestTU helper.
+//
+//===----------------------------------------------------------------------===//
 
 #include "AST.h"
 #include "Annotations.h"
-#include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
+#include "ParsedAST.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -26,9 +31,9 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
-using ::testing::AllOf;
 
 MATCHER_P(DeclNamed, Name, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
@@ -66,7 +71,7 @@ MATCHER_P(WithTemplateArgs, ArgName, "") {
   return false;
 }
 
-TEST(ClangdUnitTest, TopLevelDecls) {
+TEST(ParsedASTTest, TopLevelDecls) {
   TestTU TU;
   TU.HeaderCode = R"(
     int header1();
@@ -77,7 +82,7 @@ TEST(ClangdUnitTest, TopLevelDecls) {
   EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
 }
 
-TEST(ClangdUnitTest, DoesNotGetIncludedTopDecls) {
+TEST(ParsedASTTest, DoesNotGetIncludedTopDecls) {
   TestTU TU;
   TU.HeaderCode = R"cpp(
     #define LL void foo(){}
@@ -97,7 +102,7 @@ TEST(ClangdUnitTest, DoesNotGetIncludedTopDecls) {
   EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
 }
 
-TEST(ClangdUnitTest, DoesNotGetImplicitTemplateTopDecls) {
+TEST(ParsedASTTest, DoesNotGetImplicitTemplateTopDecls) {
   TestTU TU;
   TU.Code = R"cpp(
     template<typename T>
@@ -112,7 +117,7 @@ TEST(ClangdUnitTest, DoesNotGetImplicitTemplateTopDecls) {
               ElementsAre(DeclNamed("f"), DeclNamed("s")));
 }
 
-TEST(ClangdUnitTest,
+TEST(ParsedASTTest,
      GetsExplicitInstantiationAndSpecializationTemplateTopDecls) {
   TestTU TU;
   TU.Code = R"cpp(
@@ -156,7 +161,7 @@ TEST(ClangdUnitTest,
                         AllOf(DeclNamed("foo"), WithTemplateArgs("<bool>"))}));
 }
 
-TEST(ClangdUnitTest, TokensAfterPreamble) {
+TEST(ParsedASTTest, TokensAfterPreamble) {
   TestTU TU;
   TU.AdditionalFiles["foo.h"] = R"(
     int foo();
@@ -187,8 +192,7 @@ TEST(ClangdUnitTest, TokensAfterPreamble) {
   EXPECT_EQ(Spelled.back().text(SM), "last_token");
 }
 
-
-TEST(ClangdUnitTest, NoCrashOnTokensWithTidyCheck) {
+TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
   TestTU TU;
   // this check runs the preprocessor, we need to make sure it does not break
   // our recording logic.
@@ -208,7 +212,7 @@ TEST(ClangdUnitTest, NoCrashOnTokensWithTidyCheck) {
   EXPECT_EQ(T.expandedTokens().drop_back().back().text(SM), "}");
 }
 
-TEST(ClangdUnitTest, CanBuildInvocationWithUnknownArgs) {
+TEST(ParsedASTTest, CanBuildInvocationWithUnknownArgs) {
   // Unknown flags should not prevent a build of compiler invocation.
   ParseInputs Inputs;
   Inputs.FS = buildTestFS({{testPath("foo.cpp"), "void test() {}"}});
@@ -223,7 +227,7 @@ TEST(ClangdUnitTest, CanBuildInvocationWithUnknownArgs) {
   EXPECT_NE(buildCompilerInvocation(Inputs, IgnoreDiags), nullptr);
 }
 
-TEST(ClangdUnitTest, CollectsMainFileMacroExpansions) {
+TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
   Annotations TestCase(R"cpp(
     #define MACRO_ARGS(X, Y) X Y
     ^ID(int A);

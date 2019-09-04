@@ -478,7 +478,6 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureNetBSD
     def test_invalid_invocation(self):
         self.build()
         self.common_setup()
@@ -496,7 +495,6 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureNetBSD
     def test_write_unknown_register(self):
         self.build()
         self.common_setup()

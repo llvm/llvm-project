@@ -8,9 +8,9 @@
 #include "FindSymbols.h"
 
 #include "AST.h"
-#include "ClangdUnit.h"
 #include "FuzzyMatch.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "Quality.h"
 #include "SourceCode.h"
 #include "index/Index.h"

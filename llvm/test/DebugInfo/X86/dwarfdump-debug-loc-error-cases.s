@@ -23,26 +23,26 @@
   .byte  1                       # bogus
 .endif
 .ifdef CASE2
-  .long  0                       # starting offset
+  .quad  0                       # starting offset
 .endif
 .ifdef CASE3
-  .long  0                       # starting offset
-  .long  1                       # ending offset
+  .quad  0                       # starting offset
+  .quad  1                       # ending offset
 .endif
 .ifdef CASE4
-  .long  0                       # starting offset
-  .long  1                       # ending offset
+  .quad  0                       # starting offset
+  .quad  1                       # ending offset
   .word  0                       # Loc expr size
 .endif
 .ifdef CASE5
-  .long  0                       # starting offset
-  .long  1                       # ending offset
+  .quad  0                       # starting offset
+  .quad  1                       # ending offset
   .word  0                       # Loc expr size
-  .long  0                       # starting offset
+  .quad  0                       # starting offset
 .endif
 .ifdef CASE6
-  .long  0                       # starting offset
-  .long  1                       # ending offset
+  .quad  0                       # starting offset
+  .quad  1                       # ending offset
   .word  0xffff                  # Loc expr size
 .endif
 

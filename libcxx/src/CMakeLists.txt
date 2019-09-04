@@ -204,7 +204,13 @@ function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
   endif()
-  target_compile_options(${name} PRIVATE -fvisibility=hidden)
+  # Our visibility annotations are not quite right for non-Clang compilers,
+  # so we end up not exporting all the symbols we should. In the future, we
+  # can improve the situation by providing an explicit list of exported
+  # symbols on all compilers.
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${name} PRIVATE -fvisibility=hidden)
+  endif()
   if(WIN32 AND NOT MINGW)
     target_compile_definitions(${name}
                                PRIVATE

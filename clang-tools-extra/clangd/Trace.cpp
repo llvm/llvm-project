@@ -8,7 +8,6 @@
 
 #include "Trace.h"
 #include "Context.h"
-#include "Function.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"

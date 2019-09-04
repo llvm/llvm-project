@@ -337,14 +337,13 @@ std::string CommandLine;
 
 // Helper function for finding the input file in an arguments list.
 static std::string findInputFile(const CommandLineArguments &CLArgs) {
-  std::unique_ptr<OptTable> Opts(createDriverOptTable());
   const unsigned IncludedFlagsBitmask = options::CC1Option;
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
   for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
     Argv.push_back(I->c_str());
-  InputArgList Args = Opts->ParseArgs(Argv, MissingArgIndex, MissingArgCount,
-                                      IncludedFlagsBitmask);
+  InputArgList Args = getDriverOptTable().ParseArgs(
+      Argv, MissingArgIndex, MissingArgCount, IncludedFlagsBitmask);
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   return ModularizeUtilities::getCanonicalPath(Inputs.back());
 }

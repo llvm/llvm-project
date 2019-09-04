@@ -1055,29 +1055,28 @@ void GroupSection::accept(MutableSectionVisitor &Visitor) {
 }
 
 // Returns true IFF a section is wholly inside the range of a segment
-static bool sectionWithinSegment(const SectionBase &Section,
-                                 const Segment &Segment) {
+static bool sectionWithinSegment(const SectionBase &Sec, const Segment &Seg) {
   // If a section is empty it should be treated like it has a size of 1. This is
   // to clarify the case when an empty section lies on a boundary between two
   // segments and ensures that the section "belongs" to the second segment and
   // not the first.
-  uint64_t SecSize = Section.Size ? Section.Size : 1;
+  uint64_t SecSize = Sec.Size ? Sec.Size : 1;
 
-  if (Section.Type == SHT_NOBITS) {
-    if (!(Section.Flags & SHF_ALLOC))
+  if (Sec.Type == SHT_NOBITS) {
+    if (!(Sec.Flags & SHF_ALLOC))
       return false;
 
-    bool SectionIsTLS = Section.Flags & SHF_TLS;
-    bool SegmentIsTLS = Segment.Type == PT_TLS;
+    bool SectionIsTLS = Sec.Flags & SHF_TLS;
+    bool SegmentIsTLS = Seg.Type == PT_TLS;
     if (SectionIsTLS != SegmentIsTLS)
       return false;
 
-    return Segment.VAddr <= Section.Addr &&
-           Segment.VAddr + Segment.MemSize >= Section.Addr + SecSize;
+    return Seg.VAddr <= Sec.Addr &&
+           Seg.VAddr + Seg.MemSize >= Sec.Addr + SecSize;
   }
 
-  return Segment.Offset <= Section.OriginalOffset &&
-         Segment.Offset + Segment.FileSize >= Section.OriginalOffset + SecSize;
+  return Seg.Offset <= Sec.OriginalOffset &&
+         Seg.Offset + Seg.FileSize >= Sec.OriginalOffset + SecSize;
 }
 
 // Returns true IFF a segment's original offset is inside of another segment's
@@ -1141,8 +1140,8 @@ SymbolTableSection *BasicELFBuilder::addSymTab(StringTableSection *StrTab) {
 }
 
 void BasicELFBuilder::initSections() {
-  for (auto &Section : Obj->sections())
-    Section.initialize(Obj->sections());
+  for (SectionBase &Sec : Obj->sections())
+    Sec.initialize(Obj->sections());
 }
 
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
@@ -1256,10 +1255,9 @@ template <class ELFT> void ELFBuilder<ELFT>::findEhdrOffset() {
   if (!ExtractPartition)
     return;
 
-  for (const SectionBase &Section : Obj.sections()) {
-    if (Section.Type == SHT_LLVM_PART_EHDR &&
-        Section.Name == *ExtractPartition) {
-      EhdrOffset = Section.Offset;
+  for (const SectionBase &Sec : Obj.sections()) {
+    if (Sec.Type == SHT_LLVM_PART_EHDR && Sec.Name == *ExtractPartition) {
+      EhdrOffset = Sec.Offset;
       return;
     }
   }
@@ -1288,15 +1286,12 @@ void ELFBuilder<ELFT>::readProgramHeaders(const ELFFile<ELFT> &HeadersFile) {
     Seg.MemSize = Phdr.p_memsz;
     Seg.Align = Phdr.p_align;
     Seg.Index = Index++;
-    for (SectionBase &Section : Obj.sections()) {
-      if (sectionWithinSegment(Section, Seg)) {
-        Seg.addSection(&Section);
-        if (!Section.ParentSegment ||
-            Section.ParentSegment->Offset > Seg.Offset) {
-          Section.ParentSegment = &Seg;
-        }
+    for (SectionBase &Sec : Obj.sections())
+      if (sectionWithinSegment(Sec, Seg)) {
+        Seg.addSection(&Sec);
+        if (!Sec.ParentSegment || Sec.ParentSegment->Offset > Seg.Offset)
+          Sec.ParentSegment = &Seg;
       }
-    }
   }
 
   auto &ElfHdr = Obj.ElfHdrSegment;
@@ -1550,11 +1545,11 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections() {
   // Now that all sections and symbols have been added we can add
   // relocations that reference symbols and set the link and info fields for
   // relocation sections.
-  for (auto &Section : Obj.sections()) {
-    if (&Section == Obj.SymbolTable)
+  for (auto &Sec : Obj.sections()) {
+    if (&Sec == Obj.SymbolTable)
       continue;
-    Section.initialize(Obj.sections());
-    if (auto RelSec = dyn_cast<RelocationSection>(&Section)) {
+    Sec.initialize(Obj.sections());
+    if (auto RelSec = dyn_cast<RelocationSection>(&Sec)) {
       auto Shdr = unwrapOrError(ElfFile.sections()).begin() + RelSec->Index;
       if (RelSec->Type == SHT_REL)
         initRelocations(RelSec, Obj.SymbolTable,
@@ -1562,7 +1557,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections() {
       else
         initRelocations(RelSec, Obj.SymbolTable,
                         unwrapOrError(ElfFile.relas(Shdr)));
-    } else if (auto GroupSec = dyn_cast<GroupSection>(&Section)) {
+    } else if (auto GroupSec = dyn_cast<GroupSection>(&Sec)) {
       initGroupSection(GroupSec);
     }
   }
@@ -1869,7 +1864,7 @@ static void orderSegments(std::vector<Segment *> &Segments) {
 }
 
 // This function finds a consistent layout for a list of segments starting from
-// an Offset. It assumes that Segments have been sorted by OrderSegments and
+// an Offset. It assumes that Segments have been sorted by orderSegments and
 // returns an Offset one past the end of the last segment.
 static uint64_t layoutSegments(std::vector<Segment *> &Segments,
                                uint64_t Offset) {
@@ -1913,17 +1908,17 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
   // of the segment we can assign a new offset to the section. For sections not
   // covered by segments we can just bump Offset to the next valid location.
   uint32_t Index = 1;
-  for (auto &Section : Sections) {
-    Section.Index = Index++;
-    if (Section.ParentSegment != nullptr) {
-      auto Segment = *Section.ParentSegment;
-      Section.Offset =
-          Segment.Offset + (Section.OriginalOffset - Segment.OriginalOffset);
+  for (auto &Sec : Sections) {
+    Sec.Index = Index++;
+    if (Sec.ParentSegment != nullptr) {
+      auto Segment = *Sec.ParentSegment;
+      Sec.Offset =
+          Segment.Offset + (Sec.OriginalOffset - Segment.OriginalOffset);
     } else {
-      Offset = alignTo(Offset, Section.Align == 0 ? 1 : Section.Align);
-      Section.Offset = Offset;
-      if (Section.Type != SHT_NOBITS)
-        Offset += Section.Size;
+      Offset = alignTo(Offset, Sec.Align == 0 ? 1 : Sec.Align);
+      Sec.Offset = Offset;
+      if (Sec.Type != SHT_NOBITS)
+        Offset += Sec.Size;
     }
   }
   return Offset;
@@ -2054,9 +2049,8 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // Make sure we add the names of all the sections. Importantly this must be
   // done after we decide to add or remove SectionIndexes.
   if (Obj.SectionNames != nullptr)
-    for (const auto &Section : Obj.sections()) {
-      Obj.SectionNames->addString(Section.Name);
-    }
+    for (const SectionBase &Sec : Obj.sections())
+      Obj.SectionNames->addString(Sec.Name);
 
   initEhdrSegment();
 
@@ -2065,7 +2059,7 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // size-related fields before doing layout calculations.
   uint64_t Index = 0;
   auto SecSizer = std::make_unique<ELFSectionSizer<ELFT>>();
-  for (auto &Sec : Obj.sections()) {
+  for (SectionBase &Sec : Obj.sections()) {
     Sec.Index = Index++;
     Sec.accept(*SecSizer);
   }
@@ -2092,12 +2086,12 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // Finally now that all offsets and indexes have been set we can finalize any
   // remaining issues.
   uint64_t Offset = Obj.SHOffset + sizeof(Elf_Shdr);
-  for (SectionBase &Section : Obj.sections()) {
-    Section.HeaderOffset = Offset;
+  for (SectionBase &Sec : Obj.sections()) {
+    Sec.HeaderOffset = Offset;
     Offset += sizeof(Elf_Shdr);
     if (WriteSectionHeaders)
-      Section.NameIndex = Obj.SectionNames->findIndex(Section.Name);
-    Section.finalize();
+      Sec.NameIndex = Obj.SectionNames->findIndex(Sec.Name);
+    Sec.finalize();
   }
 
   if (Error E = Buf.allocate(totalSize()))
@@ -2107,24 +2101,20 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
 }
 
 Error BinaryWriter::write() {
-  for (auto &Section : Obj.sections())
-    if (Section.Flags & SHF_ALLOC)
-      Section.accept(*SecWriter);
+  for (const SectionBase &Sec : Obj.allocSections())
+    Sec.accept(*SecWriter);
   return Buf.commit();
 }
 
 Error BinaryWriter::finalize() {
-  // TODO: Create a filter range to construct OrderedSegments from so that this
-  // code can be deduped with assignOffsets above. This should also solve the
-  // todo below for LayoutSections.
   // We need a temporary list of segments that has a special order to it
   // so that we know that anytime ->ParentSegment is set that segment has
   // already had it's offset properly set. We only want to consider the segments
   // that will affect layout of allocated sections so we only add those.
   std::vector<Segment *> OrderedSegments;
-  for (SectionBase &Section : Obj.sections())
-    if ((Section.Flags & SHF_ALLOC) != 0 && Section.ParentSegment != nullptr)
-      OrderedSegments.push_back(Section.ParentSegment);
+  for (const SectionBase &Sec : Obj.allocSections())
+    if (Sec.ParentSegment != nullptr)
+      OrderedSegments.push_back(Sec.ParentSegment);
 
   // For binary output, we're going to use physical addresses instead of
   // virtual addresses, since a binary output is used for cases like ROM
@@ -2139,7 +2129,7 @@ Error BinaryWriter::finalize() {
   llvm::stable_sort(OrderedSegments, compareSegmentsByPAddr);
 
   // Because we add a ParentSegment for each section we might have duplicate
-  // segments in OrderedSegments. If there were duplicates then LayoutSegments
+  // segments in OrderedSegments. If there were duplicates then layoutSegments
   // would do very strange things.
   auto End =
       std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
@@ -2167,24 +2157,16 @@ Error BinaryWriter::finalize() {
     }
   }
 
-  // TODO: generalize LayoutSections to take a range. Pass a special range
-  // constructed from an iterator that skips values for which a predicate does
-  // not hold. Then pass such a range to LayoutSections instead of constructing
-  // AllocatedSections here.
-  std::vector<SectionBase *> AllocatedSections;
-  for (SectionBase &Section : Obj.sections())
-    if (Section.Flags & SHF_ALLOC)
-      AllocatedSections.push_back(&Section);
-  layoutSections(make_pointee_range(AllocatedSections), Offset);
+  layoutSections(Obj.allocSections(), Offset);
 
   // Now that every section has been laid out we just need to compute the total
   // file size. This might not be the same as the offset returned by
-  // LayoutSections, because we want to truncate the last segment to the end of
+  // layoutSections, because we want to truncate the last segment to the end of
   // its last section, to match GNU objcopy's behaviour.
   TotalSize = 0;
-  for (SectionBase *Section : AllocatedSections)
-    if (Section->Type != SHT_NOBITS)
-      TotalSize = std::max(TotalSize, Section->Offset + Section->Size);
+  for (const SectionBase &Sec : Obj.allocSections())
+    if (Sec.Type != SHT_NOBITS)
+      TotalSize = std::max(TotalSize, Sec.Offset + Sec.Size);
 
   if (Error E = Buf.allocate(TotalSize))
     return E;
@@ -2268,17 +2250,17 @@ Error IHexWriter::finalize() {
   // If any section we're to write has segment then we
   // switch to using physical addresses. Otherwise we
   // use section virtual address.
-  for (auto &Section : Obj.sections())
-    if (ShouldWrite(Section) && IsInPtLoad(Section)) {
+  for (const SectionBase &Sec : Obj.sections())
+    if (ShouldWrite(Sec) && IsInPtLoad(Sec)) {
       UseSegments = true;
       break;
     }
 
-  for (auto &Section : Obj.sections())
-    if (ShouldWrite(Section) && (!UseSegments || IsInPtLoad(Section))) {
-      if (Error E = checkSection(Section))
+  for (const SectionBase &Sec : Obj.sections())
+    if (ShouldWrite(Sec) && (!UseSegments || IsInPtLoad(Sec))) {
+      if (Error E = checkSection(Sec))
         return E;
-      Sections.insert(&Section);
+      Sections.insert(&Sec);
     }
 
   IHexSectionWriterBase LengthCalc(Buf);

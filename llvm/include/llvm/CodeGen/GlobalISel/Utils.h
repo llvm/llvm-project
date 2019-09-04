@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 
@@ -163,6 +165,11 @@ bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
 inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
   return isKnownNeverNaN(Val, MRI, true);
 }
+
+/// Get a rough equivalent of an MVT for a given LLT.
+MVT getMVTForLLT(LLT Ty);
+/// Get a rough equivalent of an LLT for a given MVT.
+LLT getLLTForMVT(MVT Ty);
 
 } // End namespace llvm.
 #endif

@@ -6098,7 +6098,7 @@ MachineInstrBuilder SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
   Register UnusedCarry = RS.scavengeRegister(RI.getBoolRC(), I, 0, false);
   // TODO: Users need to deal with this.
   if (!UnusedCarry.isValid())
-    report_fatal_error("failed to scavenge unused carry-out SGPR");
+    return MachineInstrBuilder();
 
   return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_I32_e64), DestReg)
            .addReg(UnusedCarry, RegState::Define | RegState::Dead);

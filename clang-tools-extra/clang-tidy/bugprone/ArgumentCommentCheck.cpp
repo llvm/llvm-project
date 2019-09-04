@@ -286,8 +286,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       Comments = getCommentsInRange(Ctx, BeforeArgument);
     } else {
       // Fall back to parsing back from the start of the argument.
-      CharSourceRange ArgsRange = MakeFileCharRange(
-          Args[I]->getBeginLoc(), Args[NumArgs - 1]->getEndLoc());
+      CharSourceRange ArgsRange =
+          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getEndLoc());
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 

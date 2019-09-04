@@ -8,8 +8,8 @@
 
 #include "refactor/Rename.h"
 #include "AST.h"
-#include "ClangdUnit.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
@@ -153,8 +153,9 @@ findOccurrencesWithinFile(ParsedAST &AST, const NamedDecl *RenameDecl) {
 llvm::Expected<tooling::Replacements>
 renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
                  llvm::StringRef NewName, const SymbolIndex *Index) {
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
-      Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
+  const SourceManager &SM = AST.getSourceManager();
+  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
   // FIXME: renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))

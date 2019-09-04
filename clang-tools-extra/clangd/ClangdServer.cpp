@@ -7,12 +7,13 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
-#include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Format.h"
 #include "FormattedString.h"
 #include "Headers.h"
+#include "ParsedAST.h"
+#include "Preamble.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"

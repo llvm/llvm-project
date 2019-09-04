@@ -2857,11 +2857,6 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
                                     "the size of the current value type");
   EVT ShiftTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
 
-  SDValue ResultLL = Result[0];
-  SDValue ResultLH = Result[1];
-  SDValue ResultHL = Result[2];
-  SDValue ResultHH = Result[3];
-
   // After getting the multiplication result in 4 parts, we need to perform a
   // shift right by the amount of the scale to get the result in that scale.
   //
@@ -2876,50 +2871,22 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   //
   //                             |NVTSize-|
   //
-  // The resulting Lo and Hi will only need to be one of these 32-bit parts
-  // after shifting.
-  if (Scale < NVTSize) {
-    // If the scale is less than the size of the VT we expand to, the Hi and
-    // Lo of the result will be in the first 2 parts of the result after
-    // shifting right. This only requires shifting by the scale as far as the
-    // third part in the result (ResultHL).
-    SDValue SRLAmnt = DAG.getConstant(Scale, dl, ShiftTy);
-    SDValue SHLAmnt = DAG.getConstant(NVTSize - Scale, dl, ShiftTy);
-    Lo = DAG.getNode(ISD::SRL, dl, NVT, ResultLL, SRLAmnt);
-    Lo = DAG.getNode(ISD::OR, dl, NVT, Lo,
-                     DAG.getNode(ISD::SHL, dl, NVT, ResultLH, SHLAmnt));
-    Hi = DAG.getNode(ISD::SRL, dl, NVT, ResultLH, SRLAmnt);
-    Hi = DAG.getNode(ISD::OR, dl, NVT, Hi,
-                     DAG.getNode(ISD::SHL, dl, NVT, ResultHL, SHLAmnt));
-  } else if (Scale == NVTSize) {
-    // If the scales are equal, Lo and Hi are ResultLH and ResultHL,
-    // respectively. Avoid shifting to prevent undefined behavior.
-    Lo = ResultLH;
-    Hi = ResultHL;
-  } else if (Scale < VTSize) {
-    // If the scale is instead less than the old VT size, but greater than or
-    // equal to the expanded VT size, the first part of the result (ResultLL) is
-    // no longer a part of Lo because it would be scaled out anyway. Instead we
-    // can start shifting right from the fourth part (ResultHH) to the second
-    // part (ResultLH), and ResultLH will be the new Lo.
-    SDValue SRLAmnt = DAG.getConstant(Scale - NVTSize, dl, ShiftTy);
-    SDValue SHLAmnt = DAG.getConstant(VTSize - Scale, dl, ShiftTy);
-    Lo = DAG.getNode(ISD::SRL, dl, NVT, ResultLH, SRLAmnt);
-    Lo = DAG.getNode(ISD::OR, dl, NVT, Lo,
-                     DAG.getNode(ISD::SHL, dl, NVT, ResultHL, SHLAmnt));
-    Hi = DAG.getNode(ISD::SRL, dl, NVT, ResultHL, SRLAmnt);
-    Hi = DAG.getNode(ISD::OR, dl, NVT, Hi,
-                     DAG.getNode(ISD::SHL, dl, NVT, ResultHH, SHLAmnt));
-  } else if (Scale == VTSize) {
-    assert(
-        !Signed &&
-        "Only unsigned types can have a scale equal to the operand bit width");
-
-    Lo = ResultHL;
-    Hi = ResultHH;
-  } else
-    llvm_unreachable("Expected the scale to be less than or equal to the width "
-                     "of the operands");
+  // The resulting Lo and Hi would normally be in LL and LH after the shift. But
+  // to avoid unneccessary shifting of all 4 parts, we can adjust the shift
+  // amount and get Lo and Hi using two funnel shifts. Or for the special case
+  // when Scale is a multiple of NVTSize we can just pick the result without
+  // shifting.
+  uint64_t Part0 = Scale / NVTSize; // Part holding lowest bit needed.
+  if (Scale % NVTSize) {
+    SDValue ShiftAmount = DAG.getConstant(Scale % NVTSize, dl, ShiftTy);
+    Lo = DAG.getNode(ISD::FSHR, dl, NVT, Result[Part0 + 1], Result[Part0],
+                     ShiftAmount);
+    Hi = DAG.getNode(ISD::FSHR, dl, NVT, Result[Part0 + 2], Result[Part0 + 1],
+                     ShiftAmount);
+  } else {
+    Lo = Result[Part0];
+    Hi = Result[Part0 + 1];
+  }
 
   // Unless saturation is requested we are done. The result is in <Hi,Lo>.
   if (!Saturating)
@@ -2933,6 +2900,9 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   // We cannot overflow past HH when multiplying 2 ints of size VTSize, so the
   // highest bit of HH determines saturation direction in the event of
   // saturation.
+
+  SDValue ResultHL = Result[2];
+  SDValue ResultHH = Result[3];
 
   SDValue SatMax, SatMin;
   SDValue NVTZero = DAG.getConstant(0, dl, NVT);

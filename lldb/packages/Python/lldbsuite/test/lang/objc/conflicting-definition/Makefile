@@ -1,8 +1,6 @@
-LEVEL = ../../../make
-
 LD_EXTRAS = -lobjc -framework Foundation
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 all: a.out
 

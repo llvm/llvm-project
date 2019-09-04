@@ -27,7 +27,7 @@ else:
         def expect_prompt(self):
             self.child.expect_exact(self.PROMPT)
 
-        def launch(self, executable=None, timeout=30, dimensions=None):
+        def launch(self, executable=None, extra_args=None, timeout=30, dimensions=None):
             logfile = getattr(sys.stdout, 'buffer',
                               sys.stdout) if self.TraceOn() else None
             args = ['--no-lldbinit', '--no-use-colors']
@@ -35,6 +35,8 @@ else:
                 args += ['-O', cmd]
             if executable is not None:
                 args += ['--file', executable]
+            if extra_args is not None:
+                args.extend(extra_args)
             self.child = pexpect.spawn(
                     lldbtest_config.lldbExec, args=args, logfile=logfile,
                     timeout=timeout, dimensions=dimensions)

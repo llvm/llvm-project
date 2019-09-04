@@ -1,5 +1,3 @@
-LEVEL := ../../make
-
 LIB_PREFIX := loadunload_
 
 LD_EXTRAS := -L. -l$(LIB_PREFIX)b
@@ -8,7 +6,7 @@ DYLIB_NAME := $(LIB_PREFIX)a
 DYLIB_CXX_SOURCES := a.cpp
 DYLIB_ONLY := YES
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 $(DYLIB_FILENAME): lib_b
 

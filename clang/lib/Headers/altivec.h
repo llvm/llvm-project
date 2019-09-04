@@ -3286,9 +3286,7 @@ static __inline__ vector double __ATTRS_o_ai vec_div(vector double __a,
 
 /* vec_dss */
 
-static __inline__ void __attribute__((__always_inline__)) vec_dss(int __a) {
-  __builtin_altivec_dss(__a);
-}
+#define vec_dss __builtin_altivec_dss
 
 /* vec_dssall */
 

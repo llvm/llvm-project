@@ -178,7 +178,7 @@ private:
   // Block-local map of equivalent values to their leader, does not
   // propagate to any successors. Entries added mid-block are applied
   // to the remaining instructions in the block.
-  SmallMapVector<Value *, Constant *, 4> ReplaceWithConstMap;
+  SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
   SmallVector<Instruction *, 8> InstrsToErase;
 
   // Map the block to reversed postorder traversal number. It is used to
@@ -283,7 +283,7 @@ private:
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
-  bool replaceOperandsWithConsts(Instruction *I) const;
+  bool replaceOperandsForInBlockEquality(Instruction *I) const;
   bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
                          bool DominatesByEdge);
   bool processFoldableCondBr(BranchInst *BI);
