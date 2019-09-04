@@ -201,13 +201,17 @@ add_custom_command_target(
     ALL
     DEPENDS ${clang_headers_target})
 
-add_custom_command_target(
-    copy-swift-resource-dir
-    COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${SWIFT_RESOURCE_PATH}" "${lib_dir}/lldb/swift/"
-    OUTPUT "${lib_dir}/lldb/swift/"
-    VERBATIM
-    ALL
-    DEPENDS ${SWIFT_RESOURCE_PATH})
+# Only copy the swift resource directory if you are building lldb standalone.
+# Otherwise, just rely on the swift libdir available from the swift build.
+if(LLDB_BUILT_STANDALONE)
+  add_custom_command_target(
+      copy-swift-resource-dir
+      COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory" "${SWIFT_RESOURCE_PATH}" "${lib_dir}/lldb/swift/"
+      OUTPUT "${lib_dir}/lldb/swift/"
+      VERBATIM
+      ALL
+      DEPENDS ${SWIFT_RESOURCE_PATH})
+endif()
 
 add_dependencies(liblldb ${copy-clang-resource-dir} ${copy-swift-resource-dir})
 
@@ -218,7 +222,9 @@ install(
   DIRECTORY "${lib_dir}/lldb/clang"
   DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
 
-install(
-  DIRECTORY "${lib_dir}/lldb/swift"
-  DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
+if(LLDB_BUILT_STANDALONE)
+  install(
+    DIRECTORY "${lib_dir}/lldb/swift"
+    DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
+endif()
 
