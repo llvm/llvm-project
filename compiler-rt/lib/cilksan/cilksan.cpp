@@ -51,10 +51,10 @@ template<>
 void (*DisjointSet_t<SPBagInterface *>::dtor_callback)(DisjointSet_t *) =
   &free_bag;
 
-// Free list for disjoint-set nodes
-template<>
-DisjointSet_t<SPBagInterface *> *
-DisjointSet_t<SPBagInterface *>::free_list = nullptr;
+// // Free list for disjoint-set nodes
+// template<>
+// DisjointSet_t<SPBagInterface *> *
+// DisjointSet_t<SPBagInterface *>::free_list = nullptr;
 
 // Free lists for SBags and PBags
 SBag_t::FreeNode_t *SBag_t::free_list = nullptr;
@@ -77,6 +77,10 @@ call_stack_node_t *call_stack_node_t::free_list = nullptr;
 
 // Global object to manage Cilksan data structures.
 CilkSanImpl_t CilkSanImpl;
+
+template<>
+DisjointSet_t<SPBagInterface *>::DJSAllocator
+&DisjointSet_t<SPBagInterface *>::Alloc = CilkSanImpl.getDJSAllocator();
 
 ////////////////////////////////////////////////////////////////////////
 // Events functions
@@ -559,8 +563,8 @@ void CilkSanImpl_t::deinit() {
   // Free the call-stack nodes in the free list.
   call_stack_node_t::cleanup_freelist();
 
-  // Free the disjoint-set nodes in the free list.
-  DisjointSet_t<SPBagInterface *>::cleanup_freelist();
+  // // Free the disjoint-set nodes in the free list.
+  // DisjointSet_t<SPBagInterface *>::cleanup_freelist();
 
   // Free the free lists for SBags and PBags.
   SBag_t::cleanup_freelist();

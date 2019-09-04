@@ -31,6 +31,11 @@ public:
     return MAAlloc[Idx];
   }
 
+  using DJSAllocator = DisjointSet_t<SPBagInterface *>::DJSAllocator;
+  DJSAllocator &getDJSAllocator() {
+    return DJSAlloc;
+  }
+
   // Initialization
   void init();
   void deinit();
@@ -170,6 +175,9 @@ private:
 
   // Use separate allocators for each dictionary in the shadow memory.
   MALineAllocator MAAlloc[3];
+
+  // Allocator for disjoint sets
+  DJSAllocator DJSAlloc;
 
   // A map keeping track of races found, keyed by the larger instruction address
   // involved in the race.  Races that have same instructions that made the same

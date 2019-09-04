@@ -233,13 +233,6 @@ public:
     return find_set()->_set_node;
   }
 
-  // __attribute__((always_inline))
-  // DISJOINTSET_DATA_T get_my_set_node() const {
-  //   assert_not_freed();
-
-  //   return _set_node;
-  // }
-
   /*
    * Unions this disjoint set and that disjoint set.
    *
@@ -263,42 +256,212 @@ public:
     cilksan_assert(this->find_set() == that->find_set());
   }
 
-  // Simple free-list allocator to conserve space and time in managing
-  // DisjointSet_t objects.
-  static DisjointSet_t *free_list;
+  // Custom memory allocation for disjoint sets.
+  struct DJSlab_t {
+    // System-page size.
+    static constexpr unsigned SYS_PAGE_SIZE = 4096;
+    // Mask to get sub-system-page portion of a memory address.
+    static constexpr uintptr_t SYS_PAGE_DATA_MASK = SYS_PAGE_SIZE - 1;
+    // Mask to get the system page of a memory address.
+    static constexpr uintptr_t SYS_PAGE_MASK = ~SYS_PAGE_DATA_MASK;
+
+    DJSlab_t *Next = nullptr;
+    DJSlab_t *Prev = nullptr;
+
+    static constexpr int UsedMapSize = 2;
+    uint64_t UsedMap[UsedMapSize] = { 0 };
+
+    static const size_t NumDJSets =
+      (SYS_PAGE_SIZE - (2 * sizeof(DJSlab_t *)) - sizeof(uint64_t[UsedMapSize]))
+      / sizeof(DisjointSet_t);
+    // DisjointSet_t DJSets[NumDJSets];
+    char DJSets[NumDJSets * sizeof(DisjointSet_t)];
+
+    DJSlab_t() {
+      UsedMap[UsedMapSize-1] |= ~((1UL << (NumDJSets % 64)) - 1);
+    }
+
+    // Returns true if this slab contains no free lines.
+    bool isFull() const {
+      for (int i = 0; i < UsedMapSize; ++i)
+        if (UsedMap[i] != static_cast<uint64_t>(-1))
+          return false;
+      return true;
+    }
+
+    // Get a free disjoint set from the slab, marking that disjoint set as used
+    // in the process.  Returns nullptr if no free disjoint set is available.
+    DisjointSet_t *getFreeDJSet() {
+      for (int i = 0; i < UsedMapSize; ++i) {
+        if (UsedMap[i] == static_cast<uint64_t>(-1))
+          continue;
+
+        // Get the free line.
+        DisjointSet_t *DJSet = reinterpret_cast<DisjointSet_t *>(
+            &DJSets[(64 * i + __builtin_ctzl(UsedMap[i] + 1)) * sizeof(DisjointSet_t)]);
+
+        // Mark the line as used.
+        UsedMap[i] |= UsedMap[i] + 1;
+
+        return DJSet;
+      }
+      // No free lines in this slab.
+      return nullptr;
+    }
+
+    // Returns a line to this slab, marking that line as available.
+    void returnDJSet(DisjointSet_t *DJSet) {
+      uintptr_t DJSetPtr = reinterpret_cast<uintptr_t>(DJSet);
+      cilksan_assert(
+          (DJSetPtr & SYS_PAGE_MASK) == reinterpret_cast<uintptr_t>(this) &&
+          "Disjoint set does not belong to this slab.");
+
+      // Compute the index of this line in the array.
+      uint64_t DJSetIdx = DJSetPtr & SYS_PAGE_DATA_MASK;
+      // DJSetIdx -= offsetof(DJSlab_t, DJSets);
+      // FIXME: The following code assumes no padding between fields.
+      DJSetIdx -= ((2 * sizeof(DJSlab_t *)) + sizeof(uint64_t[UsedMapSize]));
+      DJSetIdx /= sizeof(DisjointSet_t);
+
+      // Mark the line as available in the map.
+      uint64_t MapIdx = DJSetIdx / 64;
+      uint64_t MapBit = DJSetIdx % 64;
+
+      cilksan_assert(MapIdx < UsedMapSize && "Invalid MapIdx.");
+      cilksan_assert(0 != (UsedMap[MapIdx] & (1UL << MapBit)) &&
+                     "Disjoint set is not marked used.");
+      UsedMap[MapIdx] &= ~(1UL << MapBit);
+    }
+  };
+
+  class DJSAllocator {
+    DJSlab_t *FreeSlabs = nullptr;
+    DJSlab_t *FullSlabs = nullptr;
+  public:
+    DJSAllocator() {
+      FreeSlabs =
+        new (aligned_alloc(DJSlab_t::SYS_PAGE_SIZE, sizeof(DJSlab_t))) DJSlab_t;
+    }
+
+    ~DJSAllocator() {
+      cilksan_assert(!FullSlabs && "Full slabs remaining.");
+      // Destruct the free slabs and free their memory.
+      DJSlab_t *Slab = FreeSlabs;
+      DJSlab_t *PrevSlab = nullptr;
+      while (Slab) {
+        PrevSlab = Slab;
+        Slab = Slab->Next;
+        PrevSlab->~DJSlab_t();
+        free(PrevSlab);
+      }
+      FreeSlabs = nullptr;
+    }
+
+    DisjointSet_t *getDJSet() {
+      DJSlab_t *Slab = FreeSlabs;
+      DisjointSet_t *DJSet = Slab->getFreeDJSet();
+
+      // If Slab is now full, move it to the Full list.
+      if (Slab->isFull()) {
+        if (!Slab->Next)
+          // Allocate a new slab if necessary.
+          FreeSlabs = new (aligned_alloc(DJSlab_t::SYS_PAGE_SIZE,
+                                         sizeof(DJSlab_t))) DJSlab_t;
+        else {
+          Slab->Next->Prev = nullptr;
+          FreeSlabs = Slab->Next;
+        }
+        // Push slab to the beginning of the full list.
+        Slab->Next = FullSlabs;
+        if (FullSlabs)
+          FullSlabs->Prev = Slab;
+        FullSlabs = Slab;
+      }
+
+      cilksan_assert(DJSet && "No disjoinst set found.");
+      return DJSet;
+    }
+
+    void freeDJSet(void *Ptr) {
+      // Derive the pointer to the slab.
+      DJSlab_t *Slab = reinterpret_cast<DJSlab_t *>(
+          reinterpret_cast<uintptr_t>(Ptr) & DJSlab_t::SYS_PAGE_MASK);
+
+      if (Slab->isFull()) {
+        // Slab is no longer full, so move it back to the free list.
+        if (Slab->Prev)
+          Slab->Prev->Next = Slab->Next;
+        else
+          FullSlabs = Slab->Next;
+
+        // Make Slab's successor point to Slab's predecessor.
+        if (Slab->Next)
+          Slab->Next->Prev = Slab->Prev;
+
+        // Push Slab to the start of the free list.
+        Slab->Prev = nullptr;
+        Slab->Next = FreeSlabs;
+        FreeSlabs->Prev = Slab;
+        FreeSlabs = Slab;
+      } else if (FreeSlabs != Slab) {
+        // Remove Slab from its place in FreeSlabs.
+        Slab->Prev->Next = Slab->Next;
+        if (Slab->Next)
+          Slab->Next->Prev = Slab->Prev;
+
+        // Move Slab to the start of FreeSlabs.
+        Slab->Prev = nullptr;
+        Slab->Next = FreeSlabs;
+        FreeSlabs->Prev = Slab;
+        FreeSlabs = Slab;
+      }
+
+      Slab->returnDJSet(static_cast<DisjointSet_t *>(Ptr));
+    }
+  };
+
+  // // Simple free-list allocator to conserve space and time in managing
+  // // DisjointSet_t objects.
+  // static DisjointSet_t *free_list;
+  static DJSAllocator &Alloc;
 
   void *operator new(size_t size) {
-    if (free_list) {
-      DisjointSet_t *new_node = free_list;
-      free_list = free_list->_set_parent;
-      return new_node;
-    }
-    return ::operator new(size);
+    return Alloc.getDJSet();
+    // if (free_list) {
+    //   DisjointSet_t *new_node = free_list;
+    //   free_list = free_list->_set_parent;
+    //   return new_node;
+    // }
+    // return ::operator new(size);
   }
 
   void operator delete(void *ptr) {
-    DisjointSet_t *del_node = reinterpret_cast<DisjointSet_t *>(ptr);
-    del_node->_set_parent = free_list;
-    free_list = del_node;
+    Alloc.freeDJSet(ptr);
+    // DisjointSet_t *del_node = reinterpret_cast<DisjointSet_t *>(ptr);
+    // del_node->_set_parent = free_list;
+    // free_list = del_node;
   }
 
-  static void cleanup_freelist() {
-    DisjointSet_t *node = free_list;
-    DisjointSet_t *next = nullptr;
-    while (node) {
-      next = node->_set_parent;
-      ::operator delete(node);
-      node = next;
-    }
-  }
+  // static void cleanup_freelist() {
+  //   DisjointSet_t *node = free_list;
+  //   DisjointSet_t *next = nullptr;
+  //   while (node) {
+  //     next = node->_set_parent;
+  //     ::operator delete(node);
+  //     node = next;
+  //   }
+  // }
 };
 
 // Explicit instantiations for cilksan.
 template<>
 void (*DisjointSet_t<SPBagInterface *>::dtor_callback)(DisjointSet_t *);
 
+// template<>
+// DisjointSet_t<SPBagInterface *> *DisjointSet_t<SPBagInterface *>::free_list;
 template<>
-DisjointSet_t<SPBagInterface *> *DisjointSet_t<SPBagInterface *>::free_list;
+DisjointSet_t<SPBagInterface *>::DJSAllocator
+&DisjointSet_t<SPBagInterface *>::Alloc;
 
 #if CILKSAN_DEBUG
 template<>
