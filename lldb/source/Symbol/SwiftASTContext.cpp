@@ -49,7 +49,6 @@
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
-#include "swift/Serialization/ModuleFile.h"
 #include "swift/Serialization/Validation.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
