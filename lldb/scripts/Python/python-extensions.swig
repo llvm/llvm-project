@@ -980,6 +980,9 @@ class value(object):
     def __nonzero__(self):
         return self.sbvalue.__nonzero__()
 
+    def __bool__(self):
+        return self.sbvalue.__bool__()
+
     def __str__(self):
         return self.sbvalue.__str__()
 

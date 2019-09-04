@@ -160,6 +160,10 @@ class ValueAPITestCase(TestBase):
                 val_i.GetType()).AddressOf(),
             VALID_VARIABLE)
 
+        # Check that lldb.value implements truth testing.
+        self.assertFalse(lldb.value(frame0.FindVariable('bogus')))
+        self.assertTrue(lldb.value(frame0.FindVariable('uinthex')))
+
         self.assertTrue(int(lldb.value(frame0.FindVariable('uinthex')))
                         == 3768803088, 'uinthex == 3768803088')
         self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex')))
