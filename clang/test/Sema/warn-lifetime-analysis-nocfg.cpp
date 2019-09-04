@@ -7,11 +7,19 @@ struct [[gsl::Owner(int)]] MyIntOwner {
 struct [[gsl::Pointer(int)]] MyIntPointer {
   MyIntPointer(int *p = nullptr);
   // Conversion operator and constructor conversion will result in two
-  // different ASTs. The former is tested with another owner and 
+  // different ASTs. The former is tested with another owner and
   // pointer type.
   MyIntPointer(const MyIntOwner &);
   int &operator*();
   MyIntOwner toOwner();
+};
+
+struct MySpecialIntPointer : MyIntPointer {
+};
+
+// We did see examples in the wild when a derived class changes
+// the ownership model. So we have a test for it.
+struct [[gsl::Owner(int)]] MyOwnerIntPointer : MyIntPointer {
 };
 
 struct [[gsl::Pointer(long)]] MyLongPointerFromConversion {
@@ -56,21 +64,21 @@ struct Y {
 };
 
 void dangligGslPtrFromTemporary() {
-  MyIntPointer p = Y{}.a; // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
+  MyIntPointer p = Y{}.a; // TODO
   (void)p;
 }
 
 struct DanglingGslPtrField {
-  MyIntPointer p; // expected-note 2{{pointer member declared here}}
+  MyIntPointer p; // expected-note {{pointer member declared here}}
   MyLongPointerFromConversion p2; // expected-note {{pointer member declared here}}
-  DanglingGslPtrField(int i) : p(&i) {} // expected-warning {{initializing pointer member 'p' with the stack address of parameter 'i'}}
+  DanglingGslPtrField(int i) : p(&i) {} // TODO
   DanglingGslPtrField() : p2(MyLongOwnerWithConversion{}) {} // expected-warning {{initializing pointer member 'p2' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}}
   DanglingGslPtrField(double) : p(MyIntOwner{}) {} // expected-warning {{initializing pointer member 'p' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}}
 };
 
 MyIntPointer danglingGslPtrFromLocal() {
   int j;
-  return &j; // expected-warning {{address of stack memory associated with local variable 'j' returned}}
+  return &j; // TODO
 }
 
 MyIntPointer returningLocalPointer() {
@@ -124,6 +132,7 @@ template <typename T>
 struct basic_iterator {
   basic_iterator operator++();
   T& operator*() const;
+  T* operator->() const;
 };
 
 template<typename T>
@@ -140,6 +149,12 @@ typename remove_reference<T>::type &&move(T &&t) noexcept;
 
 template <typename C>
 auto data(const C &c) -> decltype(c.data());
+
+template <typename C>
+auto begin(C &c) -> decltype(c.begin());
+
+template<typename T, int N>
+T *begin(T (&array)[N]);
 
 template <typename T>
 struct vector {
@@ -158,6 +173,8 @@ struct basic_string_view {
 
 template<typename T>
 struct basic_string {
+  basic_string();
+  basic_string(const T *);
   const T *c_str() const;
   operator basic_string_view<T> () const;
 };
@@ -188,7 +205,22 @@ struct any {};
 
 template<typename T>
 T any_cast(const any& operand);
+
+template<typename T>
+struct reference_wrapper {
+  template<typename U>
+  reference_wrapper(U &&);
+};
+
+template<typename T>
+reference_wrapper<T> ref(T& t) noexcept;
 }
+
+struct Unannotated {
+  typedef std::vector<int>::iterator iterator;
+  iterator begin();
+  operator iterator() const;
+};
 
 void modelIterators() {
   std::vector<int>::iterator it = std::vector<int>().begin(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
@@ -297,4 +329,124 @@ const int &handleGslPtrInitsThroughReference() {
 void handleGslPtrInitsThroughReference2() {
   const std::vector<int> &v = getVec();
   const int *val = v.data(); // Ok, it is lifetime extended.
+}
+
+void handleTernaryOperator(bool cond) {
+    std::basic_string<char> def;
+    std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+}
+
+std::reference_wrapper<int> danglingPtrFromNonOwnerLocal() {
+  int i = 5;
+  return i; // TODO
+}
+
+std::reference_wrapper<int> danglingPtrFromNonOwnerLocal2() {
+  int i = 5;
+  return std::ref(i); // TODO
+}
+
+std::reference_wrapper<int> danglingPtrFromNonOwnerLocal3() {
+  int i = 5;
+  return std::reference_wrapper<int>(i); // TODO
+}
+
+std::reference_wrapper<Unannotated> danglingPtrFromNonOwnerLocal4() {
+  Unannotated i;
+  return std::reference_wrapper<Unannotated>(i); // TODO
+}
+
+std::reference_wrapper<Unannotated> danglingPtrFromNonOwnerLocal5() {
+  Unannotated i;
+  return std::ref(i); // TODO
+}
+
+int *returnPtrToLocalArray() {
+  int a[5];
+  return std::begin(a); // TODO
+}
+
+struct ptr_wrapper {
+  std::vector<int>::iterator member;
+};
+
+ptr_wrapper getPtrWrapper();
+
+std::vector<int>::iterator returnPtrFromWrapper() {
+  ptr_wrapper local = getPtrWrapper();
+  return local.member;
+}
+
+std::vector<int>::iterator returnPtrFromWrapperThroughRef() {
+  ptr_wrapper local = getPtrWrapper();
+  ptr_wrapper &local2 = local;
+  return local2.member;
+}
+
+std::vector<int>::iterator returnPtrFromWrapperThroughRef2() {
+  ptr_wrapper local = getPtrWrapper();
+  std::vector<int>::iterator &local2 = local.member;
+  return local2;
+}
+
+void checkPtrMemberFromAggregate() {
+  std::vector<int>::iterator local = getPtrWrapper().member; // OK.
+}
+
+std::vector<int>::iterator doNotInterferWithUnannotated() {
+  Unannotated value;
+  // Conservative choice for now. Probably not ok, but we do not warn.
+  return std::begin(value);
+}
+
+std::vector<int>::iterator doNotInterferWithUnannotated2() {
+  Unannotated value;
+  return value;
+}
+
+std::vector<int>::iterator supportDerefAddrofChain(int a, std::vector<int>::iterator value) {
+  switch (a)  {
+    default:
+      return value;
+    case 1:
+      return *&value;
+    case 2:
+      return *&*&value;
+    case 3:
+      return *&*&*&value;
+  }
+}
+
+int &supportDerefAddrofChain2(int a, std::vector<int>::iterator value) {
+  switch (a)  {
+    default:
+      return *value;
+    case 1:
+      return **&value;
+    case 2:
+      return **&*&value;
+    case 3:
+      return **&*&*&value;
+  }
+}
+
+int *supportDerefAddrofChain3(int a, std::vector<int>::iterator value) {
+  switch (a)  {
+    default:
+      return &*value;
+    case 1:
+      return &*&*value;
+    case 2:
+      return &*&**&value;
+    case 3:
+      return &*&**&*&value;
+  }
+}
+
+MyIntPointer handleDerivedToBaseCast1(MySpecialIntPointer ptr) {
+  return ptr;
+}
+
+MyIntPointer handleDerivedToBaseCast2(MyOwnerIntPointer ptr) {
+  return ptr; // expected-warning {{address of stack memory associated with parameter 'ptr' returned}}
 }

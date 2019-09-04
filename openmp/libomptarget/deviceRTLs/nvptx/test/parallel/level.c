@@ -135,5 +135,17 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Check for paraller level in non-SPMD kernels.
+  level = 0;
+  #pragma omp target teams distribute num_teams(1) thread_limit(32) reduction(+:level)
+  for (int i=0; i<5032; i+=32) {
+    int ub = (i+32 > 5032) ? 5032 : i+32;
+    #pragma omp parallel for schedule(dynamic)
+    for (int j=i ; j < ub; j++) ;
+    level += omp_get_level();
+  }
+  // CHECK: Integral level = 0.
+  printf("Integral level = %d.\n", level);
+
   return 0;
 }

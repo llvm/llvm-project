@@ -23,6 +23,7 @@ class StdCXXDisassembleTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @skipIfWindows
+    @expectedFailureNetBSD
     def test_stdcxx_disasm(self):
         """Do 'disassemble' on each and every 'Code' symbol entry from the std c++ lib."""
         self.build()

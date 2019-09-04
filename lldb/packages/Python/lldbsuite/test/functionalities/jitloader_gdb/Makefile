@@ -1,10 +1,8 @@
-LEVEL = ../../make
-
 C_SOURCES := main.c
 
 all: a.out simple
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 simple:
 	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/simple.mk

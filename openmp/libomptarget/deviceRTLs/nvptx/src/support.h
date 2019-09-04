@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "target_impl.h"
 ////////////////////////////////////////////////////////////////////////////////
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
@@ -65,8 +66,8 @@ INLINE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode);
 INLINE int IsTeamMaster(int ompThreadId);
 
 // Parallel level
-INLINE void IncParallelLevel(bool ActiveParallel);
-INLINE void DecParallelLevel(bool ActiveParallel);
+INLINE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask);
+INLINE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Memory

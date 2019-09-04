@@ -364,6 +364,12 @@ ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
   return ToolChain::CST_Libstdcxx;
 }
 
+unsigned FreeBSD::GetDefaultDwarfVersion() const {
+  if (getTriple().getOSMajorVersion() < 12)
+    return 2;
+  return 4;
+}
+
 void FreeBSD::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {

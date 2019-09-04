@@ -1,5 +1,3 @@
-LEVEL = ../../../make
-
 CXX_SOURCES = main.cpp length.cpp a.cpp
 
 CFLAGS_LIMIT = -c $(CXXFLAGS)
@@ -32,4 +30,4 @@ a.o: a.cpp
 
 clean: OBJECTS += limit nolimit length_limit.o length_nolimit.o length_limit.dwo length_nolimit.dwo
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
