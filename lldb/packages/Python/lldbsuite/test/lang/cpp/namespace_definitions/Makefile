@@ -3,7 +3,8 @@ CXX_SOURCES := main.cpp
 
 include Makefile.rules
 
-include $(LEVEL)/Makefile.rules
+.PHONY:
+a.out: lib_a lib_b
 
 lib_%:
 	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/$*.mk
