@@ -510,7 +510,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
         } else {
           result.AppendErrorWithFormat(
               "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
-              m_options.start_addr);
+              cur_range.GetBaseAddress().GetLoadAddress(target));
           result.SetStatus(eReturnStatusFailed);
         }
         if (print_sc_header)
