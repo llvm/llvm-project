@@ -563,7 +563,8 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             llvm::SmallVector<char, 256> sv;
             // Show full precision when printing float values
             const unsigned format_precision = 0;
-            const unsigned format_max_padding = 100;
+            const unsigned format_max_padding =
+                target_sp->GetMaxZeroPaddingInFloatFormat();
             size_t item_bit_size = item_byte_size * 8;
 
             if (item_bit_size == ast->getTypeSize(ast->FloatTy)) {

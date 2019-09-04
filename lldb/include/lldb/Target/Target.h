@@ -139,6 +139,8 @@ public:
 
   bool GetEnableSyntheticValue() const;
 
+  uint32_t GetMaxZeroPaddingInFloatFormat() const;
+
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;
 
   uint32_t GetMaximumSizeOfStringSummary() const;
