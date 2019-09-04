@@ -8,7 +8,8 @@
 @protocol ObjCProtocol <WithName>
 @end
 
-@interface ObjCClass : NSObject
+@interface ObjCClass : NSObject {
+}
 - (instancetype)init;
 @end
 
