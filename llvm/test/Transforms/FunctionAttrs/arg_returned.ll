@@ -1,6 +1,6 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=9 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
-; RUN: opt -attributor -attributor-disable=false -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=9 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
 ;
 ; Test cases specifically designed for the "returned" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.
@@ -160,7 +160,7 @@ return:                                           ; preds = %cond.end, %if.then3
 ; TEST SCC test returning a pointer value argument
 ;
 ; BOTH: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
-; BOTH-NEXT: define double* @ptr_sink_r0(double* readnone returned %r)
+; BOTH-NEXT: define double* @ptr_sink_r0(double* readnone returned "no-capture-maybe-returned" %r)
 ; BOTH: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; BOTH-NEXT: define double* @ptr_scc_r1(double* %a, double* readnone returned %r, double* nocapture readnone %b)
 ; BOTH: Function Attrs: nofree noinline nosync nounwind readnone uwtable
@@ -171,9 +171,9 @@ return:                                           ; preds = %cond.end, %if.then3
 ; FNATTR: define double* @ptr_scc_r2(double* readnone %a, double* readnone %b, double* readnone %r)
 ;
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
-; ATTRIBUTOR-NEXT: define double* @ptr_sink_r0(double* returned %r)
+; ATTRIBUTOR-NEXT: define double* @ptr_sink_r0(double* returned "no-capture-maybe-returned" %r)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
-; ATTRIBUTOR-NEXT: define double* @ptr_scc_r1(double* %a, double* returned %r, double* %b)
+; ATTRIBUTOR-NEXT: define double* @ptr_scc_r1(double* %a, double* returned %r, double* nocapture %b)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define double* @ptr_scc_r2(double* %a, double* %b, double* returned %r)
 ;
@@ -261,7 +261,7 @@ return:                                           ; preds = %cond.end, %if.then3
 ;
 ; FNATTR:  define i32* @rt0(i32* readonly %a)
 ; BOTH: Function Attrs: nofree noinline noreturn nosync nounwind readonly uwtable
-; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* readonly %a)
+; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture readonly %a)
 define i32* @rt0(i32* %a) #0 {
 entry:
   %v = load i32, i32* %a, align 4
@@ -294,7 +294,7 @@ entry:
 ; FNATTR:  define i32* @rt2_helper(i32* %a)
 ; FNATTR:  define i32* @rt2(i32* readnone %a, i32* readnone %b)
 ; BOTH:    define i32* @rt2_helper(i32* returned %a)
-; BOTH:    define i32* @rt2(i32* readnone %a, i32* readnone %b)
+; BOTH:    define i32* @rt2(i32* readnone %a, i32* readnone "no-capture-maybe-returned" %b)
 define i32* @rt2_helper(i32* %a) #0 {
 entry:
   %call = call i32* @rt2(i32* %a, i32* %a)
@@ -319,8 +319,8 @@ if.end:
 ;
 ; FNATTR:  define i32* @rt3_helper(i32* %a, i32* %b)
 ; FNATTR:  define i32* @rt3(i32* readnone %a, i32* readnone %b)
-; BOTH:    define i32* @rt3_helper(i32* %a, i32* returned %b)
-; BOTH:    define i32* @rt3(i32* readnone %a, i32* readnone returned %b)
+; BOTH:    define i32* @rt3_helper(i32* %a, i32* returned "no-capture-maybe-returned" %b)
+; BOTH:    define i32* @rt3(i32* readnone %a, i32* readnone returned "no-capture-maybe-returned" %b)
 define i32* @rt3_helper(i32* %a, i32* %b) #0 {
 entry:
   %call = call i32* @rt3(i32* %a, i32* %b)
@@ -353,9 +353,9 @@ if.end:
 ; BOTH: declare void @unknown_fn(i32* (i32*)*)
 ;
 ; BOTH:       Function Attrs: noinline nounwind uwtable
-; BOTH-NEXT:  define i32* @calls_unknown_fn(i32* readnone returned %r)
+; BOTH-NEXT:  define i32* @calls_unknown_fn(i32* readnone returned "no-capture-maybe-returned" %r)
 ; FNATTR:     define i32* @calls_unknown_fn(i32* readnone returned %r)
-; ATTRIBUTOR: define i32* @calls_unknown_fn(i32* returned %r)
+; ATTRIBUTOR: define i32* @calls_unknown_fn(i32* returned "no-capture-maybe-returned" %r)
 declare void @unknown_fn(i32* (i32*)*) #0
 
 define i32* @calls_unknown_fn(i32* %r) #0 {
@@ -502,12 +502,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 ; BOTH: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
-; BOTH-NEXT:  define double* @bitcast(i32* readnone returned %b)
+; BOTH-NEXT:  define double* @bitcast(i32* readnone returned "no-capture-maybe-returned" %b)
 ;
 ; FNATTR:     define double* @bitcast(i32* readnone %b)
 ;
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
-; ATTRIBUTOR-NEXT: define double* @bitcast(i32* returned %b)
+; ATTRIBUTOR-NEXT: define double* @bitcast(i32* returned "no-capture-maybe-returned" %b)
 define double* @bitcast(i32* %b) #0 {
 entry:
   %bc0 = bitcast i32* %b to double*
@@ -804,10 +804,8 @@ attributes #0 = { noinline nounwind uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readnone uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline noreturn nosync nounwind readonly uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { noinline nounwind uwtable }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readnone uwtable willreturn }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind uwtable willreturn }
+; BOTH-DAG: attributes #{{[0-9]*}} = { noreturn }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree nosync willreturn }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree nosync }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noreturn nosync }
-; BOTH-DAG: attributes #{{[0-9]*}} = { noreturn }
 ; BOTH-NOT: attributes #

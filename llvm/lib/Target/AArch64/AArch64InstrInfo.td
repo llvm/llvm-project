@@ -437,6 +437,13 @@ let RecomputePerFunction = 1 in {
 
   def UseBTI : Predicate<[{ MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
   def NotUseBTI : Predicate<[{ !MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
+
+  // Toggles patterns which aren't beneficial in GlobalISel when we aren't
+  // optimizing. This allows us to selectively use patterns without impacting
+  // SelectionDAG's behaviour.
+  // FIXME: One day there will probably be a nicer way to check for this, but
+  // today is not that day.
+  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasProperty(MachineFunctionProperties::Property::FailedISel) || !MF->getProperties().hasProperty(MachineFunctionProperties::Property::Legalized)">;
 }
 
 include "AArch64InstrFormats.td"
@@ -940,8 +947,12 @@ def trunc_imm : SDNodeXForm<imm, [{
 def gi_trunc_imm : GICustomOperandRenderer<"renderTruncImm">,
   GISDNodeXFormEquiv<trunc_imm>;
 
+let Predicates = [OptimizedGISelOrOtherSelector] in {
+// The SUBREG_TO_REG isn't eliminated at -O0, which can result in pointless
+// copies.
 def : Pat<(i64 i64imm_32bit:$src),
           (SUBREG_TO_REG (i64 0), (MOVi32imm (trunc_imm imm:$src)), sub_32)>;
+}
 
 // Materialize FP constants via MOVi32imm/MOVi64imm (MachO large code model).
 def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{

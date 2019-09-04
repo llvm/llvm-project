@@ -250,10 +250,6 @@ private:
   SDValue GetVLDSTAlign(SDValue Align, const SDLoc &dl, unsigned NumVecs,
                         bool is64BitVector);
 
-  /// Returns the number of instructions required to materialize the given
-  /// constant in a register, or 3 if a literal pool load is needed.
-  unsigned ConstantMaterializationCost(unsigned Val) const;
-
   /// Checks if N is a multiplication by a constant where we can extract out a
   /// power of two from the constant so that it can be used in a shift, but only
   /// if it simplifies the materialization of the constant. Returns true if it
@@ -454,27 +450,6 @@ bool ARMDAGToDAGISel::isShifterOpProfitable(const SDValue &Shift,
          (ShAmt == 2 || (Subtarget->isSwift() && ShAmt == 1));
 }
 
-unsigned ARMDAGToDAGISel::ConstantMaterializationCost(unsigned Val) const {
-  if (Subtarget->isThumb()) {
-    if (Val <= 255) return 1;                               // MOV
-    if (Subtarget->hasV6T2Ops() &&
-        (Val <= 0xffff ||                                   // MOV
-         ARM_AM::getT2SOImmVal(Val) != -1 ||                // MOVW
-         ARM_AM::getT2SOImmVal(~Val) != -1))                // MVN
-      return 1;
-    if (Val <= 510) return 2;                               // MOV + ADDi8
-    if (~Val <= 255) return 2;                              // MOV + MVN
-    if (ARM_AM::isThumbImmShiftedVal(Val)) return 2;        // MOV + LSL
-  } else {
-    if (ARM_AM::getSOImmVal(Val) != -1) return 1;           // MOV
-    if (ARM_AM::getSOImmVal(~Val) != -1) return 1;          // MVN
-    if (Subtarget->hasV6T2Ops() && Val <= 0xffff) return 1; // MOVW
-    if (ARM_AM::isSOImmTwoPartVal(Val)) return 2;           // two instrs
-  }
-  if (Subtarget->useMovt()) return 2; // MOVW + MOVT
-  return 3; // Literal pool load
-}
-
 bool ARMDAGToDAGISel::canExtractShiftFromMul(const SDValue &N,
                                              unsigned MaxShift,
                                              unsigned &PowerOfTwo,
@@ -504,8 +479,8 @@ bool ARMDAGToDAGISel::canExtractShiftFromMul(const SDValue &N,
   // Only optimise if the new cost is better
   unsigned NewMulConstVal = MulConstVal / (1 << PowerOfTwo);
   NewMulConst = CurDAG->getConstant(NewMulConstVal, SDLoc(N), MVT::i32);
-  unsigned OldCost = ConstantMaterializationCost(MulConstVal);
-  unsigned NewCost = ConstantMaterializationCost(NewMulConstVal);
+  unsigned OldCost = ConstantMaterializationCost(MulConstVal, Subtarget);
+  unsigned NewCost = ConstantMaterializationCost(NewMulConstVal, Subtarget);
   return NewCost < OldCost;
 }
 
@@ -2791,7 +2766,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ISD::Constant: {
     unsigned Val = cast<ConstantSDNode>(N)->getZExtValue();
     // If we can't materialize the constant we need to use a literal pool
-    if (ConstantMaterializationCost(Val) > 2) {
+    if (ConstantMaterializationCost(Val, Subtarget) > 2) {
       SDValue CPIdx = CurDAG->getTargetConstantPool(
           ConstantInt::get(Type::getInt32Ty(*CurDAG->getContext()), Val),
           TLI->getPointerTy(CurDAG->getDataLayout()));
@@ -2932,8 +2907,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       bool PreferImmediateEncoding =
         Subtarget->hasThumb2() && (is_t2_so_imm(Imm) || is_t2_so_imm_not(Imm));
       if (!PreferImmediateEncoding &&
-          ConstantMaterializationCost(Imm) >
-              ConstantMaterializationCost(~Imm)) {
+          ConstantMaterializationCost(Imm, Subtarget) >
+              ConstantMaterializationCost(~Imm, Subtarget)) {
         // The current immediate costs more to materialize than a negated
         // immediate, so negate the immediate and use a BIC.
         SDValue NewImm =

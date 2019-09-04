@@ -691,8 +691,75 @@ struct UndefinedDiag {
 
 static std::vector<UndefinedDiag> undefs;
 
+// Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
+// the suggested symbol, which is either in the symbol table, or in the same
+// file of sym.
+static const Symbol *getAlternativeSpelling(const Undefined &sym) {
+  // Build a map of local defined symbols.
+  DenseMap<StringRef, const Symbol *> map;
+  if (sym.file) {
+    for (const Symbol *s : sym.file->getSymbols())
+      if (s->isLocal() && s->isDefined())
+        map.try_emplace(s->getName(), s);
+  }
+
+  auto suggest = [&](StringRef newName) -> const Symbol * {
+    // If defined locally.
+    if (const Symbol *s = map.lookup(newName))
+      return s;
+
+    // If in the symbol table and not undefined.
+    if (const Symbol *s = symtab->find(newName))
+      if (!s->isUndefined())
+        return s;
+
+    return nullptr;
+  };
+
+  // This loop enumerates all strings of Levenshtein distance 1 as typo
+  // correction candidates and suggests the one that exists as a non-undefined
+  // symbol.
+  StringRef name = sym.getName();
+  for (size_t i = 0, e = name.size(); i != e + 1; ++i) {
+    // Insert a character before name[i].
+    std::string newName = (name.substr(0, i) + "0" + name.substr(i)).str();
+    for (char c = '0'; c <= 'z'; ++c) {
+      newName[i] = c;
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+    if (i == e)
+      break;
+
+    // Substitute name[i].
+    newName = name;
+    for (char c = '0'; c <= 'z'; ++c) {
+      newName[i] = c;
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+
+    // Transpose name[i] and name[i+1]. This is of edit distance 2 but it is
+    // common.
+    if (i + 1 < e) {
+      newName[i] = name[i + 1];
+      newName[i + 1] = name[i];
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+
+    // Delete name[i].
+    newName = (name.substr(0, i) + name.substr(i + 1)).str();
+    if (const Symbol *s = suggest(newName))
+      return s;
+  }
+
+  return nullptr;
+}
+
 template <class ELFT>
-static void reportUndefinedSymbol(const UndefinedDiag &undef) {
+static void reportUndefinedSymbol(const UndefinedDiag &undef,
+                                  bool correctSpelling) {
   Symbol &sym = *undef.sym;
 
   auto visibility = [&]() -> std::string {
@@ -732,6 +799,14 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef) {
     msg += ("\n>>> referenced " + Twine(undef.locs.size() - i) + " more times")
                .str();
 
+  if (correctSpelling)
+    if (const Symbol *corrected =
+            getAlternativeSpelling(cast<Undefined>(sym))) {
+      msg += "\n>>> did you mean: " + toString(*corrected);
+      if (corrected->file)
+        msg += "\n>>> defined in: " + toString(corrected->file);
+    }
+
   if (sym.getName().startswith("_ZTV"))
     msg += "\nthe vtable symbol may be undefined because the class is missing "
            "its key function (see https://lld.llvm.org/missingkeyfunction)";
@@ -755,10 +830,10 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
       firstRef[undef.sym] = &undef;
   }
 
-  for (const UndefinedDiag &undef : undefs) {
-    if (!undef.locs.empty())
-      reportUndefinedSymbol<ELFT>(undef);
-  }
+  // Enable spell corrector for the first 2 diagnostics.
+  for (auto it : enumerate(undefs))
+    if (!it.value().locs.empty())
+      reportUndefinedSymbol<ELFT>(it.value(), it.index() < 2);
   undefs.clear();
 }
 

@@ -270,6 +270,25 @@ struct IRPosition {
   }
   ///}
 
+  /// Return the associated argument, if any.
+  ///
+  ///{
+  Argument *getAssociatedArgument() {
+    if (auto *Arg = dyn_cast<Argument>(&getAnchorValue()))
+      return Arg;
+    int ArgNo = getArgNo();
+    if (ArgNo < 0)
+      return nullptr;
+    Function *AssociatedFn = getAssociatedFunction();
+    if (!AssociatedFn || AssociatedFn->arg_size() <= unsigned(ArgNo))
+      return nullptr;
+    return AssociatedFn->arg_begin() + ArgNo;
+  }
+  const Argument *getAssociatedArgument() const {
+    return const_cast<IRPosition *>(this)->getAssociatedArgument();
+  }
+  ///}
+
   /// Return the Function surrounding the anchor value.
   ///
   ///{
@@ -1544,6 +1563,56 @@ struct AAAlign
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAlign &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all nocapture attributes.
+struct AANoCapture
+    : public IRAttribute<Attribute::NoCapture,
+                         StateWrapper<IntegerState, AbstractAttribute>> {
+  AANoCapture(const IRPosition &IRP) : IRAttribute(IRP) {}
+
+  /// State encoding bits. A set bit in the state means the property holds.
+  /// NO_CAPTURE is the best possible state, 0 the worst possible state.
+  enum {
+    NOT_CAPTURED_IN_MEM = 1 << 0,
+    NOT_CAPTURED_IN_INT = 1 << 1,
+    NOT_CAPTURED_IN_RET = 1 << 2,
+
+    /// If we do not capture the value in memory or through integers we can only
+    /// communicate it back as a derived pointer.
+    NO_CAPTURE_MAYBE_RETURNED = NOT_CAPTURED_IN_MEM | NOT_CAPTURED_IN_INT,
+
+    /// If we do not capture the value in memory, through integers, or as a
+    /// derived pointer we know it is not captured.
+    NO_CAPTURE =
+        NOT_CAPTURED_IN_MEM | NOT_CAPTURED_IN_INT | NOT_CAPTURED_IN_RET,
+  };
+
+  /// Return true if we know that the underlying value is not captured in its
+  /// respective scope.
+  bool isKnownNoCapture() const { return isKnown(NO_CAPTURE); }
+
+  /// Return true if we assume that the underlying value is not captured in its
+  /// respective scope.
+  bool isAssumedNoCapture() const { return isAssumed(NO_CAPTURE); }
+
+  /// Return true if we know that the underlying value is not captured in its
+  /// respective scope but we allow it to escape through a "return".
+  bool isKnownNoCaptureMaybeReturned() const {
+    return isKnown(NO_CAPTURE_MAYBE_RETURNED);
+  }
+
+  /// Return true if we assume that the underlying value is not captured in its
+  /// respective scope but we allow it to escape through a "return".
+  bool isAssumedNoCaptureMaybeReturned() const {
+    return isAssumed(NO_CAPTURE_MAYBE_RETURNED);
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoCapture &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;

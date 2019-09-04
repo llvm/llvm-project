@@ -1634,6 +1634,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::WLS:           return "ARMISD::WLS";
   case ARMISD::LE:            return "ARMISD::LE";
   case ARMISD::LOOP_DEC:      return "ARMISD::LOOP_DEC";
+  case ARMISD::CSINV:         return "ARMISD::CSINV";
+  case ARMISD::CSNEG:         return "ARMISD::CSNEG";
+  case ARMISD::CSINC:         return "ARMISD::CSINC";
   }
   return nullptr;
 }
@@ -4815,6 +4818,58 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
+  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
+  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+
+  if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
+      LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
+    unsigned TVal = CTVal->getZExtValue();
+    unsigned FVal = CFVal->getZExtValue();
+    unsigned Opcode = 0;
+
+    if (TVal == ~FVal) {
+      Opcode = ARMISD::CSINV;
+    } else if (TVal == ~FVal + 1) {
+      Opcode = ARMISD::CSNEG;
+    } else if (TVal + 1 == FVal) {
+      Opcode = ARMISD::CSINC;
+    } else if (TVal == FVal + 1) {
+      Opcode = ARMISD::CSINC;
+      std::swap(TrueVal, FalseVal);
+      std::swap(TVal, FVal);
+      CC = ISD::getSetCCInverse(CC, true);
+    }
+
+    if (Opcode) {
+      // If one of the constants is cheaper than another, materialise the
+      // cheaper one and let the csel generate the other.
+      if (Opcode != ARMISD::CSINC &&
+          HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
+        std::swap(TrueVal, FalseVal);
+        std::swap(TVal, FVal);
+        CC = ISD::getSetCCInverse(CC, true);
+      }
+
+      // Attempt to use ZR checking TVal is 0, possibly inverting the condition
+      // to get there. CSINC not is invertable like the other two (~(~a) == a,
+      // -(-a) == a, but (a+1)+1 != a).
+      if (FVal == 0 && Opcode != ARMISD::CSINC) {
+        std::swap(TrueVal, FalseVal);
+        std::swap(TVal, FVal);
+        CC = ISD::getSetCCInverse(CC, true);
+      }
+      if (TVal == 0)
+        TrueVal = DAG.getRegister(ARM::ZR, MVT::i32);
+
+      // Drops F's value because we can get it by inverting/negating TVal.
+      FalseVal = TrueVal;
+
+      SDValue ARMcc;
+      SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
+      EVT VT = TrueVal.getValueType();
+      return DAG.getNode(Opcode, dl, VT, TrueVal, FalseVal, ARMcc, Cmp);
+    }
+  }
 
   if (isUnsupportedFloatingType(LHS.getValueType())) {
     DAG.getTargetLoweringInfo().softenSetCCOperands(

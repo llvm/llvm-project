@@ -174,12 +174,13 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
   bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info,
+                 ISD::ArgFlagsTy Flags,
                  CCState &State) override {
     bool Res;
     if (Info.IsFixed)
-      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
     else
-      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
 
     StackSize = State.getNextStackOffset();
     return Res;
@@ -208,7 +209,7 @@ void AArch64CallLowering::splitToValueTypes(
     // No splitting to do, but we want to replace the original type (e.g. [1 x
     // double] -> double).
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags, OrigArg.IsFixed);
+                           OrigArg.Flags[0], OrigArg.IsFixed);
     return;
   }
 
@@ -219,13 +220,13 @@ void AArch64CallLowering::splitToValueTypes(
       OrigArg.Ty, CallConv, false);
   for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
     Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
-    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags,
+    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags[0],
                            OrigArg.IsFixed);
     if (NeedsRegBlock)
-      SplitArgs.back().Flags.setInConsecutiveRegs();
+      SplitArgs.back().Flags[0].setInConsecutiveRegs();
   }
 
-  SplitArgs.back().Flags.setInConsecutiveRegsLast();
+  SplitArgs.back().Flags[0].setInConsecutiveRegsLast();
 }
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
@@ -419,7 +420,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI, Info.CallConv);
     // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
     if (OrigArg.Ty->isIntegerTy(1))
-      SplitArgs.back().Flags.setZExt();
+      SplitArgs.back().Flags[0].setZExt();
   }
 
   // Find out which ABI gets to decide where things go.

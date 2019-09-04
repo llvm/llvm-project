@@ -169,8 +169,9 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
   bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, CCState &State) override {
-    if (AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State))
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
+                 CCState &State) override {
+    if (AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State))
       return true;
 
     StackSize =
@@ -199,7 +200,7 @@ void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   if (SplitVTs.size() == 1) {
     // Even if there is no splitting to do, we still want to replace the
     // original type (e.g. pointer type -> integer).
-    auto Flags = OrigArg.Flags;
+    auto Flags = OrigArg.Flags[0];
     unsigned OriginalAlignment = DL.getABITypeAlignment(OrigArg.Ty);
     Flags.setOrigAlign(OriginalAlignment);
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
@@ -211,7 +212,7 @@ void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   for (unsigned i = 0, e = SplitVTs.size(); i != e; ++i) {
     EVT SplitVT = SplitVTs[i];
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
-    auto Flags = OrigArg.Flags;
+    auto Flags = OrigArg.Flags[0];
 
     unsigned OriginalAlignment = DL.getABITypeAlignment(SplitTy);
     Flags.setOrigAlign(OriginalAlignment);
@@ -547,7 +548,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
     if (!Arg.IsFixed)
       IsVarArg = true;
 
-    if (Arg.Flags.isByVal())
+    if (Arg.Flags[0].isByVal())
       return false;
 
     splitToValueTypes(Arg, ArgInfos, MF);

@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -7,26 +7,26 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 
 ; TEST 1
-; ATTRIBUTOR: define align 8 i32* @test1(i32* returned align 8 %0)
+; ATTRIBUTOR: define align 8 i32* @test1(i32* returned align 8 "no-capture-maybe-returned" %0)
 define i32* @test1(i32* align 8 %0) #0 {
   ret i32* %0
 }
 
 ; TEST 2
-; ATTRIBUTOR: define i32* @test2(i32* returned %0)
+; ATTRIBUTOR: define i32* @test2(i32* returned "no-capture-maybe-returned" %0)
 define i32* @test2(i32* %0) #0 {
   ret i32* %0
 }
 
 ; TEST 3
-; ATTRIBUTOR: define align 4 i32* @test3(i32* align 8 %0, i32* align 4 %1, i1 %2)
+; ATTRIBUTOR: define align 4 i32* @test3(i32* align 8 "no-capture-maybe-returned" %0, i32* align 4 "no-capture-maybe-returned" %1, i1 %2)
 define i32* @test3(i32* align 8 %0, i32* align 4 %1, i1 %2) #0 {
   %ret = select i1 %2, i32* %0, i32* %1
   ret i32* %ret
 }
 
 ; TEST 4
-; ATTRIBUTOR: define align 32 i32* @test4(i32* align 32 %0, i32* align 32 %1, i1 %2)
+; ATTRIBUTOR: define align 32 i32* @test4(i32* align 32 "no-capture-maybe-returned" %0, i32* align 32 "no-capture-maybe-returned" %1, i1 %2)
 define i32* @test4(i32* align 32 %0, i32* align 32 %1, i1 %2) #0 {
   %ret = select i1 %2, i32* %0, i32* %1
   ret i32* %ret
@@ -83,7 +83,7 @@ define i32* @test6_2() #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 dereferenceable(1) i8* @f1(i8* nonnull readnone align 8 dereferenceable(1) %0)
+; ATTRIBUTOR: define internal nonnull align 8 dereferenceable(1) i8* @f1(i8* nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
 
@@ -101,13 +101,13 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 dereferenceable(1) i8* @f2(i8* nonnull readnone align 8 dereferenceable(1) %0)
+; ATTRIBUTOR: define internal nonnull align 8 dereferenceable(1) i8* @f2(i8* nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
 
 ; <label>:3:                                      ; preds = %1
 
-; ATTRIBUTOR: %4 = tail call i8* @f1(i8* nonnull align 8 dereferenceable(1) %0)
+; ATTRIBUTOR: %4 = tail call i8* @f1(i8* nonnull align 8 dereferenceable(1) "no-capture-maybe-returned" %0)
   %4 = tail call i8* @f1(i8* nonnull %0)
   br label %7
 
@@ -123,7 +123,7 @@ define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
-; ATTRIBUTOR: define internal nonnull align 8 dereferenceable(1) i8* @f3(i8* nonnull readnone align 16 dereferenceable(1) %0)
+; ATTRIBUTOR: define internal nonnull align 8 dereferenceable(1) i8* @f3(i8* nocapture nonnull readnone align 16 dereferenceable(1) %0)
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
 
@@ -139,7 +139,7 @@ define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
 
 ; TEST 7
 ; Better than IR information
-; ATTRIBUTOR: define align 32 i32* @test7(i32* returned align 32 %p)
+; ATTRIBUTOR: define align 32 i32* @test7(i32* returned align 32 "no-capture-maybe-returned" %p)
 define align 4 i32* @test7(i32* align 32 %p) #0 {
   tail call i8* @f1(i8* align 8 dereferenceable(1) @a1)
   ret i32* %p
@@ -162,7 +162,7 @@ define void @test8_helper() {
 }
 
 define internal void @test8(i32* %a, i32* %b, i32* %c) {
-; ATTRIBUTOR: define internal void @test8(i32* align 4 %a, i32* align 4 %b, i32* %c)
+; ATTRIBUTOR: define internal void @test8(i32* nocapture align 4 %a, i32* nocapture align 4 %b, i32* nocapture %c)
   ret void
 }
 
@@ -174,8 +174,8 @@ define void @test9_traversal(i1 %c, i32* align 4 %B, i32* align 8 %C) {
 }
 
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             define align 32 i32* @test10a(i32* align 32 %p)
-; ATTRIBUTOR: define i32* @test10a(i32* align 32 %p)
+;             define align 32 i32* @test10a(i32* align 32 "no-capture-maybe-returned" %p)
+; ATTRIBUTOR: define i32* @test10a(i32* align 32 "no-capture-maybe-returned" %p)
 define i32* @test10a(i32* align 32 %p) {
 ; ATTRIBUTOR: %l = load i32, i32* %p, align 32
   %l = load i32, i32* %p
@@ -202,8 +202,8 @@ e:
 }
 
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             define align 32 i32* @test10b(i32* align 32 %p)
-; ATTRIBUTOR: define i32* @test10b(i32* align 32 %p)
+;             define align 32 i32* @test10b(i32* align 32 "no-capture-maybe-returned" %p)
+; ATTRIBUTOR: define i32* @test10b(i32* align 32 "no-capture-maybe-returned" %p)
 define i32* @test10b(i32* align 32 %p) {
 ; ATTRIBUTOR: %l = load i32, i32* %p, align 32
   %l = load i32, i32* %p
