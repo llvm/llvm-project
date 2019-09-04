@@ -558,7 +558,6 @@ eSectionTypeDWARFDebugStr = _lldb.eSectionTypeDWARFDebugStr
 eSectionTypeDWARFDebugStrOffsets = _lldb.eSectionTypeDWARFDebugStrOffsets
 eSectionTypeDWARFAppleNames = _lldb.eSectionTypeDWARFAppleNames
 eSectionTypeDWARFAppleTypes = _lldb.eSectionTypeDWARFAppleTypes
-eSectionTypeDWARFAppleExternalTypes = _lldb.eSectionTypeDWARFAppleExternalTypes
 eSectionTypeDWARFAppleNamespaces = _lldb.eSectionTypeDWARFAppleNamespaces
 eSectionTypeDWARFAppleObjC = _lldb.eSectionTypeDWARFAppleObjC
 eSectionTypeELFSymbolTable = _lldb.eSectionTypeELFSymbolTable
