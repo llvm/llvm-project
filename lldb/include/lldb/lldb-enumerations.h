@@ -696,7 +696,6 @@ enum SectionType {
   eSectionTypeDWARFDebugStrOffsets,
   eSectionTypeDWARFAppleNames,
   eSectionTypeDWARFAppleTypes,
-  eSectionTypeDWARFAppleExternalTypes,
   eSectionTypeDWARFAppleNamespaces,
   eSectionTypeDWARFAppleObjC,
   eSectionTypeELFSymbolTable,       // Elf SHT_SYMTAB section

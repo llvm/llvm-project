@@ -82097,7 +82097,6 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugStrOffsets",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugStrOffsets)));
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFAppleNames",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFAppleNames)));
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFAppleTypes",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFAppleTypes)));
-  SWIG_Python_SetConstant(d, "eSectionTypeDWARFAppleExternalTypes",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFAppleExternalTypes)));
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFAppleNamespaces",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFAppleNamespaces)));
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFAppleObjC",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFAppleObjC)));
   SWIG_Python_SetConstant(d, "eSectionTypeELFSymbolTable",SWIG_From_int(static_cast< int >(lldb::eSectionTypeELFSymbolTable)));
