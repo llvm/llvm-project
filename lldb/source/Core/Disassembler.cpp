@@ -158,52 +158,59 @@ size_t Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   return success_count;
 }
 
-bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               const char *plugin_name, const char *flavor,
-                               const ExecutionContext &exe_ctx,
-                               ConstString name, Module *module,
-                               uint32_t num_instructions,
-                               bool mixed_source_and_assembly,
-                               uint32_t num_mixed_context_lines,
-                               uint32_t options, Stream &strm) {
+bool Disassembler::Disassemble(
+    Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
+    const char *flavor, const ExecutionContext &exe_ctx, ConstString name,
+    Module *module, uint32_t num_instructions, bool mixed_source_and_assembly,
+    uint32_t num_mixed_context_lines, uint32_t options, Stream &strm) {
+  // If no name is given there's nothing to disassemble.
+  if (!name)
+    return false;
+
+  const bool include_symbols = true;
+  const bool include_inlines = true;
+
+  // Find functions matching the given name.
   SymbolContextList sc_list;
-  if (name) {
-    const bool include_symbols = true;
-    const bool include_inlines = true;
-    if (module) {
-      module->FindFunctions(name, nullptr, eFunctionNameTypeAuto,
-                            include_symbols, include_inlines, true, sc_list);
-    } else if (exe_ctx.GetTargetPtr()) {
-      exe_ctx.GetTargetPtr()->GetImages().FindFunctions(
-          name, eFunctionNameTypeAuto, include_symbols, include_inlines, false,
-          sc_list);
-    }
+  if (module) {
+    module->FindFunctions(name, nullptr, eFunctionNameTypeAuto, include_symbols,
+                          include_inlines, true, sc_list);
+  } else if (exe_ctx.GetTargetPtr()) {
+    exe_ctx.GetTargetPtr()->GetImages().FindFunctions(
+        name, eFunctionNameTypeAuto, include_symbols, include_inlines, false,
+        sc_list);
   }
 
-  if (sc_list.GetSize()) {
-    return Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, sc_list,
-                       num_instructions, mixed_source_and_assembly,
-                       num_mixed_context_lines, options, strm);
-  }
-  return false;
+  // If no functions were found there's nothing to disassemble.
+  if (sc_list.IsEmpty())
+    return false;
+
+  return Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, sc_list,
+                     num_instructions, mixed_source_and_assembly,
+                     num_mixed_context_lines, options, strm);
 }
 
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
     const ExecutionContext &exe_ctx, const AddressRange &range,
     bool prefer_file_cache) {
-  lldb::DisassemblerSP disasm_sp;
-  if (range.GetByteSize() > 0 && range.GetBaseAddress().IsValid()) {
-    disasm_sp = Disassembler::FindPluginForTarget(exe_ctx.GetTargetSP(), arch,
-                                                  flavor, plugin_name);
+  if (range.GetByteSize() <= 0)
+    return {};
 
-    if (disasm_sp) {
-      size_t bytes_disassembled = disasm_sp->ParseInstructions(
-          &exe_ctx, range, nullptr, prefer_file_cache);
-      if (bytes_disassembled == 0)
-        disasm_sp.reset();
-    }
-  }
+  if (!range.GetBaseAddress().IsValid())
+    return {};
+
+  lldb::DisassemblerSP disasm_sp = Disassembler::FindPluginForTarget(
+      exe_ctx.GetTargetSP(), arch, flavor, plugin_name);
+
+  if (!disasm_sp)
+    return {};
+
+  const size_t bytes_disassembled =
+      disasm_sp->ParseInstructions(&exe_ctx, range, nullptr, prefer_file_cache);
+  if (bytes_disassembled == 0)
+    return {};
+
   return disasm_sp;
 }
 
@@ -212,20 +219,20 @@ Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
                                const char *flavor, const Address &start,
                                const void *src, size_t src_len,
                                uint32_t num_instructions, bool data_from_file) {
-  lldb::DisassemblerSP disasm_sp;
+  if (!src)
+    return {};
 
-  if (src) {
-    disasm_sp = Disassembler::FindPlugin(arch, flavor, plugin_name);
+  lldb::DisassemblerSP disasm_sp =
+      Disassembler::FindPlugin(arch, flavor, plugin_name);
 
-    if (disasm_sp) {
-      DataExtractor data(src, src_len, arch.GetByteOrder(),
-                         arch.GetAddressByteSize());
+  if (!disasm_sp)
+    return {};
 
-      (void)disasm_sp->DecodeInstructions(start, data, 0, num_instructions,
-                                          false, data_from_file);
-    }
-  }
+  DataExtractor data(src, src_len, arch.GetByteOrder(),
+                     arch.GetAddressByteSize());
 
+  (void)disasm_sp->DecodeInstructions(start, data, 0, num_instructions, false,
+                                      data_from_file);
   return disasm_sp;
 }
 
