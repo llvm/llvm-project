@@ -82062,7 +82062,6 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eSymbolTypeObjCClass",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeObjCClass)));
   SWIG_Python_SetConstant(d, "eSymbolTypeObjCMetaClass",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeObjCMetaClass)));
   SWIG_Python_SetConstant(d, "eSymbolTypeObjCIVar",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeObjCIVar)));
-  SWIG_Python_SetConstant(d, "eSymbolTypeIVarOffset",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeIVarOffset)));
   SWIG_Python_SetConstant(d, "eSymbolTypeReExported",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeReExported)));
   SWIG_Python_SetConstant(d, "eSymbolTypeASTFile",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeASTFile)));
   SWIG_Python_SetConstant(d, "eSectionTypeInvalid",SWIG_From_int(static_cast< int >(lldb::eSectionTypeInvalid)));

@@ -456,9 +456,6 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
         return AddressClass::eRuntime;
       case eSymbolTypeASTFile:
         return AddressClass::eDebug;
-
-      case eSymbolTypeIVarOffset:
-        break;
       }
     }
   }
