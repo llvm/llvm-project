@@ -39,6 +39,10 @@ struct GetEnumPattern {
   using DeclTy = EnumDecl;
   BindableMatcher<Decl> operator()() { return enumDecl(hasName("E")); }
 };
+struct GetTypedefNamePattern {
+  using DeclTy = TypedefNameDecl;
+  BindableMatcher<Decl> operator()() { return typedefNameDecl(hasName("T")); }
+};
 
 // Values for the value-parameterized test fixtures.
 // FunctionDecl:
@@ -55,6 +59,11 @@ const auto *AnonC = "namespace { class X; }";
 // EnumDecl:
 const auto *ExternE = "enum E {};";
 const auto *AnonE = "namespace { enum E {}; }";
+// TypedefNameDecl:
+const auto *ExternTypedef = "typedef int T;";
+const auto *AnonTypedef = "namespace { typedef int T; }";
+const auto *ExternUsing = "using T = int;";
+const auto *AnonUsing = "namespace { using T = int; }";
 
 // First value in tuple: Compile options.
 // Second value in tuple: Source code to be used in the test.
@@ -243,6 +252,7 @@ using ImportFunctionsVisibility = ImportVisibility<GetFunPattern>;
 using ImportVariablesVisibility = ImportVisibility<GetVarPattern>;
 using ImportClassesVisibility = ImportVisibility<GetClassPattern>;
 using ImportEnumsVisibility = ImportVisibility<GetEnumPattern>;
+using ImportTypedefNameVisibility = ImportVisibility<GetTypedefNamePattern>;
 
 // FunctionDecl.
 TEST_P(ImportFunctionsVisibility, ImportAfter) {
@@ -270,6 +280,13 @@ TEST_P(ImportEnumsVisibility, ImportAfter) {
   TypedTest_ImportAfterWithMerge();
 }
 TEST_P(ImportEnumsVisibility, ImportAfterImport) {
+  TypedTest_ImportAfterImportWithMerge();
+}
+// TypedefNameDecl.
+TEST_P(ImportTypedefNameVisibility, ImportAfter) {
+  TypedTest_ImportAfterWithMerge();
+}
+TEST_P(ImportTypedefNameVisibility, ImportAfterImport) {
   TypedTest_ImportAfterImportWithMerge();
 }
 
@@ -318,6 +335,30 @@ INSTANTIATE_TEST_CASE_P(
                           std::make_tuple(ExternE, AnonE, ExpectNotLink),
                           std::make_tuple(AnonE, ExternE, ExpectNotLink),
                           std::make_tuple(AnonE, AnonE, ExpectNotLink))), );
+INSTANTIATE_TEST_CASE_P(
+    ParameterizedTests, ImportTypedefNameVisibility,
+    ::testing::Combine(
+        DefaultTestValuesForRunOptions,
+        ::testing::Values(
+            std::make_tuple(ExternTypedef, ExternTypedef, ExpectLink),
+            std::make_tuple(ExternTypedef, AnonTypedef, ExpectNotLink),
+            std::make_tuple(AnonTypedef, ExternTypedef, ExpectNotLink),
+            std::make_tuple(AnonTypedef, AnonTypedef, ExpectNotLink),
+
+            std::make_tuple(ExternUsing, ExternUsing, ExpectLink),
+            std::make_tuple(ExternUsing, AnonUsing, ExpectNotLink),
+            std::make_tuple(AnonUsing, ExternUsing, ExpectNotLink),
+            std::make_tuple(AnonUsing, AnonUsing, ExpectNotLink),
+
+            std::make_tuple(ExternUsing, ExternTypedef, ExpectLink),
+            std::make_tuple(ExternUsing, AnonTypedef, ExpectNotLink),
+            std::make_tuple(AnonUsing, ExternTypedef, ExpectNotLink),
+            std::make_tuple(AnonUsing, AnonTypedef, ExpectNotLink),
+
+            std::make_tuple(ExternTypedef, ExternUsing, ExpectLink),
+            std::make_tuple(ExternTypedef, AnonUsing, ExpectNotLink),
+            std::make_tuple(AnonTypedef, ExternUsing, ExpectNotLink),
+            std::make_tuple(AnonTypedef, AnonUsing, ExpectNotLink))), );
 
 } // end namespace ast_matchers
 } // end namespace clang

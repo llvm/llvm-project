@@ -112,6 +112,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder({G_SDIV, G_UDIV})
       .legalFor({s32, s64})
+      .libcallFor({s128})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
       .scalarize(0);

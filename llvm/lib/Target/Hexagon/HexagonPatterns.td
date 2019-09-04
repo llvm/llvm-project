@@ -1763,14 +1763,12 @@ def: Pat<(and (srl I64:$Rss, IsULE<32,31>:$u6), 1),
 def: Pat<(and (srl I64:$Rss, IsUGT<32,31>:$u6), 1),
          (ToZext64 (I1toI32 (S2_tstbit_i (HiReg $Rss), (UDEC32 $u6))))>;
 
-def N1toI32:  OutPatFrag<(ops node:$Pu), (C2_muxii (i1 $Pu), 0, 1)>;
-
 def: Pat<(and (not (srl I32:$Rs, u5_0ImmPred:$u5)), 1),
-         (N1toI32 (S2_tstbit_i I32:$Rs, imm:$u5))>;
+         (I1toI32 (S4_ntstbit_i I32:$Rs, imm:$u5))>;
 def: Pat<(and (not (srl I64:$Rss, IsULE<32,31>:$u6)), 1),
-         (ToZext64 (N1toI32 (S2_tstbit_i (LoReg $Rss), imm:$u6)))>;
+         (ToZext64 (I1toI32 (S4_ntstbit_i (LoReg $Rss), imm:$u6)))>;
 def: Pat<(and (not (srl I64:$Rss, IsUGT<32,31>:$u6)), 1),
-         (ToZext64 (N1toI32 (S2_tstbit_i (HiReg $Rss), (UDEC32 $u6))))>;
+         (ToZext64 (I1toI32 (S4_ntstbit_i (HiReg $Rss), (UDEC32 $u6))))>;
 
 let AddedComplexity = 20 in { // Complexity greater than compare reg-imm.
   def: Pat<(i1 (seteq (and I32:$Rs, u6_0ImmPred:$u6), 0)),
@@ -1792,23 +1790,28 @@ def: Pat<(HexagonTSTBIT I32:$Rs, u5_0ImmPred:$u5),
 def: Pat<(HexagonTSTBIT I32:$Rs, I32:$Rt),
          (S2_tstbit_r I32:$Rs, I32:$Rt)>;
 
-let AddedComplexity = 20 in {   // Complexity greater than cmp reg-imm.
-  def: Pat<(i1 (seteq (and (shl 1, u5_0ImmPred:$u5), I32:$Rs), 0)),
-           (S4_ntstbit_i I32:$Rs, imm:$u5)>;
-  def: Pat<(i1 (seteq (and (shl 1, I32:$Rt), I32:$Rs), 0)),
-           (S4_ntstbit_r I32:$Rs, I32:$Rt)>;
-}
-
 // Add extra complexity to prefer these instructions over bitsset/bitsclr.
 // The reason is that tstbit/ntstbit can be folded into a compound instruction:
 //   if ([!]tstbit(...)) jump ...
-let AddedComplexity = 100 in
-def: Pat<(i1 (setne (and I32:$Rs, (i32 IsPow2_32:$u5)), (i32 0))),
-         (S2_tstbit_i I32:$Rs, (Log2_32 imm:$u5))>;
+let AddedComplexity = 20 in {   // Complexity greater than cmp reg-imm.
+  def: Pat<(i1 (seteq (and I32:$Rs, IsPow2_32:$u5), 0)),
+           (S4_ntstbit_i I32:$Rs, (Log2_32 imm:$u5))>;
+  def: Pat<(i1 (setne (and I32:$Rs, IsPow2_32:$u5), 0)),
+           (S2_tstbit_i I32:$Rs, (Log2_32 imm:$u5))>;
+  def: Pat<(i1 (seteq (and (shl 1, I32:$Rt), I32:$Rs), 0)),
+           (S4_ntstbit_r I32:$Rs, I32:$Rt)>;
+  def: Pat<(i1 (setne (and (shl 1, I32:$Rt), I32:$Rs), 0)),
+           (S2_tstbit_r I32:$Rs, I32:$Rt)>;
+}
 
-let AddedComplexity = 100 in
-def: Pat<(i1 (seteq (and I32:$Rs, (i32 IsPow2_32:$u5)), (i32 0))),
-         (S4_ntstbit_i I32:$Rs, (Log2_32 imm:$u5))>;
+def: Pat<(i1 (seteq (and I64:$Rs, IsPow2_64L:$u6), 0)),
+         (S4_ntstbit_i (LoReg $Rs), (Log2_64 $u6))>;
+def: Pat<(i1 (seteq (and I64:$Rs, IsPow2_64H:$u6), 0)),
+         (S4_ntstbit_i (HiReg $Rs), (UDEC32 (i32 (Log2_64 $u6))))>;
+def: Pat<(i1 (setne (and I64:$Rs, IsPow2_64L:$u6), 0)),
+         (S2_tstbit_i (LoReg $Rs), (Log2_32 imm:$u6))>;
+def: Pat<(i1 (setne (and I64:$Rs, IsPow2_64H:$u6), 0)),
+         (S2_tstbit_i (HiReg $Rs), (UDEC32 (i32 (Log2_32 imm:$u6))))>;
 
 // Do not increase complexity of these patterns. In the DAG, "cmp i8" may be
 // represented as a compare against "value & 0xFF", which is an exact match
@@ -1828,10 +1831,18 @@ def: Pat<(i1 (setne (and I32:$Rs, I32:$Rt), I32:$Rt)),
 
 let AddedComplexity = 100 in {
   // Avoid A4_rcmp[n]eqi in these cases:
-  def: Pat<(i32 (zext (i1 (setne (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
-           (I1toI32 (S2_tstbit_r IntRegs:$Rs, IntRegs:$Rt))>;
   def: Pat<(i32 (zext (i1 (seteq (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
            (I1toI32 (S4_ntstbit_r IntRegs:$Rs, IntRegs:$Rt))>;
+  def: Pat<(i32 (zext (i1 (setne (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
+           (I1toI32 (S2_tstbit_r IntRegs:$Rs, IntRegs:$Rt))>;
+  def: Pat<(i32 (zext (i1 (seteq (and I32:$Rs, IsPow2_32:$u5), 0)))),
+           (I1toI32 (S4_ntstbit_i I32:$Rs, (Log2_32 imm:$u5)))>;
+  def: Pat<(i32 (zext (i1 (setne (and I32:$Rs, IsPow2_32:$u5), 0)))),
+           (I1toI32 (S2_tstbit_i I32:$Rs, (Log2_32 imm:$u5)))>;
+  def: Pat<(i32 (zext (i1 (seteq (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
+           (I1toI32 (S4_ntstbit_r I32:$Rs, I32:$Rt))>;
+  def: Pat<(i32 (zext (i1 (setne (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
+           (I1toI32 (S2_tstbit_r I32:$Rs, I32:$Rt))>;
 }
 
 // --(11) PIC ------------------------------------------------------------

@@ -250,7 +250,7 @@ SourceLocation getBeginningOfIdentifier(const Position &Pos,
   // location is correct for both!
   SourceLocation InputLoc = SM.getComposedLoc(FID, *Offset);
   if (*Offset == 0) // Case 1 or 3.
-    return SM.getMacroArgExpandedLocation(InputLoc);
+    return InputLoc;
   SourceLocation Before = SM.getComposedLoc(FID, *Offset - 1);
 
   Before = Lexer::GetBeginningOfToken(Before, SM, LangOpts);
@@ -258,8 +258,8 @@ SourceLocation getBeginningOfIdentifier(const Position &Pos,
   if (Before.isValid() &&
       !Lexer::getRawToken(Before, Tok, SM, LangOpts, false) &&
       Tok.is(tok::raw_identifier))
-    return SM.getMacroArgExpandedLocation(Before); // Case 2.
-  return SM.getMacroArgExpandedLocation(InputLoc); // Case 1 or 3.
+    return Before; // Case 2.
+  return InputLoc; // Case 1 or 3.
 }
 
 bool isValidFileRange(const SourceManager &Mgr, SourceRange R) {

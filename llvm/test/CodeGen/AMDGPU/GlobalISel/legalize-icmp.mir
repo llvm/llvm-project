@@ -69,35 +69,31 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; GFX7-LABEL: name: test_icmp_s16
-    ; GFX7: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GFX7: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
+    ; GFX7: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
     ; GFX7: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX7: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX7: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX7: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; GFX7: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; GFX7: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
-    ; GFX7: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[AND]](s32), [[AND1]]
-    ; GFX7: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
+    ; GFX7: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX7: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX7: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GFX7: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; GFX7: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; GFX7: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C1]](s32), [[AND]]
+    ; GFX7: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[C]], [[TRUNC]]
     ; GFX7: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
     ; GFX7: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX8-LABEL: name: test_icmp_s16
-    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GFX8: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
+    ; GFX8: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
     ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX8: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX8: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[TRUNC]](s16), [[TRUNC1]]
-    ; GFX8: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
+    ; GFX8: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX8: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s16), [[TRUNC]]
+    ; GFX8: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[C]], [[TRUNC]]
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
     ; GFX8: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_icmp_s16
-    ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
+    ; GFX9: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX9: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[TRUNC]](s16), [[TRUNC1]]
-    ; GFX9: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
+    ; GFX9: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX9: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s16), [[TRUNC]]
+    ; GFX9: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[C]], [[TRUNC]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
     ; GFX9: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = G_CONSTANT i16 0

@@ -353,6 +353,7 @@ Status Socket::Read(void *buf, size_t &num_bytes) {
 }
 
 Status Socket::Write(const void *buf, size_t &num_bytes) {
+  const size_t src_len = num_bytes;
   Status error;
   int bytes_sent = 0;
   do {
@@ -372,7 +373,7 @@ Status Socket::Write(const void *buf, size_t &num_bytes) {
               ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
               " (error = %s)",
               static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-              static_cast<uint64_t>(num_bytes),
+              static_cast<uint64_t>(src_len),
               static_cast<int64_t>(bytes_sent), error.AsCString());
   }
 

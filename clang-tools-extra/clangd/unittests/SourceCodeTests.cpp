@@ -312,7 +312,7 @@ TEST(SourceCodeTests, SourceLocationInMainFile) {
   }
 }
 
-TEST(ClangdUnitTest, GetBeginningOfIdentifier) {
+TEST(SourceCodeTests, GetBeginningOfIdentifier) {
   std::string Preamble = R"cpp(
 struct Bar { int func(); };
 #define MACRO(X) void f() { X; }

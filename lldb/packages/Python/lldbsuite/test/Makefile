@@ -1,4 +1,3 @@
-LLDB_LEVEL := ..
 include $(LLDB_LEVEL)/Makefile
 
 .PHONY: programs

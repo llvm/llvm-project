@@ -4101,17 +4101,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
-  // Insert a pseudo instruction after noreturn calls that expands to int3 if
-  // this would be the last instruction in the funclet. If the return address of
-  // a call refers to the last PC of a function, the Windows SEH machinery can
-  // get confused about which function or scope the return address belongs to.
-  // MSVC inserts int3 after every noreturn function call, but LLVM only places
-  // them when it would cause a problem otherwise.
-  if (CLI.DoesNotReturn && Subtarget.isTargetWin64()) {
-    Chain = DAG.getNode(X86ISD::SEH_NORETURN, dl, NodeTys, Chain, InFlag);
-    InFlag = Chain.getValue(1);
-  }
-
   // Handle result values, copying them out of physregs into vregs that we
   // return.
   return LowerCallResult(Chain, InFlag, CallConv, isVarArg, Ins, dl, DAG,
@@ -28729,7 +28718,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VASTART_SAVE_XMM_REGS: return "X86ISD::VASTART_SAVE_XMM_REGS";
   case X86ISD::VAARG_64:           return "X86ISD::VAARG_64";
   case X86ISD::WIN_ALLOCA:         return "X86ISD::WIN_ALLOCA";
-  case X86ISD::SEH_NORETURN:       return "X86ISD::SEH_NORETURN";
   case X86ISD::MEMBARRIER:         return "X86ISD::MEMBARRIER";
   case X86ISD::MFENCE:             return "X86ISD::MFENCE";
   case X86ISD::SEG_ALLOCA:         return "X86ISD::SEG_ALLOCA";

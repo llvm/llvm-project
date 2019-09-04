@@ -560,6 +560,9 @@ HANDLE_TARGET_OPCODE(G_CTPOP)
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
 
+/// Generic bit reverse.
+HANDLE_TARGET_OPCODE(G_BITREVERSE)
+
 /// Floating point ceil.
 HANDLE_TARGET_OPCODE(G_FCEIL)
 

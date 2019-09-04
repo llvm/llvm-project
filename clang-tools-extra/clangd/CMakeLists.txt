@@ -39,7 +39,6 @@ add_clang_library(clangDaemon
   Cancellation.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
-  ClangdUnit.cpp
   CodeComplete.cpp
   CodeCompletionStrings.cpp
   Compiler.cpp
@@ -62,6 +61,8 @@ add_clang_library(clangDaemon
   Logger.cpp
   Protocol.cpp
   Quality.cpp
+  ParsedAST.cpp
+  Preamble.cpp
   RIFF.cpp
   Selection.cpp
   SemanticHighlighting.cpp

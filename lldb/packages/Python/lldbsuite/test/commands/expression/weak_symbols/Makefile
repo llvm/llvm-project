@@ -1,7 +1,6 @@
-LEVEL = ../../../make
 CFLAGS_EXTRAS += -std=c99
 LD_FLAGS := -dynamiclib
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 all: a.out dylib missing
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s
 #include "Inputs/cuda.h"
 
 // CHECK: define amdgpu_kernel void @_ZN1A6kernelEv
@@ -25,7 +25,7 @@ struct Dummy {
   EmptyKernelPtr Empty() { return EmptyKernel<void>; } 
 };
 
-// CHECK: define amdgpu_kernel void @_Z15template_kernelI1AEvT_
+// CHECK: define amdgpu_kernel void @_Z15template_kernelI1AEvT_{{.*}} #[[ATTR:[0-9][0-9]*]]
 template<class T>
 __global__ void template_kernel(T x) {}
 
@@ -39,3 +39,4 @@ int main() {
   launch((void*)D.Empty());
   return 0;
 }
+// CHECK: attributes #[[ATTR]] = {{.*}}"amdgpu-flat-work-group-size"="1,256"

@@ -419,16 +419,6 @@ static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {
   return MF.getFunction().hasOptSize();
 }
 
-// Get a rough equivalent of an MVT for a given LLT.
-static MVT getMVTForLLT(LLT Ty) {
-  if (!Ty.isVector())
-    return MVT::getIntegerVT(Ty.getSizeInBits());
-
-  return MVT::getVectorVT(
-      MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
-      Ty.getNumElements());
-}
-
 // Returns a list of types to use for memory op lowering in MemOps. A partial
 // port of findOptimalMemOpLowering in TargetLowering.
 static bool findGISelOptimalMemOpLowering(
