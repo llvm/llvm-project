@@ -142,7 +142,6 @@ const char *Section::GetTypeAsCString() const {
     return "regular";
 
   case eSectionTypeSwiftModules:
-  case eSectionTypeDWARFAppleExternalTypes:
     break;
   }
   return "unknown";

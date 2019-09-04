@@ -873,9 +873,6 @@ SymbolContext::FindBestGlobalDataSymbol(ConstString name, Status &error) {
 
             case eSymbolTypeASTFile:
               break;
-
-            case eSymbolTypeIVarOffset:
-              break;
           }
         }
       }

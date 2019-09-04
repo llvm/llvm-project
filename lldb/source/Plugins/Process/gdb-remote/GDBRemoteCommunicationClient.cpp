@@ -3859,9 +3859,6 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                         symbol_load_addr =
                             sc.symbol->GetLoadAddress(&process->GetTarget());
                         break;
-
-                      case eSymbolTypeIVarOffset:
-                        break;
                       }
                     }
                   }

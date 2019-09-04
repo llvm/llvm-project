@@ -934,8 +934,7 @@ CreateMainFile(SwiftASTContext &swift_ast_context, StringRef filename,
 
   if (generate_debug_info) {
     std::string temp_source_path;
-    if (ExpressionSourceCode::SaveExpressionTextToTempFile(text, options,
-                                                           temp_source_path)) {
+    if (SwiftASTManipulator::SaveExpressionTextToTempFile(text, options, temp_source_path)) {
       auto error_or_buffer_ap =
           llvm::MemoryBuffer::getFile(temp_source_path.c_str());
       if (error_or_buffer_ap.getError() == std::error_condition()) {
@@ -1273,7 +1272,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   while (!done) {
     // Note, we disable delayed parsing for the swift expression parser.
     swift::parseIntoSourceFile(*source_file, buffer_id, &done, nullptr,
-                               &persistent_state, nullptr,
+                               &persistent_state,
                                /*DelayBodyParsing=*/false);
 
     if (swift_ast_context->HasErrors())
