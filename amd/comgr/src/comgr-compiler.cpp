@@ -186,11 +186,11 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   bool Success = true;
 
   // Parse the arguments.
-  std::unique_ptr<OptTable> OptTbl(createDriverOptTable());
+  const OptTable &OptTbl = getDriverOptTable();
 
   const unsigned IncludedFlagsBitmask = options::CC1AsOption;
   unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args = OptTbl->ParseArgs(Argv, MissingArgIndex, MissingArgCount,
+  InputArgList Args = OptTbl.ParseArgs(Argv, MissingArgIndex, MissingArgCount,
                                         IncludedFlagsBitmask);
 
   // Check for missing argument error.
