@@ -1634,6 +1634,26 @@ bool Module::RemapSourceFile(llvm::StringRef path,
   return m_source_mappings.RemapPath(path, new_path);
 }
 
+bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
+  if (!arch_spec.IsValid())
+    return false;
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
+           "module has arch %s, merging/replacing with arch %s",
+           m_arch.GetTriple().getTriple().c_str(),
+           arch_spec.GetTriple().getTriple().c_str());
+  if (!m_arch.IsCompatibleMatch(arch_spec)) {
+    // The new architecture is different, we just need to replace it.
+    return SetArchitecture(arch_spec);
+  }
+
+  // Merge bits from arch_spec into "merged_arch" and set our architecture.
+  ArchSpec merged_arch(m_arch);
+  merged_arch.MergeFrom(arch_spec);
+  // SetArchitecture() is a no-op if m_arch is already valid.
+  m_arch = ArchSpec();
+  return SetArchitecture(merged_arch);
+}
+
 llvm::VersionTuple Module::GetVersion() {
   if (ObjectFile *obj_file = GetObjectFile())
     return obj_file->GetVersion();

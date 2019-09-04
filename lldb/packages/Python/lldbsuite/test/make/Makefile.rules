@@ -88,6 +88,7 @@ ifneq "$(TRIPLE)" ""
 	triple_os_and_version =$(shell echo $(word 3, $(triple_space)) | sed 's/\([a-z]*\)\(.*\)/\1 \2/')
 	TRIPLE_OS =$(word 1, $(triple_os_and_version))
 	TRIPLE_VERSION =$(word 2, $(triple_os_and_version))
+	TRIPLE_ENV =$(word 4, $(triple_space))
 	ifeq "$(TRIPLE_VENDOR)" "apple"
 		ifeq "$(TRIPLE_OS)" "ios"
 			CODESIGN := codesign
@@ -100,11 +101,19 @@ ifneq "$(TRIPLE)" ""
 					endif
 					ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
 				else
-					SDKROOT = $(shell xcrun --sdk iphonesimulator --show-sdk-path)
+					ifeq "$(TRIPLE_ENV)" "macabi"
+						SDKROOT = $(shell xcrun --sdk macosx --show-sdk-path)
+					else
+						SDKROOT = $(shell xcrun --sdk iphonesimulator --show-sdk-path)
+					endif
 					ifeq "$(TRIPLE_VERSION)" ""
 						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
 					endif
-					ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					ifeq "$(TRIPLE_ENV)" "macabi"
+						ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					else
+						ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					endif
 				endif
 			endif
 		endif
