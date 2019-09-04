@@ -29,6 +29,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TapirRaceDetect.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -45,6 +46,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
@@ -262,7 +264,7 @@ struct CilkSanitizerImpl : public CSIImpl {
     // loads and stores), atomics, memory intrinsics.  We also want call sites,
     // for extracting debug information.
     Options.InstrumentBasicBlocks = false;
-    Options.InstrumentLoops = false;
+    Options.InstrumentLoops = true;
     // Cilksan defines its own hooks for instrumenting memory accesses, memory
     // intrinsics, and Tapir instructions, so we disable the default CSI
     // instrumentation hooks for these IR objects.
@@ -330,6 +332,7 @@ struct CilkSanitizerImpl : public CSIImpl {
   bool instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
                         LoopInfo &LI);
   bool instrumentSync(SyncInst *SI);
+  void instrumentLoop(Loop &L, TaskInfo &TI, ScalarEvolution *SE = nullptr);
   bool instrumentAlloca(Instruction *I);
 
   bool instrumentFunctionUsingRI(Function &F);
@@ -1288,6 +1291,7 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
     SmallPtrSetImpl<Instruction *> &FreeCalls) {
   bool Result = false;
   SmallPtrSet<SyncInst *, 4> Syncs;
+  SmallPtrSet<Loop *, 4> Loops;
 
   // Instrument allocas and allocation-function calls that may be involved in a
   // race.
@@ -1324,11 +1328,24 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
     // Get syncs associated with this detach
     for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
       Syncs.insert(SI);
+
+    if (CilkSanImpl.Options.InstrumentLoops) {
+      // Get any loop associated with this detach.
+      Loop *L = LI.getLoopFor(DI->getParent());
+      if (spawnsTapirLoopBody(DI, LI, TI))
+        Loops.insert(L);
+    }
   }
 
   // Instrument associated syncs
   for (SyncInst *SI : Syncs)
     CilkSanImpl.instrumentSync(SI);
+
+  if (CilkSanImpl.Options.InstrumentLoops) {
+    // Recursively instrument all loops
+    for (Loop *L : Loops)
+      CilkSanImpl.instrumentLoop(*L, TI);
+  }
 
   return Result;
 }
@@ -2021,6 +2038,7 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
     SmallPtrSetImpl<Instruction *> &FreeCalls) {
   bool Result = false;
   SmallPtrSet<SyncInst *, 4> Syncs;
+  SmallPtrSet<Loop *, 4> Loops;
 
   // Instrument allocas and allocation-function calls that may be involved in a
   // race.
@@ -2063,11 +2081,24 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
     // Get syncs associated with this detach
     for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
       Syncs.insert(SI);
+
+    if (CilkSanImpl.Options.InstrumentLoops) {
+      // Get any loop associated with this detach.
+      Loop *L = LI.getLoopFor(DI->getParent());
+      if (spawnsTapirLoopBody(DI, LI, TI))
+        Loops.insert(L);
+    }
   }
 
   // Instrument associated syncs
   for (SyncInst *SI : Syncs)
     CilkSanImpl.instrumentSync(SI);
+
+  if (CilkSanImpl.Options.InstrumentLoops) {
+    // Recursively instrument all loops
+    for (Loop *L : Loops)
+      CilkSanImpl.instrumentLoop(*L, TI);
+  }
 
   return Result;
 }
@@ -2091,6 +2122,12 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
     setupCalls(F);
   setupBlocks(F);
 
+  DominatorTree *DT = &GetDomTree(F);
+  LoopInfo &LI = GetLoopInfo(F);
+  if (Options.InstrumentLoops)
+    for (Loop *L : LI)
+      simplifyLoop(L, DT, &LI, nullptr, nullptr, /* PreserveLCSSA */false);
+
   SmallVector<Instruction *, 8> AllLoadsAndStores;
   SmallVector<Instruction *, 8> LocalLoadsAndStores;
   SmallVector<Instruction *, 8> AtomicAccesses;
@@ -2102,9 +2139,7 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
   SmallPtrSet<Instruction *, 8> FreeCalls;
   SmallVector<SyncInst *, 8> Syncs;
 
-  DominatorTree *DT = &GetDomTree(F);
   TaskInfo &TI = GetTaskInfo(F);
-  LoopInfo &LI = GetLoopInfo(F);
   RaceInfo &RI = GetRaceInfo(F);
   // Evaluate the tasks that might be in parallel with each spindle.
   MaybeParallelTasks MPTasks;
@@ -2727,6 +2762,103 @@ bool CilkSanitizerImpl::instrumentSync(SyncInst *SI) {
   insertHookCall(SI, CsanSync, {SyncID});
   NumInstrumentedSyncs++;
   return true;
+}
+
+// Helper function to get a value for the runtime trip count of the given loop.
+static const SCEV *getRuntimeTripCount(Loop &L, ScalarEvolution *SE) {
+  BasicBlock *Latch = L.getLoopLatch();
+
+  const SCEV *BECountSC = SE->getExitCount(&L, Latch);
+  if (isa<SCEVCouldNotCompute>(BECountSC) ||
+      !BECountSC->getType()->isIntegerTy()) {
+    LLVM_DEBUG(dbgs() << "Could not compute exit block SCEV\n");
+    return SE->getCouldNotCompute();
+  }
+
+  // Add 1 since the backedge count doesn't include the first loop iteration.
+  const SCEV *TripCountSC =
+      SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
+  if (isa<SCEVCouldNotCompute>(TripCountSC)) {
+    LLVM_DEBUG(dbgs() << "Could not compute trip count SCEV.\n");
+    return SE->getCouldNotCompute();
+  }
+
+  return TripCountSC;
+}
+
+void CilkSanitizerImpl::instrumentLoop(Loop &L, TaskInfo &TI,
+                                       ScalarEvolution *SE) {
+  assert(L.isLoopSimplifyForm() && "CSI assumes loops are in simplified form.");
+  BasicBlock *Preheader = L.getLoopPreheader();
+  BasicBlock *Header = L.getHeader();
+  Task *T = getTaskIfTapirLoop(&L, &TI);
+  assert(T && "CilkSanitizer should only instrument Tapir loops.");
+  // We assign a local ID for this loop here, so that IDs for loops follow a
+  // depth-first ordering.
+  // csi_id_t LocalId = LoopFED.add(*Header);
+  csi_id_t LocalId = LoopFED.add(*T->getDetach());
+
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L.getExitingBlocks(ExitingBlocks);
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L.getUniqueExitBlocks(ExitBlocks);
+
+  // Record properties of this loop.
+  CsiLoopProperty LoopProp;
+  LoopProp.setIsTapirLoop(static_cast<bool>(getTaskIfTapirLoop(&L, &TI)));
+  LoopProp.setHasUniqueExitingBlock((ExitingBlocks.size() == 1));
+
+  IRBuilder<> IRB(Preheader->getTerminator());
+  Value *LoopCsiId = LoopFED.localToGlobalId(LocalId, IRB);
+  Value *LoopPropVal = LoopProp.getValue(IRB);
+
+  // Try to evaluate the runtime trip count for this loop.  Default to a count
+  // of -1 for unknown trip counts.
+  Value *TripCount = IRB.getInt64(-1);
+  if (SE) {
+    const SCEV *TripCountSC = getRuntimeTripCount(L, SE);
+    if (!isa<SCEVCouldNotCompute>(TripCountSC)) {
+      // Extend the TripCount type if necessary.
+      if (TripCountSC->getType() != IRB.getInt64Ty())
+        TripCountSC = SE->getZeroExtendExpr(TripCountSC, IRB.getInt64Ty());
+      // Compute the trip count to pass to the CSI hook.
+      SCEVExpander Expander(*SE, DL, "csi");
+      TripCount = Expander.expandCodeFor(TripCountSC, IRB.getInt64Ty(),
+                                         &*IRB.GetInsertPoint());
+    }
+  }
+
+  // Insert before-loop hook.
+  insertHookCall(&*IRB.GetInsertPoint(), CsiBeforeLoop, {LoopCsiId, TripCount,
+                                                         LoopPropVal});
+
+  // // Insert loop-body-entry hook.
+  // IRB.SetInsertPoint(&*Header->getFirstInsertionPt());
+  // // TODO: Pass IVs to hook?
+  // insertHookCall(&*IRB.GetInsertPoint(), CsiLoopBodyEntry, {LoopCsiId,
+  //                                                           LoopPropVal});
+
+  // // Insert hooks at the ends of the exiting blocks.
+  // for (BasicBlock *BB : ExitingBlocks) {
+  //   // Record properties of this loop exit
+  //   CsiLoopExitProperty LoopExitProp;
+  //   LoopExitProp.setIsLatch(L.isLoopLatch(BB));
+
+  //   // Insert the loop-exit hook
+  //   IRB.SetInsertPoint(BB->getTerminator());
+  //   csi_id_t LocalExitId = LoopExitFED.add(*BB);
+  //   Value *ExitCsiId = LoopFED.localToGlobalId(LocalExitId, IRB);
+  //   Value *LoopExitPropVal = LoopExitProp.getValue(IRB);
+  //   // TODO: For latches, record whether the loop will repeat.
+  //   insertHookCall(&*IRB.GetInsertPoint(), CsiLoopBodyExit,
+  //                  {ExitCsiId, LoopCsiId, LoopExitPropVal});
+  // }
+  // Insert after-loop hooks.
+  for (BasicBlock *BB : ExitBlocks) {
+    IRB.SetInsertPoint(&*BB->getFirstInsertionPt());
+    insertHookCall(&*IRB.GetInsertPoint(), CsiAfterLoop, {LoopCsiId,
+                                                          LoopPropVal});
+  }
 }
 
 bool CilkSanitizerImpl::instrumentAlloca(Instruction *I) {
