@@ -1178,8 +1178,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             extractor.GetHexByteString(m_os_kernel);
             ++num_keys_decoded;
           } else if (name.equals("ostype")) {
-            if (value.equals("maccatalyst") ||
-                value.equals("platform_uikitformac")) {
+            if (value.equals("maccatalyst")) {
               os_name = "ios";
               environment = "macabi";
             } else
@@ -1207,8 +1206,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
           {
             if (!m_os_version.tryParse(value))
               ++num_keys_decoded;
-          } else if (name.equals("maccatalyst_version") ||
-                     name.equals("uikitformac_version")) {
+          } else if (name.equals("maccatalyst_version")) {
             if (!m_maccatalyst_version.tryParse(value))
               ++num_keys_decoded;
           } else if (name.equals("watchpoint_exceptions_received")) {
@@ -2023,8 +2021,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           extractor.GetHexByteString(triple);
           ++num_keys_decoded;
         } else if (name.equals("ostype")) {
-          if (value.equals("maccatalyst") ||
-              value.equals("platform_uikitformac")) {
+          if (value.equals("maccatalyst")) {
             os_name = "ios";
             environment = "macabi";
           } else

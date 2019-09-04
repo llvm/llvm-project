@@ -394,9 +394,6 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   options.SetUseDynamic(m_varobj_options.use_dynamic);
   options.SetTryAllThreads(m_command_options.try_all_threads);
   options.SetDebug(m_command_options.debug);
-#ifdef LLDB_CONFIGURATION_DEBUG
-  options.SetPlaygroundTransformEnabled(m_command_options.playground);
-#endif
 
   // If the language was not specified in the expression command,
   // set it to the language in the target's properties if

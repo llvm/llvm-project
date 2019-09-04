@@ -161,6 +161,8 @@ public:
 
   bool GetEnableSyntheticValue() const;
 
+  uint32_t GetMaxZeroPaddingInFloatFormat() const;
+
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;
 
   uint32_t GetMaximumSizeOfStringSummary() const;
@@ -639,7 +641,7 @@ public:
       const FileSpecList *containingModules,
       const FileSpecList *source_file_list,
       const std::unordered_set<std::string> &function_names,
-      RegularExpression &source_regex, bool internal, bool request_hardware,
+      RegularExpression source_regex, bool internal, bool request_hardware,
       LazyBool move_to_nearest_code);
 
   // Use this to create a breakpoint from a load address
@@ -662,7 +664,7 @@ public:
   // target setting, else we use the values passed in
   lldb::BreakpointSP CreateFuncRegexBreakpoint(
       const FileSpecList *containingModules,
-      const FileSpecList *containingSourceFiles, RegularExpression &func_regexp,
+      const FileSpecList *containingSourceFiles, RegularExpression func_regexp,
       lldb::LanguageType requested_language, LazyBool skip_prologue,
       bool internal, bool request_hardware);
 

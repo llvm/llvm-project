@@ -268,7 +268,14 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
                                   llvm::StringRef value) {
   bool is_load_script =
       (property_path == "target.load-script-from-symbol-file");
-  bool is_escape_non_printables = (property_path == "escape-non-printables");
+  // These properties might change how we visualize data.
+  bool invalidate_data_vis = (property_path == "escape-non-printables");
+  invalidate_data_vis |=
+      (property_path == "target.max-zero-padding-in-float-format");
+  if (invalidate_data_vis) {
+    DataVisualization::ForceUpdate();
+  }
+
   TargetSP target_sp;
   LoadScriptFromSymFile load_script_old_value;
   if (is_load_script && exe_ctx->GetTargetSP()) {
@@ -311,8 +318,6 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
           }
         }
       }
-    } else if (is_escape_non_printables) {
-      DataVisualization::ForceUpdate();
     }
   }
   return error;

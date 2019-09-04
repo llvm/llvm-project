@@ -907,6 +907,9 @@ public:
 
   std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
 
+  /// Update the ArchSpec to a more specific variant.
+  bool MergeArchitecture(const ArchSpec &arch_spec);
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///

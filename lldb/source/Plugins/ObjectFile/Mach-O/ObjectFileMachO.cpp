@@ -109,6 +109,31 @@ struct lldb_copy_dyld_cache_local_symbols_entry {
   uint32_t nlistCount;
 };
 
+static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
+                              const char *alt_name, size_t reg_byte_size,
+                              Stream &data) {
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  if (reg_info == nullptr)
+    reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
+  if (reg_info) {
+    lldb_private::RegisterValue reg_value;
+    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+      if (reg_info->byte_size >= reg_byte_size)
+        data.Write(reg_value.GetBytes(), reg_byte_size);
+      else {
+        data.Write(reg_value.GetBytes(), reg_info->byte_size);
+        for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n;
+             ++i)
+          data.PutChar(0);
+      }
+      return;
+    }
+  }
+  // Just write zeros if all else fails
+  for (size_t i = 0; i < reg_byte_size; ++i)
+    data.PutChar(0);
+}
+
 class RegisterContextDarwin_x86_64_Mach : public RegisterContextDarwin_x86_64 {
 public:
   RegisterContextDarwin_x86_64_Mach(lldb_private::Thread &thread,
@@ -170,32 +195,6 @@ public:
     }
   }
 
-  static size_t WriteRegister(RegisterContext *reg_ctx, const char *name,
-                              const char *alt_name, size_t reg_byte_size,
-                              Stream &data) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == nullptr)
-      reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
-    if (reg_info) {
-      lldb_private::RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_info->byte_size >= reg_byte_size)
-          data.Write(reg_value.GetBytes(), reg_byte_size);
-        else {
-          data.Write(reg_value.GetBytes(), reg_info->byte_size);
-          for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n;
-               ++i)
-            data.PutChar(0);
-        }
-        return reg_byte_size;
-      }
-    }
-    // Just write zeros if all else fails
-    for (size_t i = 0; i < reg_byte_size; ++i)
-      data.PutChar(0);
-    return reg_byte_size;
-  }
-
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
     RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
@@ -203,27 +202,27 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "rax", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rbx", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rcx", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rdx", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rdi", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rsi", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rbp", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rsp", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r8", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r9", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r10", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r11", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r12", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r13", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r14", nullptr, 8, data);
-      WriteRegister(reg_ctx, "r15", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rip", nullptr, 8, data);
-      WriteRegister(reg_ctx, "rflags", nullptr, 8, data);
-      WriteRegister(reg_ctx, "cs", nullptr, 8, data);
-      WriteRegister(reg_ctx, "fs", nullptr, 8, data);
-      WriteRegister(reg_ctx, "gs", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rax", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rbx", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rcx", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rdx", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rdi", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rsi", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rbp", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rsp", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r8", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r9", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r10", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r11", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r12", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r13", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r14", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "r15", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rip", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "rflags", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "cs", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "fs", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "gs", nullptr, 8, data);
 
       //            // Write out the FPU registers
       //            const size_t fpu_byte_size = sizeof(FPU);
@@ -312,9 +311,9 @@ public:
       // Write out the EXC registers
       data.PutHex32(EXCRegSet);
       data.PutHex32(EXCWordCount);
-      WriteRegister(reg_ctx, "trapno", nullptr, 4, data);
-      WriteRegister(reg_ctx, "err", nullptr, 4, data);
-      WriteRegister(reg_ctx, "faultvaddr", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "trapno", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "err", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "faultvaddr", nullptr, 8, data);
       return true;
     }
     return false;
@@ -401,32 +400,6 @@ public:
     }
   }
 
-  static size_t WriteRegister(RegisterContext *reg_ctx, const char *name,
-                              const char *alt_name, size_t reg_byte_size,
-                              Stream &data) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == nullptr)
-      reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
-    if (reg_info) {
-      lldb_private::RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_info->byte_size >= reg_byte_size)
-          data.Write(reg_value.GetBytes(), reg_byte_size);
-        else {
-          data.Write(reg_value.GetBytes(), reg_info->byte_size);
-          for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n;
-               ++i)
-            data.PutChar(0);
-        }
-        return reg_byte_size;
-      }
-    }
-    // Just write zeros if all else fails
-    for (size_t i = 0; i < reg_byte_size; ++i)
-      data.PutChar(0);
-    return reg_byte_size;
-  }
-
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
     RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
@@ -434,29 +407,29 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "eax", nullptr, 4, data);
-      WriteRegister(reg_ctx, "ebx", nullptr, 4, data);
-      WriteRegister(reg_ctx, "ecx", nullptr, 4, data);
-      WriteRegister(reg_ctx, "edx", nullptr, 4, data);
-      WriteRegister(reg_ctx, "edi", nullptr, 4, data);
-      WriteRegister(reg_ctx, "esi", nullptr, 4, data);
-      WriteRegister(reg_ctx, "ebp", nullptr, 4, data);
-      WriteRegister(reg_ctx, "esp", nullptr, 4, data);
-      WriteRegister(reg_ctx, "ss", nullptr, 4, data);
-      WriteRegister(reg_ctx, "eflags", nullptr, 4, data);
-      WriteRegister(reg_ctx, "eip", nullptr, 4, data);
-      WriteRegister(reg_ctx, "cs", nullptr, 4, data);
-      WriteRegister(reg_ctx, "ds", nullptr, 4, data);
-      WriteRegister(reg_ctx, "es", nullptr, 4, data);
-      WriteRegister(reg_ctx, "fs", nullptr, 4, data);
-      WriteRegister(reg_ctx, "gs", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "eax", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "ebx", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "ecx", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "edx", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "edi", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "esi", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "ebp", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "esp", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "ss", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "eflags", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "eip", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "cs", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "ds", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "es", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "fs", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "gs", nullptr, 4, data);
 
       // Write out the EXC registers
       data.PutHex32(EXCRegSet);
       data.PutHex32(EXCWordCount);
-      WriteRegister(reg_ctx, "trapno", nullptr, 4, data);
-      WriteRegister(reg_ctx, "err", nullptr, 4, data);
-      WriteRegister(reg_ctx, "faultvaddr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "trapno", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "err", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "faultvaddr", nullptr, 4, data);
       return true;
     }
     return false;
@@ -552,32 +525,6 @@ public:
     }
   }
 
-  static size_t WriteRegister(RegisterContext *reg_ctx, const char *name,
-                              const char *alt_name, size_t reg_byte_size,
-                              Stream &data) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == nullptr)
-      reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
-    if (reg_info) {
-      lldb_private::RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_info->byte_size >= reg_byte_size)
-          data.Write(reg_value.GetBytes(), reg_byte_size);
-        else {
-          data.Write(reg_value.GetBytes(), reg_info->byte_size);
-          for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n;
-               ++i)
-            data.PutChar(0);
-        }
-        return reg_byte_size;
-      }
-    }
-    // Just write zeros if all else fails
-    for (size_t i = 0; i < reg_byte_size; ++i)
-      data.PutChar(0);
-    return reg_byte_size;
-  }
-
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
     RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
@@ -585,23 +532,23 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "r0", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r1", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r2", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r3", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r4", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r5", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r6", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r7", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r8", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r9", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r10", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r11", nullptr, 4, data);
-      WriteRegister(reg_ctx, "r12", nullptr, 4, data);
-      WriteRegister(reg_ctx, "sp", nullptr, 4, data);
-      WriteRegister(reg_ctx, "lr", nullptr, 4, data);
-      WriteRegister(reg_ctx, "pc", nullptr, 4, data);
-      WriteRegister(reg_ctx, "cpsr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r0", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r1", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r2", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r3", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r4", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r5", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r6", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r7", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r8", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r9", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r10", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r11", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "r12", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "sp", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "lr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "pc", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "cpsr", nullptr, 4, data);
 
       // Write out the EXC registers
       //            data.PutHex32 (EXCRegSet);
@@ -707,32 +654,6 @@ public:
     }
   }
 
-  static size_t WriteRegister(RegisterContext *reg_ctx, const char *name,
-                              const char *alt_name, size_t reg_byte_size,
-                              Stream &data) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
-    if (reg_info == nullptr)
-      reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
-    if (reg_info) {
-      lldb_private::RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_info->byte_size >= reg_byte_size)
-          data.Write(reg_value.GetBytes(), reg_byte_size);
-        else {
-          data.Write(reg_value.GetBytes(), reg_info->byte_size);
-          for (size_t i = 0, n = reg_byte_size - reg_info->byte_size; i < n;
-               ++i)
-            data.PutChar(0);
-        }
-        return reg_byte_size;
-      }
-    }
-    // Just write zeros if all else fails
-    for (size_t i = 0; i < reg_byte_size; ++i)
-      data.PutChar(0);
-    return reg_byte_size;
-  }
-
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
     RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
@@ -740,40 +661,40 @@ public:
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
-      WriteRegister(reg_ctx, "x0", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x1", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x2", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x3", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x4", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x5", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x6", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x7", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x8", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x9", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x10", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x11", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x12", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x13", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x14", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x15", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x16", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x17", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x18", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x19", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x20", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x21", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x22", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x23", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x24", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x25", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x26", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x27", nullptr, 8, data);
-      WriteRegister(reg_ctx, "x28", nullptr, 8, data);
-      WriteRegister(reg_ctx, "fp", nullptr, 8, data);
-      WriteRegister(reg_ctx, "lr", nullptr, 8, data);
-      WriteRegister(reg_ctx, "sp", nullptr, 8, data);
-      WriteRegister(reg_ctx, "pc", nullptr, 8, data);
-      WriteRegister(reg_ctx, "cpsr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "x0", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x1", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x2", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x3", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x4", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x5", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x6", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x7", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x8", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x9", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x10", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x11", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x12", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x13", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x14", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x15", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x16", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x17", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x18", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x19", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x20", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x21", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x22", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x23", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x24", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x25", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x26", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x27", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "x28", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "fp", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "lr", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "sp", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "pc", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "cpsr", nullptr, 4, data);
 
       // Write out the EXC registers
       //            data.PutHex32 (EXCRegSet);

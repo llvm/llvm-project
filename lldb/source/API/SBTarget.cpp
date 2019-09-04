@@ -963,8 +963,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByRegex(
     const LazyBool skip_prologue = eLazyBoolCalculate;
 
     sb_bp = target_sp->CreateFuncRegexBreakpoint(
-        module_list.get(), comp_unit_list.get(), regexp, symbol_language,
-        skip_prologue, internal, hardware);
+        module_list.get(), comp_unit_list.get(), std::move(regexp),
+        symbol_language, skip_prologue, internal, hardware);
   }
 
   return LLDB_RECORD_RESULT(sb_bp);
@@ -1064,8 +1064,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
     }
 
     sb_bp = target_sp->CreateSourceRegexBreakpoint(
-        module_list.get(), source_file_list.get(), func_names_set, regexp,
-        false, hardware, move_to_nearest_code);
+        module_list.get(), source_file_list.get(), func_names_set,
+        std::move(regexp), false, hardware, move_to_nearest_code);
   }
 
   return LLDB_RECORD_RESULT(sb_bp);

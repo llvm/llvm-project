@@ -1,8 +1,6 @@
-LEVEL := ../../make
-
 EXE := testit
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 all: testit
 

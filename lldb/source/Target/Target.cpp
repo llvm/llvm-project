@@ -315,14 +315,14 @@ BreakpointSP Target::CreateSourceRegexBreakpoint(
     const FileSpecList *containingModules,
     const FileSpecList *source_file_spec_list,
     const std::unordered_set<std::string> &function_names,
-    RegularExpression &source_regex, bool internal, bool hardware,
+    RegularExpression source_regex, bool internal, bool hardware,
     LazyBool move_to_nearest_code) {
   SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(
       containingModules, source_file_spec_list));
   if (move_to_nearest_code == eLazyBoolCalculate)
     move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
   BreakpointResolverSP resolver_sp(new BreakpointResolverFileRegex(
-      nullptr, source_regex, function_names,
+      nullptr, std::move(source_regex), function_names,
       !static_cast<bool>(move_to_nearest_code)));
 
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
@@ -563,7 +563,7 @@ SearchFilterSP Target::GetSearchFilterForModuleAndCUList(
 
 BreakpointSP Target::CreateFuncRegexBreakpoint(
     const FileSpecList *containingModules,
-    const FileSpecList *containingSourceFiles, RegularExpression &func_regex,
+    const FileSpecList *containingSourceFiles, RegularExpression func_regex,
     lldb::LanguageType requested_language, LazyBool skip_prologue,
     bool internal, bool hardware) {
   SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(
@@ -572,7 +572,7 @@ BreakpointSP Target::CreateFuncRegexBreakpoint(
                   ? GetSkipPrologue()
                   : static_cast<bool>(skip_prologue);
   BreakpointResolverSP resolver_sp(new BreakpointResolverName(
-      nullptr, func_regex, requested_language, 0, skip));
+      nullptr, std::move(func_regex), requested_language, 0, skip));
 
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
 }
@@ -4140,6 +4140,12 @@ bool TargetProperties::GetEnableSyntheticValue() const {
   const uint32_t idx = ePropertyEnableSynthetic;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+uint32_t TargetProperties::GetMaxZeroPaddingInFloatFormat() const {
+  const uint32_t idx = ePropertyMaxZeroPaddingInFloatFormat;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {

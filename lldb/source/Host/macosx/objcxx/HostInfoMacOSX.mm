@@ -96,6 +96,7 @@ llvm::VersionTuple HostInfoMacOSX::GetMacCatalystVersion() {
   return g_version;
 }
 
+
 FileSpec HostInfoMacOSX::GetProgramFileSpec() {
   static FileSpec g_program_filespec;
   if (!g_program_filespec) {

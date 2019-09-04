@@ -1,5 +1,4 @@
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
-
 all: a.c clean
 		$(CC) -arch i386 -g -c $(SRCDIR)/a.c
 		ar -q liba-i386.a a.o
