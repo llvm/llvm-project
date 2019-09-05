@@ -78,10 +78,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
 
-static cl::opt<unsigned>
-AlignAllFunctions("align-all-functions",
-                  cl::desc("Force the alignment of all functions."),
-                  cl::init(0), cl::Hidden);
+static cl::opt<unsigned> AlignAllFunctions(
+    "align-all-functions",
+    cl::desc("Force the alignment of all functions in log2 format (e.g. 4 "
+             "means align on 16B boundaries)."),
+    cl::init(0), cl::Hidden);
 
 static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   using P = MachineFunctionProperties::Property;
@@ -172,16 +173,16 @@ void MachineFunction::init() {
     FrameInfo->ensureMaxAlignment(F.getFnStackAlignment());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
-  Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
+  LogAlignment = STI->getTargetLowering()->getMinFunctionLogAlignment();
 
   // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
   // FIXME: Use Function::hasOptSize().
   if (!F.hasFnAttribute(Attribute::OptimizeForSize))
-    Alignment = std::max(Alignment,
-                         STI->getTargetLowering()->getPrefFunctionAlignment());
+    LogAlignment = std::max(
+        LogAlignment, STI->getTargetLowering()->getPrefFunctionLogAlignment());
 
   if (AlignAllFunctions)
-    Alignment = AlignAllFunctions;
+    LogAlignment = AlignAllFunctions;
 
   JumpTableInfo = nullptr;
 

@@ -66,6 +66,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasBPERMD = false;
   bool HasExtDiv = false;
   bool HasP9Vector = false;
+  bool HasSPE = false;
 
 protected:
   std::string ABI;

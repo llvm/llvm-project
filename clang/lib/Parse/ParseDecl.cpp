@@ -3924,6 +3924,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       //   If the _Atomic keyword is immediately followed by a left parenthesis,
       //   it is interpreted as a type specifier (with a type name), not as a
       //   type qualifier.
+      if (!getLangOpts().C11)
+        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+
       if (NextToken().is(tok::l_paren)) {
         ParseAtomicSpecifier(DS);
         continue;
@@ -5330,6 +5333,8 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw__Atomic:
       if (!AtomicAllowed)
         goto DoneWithTypeQuals;
+      if (!getLangOpts().C11)
+        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_atomic, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;

@@ -6,41 +6,41 @@
 # RUN:         %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t2.o -shared -o %t.so
 # RUN: ld.lld %t1.o %t.so -o %t.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.exe | FileCheck %s
 # RUN: llvm-readobj --dynamic-table -S -r --mips-plt-got %t.exe \
 # RUN:   | FileCheck -check-prefix=REL %s
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: bar:
-# CHECK-NEXT:   20000:       jal     131096 <loc>
-# CHECK-NEXT:   20004:       nop
+# CHECK-NEXT:   [[BAR:[0-9a-f]+]]:  jal  0x[[LOC:[0-9a-f]+]] <loc>
+# CHECK-NEXT:   {{.*}}:              nop
 #
 # CHECK:      __start:
-# CHECK-NEXT:   20008:       jal     131072 <bar>
-# CHECK-NEXT:   2000c:       nop
-# CHECK-NEXT:   20010:       jal     131136
-#                                    ^-- 0x20040 gotplt[foo0]
-# CHECK-NEXT:   20014:       nop
+# CHECK-NEXT:   {{.*}}:       jal     0x[[BAR]] <bar>
+# CHECK-NEXT:   {{.*}}:       nop
+# CHECK-NEXT:   {{.*}}:       jal     0x[[FOO0:[0-9a-f]+]]
+#                                     ^-- gotplt[foo0]
+# CHECK-NEXT:   {{.*}}:       nop
 #
 # CHECK:      loc:
-# CHECK-NEXT:   20018:       nop
+# CHECK-NEXT:   [[LOC]]:      nop
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-EMPTY:
 # CHECK-NEXT: .plt:
-# CHECK-NEXT:   20020:       lui     $gp, 3
-# CHECK-NEXT:   20024:       lw      $25, 4($gp)
-# CHECK-NEXT:   20028:       addiu   $gp, $gp, 4
-# CHECK-NEXT:   2002c:       subu    $24, $24, $gp
-# CHECK-NEXT:   20030:       move    $15, $ra
-# CHECK-NEXT:   20034:       srl     $24, $24, 2
-# CHECK-NEXT:   20038:       jalr    $25
-# CHECK-NEXT:   2003c:       addiu   $24, $24, -2
-# CHECK-NEXT:   20040:       lui     $15, 3
-# CHECK-NEXT:   20044:       lw      $25, 12($15)
-# CHECK-NEXT:   20048:       jr      $25
-# CHECK-NEXT:   2004c:       addiu   $24, $15, 12
+# CHECK-NEXT:   {{.*}}:       lui     $gp, 0x3
+# CHECK-NEXT:   {{.*}}:       lw      $25, {{.*}}($gp)
+# CHECK-NEXT:   {{.*}}:       addiu   $gp, $gp, {{.*}}
+# CHECK-NEXT:   {{.*}}:       subu    $24, $24, $gp
+# CHECK-NEXT:   {{.*}}:       move    $15, $ra
+# CHECK-NEXT:   {{.*}}:       srl     $24, $24, 0x2
+# CHECK-NEXT:   {{.*}}:       jalr    $25
+# CHECK-NEXT:   {{.*}}:       addiu   $24, $24, -0x2
+# CHECK-NEXT:   [[FOO0]]:     lui     $15, 0x3
+# CHECK-NEXT:   {{.*}}:       lw      $25, {{.*}}($15)
+# CHECK-NEXT:   {{.*}}:       jr      $25
+# CHECK-NEXT:   {{.*}}:       addiu   $24, $15, {{.*}}
 
 # REL:      Name: .plt
 # REL-NEXT: Type: SHT_PROGBITS

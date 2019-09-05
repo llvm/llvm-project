@@ -72,6 +72,8 @@ public:
 
   bool legalizeImplicitArgPtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
+  bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B, unsigned AddrSpace) const;
   bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &MIRBuilder) const override;
 

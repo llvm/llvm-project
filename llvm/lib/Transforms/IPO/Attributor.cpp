@@ -1716,7 +1716,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noalias) }
+  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(noalias) }
 };
 
 /// NoAlias attribute for function return value.
@@ -1782,7 +1782,7 @@ struct AANoAliasCallSiteReturned final : AANoAliasImpl {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(noalias); }
+  void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noalias); }
 };
 
 /// -------------------AAIsDead Function Attribute-----------------------
@@ -1883,8 +1883,20 @@ struct AAIsDeadImpl : public AAIsDead {
           }
         }
 
-        if (SplitPos == &NormalDestBB->front())
-          assumeLive(A, *NormalDestBB);
+        if (SplitPos == &NormalDestBB->front()) {
+          // If this is an invoke of a noreturn function the edge to the normal
+          // destination block is dead but not necessarily the block itself.
+          // TODO: We need to move to an edge based system during deduction and
+          //       also manifest.
+          assert(!NormalDestBB->isLandingPad() &&
+                 "Expected the normal destination not to be a landingpad!");
+          BasicBlock *SplitBB =
+              SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
+          // The split block is live even if it contains only an unreachable
+          // instruction at the end.
+          assumeLive(A, *SplitBB);
+          SplitPos = SplitBB->getTerminator();
+        }
       }
 
       BB = SplitPos->getParent();

@@ -14,7 +14,7 @@
 # LLVM1-NEXT: }
 
 # RUN: yaml2obj -docnum 1 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU1 %s
-# GNU1:      Relocation section '.rela.dyn' at offset 0x180 contains 8 entries:
+# GNU1:      Relocation section '.rela.dyn' at offset 0x40 contains 8 entries:
 # GNU1:      0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
 # GNU1-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 0
 # GNU1-NEXT: 0000000000001188  0000000100000001 R_X86_64_64            0000000000000000 sym1 + 0
@@ -62,7 +62,7 @@ Symbols:
 # LLVM2-NEXT: }
 
 # RUN: yaml2obj -docnum 2 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU2 %s
-# GNU2:      Relocation section '.rel.dyn' at offset 0xfc contains 10 entries:
+# GNU2:      Relocation section '.rel.dyn' at offset 0x34 contains 10 entries:
 # GNU2:      00001008  00000101 R_386_32               00000000   sym1
 # GNU2-NEXT: 00001010  00000203 R_386_GOT32            00000000   sym2
 # GNU2-NEXT: 0000100c  00000008 R_386_RELATIVE
@@ -109,7 +109,7 @@ Symbols:
 # LLVM3-NEXT: }
 
 # RUN: yaml2obj -docnum 3 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU3 %s
-# GNU3:      Relocation section '.rela.dyn' at offset 0x180 contains 6 entries:
+# GNU3:      Relocation section '.rela.dyn' at offset 0x40 contains 6 entries:
 # GNU3: 0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
 # GNU3-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 8
 # GNU3-NEXT: 0000000000001200  0000000100000001 R_X86_64_64            0000000000000000 sym1 + 0

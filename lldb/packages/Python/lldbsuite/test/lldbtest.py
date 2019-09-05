@@ -684,16 +684,31 @@ class Base(unittest2.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
-    @staticmethod
-    def setUpCommands():
-        return [
+    @classmethod
+    def setUpCommands(cls):
+        commands = [
             # Disable Spotlight lookup. The testsuite creates
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.
             "settings set symbols.enable-external-lookup false",
 
             # Testsuite runs in parallel and the host can have also other load.
-            "settings set plugin.process.gdb-remote.packet-timeout 60"]
+            "settings set plugin.process.gdb-remote.packet-timeout 60",
+
+            'settings set symbols.clang-modules-cache-path "{}"'.format(
+                configuration.module_cache_dir),
+            "settings set use-color false",
+        ]
+        # Make sure that a sanitizer LLDB's environment doesn't get passed on.
+        if cls.platformContext and cls.platformContext.shlib_environment_var in os.environ:
+            commands.append('settings set target.env-vars {}='.format(
+                cls.platformContext.shlib_environment_var))
+
+        # Set environment variables for the inferior.
+        if lldbtest_config.inferior_env:
+            commands.append('settings set target.env-vars {}'.format(
+                lldbtest_config.inferior_env))
+        return commands
 
     def setUp(self):
         """Fixture for unittest test case setup.
@@ -1851,24 +1866,8 @@ class TestBase(Base):
         # decorators.
         Base.setUp(self)
 
-        # Set the clang modules cache path used by LLDB.
-        self.runCmd(
-            'settings set symbols.clang-modules-cache-path "{}"'.format(
-                configuration.module_cache_dir))
-
         for s in self.setUpCommands():
             self.runCmd(s)
-
-        # Disable color.
-        self.runCmd("settings set use-color false")
-
-        # Make sure that a sanitizer LLDB's environment doesn't get passed on.
-        if 'DYLD_LIBRARY_PATH' in os.environ:
-            self.runCmd('settings set target.env-vars DYLD_LIBRARY_PATH=')
-
-        # Set environment variables for the inferior.
-        if lldbtest_config.inferior_env:
-            self.runCmd('settings set target.env-vars {}'.format(lldbtest_config.inferior_env))
 
         if "LLDB_MAX_LAUNCH_COUNT" in os.environ:
             self.maxLaunchCount = int(os.environ["LLDB_MAX_LAUNCH_COUNT"])

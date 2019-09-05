@@ -105,7 +105,7 @@ private:
 
   /// Alignment of the basic block. Zero if the basic block does not need to be
   /// aligned. The alignment is specified as log2(bytes).
-  unsigned Alignment = 0;
+  unsigned LogAlignment = 0;
 
   /// Indicate that this basic block is entered via an exception handler.
   bool IsEHPad = false;
@@ -374,11 +374,11 @@ public:
 
   /// Return alignment of the basic block. The alignment is specified as
   /// log2(bytes).
-  unsigned getAlignment() const { return Alignment; }
+  unsigned getLogAlignment() const { return LogAlignment; }
 
   /// Set alignment of the basic block. The alignment is specified as
   /// log2(bytes).
-  void setAlignment(unsigned Align) { Alignment = Align; }
+  void setLogAlignment(unsigned A) { LogAlignment = A; }
 
   /// Returns true if the block is a landing pad. That is this basic block is
   /// entered via an exception handler.

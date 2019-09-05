@@ -302,7 +302,7 @@ def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
 def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Pref32BitThumb", "true",
                                              "Prefer 32-bit Thumb instrs">;
 
-def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopAlignment","2",
+def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
                                               "Prefer 32-bit alignment for loops">;
 
 def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "1",

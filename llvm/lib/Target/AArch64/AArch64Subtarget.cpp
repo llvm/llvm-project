@@ -71,22 +71,22 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA35:
     break;
   case CortexA53:
-    PrefFunctionAlignment = 3;
+    PrefFunctionLogAlignment = 3;
     break;
   case CortexA55:
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
-    PrefFunctionAlignment = 4;
+    PrefFunctionLogAlignment = 4;
     break;
   case CortexA65:
-    PrefFunctionAlignment = 3;
+    PrefFunctionLogAlignment = 3;
     break;
   case CortexA72:
   case CortexA73:
   case CortexA75:
   case CortexA76:
-    PrefFunctionAlignment = 4;
+    PrefFunctionLogAlignment = 4;
     break;
   case Cyclone:
     CacheLineSize = 64;
@@ -97,14 +97,14 @@ void AArch64Subtarget::initializeProperties() {
   case ExynosM1:
     MaxInterleaveFactor = 4;
     MaxJumpTableSize = 8;
-    PrefFunctionAlignment = 4;
-    PrefLoopAlignment = 3;
+    PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 3;
     break;
   case ExynosM3:
     MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;
-    PrefFunctionAlignment = 5;
-    PrefLoopAlignment = 4;
+    PrefFunctionLogAlignment = 5;
+    PrefLoopLogAlignment = 4;
     break;
   case Falkor:
     MaxInterleaveFactor = 4;
@@ -126,10 +126,10 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case NeoverseE1:
-    PrefFunctionAlignment = 3;
+    PrefFunctionLogAlignment = 3;
     break;
   case NeoverseN1:
-    PrefFunctionAlignment = 4;
+    PrefFunctionLogAlignment = 4;
     break;
   case Saphira:
     MaxInterleaveFactor = 4;
@@ -138,8 +138,8 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case ThunderX2T99:
     CacheLineSize = 64;
-    PrefFunctionAlignment = 3;
-    PrefLoopAlignment = 2;
+    PrefFunctionLogAlignment = 3;
+    PrefLoopLogAlignment = 2;
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -152,15 +152,15 @@ void AArch64Subtarget::initializeProperties() {
   case ThunderXT81:
   case ThunderXT83:
     CacheLineSize = 128;
-    PrefFunctionAlignment = 3;
-    PrefLoopAlignment = 2;
+    PrefFunctionLogAlignment = 3;
+    PrefLoopLogAlignment = 2;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
   case TSV110:
     CacheLineSize = 64;
-    PrefFunctionAlignment = 4;
-    PrefLoopAlignment = 2;
+    PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 2;
     break;
   }
 }

@@ -918,7 +918,7 @@ def ConstInit : InheritableAttr {
                    Clang<"require_constant_initialization", 0>];
   let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
   let Accessors = [Accessor<"isConstinit", [Keyword<"constinit">]>];
-  let Documentation = [RequireConstantInitDocs];
+  let Documentation = [ConstInitDocs];
   let LangOpts = [CPlusPlus];
 }
 

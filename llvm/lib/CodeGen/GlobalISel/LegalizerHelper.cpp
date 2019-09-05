@@ -1470,6 +1470,24 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_BITREVERSE: {
+    Observer.changingInstr(MI);
+
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(DstReg);
+    unsigned DiffBits = WideTy.getScalarSizeInBits() - Ty.getScalarSizeInBits();
+
+    Register DstExt = MRI.createGenericVirtualRegister(WideTy);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    MI.getOperand(0).setReg(DstExt);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+
+    auto ShiftAmt = MIRBuilder.buildConstant(WideTy, DiffBits);
+    auto Shift = MIRBuilder.buildLShr(WideTy, DstExt, ShiftAmt);
+    MIRBuilder.buildTrunc(DstReg, Shift);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_MUL:
@@ -2826,6 +2844,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FSIN:
   case G_FSQRT:
   case G_BSWAP:
+  case G_BITREVERSE:
   case G_SDIV:
   case G_SMIN:
   case G_SMAX:

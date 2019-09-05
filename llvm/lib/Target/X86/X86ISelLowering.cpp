@@ -1892,13 +1892,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   MaxLoadsPerMemcmpOptSize = 2;
 
   // Set loop alignment to 2^ExperimentalPrefLoopAlignment bytes (default: 2^4).
-  setPrefLoopAlignment(ExperimentalPrefLoopAlignment);
+  setPrefLoopLogAlignment(ExperimentalPrefLoopAlignment);
 
   // An out-of-order CPU can speculatively execute past a predictable branch,
   // but a conditional move could be stalled by an expensive earlier operation.
   PredictableSelectIsExpensive = Subtarget.getSchedModel().isOutOfOrder();
   EnableExtLdPromotion = true;
-  setPrefFunctionAlignment(4); // 2^4 bytes.
+  setPrefFunctionLogAlignment(4); // 2^4 bytes.
 
   verifyIntrinsicTables();
 }
@@ -7718,6 +7718,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   unsigned BaseSizeInBytes = BaseSizeInBits / 8;
   int LoadSizeInBits = (1 + LastLoadedElt - FirstLoadedElt) * BaseSizeInBits;
   assert((BaseSizeInBits % 8) == 0 && "Sub-byte element loads detected");
+
+  // TODO: Support offsetting the base load.
+  if (ByteOffsets[FirstLoadedElt] != 0)
+    return SDValue();
 
   // Check to see if the element's load is consecutive to the base load
   // or offset from a previous (already checked) load.

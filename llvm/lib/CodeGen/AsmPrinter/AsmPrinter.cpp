@@ -667,7 +667,7 @@ void AsmPrinter::EmitFunctionHeader() {
 
   EmitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment())
-    EmitAlignment(MF->getAlignment(), &F);
+    EmitAlignment(MF->getLogAlignment(), &F);
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
@@ -2905,8 +2905,8 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   }
 
   // Emit an alignment directive for this block, if needed.
-  if (unsigned Align = MBB.getAlignment())
-    EmitAlignment(Align);
+  if (unsigned LogAlign = MBB.getLogAlignment())
+    EmitAlignment(LogAlign);
   MCCodePaddingContext Context;
   setupCodePaddingContext(MBB, Context);
   OutStreamer->EmitCodePaddingBasicBlockStart(Context);

@@ -1235,9 +1235,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       Subtarget(ST) {
   auto &HRI = *Subtarget.getRegisterInfo();
 
-  setPrefLoopAlignment(4);
-  setPrefFunctionAlignment(4);
-  setMinFunctionAlignment(2);
+  setPrefLoopLogAlignment(4);
+  setPrefFunctionLogAlignment(4);
+  setMinFunctionLogAlignment(2);
   setStackPointerRegisterToSaveRestore(HRI.getStackRegister());
   setBooleanContents(TargetLoweringBase::UndefinedBooleanContent);
   setBooleanVectorContents(TargetLoweringBase::UndefinedBooleanContent);
@@ -2902,7 +2902,8 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
       if (N->getValueType(0) == MVT::i8) {
         SDValue P = getInstr(Hexagon::C2_tfrpr, dl, MVT::i32,
                              N->getOperand(0), DAG);
-        Results.push_back(P);
+        SDValue T = DAG.getAnyExtOrTrunc(P, dl, MVT::i8);
+        Results.push_back(T);
       }
       break;
   }

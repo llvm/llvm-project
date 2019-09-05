@@ -12,7 +12,7 @@ class VSCodeTestCaseBase(TestBase):
         self.assertTrue(os.path.exists(self.lldbVSCodeExec),
                         'lldb-vscode must exist')
         self.vscode = vscode.DebugAdaptor(
-            executable=self.lldbVSCodeExec, init_commands=Base.setUpCommands())
+            executable=self.lldbVSCodeExec, init_commands=self.setUpCommands())
 
     def build_and_create_debug_adaptor(self):
         self.build()

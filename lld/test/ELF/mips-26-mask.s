@@ -8,7 +8,7 @@
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK:      __start:
-# CHECK-NEXT:   20000:       jal     0x8020000
+# CHECK-NEXT:   [[ADDR:[0-9a-f]+]]:       jal     0x80[[ADDR]]
 
   .text
   .global __start

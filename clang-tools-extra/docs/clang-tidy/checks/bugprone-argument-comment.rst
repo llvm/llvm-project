@@ -28,6 +28,9 @@ Options
    underscores and case when comparing names -- otherwise they are taken into
    account.
 
+.. option:: IgnoreSingleArgument
+   When true, the check will ignore the single argument.
+
 .. option:: CommentBoolLiterals
 
    When true, the check will add argument comments in the format

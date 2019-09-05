@@ -1910,7 +1910,8 @@ StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
                                                  llvm::Function *InitFn) {
   // If we're not emitting codeview, use the mangled name. For Itanium, this is
   // arbitrary.
-  if (!CGM.getCodeGenOpts().EmitCodeView)
+  if (!CGM.getCodeGenOpts().EmitCodeView ||
+      StubKind == DynamicInitKind::GlobalArrayDestructor)
     return InitFn->getName();
 
   // Print the normal qualified name for the variable, then break off the last
@@ -1935,6 +1936,7 @@ StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
 
   switch (StubKind) {
   case DynamicInitKind::NoStub:
+  case DynamicInitKind::GlobalArrayDestructor:
     llvm_unreachable("not an initializer");
   case DynamicInitKind::Initializer:
     OS << "`dynamic initializer for '";
@@ -3569,7 +3571,8 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   if (Name.startswith("\01"))
     Name = Name.substr(1);
 
-  if (!HasDecl || D->isImplicit() || D->hasAttr<ArtificialAttr>()) {
+  if (!HasDecl || D->isImplicit() || D->hasAttr<ArtificialAttr>() ||
+      (isa<VarDecl>(D) && GD.getDynamicInitKind() != DynamicInitKind::NoStub)) {
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions should not silently reuse CurLoc.
     CurLoc = SourceLocation();
@@ -4438,19 +4441,27 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   StringRef Name = VD->getName();
   llvm::DIType *Ty = getOrCreateType(VD->getType(), Unit);
 
-  // Do not use global variables for enums, unless in CodeView.
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     assert(isa<EnumType>(ED->getTypeForDecl()) && "Enum without EnumType?");
-    (void)ED;
 
-    // If CodeView, emit enums as global variables, unless they are defined
-    // inside a class. We do this because MSVC doesn't emit S_CONSTANTs for
-    // enums in classes, and because it is difficult to attach this scope
-    // information to the global variable.
-    if (!CGM.getCodeGenOpts().EmitCodeView ||
-        isa<RecordDecl>(ED->getDeclContext()))
+    if (CGM.getCodeGenOpts().EmitCodeView) {
+      // If CodeView, emit enums as global variables, unless they are defined
+      // inside a class. We do this because MSVC doesn't emit S_CONSTANTs for
+      // enums in classes, and because it is difficult to attach this scope
+      // information to the global variable.
+      if (isa<RecordDecl>(ED->getDeclContext()))
+        return;
+    } else {
+      // If not CodeView, emit DW_TAG_enumeration_type if necessary. For
+      // example: for "enum { ZERO };", a DW_TAG_enumeration_type is created the
+      // first time `ZERO` is referenced in a function.
+      llvm::DIType *EDTy =
+          getOrCreateType(QualType(ED->getTypeForDecl(), 0), Unit);
+      assert (EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
+      (void)EDTy;
       return;
+    }
   }
 
   llvm::DIScope *DContext = nullptr;
