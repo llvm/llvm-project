@@ -665,7 +665,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
       // We can ignore the alias if the we have a load store pair and the load
       // is known to be invariant. The load cannot be clobbered by the store.
       auto IsInvariantLoad = [](const LoadInst *LI) -> bool {
-        return LI->getMetadata(LLVMContext::MD_invariant_load);
+        return LI->hasMetadata(LLVMContext::MD_invariant_load);
       };
 
       // We can ignore the alias as long as the load comes before the store,

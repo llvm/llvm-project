@@ -2,39 +2,16 @@
 ; RUN: llc -filetype=obj %s -o %t.bulk-mem.o -mattr=+bulk-memory
 ; RUN: llc -filetype=obj %s -o %t.atomics.bulk-mem.o -mattr=+atomics,+bulk-memory
 
-; atomics => error
+; atomics, shared memory => error
 ; RUN: not wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.o -o %t.atomics.wasm 2>&1 | FileCheck %s --check-prefix ERROR
 
-; atomics, active segments => active segments
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --active-segments %t.atomics.o -o %t.atomics.active.wasm
-; RUN: obj2yaml %t.atomics.active.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE-TLS
-
-; atomics, passive segments => error
-; RUN: not wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --passive-segments %t.atomics.o -o %t.atomics.passive.wasm 2>&1 | FileCheck %s --check-prefix ERROR
-
-; bulk memory => active segments
+; bulk memory, unshared memory => active segments
 ; RUN: wasm-ld -no-gc-sections --no-entry %t.bulk-mem.o -o %t.bulk-mem.wasm
 ; RUN: obj2yaml %t.bulk-mem.wasm | FileCheck %s --check-prefix ACTIVE
 
-; bulk-memory, active segments => active segments
-; RUN: wasm-ld -no-gc-sections --no-entry --active-segments %t.bulk-mem.o -o %t.bulk-mem.active.wasm
-; RUN: obj2yaml %t.bulk-mem.active.wasm | FileCheck %s --check-prefix ACTIVE
-
-; bulk memory, passive segments => passive segments
-; RUN: wasm-ld -no-gc-sections --no-entry --passive-segments %t.bulk-mem.o -o %t.bulk-mem.passive.wasm
-; RUN: obj2yaml %t.bulk-mem.passive.wasm | FileCheck %s --check-prefix PASSIVE
-
-; atomics, bulk memory => passive segments
+; atomics, bulk memory, shared memory => passive segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.wasm
-; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes PASSIVE,PASSIVE-TLS
-
-; atomics, bulk memory, active segments => active segments
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --active-segments %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.active.wasm
-; RUN: obj2yaml %t.atomics.bulk-mem.active.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE-TLS
-
-; atomics, bulk memory, passive segments => passive segments
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --passive-segments %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.passive.wasm
-; RUN: obj2yaml %t.atomics.bulk-mem.passive.wasm | FileCheck %s --check-prefixes PASSIVE,PASSIVE-TLS
+; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes PASSIVE
 
 target triple = "wasm32-unknown-unknown"
 
@@ -46,16 +23,13 @@ target triple = "wasm32-unknown-unknown"
 @e = private constant [9 x i8] c"constant\00", align 1
 @f = private constant i8 43, align 4
 
-; ERROR: 'bulk-memory' feature must be used in order to emit passive segments
+; ERROR: 'bulk-memory' feature must be used in order to use shared memory
 
 ; ACTIVE-LABEL: - Type:            CODE
 ; ACTIVE-NEXT:    Functions:
 ; ACTIVE-NEXT:      - Index:           0
 ; ACTIVE-NEXT:        Locals:          []
 ; ACTIVE-NEXT:        Body:            0B
-; ACTIVE-TLS-NEXT:  - Index:           1
-; ACTIVE-TLS-NEXT:    Locals:          []
-; ACTIVE-TLS-NEXT:    Body:            0B
 ; ACTIVE-NEXT:  - Type:            DATA
 ; ACTIVE-NEXT:    Segments:
 ; ACTIVE-NEXT:      - SectionOffset:   7
@@ -82,20 +56,20 @@ target triple = "wasm32-unknown-unknown"
 ; ACTIVE-NEXT:    FunctionNames:
 ; ACTIVE-NEXT:      - Index:           0
 ; ACTIVE-NEXT:        Name:            __wasm_call_ctors
-; ACTIVE-TLS-NEXT:  - Index:           1
-; ACTIVE-TLS-NEXT:    Name:            __wasm_init_tls
 
+; PASSIVE-LABEL: - Type:            START
+; PASSIVE-NEXT:    StartFunction:   1
 ; PASSIVE-LABEL: - Type:            CODE
 ; PASSIVE-NEXT:    Functions:
 ; PASSIVE-NEXT:      - Index:           0
 ; PASSIVE-NEXT:        Locals:          []
-; PASSIVE-NEXT:        Body:            10010B
+; PASSIVE-NEXT:        Body:            0B
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Locals:          []
-; PASSIVE-NEXT:        Body:            41800841004114FC080000FC090041940841004190CE00FC080100FC090141A4D6004100410DFC080200FC09020B
-; PASSIVE-TLS-NEXT:  - Index:           2
-; PASSIVE-TLS-NEXT:    Locals:          []
-; PASSIVE-TLS-NEXT:    Body:            0B
+; PASSIVE-NEXT:        Body:            41B4D60041004101FE480200044041B4D6004101427FFE0102001A0541800841004114FC08000041940841004190CE00FC08010041A4D6004100410DFC08020041B4D6004102FE17020041B4D600417FFE0002001A0BFC0900FC0901FC09020B
+; PASSIVE-NEXT:  - Index:           2
+; PASSIVE-NEXT:    Locals:          []
+; PASSIVE-NEXT:    Body:            0B
 ; PASSIVE-NEXT:  - Type:            DATA
 ; PASSIVE-NEXT:    Segments:
 ; PASSIVE-NEXT:      - SectionOffset:   3
@@ -115,5 +89,5 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:        Name:            __wasm_call_ctors
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Name:            __wasm_init_memory
-; PASSIVE-TLS-NEXT:  - Index:           2
-; PASSIVE-TLS-NEXT:    Name:            __wasm_init_tls
+; PASSIVE-NEXT:  - Index:           2
+; PASSIVE-NEXT:    Name:            __wasm_init_tls

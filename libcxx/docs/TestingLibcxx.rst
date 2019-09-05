@@ -8,11 +8,14 @@ Testing libc++
 Getting Started
 ===============
 
-libc++ uses LIT to configure and run its tests. The primary way to run the
-libc++ tests is by using make check-libcxx. However since libc++ can be used
-in any number of possible configurations it is important to customize the way
-LIT builds and runs the tests. This guide provides information on how to use
-LIT directly to test libc++.
+libc++ uses LIT to configure and run its tests. 
+
+The primary way to run the libc++ tests is by using `make check-libcxx`. 
+
+However since libc++ can be used in any number of possible
+configurations it is important to customize the way LIT builds and runs
+the tests. This guide provides information on how to use LIT directly to
+test libc++.
 
 Please see the `Lit Command Guide`_ for more information about LIT.
 

@@ -26,7 +26,7 @@ ImportedFunctionsInliningStatistics::createInlineGraphNode(const Function &F) {
   auto &ValueLookup = NodesMap[F.getName()];
   if (!ValueLookup) {
     ValueLookup = std::make_unique<InlineGraphNode>();
-    ValueLookup->Imported = F.getMetadata("thinlto_src_module") != nullptr;
+    ValueLookup->Imported = F.hasMetadata("thinlto_src_module");
   }
   return *ValueLookup;
 }
@@ -64,7 +64,7 @@ void ImportedFunctionsInliningStatistics::setModuleInfo(const Module &M) {
     if (F.isDeclaration())
       continue;
     AllFunctions++;
-    ImportedFunctions += int(F.getMetadata("thinlto_src_module") != nullptr);
+    ImportedFunctions += int(F.hasMetadata("thinlto_src_module"));
   }
 }
 static std::string getStatString(const char *Msg, int32_t Fraction, int32_t All,

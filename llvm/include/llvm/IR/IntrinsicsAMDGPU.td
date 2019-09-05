@@ -1469,6 +1469,18 @@ def int_amdgcn_set_inactive :
              LLVMMatchType<0>], // value for the inactive lanes to take
             [IntrNoMem, IntrConvergent]>;
 
+// Return if the given flat pointer points to a local memory address.
+def int_amdgcn_is_shared : GCCBuiltin<"__builtin_amdgcn_is_shared">,
+  Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+  [IntrNoMem, IntrSpeculatable, NoCapture<0>]
+>;
+
+// Return if the given flat pointer points to a prvate memory address.
+def int_amdgcn_is_private : GCCBuiltin<"__builtin_amdgcn_is_private">,
+  Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+  [IntrNoMem, IntrSpeculatable, NoCapture<0>]
+>;
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//

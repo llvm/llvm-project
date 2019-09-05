@@ -609,6 +609,13 @@ Expected<int> runEntryPoint(Session &S, JITEvaluatedSymbol EntryPoint) {
   return EntryPointPtr(EntryPointArgs.size() - 1, EntryPointArgs.data());
 }
 
+struct JITLinkTimers {
+  TimerGroup JITLinkTG{"llvm-jitlink timers", "timers for llvm-jitlink phases"};
+  Timer LoadObjectsTimer{"load", "time to load/add object files", JITLinkTG};
+  Timer LinkTimer{"link", "time to link object files", JITLinkTG};
+  Timer RunTimer{"run", "time to execute jitlink'd code", JITLinkTG};
+};
+
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
 
@@ -619,6 +626,10 @@ int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "llvm jitlink tool");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
+  /// If timers are enabled, create a JITLinkTimers instance.
+  std::unique_ptr<JITLinkTimers> Timers =
+      ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
+
   Session S(getFirstFileTriple());
 
   ExitOnErr(sanitizeArguments(S));
@@ -627,23 +638,16 @@ int main(int argc, char *argv[]) {
     ExitOnErr(loadProcessSymbols(S));
   ExitOnErr(loadDylibs());
 
-  TimerGroup JITLinkTimers("llvm-jitlink timers",
-                           "timers for llvm-jitlink phases");
 
   {
-    Timer LoadObjectsTimer(
-        "load", "time to load/add object files to llvm-jitlink", JITLinkTimers);
-    LoadObjectsTimer.startTimer();
+    TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
     ExitOnErr(loadObjects(S));
-    LoadObjectsTimer.stopTimer();
   }
 
   JITEvaluatedSymbol EntryPoint = 0;
   {
-    Timer LinkTimer("link", "time to link object files", JITLinkTimers);
-    LinkTimer.startTimer();
+    TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
     EntryPoint = ExitOnErr(getMainEntryPoint(S));
-    LinkTimer.stopTimer();
   }
 
   if (ShowAddrs)
@@ -658,14 +662,9 @@ int main(int argc, char *argv[]) {
 
   int Result = 0;
   {
-    Timer RunTimer("run", "time to execute jitlink'd code", JITLinkTimers);
-    RunTimer.startTimer();
+    TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     Result = ExitOnErr(runEntryPoint(S, EntryPoint));
-    RunTimer.stopTimer();
   }
-
-  if (ShowTimes)
-    JITLinkTimers.print(dbgs());
 
   return Result;
 }

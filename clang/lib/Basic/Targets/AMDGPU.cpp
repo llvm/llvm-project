@@ -142,6 +142,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX1010:
       Features["dl-insts"] = true;
       Features["ci-insts"] = true;
+      Features["flat-address-space"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["gfx8-insts"] = true;
@@ -181,6 +182,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX701:
     case GK_GFX700:
       Features["ci-insts"] = true;
+      Features["flat-address-space"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX601:
     case GK_GFX600:
