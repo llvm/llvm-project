@@ -24,11 +24,9 @@ class DriverBatchModeTest(PExpectTest):
         self.build()
 
         exe = self.getBuildArtifact("a.out")
-        module_cache = self.getBuildArtifact("module.cache")
 
         # Pass CRASH so the process will crash and stop in batch mode.
         extra_args = ['-b',
-            '-o', "settings set symbols.clang-modules-cache-path '%s'"%module_cache,
             '-o', 'break set -n main',
             '-o', 'run',
             '-o', 'continue',
@@ -57,11 +55,9 @@ class DriverBatchModeTest(PExpectTest):
         self.build()
 
         exe = self.getBuildArtifact("a.out")
-        module_cache = self.getBuildArtifact("module.cache")
 
         # Now do it again, and make sure if we don't crash, we quit:
         extra_args = ['-b',
-            '-o', "settings set symbols.clang-modules-cache-path '%s'"%module_cache,
             '-o', 'break set -n main',
             '-o', 'run',
             '-o', 'continue',
@@ -96,7 +92,6 @@ class DriverBatchModeTest(PExpectTest):
         self.setTearDownCleanup()
 
         exe = self.getBuildArtifact("a.out")
-        module_cache = self.getBuildArtifact("module.cache")
 
         # Start up the process by hand, attach to it, and wait for its completion.
         # Attach is funny, since it looks like it stops with a signal on most Unixen so
@@ -117,7 +112,6 @@ class DriverBatchModeTest(PExpectTest):
 
         extra_args = [
             '-b',
-            '-o', "settings set symbols.clang-modules-cache-path '%s'"%module_cache,
             '-o', 'process attach -p %d'%victim_pid,
             '-o', "breakpoint set --file '%s' -p 'Stop here to unset keep_waiting' -N keep_waiting"%self.source,
             '-o', 'continue',

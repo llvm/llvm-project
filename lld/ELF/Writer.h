@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_WRITER_H
 #define LLD_ELF_WRITER_H
 
+#include "Config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
@@ -28,7 +29,9 @@ template <class ELFT> void writeResult();
 // Each contains type, access flags and range of output sections that will be
 // placed in it.
 struct PhdrEntry {
-  PhdrEntry(unsigned type, unsigned flags) : p_type(type), p_flags(flags) {}
+  PhdrEntry(unsigned type, unsigned flags)
+      : p_align(type == llvm::ELF::PT_LOAD ? config->maxPageSize : 0),
+        p_type(type), p_flags(flags) {}
   void add(OutputSection *sec);
 
   uint64_t p_paddr = 0;

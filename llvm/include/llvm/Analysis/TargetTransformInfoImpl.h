@@ -247,14 +247,14 @@ public:
 
   bool isLegalMaskedLoad(Type *DataType) { return false; }
 
-  bool isLegalNTStore(Type *DataType, unsigned Alignment) {
+  bool isLegalNTStore(Type *DataType, llvm::Align Alignment) {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
     unsigned DataSize = DL.getTypeStoreSize(DataType);
     return Alignment >= DataSize && isPowerOf2_32(DataSize);
   }
 
-  bool isLegalNTLoad(Type *DataType, unsigned Alignment) {
+  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) {
     // By default, assume nontemporal memory loads are available for loads that
     // are aligned and have a size that is a power of 2.
     unsigned DataSize = DL.getTypeStoreSize(DataType);

@@ -56,6 +56,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -233,6 +234,13 @@ void BuiltinNameEmitter::EmitDeclarations() {
 
   // Structure definitions.
   OS << R"(
+// Image access qualifier.
+enum OpenCLAccessQual : unsigned char {
+  OCLAQ_None,
+  OCLAQ_ReadOnly,
+  OCLAQ_WriteOnly,
+  OCLAQ_ReadWrite
+};
 
 // Represents a return type or argument type.
 struct OpenCLTypeStruct {
@@ -246,6 +254,8 @@ struct OpenCLTypeStruct {
   const bool IsConst;
   // 0 if the type is not volatile.
   const bool IsVolatile;
+  // Access qualifier.
+  const OpenCLAccessQual AccessQualifier;
   // Address space of the pointer (if applicable).
   const LangAS AS;
 };
@@ -347,12 +357,20 @@ void BuiltinNameEmitter::GetOverloads() {
 void BuiltinNameEmitter::EmitTypeTable() {
   OS << "static const OpenCLTypeStruct TypeTable[] = {\n";
   for (const auto &T : TypeMap) {
-    OS << "  // " << T.second << "\n";
-    OS << "  {OCLT_" << T.first->getValueAsString("Name") << ", "
+    const char *AccessQual =
+        StringSwitch<const char *>(T.first->getValueAsString("AccessQualifier"))
+            .Case("RO", "OCLAQ_ReadOnly")
+            .Case("WO", "OCLAQ_WriteOnly")
+            .Case("RW", "OCLAQ_ReadWrite")
+            .Default("OCLAQ_None");
+
+    OS << "  // " << T.second << "\n"
+       << "  {OCLT_" << T.first->getValueAsString("Name") << ", "
        << T.first->getValueAsInt("VecWidth") << ", "
        << T.first->getValueAsBit("IsPointer") << ", "
        << T.first->getValueAsBit("IsConst") << ", "
        << T.first->getValueAsBit("IsVolatile") << ", "
+       << AccessQual << ", "
        << T.first->getValueAsString("AddrSpace") << "},\n";
   }
   OS << "};\n\n";
@@ -455,6 +473,47 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   // Start of switch statement over all types.
   OS << "\n  switch (Ty.ID) {\n";
 
+  // Switch cases for image types (Image2d, Image3d, ...)
+  std::vector<Record *> ImageTypes =
+      Records.getAllDerivedDefinitions("ImageType");
+
+  // Map an image type name to its 3 access-qualified types (RO, WO, RW).
+  std::map<StringRef, SmallVector<Record *, 3>> ImageTypesMap;
+  for (auto *IT : ImageTypes) {
+    auto Entry = ImageTypesMap.find(IT->getValueAsString("Name"));
+    if (Entry == ImageTypesMap.end()) {
+      SmallVector<Record *, 3> ImageList;
+      ImageList.push_back(IT);
+      ImageTypesMap.insert(
+          std::make_pair(IT->getValueAsString("Name"), ImageList));
+    } else {
+      Entry->second.push_back(IT);
+    }
+  }
+
+  // Emit the cases for the image types.  For an image type name, there are 3
+  // corresponding QualTypes ("RO", "WO", "RW").  The "AccessQualifier" field
+  // tells which one is needed.  Emit a switch statement that puts the
+  // corresponding QualType into "QT".
+  for (const auto &ITE : ImageTypesMap) {
+    OS << "    case OCLT_" << ITE.first.str() << ":\n"
+       << "      switch (Ty.AccessQualifier) {\n"
+       << "        case OCLAQ_None:\n"
+       << "          llvm_unreachable(\"Image without access qualifier\");\n";
+    for (const auto &Image : ITE.second) {
+      OS << StringSwitch<const char *>(
+                Image->getValueAsString("AccessQualifier"))
+                .Case("RO", "        case OCLAQ_ReadOnly:\n")
+                .Case("WO", "        case OCLAQ_WriteOnly:\n")
+                .Case("RW", "        case OCLAQ_ReadWrite:\n")
+         << "          QT.push_back(Context."
+         << Image->getValueAsDef("QTName")->getValueAsString("Name") << ");\n"
+         << "          break;\n";
+    }
+    OS << "      }\n"
+       << "      break;\n";
+  }
+
   // Switch cases for generic types.
   for (const auto *GenType : Records.getAllDerivedDefinitions("GenericType")) {
     OS << "    case OCLT_" << GenType->getValueAsString("Name") << ":\n";
@@ -495,6 +554,9 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   StringMap<bool> TypesSeen;
 
   for (const auto *T : Types) {
+    // Check this is not an image type
+    if (ImageTypesMap.find(T->getValueAsString("Name")) != ImageTypesMap.end())
+      continue;
     // Check we have not seen this Type
     if (TypesSeen.find(T->getValueAsString("Name")) != TypesSeen.end())
       continue;
@@ -512,7 +574,9 @@ static void OCL2Qual(ASTContext &Context, const OpenCLTypeStruct &Ty,
   }
 
   // End of switch statement.
-  OS << "  } // end of switch (Ty.ID)\n\n";
+  OS << "    default:\n"
+     << "      llvm_unreachable(\"OpenCL builtin type not handled yet\");\n"
+     << "  } // end of switch (Ty.ID)\n\n";
 
   // Step 2.
   // Add ExtVector types if this was a generic type, as the switch statement

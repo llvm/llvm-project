@@ -196,7 +196,6 @@ FUNCTION_PASS("lowerinvoke", LowerInvokePass())
 FUNCTION_PASS("mem2reg", PromotePass())
 FUNCTION_PASS("memcpyopt", MemCpyOptPass())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass())
-FUNCTION_PASS("mldst-motion", MergedLoadStoreMotionPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
@@ -271,6 +270,11 @@ FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
                              return LoopVectorizePass(Opts);
                            },
                            parseLoopVectorizeOptions)
+FUNCTION_PASS_WITH_PARAMS("mldst-motion",
+                           [](MergedLoadStoreMotionOptions Opts) {
+                             return MergedLoadStoreMotionPass(Opts);
+                           },
+                           parseMergedLoadStoreMotionOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS

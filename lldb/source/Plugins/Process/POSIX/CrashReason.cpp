@@ -229,11 +229,6 @@ std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr) {
 }
 
 const char *CrashReasonAsString(CrashReason reason) {
-#ifdef LLDB_CONFIGURATION_BUILDANDINTEGRATION
-  // Just return the code in ascii for integration builds.
-  chcar str[8];
-  sprintf(str, "%d", reason);
-#else
   const char *str = nullptr;
 
   switch (reason) {
@@ -315,8 +310,6 @@ const char *CrashReasonAsString(CrashReason reason) {
     str = "eFloatSubscriptRange";
     break;
   }
-#endif
-
   return str;
 }
 

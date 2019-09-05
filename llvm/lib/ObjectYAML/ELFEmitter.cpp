@@ -116,13 +116,10 @@ template <class ELFT> class ELFState {
 
   bool buildSectionIndex();
   bool buildSymbolIndexes();
-  void initELFHeader(Elf_Ehdr &Header);
   void initProgramHeaders(std::vector<Elf_Phdr> &PHeaders);
-  bool initImplicitHeader(ELFState<ELFT> &State, ContiguousBlobAccumulator &CBA,
-                          Elf_Shdr &Header, StringRef SecName,
-                          ELFYAML::Section *YAMLSec);
-  bool initSectionHeaders(ELFState<ELFT> &State,
-                          std::vector<Elf_Shdr> &SHeaders,
+  bool initImplicitHeader(ContiguousBlobAccumulator &CBA, Elf_Shdr &Header,
+                          StringRef SecName, ELFYAML::Section *YAMLSec);
+  bool initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
                           ContiguousBlobAccumulator &CBA);
   void initSymtabSectionHeader(Elf_Shdr &SHeader, SymtabType STType,
                                ContiguousBlobAccumulator &CBA,
@@ -133,6 +130,8 @@ template <class ELFT> class ELFState {
                                ELFYAML::Section *YAMLSec);
   void setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                               std::vector<Elf_Shdr> &SHeaders);
+  void finalizeStrings();
+  void writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream &OS);
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
                            ContiguousBlobAccumulator &CBA);
@@ -163,9 +162,6 @@ template <class ELFT> class ELFState {
 
 public:
   static int writeELF(raw_ostream &OS, ELFYAML::Object &Doc);
-
-private:
-  void finalizeStrings();
 };
 } // end anonymous namespace
 
@@ -209,8 +205,11 @@ template <class ELFT> ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
   }
 }
 
-template <class ELFT> void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
+template <class ELFT>
+void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream &OS) {
   using namespace llvm::ELF;
+
+  Elf_Ehdr Header;
   zero(Header);
   Header.e_ident[EI_MAG0] = 0x7f;
   Header.e_ident[EI_MAG1] = 'E';
@@ -234,14 +233,18 @@ template <class ELFT> void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   Header.e_shentsize =
       Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
   // Immediately following the ELF header and program headers.
-  Header.e_shoff =
-      Doc.Header.SHOffset
-          ? (typename ELFT::uint)(*Doc.Header.SHOffset)
-          : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
+  // Align the start of the section header and write the ELF header.
+  uint64_t ShOffset;
+  CBA.getOSAndAlignedOffset(ShOffset, sizeof(typename ELFT::uint));
+  Header.e_shoff = Doc.Header.SHOffset
+                       ? typename ELFT::uint(*Doc.Header.SHOffset)
+                       : ShOffset;
   Header.e_shnum =
       Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : Doc.Sections.size();
   Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
                                           : SN2I.get(".shstrtab");
+
+  OS.write((const char *)&Header, sizeof(Header));
 }
 
 template <class ELFT>
@@ -267,8 +270,7 @@ static bool convertSectionIndex(NameToIdxMap &SN2I, StringRef SecName,
 }
 
 template <class ELFT>
-bool ELFState<ELFT>::initImplicitHeader(ELFState<ELFT> &State,
-                                        ContiguousBlobAccumulator &CBA,
+bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
                                         Elf_Shdr &Header, StringRef SecName,
                                         ELFYAML::Section *YAMLSec) {
   // Check if the header was already initialized.
@@ -276,19 +278,15 @@ bool ELFState<ELFT>::initImplicitHeader(ELFState<ELFT> &State,
     return false;
 
   if (SecName == ".symtab")
-    State.initSymtabSectionHeader(Header, SymtabType::Static, CBA, YAMLSec);
+    initSymtabSectionHeader(Header, SymtabType::Static, CBA, YAMLSec);
   else if (SecName == ".strtab")
-    State.initStrtabSectionHeader(Header, SecName, State.DotStrtab, CBA,
-                                  YAMLSec);
+    initStrtabSectionHeader(Header, SecName, DotStrtab, CBA, YAMLSec);
   else if (SecName == ".shstrtab")
-    State.initStrtabSectionHeader(Header, SecName, State.DotShStrtab, CBA,
-                                  YAMLSec);
-
+    initStrtabSectionHeader(Header, SecName, DotShStrtab, CBA, YAMLSec);
   else if (SecName == ".dynsym")
-    State.initSymtabSectionHeader(Header, SymtabType::Dynamic, CBA, YAMLSec);
+    initSymtabSectionHeader(Header, SymtabType::Dynamic, CBA, YAMLSec);
   else if (SecName == ".dynstr")
-    State.initStrtabSectionHeader(Header, SecName, State.DotDynstr, CBA,
-                                  YAMLSec);
+    initStrtabSectionHeader(Header, SecName, DotDynstr, CBA, YAMLSec);
   else
     return false;
 
@@ -313,8 +311,7 @@ static StringRef dropUniqueSuffix(StringRef S) {
 }
 
 template <class ELFT>
-bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
-                                        std::vector<Elf_Shdr> &SHeaders,
+bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
                                         ContiguousBlobAccumulator &CBA) {
   // Ensure SHN_UNDEF entry is present. An all-zero section header is a
   // valid SHN_UNDEF entry since SHT_NULL == 0.
@@ -330,7 +327,7 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
     // in the YAML, we need to write them here. This ensures the file offset
     // remains correct.
     Elf_Shdr &SHeader = SHeaders[I];
-    if (initImplicitHeader(State, CBA, SHeader, Sec->Name,
+    if (initImplicitHeader(CBA, SHeader, Sec->Name,
                            Sec->IsImplicit ? nullptr : Sec))
       continue;
 
@@ -1050,32 +1047,26 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   if (!State.buildSectionIndex() || !State.buildSymbolIndexes())
     return 1;
 
-  Elf_Ehdr Header;
-  State.initELFHeader(Header);
-
-  // TODO: Flesh out section header support.
-
   std::vector<Elf_Phdr> PHeaders;
   State.initProgramHeaders(PHeaders);
 
   // XXX: This offset is tightly coupled with the order that we write
   // things to `OS`.
-  const size_t SectionContentBeginOffset = Header.e_ehsize +
-                                           Header.e_phentsize * Header.e_phnum +
-                                           Header.e_shentsize * Header.e_shnum;
+  const size_t SectionContentBeginOffset =
+      sizeof(Elf_Ehdr) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
   ContiguousBlobAccumulator CBA(SectionContentBeginOffset);
 
   std::vector<Elf_Shdr> SHeaders;
-  if (!State.initSectionHeaders(State, SHeaders, CBA))
+  if (!State.initSectionHeaders(SHeaders, CBA))
     return 1;
 
   // Now we can decide segment offsets
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
-  OS.write((const char *)&Header, sizeof(Header));
+  State.writeELFHeader(CBA, OS);
   writeArrayData(OS, makeArrayRef(PHeaders));
-  writeArrayData(OS, makeArrayRef(SHeaders));
   CBA.writeBlobToStream(OS);
+  writeArrayData(OS, makeArrayRef(SHeaders));
   return 0;
 }
 

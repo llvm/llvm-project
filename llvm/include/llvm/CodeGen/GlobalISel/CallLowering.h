@@ -90,13 +90,6 @@ public:
 
     /// True if the call must be tail call optimized.
     bool IsMustTailCall = false;
-
-    /// True if the call passes all target-independent checks for tail call
-    /// optimization.
-    bool IsTailCall = false;
-
-    /// True if the call is to a vararg function.
-    bool IsVarArg = false;
   };
 
   /// Argument handling is mostly uniform between the four places that

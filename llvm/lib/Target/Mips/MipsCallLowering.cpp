@@ -508,7 +508,9 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : Info.OrigArgs) {
     if (!isSupportedType(Arg.Ty))
       return false;
-    if (Arg.Flags[0].isByVal() || Arg.Flags[0].isSRet())
+    if (Arg.Flags[0].isByVal())
+      return false;
+    if (Arg.Flags[0].isSRet() && !Arg.Ty->isPointerTy())
       return false;
   }
 
