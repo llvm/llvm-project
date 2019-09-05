@@ -228,7 +228,7 @@ class Configuration(object):
         if not cxx:
             self.lit_config.fatal('must specify user parameter cxx_under_test '
                                   '(e.g., --param=cxx_under_test=clang++)')
-        self.cxx = CXXCompiler(cxx) if not self.cxx_is_clang_cl else \
+        self.cxx = CXXCompiler(self, cxx) if not self.cxx_is_clang_cl else \
                    self._configure_clang_cl(cxx)
         cxx_type = self.cxx.type
         if cxx_type is not None:
@@ -260,7 +260,7 @@ class Configuration(object):
         link_flags = _prefixed_env_list('LIB', '-L')
         for path in _split_env_var('LIB'):
             self.add_path(self.exec_env, path)
-        return CXXCompiler(clang_path, flags=flags,
+        return CXXCompiler(self, clang_path, flags=flags,
                            compile_flags=compile_flags,
                            link_flags=link_flags)
 
@@ -1035,8 +1035,14 @@ class Configuration(object):
             self.cxx.useModules()
 
     def configure_substitutions(self):
+        tool_env = ''
+        if platform.system() == 'Darwin':
+            # Do not pass DYLD_LIBRARY_PATH to the compiler, linker, etc. as
+            # these tools are not meant to exercise the just-built libraries.
+            tool_env += 'DYLD_LIBRARY_PATH="" '
+
         sub = self.config.substitutions
-        cxx_path = pipes.quote(self.cxx.path)
+        cxx_path = tool_env + pipes.quote(self.cxx.path)
         # Configure compiler substitutions
         sub.append(('%cxx', cxx_path))
         sub.append(('%libcxx_src_root', self.libcxx_src_root))
@@ -1071,7 +1077,11 @@ class Configuration(object):
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
         # Configure run env substitution.
-        sub.append(('%run', '%t.exe'))
+        codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
+        run_py = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
+        run_str = '%s %s "%s" %%t.exe' % (pipes.quote(sys.executable), \
+                                          pipes.quote(run_py), codesign_ident)
+        sub.append(('%run', run_str))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
