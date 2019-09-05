@@ -15,7 +15,7 @@ class MultilineCompletionTest(PExpectTest):
         """Test that we can complete a simple multiline expression"""
         self.build()
 
-        self.launch(executable=self.getBuildArtifact("a.out"))
+        self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100,500))
         self.expect("b main", substrs=["Breakpoint 1", "address ="])
         self.expect("run", substrs=["stop reason ="])
 
