@@ -13,7 +13,7 @@ lld is a high-performance linker that supports ELF (Unix), COFF
 command-line-compatible with GNU linkers and Microsoft link.exe and is
 significantly faster than the system default linkers.
 
-lld 9.0 has lots of feature improvements and bug fixes.
+lld 9 has lots of feature improvements and bug fixes.
 
 Non-comprehensive list of changes in this release
 =================================================
@@ -56,7 +56,7 @@ ELF Improvements
   include a header file provided by the library and then explicitly
   link the library with the linker ``-l`` option. On Windows, header
   files usually contain pragmas that list needed libraries. Compilers
-  copies that information to object files, so that linkers can
+  copy that information to object files, so that linkers can
   automatically link needed libraries. ``--dependent-library`` is
   added for implementing that Windows semantics on Unix.
   (`r360984 <https://reviews.llvm.org/rL360984>`_)
@@ -65,7 +65,7 @@ ELF Improvements
   (`r362793 <https://reviews.llvm.org/rL362793>`_)
 
 * lld now supports replacing ``JAL`` with ``JALX`` instructions in case
-  of MIPS ↔ microMIPS cross-mode jumps.
+  of MIPS-microMIPS cross-mode jumps.
   (`r354311 <https://reviews.llvm.org/rL354311>`_)
 
 * lld now creates LA25 thunks for MIPS R6 code.
@@ -93,7 +93,7 @@ ELF Improvements
 * The experimental partitioning feature is added to allow a program to
   be split into multiple pieces.
 
-  The feature allows you semi-automatically split a single program
+  The feature allows you to semi-automatically split a single program
   into multiple ELF files called "partitions". Since all partitions
   share the same memory address space and don't use PLT/GOT, split
   programs run as fast as regular programs.
@@ -104,9 +104,9 @@ ELF Improvements
   sub-partition and load the PDF reader partition only when a user
   tries to open a PDF file.
 
-  See https://lld.llvm.org/Partitions.html for more information.
+  See `the documentation <Partitions.html>`_ for more information.
 
-* If "-" is given as an output filename, lld write the final result
+* If "-" is given as an output filename, lld writes the final result
   to the standard output. Previously, it created a file "-" in the
   current directory.
   (`r351852 <https://reviews.llvm.org/rL351852>`_)
@@ -161,8 +161,6 @@ COFF Improvements
 
 * Several speed and memory usage improvements.
 
-* Range extension thunks are now created for ARM64, if needed.
-
 * lld-link now supports resource object files created by GNU windres and
   MS cvtres, not only llvm-cvtres.
 
@@ -189,7 +187,7 @@ WebAssembly Improvements
 * Imports from custom module names are supported.
   (`r352828 <https://reviews.llvm.org/rL352828>`_)
 
-* Symbols that are in llvm.used are no exported by default.
+* Symbols that are in llvm.used are now exported by default.
   (`r353364 <https://reviews.llvm.org/rL353364>`_)
 
 * Initial support for PIC and dynamic linking has landed.
