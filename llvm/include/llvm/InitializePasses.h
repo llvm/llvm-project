@@ -364,8 +364,6 @@ void initializeSROALegacyPassPass(PassRegistry&);
 void initializeSafeStackLegacyPassPass(PassRegistry&);
 void initializeSafepointIRVerifierPass(PassRegistry&);
 void initializeSampleProfileLoaderLegacyPassPass(PassRegistry&);
-void initializeSanitizerCoverageFunctionCheckLegacyPassPass(PassRegistry &);
-void initializeSanitizerCoverageLegacyPassPass(PassRegistry &);
 void initializeModuleSanitizerCoverageLegacyPassPass(PassRegistry &);
 void initializeScalarEvolutionWrapperPassPass(PassRegistry&);
 void initializeScalarizeMaskedMemIntrinPass(PassRegistry&);

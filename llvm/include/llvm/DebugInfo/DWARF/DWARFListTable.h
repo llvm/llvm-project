@@ -57,7 +57,7 @@ class DWARFListTableHeader {
   struct Header {
     /// The total length of the entries for this table, not including the length
     /// field itself.
-    uint32_t Length = 0;
+    uint64_t Length = 0;
     /// The DWARF version number.
     uint16_t Version;
     /// The size in bytes of an address on the target architecture. For
@@ -75,7 +75,7 @@ class DWARFListTableHeader {
   /// The offset table, which contains offsets to the individual list entries.
   /// It is used by forms such as DW_FORM_rnglistx.
   /// FIXME: Generate the table and use the appropriate forms.
-  std::vector<uint32_t> Offsets;
+  std::vector<uint64_t> Offsets;
   /// The table's format, either DWARF32 or DWARF64.
   dwarf::DwarfFormat Format;
   /// The offset at which the header (and hence the table) is located within
@@ -97,14 +97,26 @@ public:
   }
   uint64_t getHeaderOffset() const { return HeaderOffset; }
   uint8_t getAddrSize() const { return HeaderData.AddrSize; }
-  uint32_t getLength() const { return HeaderData.Length; }
+  uint64_t getLength() const { return HeaderData.Length; }
   uint16_t getVersion() const { return HeaderData.Version; }
   StringRef getSectionName() const { return SectionName; }
   StringRef getListTypeString() const { return ListTypeString; }
   dwarf::DwarfFormat getFormat() const { return Format; }
 
+  /// Return the size of the table header including the length but not including
+  /// the offsets.
+  static uint8_t getHeaderSize(dwarf::DwarfFormat Format) {
+    switch (Format) {
+    case dwarf::DwarfFormat::DWARF32:
+      return 12;
+    case dwarf::DwarfFormat::DWARF64:
+      return 20;
+    }
+    llvm_unreachable("Invalid DWARF format (expected DWARF32 or DWARF64");
+  }
+
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = {}) const;
-  Optional<uint32_t> getOffsetEntry(uint32_t Index) const {
+  Optional<uint64_t> getOffsetEntry(uint32_t Index) const {
     if (Index < Offsets.size())
       return Offsets[Index];
     return None;
@@ -116,7 +128,7 @@ public:
   /// Returns the length of the table, including the length field, or 0 if the
   /// length has not been determined (e.g. because the table has not yet been
   /// parsed, or there was a problem in parsing).
-  uint32_t length() const;
+  uint64_t length() const;
 };
 
 /// A class representing a table of lists as specified in the DWARF v5
@@ -155,6 +167,7 @@ public:
 
   uint64_t getHeaderOffset() const { return Header.getHeaderOffset(); }
   uint8_t getAddrSize() const { return Header.getAddrSize(); }
+  dwarf::DwarfFormat getFormat() const { return Header.getFormat(); }
 
   void dump(raw_ostream &OS,
             llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
@@ -162,23 +175,17 @@ public:
             DIDumpOptions DumpOpts = {}) const;
 
   /// Return the contents of the offset entry designated by a given index.
-  Optional<uint32_t> getOffsetEntry(uint32_t Index) const {
+  Optional<uint64_t> getOffsetEntry(uint32_t Index) const {
     return Header.getOffsetEntry(Index);
   }
   /// Return the size of the table header including the length but not including
   /// the offsets. This is dependent on the table format, which is unambiguously
   /// derived from parsing the table.
   uint8_t getHeaderSize() const {
-    switch (Header.getFormat()) {
-    case dwarf::DwarfFormat::DWARF32:
-      return 12;
-    case dwarf::DwarfFormat::DWARF64:
-      return 20;
-    }
-    llvm_unreachable("Invalid DWARF format (expected DWARF32 or DWARF64");
+    return DWARFListTableHeader::getHeaderSize(getFormat());
   }
 
-  uint32_t length() { return Header.length(); }
+  uint64_t length() { return Header.length(); }
 };
 
 template <typename DWARFListType>

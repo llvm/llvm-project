@@ -456,8 +456,7 @@ body: |
     ; CHECK-LABEL: name: extract_vector_elt_v2s16_idx2_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
+    ; CHECK: $vgpr0 = COPY [[DEF]](s32)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 2
     %2:_(s16) = G_EXTRACT_VECTOR_ELT %0, %1

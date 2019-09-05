@@ -67,3 +67,26 @@ define <8 x i8> @extract_insert_same_vec_and_index2(<8 x i8> %in, i32 %index) {
   %vec = insertelement <8 x i8> %in, i8 %val, i32 %index
   ret <8 x i8> %vec
 }
+
+; The insert is in an unreachable block, so it is allowed to point to itself.
+; This would crash via stack overflow.
+
+define void @PR43218() {
+; CHECK-LABEL: @PR43218(
+; CHECK-NEXT:  end:
+; CHECK-NEXT:    ret void
+; CHECK:       unreachable_infloop:
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x i64> [[BOGUS:%.*]], i32 0
+; CHECK-NEXT:    [[T0:%.*]] = inttoptr i64 [[EXTRACT]] to i16****
+; CHECK-NEXT:    [[BOGUS]] = insertelement <2 x i64> [[BOGUS]], i64 undef, i32 1
+; CHECK-NEXT:    br label [[UNREACHABLE_INFLOOP:%.*]]
+;
+end:
+  ret void
+
+unreachable_infloop:
+  %extract = extractelement <2 x i64> %bogus, i32 0
+  %t0 = inttoptr i64 %extract to i16****
+  %bogus = insertelement <2 x i64> %bogus, i64 undef, i32 1
+  br label %unreachable_infloop
+}

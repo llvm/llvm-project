@@ -173,6 +173,9 @@ static StringRef intrinsicToAttrName(Intrinsic::ID ID,
   case Intrinsic::amdgcn_implicitarg_ptr:
     return "amdgpu-implicitarg-ptr";
   case Intrinsic::amdgcn_queue_ptr:
+  case Intrinsic::amdgcn_is_shared:
+  case Intrinsic::amdgcn_is_private:
+    // TODO: Does not require queue ptr on gfx9+
   case Intrinsic::trap:
   case Intrinsic::debugtrap:
     IsQueuePtr = true;

@@ -289,6 +289,19 @@ struct IRPosition {
   }
   ///}
 
+  /// Return true if the position refers to a function interface, that is the
+  /// function scope, the function return, or an argumnt.
+  bool isFnInterfaceKind() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_FUNCTION:
+    case IRPosition::IRP_RETURNED:
+    case IRPosition::IRP_ARGUMENT:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Return the Function surrounding the anchor value.
   ///
   ///{
@@ -593,8 +606,11 @@ struct Attributor {
   ///                  the abstract attributes.
   /// \param DepRecomputeInterval Number of iterations until the dependences
   ///                             between abstract attributes are recomputed.
-  Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval)
-      : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval) {}
+  /// \param Whitelist If not null, a set limiting the attribute opportunities.
+  Attributor(InformationCache &InfoCache, unsigned DepRecomputeInterval,
+             DenseSet<const char *> *Whitelist = nullptr)
+      : InfoCache(InfoCache), DepRecomputeInterval(DepRecomputeInterval),
+        Whitelist(Whitelist) {}
 
   ~Attributor() { DeleteContainerPointers(AllAbstractAttributes); }
 
@@ -604,7 +620,7 @@ struct Attributor {
   /// as the Attributor is not destroyed (it owns the attributes now).
   ///
   /// \Returns CHANGED if the IR was changed, otherwise UNCHANGED.
-  ChangeStatus run();
+  ChangeStatus run(Module &M);
 
   /// Lookup an abstract attribute of type \p AAType at position \p IRP. While
   /// no abstract attribute is found equivalent positions are checked, see
@@ -629,33 +645,7 @@ struct Attributor {
   template <typename AAType>
   const AAType &getAAFor(const AbstractAttribute &QueryingAA,
                          const IRPosition &IRP, bool TrackDependence = true) {
-    static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
-                  "Cannot query an attribute with a type not derived from "
-                  "'AbstractAttribute'!");
-
-    // Lookup the abstract attribute of type AAType. If found, return it after
-    // registering a dependence of QueryingAA on the one returned attribute.
-    const auto &KindToAbstractAttributeMap =
-        AAMap.lookup(const_cast<IRPosition &>(IRP));
-    if (AAType *AA = static_cast<AAType *>(
-            KindToAbstractAttributeMap.lookup(&AAType::ID))) {
-      // Do not registr a dependence on an attribute with an invalid state.
-      if (TrackDependence && AA->getState().isValidState())
-        QueryMap[AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
-      return *AA;
-    }
-
-    // No matching attribute found, create one.
-    auto &AA = AAType::createForPosition(IRP, *this);
-    registerAA(AA);
-
-    // Bootstrap the new attribute with an initial update to propagate
-    // information, e.g., function -> call site.
-    AA.update(*this);
-
-    if (TrackDependence && AA.getState().isValidState())
-      QueryMap[&AA].insert(const_cast<AbstractAttribute *>(&QueryingAA));
-    return AA;
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence);
   }
 
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if
@@ -684,7 +674,10 @@ struct Attributor {
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
     IRPosition &IRP = AA.getIRPosition();
-    AAMap[IRP][&AAType::ID] = &AA;
+    auto &KindToAbstractAttributeMap = AAMap[IRP];
+    assert(!KindToAbstractAttributeMap.count(&AAType::ID) &&
+           "Attribute already in map!");
+    KindToAbstractAttributeMap[&AAType::ID] = &AA;
     AllAbstractAttributes.push_back(&AA);
     return AA;
   }
@@ -696,15 +689,23 @@ struct Attributor {
   /// abstract attribute objects for them.
   ///
   /// \param F The function that is checked for attribute opportunities.
-  /// \param Whitelist If not null, a set limiting the attribute opportunities.
   ///
   /// Note that abstract attribute instances are generally created even if the
   /// IR already contains the information they would deduce. The most important
   /// reason for this is the single interface, the one of the abstract attribute
   /// instance, which can be queried without the need to look at the IR in
   /// various places.
-  void identifyDefaultAbstractAttributes(
-      Function &F, DenseSet<const char *> *Whitelist = nullptr);
+  void identifyDefaultAbstractAttributes(Function &F);
+
+  /// Mark the internal function \p F as live.
+  ///
+  /// This will trigger the identification and initialization of attributes for
+  /// \p F.
+  void markLiveInternalFunction(const Function &F) {
+    assert(F.hasInternalLinkage() &&
+            "Only internal linkage is assumed dead initially.");
+    identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+  }
 
   /// Record that \p I is deleted after information was manifested.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
@@ -780,6 +781,60 @@ struct Attributor {
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
 private:
+
+  /// The private version of getAAFor that allows to omit a querying abstract
+  /// attribute. See also the public getAAFor method.
+  template <typename AAType>
+  const AAType &getOrCreateAAFor(const IRPosition &IRP,
+                         const AbstractAttribute *QueryingAA = nullptr,
+                         bool TrackDependence = false) {
+    if (const AAType *AAPtr =
+            lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence))
+      return *AAPtr;
+
+    // No matching attribute found, create one.
+    // Use the static create method.
+    auto &AA = AAType::createForPosition(IRP, *this);
+    registerAA(AA);
+    AA.initialize(*this);
+
+    // Bootstrap the new attribute with an initial update to propagate
+    // information, e.g., function -> call site. If it is not on a given
+    // whitelist we will not perform updates at all.
+    if (Whitelist && !Whitelist->count(&AAType::ID))
+      AA.getState().indicatePessimisticFixpoint();
+    else
+      AA.update(*this);
+
+    if (TrackDependence && AA.getState().isValidState())
+      QueryMap[&AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
+    return AA;
+  }
+
+  /// Return the attribute of \p AAType for \p IRP if existing.
+  template <typename AAType>
+  const AAType *lookupAAFor(const IRPosition &IRP,
+                            const AbstractAttribute *QueryingAA = nullptr,
+                            bool TrackDependence = false) {
+    static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
+                  "Cannot query an attribute with a type not derived from "
+                  "'AbstractAttribute'!");
+    assert((QueryingAA || !TrackDependence) &&
+           "Cannot track dependences without a QueryingAA!");
+
+    // Lookup the abstract attribute of type AAType. If found, return it after
+    // registering a dependence of QueryingAA on the one returned attribute.
+    const auto &KindToAbstractAttributeMap = AAMap.lookup(IRP);
+    if (AAType *AA = static_cast<AAType *>(
+            KindToAbstractAttributeMap.lookup(&AAType::ID))) {
+      // Do not register a dependence on an attribute with an invalid state.
+      if (TrackDependence && AA->getState().isValidState())
+        QueryMap[AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
+      return AA;
+    }
+    return nullptr;
+  }
+
   /// The set of all abstract attributes.
   ///{
   using AAVector = SmallVector<AbstractAttribute *, 64>;
@@ -809,6 +864,12 @@ private:
   /// Number of iterations until the dependences between abstract attributes are
   /// recomputed.
   const unsigned DepRecomputeInterval;
+
+  /// If not null, a set limiting the attribute opportunities.
+  const DenseSet<const char *> *Whitelist;
+
+  /// A set to remember the functions we already assume to be live and visited.
+  DenseSet<const Function *> VisitedFunctions;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
@@ -1034,6 +1095,27 @@ template <Attribute::AttrKind AK, typename Base>
 struct IRAttribute : public IRPosition, public Base {
   IRAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
   ~IRAttribute() {}
+
+  /// See AbstractAttribute::initialize(...).
+  virtual void initialize(Attributor &A) override {
+    if (hasAttr(getAttrKind())) {
+      this->getState().indicateOptimisticFixpoint();
+      return;
+    }
+
+    const IRPosition &IRP = this->getIRPosition();
+    bool IsFnInterface = IRP.isFnInterfaceKind();
+    const Function *FnScope = IRP.getAnchorScope();
+    // TODO: Not all attributes require an exact definition. Find a way to
+    //       enable deduction for some but not all attributes in case the
+    //       definition might be changed at runtime, see also
+    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
+    // TODO: We could always determine abstract attributes and if sufficient
+    //       information was found we could duplicate the functions that do not
+    //       have an exact definition.
+    if (IsFnInterface && (!FnScope || !FnScope->hasExactDefinition()))
+      this->getState().indicatePessimisticFixpoint();
+  }
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
@@ -1418,8 +1500,8 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
   /// Return an IR position, see struct IRPosition.
   ///
   ///{
-  IRPosition &getIRPosition() { return *this; }
-  const IRPosition &getIRPosition() const { return *this; }
+  IRPosition &getIRPosition() override { return *this; }
+  const IRPosition &getIRPosition() const override { return *this; }
   ///}
 
   /// Create an abstract attribute view for the position \p IRP.
