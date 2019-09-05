@@ -2293,6 +2293,8 @@ def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[DriverOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[DriverOption]>;
 def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;
 def mno_altivec : Flag<["-"], "mno-altivec">, Group<m_ppc_Features_Group>;
+def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
+def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mvsx : Flag<["-"], "mvsx">, Group<m_ppc_Features_Group>;
 def mno_vsx : Flag<["-"], "mno-vsx">, Group<m_ppc_Features_Group>;
 def msecure_plt : Flag<["-"], "msecure-plt">, Group<m_ppc_Features_Group>;

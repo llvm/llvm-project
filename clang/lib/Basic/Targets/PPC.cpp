@@ -54,6 +54,10 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFloat128 = true;
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
+    } else if (Feature == "+spe") {
+      HasSPE = true;
+      LongDoubleWidth = LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     } else if (Feature == "-hard-float") {
       FloatABI = SoftFloat;
     }
@@ -165,6 +169,10 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__VEC__", "10206");
     Builder.defineMacro("__ALTIVEC__");
   }
+  if (HasSPE) {
+    Builder.defineMacro("__SPE__");
+    Builder.defineMacro("__NO_FPRS__");
+  }
   if (HasVSX)
     Builder.defineMacro("__VSX__");
   if (HasP8Vector)
@@ -203,7 +211,6 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   //   __CMODEL_LARGE__
   //   _CALL_SYSV
   //   _CALL_DARWIN
-  //   __NO_FPRS__
 }
 
 // Handle explicit options being passed to the compiler here: if we've
@@ -332,6 +339,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("extdiv", HasExtDiv)
       .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
+      .Case("spe", HasSPE)
       .Default(false);
 }
 
