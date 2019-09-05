@@ -40,9 +40,6 @@ struct YAMLRemarkSerializer : public RemarkSerializer {
   std::unique_ptr<MetaSerializer>
   metaSerializer(raw_ostream &OS,
                  Optional<StringRef> ExternalFilename = None) override;
-
-protected:
-  bool DidEmitMeta = false;
 };
 
 struct YAMLMetaSerializer : public MetaSerializer {
@@ -58,6 +55,10 @@ struct YAMLMetaSerializer : public MetaSerializer {
 /// like the regular YAML remark but instead of string entries it's using
 /// numbers that map to an index in the string table.
 struct YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
+  /// Wether we already emitted the metadata in standalone mode.
+  /// This should be set to true after the first invocation of `emit`.
+  bool DidEmitMeta = false;
+
   YAMLStrTabRemarkSerializer(raw_ostream &OS, SerializerMode Mode)
       : YAMLRemarkSerializer(OS, Mode) {
     // Having a string table set up enables the serializer to use it.
@@ -68,6 +69,10 @@ struct YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
       : YAMLRemarkSerializer(OS, Mode) {
     StrTab = std::move(StrTabIn);
   }
+
+  /// Override to emit the metadata if necessary.
+  void emit(const Remark &Remark) override;
+
   std::unique_ptr<MetaSerializer>
   metaSerializer(raw_ostream &OS,
                  Optional<StringRef> ExternalFilename = None) override;
