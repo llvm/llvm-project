@@ -9,6 +9,7 @@
 #include "JSONAggregation.h"
 #include "indexstore/IndexStoreCXX.h"
 #include "clang/DirectoryWatcher/DirectoryWatcher.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -21,7 +22,6 @@
 #include "clang/Index/IndexRecordReader.h"
 #include "clang/Index/IndexUnitReader.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Index/CodegenNameGenerator.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Support/CommandLine.h"
@@ -113,7 +113,7 @@ namespace {
 
 class PrintIndexDataConsumer : public IndexDataConsumer {
   raw_ostream &OS;
-  std::unique_ptr<CodegenNameGenerator> CGNameGen;
+  std::unique_ptr<ASTNameGenerator> ASTNameGen;
   std::shared_ptr<Preprocessor> PP;
 
 public:
@@ -121,7 +121,7 @@ public:
   }
 
   void initialize(ASTContext &Ctx) override {
-    CGNameGen.reset(new CodegenNameGenerator(Ctx));
+    ASTNameGen.reset(new ASTNameGenerator(Ctx));
   }
 
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
@@ -146,7 +146,7 @@ public:
     printSymbolNameAndUSR(D, Ctx, OS);
     OS << " | ";
 
-    if (CGNameGen->writeName(D, OS))
+    if (ASTNameGen->writeName(D, OS))
       OS << "<no-cgname>";
     OS << " | ";
 
