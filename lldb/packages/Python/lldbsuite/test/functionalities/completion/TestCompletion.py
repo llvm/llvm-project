@@ -363,7 +363,7 @@ class CommandLineCompletionTestCase(TestBase):
         """Test descriptions of top-level command completions"""
         self.check_completion_with_desc("", [
             ["command", "Commands for managing custom LLDB commands."],
-            ["bugreport", "Commands for creating domain-specific bug reports."]
+            ["breakpoint", "Commands for operating on breakpoints (see 'help b' for shorthand.)"]
         ])
 
         self.check_completion_with_desc("pl", [
