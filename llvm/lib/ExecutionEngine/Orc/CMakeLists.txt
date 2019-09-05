@@ -33,4 +33,5 @@ target_link_libraries(LLVMOrcJIT
   PRIVATE
   LLVMBitReader
   LLVMBitWriter
+  LLVMPasses
   )
