@@ -1,0 +1,59 @@
+# Test that reproducers can deal with .swiftinterface files.
+
+# REQUIRES: system-darwin
+
+# Start clean.
+# RUN: rm -rf %t.build && mkdir %t.build && cd %t.build
+# RUN: rm -rf %t.lib && mkdir %t.lib
+# RUN: cp %S/Inputs/A.swift %t.build/AA.swift
+# RUN: cp %S/Inputs/Main.swift %t.build/Main.swift
+
+# RUN: %target-swiftc -module-name AA \
+# RUN:          -module-cache-path %t.build/cache \
+# RUN:          -enable-library-evolution \
+# RUN:          -emit-module-interface-path %t.lib/AA.swiftinterface \
+# RUN:          -emit-library \
+# RUN:          -o %t.lib/libAA%target-shared-library-suffix \
+# RUN:          %t.build/AA.swift
+
+# Regenerate the Swift module but with a different type.
+# RUN: sed -e 's/FromInterface/FromSerialized/g' %t.build/AA.swift | %target-swiftc -module-name AA -enable-library-evolution -emit-module -o %t.lib/AA.swiftmodule -
+
+# Remove the swift source file.
+# RUN: rm %t.build/AA.swift
+
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t.build/cache \
+# RUN:          -I%t.lib -L%t.lib -lAA \
+# RUN:          -module-name main \
+# RUN:          -o %t.out \
+# RUN:          %t.build/Main.swift
+
+# Cleanup build directory.
+# RUN: rm -rf %t.build
+
+# Change to run directory.
+# RUN: rm -rf %t.repro
+# RUN: rm -rf %t.run && mkdir %t.run && cd %t.run
+
+# Capture the reproducer.
+# RUN: %lldb -x -b \
+# RUN:          -o 'settings set interpreter.stop-command-source-on-error false' \
+# RUN:          -s %S/Inputs/SwiftInterface.in \
+# RUN:          --capture \
+# RUN:          --capture-path %t.repro \
+# RUN:          %t.out 2>&1 | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+
+# Cleanup lib directory and binary.
+# RUN: rm -rf %t.lib
+# RUN: rm -rf %t.out
+
+# Replay the reproducer in place.
+# RUN: %lldb --replay %t.repro 2>&1 | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+
+# CHECK: Breakpoint 1:{{.*}} Main.swift:8
+# CAPTURE: x=100
+# REPLAY-NOT: x=100
+# CHECK: cannot convert value of type 'FromInterface' to specified type 'OtherType'
+# CHECK: (Int) $R{{[0-9]+}} = 404
+# CHECK: (Int) $R{{[0-9]+}} = 5
