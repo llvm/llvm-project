@@ -462,8 +462,8 @@ bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       break;
 
     // A terminator that isn't a branch can't easily be handled by this
-    // analysis.
-    if (!I->isBranch())
+    // analysis.  Asm goto is not understood / optimized.
+    if (!I->isBranch() || I->getOpcode() == SystemZ::INLINEASM_BR)
       return true;
 
     // Can't handle indirect branches.
