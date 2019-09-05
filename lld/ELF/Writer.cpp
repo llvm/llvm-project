@@ -2272,7 +2272,8 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
   // The first section in a PT_LOAD has to have congruent offset and address
   // module the page size.
   if (os->ptLoad && os->ptLoad->firstSec == os) {
-    uint64_t alignment = std::max<uint64_t>(os->alignment, config->maxPageSize);
+    uint64_t alignment =
+        std::max<uint64_t>(os->ptLoad->p_align, config->maxPageSize);
     return alignTo(off, alignment, os->addr);
   }
 
