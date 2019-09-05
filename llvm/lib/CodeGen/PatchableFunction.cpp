@@ -78,7 +78,7 @@ bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
     MIB.add(MO);
 
   FirstActualI->eraseFromParent();
-  MF.ensureAlignment(4);
+  MF.ensureLogAlignment(4);
   return true;
 }
 

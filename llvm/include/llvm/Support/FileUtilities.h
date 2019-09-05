@@ -14,6 +14,8 @@
 #ifndef LLVM_SUPPORT_FILEUTILITIES_H
 #define LLVM_SUPPORT_FILEUTILITIES_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -72,6 +74,11 @@ namespace llvm {
     /// will not be removed when the object is destroyed.
     void releaseFile() { DeleteIt = false; }
   };
+
+  /// Creates a unique file with name according to the given \p TempPathModel,
+  /// writes content of \p Buffer to the file and renames it to \p FinalPath.
+  llvm::Error writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
+                                  StringRef Buffer);
 } // End llvm namespace
 
 #endif

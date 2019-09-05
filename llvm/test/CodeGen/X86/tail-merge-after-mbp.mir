@@ -26,7 +26,7 @@ body:             |
   ; CHECK:   $rax = MOV64rm $r14, 1, $noreg, 0, $noreg :: (load 8)
   ; CHECK:   TEST64rr $rax, $rax, implicit-def $eflags
   ; CHECK:   JCC_1 %bb.1, 4, implicit $eflags
-  ; CHECK: bb.5 (align 4):
+  ; CHECK: bb.5 (align 16):
   ; CHECK:   successors: %bb.6(0x71555555), %bb.8(0x0eaaaaab)
   ; CHECK:   CMP64mi8 killed $rax, 1, $noreg, 8, $noreg, 0, implicit-def $eflags :: (load 8), (load 8)
   ; CHECK:   JCC_1 %bb.8, 5, implicit $eflags

@@ -116,7 +116,6 @@ template <class ELFT> class ELFState {
 
   bool buildSectionIndex();
   bool buildSymbolIndexes();
-  void initELFHeader(Elf_Ehdr &Header);
   void initProgramHeaders(std::vector<Elf_Phdr> &PHeaders);
   bool initImplicitHeader(ContiguousBlobAccumulator &CBA, Elf_Shdr &Header,
                           StringRef SecName, ELFYAML::Section *YAMLSec);
@@ -132,6 +131,7 @@ template <class ELFT> class ELFState {
   void setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                               std::vector<Elf_Shdr> &SHeaders);
   void finalizeStrings();
+  void writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream &OS);
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
                            ContiguousBlobAccumulator &CBA);
@@ -205,8 +205,11 @@ template <class ELFT> ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
   }
 }
 
-template <class ELFT> void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
+template <class ELFT>
+void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream &OS) {
   using namespace llvm::ELF;
+
+  Elf_Ehdr Header;
   zero(Header);
   Header.e_ident[EI_MAG0] = 0x7f;
   Header.e_ident[EI_MAG1] = 'E';
@@ -230,14 +233,18 @@ template <class ELFT> void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   Header.e_shentsize =
       Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
   // Immediately following the ELF header and program headers.
-  Header.e_shoff =
-      Doc.Header.SHOffset
-          ? (typename ELFT::uint)(*Doc.Header.SHOffset)
-          : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
+  // Align the start of the section header and write the ELF header.
+  uint64_t ShOffset;
+  CBA.getOSAndAlignedOffset(ShOffset, sizeof(typename ELFT::uint));
+  Header.e_shoff = Doc.Header.SHOffset
+                       ? typename ELFT::uint(*Doc.Header.SHOffset)
+                       : ShOffset;
   Header.e_shnum =
       Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : Doc.Sections.size();
   Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
                                           : SN2I.get(".shstrtab");
+
+  OS.write((const char *)&Header, sizeof(Header));
 }
 
 template <class ELFT>
@@ -1040,19 +1047,13 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   if (!State.buildSectionIndex() || !State.buildSymbolIndexes())
     return 1;
 
-  Elf_Ehdr Header;
-  State.initELFHeader(Header);
-
-  // TODO: Flesh out section header support.
-
   std::vector<Elf_Phdr> PHeaders;
   State.initProgramHeaders(PHeaders);
 
   // XXX: This offset is tightly coupled with the order that we write
   // things to `OS`.
-  const size_t SectionContentBeginOffset = Header.e_ehsize +
-                                           Header.e_phentsize * Header.e_phnum +
-                                           Header.e_shentsize * Header.e_shnum;
+  const size_t SectionContentBeginOffset =
+      sizeof(Elf_Ehdr) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
   ContiguousBlobAccumulator CBA(SectionContentBeginOffset);
 
   std::vector<Elf_Shdr> SHeaders;
@@ -1062,10 +1063,10 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   // Now we can decide segment offsets
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
-  OS.write((const char *)&Header, sizeof(Header));
+  State.writeELFHeader(CBA, OS);
   writeArrayData(OS, makeArrayRef(PHeaders));
-  writeArrayData(OS, makeArrayRef(SHeaders));
   CBA.writeBlobToStream(OS);
+  writeArrayData(OS, makeArrayRef(SHeaders));
   return 0;
 }
 

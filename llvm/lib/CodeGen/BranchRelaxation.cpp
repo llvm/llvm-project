@@ -65,13 +65,13 @@ class BranchRelaxation : public MachineFunctionPass {
     /// block.
     unsigned postOffset(const MachineBasicBlock &MBB) const {
       unsigned PO = Offset + Size;
-      unsigned Align = MBB.getAlignment();
-      if (Align == 0)
+      unsigned LogAlign = MBB.getLogAlignment();
+      if (LogAlign == 0)
         return PO;
 
-      unsigned AlignAmt = 1 << Align;
-      unsigned ParentAlign = MBB.getParent()->getAlignment();
-      if (Align <= ParentAlign)
+      unsigned AlignAmt = 1 << LogAlign;
+      unsigned ParentLogAlign = MBB.getParent()->getLogAlignment();
+      if (LogAlign <= ParentLogAlign)
         return PO + OffsetToAlignment(PO, AlignAmt);
 
       // The alignment of this MBB is larger than the function's alignment, so we
@@ -128,9 +128,9 @@ void BranchRelaxation::verify() {
 #ifndef NDEBUG
   unsigned PrevNum = MF->begin()->getNumber();
   for (MachineBasicBlock &MBB : *MF) {
-    unsigned Align = MBB.getAlignment();
+    unsigned LogAlign = MBB.getLogAlignment();
     unsigned Num = MBB.getNumber();
-    assert(BlockInfo[Num].Offset % (1u << Align) == 0);
+    assert(BlockInfo[Num].Offset % (1u << LogAlign) == 0);
     assert(!Num || BlockInfo[PrevNum].postOffset(MBB) <= BlockInfo[Num].Offset);
     assert(BlockInfo[Num].Size == computeBlockSize(MBB));
     PrevNum = Num;

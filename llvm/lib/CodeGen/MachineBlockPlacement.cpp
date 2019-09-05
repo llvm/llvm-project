@@ -79,16 +79,17 @@ STATISTIC(CondBranchTakenFreq,
 STATISTIC(UncondBranchTakenFreq,
           "Potential frequency of taking unconditional branches");
 
-static cl::opt<unsigned> AlignAllBlock("align-all-blocks",
-                                       cl::desc("Force the alignment of all "
-                                                "blocks in the function."),
-                                       cl::init(0), cl::Hidden);
+static cl::opt<unsigned> AlignAllBlock(
+    "align-all-blocks",
+    cl::desc("Force the alignment of all blocks in the function in log2 format "
+             "(e.g 4 means align on 16B boundaries)."),
+    cl::init(0), cl::Hidden);
 
 static cl::opt<unsigned> AlignAllNonFallThruBlocks(
     "align-all-nofallthru-blocks",
-    cl::desc("Force the alignment of all "
-             "blocks that have no fall-through predecessors (i.e. don't add "
-             "nops that are executed)."),
+    cl::desc("Force the alignment of all blocks that have no fall-through "
+             "predecessors (i.e. don't add nops that are executed). In log2 "
+             "format (e.g 4 means align on 16B boundaries)."),
     cl::init(0), cl::Hidden);
 
 // FIXME: Find a good default for this flag and remove the flag.
@@ -2763,8 +2764,8 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    unsigned Align = TLI->getPrefLoopAlignment(L);
-    if (!Align)
+    unsigned LogAlign = TLI->getPrefLoopLogAlignment(L);
+    if (!LogAlign)
       continue; // Don't care about loop alignment.
 
     // If the block is cold relative to the function entry don't waste space
@@ -2788,7 +2789,7 @@ void MachineBlockPlacement::alignBlocks() {
     // Force alignment if all the predecessors are jumps. We already checked
     // that the block isn't cold above.
     if (!LayoutPred->isSuccessor(ChainBB)) {
-      ChainBB->setAlignment(Align);
+      ChainBB->setLogAlignment(LogAlign);
       continue;
     }
 
@@ -2800,7 +2801,7 @@ void MachineBlockPlacement::alignBlocks() {
         MBPI->getEdgeProbability(LayoutPred, ChainBB);
     BlockFrequency LayoutEdgeFreq = MBFI->getBlockFreq(LayoutPred) * LayoutProb;
     if (LayoutEdgeFreq <= (Freq * ColdProb))
-      ChainBB->setAlignment(Align);
+      ChainBB->setLogAlignment(LogAlign);
   }
 }
 
@@ -3062,14 +3063,14 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (AlignAllBlock)
     // Align all of the blocks in the function to a specific alignment.
     for (MachineBasicBlock &MBB : MF)
-      MBB.setAlignment(AlignAllBlock);
+      MBB.setLogAlignment(AlignAllBlock);
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
     // specific alignment.
     for (auto MBI = std::next(MF.begin()), MBE = MF.end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
       if (!LayoutPred->isSuccessor(&*MBI))
-        MBI->setAlignment(AlignAllNonFallThruBlocks);
+        MBI->setLogAlignment(AlignAllNonFallThruBlocks);
     }
   }
   if (ViewBlockLayoutWithBFI != GVDT_None &&

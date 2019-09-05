@@ -300,7 +300,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     LdStMultipleTiming = SingleIssuePlusExtras;
     MaxInterleaveFactor = 4;
     if (!isThumb())
-      PrefLoopAlignment = 3;
+      PrefLoopLogAlignment = 3;
     break;
   case Kryo:
     break;

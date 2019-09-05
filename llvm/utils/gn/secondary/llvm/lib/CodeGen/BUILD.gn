@@ -82,6 +82,7 @@ static_library("CodeGen") {
     "LowLevelType.cpp",
     "LowerEmuTLS.cpp",
     "MIRCanonicalizerPass.cpp",
+    "MIRNamerPass.cpp",
     "MIRPrinter.cpp",
     "MIRPrintingPass.cpp",
     "MIRVRegNamerUtils.cpp",

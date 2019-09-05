@@ -198,8 +198,8 @@ protected:
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
-  unsigned PrefFunctionAlignment = 0;
-  unsigned PrefLoopAlignment = 0;
+  unsigned PrefFunctionLogAlignment = 0;
+  unsigned PrefLoopLogAlignment = 0;
   unsigned MaxJumpTableSize = 0;
   unsigned WideningBaseCost = 0;
 
@@ -359,8 +359,10 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const {
     return MaxPrefetchIterationsAhead;
   }
-  unsigned getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
-  unsigned getPrefLoopAlignment() const { return PrefLoopAlignment; }
+  unsigned getPrefFunctionLogAlignment() const {
+    return PrefFunctionLogAlignment;
+  }
+  unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
 
   unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
 

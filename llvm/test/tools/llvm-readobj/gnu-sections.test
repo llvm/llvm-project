@@ -1,18 +1,18 @@
 # RUN: yaml2obj --docnum=1 %s -o %t-i386.o
 # RUN: llvm-readelf -S %t-i386.o | FileCheck %s -check-prefix ELF32
 
-# ELF32:      There are 8 section headers, starting at offset 0x34:
+# ELF32:      There are 8 section headers, starting at offset 0x90:
 # ELF32-EMPTY:
 # ELF32-NEXT: Section Headers:
 # ELF32-NEXT:   [Nr] Name              Type            Address  Off    Size   ES Flg Lk Inf Al
 # ELF32-NEXT:   [ 0]                   NULL            00000000 000000 000000 00      0   0  0
-# ELF32-NEXT:   [ 1] .text             PROGBITS        00000000 000174 000001 00  AX  0   0  4
-# ELF32-NEXT:   [ 2] .rel.text         REL             00000000 000178 000000 08      5   1  4
-# ELF32-NEXT:   [ 3] .data             PROGBITS        00000000 000178 000000 00  WA  0   0  4
-# ELF32-NEXT:   [ 4] .bss              NOBITS          00000000 000178 000000 00  WA  0   0  4
-# ELF32-NEXT:   [ 5] .symtab           SYMTAB          00000000 000178 000020 10      6   2  8
-# ELF32-NEXT:   [ 6] .strtab           STRTAB          00000000 000198 000007 00      0   0  1
-# ELF32-NEXT:   [ 7] .shstrtab         STRTAB          00000000 00019f 000030 00      0   0  1
+# ELF32-NEXT:   [ 1] .text             PROGBITS        00000000 000034 000001 00  AX  0   0  4
+# ELF32-NEXT:   [ 2] .rel.text         REL             00000000 000038 000000 08      5   1  4
+# ELF32-NEXT:   [ 3] .data             PROGBITS        00000000 000038 000000 00  WA  0   0  4
+# ELF32-NEXT:   [ 4] .bss              NOBITS          00000000 000038 000000 00  WA  0   0  4
+# ELF32-NEXT:   [ 5] .symtab           SYMTAB          00000000 000038 000020 10      6   2  8
+# ELF32-NEXT:   [ 6] .strtab           STRTAB          00000000 000058 000007 00      0   0  1
+# ELF32-NEXT:   [ 7] .shstrtab         STRTAB          00000000 00005f 000030 00      0   0  1
 # ELF32-NEXT: Key to Flags:
 # ELF32-NEXT:   W (write), A (alloc), X (execute), M (merge), S (strings), l (large)
 # ELF32-NEXT:   I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)
@@ -63,18 +63,18 @@ Symbols:
 # RUN:   | FileCheck %s -check-prefix ELF64
 # RUN: llvm-readelf -W -S %t-x64.o | FileCheck %s -check-prefix ELF64
 
-# ELF64:      There are 8 section headers, starting at offset 0x40:
+# ELF64:      There are 8 section headers, starting at offset 0xb0:
 # ELF64-EMPTY: 
 # ELF64-NEXT: Section Headers:
 # ELF64-NEXT:   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # ELF64-NEXT:   [ 0]                   NULL            0000000000000000 000000 000000 00  0  0  0
-# ELF64-NEXT:   [ 1] .text             PROGBITS        0000000000000000 000240 000001 00  AX 0   0  4
-# ELF64-NEXT:   [ 2] .rela.text        RELA            0000000000000000 000248 000000 18  5  1  8
-# ELF64-NEXT:   [ 3] .data             PROGBITS        0000000000000000 000248 000000 00  WA 0   0  4
-# ELF64-NEXT:   [ 4] .bss              NOBITS          0000000000000000 000248 000000 00  WA 0   0  4
-# ELF64-NEXT:   [ 5] .symtab           SYMTAB          0000000000000000 000248 000030 18  6  2  8
-# ELF64-NEXT:   [ 6] .strtab           STRTAB          0000000000000000 000278 000007 00  0  0  1
-# ELF64-NEXT:   [ 7] .shstrtab         STRTAB          0000000000000000 00027f 000031 00  0  0  1
+# ELF64-NEXT:   [ 1] .text             PROGBITS        0000000000000000 000040 000001 00  AX 0   0  4
+# ELF64-NEXT:   [ 2] .rela.text        RELA            0000000000000000 000048 000000 18  5  1  8
+# ELF64-NEXT:   [ 3] .data             PROGBITS        0000000000000000 000048 000000 00  WA 0   0  4
+# ELF64-NEXT:   [ 4] .bss              NOBITS          0000000000000000 000048 000000 00  WA 0   0  4
+# ELF64-NEXT:   [ 5] .symtab           SYMTAB          0000000000000000 000048 000030 18  6  2  8
+# ELF64-NEXT:   [ 6] .strtab           STRTAB          0000000000000000 000078 000007 00  0  0  1
+# ELF64-NEXT:   [ 7] .shstrtab         STRTAB          0000000000000000 00007f 000031 00  0  0  1
 # ELF64-NEXT: Key to Flags:
 # ELF64-NEXT:   W (write), A (alloc), X (execute), M (merge), S (strings), l (large)
 # ELF64-NEXT:   I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)

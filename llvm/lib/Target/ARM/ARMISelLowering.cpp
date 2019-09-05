@@ -1419,9 +1419,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   // Prefer likely predicted branches to selects on out-of-order cores.
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
-  setPrefLoopAlignment(Subtarget->getPrefLoopAlignment());
+  setPrefLoopLogAlignment(Subtarget->getPrefLoopLogAlignment());
 
-  setMinFunctionAlignment(Subtarget->isThumb() ? 1 : 2);
+  setMinFunctionLogAlignment(Subtarget->isThumb() ? 1 : 2);
 
   if (Subtarget->isThumb() || Subtarget->isThumb2())
     setTargetDAGCombine(ISD::ABS);
@@ -15323,7 +15323,7 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       case 'j':
         // Constant suitable for movw, must be between 0 and
         // 65535.
-        if (Subtarget->hasV6T2Ops())
+        if (Subtarget->hasV6T2Ops() || (Subtarget->hasV8MBaselineOps()))
           if (CVal >= 0 && CVal <= 65535)
             break;
         return;
@@ -15431,7 +15431,7 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         return;
 
       case 'N':
-        if (Subtarget->isThumb()) {  // FIXME thumb2
+        if (Subtarget->isThumb1Only()) {
           // This must be a constant between 0 and 31, for shift amounts.
           if (CVal >= 0 && CVal <= 31)
             break;
@@ -15439,7 +15439,7 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         return;
 
       case 'O':
-        if (Subtarget->isThumb()) {  // FIXME thumb2
+        if (Subtarget->isThumb1Only()) {
           // This must be a multiple of 4 between -508 and 508, for
           // ADD/SUB sp = sp + immediate.
           if ((CVal >= -508 && CVal <= 508) && ((CVal & 3) == 0))

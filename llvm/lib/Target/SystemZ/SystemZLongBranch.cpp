@@ -87,7 +87,7 @@ struct MBBInfo {
 
   // The minimum alignment of the block, as a log2 value.
   // This value never changes.
-  unsigned Alignment = 0;
+  unsigned LogAlignment = 0;
 
   // The number of terminators in this block.  This value never changes.
   unsigned NumTerminators = 0;
@@ -127,7 +127,8 @@ struct BlockPosition {
   // as the runtime address.
   unsigned KnownBits;
 
-  BlockPosition(unsigned InitialAlignment) : KnownBits(InitialAlignment) {}
+  BlockPosition(unsigned InitialLogAlignment)
+      : KnownBits(InitialLogAlignment) {}
 };
 
 class SystemZLongBranch : public MachineFunctionPass {
@@ -178,16 +179,16 @@ const uint64_t MaxForwardRange = 0xfffe;
 // instructions.
 void SystemZLongBranch::skipNonTerminators(BlockPosition &Position,
                                            MBBInfo &Block) {
-  if (Block.Alignment > Position.KnownBits) {
+  if (Block.LogAlignment > Position.KnownBits) {
     // When calculating the address of Block, we need to conservatively
     // assume that Block had the worst possible misalignment.
-    Position.Address += ((uint64_t(1) << Block.Alignment) -
+    Position.Address += ((uint64_t(1) << Block.LogAlignment) -
                          (uint64_t(1) << Position.KnownBits));
-    Position.KnownBits = Block.Alignment;
+    Position.KnownBits = Block.LogAlignment;
   }
 
   // Align the addresses.
-  uint64_t AlignMask = (uint64_t(1) << Block.Alignment) - 1;
+  uint64_t AlignMask = (uint64_t(1) << Block.LogAlignment) - 1;
   Position.Address = (Position.Address + AlignMask) & ~AlignMask;
 
   // Record the block's position.
@@ -257,7 +258,7 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
     }
     Terminator.Branch = &MI;
     Terminator.TargetBlock =
-      TII->getBranchInfo(MI).Target->getMBB()->getNumber();
+      TII->getBranchInfo(MI).getMBBTarget()->getNumber();
   }
   return Terminator;
 }
@@ -275,13 +276,13 @@ uint64_t SystemZLongBranch::initMBBInfo() {
   Terminators.clear();
   Terminators.reserve(NumBlocks);
 
-  BlockPosition Position(MF->getAlignment());
+  BlockPosition Position(MF->getLogAlignment());
   for (unsigned I = 0; I < NumBlocks; ++I) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(I);
     MBBInfo &Block = MBBs[I];
 
     // Record the alignment, for quick access.
-    Block.Alignment = MBB->getAlignment();
+    Block.LogAlignment = MBB->getLogAlignment();
 
     // Calculate the size of the fixed part of the block.
     MachineBasicBlock::iterator MI = MBB->begin();
@@ -339,7 +340,7 @@ bool SystemZLongBranch::mustRelaxABranch() {
 // must be long.
 void SystemZLongBranch::setWorstCaseAddresses() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
-  BlockPosition Position(MF->getAlignment());
+  BlockPosition Position(MF->getLogAlignment());
   for (auto &Block : MBBs) {
     skipNonTerminators(Position, Block);
     for (unsigned BTI = 0, BTE = Block.NumTerminators; BTI != BTE; ++BTI) {
@@ -440,7 +441,7 @@ void SystemZLongBranch::relaxBranch(TerminatorInfo &Terminator) {
 // Run a shortening pass and relax any branches that need to be relaxed.
 void SystemZLongBranch::relaxBranches() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
-  BlockPosition Position(MF->getAlignment());
+  BlockPosition Position(MF->getLogAlignment());
   for (auto &Block : MBBs) {
     skipNonTerminators(Position, Block);
     for (unsigned BTI = 0, BTE = Block.NumTerminators; BTI != BTE; ++BTI) {
