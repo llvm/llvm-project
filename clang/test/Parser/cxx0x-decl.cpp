@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -std=c++11 -pedantic-errors -triple x86_64-linux-gnu %s
+// RUN: %clang_cc1 -verify -fsyntax-only -std=c++2a -pedantic-errors -triple x86_64-linux-gnu %s
 
 // Make sure we know these are legitimate commas and not typos for ';'.
 namespace Commas {
@@ -108,14 +108,25 @@ namespace UsingDeclAttrs {
 }
 
 namespace DuplicateSpecifier {
-  constexpr constexpr int f(); // expected-warning {{duplicate 'constexpr' declaration specifier}}
-  constexpr int constexpr a = 0; // expected-warning {{duplicate 'constexpr' declaration specifier}}
+  constexpr constexpr int f(); // expected-error {{duplicate 'constexpr' declaration specifier}}
+  constexpr int constexpr a = 0; // expected-error {{duplicate 'constexpr' declaration specifier}}
 
   struct A {
     friend constexpr int constexpr friend f(); // expected-warning {{duplicate 'friend' declaration specifier}} \
-                                               // expected-warning {{duplicate 'constexpr' declaration specifier}}
+                                               // expected-error {{duplicate 'constexpr' declaration specifier}}
     friend struct A friend; // expected-warning {{duplicate 'friend'}} expected-error {{'friend' must appear first}}
   };
+
+  constinit constexpr int n1 = 0; // expected-error {{cannot combine with previous 'constinit'}}
+  constexpr constinit int n2 = 0; // expected-error {{cannot combine with previous 'constexpr'}}
+  constinit constinit int n3 = 0; // expected-error {{duplicate 'constinit' declaration specifier}}
+
+  consteval constexpr int f1(); // expected-error {{cannot combine with previous 'consteval'}}
+  constexpr consteval int f2(); // expected-error {{cannot combine with previous 'constexpr'}}
+  consteval consteval int f3(); // expected-error {{duplicate 'consteval' declaration specifier}}
+
+  constinit consteval int wat = 0; // expected-error {{cannot combine with previous 'constinit'}}
+  consteval constinit int huh(); // expected-error {{cannot combine with previous 'consteval'}}
 }
 
 namespace ColonColonDecltype {

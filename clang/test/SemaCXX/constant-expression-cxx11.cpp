@@ -1322,21 +1322,21 @@ namespace ComplexConstexpr {
 // _Atomic(T) is exactly like T for the purposes of constant expression
 // evaluation..
 namespace Atomic {
-  constexpr _Atomic int n = 3;
+  constexpr _Atomic int n = 3; // expected-warning {{'_Atomic' is a C11 extension}}
 
-  struct S { _Atomic(double) d; };
+  struct S { _Atomic(double) d; }; // expected-warning {{'_Atomic' is a C11 extension}}
   constexpr S s = { 0.5 };
   constexpr double d1 = s.d;
   constexpr double d2 = n;
-  constexpr _Atomic double d3 = n;
+  constexpr _Atomic double d3 = n; // expected-warning {{'_Atomic' is a C11 extension}}
 
-  constexpr _Atomic(int) n2 = d3;
+  constexpr _Atomic(int) n2 = d3; // expected-warning {{'_Atomic' is a C11 extension}}
   static_assert(d1 == 0.5, "");
   static_assert(d3 == 3.0, "");
 
   namespace PR16056 {
     struct TestVar {
-      _Atomic(int) value;
+      _Atomic(int) value; // expected-warning {{'_Atomic' is a C11 extension}}
       constexpr TestVar(int value) : value(value) {}
     };
     constexpr TestVar testVar{-1};
@@ -1345,11 +1345,11 @@ namespace Atomic {
 
   namespace PR32034 {
     struct A {};
-    struct B { _Atomic(A) a; };
+    struct B { _Atomic(A) a; }; // expected-warning {{'_Atomic' is a C11 extension}}
     constexpr int n = (B(), B(), 0);
 
     struct C { constexpr C() {} void *self = this; };
-    constexpr _Atomic(C) c = C();
+    constexpr _Atomic(C) c = C(); // expected-warning {{'_Atomic' is a C11 extension}}
   }
 }
 

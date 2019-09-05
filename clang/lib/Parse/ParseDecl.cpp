@@ -2551,7 +2551,7 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   // Issue diagnostic and remove constexpr specifier if present.
   if (DS.hasConstexprSpecifier() && DSC != DeclSpecContext::DSC_condition) {
     Diag(DS.getConstexprSpecLoc(), diag::err_typename_invalid_constexpr)
-        << (DS.getConstexprSpecifier() == CSK_consteval);
+        << DS.getConstexprSpecifier();
     DS.ClearConstexprSpec();
   }
 }
@@ -3690,14 +3690,15 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.setModulePrivateSpec(Loc, PrevSpec, DiagID);
       break;
 
-    // constexpr
+    // constexpr, consteval, constinit specifiers
     case tok::kw_constexpr:
       isInvalid = DS.SetConstexprSpec(CSK_constexpr, Loc, PrevSpec, DiagID);
       break;
-
-    // consteval
     case tok::kw_consteval:
       isInvalid = DS.SetConstexprSpec(CSK_consteval, Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw_constinit:
+      isInvalid = DS.SetConstexprSpec(CSK_constinit, Loc, PrevSpec, DiagID);
       break;
 
     // type-specifier
@@ -3960,6 +3961,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       //   If the _Atomic keyword is immediately followed by a left parenthesis,
       //   it is interpreted as a type specifier (with a type name), not as a
       //   type qualifier.
+      if (!getLangOpts().C11)
+        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+
       if (NextToken().is(tok::l_paren)) {
         ParseAtomicSpecifier(DS);
         continue;
@@ -5117,8 +5121,9 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::annot_decltype:
   case tok::kw_constexpr:
 
-    // C++20 consteval.
+    // C++20 consteval and constinit.
   case tok::kw_consteval:
+  case tok::kw_constinit:
 
     // C11 _Atomic
   case tok::kw__Atomic:
@@ -5365,6 +5370,8 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw__Atomic:
       if (!AtomicAllowed)
         goto DoneWithTypeQuals;
+      if (!getLangOpts().C11)
+        Diag(Tok, diag::ext_c11_feature) << Tok.getName();
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_atomic, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;

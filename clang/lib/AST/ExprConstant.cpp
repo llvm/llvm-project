@@ -32,11 +32,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstring>
-#include <functional>
-#include "Interp/Context.h"
-#include "Interp/Frame.h"
-#include "Interp/State.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -46,7 +41,6 @@
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OSLog.h"
-#include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
@@ -57,6 +51,8 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstring>
+#include <functional>
 
 #define DEBUG_TYPE "exprconstant"
 
@@ -70,8 +66,8 @@ static bool IsGlobalLValue(APValue::LValueBase B);
 
 namespace {
   struct LValue;
-  class CallStackFrame;
-  class EvalInfo;
+  struct CallStackFrame;
+  struct EvalInfo;
 
   using SourceLocExprScopeGuard =
       CurrentSourceLocExprScope::SourceLocExprScopeGuard;
@@ -225,6 +221,12 @@ namespace {
     }
     return MostDerivedLength;
   }
+
+  // The order of this enum is important for diagnostics.
+  enum CheckSubobjectKind {
+    CSK_Base, CSK_Derived, CSK_Field, CSK_ArrayToPointer, CSK_ArrayIndex,
+    CSK_Real, CSK_Imag
+  };
 
   /// A path from a glvalue to a subobject of that glvalue.
   struct SubobjectDesignator {
@@ -478,8 +480,7 @@ namespace {
   };
 
   /// A stack frame in the constexpr call stack.
-  class CallStackFrame : public interp::Frame {
-  public:
+  struct CallStackFrame {
     EvalInfo &Info;
 
     /// Parent - The caller of this stack frame.
@@ -573,12 +574,6 @@ namespace {
     }
 
     APValue &createTemporary(const void *Key, bool IsLifetimeExtended);
-
-    void describe(llvm::raw_ostream &OS) override;
-
-    Frame *getCaller() const override { return Caller; }
-    SourceLocation getCallLocation() const override { return CallLoc; }
-    const FunctionDecl *getCallee() const override { return Callee; }
   };
 
   /// Temporarily override 'this'.
@@ -595,6 +590,59 @@ namespace {
   private:
     CallStackFrame &Frame;
     const LValue *OldThis;
+  };
+
+  /// A partial diagnostic which we might know in advance that we are not going
+  /// to emit.
+  class OptionalDiagnostic {
+    PartialDiagnostic *Diag;
+
+  public:
+    explicit OptionalDiagnostic(PartialDiagnostic *Diag = nullptr)
+      : Diag(Diag) {}
+
+    template<typename T>
+    OptionalDiagnostic &operator<<(const T &v) {
+      if (Diag)
+        *Diag << v;
+      return *this;
+    }
+
+    OptionalDiagnostic &operator<<(const APSInt &I) {
+      if (Diag) {
+        SmallVector<char, 32> Buffer;
+        I.toString(Buffer);
+        *Diag << StringRef(Buffer.data(), Buffer.size());
+      }
+      return *this;
+    }
+
+    OptionalDiagnostic &operator<<(const APFloat &F) {
+      if (Diag) {
+        // FIXME: Force the precision of the source value down so we don't
+        // print digits which are usually useless (we don't really care here if
+        // we truncate a digit by accident in edge cases).  Ideally,
+        // APFloat::toString would automatically print the shortest
+        // representation which rounds to the correct value, but it's a bit
+        // tricky to implement.
+        unsigned precision =
+            llvm::APFloat::semanticsPrecision(F.getSemantics());
+        precision = (precision * 59 + 195) / 196;
+        SmallVector<char, 32> Buffer;
+        F.toString(Buffer, precision);
+        *Diag << StringRef(Buffer.data(), Buffer.size());
+      }
+      return *this;
+    }
+
+    OptionalDiagnostic &operator<<(const APFixedPoint &FX) {
+      if (Diag) {
+        SmallVector<char, 32> Buffer;
+        FX.toString(Buffer);
+        *Diag << StringRef(Buffer.data(), Buffer.size());
+      }
+      return *this;
+    }
   };
 
   /// A cleanup, and a flag indicating whether it is lifetime-extended.
@@ -659,8 +707,7 @@ namespace {
   /// rules.  For example, the RHS of (0 && foo()) is not evaluated.  We can
   /// evaluate the expression regardless of what the RHS is, but C only allows
   /// certain things in certain situations.
-  class EvalInfo : public interp::State {
-  public:
+  struct EvalInfo {
     ASTContext &Ctx;
 
     /// EvalStatus - Contains information about the evaluation.
@@ -679,13 +726,6 @@ namespace {
     /// to perform. This is essentially a limit for the number of statements
     /// we will evaluate.
     unsigned StepsLeft;
-
-    /// Force the use of the experimental new constant interpreter, bailing out
-    /// with an error if a feature is not supported.
-    bool ForceNewConstInterp;
-
-    /// Enable the experimental new constant interpreter.
-    bool EnableNewConstInterp;
 
     /// BottomFrame - The frame in which evaluation started. This must be
     /// initialized after CurrentCall and CallStackDepth.
@@ -797,7 +837,7 @@ namespace {
 
     /// Are we checking whether the expression is a potential constant
     /// expression?
-    bool checkingPotentialConstantExpression() const override {
+    bool checkingPotentialConstantExpression() const {
       return EvalMode == EM_PotentialConstantExpression ||
              EvalMode == EM_PotentialConstantExpressionUnevaluated;
     }
@@ -805,27 +845,24 @@ namespace {
     /// Are we checking an expression for overflow?
     // FIXME: We should check for any kind of undefined or suspicious behavior
     // in such constructs, not just overflow.
-    bool checkingForOverflow() const override {
-      return EvalMode == EM_EvaluateForOverflow;
-    }
+    bool checkingForOverflow() { return EvalMode == EM_EvaluateForOverflow; }
 
     EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
-        : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
-          CallStackDepth(0), NextCallIndex(1),
-          StepsLeft(getLangOpts().ConstexprStepLimit),
-          ForceNewConstInterp(getLangOpts().ForceNewConstInterp),
-          EnableNewConstInterp(ForceNewConstInterp ||
-                               getLangOpts().EnableNewConstInterp),
-          BottomFrame(*this, SourceLocation(), nullptr, nullptr, nullptr),
-          EvaluatingDecl((const ValueDecl *)nullptr),
-          EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false), InConstantContext(false),
-          EvalMode(Mode) {}
+      : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
+        CallStackDepth(0), NextCallIndex(1),
+        StepsLeft(getLangOpts().ConstexprStepLimit),
+        BottomFrame(*this, SourceLocation(), nullptr, nullptr, nullptr),
+        EvaluatingDecl((const ValueDecl *)nullptr),
+        EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
+        HasFoldFailureDiagnostic(false),
+        InConstantContext(false), EvalMode(Mode) {}
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
       EvaluatingDecl = Base;
       EvaluatingDeclValue = &Value;
     }
+
+    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     bool CheckCallLimit(SourceLocation Loc) {
       // Don't perform any constexpr calls (other than the call we're checking)
@@ -870,52 +907,118 @@ namespace {
     }
 
   private:
-    interp::Frame *getCurrentFrame() override { return CurrentCall; }
-    const interp::Frame *getBottomFrame() const override { return &BottomFrame; }
-
-    bool hasActiveDiagnostic() override { return HasActiveDiagnostic; }
-    void setActiveDiagnostic(bool Flag) override { HasActiveDiagnostic = Flag; }
-
-    void setFoldFailureDiagnostic(bool Flag) override {
-      HasFoldFailureDiagnostic = Flag;
+    /// Add a diagnostic to the diagnostics list.
+    PartialDiagnostic &addDiag(SourceLocation Loc, diag::kind DiagId) {
+      PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
+      EvalStatus.Diag->push_back(std::make_pair(Loc, PD));
+      return EvalStatus.Diag->back().second;
     }
 
-    Expr::EvalStatus &getEvalStatus() const override { return EvalStatus; }
+    /// Add notes containing a call stack to the current point of evaluation.
+    void addCallStack(unsigned Limit);
 
-    ASTContext &getCtx() const override { return Ctx; }
+  private:
+    OptionalDiagnostic Diag(SourceLocation Loc, diag::kind DiagId,
+                            unsigned ExtraNotes, bool IsCCEDiag) {
 
-    // If we have a prior diagnostic, it will be noting that the expression
-    // isn't a constant expression. This diagnostic is more important,
-    // unless we require this evaluation to produce a constant expression.
-    //
-    // FIXME: We might want to show both diagnostics to the user in
-    // EM_ConstantFold mode.
-    bool hasPriorDiagnostic() override {
-      if (!EvalStatus.Diag->empty()) {
-        switch (EvalMode) {
-        case EM_ConstantFold:
-        case EM_IgnoreSideEffects:
-        case EM_EvaluateForOverflow:
-          if (!HasFoldFailureDiagnostic)
-            break;
-          // We've already failed to fold something. Keep that diagnostic.
-          LLVM_FALLTHROUGH;
-        case EM_ConstantExpression:
-        case EM_PotentialConstantExpression:
-        case EM_ConstantExpressionUnevaluated:
-        case EM_PotentialConstantExpressionUnevaluated:
-          setActiveDiagnostic(false);
-          return true;
+      if (EvalStatus.Diag) {
+        // If we have a prior diagnostic, it will be noting that the expression
+        // isn't a constant expression. This diagnostic is more important,
+        // unless we require this evaluation to produce a constant expression.
+        //
+        // FIXME: We might want to show both diagnostics to the user in
+        // EM_ConstantFold mode.
+        if (!EvalStatus.Diag->empty()) {
+          switch (EvalMode) {
+          case EM_ConstantFold:
+          case EM_IgnoreSideEffects:
+          case EM_EvaluateForOverflow:
+            if (!HasFoldFailureDiagnostic)
+              break;
+            // We've already failed to fold something. Keep that diagnostic.
+            LLVM_FALLTHROUGH;
+          case EM_ConstantExpression:
+          case EM_PotentialConstantExpression:
+          case EM_ConstantExpressionUnevaluated:
+          case EM_PotentialConstantExpressionUnevaluated:
+            HasActiveDiagnostic = false;
+            return OptionalDiagnostic();
+          }
         }
+
+        unsigned CallStackNotes = CallStackDepth - 1;
+        unsigned Limit = Ctx.getDiagnostics().getConstexprBacktraceLimit();
+        if (Limit)
+          CallStackNotes = std::min(CallStackNotes, Limit + 1);
+        if (checkingPotentialConstantExpression())
+          CallStackNotes = 0;
+
+        HasActiveDiagnostic = true;
+        HasFoldFailureDiagnostic = !IsCCEDiag;
+        EvalStatus.Diag->clear();
+        EvalStatus.Diag->reserve(1 + ExtraNotes + CallStackNotes);
+        addDiag(Loc, DiagId);
+        if (!checkingPotentialConstantExpression())
+          addCallStack(Limit);
+        return OptionalDiagnostic(&(*EvalStatus.Diag)[0].second);
       }
-      return false;
+      HasActiveDiagnostic = false;
+      return OptionalDiagnostic();
     }
-
-    unsigned getCallStackDepth() override {
-      return CallStackDepth;
-    }
-
   public:
+    // Diagnose that the evaluation could not be folded (FF => FoldFailure)
+    OptionalDiagnostic
+    FFDiag(SourceLocation Loc,
+          diag::kind DiagId = diag::note_invalid_subexpr_in_const_expr,
+          unsigned ExtraNotes = 0) {
+      return Diag(Loc, DiagId, ExtraNotes, false);
+    }
+
+    OptionalDiagnostic FFDiag(const Expr *E, diag::kind DiagId
+                              = diag::note_invalid_subexpr_in_const_expr,
+                            unsigned ExtraNotes = 0) {
+      if (EvalStatus.Diag)
+        return Diag(E->getExprLoc(), DiagId, ExtraNotes, /*IsCCEDiag*/false);
+      HasActiveDiagnostic = false;
+      return OptionalDiagnostic();
+    }
+
+    /// Diagnose that the evaluation does not produce a C++11 core constant
+    /// expression.
+    ///
+    /// FIXME: Stop evaluating if we're in EM_ConstantExpression or
+    /// EM_PotentialConstantExpression mode and we produce one of these.
+    OptionalDiagnostic CCEDiag(SourceLocation Loc, diag::kind DiagId
+                                 = diag::note_invalid_subexpr_in_const_expr,
+                               unsigned ExtraNotes = 0) {
+      // Don't override a previous diagnostic. Don't bother collecting
+      // diagnostics if we're evaluating for overflow.
+      if (!EvalStatus.Diag || !EvalStatus.Diag->empty()) {
+        HasActiveDiagnostic = false;
+        return OptionalDiagnostic();
+      }
+      return Diag(Loc, DiagId, ExtraNotes, true);
+    }
+    OptionalDiagnostic CCEDiag(const Expr *E, diag::kind DiagId
+                                 = diag::note_invalid_subexpr_in_const_expr,
+                               unsigned ExtraNotes = 0) {
+      return CCEDiag(E->getExprLoc(), DiagId, ExtraNotes);
+    }
+    /// Add a note to a prior diagnostic.
+    OptionalDiagnostic Note(SourceLocation Loc, diag::kind DiagId) {
+      if (!HasActiveDiagnostic)
+        return OptionalDiagnostic();
+      return OptionalDiagnostic(&addDiag(Loc, DiagId));
+    }
+
+    /// Add a stack of notes to a prior diagnostic.
+    void addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
+      if (HasActiveDiagnostic) {
+        EvalStatus.Diag->insert(EvalStatus.Diag->end(),
+                                Diags.begin(), Diags.end());
+      }
+    }
+
     /// Should we continue evaluation after encountering a side-effect that we
     /// couldn't model?
     bool keepEvaluatingAfterSideEffect() {
@@ -961,14 +1064,14 @@ namespace {
     /// Note that we hit something that was technically undefined behavior, but
     /// that we can evaluate past it (such as signed overflow or floating-point
     /// division by zero.)
-    bool noteUndefinedBehavior() override {
+    bool noteUndefinedBehavior() {
       EvalStatus.HasUndefinedBehavior = true;
       return keepEvaluatingAfterUndefinedBehavior();
     }
 
     /// Should we continue evaluation as much as possible after encountering a
     /// construct which can't be reduced to a value?
-    bool keepEvaluatingAfterFailure() const override {
+    bool keepEvaluatingAfterFailure() {
       if (!StepsLeft)
         return false;
 
@@ -1217,6 +1320,62 @@ APValue &CallStackFrame::createTemporary(const void *Key,
   Info.CleanupStack.push_back(Cleanup(&Result, IsLifetimeExtended));
   return Result;
 }
+
+static void describeCall(CallStackFrame *Frame, raw_ostream &Out);
+
+void EvalInfo::addCallStack(unsigned Limit) {
+  // Determine which calls to skip, if any.
+  unsigned ActiveCalls = CallStackDepth - 1;
+  unsigned SkipStart = ActiveCalls, SkipEnd = SkipStart;
+  if (Limit && Limit < ActiveCalls) {
+    SkipStart = Limit / 2 + Limit % 2;
+    SkipEnd = ActiveCalls - Limit / 2;
+  }
+
+  // Walk the call stack and add the diagnostics.
+  unsigned CallIdx = 0;
+  for (CallStackFrame *Frame = CurrentCall; Frame != &BottomFrame;
+       Frame = Frame->Caller, ++CallIdx) {
+    // Skip this call?
+    if (CallIdx >= SkipStart && CallIdx < SkipEnd) {
+      if (CallIdx == SkipStart) {
+        // Note that we're skipping calls.
+        addDiag(Frame->CallLoc, diag::note_constexpr_calls_suppressed)
+          << unsigned(ActiveCalls - Limit);
+      }
+      continue;
+    }
+
+    // Use a different note for an inheriting constructor, because from the
+    // user's perspective it's not really a function at all.
+    if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(Frame->Callee)) {
+      if (CD->isInheritingConstructor()) {
+        addDiag(Frame->CallLoc, diag::note_constexpr_inherited_ctor_call_here)
+          << CD->getParent();
+        continue;
+      }
+    }
+
+    SmallVector<char, 128> Buffer;
+    llvm::raw_svector_ostream Out(Buffer);
+    describeCall(Frame, Out);
+    addDiag(Frame->CallLoc, diag::note_constexpr_call_here) << Out.str();
+  }
+}
+
+/// Kinds of access we can perform on an object, for diagnostics. Note that
+/// we consider a member function call to be a kind of access, even though
+/// it is not formally an access of the object, because it has (largely) the
+/// same set of semantic restrictions.
+enum AccessKinds {
+  AK_Read,
+  AK_Assign,
+  AK_Increment,
+  AK_Decrement,
+  AK_MemberCall,
+  AK_DynamicCast,
+  AK_TypeId,
+};
 
 static bool isModification(AccessKinds AK) {
   switch (AK) {
@@ -1585,36 +1744,36 @@ static void negateAsSigned(APSInt &Int) {
 }
 
 /// Produce a string describing the given constexpr call.
-void CallStackFrame::describe(raw_ostream &Out) {
+static void describeCall(CallStackFrame *Frame, raw_ostream &Out) {
   unsigned ArgIndex = 0;
-  bool IsMemberCall = isa<CXXMethodDecl>(Callee) &&
-                      !isa<CXXConstructorDecl>(Callee) &&
-                      cast<CXXMethodDecl>(Callee)->isInstance();
+  bool IsMemberCall = isa<CXXMethodDecl>(Frame->Callee) &&
+                      !isa<CXXConstructorDecl>(Frame->Callee) &&
+                      cast<CXXMethodDecl>(Frame->Callee)->isInstance();
 
   if (!IsMemberCall)
-    Out << *Callee << '(';
+    Out << *Frame->Callee << '(';
 
-  if (This && IsMemberCall) {
+  if (Frame->This && IsMemberCall) {
     APValue Val;
-    This->moveInto(Val);
-    Val.printPretty(Out, Info.Ctx,
-                    This->Designator.MostDerivedType);
+    Frame->This->moveInto(Val);
+    Val.printPretty(Out, Frame->Info.Ctx,
+                    Frame->This->Designator.MostDerivedType);
     // FIXME: Add parens around Val if needed.
-    Out << "->" << *Callee << '(';
+    Out << "->" << *Frame->Callee << '(';
     IsMemberCall = false;
   }
 
-  for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
-       E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
+  for (FunctionDecl::param_const_iterator I = Frame->Callee->param_begin(),
+       E = Frame->Callee->param_end(); I != E; ++I, ++ArgIndex) {
     if (ArgIndex > (unsigned)IsMemberCall)
       Out << ", ";
 
     const ParmVarDecl *Param = *I;
-    const APValue &Arg = Arguments[ArgIndex];
-    Arg.printPretty(Out, Info.Ctx, Param->getType());
+    const APValue &Arg = Frame->Arguments[ArgIndex];
+    Arg.printPretty(Out, Frame->Info.Ctx, Param->getType());
 
     if (ArgIndex == 0 && IsMemberCall)
-      Out << "->" << *Callee << '(';
+      Out << "->" << *Frame->Callee << '(';
   }
 
   Out << ')';
@@ -12117,18 +12276,6 @@ static bool EvaluateInPlace(APValue &Result, EvalInfo &Info, const LValue &This,
 /// EvaluateAsRValue - Try to evaluate this expression, performing an implicit
 /// lvalue-to-rvalue cast if it is an lvalue.
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
-   if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = Info.Ctx.getInterpContext();
-    switch (InterpCtx.evaluateAsRValue(Info, E, Result)) {
-    case interp::InterpResult::Success:
-      return true;
-    case interp::InterpResult::Fail:
-      return false;
-    case interp::InterpResult::Bail:
-      break;
-    }
-  }
-
   if (E->getType().isNull())
     return false;
 
@@ -12336,29 +12483,11 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  EvalInfo Info(Ctx, EStatus, VD->isConstexpr()
+  EvalInfo InitInfo(Ctx, EStatus, VD->isConstexpr()
                                       ? EvalInfo::EM_ConstantExpression
                                       : EvalInfo::EM_ConstantFold);
-  Info.setEvaluatingDecl(VD, Value);
-  Info.InConstantContext = true;
-
-  SourceLocation DeclLoc = VD->getLocation();
-  QualType DeclTy = VD->getType();
-
-  if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
-    switch (InterpCtx.evaluateAsInitializer(Info, VD, Value)) {
-    case interp::InterpResult::Fail:
-      // Bail out if an error was encountered.
-      return false;
-    case interp::InterpResult::Success:
-      // Evaluation succeeded and value was set.
-      return CheckConstantExpression(Info, DeclLoc, DeclTy, Value);
-    case interp::InterpResult::Bail:
-      // Evaluate the value again for the tree evaluator to use.
-      break;
-    }
-  }
+  InitInfo.setEvaluatingDecl(VD, Value);
+  InitInfo.InConstantContext = true;
 
   LValue LVal;
   LVal.set(VD);
@@ -12368,19 +12497,20 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   //  zero-initialized before any other initialization takes place.
   // This behavior is not present in C.
   if (Ctx.getLangOpts().CPlusPlus && !VD->hasLocalStorage() &&
-      !DeclTy->isReferenceType()) {
-    ImplicitValueInitExpr VIE(DeclTy);
-    if (!EvaluateInPlace(Value, Info, LVal, &VIE,
+      !VD->getType()->isReferenceType()) {
+    ImplicitValueInitExpr VIE(VD->getType());
+    if (!EvaluateInPlace(Value, InitInfo, LVal, &VIE,
                          /*AllowNonLiteralTypes=*/true))
       return false;
   }
 
-  if (!EvaluateInPlace(Value, Info, LVal, this,
+  if (!EvaluateInPlace(Value, InitInfo, LVal, this,
                        /*AllowNonLiteralTypes=*/true) ||
       EStatus.HasSideEffects)
     return false;
 
-  return CheckConstantExpression(Info, DeclLoc, DeclTy, Value);
+  return CheckConstantExpression(InitInfo, VD->getLocation(), VD->getType(),
+                                 Value);
 }
 
 /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
@@ -13054,18 +13184,6 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   EvalInfo Info(FD->getASTContext(), Status,
                 EvalInfo::EM_PotentialConstantExpression);
   Info.InConstantContext = true;
-
-  // The constexpr VM attempts to compile all methods to bytecode here.
-  if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = Info.Ctx.getInterpContext();
-    switch (InterpCtx.isPotentialConstantExpr(Info, FD)) {
-    case interp::InterpResult::Success:
-    case interp::InterpResult::Fail:
-      return Diags.empty();
-    case interp::InterpResult::Bail:
-      break;
-    }
-  }
 
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
   const CXXRecordDecl *RD = MD ? MD->getParent()->getCanonicalDecl() : nullptr;

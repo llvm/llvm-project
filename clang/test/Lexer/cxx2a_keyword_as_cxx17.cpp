@@ -11,3 +11,5 @@ int co_yield = 0; // expected-warning {{'co_yield' is a keyword in C++2a}}
 int char8_t = 0; // expected-warning {{'char8_t' is a keyword in C++2a}}
 int concept = 0; // expected-warning {{'concept' is a keyword in C++2a}}
 int requires = 0; // expected-warning {{'requires' is a keyword in C++2a}}
+int consteval = 0; // expected-warning {{'consteval' is a keyword in C++2a}}
+int constinit = 0; // expected-warning {{'constinit' is a keyword in C++2a}}

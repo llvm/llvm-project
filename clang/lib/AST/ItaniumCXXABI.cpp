@@ -19,10 +19,12 @@
 #include "CXXABI.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/iterator.h"
 
 using namespace clang;
@@ -73,10 +75,33 @@ struct DecompositionDeclName {
 }
 
 namespace llvm {
+template<typename T> bool isDenseMapKeyEmpty(T V) {
+  return llvm::DenseMapInfo<T>::isEqual(
+      V, llvm::DenseMapInfo<T>::getEmptyKey());
+}
+template<typename T> bool isDenseMapKeyTombstone(T V) {
+  return llvm::DenseMapInfo<T>::isEqual(
+      V, llvm::DenseMapInfo<T>::getTombstoneKey());
+}
+
+template<typename T>
+Optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
+  bool LHSEmpty = isDenseMapKeyEmpty(LHS);
+  bool RHSEmpty = isDenseMapKeyEmpty(RHS);
+  if (LHSEmpty || RHSEmpty)
+    return LHSEmpty && RHSEmpty;
+
+  bool LHSTombstone = isDenseMapKeyTombstone(LHS);
+  bool RHSTombstone = isDenseMapKeyTombstone(RHS);
+  if (LHSTombstone || RHSTombstone)
+    return LHSTombstone && RHSTombstone;
+
+  return None;
+}
+
 template<>
 struct DenseMapInfo<DecompositionDeclName> {
   using ArrayInfo = llvm::DenseMapInfo<ArrayRef<const BindingDecl*>>;
-  using IdentInfo = llvm::DenseMapInfo<const IdentifierInfo*>;
   static DecompositionDeclName getEmptyKey() {
     return {ArrayInfo::getEmptyKey()};
   }
@@ -88,10 +113,10 @@ struct DenseMapInfo<DecompositionDeclName> {
     return llvm::hash_combine_range(Key.begin(), Key.end());
   }
   static bool isEqual(DecompositionDeclName LHS, DecompositionDeclName RHS) {
-    if (ArrayInfo::isEqual(LHS.Bindings, ArrayInfo::getEmptyKey()))
-      return ArrayInfo::isEqual(RHS.Bindings, ArrayInfo::getEmptyKey());
-    if (ArrayInfo::isEqual(LHS.Bindings, ArrayInfo::getTombstoneKey()))
-      return ArrayInfo::isEqual(RHS.Bindings, ArrayInfo::getTombstoneKey());
+    if (Optional<bool> Result = areDenseMapKeysEqualSpecialValues(
+            LHS.Bindings, RHS.Bindings))
+      return *Result;
+
     return LHS.Bindings.size() == RHS.Bindings.size() &&
            std::equal(LHS.begin(), LHS.end(), RHS.begin());
   }
@@ -103,29 +128,32 @@ namespace {
 /// Keeps track of the mangled names of lambda expressions and block
 /// literals within a particular context.
 class ItaniumNumberingContext : public MangleNumberingContext {
-  llvm::DenseMap<const Type *, unsigned> ManglingNumbers;
+  ItaniumMangleContext *Mangler;
+  llvm::StringMap<unsigned> LambdaManglingNumbers;
+  unsigned BlockManglingNumber = 0;
   llvm::DenseMap<const IdentifierInfo *, unsigned> VarManglingNumbers;
   llvm::DenseMap<const IdentifierInfo *, unsigned> TagManglingNumbers;
   llvm::DenseMap<DecompositionDeclName, unsigned>
       DecompsitionDeclManglingNumbers;
 
 public:
-  unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
-    const FunctionProtoType *Proto =
-        CallOperator->getType()->getAs<FunctionProtoType>();
-    ASTContext &Context = CallOperator->getASTContext();
+  ItaniumNumberingContext(ItaniumMangleContext *Mangler) : Mangler(Mangler) {}
 
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.Variadic = Proto->isVariadic();
-    QualType Key =
-        Context.getFunctionType(Context.VoidTy, Proto->getParamTypes(), EPI);
-    Key = Context.getCanonicalType(Key);
-    return ++ManglingNumbers[Key->castAs<FunctionProtoType>()];
+  unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
+    const CXXRecordDecl *Lambda = CallOperator->getParent();
+    assert(Lambda->isLambda());
+
+    // Computation of the <lambda-sig> is non-trivial and subtle. Rather than
+    // duplicating it here, just mangle the <lambda-sig> directly.
+    llvm::SmallString<128> LambdaSig;
+    llvm::raw_svector_ostream Out(LambdaSig);
+    Mangler->mangleLambdaSig(Lambda, Out);
+
+    return ++LambdaManglingNumbers[LambdaSig];
   }
 
   unsigned getManglingNumber(const BlockDecl *BD) override {
-    const Type *Ty = nullptr;
-    return ++ManglingNumbers[Ty];
+    return ++BlockManglingNumber;
   }
 
   unsigned getStaticLocalNumber(const VarDecl *VD) override {
@@ -154,10 +182,13 @@ public:
 };
 
 class ItaniumCXXABI : public CXXABI {
+private:
+  std::unique_ptr<MangleContext> Mangler;
 protected:
   ASTContext &Context;
 public:
-  ItaniumCXXABI(ASTContext &Ctx) : Context(Ctx) { }
+  ItaniumCXXABI(ASTContext &Ctx)
+      : Mangler(Ctx.createMangleContext()), Context(Ctx) {}
 
   MemberPointerInfo
   getMemberPointerInfo(const MemberPointerType *MPT) const override {
@@ -218,7 +249,8 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
-    return std::make_unique<ItaniumNumberingContext>();
+    return std::make_unique<ItaniumNumberingContext>(
+        cast<ItaniumMangleContext>(Mangler.get()));
   }
 };
 }

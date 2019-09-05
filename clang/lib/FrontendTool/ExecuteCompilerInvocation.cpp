@@ -191,11 +191,11 @@ CreateFrontendAction(CompilerInstance &CI) {
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
-    std::unique_ptr<OptTable> Opts = driver::createDriverOptTable();
-    Opts->PrintHelp(llvm::outs(), "clang -cc1 [options] file...",
-                    "LLVM 'Clang' Compiler: http://clang.llvm.org",
-                    /*Include=*/driver::options::CC1Option,
-                    /*Exclude=*/0, /*ShowAllAliases=*/false);
+    driver::getDriverOptTable().PrintHelp(
+        llvm::outs(), "clang -cc1 [options] file...",
+        "LLVM 'Clang' Compiler: http://clang.llvm.org",
+        /*Include=*/driver::options::CC1Option,
+        /*Exclude=*/0, /*ShowAllAliases=*/false);
     return true;
   }
 

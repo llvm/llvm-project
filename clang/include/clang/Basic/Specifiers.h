@@ -32,7 +32,8 @@ namespace clang {
   enum ConstexprSpecKind {
     CSK_unspecified,
     CSK_constexpr,
-    CSK_consteval
+    CSK_consteval,
+    CSK_constinit
   };
 
   /// Specifies the width of a type, e.g., short, long, or long long.

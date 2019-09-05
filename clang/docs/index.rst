@@ -89,7 +89,6 @@ Design Documents
    PCHInternals
    ItaniumMangleAbiTags
    HardwareAssistedAddressSanitizerDesign.rst
-   ConstantInterpreter
 
 
 Indices and tables
