@@ -7,44 +7,55 @@
 # RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t.exe.o %t.so -o %t.exe
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
-# RUN: llvm-readelf -r --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
+# RUN: llvm-readelf -r -s --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK:      __start:
-# CHECK-NEXT:    20000:       addiu   $2, $2, -32704
-# CHECK-NEXT:    20004:       addiu   $2, $2, -32736
-# CHECK-NEXT:    20008:       addiu   $2, $2, -32728
-# CHECK-NEXT:    2000c:       addiu   $2, $2, -32720
-# CHECK-NEXT:    20010:       addiu   $2, $2, -32712
+# CHECK-NEXT:    {{.*}}:  addiu   $2, $2, -32704
+# CHECK-EMPTY:
+# CHECK-NEXT: b4:
+# CHECK-NEXT:    {{.*}}:  addiu   $2, $2, -32736
+# CHECK-EMPTY:
+# CHECK-NEXT: b8:
+# CHECK-NEXT:    {{.*}}:  addiu   $2, $2, -32728
+# CHECK-EMPTY:
+# CHECK-NEXT: b12:
+# CHECK-NEXT:    {{.*}}:  addiu   $2, $2, -32720
+# CHECK-NEXT:    {{.*}}:  addiu   $2, $2, -32712
 
-# CHECK: 0000000000020014     .text   00000000 foo
-# CHECK: 0000000000020000     .text   00000000 __start
-# CHECK: 0000000000000000 g F *UND*   00000000 foo1a
+# GOT: Symbol table '.symtab'
+# GOT: {{.*}} [[B12:[0-9a-f]+]] {{.*}} b12
+# GOT: {{.*}} [[B04:[0-9a-f]+]] {{.*}} b4
+# GOT: {{.*}} [[B08:[0-9a-f]+]] {{.*}} b8
+# GOT: {{.*}} [[FOO:[0-9a-f]+]] {{.*}} foo
 
 # GOT:      Primary GOT:
-# GOT-NEXT:  Canonical gp value: 0000000000038000
+# GOT-NEXT:  Canonical gp value:
 # GOT-EMPTY:
 # GOT-NEXT:  Reserved entries:
-# GOT-NEXT:            Address     Access          Initial Purpose
-# GOT-NEXT:   0000000000030010 -32752(gp) 0000000000000000 Lazy resolver
-# GOT-NEXT:   0000000000030018 -32744(gp) 8000000000000000 Module pointer (GNU extension)
+# GOT-NEXT:  Address     Access          Initial Purpose
+# GOT-NEXT:   {{.*}} -32752(gp) 0000000000000000 Lazy resolver
+# GOT-NEXT:   {{.*}} -32744(gp) 8000000000000000 Module pointer (GNU extension)
 # GOT-EMPTY:
 # GOT-NEXT:  Local entries:
-# GOT-NEXT:            Address     Access          Initial
-# GOT-NEXT:   0000000000030020 -32736(gp) 0000000000020014
-# GOT-NEXT:   0000000000030028 -32728(gp) 0000000000020004
-# GOT-NEXT:   0000000000030030 -32720(gp) 0000000000020008
-# GOT-NEXT:   0000000000030038 -32712(gp) 000000000002000c
+# GOT-NEXT:  Address     Access          Initial
+# GOT-NEXT:   {{.*}} -32736(gp) [[FOO]]
+# GOT-NEXT:   {{.*}} -32728(gp) [[B04]]
+# GOT-NEXT:   {{.*}} -32720(gp) [[B08]]
+# GOT-NEXT:   {{.*}} -32712(gp) [[B12]]
 # GOT-EMPTY:
 # GOT-NEXT:  Global entries:
-# GOT-NEXT:            Address     Access          Initial         Sym.Val. Type Ndx Name
-# GOT-NEXT:   0000000000030040 -32704(gp) 0000000000000000 0000000000000000 FUNC UND foo1a
+# GOT-NEXT:  Address     Access          Initial         Sym.Val. Type Ndx Name
+# GOT-NEXT:   {{.*}} -32704(gp) 0000000000000000 0000000000000000 FUNC UND foo1a
 
   .text
   .global  __start
 __start:
   addiu   $v0,$v0,%got_disp(foo1a)            # R_MIPS_GOT_DISP
+b4:
   addiu   $v0,$v0,%got_disp(foo)              # R_MIPS_GOT_DISP
+b8:
   addiu   $v0,$v0,%got_disp(.text+4)          # R_MIPS_GOT_DISP
+b12:
   addiu   $v0,$v0,%got_disp(.text+8)          # R_MIPS_GOT_DISP
   addiu   $v0,$v0,%got_disp(.text+12)         # R_MIPS_GOT_DISP
 
