@@ -1,4 +1,4 @@
-; RUN: llc -mattr=+bulk-memory -filetype=obj %s -o %t.o
+; RUN: llc -mattr=+bulk-memory,+atomics -filetype=obj %s -o %t.o
 
 target triple = "wasm32-unknown-unknown"
 
