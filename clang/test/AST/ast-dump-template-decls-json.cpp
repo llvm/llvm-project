@@ -2217,7 +2217,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "parentDeclContext": "0x{{.*}}",
+// CHECK-NEXT:    "parentDeclContextId": "0x{{.*}}",
 // CHECK-NEXT:    "previousDecl": "0x{{.*}}",
 // CHECK-NEXT:    "name": "f",
 // CHECK-NEXT:    "inner": [
@@ -2264,7 +2264,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "parentDeclContext": "0x{{.*}}",
+// CHECK-NEXT:      "parentDeclContextId": "0x{{.*}}",
 // CHECK-NEXT:      "previousDecl": "0x{{.*}}",
 // CHECK-NEXT:      "name": "f",
 // CHECK-NEXT:      "type": {

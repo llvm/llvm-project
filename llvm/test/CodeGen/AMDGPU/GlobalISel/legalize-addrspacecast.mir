@@ -5,6 +5,10 @@
 
 ---
 name: test_addrspacecast_p0_to_p1
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
+
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -28,6 +32,10 @@ body: |
 
 ---
 name: test_addrspacecast_p1_to_p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
+
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -51,6 +59,9 @@ body: |
 
 ---
 name: test_addrspacecast_p0_to_p4
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -74,6 +85,9 @@ body: |
 
 ---
 name: test_addrspacecast_p4_to_p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -97,6 +111,9 @@ body: |
 
 ---
 name: test_addrspacecast_p0_to_p999
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -120,6 +137,9 @@ body: |
 
 ---
 name: test_addrspacecast_p999_to_p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -143,20 +163,24 @@ body: |
 
 ---
 name: test_addrspacecast_p5_to_p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0
 
     ; VI-LABEL: name: test_addrspacecast_p5_to_p0
-    ; VI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+    ; VI: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; VI: [[C:%[0-9]+]]:_(p5) = G_CONSTANT i32 0
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; VI: [[C2:%[0-9]+]]:_(p4) = G_CONSTANT i64 3735928559
-    ; VI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[C2]], [[C3]](s64)
+    ; VI: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
+    ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
+    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY2]], [[C2]](s64)
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 68, addrspace 4)
-    ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p5), [[C]]
-    ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p5)
+    ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p5), [[C]]
+    ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p5)
     ; VI: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; VI: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
     ; VI: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
@@ -183,6 +207,9 @@ body: |
 
 ---
 name: test_addrspacecast_p0_to_p5
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -218,20 +245,25 @@ body: |
 
 ---
 name: test_addrspacecast_p3_to_p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
+
 body: |
   bb.0:
     liveins: $vgpr0
 
     ; VI-LABEL: name: test_addrspacecast_p3_to_p0
-    ; VI: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+    ; VI: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; VI: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; VI: [[C2:%[0-9]+]]:_(p4) = G_CONSTANT i64 3735928559
-    ; VI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[C2]], [[C3]](s64)
+    ; VI: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
+    ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
+    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY2]], [[C2]](s64)
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 68, addrspace 4)
-    ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p3), [[C]]
-    ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
+    ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p3), [[C]]
+    ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p3)
     ; VI: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; VI: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
     ; VI: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
@@ -258,6 +290,9 @@ body: |
 
 ---
 name: test_addrspacecast_p0_to_p3
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -293,6 +328,9 @@ body: |
 
 ---
 name: test_addrspacecast_v2p0_to_v2p1
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -325,6 +363,9 @@ body: |
 
 ---
 name: test_addrspacecast_v2p1_to_v2p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -357,6 +398,9 @@ body: |
 
 ---
 name: test_addrspacecast_v2p0_to_v2p3
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -407,25 +451,29 @@ body: |
 
 ---
 name: test_addrspacecast_v2p3_to_v2p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
 
     ; VI-LABEL: name: test_addrspacecast_v2p3_to_v2p0
-    ; VI: [[COPY:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
-    ; VI: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY]](<2 x p3>)
+    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+    ; VI: [[COPY1:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
+    ; VI: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY1]](<2 x p3>)
     ; VI: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; VI: [[C2:%[0-9]+]]:_(p4) = G_CONSTANT i64 3735928559
-    ; VI: [[COPY1:%[0-9]+]]:_(p4) = COPY [[C2]](p4)
-    ; VI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY1]], [[C3]](s64)
+    ; VI: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
+    ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
+    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY2]], [[C2]](s64)
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 68, addrspace 4)
     ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C]]
     ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV]](p3)
     ; VI: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; VI: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
-    ; VI: [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[C2]], [[C3]](s64)
+    ; VI: [[COPY3:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
+    ; VI: [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY3]], [[C2]](s64)
     ; VI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 68, addrspace 4)
     ; VI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C]]
     ; VI: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV1]](p3)

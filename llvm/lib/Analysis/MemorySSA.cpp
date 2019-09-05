@@ -84,7 +84,7 @@ bool llvm::VerifyMemorySSA = false;
 #endif
 /// Enables memory ssa as a dependency for loop passes in legacy pass manager.
 cl::opt<bool> llvm::EnableMSSALoopDependency(
-    "enable-mssa-loop-dependency", cl::Hidden, cl::init(false),
+    "enable-mssa-loop-dependency", cl::Hidden, cl::init(true),
     cl::desc("Enable MemorySSA dependency for loop pass manager"));
 
 static cl::opt<bool, true>
@@ -370,7 +370,7 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
-  return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
+  return isa<LoadInst>(I) && (I->hasMetadata(LLVMContext::MD_invariant_load) ||
                               AA.pointsToConstantMemory(MemoryLocation(
                                   cast<LoadInst>(I)->getPointerOperand())));
 }

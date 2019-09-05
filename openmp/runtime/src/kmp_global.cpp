@@ -431,7 +431,7 @@ std::atomic<int> __kmp_thread_pool_active_nth = ATOMIC_VAR_INIT(0);
 /* -------------------------------------------------
  * GLOBAL/ROOT STATE */
 KMP_ALIGN_CACHE
-kmp_global_t __kmp_global = {{0}};
+kmp_global_t __kmp_global;
 
 /* ----------------------------------------------- */
 /* GLOBAL SYNCHRONIZATION LOCKS */

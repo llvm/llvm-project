@@ -117,8 +117,10 @@ module ``M`` loaded on an ThreadSafeContext ``Ctx``:
   if (!EntrySym)
     return EntrySym.takeError();
 
+  // Cast the entry point address to a function pointer.
   auto *Entry = (void(*)())EntrySym.getAddress();
 
+  // Call into JIT'd code.
   Entry();
 
 The builder clasess provide a number of configuration options that can be

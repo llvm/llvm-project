@@ -111,9 +111,14 @@ void JSONNodeDumper::Visit(const Decl *D) {
   if (const auto *ND = dyn_cast<NamedDecl>(D))
     attributeOnlyIfTrue("isHidden", ND->isHidden());
 
-  if (D->getLexicalDeclContext() != D->getDeclContext())
-    JOS.attribute("parentDeclContext",
-                  createPointerRepresentation(D->getDeclContext()));
+  if (D->getLexicalDeclContext() != D->getDeclContext()) {
+    // Because of multiple inheritance, a DeclContext pointer does not produce
+    // the same pointer representation as a Decl pointer that references the
+    // same AST Node.
+    const auto *ParentDeclContextDecl = dyn_cast<Decl>(D->getDeclContext());
+    JOS.attribute("parentDeclContextId",
+                  createPointerRepresentation(ParentDeclContextDecl));
+  }
 
   addPreviousDeclaration(D);
   InnerDeclVisitor::Visit(D);

@@ -177,7 +177,7 @@ cond.true:                                        ; preds = %entry
   %call = invoke i32 @foo_noreturn() to label %continue
             unwind label %cleanup
   ; CHECK:      %call = invoke i32 @foo_noreturn()
-  ; CHECK-NEXT:         to label %continue unwind label %cleanup
+  ; CHECK-NEXT:         to label %continue.dead unwind label %cleanup
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()
@@ -189,7 +189,7 @@ cond.end:                                         ; preds = %cond.false, %contin
   ret i32 %cond
 
 continue:
-  ; CHECK:      continue:
+  ; CHECK:      continue.dead:
   ; CHECK-NEXT: unreachable
   br label %cond.end
 
@@ -663,3 +663,59 @@ define internal void @dead_e2() { ret void }
 ; CHECK: Function Attrs: nofree nosync nounwind willreturn
 ; CHECK-NEXT: define internal void @non_dead_d15()
 ; CHECK-NOT: define internal void @dead_e
+
+
+declare void @blowup() noreturn
+define void @live_with_dead_entry() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK:      define void @live_with_dead_entry(
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   invoke void @blowup()
+; CHECK-NEXT:           to label %live_with_dead_entry.dead unwind label %lpad
+; CHECK:      lpad:                                             ; preds = %entry
+; CHECK-NEXT:   %0 = landingpad { i8*, i32 }
+; CHECK-NEXT:           catch i8* null
+; CHECK-NEXT:   br label %live_with_dead_entry
+; CHECK:      live_with_dead_entry.dead:                        ; preds = %entry
+; CHECK-NEXT:   unreachable
+; CHECK:      live_with_dead_entry:                             ; preds = %lpad
+; CHECK-NEXT:   ret void
+entry:
+  invoke void @blowup() to label %live_with_dead_entry unwind label %lpad
+lpad:
+  %0 = landingpad { i8*, i32 } catch i8* null
+  br label %live_with_dead_entry
+live_with_dead_entry:
+  ret void
+}
+
+define void @live_with_dead_entry_lp() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK:      define void @live_with_dead_entry_lp(
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   invoke void @blowup()
+; CHECK-NEXT:           to label %live_with_dead_entry.dead unwind label %lp1
+; CHECK:      lp1:                                              ; preds = %entry
+; CHECK-NEXT:   %lp = landingpad { i8*, i32 }
+; CHECK-NEXT:           catch i8* null
+; CHECK-NEXT:   invoke void @blowup()
+; CHECK-NEXT:           to label %live_with_dead_entry.dead1 unwind label %lp2
+; CHECK:      lp2:                                              ; preds = %lp1
+; CHECK-NEXT:   %0 = landingpad { i8*, i32 }
+; CHECK-NEXT:           catch i8* null
+; CHECK-NEXT:   br label %live_with_dead_entry
+; CHECK:      live_with_dead_entry.dead:                        ; preds = %entry
+; CHECK-NEXT:   unreachable
+; CHECK:      live_with_dead_entry.dead1:                       ; preds = %lp1
+; CHECK-NEXT:   unreachable
+; CHECK:      live_with_dead_entry:                             ; preds = %lp2
+; CHECK-NEXT:   ret void
+entry:
+  invoke void @blowup() to label %live_with_dead_entry unwind label %lp1
+lp1:
+  %lp = landingpad { i8*, i32 } catch i8* null
+  invoke void @blowup() to label %live_with_dead_entry unwind label %lp2
+lp2:
+  %0 = landingpad { i8*, i32 } catch i8* null
+  br label %live_with_dead_entry
+live_with_dead_entry:
+  ret void
+}

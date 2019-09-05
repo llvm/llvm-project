@@ -407,6 +407,8 @@ CXXMethodDecl *Sema::startLambdaDefinition(
       MethodType, MethodTypeInfo, SC_None,
       /*isInline=*/true, ConstexprKind, EndLoc);
   Method->setAccess(AS_public);
+  if (!TemplateParams)
+    Class->addDecl(Method);
 
   // Temporarily set the lexical declaration context to the current
   // context, so that the Scope stack matches the lexical nesting.
@@ -418,9 +420,10 @@ CXXMethodDecl *Sema::startLambdaDefinition(
                                          TemplateParams,
                                          Method) : nullptr;
   if (TemplateMethod) {
-    TemplateMethod->setLexicalDeclContext(CurContext);
     TemplateMethod->setAccess(AS_public);
     Method->setDescribedFunctionTemplate(TemplateMethod);
+    Class->addDecl(TemplateMethod);
+    TemplateMethod->setLexicalDeclContext(CurContext);
   }
 
   // Add parameters.
@@ -1641,8 +1644,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
         ? CallOperator->getDescribedFunctionTemplate()
         : cast<Decl>(CallOperator);
 
+    // FIXME: Is this really the best choice? Keeping the lexical decl context
+    // set as CurContext seems more faithful to the source.
     TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
-    Class->addDecl(TemplateOrNonTemplateCallOperatorDecl);
 
     PopExpressionEvaluationContext();
 

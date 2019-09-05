@@ -500,7 +500,7 @@ Value *HWAddressSanitizer::isInterestingMemoryAccess(Instruction *I,
                                                      unsigned *Alignment,
                                                      Value **MaybeMask) {
   // Skip memory accesses inserted by another instrumentation.
-  if (I->getMetadata("nosanitize")) return nullptr;
+  if (I->hasMetadata("nosanitize")) return nullptr;
 
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)

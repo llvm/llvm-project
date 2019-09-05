@@ -260,6 +260,15 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
     response.PutChar(';');
   }
 
+#if defined(__APPLE__)
+  llvm::VersionTuple maccatalyst_version = HostInfo::GetMacCatalystVersion();
+  if (!maccatalyst_version.empty()) {
+    response.Format("maccatalyst_version:{0}",
+                    maccatalyst_version.getAsString());
+    response.PutChar(';');
+  }
+#endif
+
   std::string s;
   if (HostInfo::GetOSBuildString(s)) {
     response.PutCString("os_build:");

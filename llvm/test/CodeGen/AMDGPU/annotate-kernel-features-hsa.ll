@@ -12,6 +12,9 @@ declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 declare i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
 declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
 
+declare i1 @llvm.amdgcn.is.shared(i8* nocapture) #2
+declare i1 @llvm.amdgcn.is.private(i8* nocapture) #2
+
 ; HSA: define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
 define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -228,6 +231,22 @@ define amdgpu_kernel void @use_flat_to_global_addrspacecast(i32* %ptr) #1 {
 define amdgpu_kernel void @use_flat_to_constant_addrspacecast(i32* %ptr) #1 {
   %ftos = addrspacecast i32* %ptr to i32 addrspace(4)*
   %ld = load volatile i32, i32 addrspace(4)* %ftos
+  ret void
+}
+
+; HSA: define amdgpu_kernel void @use_is_shared(i8* %ptr) #11 {
+define amdgpu_kernel void @use_is_shared(i8* %ptr) #1 {
+  %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %ptr)
+  %ext = zext i1 %is.shared to i32
+  store i32 %ext, i32 addrspace(1)* undef
+  ret void
+}
+
+; HSA: define amdgpu_kernel void @use_is_private(i8* %ptr) #11 {
+define amdgpu_kernel void @use_is_private(i8* %ptr) #1 {
+  %is.private = call i1 @llvm.amdgcn.is.private(i8* %ptr)
+  %ext = zext i1 %is.private to i32
+  store i32 %ext, i32 addrspace(1)* undef
   ret void
 }
 
