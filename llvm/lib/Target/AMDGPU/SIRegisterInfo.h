@@ -51,8 +51,6 @@ public:
     return SpillSGPRToSMEM;
   }
 
-  bool isCFISavedRegsSpillEnabled() const;
-
   /// Return the end register initially reserved for the scratch buffer in case
   /// spilling is needed.
   unsigned reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
@@ -252,8 +250,6 @@ public:
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
 
   unsigned getReturnAddressReg(const MachineFunction &MF) const;
-
-  const unsigned *getCFISavedRegisters(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
   getRegClassForSizeOnBank(unsigned Size,
