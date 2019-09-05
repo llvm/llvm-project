@@ -94,6 +94,15 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   unsigned Opcode = MI.getOpcode();
   LLT DstTy = MRI.getType(R);
 
+  // Handle the case where this is called on a register that does not have a
+  // type constraint (i.e. it has a register class constraint instead). This is
+  // unlikely to occur except by looking through copies but it is possible for
+  // the initial register being queried to be in this state.
+  if (!DstTy.isValid()) {
+    Known = KnownBits();
+    return;
+  }
+
   unsigned BitWidth = DstTy.getSizeInBits();
   Known = KnownBits(BitWidth); // Don't know anything
 
@@ -115,11 +124,15 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::COPY: {
     MachineOperand Dst = MI.getOperand(0);
     MachineOperand Src = MI.getOperand(1);
-    // Look through trivial copies.
+    // Look through trivial copies but don't look through trivial copies of the
+    // form `%1:(s32) = OP %0:gpr32` known-bits analysis is currently unable to
+    // determine the bit width of a register class.
+    //
     // We can't use NoSubRegister by name as it's defined by each target but
     // it's always defined to be 0 by tablegen.
     if (Dst.getSubReg() == 0 /*NoSubRegister*/ && Src.getReg().isVirtual() &&
-        Src.getSubReg() == 0 /*NoSubRegister*/) {
+        Src.getSubReg() == 0 /*NoSubRegister*/ &&
+        MRI.getType(Src.getReg()).isValid()) {
       // Don't increment Depth for this one since we didn't do any work.
       computeKnownBitsImpl(Src.getReg(), Known, DemandedElts, Depth);
     }

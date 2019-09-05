@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
 #include <cmath>
@@ -263,4 +264,38 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
   }
 
   return CompareFailed;
+}
+
+Error llvm::writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
+                                StringRef Buffer) {
+  SmallString<128> GeneratedUniqPath;
+  int TempFD;
+  if (const std::error_code Error = sys::fs::createUniqueFile(
+          TempPathModel.str(), TempFD, GeneratedUniqPath)) {
+    return createStringError(
+        Error, "failed to create temporary file with model \"%s\"",
+        TempPathModel.str().c_str());
+  }
+
+  raw_fd_ostream OS(TempFD, /*shouldClose=*/true);
+  OS.write(Buffer.data(), Buffer.size());
+  OS.close();
+  TempFD = -1;
+
+  if (OS.has_error()) {
+    const std::error_code Error = OS.error();
+    OS.clear_error();
+    return createStringError(Error, "failed to write to \"%s\"",
+                             GeneratedUniqPath.c_str());
+  }
+
+  if (const std::error_code Error =
+          sys::fs::rename(/*from=*/GeneratedUniqPath.c_str(),
+                          /*to=*/FinalPath.str().c_str())) {
+    return createStringError(Error, "failed to rename file \"%s\" to \"%s\"",
+                             GeneratedUniqPath.c_str(),
+                             FinalPath.str().c_str());
+  }
+
+  return Error::success();
 }

@@ -4,7 +4,7 @@
 
 # GNU:      ELF Header:
 # GNU:        Section header string table index: 255
-# GNU-NEXT:   There are 4 section headers, starting at offset 0x40:
+# GNU-NEXT:   There are 4 section headers, starting at offset 0x78:
 # GNU:      Section Headers:
 # GNU-NEXT:  [Nr] Name
 # GNU-EMPTY:

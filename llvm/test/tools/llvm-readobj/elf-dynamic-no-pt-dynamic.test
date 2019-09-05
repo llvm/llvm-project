@@ -14,7 +14,7 @@
 # LLVM-NEXT:   0x0000000000000000 NULL 0x0
 # LLVM-NEXT: ]
 
-# GNU:      Dynamic section at offset 0x1b8 contains 1 entries:
+# GNU:      Dynamic section at offset 0x78 contains 1 entries:
 # GNU-NEXT: Tag                Type   Name/Value
 # GNU-NEXT: 0x0000000000000000 (NULL) 0x0
 

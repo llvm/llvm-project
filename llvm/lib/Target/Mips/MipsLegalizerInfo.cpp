@@ -219,8 +219,16 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
   return true;
 }
 
-bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
+                                          MachineRegisterInfo &MRI,
                                           MachineIRBuilder &MIRBuilder) const {
+  const MipsSubtarget &ST =
+      static_cast<const MipsSubtarget &>(MI.getMF()->getSubtarget());
+  const MipsInstrInfo &TII = *ST.getInstrInfo();
+  const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
+  const RegisterBankInfo &RBI = *ST.getRegBankInfo();
+  MIRBuilder.setInstr(MI);
+
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
   case Intrinsic::memset:
@@ -230,6 +238,11 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo 
       return false;
     MI.eraseFromParent();
     return true;
+  case Intrinsic::trap: {
+    MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
+    MI.eraseFromParent();
+    return constrainSelectedInstRegOperands(*Trap, TII, TRI, RBI);
+  }
   default:
     break;
   }

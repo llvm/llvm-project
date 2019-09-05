@@ -512,30 +512,38 @@ static bool isHoistable(Instruction *I, DominatorTree &DT) {
 // first-region entry block) or the (hoistable or unhoistable) base values that
 // are defined outside (including the first-region entry block) of the
 // scope. The returned set doesn't include constants.
-static std::set<Value *> getBaseValues(Value *V,
-                                       DominatorTree &DT) {
+static std::set<Value *> getBaseValues(
+    Value *V, DominatorTree &DT,
+    DenseMap<Value *, std::set<Value *>> &Visited) {
+  if (Visited.count(V)) {
+    return Visited[V];
+  }
   std::set<Value *> Result;
   if (auto *I = dyn_cast<Instruction>(V)) {
     // We don't stop at a block that's not in the Scope because we would miss some
     // instructions that are based on the same base values if we stop there.
     if (!isHoistable(I, DT)) {
       Result.insert(I);
+      Visited.insert(std::make_pair(V, Result));
       return Result;
     }
     // I is hoistable above the Scope.
     for (Value *Op : I->operands()) {
-      std::set<Value *> OpResult = getBaseValues(Op, DT);
+      std::set<Value *> OpResult = getBaseValues(Op, DT, Visited);
       Result.insert(OpResult.begin(), OpResult.end());
     }
+    Visited.insert(std::make_pair(V, Result));
     return Result;
   }
   if (isa<Argument>(V)) {
     Result.insert(V);
+    Visited.insert(std::make_pair(V, Result));
     return Result;
   }
   // We don't include others like constants because those won't lead to any
   // chance of folding of conditions (eg two bit checks merged into one check)
   // after CHR.
+  Visited.insert(std::make_pair(V, Result));
   return Result;  // empty
 }
 
@@ -1078,12 +1086,13 @@ static bool shouldSplit(Instruction *InsertPoint,
   if (!PrevConditionValues.empty() && !ConditionValues.empty()) {
     // Use std::set as DenseSet doesn't work with set_intersection.
     std::set<Value *> PrevBases, Bases;
+    DenseMap<Value *, std::set<Value *>> Visited;
     for (Value *V : PrevConditionValues) {
-      std::set<Value *> BaseValues = getBaseValues(V, DT);
+      std::set<Value *> BaseValues = getBaseValues(V, DT, Visited);
       PrevBases.insert(BaseValues.begin(), BaseValues.end());
     }
     for (Value *V : ConditionValues) {
-      std::set<Value *> BaseValues = getBaseValues(V, DT);
+      std::set<Value *> BaseValues = getBaseValues(V, DT, Visited);
       Bases.insert(BaseValues.begin(), BaseValues.end());
     }
     CHR_DEBUG(

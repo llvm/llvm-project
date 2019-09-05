@@ -580,9 +580,9 @@ public:
   bool isLegalMaskedLoad(Type *DataType) const;
 
   /// Return true if the target supports nontemporal store.
-  bool isLegalNTStore(Type *DataType, unsigned Alignment) const;
+  bool isLegalNTStore(Type *DataType, llvm::Align Alignment) const;
   /// Return true if the target supports nontemporal load.
-  bool isLegalNTLoad(Type *DataType, unsigned Alignment) const;
+  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) const;
 
   /// Return true if the target supports masked scatter.
   bool isLegalMaskedScatter(Type *DataType) const;
@@ -1202,8 +1202,8 @@ public:
   virtual bool shouldFavorBackedgeIndex(const Loop *L) const = 0;
   virtual bool isLegalMaskedStore(Type *DataType) = 0;
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
-  virtual bool isLegalNTStore(Type *DataType, unsigned Alignment) = 0;
-  virtual bool isLegalNTLoad(Type *DataType, unsigned Alignment) = 0;
+  virtual bool isLegalNTStore(Type *DataType, llvm::Align Alignment) = 0;
+  virtual bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
   virtual bool isLegalMaskedGather(Type *DataType) = 0;
   virtual bool isLegalMaskedCompressStore(Type *DataType) = 0;
@@ -1479,10 +1479,10 @@ public:
   bool isLegalMaskedLoad(Type *DataType) override {
     return Impl.isLegalMaskedLoad(DataType);
   }
-  bool isLegalNTStore(Type *DataType, unsigned Alignment) override {
+  bool isLegalNTStore(Type *DataType, llvm::Align Alignment) override {
     return Impl.isLegalNTStore(DataType, Alignment);
   }
-  bool isLegalNTLoad(Type *DataType, unsigned Alignment) override {
+  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment) override {
     return Impl.isLegalNTLoad(DataType, Alignment);
   }
   bool isLegalMaskedScatter(Type *DataType) override {

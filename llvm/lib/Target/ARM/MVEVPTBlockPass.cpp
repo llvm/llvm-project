@@ -82,8 +82,8 @@ enum VPTMaskValue {
 
 bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
   bool Modified = false;
-  MachineBasicBlock::iterator MBIter = Block.begin();
-  MachineBasicBlock::iterator EndIter = Block.end();
+  MachineBasicBlock::instr_iterator MBIter = Block.instr_begin();
+  MachineBasicBlock::instr_iterator EndIter = Block.instr_end();
 
   while (MBIter != EndIter) {
     MachineInstr *MI = &*MBIter;
@@ -105,18 +105,27 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       continue;
     }
 
-    MachineInstrBuilder MIBuilder =
-        BuildMI(Block, MBIter, dl, TII->get(ARM::MVE_VPST));
-
-    MachineBasicBlock::iterator VPSTInsertPos = MIBuilder.getInstr();
+    LLVM_DEBUG(dbgs() << "VPT block created for: "; MI->dump());
     int VPTInstCnt = 1;
     ARMVCC::VPTCodes NextPred;
 
-    do {
-      ++MBIter;
+    // Look at subsequent instructions, checking if they can be in the same VPT
+    // block.
+    ++MBIter;
+    while (MBIter != EndIter && VPTInstCnt < 4) {
       NextPred = getVPTInstrPredicate(*MBIter, PredReg);
-    } while (NextPred != ARMVCC::None && NextPred == Pred && ++VPTInstCnt < 4);
+      assert(NextPred != ARMVCC::Else &&
+             "VPT block pass does not expect Else preds");
+      if (NextPred != Pred)
+        break;
+      LLVM_DEBUG(dbgs() << "  adding : "; MBIter->dump());
+      ++VPTInstCnt;
+      ++MBIter;
+    };
 
+    // Create the new VPST
+    MachineInstrBuilder MIBuilder =
+        BuildMI(Block, MI, dl, TII->get(ARM::MVE_VPST));
     switch (VPTInstCnt) {
     case 1:
       MIBuilder.addImm(VPTMaskValue::T);
@@ -134,14 +143,10 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       llvm_unreachable("Unexpected number of instruction in a VPT block");
     };
 
-    MachineInstr *LastMI = &*MBIter;
-    finalizeBundle(Block, VPSTInsertPos.getInstrIterator(),
-                   ++LastMI->getIterator());
+    finalizeBundle(
+        Block, MachineBasicBlock::instr_iterator(MIBuilder.getInstr()), MBIter);
 
     Modified = true;
-    LLVM_DEBUG(dbgs() << "VPT block created for: "; MI->dump());
-
-    ++MBIter;
   }
   return Modified;
 }

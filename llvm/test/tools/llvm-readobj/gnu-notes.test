@@ -7,24 +7,24 @@
 # RUN: llvm-readelf --notes %t1.stripped.so | FileCheck %s --check-prefix=GNU-STRIPPED --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --notes %t1.stripped.so | FileCheck %s --check-prefix=LLVM-STRIPPED
 
-#      GNU:Displaying notes found at file offset 0x00000238 with length 0x00000020:
+#      GNU:Displaying notes found at file offset 0x00000078 with length 0x00000020:
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:    OS: Linux, ABI: 2.6.32
 
-#      GNU:Displaying notes found at file offset 0x00000258 with length 0x00000020:
+#      GNU:Displaying notes found at file offset 0x00000098 with length 0x00000020:
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
 # GNU-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 
-#      GNU:Displaying notes found at file offset 0x00000278 with length 0x0000001c:
+#      GNU:Displaying notes found at file offset 0x000000b8 with length 0x0000001c:
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000009	NT_GNU_GOLD_VERSION (gold version)
 # GNU-NEXT:    Version: gold 1.11
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x238
+# LLVM-NEXT:     Offset: 0x78
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -35,7 +35,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x258
+# LLVM-NEXT:     Offset: 0x98
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -45,7 +45,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
-# LLVM-NEXT:     Offset: 0x278
+# LLVM-NEXT:     Offset: 0xB8
 # LLVM-NEXT:     Size: 0x1C
 # LLVM-NEXT:     Note {
 # LLVM-NEXT:       Owner: GNU
@@ -128,7 +128,7 @@ Sections:
 # RUN: not llvm-readelf --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 # RUN: not llvm-readobj --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 
-# ERR2: error: '[[FILE]]': SHT_NOTE section [index 1] has invalid offset (0x180) or size (0xffff0000)
+# ERR2: error: '[[FILE]]': SHT_NOTE section [index 1] has invalid offset (0x40) or size (0xffff0000)
 
 --- !ELF
 FileHeader:
@@ -172,7 +172,7 @@ ProgramHeaders:
 # RUN: not llvm-readelf --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so  %s --check-prefix=ERR4
 # RUN: not llvm-readobj --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefix=ERR4
 
-# ERR4: error: '[[FILE]]': PT_NOTE header has invalid offset (0x1b8) or size (0xffff0000)
+# ERR4: error: '[[FILE]]': PT_NOTE header has invalid offset (0x78) or size (0xffff0000)
 
 --- !ELF
 FileHeader:

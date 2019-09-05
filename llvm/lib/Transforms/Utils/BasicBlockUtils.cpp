@@ -250,8 +250,11 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
       llvm::findDbgValues(DbgValues, Incoming);
       for (auto &DVI : DbgValues) {
         auto R = DbgValueSet.insert({DVI->getVariable(), DVI->getExpression()});
-        if (!R.second)
+        if (!R.second) {
+          if (MSSAU)
+            MSSAU->removeMemoryAccess(DVI);
           DVI->eraseFromParent();
+        }
       }
     }
   }

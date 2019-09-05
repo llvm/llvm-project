@@ -441,6 +441,23 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
 
   LLVM_DEBUG(dbgs() << "Attempting to lower call as tail call\n");
 
+  if (Info.SwiftErrorVReg) {
+    // TODO: We should handle this.
+    // Note that this is also handled by the check for no outgoing arguments.
+    // Proactively disabling this though, because the swifterror handling in
+    // lowerCall inserts a COPY *after* the location of the call.
+    LLVM_DEBUG(dbgs() << "... Cannot handle tail calls with swifterror yet.\n");
+    return false;
+  }
+
+  if (!Info.OrigRet.Ty->isVoidTy()) {
+    // TODO: lowerCall will insert COPYs to handle the call's return value.
+    // This needs some refactoring to avoid this with tail call returns. For
+    // now, just don't handle that case.
+    LLVM_DEBUG(dbgs() << "... Cannot handle non-void return types yet.\n");
+    return false;
+  }
+
   if (!mayTailCallThisCC(CalleeCC)) {
     LLVM_DEBUG(dbgs() << "... Calling convention cannot be tail called.\n");
     return false;

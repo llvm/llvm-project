@@ -104,7 +104,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
 
   // Functions needs to be cacheline (256B) aligned.
-  MF.ensureAlignment(8);
+  MF.ensureLogAlignment(8);
 
   SetupMachineFunction(MF);
 

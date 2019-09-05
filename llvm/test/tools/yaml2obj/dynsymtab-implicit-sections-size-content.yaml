@@ -75,7 +75,7 @@ DynamicSymbols:
 # CASE4-NEXT:   SHF_ALLOC
 # CASE4-NEXT: ]
 # CASE4-NEXT: Address: 0x0
-# CASE4-NEXT: Offset: 0x180
+# CASE4-NEXT: Offset: 0x40
 # CASE4-NEXT: Size: 2
 # CASE4-NEXT: Link: 0
 # CASE4-NEXT: Info: 1
@@ -107,7 +107,7 @@ Sections:
 # CASE5-NEXT:   SHF_ALLOC
 # CASE5-NEXT: ]
 # CASE5-NEXT: Address: 0x0
-# CASE5-NEXT: Offset: 0x180
+# CASE5-NEXT: Offset: 0x40
 # CASE5-NEXT: Size: 5
 # CASE5-NEXT: Link: 0
 # CASE5-NEXT: Info: 1
@@ -141,7 +141,7 @@ Sections:
 # CASE6-NEXT:   SHF_ALLOC
 # CASE6-NEXT: ]
 # CASE6-NEXT: Address: 0x0
-# CASE6-NEXT: Offset: 0x180
+# CASE6-NEXT: Offset: 0x40
 # CASE6-NEXT: Size: 4
 # CASE6-NEXT: Link: 0
 # CASE6-NEXT: Info: 1
@@ -175,7 +175,7 @@ Sections:
 # CASE7-NEXT:    SHF_ALLOC
 # CASE7-NEXT:  ]
 # CASE7-NEXT:  Address: 0x0
-# CASE7-NEXT:  Offset: 0x180
+# CASE7-NEXT:  Offset: 0x40
 # CASE7-NEXT:  Size: 2
 # CASE7-NEXT:  Link: 0
 # CASE7-NEXT:  Info: 1

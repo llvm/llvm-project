@@ -216,7 +216,7 @@ ProgramHeaders:
 # BAD-RELA-NEXT:   0x0000000000000007 RELA 0x1000000
 # BAD-RELA-NEXT:   0x0000000000000000 NULL 0x0
 # BAD-RELA-NEXT: ]
-# BAD-RELA-GNU:      Dynamic section at offset 0x1f0 contains 2 entries:
+# BAD-RELA-GNU:      Dynamic section at offset 0xb0 contains 2 entries:
 # BAD-RELA-GNU-NEXT: Tag                Type   Name/Value
 # BAD-RELA-GNU-NEXT: 0x0000000000000007 (RELA) 0x1000000
 # BAD-RELA-GNU-NEXT: 0x0000000000000000 (NULL) 0x0
