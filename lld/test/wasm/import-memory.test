@@ -32,7 +32,7 @@
 # CHECK-MAX-NEXT:          Maximum:         0x00000005
 # CHECK-MAX-NEXT:  - Type:
 
-# RUN: wasm-ld --import-memory --shared-memory --active-segments \
+# RUN: wasm-ld --import-memory --shared-memory --features=atomics,bulk-memory \
 # RUN:     --initial-memory=262144 --max-memory=327680 -o %t.max.wasm %t.start.o
 # RUN: obj2yaml %t.max.wasm | FileCheck -check-prefix=CHECK-SHARED %s
 

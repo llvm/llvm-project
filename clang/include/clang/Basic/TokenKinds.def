@@ -389,6 +389,7 @@ MODULES_KEYWORD(import)
 // C++20 keywords.
 CXX2A_KEYWORD(char8_t               , CHAR8SUPPORT)
 CXX2A_KEYWORD(consteval             , 0)
+CXX2A_KEYWORD(constinit             , 0)
 
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)

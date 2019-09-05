@@ -426,7 +426,7 @@ int main() {
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "parentDeclContext": "0x{{.*}}",
+// CHECK-NEXT:  "parentDeclContextId": "0x{{.*}}",
 // CHECK-NEXT:  "previousDecl": "0x{{.*}}",
 // CHECK-NEXT:  "name": "Test1",
 // CHECK-NEXT:  "type": {

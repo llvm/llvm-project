@@ -1237,7 +1237,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
     updateValueMap(CLI.CS->getInstruction(), CLI.ResultReg, CLI.NumResultRegs);
 
   // Set labels for heapallocsite call.
-  if (CLI.CS && CLI.CS->getInstruction()->getMetadata("heapallocsite")) {
+  if (CLI.CS && CLI.CS->getInstruction()->hasMetadata("heapallocsite")) {
     const MDNode *MD = CLI.CS->getInstruction()->getMetadata("heapallocsite");
     MF->addCodeViewHeapAllocSite(CLI.Call, MD);
   }
@@ -2417,10 +2417,9 @@ FastISel::createMachineMemOperandFor(const Instruction *I) const {
   } else
     return nullptr;
 
-  bool IsNonTemporal = I->getMetadata(LLVMContext::MD_nontemporal) != nullptr;
-  bool IsInvariant = I->getMetadata(LLVMContext::MD_invariant_load) != nullptr;
-  bool IsDereferenceable =
-      I->getMetadata(LLVMContext::MD_dereferenceable) != nullptr;
+  bool IsNonTemporal = I->hasMetadata(LLVMContext::MD_nontemporal);
+  bool IsInvariant = I->hasMetadata(LLVMContext::MD_invariant_load);
+  bool IsDereferenceable = I->hasMetadata(LLVMContext::MD_dereferenceable);
   const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range);
 
   AAMDNodes AAInfo;

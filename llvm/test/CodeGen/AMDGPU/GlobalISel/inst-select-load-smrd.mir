@@ -5,6 +5,7 @@
 --- |
   define amdgpu_kernel void @smrd_imm(i32 addrspace(4)* %const0) { ret void }
   define amdgpu_kernel void @smrd_wide() { ret void }
+  define amdgpu_kernel void @constant_address_positive() { ret void }
 ...
 ---
 
@@ -184,4 +185,30 @@ body: |
     ; CHECK s_load_dwordx16 [[GLOBAL_PTR]]
     %5:sgpr(<16 x s32>) = G_LOAD %1 :: (load 64, addrspace 1)
     $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %5
+...
+
+
+# Test a load of an offset from a constant base address
+# GCN-LABEL: name: constant_address_positive{{$}}
+# GCN: %4:sreg_32_xm0 = S_MOV_B32 44
+# GCN: %5:sreg_32_xm0 = S_MOV_B32 0
+# GCN: %0:sreg_64 = REG_SEQUENCE %4, %subreg.sub0, %5, %subreg.sub1
+
+# VI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 64, 0, 0 :: (dereferenceable invariant load 4, addrspace 4)
+# SICI: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0, 0 :: (dereferenceable invariant load 4, addrspace 4)
+
+---
+
+name:            constant_address_positive
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr2_vgpr3
+    %0:sgpr(p4) = G_CONSTANT i64 44
+    %1:sgpr(s64) = G_CONSTANT i64 64
+    %2:sgpr(p4) = G_GEP %0, %1
+    %3:sgpr(s32) = G_LOAD %2 :: (dereferenceable invariant load 4, align 4, addrspace 4)
+    S_ENDPGM 0, implicit %3
 ...

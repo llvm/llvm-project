@@ -8,7 +8,8 @@ target triple = "wasm32-unknown-unknown"
 @e = private constant [9 x i8] c"constant\00", align 1
 @f = private constant i8 43, align 4
 
-; RUN: llc -mattr=+bulk-memory -filetype=obj %s -o %t.o
+; RUN: llc -mattr=+bulk-memory,+atomics -filetype=obj %s -o %t.passive.o
+; RUN: llc -filetype=obj %s -o %t.o
 
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.wasm %t.o
 ; RUN: obj2yaml %t.merged.wasm | FileCheck %s --check-prefix=MERGE
@@ -67,7 +68,7 @@ target triple = "wasm32-unknown-unknown"
 ; SEPARATE-NEXT:        Name:            __wasm_call_ctors
 ; SEPARATE-NOT:       - Index:
 
-; RUN: wasm-ld -no-gc-sections --no-entry --passive-segments -o %t.merged.passive.wasm %t.o
+; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -o %t.merged.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.merged.passive.wasm | FileCheck %s --check-prefix=PASSIVE-MERGE
 
 ; PASSIVE-MERGE-LABEL: - Type:            DATACOUNT
@@ -87,9 +88,10 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-MERGE-NEXT:        Name:            __wasm_call_ctors
 ; PASSIVE-MERGE-NEXT:      - Index:           1
 ; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_memory
-; PASSIVE-MERGE-NOT:       - Index:
+; PASSIVE-MERGE-NEXT:      - Index:           2
+; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_tls
 
-; RUN: wasm-ld -no-gc-sections --no-entry --passive-segments -no-merge-data-segments -o %t.separate.passive.wasm %t.o
+; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.separate.passive.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
 
 ; PASSIVE-SEPARATE-LABEL: - Type:            DATACOUNT
@@ -121,4 +123,5 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_call_ctors
 ; PASSIVE-SEPARATE-NEXT:        - Index:           1
 ; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_memory
-; PASSIVE-SEPARATE-NOT:         - Index
+; PASSIVE-SEPARATE-NEXT:        - Index:           2
+; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_tls

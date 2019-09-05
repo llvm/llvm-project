@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -run-pass mir-canonicalizer %s | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -run-pass mir-canonicalizer %s | FileCheck %s
 
 ...
 ---
@@ -40,8 +40,8 @@ body: |
     %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
 
     ;CHECK: %namedVReg1352:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
-    ;CHECK: $w0 = COPY %namedVReg1352
-    ;CHECK: RET_ReallyLR implicit $w0
+    ;CHECK-NEXT: $w0 = COPY %namedVReg1352
+    ;CHECK-NEXT: RET_ReallyLR implicit $w0
 
     %vreg1234:gpr32 = COPY %42
     %vreg1235:gpr32 = COPY %vreg1234

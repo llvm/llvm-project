@@ -4,9 +4,9 @@
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=3 \
 ; RUN:     -sanitizer-coverage-stack-depth -sanitizer-coverage-trace-pc-guard \
 ; RUN:     -S | FileCheck %s
-; RUN: opt < %s -passes='module(sancov-module),function(sancov-func)' -sanitizer-coverage-level=1 \
+; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 \
 ; RUN:     -sanitizer-coverage-stack-depth -S | FileCheck %s
-; RUN: opt < %s -passes='module(sancov-module),function(sancov-func)' -sanitizer-coverage-level=3 \
+; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 \
 ; RUN:     -sanitizer-coverage-stack-depth -sanitizer-coverage-trace-pc-guard \
 ; RUN:     -S | FileCheck %s
 

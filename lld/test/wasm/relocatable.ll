@@ -3,7 +3,7 @@
 ; RUN: wasm-ld -r -o %t.wasm %t.hello.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes CHECK,NORMAL
 
-; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.bm.o -mattr=+bulk-memory
+; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.bm.o -mattr=+bulk-memory,+atomics
 ; RUN: llc -filetype=obj %s -o %t.bm.o -mattr=+bulk-memory
 ; RUN: wasm-ld -r -o %t.mt.wasm %t.hello.bm.o %t.bm.o --shared-memory --max-memory=131072
 ; RUN: obj2yaml %t.mt.wasm | FileCheck %s --check-prefixes CHECK,SHARED

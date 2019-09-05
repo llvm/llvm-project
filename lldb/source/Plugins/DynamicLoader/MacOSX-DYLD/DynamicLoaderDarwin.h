@@ -95,25 +95,34 @@ protected:
   };
 
   struct ImageInfo {
-    lldb::addr_t address;  // Address of mach header for this dylib
-    lldb::addr_t slide;    // The amount to slide all segments by if there is a
-                           // global slide.
-    lldb::addr_t mod_date; // Modification date for this dylib
-    lldb_private::FileSpec file_spec; // Resolved path for this dylib
-    lldb_private::UUID
-        uuid; // UUID for this dylib if it has one, else all zeros
-    llvm::MachO::mach_header header; // The mach header for this image
-    std::vector<Segment> segments;   // All segment vmaddr and vmsize pairs for
-                                   // this executable (from memory of inferior)
-    uint32_t load_stop_id; // The process stop ID that the sections for this
-                           // image were loaded
-    llvm::Triple::OSType os_type;   // LC_VERSION_MIN_... load command os type
-    std::string min_version_os_sdk; // LC_VERSION_MIN_... sdk value
+    /// Address of mach header for this dylib.
+    lldb::addr_t address = LLDB_INVALID_ADDRESS;
+    /// The amount to slide all segments by if there is a global
+    /// slide.
+    lldb::addr_t slide = 0;
+    /// Modification date for this dylib.
+    lldb::addr_t mod_date = 0;
+    /// Resolved path for this dylib.
+    lldb_private::FileSpec file_spec;
+    /// UUID for this dylib if it has one, else all zeros.
+    lldb_private::UUID uuid;
+    /// The mach header for this image.
+    llvm::MachO::mach_header header;
+    /// All segment vmaddr and vmsize pairs for this executable (from
+    /// memory of inferior).
+    std::vector<Segment> segments;
+    /// The process stop ID that the sections for this image were
+    /// loaded.
+    uint32_t load_stop_id = 0;
+    /// LC_VERSION_MIN_... load command os type.
+    llvm::Triple::OSType os_type = llvm::Triple::OSType::UnknownOS;
+    /// LC_VERSION_MIN_... load command os environment.
+    llvm::Triple::EnvironmentType os_env =
+        llvm::Triple::EnvironmentType::UnknownEnvironment;
+    /// LC_VERSION_MIN_... SDK.
+    std::string min_version_os_sdk;
 
-    ImageInfo()
-        : address(LLDB_INVALID_ADDRESS), slide(0), mod_date(0), file_spec(),
-          uuid(), header(), segments(), load_stop_id(0),
-          os_type(llvm::Triple::OSType::UnknownOS), min_version_os_sdk() {}
+    ImageInfo() = default;
 
     void Clear(bool load_cmd_data_only) {
       if (!load_cmd_data_only) {
@@ -127,6 +136,7 @@ protected:
       segments.clear();
       load_stop_id = 0;
       os_type = llvm::Triple::OSType::UnknownOS;
+      os_env = llvm::Triple::EnvironmentType::UnknownEnvironment;
       min_version_os_sdk.clear();
     }
 
@@ -135,7 +145,8 @@ protected:
              mod_date == rhs.mod_date && file_spec == rhs.file_spec &&
              uuid == rhs.uuid &&
              memcmp(&header, &rhs.header, sizeof(header)) == 0 &&
-             segments == rhs.segments && os_type == rhs.os_type;
+             segments == rhs.segments && os_type == rhs.os_type &&
+             os_env == rhs.os_env;
     }
 
     bool UUIDValid() const { return uuid.IsValid(); }
@@ -150,10 +161,7 @@ protected:
       return 0;
     }
 
-    lldb_private::ArchSpec GetArchitecture() const {
-      return lldb_private::ArchSpec(lldb_private::eArchTypeMachO,
-                                    header.cputype, header.cpusubtype);
-    }
+    lldb_private::ArchSpec GetArchitecture() const;
 
     const Segment *FindSegment(lldb_private::ConstString name) const;
 

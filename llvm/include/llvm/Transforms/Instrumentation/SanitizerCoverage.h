@@ -16,29 +16,16 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Instrumentation.h"
 
 namespace llvm {
 
-/// This is the SanitizerCoverage pass used in the new pass manager. The
-/// pass instruments functions for coverage.
-class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
-public:
-  explicit SanitizerCoveragePass(
-      SanitizerCoverageOptions Options = SanitizerCoverageOptions())
-      : Options(Options) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-private:
-  SanitizerCoverageOptions Options;
-};
-
-/// This is the ModuleSanitizerCoverage pass used in the new pass manager. This
-/// adds initialization calls to the module for trace PC guards and 8bit
-/// counters if they are requested.
+/// This is the ModuleSanitizerCoverage pass used in the new pass manager. The
+/// pass instruments functions for coverage, adds initialization calls to the
+/// module for trace PC guards and 8bit counters if they are requested, and
+/// appends globals to llvm.compiler.used.
 class ModuleSanitizerCoveragePass
     : public PassInfoMixin<ModuleSanitizerCoveragePass> {
 public:
@@ -52,8 +39,6 @@ private:
 };
 
 // Insert SanitizerCoverage instrumentation.
-FunctionPass *createSanitizerCoverageLegacyPassPass(
-    const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
 ModulePass *createModuleSanitizerCoverageLegacyPassPass(
     const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
 

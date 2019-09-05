@@ -4320,6 +4320,10 @@ llvm::VersionTuple ProcessGDBRemote::GetHostOSVersion() {
   return m_gdb_comm.GetOSVersion();
 }
 
+llvm::VersionTuple ProcessGDBRemote::GetHostMacCatalystVersion() {
+  return m_gdb_comm.GetMacCatalystVersion();
+}
+
 namespace {
 
 typedef std::vector<std::string> stringVec;
