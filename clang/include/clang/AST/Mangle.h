@@ -250,8 +250,16 @@ class ASTNameGenerator {
 public:
   explicit ASTNameGenerator(ASTContext &Ctx);
   ~ASTNameGenerator();
+
+  /// Writes name for \p D to \p OS.
+  /// \returns true on failure, false on success.
   bool writeName(const Decl *D, raw_ostream &OS);
+
+  /// \returns name for \p D
   std::string getName(const Decl *D);
+
+  /// \returns all applicable mangled names.
+  /// For example C++ constructors/destructors can have multiple.
   std::vector<std::string> getAllManglings(const Decl *D);
 
 private:

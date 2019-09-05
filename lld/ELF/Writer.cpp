@@ -2270,12 +2270,9 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // load executables without any address adjustment.
 static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
   // The first section in a PT_LOAD has to have congruent offset and address
-  // module the page size.
-  if (os->ptLoad && os->ptLoad->firstSec == os) {
-    uint64_t alignment =
-        std::max<uint64_t>(os->ptLoad->p_align, config->maxPageSize);
-    return alignTo(off, alignment, os->addr);
-  }
+  // modulo the maximum page size.
+  if (os->ptLoad && os->ptLoad->firstSec == os)
+    return alignTo(off, os->ptLoad->p_align, os->addr);
 
   // File offsets are not significant for .bss sections other than the first one
   // in a PT_LOAD. By convention, we keep section offsets monotonically
@@ -2385,9 +2382,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
         p->p_paddr = first->getLMA();
     }
 
-    if (p->p_type == PT_LOAD) {
-      p->p_align = std::max<uint64_t>(p->p_align, config->maxPageSize);
-    } else if (p->p_type == PT_GNU_RELRO) {
+    if (p->p_type == PT_GNU_RELRO) {
       p->p_align = 1;
       // musl/glibc ld.so rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always

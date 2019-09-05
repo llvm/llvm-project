@@ -87,11 +87,11 @@ class Type<string _Name, QualType _QTName> {
 // OpenCL vector types (e.g. int2, int3, int16, float8, ...).
 class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
   let VecWidth = _VecWidth;
+  let AccessQualifier = "";
   // Inherited fields
   let IsPointer = _Ty.IsPointer;
   let IsConst = _Ty.IsConst;
   let IsVolatile = _Ty.IsVolatile;
-  let AccessQualifier = _Ty.AccessQualifier;
   let AddrSpace = _Ty.AddrSpace;
 }
 
@@ -129,10 +129,16 @@ class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
   let AddrSpace = _Ty.AddrSpace;
 }
 
-// OpenCL image types (e.g. image2d_t, ...)
-class ImageType<Type _Ty, QualType _QTName, string _AccessQualifier> :
-                                              Type<_Ty.Name, _QTName> {
+// OpenCL image types (e.g. image2d).
+class ImageType<Type _Ty, string _AccessQualifier> :
+          Type<_Ty.Name, QualType<_Ty.QTName.Name#_AccessQualifier#"Ty", 0>> {
+  let VecWidth = 0;
   let AccessQualifier = _AccessQualifier;
+  // Inherited fields
+  let IsPointer = _Ty.IsPointer;
+  let IsConst = _Ty.IsConst;
+  let IsVolatile = _Ty.IsVolatile;
+  let AddrSpace = _Ty.AddrSpace;
 }
 
 // List of Types.
@@ -221,37 +227,21 @@ def Void      : Type<"void_t",    QualType<"VoidTy">>;
 // OpenCL v1.0/1.2/2.0 s6.1.2: Built-in Vector Data Types.
 // Built-in vector data types are created by TableGen's OpenCLBuiltinEmitter.
 
-// OpenCL v1.2 s6.1.3: Other Built-in Data Types
-// These definitions with a "null" name are "abstract". They should not
-// be used in definitions of Builtin functions.
-def image2d_t         : Type<"image2d_t", QualType<"null", 1>>;
-def image3d_t         : Type<"image3d_t", QualType<"null", 1>>;
-def image2d_array_t   : Type<"image2d_array_t", QualType<"null", 1>>;
-def image1d_t         : Type<"image1d_t", QualType<"null", 1>>;
-def image1d_buffer_t  : Type<"image1d_buffer_t", QualType<"null", 1>>;
-def image1d_array_t   : Type<"image1d_array_t", QualType<"null", 1>>;
-// Unlike the few functions above, the following definitions can be used
-// in definitions of Builtin functions (they have a QualType with a name).
-foreach v = ["RO", "WO", "RW"] in {
-  def image2d_#v#_t       : ImageType<image2d_t,
-                                      QualType<"OCLImage2d"#v#"Ty">,
-                                      v>;
-  def image3d_#v#_t       : ImageType<image3d_t,
-                                      QualType<"OCLImage3d"#v#"Ty">,
-                                      v>;
-  def image2d_array#v#_t  : ImageType<image2d_array_t,
-                                      QualType<"OCLImage2dArray"#v#"Ty">,
-                                      v>;
-  def image1d_#v#_t       : ImageType<image1d_t,
-                                      QualType<"OCLImage1d"#v#"Ty">,
-                                      v>;
-  def image1d_buffer#v#_t : ImageType<image1d_buffer_t,
-                                      QualType<"OCLImage1dBuffer"#v#"Ty">,
-                                      v>;
-  def image1d_array#v#_t  : ImageType<image1d_array_t,
-                                      QualType<"OCLImage1dArray"#v#"Ty">,
-                                      v>;
-}
+// OpenCL v1.0/1.2/2.0 s6.1.3: Other Built-in Data Types.
+// The image definitions are "abstract".  They should not be used without
+// specifying an access qualifier (RO/WO/RW).
+def Image1d               : Type<"Image1d", QualType<"OCLImage1d", 1>>;
+def Image2d               : Type<"Image2d", QualType<"OCLImage2d", 1>>;
+def Image3d               : Type<"Image3d", QualType<"OCLImage3d", 1>>;
+def Image1dArray          : Type<"Image1dArray", QualType<"OCLImage1dArray", 1>>;
+def Image1dBuffer         : Type<"Image1dBuffer", QualType<"OCLImage1dBuffer", 1>>;
+def Image2dArray          : Type<"Image2dArray", QualType<"OCLImage2dArray", 1>>;
+def Image2dDepth          : Type<"Image2dDepth", QualType<"OCLImage2dDepth", 1>>;
+def Image2dArrayDepth     : Type<"Image2dArrayDepth", QualType<"OCLImage2dArrayDepth", 1>>;
+def Image2dMsaa           : Type<"Image2dMsaa", QualType<"OCLImage2dMSAA", 1>>;
+def Image2dArrayMsaa      : Type<"Image2dArrayMsaa", QualType<"OCLImage2dArrayMSAA", 1>>;
+def Image2dMsaaDepth      : Type<"Image2dMsaaDepth", QualType<"OCLImage2dMSAADepth", 1>>;
+def Image2dArrayMsaaDepth : Type<"Image2dArrayMsaaDepth", QualType<"OCLImage2dArrayMSAADepth", 1>>;
 
 def Sampler           : Type<"Sampler", QualType<"OCLSamplerTy">>;
 def Event             : Type<"Event", QualType<"OCLEventTy">>;
@@ -398,14 +388,132 @@ foreach name = ["max", "min"] in {
   def : Builtin<name, [AIGenTypeNNoScalar, AIGenTypeNNoScalar, AIGenType1]>;
 }
 
-// OpenCL v1.2 s6.12.14: Built-in Image Read Functions
-def read_imagef : Builtin<"read_imagef",
-                          [VectorType<Float, 4>, image2d_RO_t, VectorType<Int, 2>]>;
-def write_imagef : Builtin<"write_imagef",
-                           [Void,
-                            image2d_WO_t,
-                            VectorType<Int, 2>,
-                            VectorType<Float, 4>]>;
+//--------------------------------------------------------------------
+// OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14: Image Read and Write Functions
+// OpenCL Extension v2.0 s5.1.8 and s6.1.8: Image Read and Write Functions
+// --- Table 22: Image Read Functions with Samplers ---
+foreach imgTy = [Image1d] in {
+  foreach coordTy = [Int, Float] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, "RO">, Sampler, coordTy]>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, "RO">, Sampler, coordTy]>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, "RO">, Sampler, coordTy]>;
+  }
+}
+foreach imgTy = [Image2d, Image1dArray] in {
+  foreach coordTy = [Int, Float] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, "RO">, Sampler, VectorType<coordTy, 2>]>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, "RO">, Sampler, VectorType<coordTy, 2>]>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, "RO">, Sampler, VectorType<coordTy, 2>]>;
+  }
+}
+foreach imgTy = [Image3d, Image2dArray] in {
+  foreach coordTy = [Int, Float] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, "RO">, Sampler, VectorType<coordTy, 4>]>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, "RO">, Sampler, VectorType<coordTy, 4>]>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, "RO">, Sampler, VectorType<coordTy, 4>]>;
+  }
+}
+foreach coordTy = [Int, Float] in {
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, "RO">, Sampler, VectorType<coordTy, 2>]>;
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, "RO">, Sampler, VectorType<coordTy, 4>]>;
+}
+
+// --- Table 23: Sampler-less Read Functions ---
+foreach aQual = ["RO", "RW"] in {
+  foreach imgTy = [Image2d, Image1dArray] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>]>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>]>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>]>;
+  }
+  foreach imgTy = [Image3d, Image2dArray] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>]>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>]>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>]>;
+  }
+  foreach imgTy = [Image1d, Image1dBuffer] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int]>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int]>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int]>;
+  }
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>]>;
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>]>;
+}
+
+// --- Table 24: Image Write Functions ---
+foreach aQual = ["WO", "RW"] in {
+  foreach imgTy = [Image2d] in {
+    def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Float, 4>]>;
+    def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Int, 4>]>;
+    def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<UInt, 4>]>;
+  }
+  foreach imgTy = [Image2dArray] in {
+    def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, VectorType<Float, 4>]>;
+    def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, VectorType<Int, 4>]>;
+    def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, VectorType<UInt, 4>]>;
+  }
+  foreach imgTy = [Image1d, Image1dBuffer] in {
+    def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, Int, VectorType<Float, 4>]>;
+    def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, Int, VectorType<Int, 4>]>;
+    def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, Int, VectorType<UInt, 4>]>;
+  }
+  foreach imgTy = [Image1dArray] in {
+    def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Float, 4>]>;
+    def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Int, 4>]>;
+    def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<UInt, 4>]>;
+  }
+  foreach imgTy = [Image3d] in {
+    def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, VectorType<Float, 4>]>;
+    def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, VectorType<Int, 4>]>;
+    def : Builtin<"write_imageui", [Void, ImageType<imgTy, aQual>, VectorType<Int, 4>, VectorType<UInt, 4>]>;
+  }
+  def : Builtin<"write_imagef", [Void, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>, Float]>;
+  def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Float]>;
+}
+
+// OpenCL extension v2.0 s5.1.9: Built-in Image Read Functions
+// --- Table 8 ---
+foreach aQual = ["RO"] in {
+  foreach name = ["read_imageh"] in {
+    foreach coordTy = [Int, Float] in {
+      foreach imgTy = [Image2d, Image1dArray] in {
+        def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, Sampler, VectorType<coordTy, 2>]>;
+      }
+      foreach imgTy = [Image3d, Image2dArray] in {
+        def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, Sampler, VectorType<coordTy, 4>]>;
+      }
+      foreach imgTy = [Image1d] in {
+        def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, Sampler, coordTy]>;
+      }
+    }
+  }
+}
+// OpenCL extension v2.0 s5.1.10: Built-in Image Sampler-less Read Functions
+// --- Table 9 ---
+foreach aQual = ["RO", "RW"] in {
+  foreach name = ["read_imageh"] in {
+    foreach imgTy = [Image2d, Image1dArray] in {
+      def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>]>;
+    }
+    foreach imgTy = [Image3d, Image2dArray] in {
+      def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>]>;
+    }
+    foreach imgTy = [Image1d, Image1dBuffer] in {
+      def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, Int]>;
+    }
+  }
+}
+// OpenCL extension v2.0 s5.1.11: Built-in Image Write Functions
+// --- Table 10 ---
+foreach aQual = ["WO", "RW"] in {
+  foreach name = ["write_imageh"] in {
+    def : Builtin<name, [Void, ImageType<Image2d, aQual>, VectorType<Int, 2>, VectorType<Half, 4>]>;
+    def : Builtin<name, [Void, ImageType<Image2dArray, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
+    def : Builtin<name, [Void, ImageType<Image1d, aQual>, Int, VectorType<Half, 4>]>;
+    def : Builtin<name, [Void, ImageType<Image1dBuffer, aQual>, Int, VectorType<Half, 4>]>;
+    def : Builtin<name, [Void, ImageType<Image1dArray, aQual>, VectorType<Int, 2>, VectorType<Half, 4>]>;
+    def : Builtin<name, [Void, ImageType<Image3d, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
+  }
+}
 
 
 // OpenCL v2.0 s9.17.3: Additions to section 6.13.1: Work-Item Functions
