@@ -1,4 +1,4 @@
-//===--- ThreadPool.h --------------------------------------------*- C++-*-===//
+//===--- Threading.h - Abstractions for multithreading -----------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_THREADING_H
 
 #include "Context.h"
-#include "Function.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Twine.h"
 #include <cassert>
 #include <condition_variable>

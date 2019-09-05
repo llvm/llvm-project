@@ -18,7 +18,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRACE_H_
 
 #include "Context.h"
-#include "Function.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"

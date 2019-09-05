@@ -44,7 +44,7 @@ export interface SemanticHighlightingLine {
 
 // Language server push notification providing the semantic highlighting
 // information for a text document.
-export const NotificationType =
+const NotificationType =
     new vscodelc.NotificationType<SemanticHighlightingParams, void>(
         'textDocument/semanticHighlighting');
 
@@ -58,6 +58,19 @@ export class SemanticHighlightingFeature implements vscodelc.StaticFeature {
   highlighter: Highlighter;
   // Any disposables that should be cleaned up when clangd crashes.
   private subscriptions: vscode.Disposable[] = [];
+  constructor(client: vscodelc.BaseLanguageClient,
+              context: vscode.ExtensionContext) {
+    context.subscriptions.push(client.onDidChangeState(({newState}) => {
+      if (newState == vscodelc.State.Running) {
+        // Register handler for semantic highlighting notification.
+        client.onNotification(NotificationType,
+                              this.handleNotification.bind(this));
+      } else if (newState == vscodelc.State.Stopped) {
+        // Dispose resources when clangd crashes.
+        this.dispose();
+      }
+    }));
+  }
   fillClientCapabilities(capabilities: vscodelc.ClientCapabilities) {
     // Extend the ClientCapabilities type and add semantic highlighting
     // capability to the object.

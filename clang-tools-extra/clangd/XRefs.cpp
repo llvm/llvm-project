@@ -255,8 +255,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     }
   }
 
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
-      Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
+  SourceLocation SourceLocationBeg =
+      SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
+          Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts()));
 
   // Macros are simple: there's no declaration/definition distinction.
   // As a consequence, there's no need to look them up in the index either.
@@ -409,10 +410,11 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   // FIXME: show references to macro within file?
-  auto References = findRefs(
-      getDeclAtPosition(AST, getBeginningOfIdentifier(
-                                 Pos, SM, AST.getASTContext().getLangOpts())),
-      AST);
+  auto References =
+      findRefs(getDeclAtPosition(
+                   AST, SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
+                            Pos, SM, AST.getASTContext().getLangOpts()))),
+               AST);
 
   // FIXME: we may get multiple DocumentHighlights with the same location and
   // different kinds, deduplicate them.
@@ -875,9 +877,10 @@ bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
                                    format::FormatStyle Style,
                                    const SymbolIndex *Index) {
+  const SourceManager &SM = AST.getSourceManager();
   llvm::Optional<HoverInfo> HI;
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
-      Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
+  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
 
   if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
     HI = getHoverContents(*M, AST);
@@ -919,8 +922,8 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
     elog("Failed to get a path for the main file, so no references");
     return Results;
   }
-  auto Loc =
-      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts());
+  auto Loc = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
   // TODO: should we handle macros, too?
   auto Decls = getDeclAtPosition(AST, Loc);
 
@@ -976,8 +979,8 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
 
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
-  auto Loc =
-      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts());
+  auto Loc = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
 
   std::vector<SymbolDetails> Results;
 
@@ -1147,8 +1150,9 @@ static void fillSuperTypes(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
 }
 
 const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
-      Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
+  const SourceManager &SM = AST.getSourceManager();
+  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
   auto Decls = getDeclAtPosition(AST, SourceLocationBeg);
   if (Decls.empty())
     return nullptr;

@@ -37,9 +37,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// We disable the tracing of ptrace calls for integration builds to avoid the
-// additional indirection and checks.
-#ifndef LLDB_CONFIGURATION_BUILDANDINTEGRATION
 // Wrapper for ptrace to catch errors and log calls.
 
 const char *Get_PT_IO_OP(int op) {
@@ -137,9 +134,6 @@ extern long PtraceWrapper(int req, lldb::pid_t pid, void *addr, int data) {
 
 #define PTRACE(req, pid, addr, data)                                           \
   PtraceWrapper((req), (pid), (addr), (data), #req, __FILE__, __LINE__)
-#else
-PtraceWrapper((req), (pid), (addr), (data))
-#endif
 
 // Static implementations of ProcessMonitor::ReadMemory and
 // ProcessMonitor::WriteMemory.  This enables mutual recursion between these

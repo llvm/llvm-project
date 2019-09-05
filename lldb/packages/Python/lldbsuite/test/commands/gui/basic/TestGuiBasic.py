@@ -56,4 +56,5 @@ class BasicGuiCommandTest(PExpectTest):
         # Press escape to quit the gui
         self.child.send(escape_key)
 
+        self.expect_prompt()
         self.quit()
