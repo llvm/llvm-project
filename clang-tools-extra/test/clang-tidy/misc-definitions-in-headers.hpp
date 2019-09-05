@@ -180,3 +180,15 @@ int CD<T, int>::f() { // OK: partial template specialization.
 constexpr int k = 1; // OK: constexpr variable has internal linkage.
 
 constexpr int f10() { return 0; } // OK: constexpr function definition.
+
+const int f11() { return 0; }
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: function 'f11' defined in a header file;
+// CHECK-FIXES: inline const int f11() { return 0; }
+
+template <typename T>
+const T f12();
+
+template <>
+const int f12() { return 0; }
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: full function template specialization 'f12<int>' defined in a header file;
+// CHECK-FIXES: inline const int f12() { return 0; }

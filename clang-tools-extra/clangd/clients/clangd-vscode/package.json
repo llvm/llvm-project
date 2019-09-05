@@ -89,6 +89,11 @@
                 "clangd.trace": {
                     "type": "string",
                     "description": "Names a file that clangd should log a performance trace to, in chrome trace-viewer JSON format."
+                },
+                "clangd.semanticHighlighting": {
+                    "type": "boolean",
+                    "default": "false",
+                    "description": "Enable semantic highlighting in clangd"
                 }
             }
         },

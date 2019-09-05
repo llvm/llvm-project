@@ -210,6 +210,15 @@ TEST(SelectionTest, CommonAncestor) {
           )cpp",
           "FunctionProtoTypeLoc",
       },
+      {
+          R"cpp(
+            struct S {
+              int foo;
+              int bar() { return [[f^oo]]; }
+            };
+          )cpp",
+          "MemberExpr", // Not implicit CXXThisExpr!
+      },
 
       // Point selections.
       {"void foo() { [[^foo]](); }", "DeclRefExpr"},
