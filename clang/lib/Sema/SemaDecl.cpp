@@ -2667,6 +2667,60 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
   }
 }
 
+static void diagnoseMissingConstinit(Sema &S, const VarDecl *InitDecl,
+                                     const ConstInitAttr *CIAttr,
+                                     bool AttrBeforeInit) {
+  SourceLocation InsertLoc = InitDecl->getInnerLocStart();
+
+  // Figure out a good way to write this specifier on the old declaration.
+  // FIXME: We should just use the spelling of CIAttr, but we don't preserve
+  // enough of the attribute list spelling information to extract that without
+  // heroics.
+  std::string SuitableSpelling;
+  if (S.getLangOpts().CPlusPlus2a)
+    SuitableSpelling =
+        S.PP.getLastMacroWithSpelling(InsertLoc, {tok::kw_constinit});
+  if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus11)
+    SuitableSpelling = S.PP.getLastMacroWithSpelling(
+        InsertLoc,
+        {tok::l_square, tok::l_square, S.PP.getIdentifierInfo("clang"),
+         tok::coloncolon,
+         S.PP.getIdentifierInfo("require_constant_initialization"),
+         tok::r_square, tok::r_square});
+  if (SuitableSpelling.empty())
+    SuitableSpelling = S.PP.getLastMacroWithSpelling(
+        InsertLoc,
+        {tok::kw___attribute, tok::l_paren, tok::r_paren,
+         S.PP.getIdentifierInfo("require_constant_initialization"),
+         tok::r_paren, tok::r_paren});
+  if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus2a)
+    SuitableSpelling = "constinit";
+  if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus11)
+    SuitableSpelling = "[[clang::require_constant_initialization]]";
+  if (SuitableSpelling.empty())
+    SuitableSpelling = "__attribute__((require_constant_initialization))";
+  SuitableSpelling += " ";
+
+  if (AttrBeforeInit) {
+    // extern constinit int a;
+    // int a = 0; // error (missing 'constinit'), accepted as extension
+    assert(CIAttr->isConstinit() && "should not diagnose this for attribute");
+    S.Diag(InitDecl->getLocation(), diag::ext_constinit_missing)
+        << InitDecl << FixItHint::CreateInsertion(InsertLoc, SuitableSpelling);
+    S.Diag(CIAttr->getLocation(), diag::note_constinit_specified_here);
+  } else {
+    // int a = 0;
+    // constinit extern int a; // error (missing 'constinit')
+    S.Diag(CIAttr->getLocation(),
+           CIAttr->isConstinit() ? diag::err_constinit_added_too_late
+                                 : diag::warn_require_const_init_added_too_late)
+        << FixItHint::CreateRemoval(SourceRange(CIAttr->getLocation()));
+    S.Diag(InitDecl->getLocation(), diag::note_constinit_missing_here)
+        << CIAttr->isConstinit()
+        << FixItHint::CreateInsertion(InsertLoc, SuitableSpelling);
+  }
+}
+
 /// mergeDeclAttributes - Copy attributes from the Old decl to the New one.
 void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
                                AvailabilityMergeKind AMK) {
@@ -2678,6 +2732,41 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
 
   if (!Old->hasAttrs() && !New->hasAttrs())
     return;
+
+  // [dcl.constinit]p1:
+  //   If the [constinit] specifier is applied to any declaration of a
+  //   variable, it shall be applied to the initializing declaration.
+  const auto *OldConstInit = Old->getAttr<ConstInitAttr>();
+  const auto *NewConstInit = New->getAttr<ConstInitAttr>();
+  if (bool(OldConstInit) != bool(NewConstInit)) {
+    const auto *OldVD = cast<VarDecl>(Old);
+    auto *NewVD = cast<VarDecl>(New);
+
+    // Find the initializing declaration. Note that we might not have linked
+    // the new declaration into the redeclaration chain yet.
+    const VarDecl *InitDecl = OldVD->getInitializingDeclaration();
+    if (!InitDecl &&
+        (NewVD->hasInit() || NewVD->isThisDeclarationADefinition()))
+      InitDecl = NewVD;
+
+    if (InitDecl == NewVD) {
+      // This is the initializing declaration. If it would inherit 'constinit',
+      // that's ill-formed. (Note that we do not apply this to the attribute
+      // form).
+      if (OldConstInit && OldConstInit->isConstinit())
+        diagnoseMissingConstinit(*this, NewVD, OldConstInit,
+                                 /*AttrBeforeInit=*/true);
+    } else if (NewConstInit) {
+      // This is the first time we've been told that this declaration should
+      // have a constant initializer. If we already saw the initializing
+      // declaration, this is too late.
+      if (InitDecl && InitDecl != NewVD) {
+        diagnoseMissingConstinit(*this, InitDecl, NewConstInit,
+                                 /*AttrBeforeInit=*/false);
+        NewVD->dropAttr<ConstInitAttr>();
+      }
+    }
+  }
 
   // Attributes declared post-definition are currently ignored.
   checkNewAttributesAfterDef(*this, New, Old);
@@ -4321,13 +4410,13 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
     // and definitions of functions and variables.
     // C++2a [dcl.constexpr]p1: The consteval specifier shall be applied only to
     // the declaration of a function or function template
-    bool IsConsteval = DS.getConstexprSpecifier() == CSK_consteval;
     if (Tag)
       Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_tag)
-          << GetDiagnosticTypeSpecifierID(DS.getTypeSpecType()) << IsConsteval;
+          << GetDiagnosticTypeSpecifierID(DS.getTypeSpecType())
+          << DS.getConstexprSpecifier();
     else
       Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_wrong_decl_kind)
-          << IsConsteval;
+          << DS.getConstexprSpecifier();
     // Don't emit warnings after this error.
     return TagD;
   }
@@ -5782,7 +5871,7 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
         << getLangOpts().CPlusPlus17;
   if (D.getDeclSpec().hasConstexprSpecifier())
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
-        << 1 << (D.getDeclSpec().getConstexprSpecifier() == CSK_consteval);
+        << 1 << D.getDeclSpec().getConstexprSpecifier();
 
   if (D.getName().Kind != UnqualifiedIdKind::IK_Identifier) {
     if (D.getName().Kind == UnqualifiedIdKind::IK_DeductionGuideName)
@@ -6677,19 +6766,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (TemplateParamLists.size() > VDTemplateParamLists)
       NewVD->setTemplateParameterListsInfo(
           Context, TemplateParamLists.drop_back(VDTemplateParamLists));
-
-    if (D.getDeclSpec().hasConstexprSpecifier()) {
-      NewVD->setConstexpr(true);
-      // C++1z [dcl.spec.constexpr]p1:
-      //   A static data member declared with the constexpr specifier is
-      //   implicitly an inline variable.
-      if (NewVD->isStaticDataMember() && getLangOpts().CPlusPlus17)
-        NewVD->setImplicitlyInline();
-      if (D.getDeclSpec().getConstexprSpecifier() == CSK_consteval)
-        Diag(D.getDeclSpec().getConstexprSpecLoc(),
-             diag::err_constexpr_wrong_decl_kind)
-            << /*consteval*/ 1;
-    }
   }
 
   if (D.getDeclSpec().isInlineSpecified()) {
@@ -6753,6 +6829,36 @@ NamedDecl *Sema::ActOnVariableDeclarator(
              diag::err_thread_unsupported);
     } else
       NewVD->setTSCSpec(TSCS);
+  }
+
+  switch (D.getDeclSpec().getConstexprSpecifier()) {
+  case CSK_unspecified:
+    break;
+
+  case CSK_consteval:
+    Diag(D.getDeclSpec().getConstexprSpecLoc(),
+        diag::err_constexpr_wrong_decl_kind)
+      << D.getDeclSpec().getConstexprSpecifier();
+    LLVM_FALLTHROUGH;
+
+  case CSK_constexpr:
+    NewVD->setConstexpr(true);
+    // C++1z [dcl.spec.constexpr]p1:
+    //   A static data member declared with the constexpr specifier is
+    //   implicitly an inline variable.
+    if (NewVD->isStaticDataMember() && getLangOpts().CPlusPlus17)
+      NewVD->setImplicitlyInline();
+    break;
+
+  case CSK_constinit:
+    if (!NewVD->hasGlobalStorage())
+      Diag(D.getDeclSpec().getConstexprSpecLoc(),
+           diag::err_constinit_local_variable);
+    else
+      NewVD->addAttr(::new (Context) ConstInitAttr(
+          SourceRange(D.getDeclSpec().getConstexprSpecLoc()), Context,
+          ConstInitAttr::Keyword_constinit));
+    break;
   }
 
   // C99 6.7.4p3
@@ -7995,7 +8101,7 @@ static StorageClass getFunctionStorageClass(Sema &SemaRef, Declarator &D) {
   return SC_None;
 }
 
-static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
+static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
                                            DeclContext *DC, QualType &R,
                                            TypeSourceInfo *TInfo,
                                            StorageClass SC,
@@ -8027,7 +8133,16 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
   }
 
   ExplicitSpecifier ExplicitSpecifier = D.getDeclSpec().getExplicitSpecifier();
+
   ConstexprSpecKind ConstexprKind = D.getDeclSpec().getConstexprSpecifier();
+  if (ConstexprKind == CSK_constinit) {
+    SemaRef.Diag(D.getDeclSpec().getConstexprSpecLoc(),
+                 diag::err_constexpr_wrong_decl_kind)
+        << ConstexprKind;
+    ConstexprKind = CSK_unspecified;
+    D.getMutableDeclSpec().ClearConstexprSpec();
+  }
+
   // Check that the return type is not an abstract class type.
   // For record types, this is done by the AbstractClassUsageDiagnoser once
   // the class has been completely parsed.
@@ -8458,7 +8573,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     bool isInline = D.getDeclSpec().isInlineSpecified();
     bool isVirtual = D.getDeclSpec().isVirtualSpecified();
     bool hasExplicit = D.getDeclSpec().hasExplicitSpecifier();
-    ConstexprSpecKind ConstexprKind = D.getDeclSpec().getConstexprSpecifier();
     isFriend = D.getDeclSpec().isFriendSpecified();
     if (isFriend && !isInline && D.isFunctionDefinition()) {
       // C++ [class.friend]p5
@@ -8657,7 +8771,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
     }
 
-    if (ConstexprKind != CSK_unspecified) {
+    if (ConstexprSpecKind ConstexprKind =
+            D.getDeclSpec().getConstexprSpecifier()) {
       // C++11 [dcl.constexpr]p2: constexpr functions and constexpr constructors
       // are implicitly inline.
       NewFD->setImplicitlyInline();
@@ -8665,9 +8780,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // C++11 [dcl.constexpr]p3: functions declared constexpr are required to
       // be either constructors or to return a literal type. Therefore,
       // destructors cannot be declared constexpr.
-      if (isa<CXXDestructorDecl>(NewFD))
+      if (isa<CXXDestructorDecl>(NewFD)) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_constexpr_dtor)
-            << (ConstexprKind == CSK_consteval);
+            << ConstexprKind;
+      }
     }
 
     // If __module_private__ was specified, mark the function accordingly.
@@ -12049,17 +12165,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
     // Don't emit further diagnostics about constexpr globals since they
     // were just diagnosed.
-    if (!var->isConstexpr() && GlobalStorage &&
-            var->hasAttr<RequireConstantInitAttr>()) {
+    if (!var->isConstexpr() && GlobalStorage && var->hasAttr<ConstInitAttr>()) {
       // FIXME: Need strict checking in C++03 here.
       bool DiagErr = getLangOpts().CPlusPlus11
           ? !var->checkInitIsICE() : !checkConstInit();
       if (DiagErr) {
-        auto attr = var->getAttr<RequireConstantInitAttr>();
+        auto *Attr = var->getAttr<ConstInitAttr>();
         Diag(var->getLocation(), diag::err_require_constant_init_failed)
           << Init->getSourceRange();
-        Diag(attr->getLocation(), diag::note_declared_required_constant_init_here)
-          << attr->getRange();
+        Diag(Attr->getLocation(),
+             diag::note_declared_required_constant_init_here)
+            << Attr->getRange() << Attr->isConstinit();
         if (getLangOpts().CPlusPlus11) {
           APValue Value;
           SmallVector<PartialDiagnosticAt, 8> Notes;
@@ -12552,7 +12668,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
         << getLangOpts().CPlusPlus17;
   if (DS.hasConstexprSpecifier())
     Diag(DS.getConstexprSpecLoc(), diag::err_invalid_constexpr)
-        << 0 << (D.getDeclSpec().getConstexprSpecifier() == CSK_consteval);
+        << 0 << D.getDeclSpec().getConstexprSpecifier();
 
   DiagnoseFunctionSpecifiers(DS);
 

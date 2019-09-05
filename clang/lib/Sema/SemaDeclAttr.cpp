@@ -7530,8 +7530,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_VecTypeHint:
     handleVecTypeHint(S, D, AL);
     break;
-  case ParsedAttr::AT_RequireConstantInit:
-    handleSimpleAttribute<RequireConstantInitAttr>(S, D, AL);
+  case ParsedAttr::AT_ConstInit:
+    handleSimpleAttribute<ConstInitAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_InitPriority:
     handleInitPriorityAttr(S, D, AL);

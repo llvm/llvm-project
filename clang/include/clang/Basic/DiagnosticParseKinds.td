@@ -358,7 +358,8 @@ def err_typename_invalid_storageclass : Error<
 def err_typename_invalid_functionspec : Error<
   "type name does not allow function specifier to be specified">;
 def err_typename_invalid_constexpr : Error<
-  "type name does not allow %select{constexpr|consteval}0 specifier to be specified">;
+  "type name does not allow %sub{select_constexpr_spec_kind}0 specifier "
+  "to be specified">;
 def err_typename_identifiers_only : Error<
   "typename is allowed for identifiers only">;
 

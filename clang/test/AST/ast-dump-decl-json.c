@@ -226,7 +226,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "parentDeclContext": "0x{{.*}}",
+// CHECK-NEXT:    "parentDeclContextId": "0x{{.*}}",
 // CHECK-NEXT:    "name": "y",
 // CHECK-NEXT:    "tagUsed": "struct",
 // CHECK-NEXT:    "completeDefinition": true,

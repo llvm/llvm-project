@@ -2349,18 +2349,18 @@ def warn_cxx14_compat_constexpr_not_const : Warning<
   "in C++14; add 'const' to avoid a change in behavior">,
   InGroup<DiagGroup<"constexpr-not-const">>;
 def err_invalid_constexpr : Error<
-  "%select{function parameter|typedef|non-static data member}0 "
-  "cannot be %select{constexpr|consteval}1">;
+  "%select{function parameter|typedef}0 "
+  "cannot be %sub{select_constexpr_spec_kind}1">;
 def err_invalid_constexpr_member : Error<"non-static data member cannot be "
   "constexpr%select{; did you intend to make it %select{const|static}0?|}1">;
 def err_constexpr_tag : Error<
   "%select{class|struct|interface|union|enum}0 "
-  "cannot be marked %select{constexpr|consteval}1">;
+  "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
-  "destructor cannot be marked %select{constexpr|consteval}0">;
+  "destructor cannot be marked %sub{select_constexpr_spec_kind}0">;
 def err_constexpr_wrong_decl_kind : Error<
-  "%select{constexpr|consteval}0 can only be used "
-  "in %select{variable and |}0function declarations">;
+  "%sub{select_constexpr_spec_kind}0 can only be used "
+  "in %select{|variable and function|function|variable}0 declarations">;
 def err_invalid_constexpr_var_decl : Error<
   "constexpr variable declaration must be a definition">;
 def err_constexpr_static_mem_var_requires_init : Error<
@@ -7584,10 +7584,30 @@ def note_inequality_comparison_to_or_assign : Note<
 def err_incomplete_type_used_in_type_trait_expr : Error<
   "incomplete type %0 used in type trait expression">;
 
+// C++20 constinit and require_constant_initialization attribute
+def warn_cxx20_compat_constinit : Warning<
+  "'constinit' specifier is incompatible with C++ standards before C++20">,
+  InGroup<CXX2aCompat>, DefaultIgnore;
+def err_constinit_local_variable : Error<
+  "local variable cannot be declared 'constinit'">;
 def err_require_constant_init_failed : Error<
   "variable does not have a constant initializer">;
 def note_declared_required_constant_init_here : Note<
-  "required by 'require_constant_initialization' attribute here">;
+  "required by %select{'require_constant_initialization' attribute|"
+  "'constinit' specifier}0 here">;
+def ext_constinit_missing : ExtWarn<
+  "'constinit' specifier missing on initializing declaration of %0">,
+  InGroup<DiagGroup<"missing-constinit">>;
+def note_constinit_specified_here : Note<"variable declared constinit here">;
+def err_constinit_added_too_late : Error<
+  "'constinit' specifier added after initialization of variable">;
+def warn_require_const_init_added_too_late : Warning<
+  "'require_constant_initialization' attribute added after initialization "
+  "of variable">, InGroup<IgnoredAttributes>;
+def note_constinit_missing_here : Note<
+  "add the "
+  "%select{'require_constant_initialization' attribute|'constinit' specifier}0 "
+  "to the initializing declaration here">;
 
 def err_dimension_expr_not_constant_integer : Error<
   "dimension expression does not evaluate to a constant unsigned int">;

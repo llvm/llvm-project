@@ -289,10 +289,6 @@ BENIGN_LANGOPT(ConstexprCallDepth, 32, 512,
                "maximum constexpr call depth")
 BENIGN_LANGOPT(ConstexprStepLimit, 32, 1048576,
                "maximum constexpr evaluation steps")
-BENIGN_LANGOPT(EnableNewConstInterp, 1, 0,
-               "enable the experimental new constant interpreter")
-BENIGN_LANGOPT(ForceNewConstInterp, 1, 0,
-               "force the use of the experimental new constant interpreter")
 BENIGN_LANGOPT(BracketDepth, 32, 256,
                "maximum bracket nesting depth")
 BENIGN_LANGOPT(NumLargeByValueCopy, 32, 0,

@@ -5136,9 +5136,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // C++0x [dcl.constexpr]p9:
   //  A constexpr specifier used in an object declaration declares the object
   //  as const.
-  if (D.getDeclSpec().hasConstexprSpecifier() && T->isObjectType()) {
+  if (D.getDeclSpec().getConstexprSpecifier() == CSK_constexpr &&
+      T->isObjectType())
     T.addConst();
-  }
 
   // If there was an ellipsis in the declarator, the declaration declares a
   // parameter pack whose type may be a pack expansion type.

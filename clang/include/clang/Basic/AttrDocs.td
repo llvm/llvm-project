@@ -1408,15 +1408,17 @@ all optional, but the attribute has to have at least one clause.
   }];
 }
 
-def RequireConstantInitDocs : Documentation {
+def ConstInitDocs : Documentation {
   let Category = DocCatVariable;
+  let Heading = "require_constant_initialization, constinit (C++20)";
   let Content = [{
 This attribute specifies that the variable to which it is attached is intended
 to have a `constant initializer <http://en.cppreference.com/w/cpp/language/constant_initialization>`_
 according to the rules of [basic.start.static]. The variable is required to
 have static or thread storage duration. If the initialization of the variable
 is not a constant initializer an error will be produced. This attribute may
-only be used in C++.
+only be used in C++; the ``constinit`` spelling is only accepted in C++20
+onwards.
 
 Note that in C++03 strict constant expression checking is not done. Instead
 the attribute reports if Clang can emit the variable as a constant, even if it's
@@ -1430,6 +1432,12 @@ This attribute acts as a compile time assertion that the requirements
 for constant initialization have been met. Since these requirements change
 between dialects and have subtle pitfalls it's important to fail fast instead
 of silently falling back on dynamic initialization.
+
+The first use of the attribute on a variable must be part of, or precede, the
+initializing declaration of the variable. C++20 requires the ``constinit``
+spelling of the attribute to be present on the initializing declaration if it
+is used anywhere. The other spellings can be specified on a forward declaration
+and omitted on a later initializing declaration.
 
 .. code-block:: c++
 
@@ -2629,7 +2637,7 @@ is retained by the return value of the annotated function
 It is only supported in C++.
 
 This attribute provides an experimental implementation of the facility
-described in the C++ committee paper [http://wg21.link/p0936r0](P0936R0),
+described in the C++ committee paper `P0936R0 <http://wg21.link/p0936r0>`_,
 and is subject to change as the design of the corresponding functionality
 changes.
   }];
