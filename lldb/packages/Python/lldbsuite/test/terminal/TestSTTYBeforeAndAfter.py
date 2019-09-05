@@ -73,7 +73,7 @@ class TestSTTYBeforeAndAfter(TestBase):
         child.logfile_read = None
 
         # Invoke the lldb command.
-        child.sendline('%s %s' % (lldbtest_config.lldbExec, self.lldbOption))
+        child.sendline(lldbtest_config.lldbExec)
         child.expect_exact(lldb_prompt)
 
         # Immediately quit.

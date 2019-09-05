@@ -3701,328 +3701,345 @@ NamedDecl *VisibleDeclsRecord::checkHidden(NamedDecl *ND) {
   return nullptr;
 }
 
-static void LookupVisibleDecls(DeclContext *Ctx, LookupResult &Result,
-                               bool QualifiedNameLookup,
-                               bool InBaseClass,
-                               VisibleDeclConsumer &Consumer,
-                               VisibleDeclsRecord &Visited,
-                               bool IncludeDependentBases,
-                               bool LoadExternal) {
-  if (!Ctx)
-    return;
+class LookupVisibleHelper {
+public:
+  LookupVisibleHelper(VisibleDeclConsumer &Consumer, bool IncludeDependentBases,
+                      bool LoadExternal)
+      : Consumer(Consumer), IncludeDependentBases(IncludeDependentBases),
+        LoadExternal(LoadExternal) {}
 
-  // Make sure we don't visit the same context twice.
-  if (Visited.visitedContext(Ctx->getPrimaryContext()))
-    return;
+  void lookupVisibleDecls(Sema &SemaRef, Scope *S, Sema::LookupNameKind Kind,
+                          bool IncludeGlobalScope) {
+    // Determine the set of using directives available during
+    // unqualified name lookup.
+    Scope *Initial = S;
+    UnqualUsingDirectiveSet UDirs(SemaRef);
+    if (SemaRef.getLangOpts().CPlusPlus) {
+      // Find the first namespace or translation-unit scope.
+      while (S && !isNamespaceOrTranslationUnitScope(S))
+        S = S->getParent();
 
-  Consumer.EnteredContext(Ctx);
-
-  // Outside C++, lookup results for the TU live on identifiers.
-  if (isa<TranslationUnitDecl>(Ctx) &&
-      !Result.getSema().getLangOpts().CPlusPlus) {
-    auto &S = Result.getSema();
-    auto &Idents = S.Context.Idents;
-
-    // Ensure all external identifiers are in the identifier table.
-    if (LoadExternal)
-      if (IdentifierInfoLookup *External = Idents.getExternalIdentifierLookup()) {
-        std::unique_ptr<IdentifierIterator> Iter(External->getIdentifiers());
-        for (StringRef Name = Iter->Next(); !Name.empty(); Name = Iter->Next())
-          Idents.get(Name);
-      }
-
-    // Walk all lookup results in the TU for each identifier.
-    for (const auto &Ident : Idents) {
-      for (auto I = S.IdResolver.begin(Ident.getValue()),
-                E = S.IdResolver.end();
-           I != E; ++I) {
-        if (S.IdResolver.isDeclInScope(*I, Ctx)) {
-          if (NamedDecl *ND = Result.getAcceptableDecl(*I)) {
-            Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
-            Visited.add(ND);
-          }
-        }
-      }
+      UDirs.visitScopeChain(Initial, S);
     }
+    UDirs.done();
 
-    return;
-  }
-
-  if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx))
-    Result.getSema().ForceDeclarationOfImplicitMembers(Class);
-
-  // We sometimes skip loading namespace-level results (they tend to be huge).
-  bool Load = LoadExternal ||
-              !(isa<TranslationUnitDecl>(Ctx) || isa<NamespaceDecl>(Ctx));
-  // Enumerate all of the results in this context.
-  for (DeclContextLookupResult R :
-       Load ? Ctx->lookups()
-            : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
-    for (auto *D : R) {
-      if (auto *ND = Result.getAcceptableDecl(D)) {
-        Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
-        Visited.add(ND);
-      }
-    }
-  }
-
-  // Traverse using directives for qualified name lookup.
-  if (QualifiedNameLookup) {
+    // Look for visible declarations.
+    LookupResult Result(SemaRef, DeclarationName(), SourceLocation(), Kind);
+    Result.setAllowHidden(Consumer.includeHiddenDecls());
+    if (!IncludeGlobalScope)
+      Visited.visitedContext(SemaRef.getASTContext().getTranslationUnitDecl());
     ShadowContextRAII Shadow(Visited);
-    for (auto I : Ctx->using_directives()) {
-      if (!Result.getSema().isVisible(I))
-        continue;
-      LookupVisibleDecls(I->getNominatedNamespace(), Result,
-                         QualifiedNameLookup, InBaseClass, Consumer, Visited,
-                         IncludeDependentBases, LoadExternal);
-    }
+    lookupInScope(Initial, Result, UDirs);
   }
 
-  // Traverse the contexts of inherited C++ classes.
-  if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(Ctx)) {
-    if (!Record->hasDefinition())
+  void lookupVisibleDecls(Sema &SemaRef, DeclContext *Ctx,
+                          Sema::LookupNameKind Kind, bool IncludeGlobalScope) {
+    LookupResult Result(SemaRef, DeclarationName(), SourceLocation(), Kind);
+    Result.setAllowHidden(Consumer.includeHiddenDecls());
+    if (!IncludeGlobalScope)
+      Visited.visitedContext(SemaRef.getASTContext().getTranslationUnitDecl());
+
+    ShadowContextRAII Shadow(Visited);
+    lookupInDeclContext(Ctx, Result, /*QualifiedNameLookup=*/true,
+                        /*InBaseClass=*/false);
+  }
+
+private:
+  void lookupInDeclContext(DeclContext *Ctx, LookupResult &Result,
+                           bool QualifiedNameLookup, bool InBaseClass) {
+    if (!Ctx)
       return;
 
-    for (const auto &B : Record->bases()) {
-      QualType BaseType = B.getType();
+    // Make sure we don't visit the same context twice.
+    if (Visited.visitedContext(Ctx->getPrimaryContext()))
+      return;
 
-      RecordDecl *RD;
-      if (BaseType->isDependentType()) {
-        if (!IncludeDependentBases) {
-          // Don't look into dependent bases, because name lookup can't look
-          // there anyway.
-          continue;
+    Consumer.EnteredContext(Ctx);
+
+    // Outside C++, lookup results for the TU live on identifiers.
+    if (isa<TranslationUnitDecl>(Ctx) &&
+        !Result.getSema().getLangOpts().CPlusPlus) {
+      auto &S = Result.getSema();
+      auto &Idents = S.Context.Idents;
+
+      // Ensure all external identifiers are in the identifier table.
+      if (LoadExternal)
+        if (IdentifierInfoLookup *External =
+                Idents.getExternalIdentifierLookup()) {
+          std::unique_ptr<IdentifierIterator> Iter(External->getIdentifiers());
+          for (StringRef Name = Iter->Next(); !Name.empty();
+               Name = Iter->Next())
+            Idents.get(Name);
         }
-        const auto *TST = BaseType->getAs<TemplateSpecializationType>();
-        if (!TST)
-          continue;
-        TemplateName TN = TST->getTemplateName();
-        const auto *TD =
-            dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
-        if (!TD)
-          continue;
-        RD = TD->getTemplatedDecl();
-      } else {
-        const auto *Record = BaseType->getAs<RecordType>();
-        if (!Record)
-          continue;
-        RD = Record->getDecl();
-      }
 
-      // FIXME: It would be nice to be able to determine whether referencing
-      // a particular member would be ambiguous. For example, given
-      //
-      //   struct A { int member; };
-      //   struct B { int member; };
-      //   struct C : A, B { };
-      //
-      //   void f(C *c) { c->### }
-      //
-      // accessing 'member' would result in an ambiguity. However, we
-      // could be smart enough to qualify the member with the base
-      // class, e.g.,
-      //
-      //   c->B::member
-      //
-      // or
-      //
-      //   c->A::member
-
-      // Find results in this base class (and its bases).
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(RD, Result, QualifiedNameLookup, /*InBaseClass=*/true,
-                         Consumer, Visited, IncludeDependentBases,
-                         LoadExternal);
-    }
-  }
-
-  // Traverse the contexts of Objective-C classes.
-  if (ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Ctx)) {
-    // Traverse categories.
-    for (auto *Cat : IFace->visible_categories()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(Cat, Result, QualifiedNameLookup, false, Consumer,
-                         Visited, IncludeDependentBases, LoadExternal);
-    }
-
-    // Traverse protocols.
-    for (auto *I : IFace->all_referenced_protocols()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(I, Result, QualifiedNameLookup, false, Consumer,
-                         Visited, IncludeDependentBases, LoadExternal);
-    }
-
-    // Traverse the superclass.
-    if (IFace->getSuperClass()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(IFace->getSuperClass(), Result, QualifiedNameLookup,
-                         true, Consumer, Visited, IncludeDependentBases,
-                         LoadExternal);
-    }
-
-    // If there is an implementation, traverse it. We do this to find
-    // synthesized ivars.
-    if (IFace->getImplementation()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(IFace->getImplementation(), Result,
-                         QualifiedNameLookup, InBaseClass, Consumer, Visited,
-                         IncludeDependentBases, LoadExternal);
-    }
-  } else if (ObjCProtocolDecl *Protocol = dyn_cast<ObjCProtocolDecl>(Ctx)) {
-    for (auto *I : Protocol->protocols()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(I, Result, QualifiedNameLookup, false, Consumer,
-                         Visited, IncludeDependentBases, LoadExternal);
-    }
-  } else if (ObjCCategoryDecl *Category = dyn_cast<ObjCCategoryDecl>(Ctx)) {
-    for (auto *I : Category->protocols()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(I, Result, QualifiedNameLookup, false, Consumer,
-                         Visited, IncludeDependentBases, LoadExternal);
-    }
-
-    // If there is an implementation, traverse it.
-    if (Category->getImplementation()) {
-      ShadowContextRAII Shadow(Visited);
-      LookupVisibleDecls(Category->getImplementation(), Result,
-                         QualifiedNameLookup, true, Consumer, Visited,
-                         IncludeDependentBases, LoadExternal);
-    }
-  }
-}
-
-static void LookupVisibleDecls(Scope *S, LookupResult &Result,
-                               UnqualUsingDirectiveSet &UDirs,
-                               VisibleDeclConsumer &Consumer,
-                               VisibleDeclsRecord &Visited,
-                               bool LoadExternal) {
-  if (!S)
-    return;
-
-  if (!S->getEntity() ||
-      (!S->getParent() &&
-       !Visited.alreadyVisitedContext(S->getEntity())) ||
-      (S->getEntity())->isFunctionOrMethod()) {
-    FindLocalExternScope FindLocals(Result);
-    // Walk through the declarations in this Scope. The consumer might add new
-    // decls to the scope as part of deserialization, so make a copy first.
-    SmallVector<Decl *, 8> ScopeDecls(S->decls().begin(), S->decls().end());
-    for (Decl *D : ScopeDecls) {
-      if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
-        if ((ND = Result.getAcceptableDecl(ND))) {
-          Consumer.FoundDecl(ND, Visited.checkHidden(ND), nullptr, false);
-          Visited.add(ND);
-        }
-    }
-  }
-
-  // FIXME: C++ [temp.local]p8
-  DeclContext *Entity = nullptr;
-  if (S->getEntity()) {
-    // Look into this scope's declaration context, along with any of its
-    // parent lookup contexts (e.g., enclosing classes), up to the point
-    // where we hit the context stored in the next outer scope.
-    Entity = S->getEntity();
-    DeclContext *OuterCtx = findOuterContext(S).first; // FIXME
-
-    for (DeclContext *Ctx = Entity; Ctx && !Ctx->Equals(OuterCtx);
-         Ctx = Ctx->getLookupParent()) {
-      if (ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(Ctx)) {
-        if (Method->isInstanceMethod()) {
-          // For instance methods, look for ivars in the method's interface.
-          LookupResult IvarResult(Result.getSema(), Result.getLookupName(),
-                                  Result.getNameLoc(), Sema::LookupMemberName);
-          if (ObjCInterfaceDecl *IFace = Method->getClassInterface()) {
-            LookupVisibleDecls(IFace, IvarResult, /*QualifiedNameLookup=*/false,
-                               /*InBaseClass=*/false, Consumer, Visited,
-                               /*IncludeDependentBases=*/false, LoadExternal);
+      // Walk all lookup results in the TU for each identifier.
+      for (const auto &Ident : Idents) {
+        for (auto I = S.IdResolver.begin(Ident.getValue()),
+                  E = S.IdResolver.end();
+             I != E; ++I) {
+          if (S.IdResolver.isDeclInScope(*I, Ctx)) {
+            if (NamedDecl *ND = Result.getAcceptableDecl(*I)) {
+              Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
+              Visited.add(ND);
+            }
           }
         }
-
-        // We've already performed all of the name lookup that we need
-        // to for Objective-C methods; the next context will be the
-        // outer scope.
-        break;
       }
 
-      if (Ctx->isFunctionOrMethod())
-        continue;
-
-      LookupVisibleDecls(Ctx, Result, /*QualifiedNameLookup=*/false,
-                         /*InBaseClass=*/false, Consumer, Visited,
-                         /*IncludeDependentBases=*/false, LoadExternal);
+      return;
     }
-  } else if (!S->getParent()) {
-    // Look into the translation unit scope. We walk through the translation
-    // unit's declaration context, because the Scope itself won't have all of
-    // the declarations if we loaded a precompiled header.
-    // FIXME: We would like the translation unit's Scope object to point to the
-    // translation unit, so we don't need this special "if" branch. However,
-    // doing so would force the normal C++ name-lookup code to look into the
-    // translation unit decl when the IdentifierInfo chains would suffice.
-    // Once we fix that problem (which is part of a more general "don't look
-    // in DeclContexts unless we have to" optimization), we can eliminate this.
-    Entity = Result.getSema().Context.getTranslationUnitDecl();
-    LookupVisibleDecls(Entity, Result, /*QualifiedNameLookup=*/false,
-                       /*InBaseClass=*/false, Consumer, Visited,
-                       /*IncludeDependentBases=*/false, LoadExternal);
+
+    if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx))
+      Result.getSema().ForceDeclarationOfImplicitMembers(Class);
+
+    // We sometimes skip loading namespace-level results (they tend to be huge).
+    bool Load = LoadExternal ||
+                !(isa<TranslationUnitDecl>(Ctx) || isa<NamespaceDecl>(Ctx));
+    // Enumerate all of the results in this context.
+    for (DeclContextLookupResult R :
+         Load ? Ctx->lookups()
+              : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
+      for (auto *D : R) {
+        if (auto *ND = Result.getAcceptableDecl(D)) {
+          Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
+          Visited.add(ND);
+        }
+      }
+    }
+
+    // Traverse using directives for qualified name lookup.
+    if (QualifiedNameLookup) {
+      ShadowContextRAII Shadow(Visited);
+      for (auto I : Ctx->using_directives()) {
+        if (!Result.getSema().isVisible(I))
+          continue;
+        lookupInDeclContext(I->getNominatedNamespace(), Result,
+                            QualifiedNameLookup, InBaseClass);
+      }
+    }
+
+    // Traverse the contexts of inherited C++ classes.
+    if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(Ctx)) {
+      if (!Record->hasDefinition())
+        return;
+
+      for (const auto &B : Record->bases()) {
+        QualType BaseType = B.getType();
+
+        RecordDecl *RD;
+        if (BaseType->isDependentType()) {
+          if (!IncludeDependentBases) {
+            // Don't look into dependent bases, because name lookup can't look
+            // there anyway.
+            continue;
+          }
+          const auto *TST = BaseType->getAs<TemplateSpecializationType>();
+          if (!TST)
+            continue;
+          TemplateName TN = TST->getTemplateName();
+          const auto *TD =
+              dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
+          if (!TD)
+            continue;
+          RD = TD->getTemplatedDecl();
+        } else {
+          const auto *Record = BaseType->getAs<RecordType>();
+          if (!Record)
+            continue;
+          RD = Record->getDecl();
+        }
+
+        // FIXME: It would be nice to be able to determine whether referencing
+        // a particular member would be ambiguous. For example, given
+        //
+        //   struct A { int member; };
+        //   struct B { int member; };
+        //   struct C : A, B { };
+        //
+        //   void f(C *c) { c->### }
+        //
+        // accessing 'member' would result in an ambiguity. However, we
+        // could be smart enough to qualify the member with the base
+        // class, e.g.,
+        //
+        //   c->B::member
+        //
+        // or
+        //
+        //   c->A::member
+
+        // Find results in this base class (and its bases).
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(RD, Result, QualifiedNameLookup,
+                            /*InBaseClass=*/true);
+      }
+    }
+
+    // Traverse the contexts of Objective-C classes.
+    if (ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Ctx)) {
+      // Traverse categories.
+      for (auto *Cat : IFace->visible_categories()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(Cat, Result, QualifiedNameLookup,
+                            /*InBaseClass=*/false);
+      }
+
+      // Traverse protocols.
+      for (auto *I : IFace->all_referenced_protocols()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(I, Result, QualifiedNameLookup,
+                            /*InBaseClass=*/false);
+      }
+
+      // Traverse the superclass.
+      if (IFace->getSuperClass()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(IFace->getSuperClass(), Result, QualifiedNameLookup,
+                            /*InBaseClass=*/true);
+      }
+
+      // If there is an implementation, traverse it. We do this to find
+      // synthesized ivars.
+      if (IFace->getImplementation()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(IFace->getImplementation(), Result,
+                            QualifiedNameLookup, InBaseClass);
+      }
+    } else if (ObjCProtocolDecl *Protocol = dyn_cast<ObjCProtocolDecl>(Ctx)) {
+      for (auto *I : Protocol->protocols()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(I, Result, QualifiedNameLookup,
+                            /*InBaseClass=*/false);
+      }
+    } else if (ObjCCategoryDecl *Category = dyn_cast<ObjCCategoryDecl>(Ctx)) {
+      for (auto *I : Category->protocols()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(I, Result, QualifiedNameLookup,
+                            /*InBaseClass=*/false);
+      }
+
+      // If there is an implementation, traverse it.
+      if (Category->getImplementation()) {
+        ShadowContextRAII Shadow(Visited);
+        lookupInDeclContext(Category->getImplementation(), Result,
+                            QualifiedNameLookup, /*InBaseClass=*/true);
+      }
+    }
   }
 
-  if (Entity) {
-    // Lookup visible declarations in any namespaces found by using
-    // directives.
-    for (const UnqualUsingEntry &UUE : UDirs.getNamespacesFor(Entity))
-      LookupVisibleDecls(const_cast<DeclContext *>(UUE.getNominatedNamespace()),
-                         Result, /*QualifiedNameLookup=*/false,
-                         /*InBaseClass=*/false, Consumer, Visited,
-                         /*IncludeDependentBases=*/false, LoadExternal);
+  void lookupInScope(Scope *S, LookupResult &Result,
+                     UnqualUsingDirectiveSet &UDirs) {
+    // No clients run in this mode and it's not supported. Please add tests and
+    // remove the assertion if you start relying on it.
+    assert(!IncludeDependentBases && "Unsupported flag for lookupInScope");
+
+    if (!S)
+      return;
+
+    if (!S->getEntity() ||
+        (!S->getParent() && !Visited.alreadyVisitedContext(S->getEntity())) ||
+        (S->getEntity())->isFunctionOrMethod()) {
+      FindLocalExternScope FindLocals(Result);
+      // Walk through the declarations in this Scope. The consumer might add new
+      // decls to the scope as part of deserialization, so make a copy first.
+      SmallVector<Decl *, 8> ScopeDecls(S->decls().begin(), S->decls().end());
+      for (Decl *D : ScopeDecls) {
+        if (NamedDecl *ND = dyn_cast<NamedDecl>(D))
+          if ((ND = Result.getAcceptableDecl(ND))) {
+            Consumer.FoundDecl(ND, Visited.checkHidden(ND), nullptr, false);
+            Visited.add(ND);
+          }
+      }
+    }
+
+    // FIXME: C++ [temp.local]p8
+    DeclContext *Entity = nullptr;
+    if (S->getEntity()) {
+      // Look into this scope's declaration context, along with any of its
+      // parent lookup contexts (e.g., enclosing classes), up to the point
+      // where we hit the context stored in the next outer scope.
+      Entity = S->getEntity();
+      DeclContext *OuterCtx = findOuterContext(S).first; // FIXME
+
+      for (DeclContext *Ctx = Entity; Ctx && !Ctx->Equals(OuterCtx);
+           Ctx = Ctx->getLookupParent()) {
+        if (ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(Ctx)) {
+          if (Method->isInstanceMethod()) {
+            // For instance methods, look for ivars in the method's interface.
+            LookupResult IvarResult(Result.getSema(), Result.getLookupName(),
+                                    Result.getNameLoc(),
+                                    Sema::LookupMemberName);
+            if (ObjCInterfaceDecl *IFace = Method->getClassInterface()) {
+              lookupInDeclContext(IFace, IvarResult,
+                                  /*QualifiedNameLookup=*/false,
+                                  /*InBaseClass=*/false);
+            }
+          }
+
+          // We've already performed all of the name lookup that we need
+          // to for Objective-C methods; the next context will be the
+          // outer scope.
+          break;
+        }
+
+        if (Ctx->isFunctionOrMethod())
+          continue;
+
+        lookupInDeclContext(Ctx, Result, /*QualifiedNameLookup=*/false,
+                            /*InBaseClass=*/false);
+      }
+    } else if (!S->getParent()) {
+      // Look into the translation unit scope. We walk through the translation
+      // unit's declaration context, because the Scope itself won't have all of
+      // the declarations if we loaded a precompiled header.
+      // FIXME: We would like the translation unit's Scope object to point to
+      // the translation unit, so we don't need this special "if" branch.
+      // However, doing so would force the normal C++ name-lookup code to look
+      // into the translation unit decl when the IdentifierInfo chains would
+      // suffice. Once we fix that problem (which is part of a more general
+      // "don't look in DeclContexts unless we have to" optimization), we can
+      // eliminate this.
+      Entity = Result.getSema().Context.getTranslationUnitDecl();
+      lookupInDeclContext(Entity, Result, /*QualifiedNameLookup=*/false,
+                          /*InBaseClass=*/false);
+    }
+
+    if (Entity) {
+      // Lookup visible declarations in any namespaces found by using
+      // directives.
+      for (const UnqualUsingEntry &UUE : UDirs.getNamespacesFor(Entity))
+        lookupInDeclContext(
+            const_cast<DeclContext *>(UUE.getNominatedNamespace()), Result,
+            /*QualifiedNameLookup=*/false,
+            /*InBaseClass=*/false);
+    }
+
+    // Lookup names in the parent scope.
+    ShadowContextRAII Shadow(Visited);
+    lookupInScope(S->getParent(), Result, UDirs);
   }
 
-  // Lookup names in the parent scope.
-  ShadowContextRAII Shadow(Visited);
-  LookupVisibleDecls(S->getParent(), Result, UDirs, Consumer, Visited,
-                     LoadExternal);
-}
+private:
+  VisibleDeclsRecord Visited;
+  VisibleDeclConsumer &Consumer;
+  bool IncludeDependentBases;
+  bool LoadExternal;
+};
 
 void Sema::LookupVisibleDecls(Scope *S, LookupNameKind Kind,
                               VisibleDeclConsumer &Consumer,
                               bool IncludeGlobalScope, bool LoadExternal) {
-  // Determine the set of using directives available during
-  // unqualified name lookup.
-  Scope *Initial = S;
-  UnqualUsingDirectiveSet UDirs(*this);
-  if (getLangOpts().CPlusPlus) {
-    // Find the first namespace or translation-unit scope.
-    while (S && !isNamespaceOrTranslationUnitScope(S))
-      S = S->getParent();
-
-    UDirs.visitScopeChain(Initial, S);
-  }
-  UDirs.done();
-
-  // Look for visible declarations.
-  LookupResult Result(*this, DeclarationName(), SourceLocation(), Kind);
-  Result.setAllowHidden(Consumer.includeHiddenDecls());
-  VisibleDeclsRecord Visited;
-  if (!IncludeGlobalScope)
-    Visited.visitedContext(Context.getTranslationUnitDecl());
-  ShadowContextRAII Shadow(Visited);
-  ::LookupVisibleDecls(Initial, Result, UDirs, Consumer, Visited, LoadExternal);
+  LookupVisibleHelper H(Consumer, /*IncludeDependentBases=*/false,
+                        LoadExternal);
+  H.lookupVisibleDecls(*this, S, Kind, IncludeGlobalScope);
 }
 
 void Sema::LookupVisibleDecls(DeclContext *Ctx, LookupNameKind Kind,
                               VisibleDeclConsumer &Consumer,
                               bool IncludeGlobalScope,
                               bool IncludeDependentBases, bool LoadExternal) {
-  LookupResult Result(*this, DeclarationName(), SourceLocation(), Kind);
-  Result.setAllowHidden(Consumer.includeHiddenDecls());
-  VisibleDeclsRecord Visited;
-  if (!IncludeGlobalScope)
-    Visited.visitedContext(Context.getTranslationUnitDecl());
-  ShadowContextRAII Shadow(Visited);
-  ::LookupVisibleDecls(Ctx, Result, /*QualifiedNameLookup=*/true,
-                       /*InBaseClass=*/false, Consumer, Visited,
-                       IncludeDependentBases, LoadExternal);
+  LookupVisibleHelper H(Consumer, IncludeDependentBases, LoadExternal);
+  H.lookupVisibleDecls(*this, Ctx, Kind, IncludeGlobalScope);
 }
 
 /// LookupOrCreateLabel - Do a name lookup of a label with the specified name.

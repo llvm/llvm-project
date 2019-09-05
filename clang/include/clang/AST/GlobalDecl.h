@@ -31,6 +31,7 @@ enum class DynamicInitKind : unsigned {
   NoStub = 0,
   Initializer,
   AtExit,
+  GlobalArrayDestructor
 };
 
 /// GlobalDecl - represents a global declaration. This can either be a

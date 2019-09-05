@@ -1,10 +1,11 @@
-RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 | FileCheck %s
+# RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 | FileCheck %s
 
-# Check the two-letter alias --dt is equivalent to the --dyn-symbols full flag
-# name.
-RUN: llvm-readobj --dt %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-alias
-RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-no-alias
-RUN: diff %t.readobj-dt-alias %t.readobj-dt-no-alias
+## Check the two-letter alias --dt is equivalent to the --dyn-symbols full flag
+## name.
+
+# RUN: llvm-readobj --dt %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-alias
+# RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-no-alias
+# RUN: diff %t.readobj-dt-alias %t.readobj-dt-no-alias
 
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
@@ -161,3 +162,125 @@ RUN: diff %t.readobj-dt-alias %t.readobj-dt-no-alias
 # CHECK-NEXT:     Section: .fini
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
+
+## Check that we are able to dump the dynamic symbol table even when we have no program headers.
+## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.so
+# RUN: llvm-readobj %t1.so --dyn-symbols | FileCheck %s --check-prefix=NOPHDRS
+
+# NOPHDRS: Name: foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0xffff1234
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check we report a warning when there is no SHT_DYNSYM section and we can't map the DT_SYMTAB value
+## to an address because of the absence of a corresponding PT_LOAD program header.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.so
+# RUN: llvm-readobj %t2.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t2.so --check-prefix=NOSHT-DYNSYM
+
+# NOSHT-DYNSYM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
+# NOSHT-DYNSYM:      DynamicSymbols [
+# NOSHT-DYNSYM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynsym
+    Type:    SHT_PROGBITS
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols:
+  - Name: foo
+
+## Check that when we can't map the value of the DT_SYMTAB tag to an address, we report a warning and
+## use the information in the section header table to locate the dynamic symbol table.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.so
+# RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=BROKEN-DTSYMTAB
+
+# BROKEN-DTSYMTAB: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# BROKEN-DTSYMTAB: Name: foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0xffff1234
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x0000
+    Sections:
+      - Section: .dynsym
+
+## Check that if we can get the location of the dynamic symbol table using both the DT_SYMTAB value
+## and the section headers table then we prefer the former and report a warning.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4.so
+# RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=PREFER-DTSYMTAB
+
+# PREFER-DTSYMTAB: warning: '[[FILE]]': SHT_DYNSYM section header and DT_SYMTAB disagree about the location of the dynamic symbol table
+# PREFER-DTSYMTAB: Name: o
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+  - Name: .mydynsym
+    Type: SHT_DYNSYM
+## The Content describes 2 symbols: zero symbol and symbol with st_name == 3.
+    Content: "000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000"
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x0000
+    Sections:
+      - Section: .mydynsym

@@ -507,7 +507,7 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
           .addImm(0);
       if (STI->isTargetNaCl())
         // Bundle-align the target of indirect branch JR.
-        TgtMBB->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
+        TgtMBB->setLogAlignment(MIPS_NACL_BUNDLE_LOG_ALIGN);
 
       // In NaCl, modifying the sp is not allowed in branch delay slot.
       // For MIPS32R6, we can skip using a delay slot branch.

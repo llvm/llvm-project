@@ -88,8 +88,6 @@ public:
   }
 };
 
-typedef llvm::DenseSet<PPRegion> PPRegionSetTy;
-
 } // end anonymous namespace
 
 namespace llvm {
@@ -124,20 +122,20 @@ namespace {
 /// Keeps track of function bodies that have already been parsed.
 ///
 /// Is thread-safe.
-class SharedParsedRegionsStorage {
-  std::mutex Mux;
-  PPRegionSetTy ParsedRegions;
+class ThreadSafeParsedRegions {
+  mutable std::mutex Mutex;
+  llvm::DenseSet<PPRegion> ParsedRegions;
 
 public:
-  ~SharedParsedRegionsStorage() = default;
+  ~ThreadSafeParsedRegions() = default;
 
-  void copyTo(PPRegionSetTy &Set) {
-    std::lock_guard<std::mutex> MG(Mux);
-    Set = ParsedRegions;
+  llvm::DenseSet<PPRegion> getParsedRegions() const {
+    std::lock_guard<std::mutex> MG(Mutex);
+    return ParsedRegions;
   }
 
-  void merge(ArrayRef<PPRegion> Regions) {
-    std::lock_guard<std::mutex> MG(Mux);
+  void addParsedRegions(ArrayRef<PPRegion> Regions) {
+    std::lock_guard<std::mutex> MG(Mutex);
     ParsedRegions.insert(Regions.begin(), Regions.end());
   }
 };
@@ -147,13 +145,13 @@ public:
 ///
 /// Is NOT thread-safe.
 class ParsedSrcLocationsTracker {
-  SharedParsedRegionsStorage &ParsedRegionsStorage;
+  ThreadSafeParsedRegions &ParsedRegionsStorage;
   PPConditionalDirectiveRecord &PPRec;
   Preprocessor &PP;
 
   /// Snapshot of the shared state at the point when this instance was
   /// constructed.
-  PPRegionSetTy ParsedRegions;
+  llvm::DenseSet<PPRegion> ParsedRegionsSnapshot;
   /// Regions that were queried during this instance lifetime.
   SmallVector<PPRegion, 32> NewParsedRegions;
 
@@ -163,12 +161,11 @@ class ParsedSrcLocationsTracker {
 
 public:
   /// Creates snapshot of \p ParsedRegionsStorage.
-  ParsedSrcLocationsTracker(SharedParsedRegionsStorage &ParsedRegionsStorage,
+  ParsedSrcLocationsTracker(ThreadSafeParsedRegions &ParsedRegionsStorage,
                             PPConditionalDirectiveRecord &ppRec,
                             Preprocessor &pp)
-      : ParsedRegionsStorage(ParsedRegionsStorage), PPRec(ppRec), PP(pp) {
-    ParsedRegionsStorage.copyTo(ParsedRegions);
-  }
+      : ParsedRegionsStorage(ParsedRegionsStorage), PPRec(ppRec), PP(pp),
+        ParsedRegionsSnapshot(ParsedRegionsStorage.getParsedRegions()) {}
 
   /// \returns true iff \p Loc has already been parsed.
   ///
@@ -190,14 +187,16 @@ public:
     // That means if we hit the same region again, it's a different location in
     // the same region and so the "is parsed" value from the snapshot is still
     // correct.
-    LastIsParsed = ParsedRegions.count(region);
+    LastIsParsed = ParsedRegionsSnapshot.count(region);
     if (!LastIsParsed)
       NewParsedRegions.emplace_back(std::move(region));
     return LastIsParsed;
   }
 
   /// Updates ParsedRegionsStorage with newly parsed regions.
-  void syncWithStorage() { ParsedRegionsStorage.merge(NewParsedRegions); }
+  void syncWithStorage() {
+    ParsedRegionsStorage.addParsedRegions(NewParsedRegions);
+  }
 
 private:
   PPRegion getRegion(SourceLocation Loc, FileID FID, const FileEntry *FE) {
@@ -336,13 +335,13 @@ class IndexingFrontendAction : public ASTFrontendAction {
   std::shared_ptr<CXIndexDataConsumer> DataConsumer;
   IndexingOptions Opts;
 
-  SharedParsedRegionsStorage *SKData;
+  ThreadSafeParsedRegions *SKData;
   std::unique_ptr<ParsedSrcLocationsTracker> ParsedLocsTracker;
 
 public:
   IndexingFrontendAction(std::shared_ptr<CXIndexDataConsumer> dataConsumer,
                          const IndexingOptions &Opts,
-                         SharedParsedRegionsStorage *skData)
+                         ThreadSafeParsedRegions *skData)
       : DataConsumer(std::move(dataConsumer)), Opts(Opts), SKData(skData) {}
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -431,10 +430,10 @@ static IndexingOptions getIndexingOptionsFromCXOptions(unsigned index_options) {
 
 struct IndexSessionData {
   CXIndex CIdx;
-  std::unique_ptr<SharedParsedRegionsStorage> SkipBodyData;
+  std::unique_ptr<ThreadSafeParsedRegions> SkipBodyData =
+      std::make_unique<ThreadSafeParsedRegions>();
 
-  explicit IndexSessionData(CXIndex cIdx)
-      : CIdx(cIdx), SkipBodyData(new SharedParsedRegionsStorage) {}
+  explicit IndexSessionData(CXIndex cIdx) : CIdx(cIdx) {}
 };
 
 } // anonymous namespace

@@ -15,7 +15,7 @@
 # GNU: Section Headers:
 # GNU:   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # GNU: warning: '[[FILE]]': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
-# GNU:   [ 1] .shstrtab         PROGBITS        0000000000000000 000140 00001b 00 0   0  0
+# GNU:   [ 1] .shstrtab         PROGBITS        0000000000000000 000040 00001b 00 0   0  0
 
 ## Test we report multiple identical warnings (one for each object) when dumping an archive.
 

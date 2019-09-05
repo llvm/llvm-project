@@ -3275,7 +3275,7 @@ bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
   return isLegalMaskedLoad(DataType);
 }
 
-bool X86TTIImpl::isLegalNTLoad(Type *DataType, unsigned Alignment) {
+bool X86TTIImpl::isLegalNTLoad(Type *DataType, llvm::Align Alignment) {
   unsigned DataSize = DL.getTypeStoreSize(DataType);
   // The only supported nontemporal loads are for aligned vectors of 16 or 32
   // bytes.  Note that 32-byte nontemporal vector loads are supported by AVX2
@@ -3286,7 +3286,7 @@ bool X86TTIImpl::isLegalNTLoad(Type *DataType, unsigned Alignment) {
   return false;
 }
 
-bool X86TTIImpl::isLegalNTStore(Type *DataType, unsigned Alignment) {
+bool X86TTIImpl::isLegalNTStore(Type *DataType, llvm::Align Alignment) {
   unsigned DataSize = DL.getTypeStoreSize(DataType);
 
   // SSE4A supports nontemporal stores of float and double at arbitrary

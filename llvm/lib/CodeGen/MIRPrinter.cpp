@@ -197,7 +197,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
 
   yaml::MachineFunction YamlMF;
   YamlMF.Name = MF.getName();
-  YamlMF.Alignment = MF.getAlignment();
+  YamlMF.Alignment = 1UL << MF.getLogAlignment();
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
   YamlMF.HasWinCFI = MF.hasWinCFI();
 
@@ -629,9 +629,10 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "landing-pad";
     HasAttributes = true;
   }
-  if (MBB.getAlignment()) {
+  if (MBB.getLogAlignment()) {
     OS << (HasAttributes ? ", " : " (");
-    OS << "align " << MBB.getAlignment();
+    OS << "align "
+       << (1UL << MBB.getLogAlignment());
     HasAttributes = true;
   }
   if (HasAttributes)

@@ -1582,18 +1582,18 @@ public:
   }
 
   /// Return the minimum function alignment.
-  unsigned getMinFunctionAlignment() const {
-    return MinFunctionAlignment;
+  unsigned getMinFunctionLogAlignment() const {
+    return MinFunctionLogAlignment;
   }
 
   /// Return the preferred function alignment.
-  unsigned getPrefFunctionAlignment() const {
-    return PrefFunctionAlignment;
+  unsigned getPrefFunctionLogAlignment() const {
+    return PrefFunctionLogAlignment;
   }
 
   /// Return the preferred loop alignment.
-  virtual unsigned getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
-    return PrefLoopAlignment;
+  virtual unsigned getPrefLoopLogAlignment(MachineLoop *ML = nullptr) const {
+    return PrefLoopLogAlignment;
   }
 
   /// Should loops be aligned even when the function is marked OptSize (but not
@@ -2105,26 +2105,26 @@ protected:
   }
 
   /// Set the target's minimum function alignment (in log2(bytes))
-  void setMinFunctionAlignment(unsigned Align) {
-    MinFunctionAlignment = Align;
+  void setMinFunctionLogAlignment(unsigned LogAlign) {
+    MinFunctionLogAlignment = LogAlign;
   }
 
   /// Set the target's preferred function alignment.  This should be set if
   /// there is a performance benefit to higher-than-minimum alignment (in
   /// log2(bytes))
-  void setPrefFunctionAlignment(unsigned Align) {
-    PrefFunctionAlignment = Align;
+  void setPrefFunctionLogAlignment(unsigned LogAlign) {
+    PrefFunctionLogAlignment = LogAlign;
   }
 
   /// Set the target's preferred loop alignment. Default alignment is zero, it
   /// means the target does not care about loop alignment.  The alignment is
   /// specified in log2(bytes). The target may also override
   /// getPrefLoopAlignment to provide per-loop values.
-  void setPrefLoopAlignment(unsigned Align) {
-    PrefLoopAlignment = Align;
+  void setPrefLoopLogAlignment(unsigned LogAlign) {
+    PrefLoopLogAlignment = LogAlign;
   }
 
-  /// Set the minimum stack alignment of an argument (in log2(bytes)).
+  /// Set the minimum stack alignment of an argument.
   void setMinStackArgumentAlignment(unsigned Align) {
     MinStackArgumentAlignment = Align;
   }
@@ -2692,14 +2692,14 @@ private:
 
   /// The minimum function alignment (used when optimizing for size, and to
   /// prevent explicitly provided alignment from leading to incorrect code).
-  unsigned MinFunctionAlignment;
+  unsigned MinFunctionLogAlignment;
 
   /// The preferred function alignment (used when alignment unspecified and
   /// optimizing for speed).
-  unsigned PrefFunctionAlignment;
+  unsigned PrefFunctionLogAlignment;
 
-  /// The preferred loop alignment.
-  unsigned PrefLoopAlignment;
+  /// The preferred loop alignment (in log2 bot in bytes).
+  unsigned PrefLoopLogAlignment;
 
   /// Size in bits of the maximum atomics size the backend supports.
   /// Accesses larger than this will be expanded by AtomicExpandPass.

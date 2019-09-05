@@ -132,8 +132,7 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
         << IsFullSpec << FD;
     diag(FD->getLocation(), /*FixDescription=*/"make as 'inline'",
          DiagnosticIDs::Note)
-        << FixItHint::CreateInsertion(FD->getReturnTypeSourceRange().getBegin(),
-                                      "inline ");
+        << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Static data members of a class template are allowed.
     if (VD->getDeclContext()->isDependentContext() && VD->isStaticDataMember())

@@ -400,7 +400,7 @@ void MipsAsmPrinter::EmitFunctionEntryLabel() {
   // NaCl sandboxing requires that indirect call instructions are masked.
   // This means that function entry points should be bundle-aligned.
   if (Subtarget->isTargetNaCl())
-    EmitAlignment(std::max(MF->getAlignment(), MIPS_NACL_BUNDLE_ALIGN));
+    EmitAlignment(std::max(MF->getLogAlignment(), MIPS_NACL_BUNDLE_LOG_ALIGN));
 
   if (Subtarget->inMicroMipsMode()) {
     TS.emitDirectiveSetMicroMips();
@@ -1278,14 +1278,14 @@ void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
       const std::vector<MachineBasicBlock*> &MBBs = JT[I].MBBs;
 
       for (unsigned J = 0; J < MBBs.size(); ++J)
-        MBBs[J]->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
+        MBBs[J]->setLogAlignment(MIPS_NACL_BUNDLE_LOG_ALIGN);
     }
   }
 
   // If basic block address is taken, block can be target of indirect branch.
   for (auto &MBB : MF) {
     if (MBB.hasAddressTaken())
-      MBB.setAlignment(MIPS_NACL_BUNDLE_ALIGN);
+      MBB.setLogAlignment(MIPS_NACL_BUNDLE_LOG_ALIGN);
   }
 }
 
