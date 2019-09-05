@@ -143,6 +143,48 @@ endif()
 #    locate 64-bit Python libraries.
 # This function is designed to address those limitations.  Currently it only partially
 # addresses them, but it can be improved and extended on an as-needed basis.
+function(find_python_libs_windows_helper LOOKUP_DEBUG OUT_EXE_PATH_VARNAME OUT_LIB_PATH_VARNAME OUT_DLL_PATH_VARNAME OUT_VERSION_VARNAME)
+  if(LOOKUP_DEBUG)
+      set(POSTFIX "_d")
+  else()
+      set(POSTFIX "")
+  endif()
+
+  file(TO_CMAKE_PATH "${PYTHON_HOME}/python${POSTFIX}.exe"                       PYTHON_EXE)
+  file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}${POSTFIX}.lib" PYTHON_LIB)
+  file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}${POSTFIX}.dll"      PYTHON_DLL)
+
+  foreach(component PYTHON_EXE;PYTHON_LIB;PYTHON_DLL)
+    if(NOT EXISTS ${${component}})
+      message(WARNING "Unable to find ${component}")
+      unset(${component})
+    endif()
+  endforeach()
+
+  if (NOT PYTHON_EXE OR NOT PYTHON_LIB OR NOT PYTHON_DLL)
+    message(WARNING "Unable to find all Python components.  Python support will be disabled for this build.")
+    set(LLDB_DISABLE_PYTHON 1 PARENT_SCOPE)
+    return()
+  endif()
+
+  # Find the version of the Python interpreter.
+  execute_process(COMMAND "${PYTHON_EXE}" -c
+                  "import sys; sys.stdout.write('.'.join([str(x) for x in sys.version_info[:3]]))"
+                  OUTPUT_VARIABLE PYTHON_VERSION_OUTPUT
+                  RESULT_VARIABLE PYTHON_VERSION_RESULT
+                  ERROR_QUIET)
+
+  if(PYTHON_VERSION_RESULT)
+    message(WARNING "Unable to retrieve Python executable version")
+    set(PYTHON_VERSION_OUTPUT "")
+  endif()
+
+  set(${OUT_EXE_PATH_VARNAME} ${PYTHON_EXE} PARENT_SCOPE)
+  set(${OUT_LIB_PATH_VARNAME} ${PYTHON_LIB} PARENT_SCOPE)
+  set(${OUT_DLL_PATH_VARNAME} ${PYTHON_DLL} PARENT_SCOPE)
+  set(${OUT_VERSION_VARNAME}  ${PYTHON_VERSION_OUTPUT} PARENT_SCOPE)
+endfunction()
+
 function(find_python_libs_windows)
   if ("${PYTHON_HOME}" STREQUAL "")
     message(WARNING "LLDB embedded Python on Windows requires specifying a value for PYTHON_HOME.  Python support disabled.")
@@ -170,55 +212,65 @@ function(find_python_libs_windows)
   file(TO_CMAKE_PATH "${PYTHON_HOME}" PYTHON_HOME)
   # TODO(compnerd) when CMake Policy `CMP0091` is set to NEW, we should use
   # if(CMAKE_MSVC_RUNTIME_LIBRARY MATCHES MultiThreadedDebug)
-  if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    file(TO_CMAKE_PATH "${PYTHON_HOME}/python_d.exe" PYTHON_EXE)
-    file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}_d.lib" PYTHON_LIB)
-    file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}_d.dll" PYTHON_DLL)
-  else()
-    file(TO_CMAKE_PATH "${PYTHON_HOME}/python.exe" PYTHON_EXE)
-    file(TO_CMAKE_PATH "${PYTHON_HOME}/libs/${PYTHONLIBS_BASE_NAME}.lib" PYTHON_LIB)
-    file(TO_CMAKE_PATH "${PYTHON_HOME}/${PYTHONLIBS_BASE_NAME}.dll" PYTHON_DLL)
-  endif()
-
-  foreach(component PYTHON_EXE;PYTHON_LIB;PYTHON_DLL)
-    if(NOT EXISTS ${${component}})
-      message(WARNING "unable to find ${component}")
-      unset(${component})
+  if(NOT DEFINED CMAKE_BUILD_TYPE)
+    # Multi-target generator was selected (like Visual Studio or Xcode) where no concrete build type was passed
+    # Lookup for both debug and release python installations
+    find_python_libs_windows_helper(TRUE  PYTHON_DEBUG_EXE   PYTHON_DEBUG_LIB   PYTHON_DEBUG_DLL   PYTHON_DEBUG_VERSION_STRING)
+    find_python_libs_windows_helper(FALSE PYTHON_RELEASE_EXE PYTHON_RELEASE_LIB PYTHON_RELEASE_DLL PYTHON_RELEASE_VERSION_STRING)
+    if(LLDB_DISABLE_PYTHON)
+      set(LLDB_DISABLE_PYTHON 1 PARENT_SCOPE)
+      return()
     endif()
-  endforeach()
 
-  if (NOT PYTHON_EXE OR NOT PYTHON_LIB OR NOT PYTHON_DLL)
-    message(WARNING "Unable to find all Python components.  Python support will be disabled for this build.")
-    set(LLDB_DISABLE_PYTHON 1 PARENT_SCOPE)
-    return()
+    # We should have been found both debug and release python here
+    # Now check that their versions are equal
+    if(NOT PYTHON_DEBUG_VERSION_STRING STREQUAL PYTHON_RELEASE_VERSION_STRING)
+      message(FATAL_ERROR "Python versions for debug (${PYTHON_DEBUG_VERSION_STRING}) and release (${PYTHON_RELEASE_VERSION_STRING}) are different."
+                          "Python installation is corrupted")
+    endif ()
+
+    set(PYTHON_EXECUTABLE $<$<CONFIG:Debug>:${PYTHON_DEBUG_EXE}>$<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_EXE}>)
+    set(PYTHON_LIBRARY    $<$<CONFIG:Debug>:${PYTHON_DEBUG_LIB}>$<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_LIB}>)
+    set(PYTHON_DLL        $<$<CONFIG:Debug>:${PYTHON_DEBUG_DLL}>$<$<NOT:$<CONFIG:Debug>>:${PYTHON_RELEASE_DLL}>)
+    set(PYTHON_VERSION_STRING ${PYTHON_RELEASE_VERSION_STRING})
+  else()
+    # Lookup for concrete python installation depending on build type
+    if (CMAKE_BUILD_TYPE STREQUAL Debug)
+      set(LOOKUP_DEBUG_PYTHON TRUE)
+    else()
+      set(LOOKUP_DEBUG_PYTHON FALSE)
+    endif()
+    find_python_libs_windows_helper(${LOOKUP_DEBUG_PYTHON} PYTHON_EXECUTABLE PYTHON_LIBRARY PYTHON_DLL PYTHON_VERSION_STRING)
+    if(LLDB_DISABLE_PYTHON)
+      set(LLDB_DISABLE_PYTHON 1 PARENT_SCOPE)
+      return()
+    endif()
   endif()
 
-  # Find the version of the Python interpreter.
-  execute_process(COMMAND "${PYTHON_EXE}" -c
-                  "import sys; sys.stdout.write(';'.join([str(x) for x in sys.version_info[:3]]))"
-                  OUTPUT_VARIABLE PYTHON_VERSION_OUTPUT
-                  RESULT_VARIABLE PYTHON_VERSION_RESULT
-                  ERROR_QUIET)
-  if(NOT PYTHON_VERSION_RESULT)
-    string(REPLACE ";" "." PYTHON_VERSION_STRING "${PYTHON_VERSION_OUTPUT}")
-    list(GET PYTHON_VERSION_OUTPUT 0 PYTHON_VERSION_MAJOR)
-    list(GET PYTHON_VERSION_OUTPUT 1 PYTHON_VERSION_MINOR)
-    list(GET PYTHON_VERSION_OUTPUT 2 PYTHON_VERSION_PATCH)
+  if(PYTHON_VERSION_STRING)
+    string(REPLACE "." ";" PYTHON_VERSION_PARTS "${PYTHON_VERSION_STRING}")
+    list(GET PYTHON_VERSION_PARTS 0 PYTHON_VERSION_MAJOR)
+    list(GET PYTHON_VERSION_PARTS 1 PYTHON_VERSION_MINOR)
+    list(GET PYTHON_VERSION_PARTS 2 PYTHON_VERSION_PATCH)
+  else()
+    unset(PYTHON_VERSION_MAJOR)
+    unset(PYTHON_VERSION_MINOR)
+    unset(PYTHON_VERSION_PATCH)
   endif()
 
   # Set the same variables as FindPythonInterp and FindPythonLibs.
-  set(PYTHON_EXECUTABLE ${PYTHON_EXE} PARENT_SCOPE)
-  set(PYTHON_LIBRARY ${PYTHON_LIB} PARENT_SCOPE)
-  set(PYTHON_DLL ${PYTHON_DLL} PARENT_SCOPE)
-  set(PYTHON_INCLUDE_DIR ${PYTHON_INCLUDE_DIR} PARENT_SCOPE)
-  set(PYTHONLIBS_VERSION_STRING "${PYTHONLIBS_VERSION_STRING}" PARENT_SCOPE)
-  set(PYTHON_VERSION_STRING ${PYTHON_VERSION_STRING} PARENT_SCOPE)
-  set(PYTHON_VERSION_MAJOR ${PYTHON_VERSION_MAJOR} PARENT_SCOPE)
-  set(PYTHON_VERSION_MINOR ${PYTHON_VERSION_MINOR} PARENT_SCOPE)
-  set(PYTHON_VERSION_PATCH ${PYTHON_VERSION_PATCH} PARENT_SCOPE)
+  set(PYTHON_EXECUTABLE         "${PYTHON_EXECUTABLE}"          PARENT_SCOPE)
+  set(PYTHON_LIBRARY            "${PYTHON_LIBRARY}"             PARENT_SCOPE)
+  set(PYTHON_DLL                "${PYTHON_DLL}"                 PARENT_SCOPE)
+  set(PYTHON_INCLUDE_DIR        "${PYTHON_INCLUDE_DIR}"         PARENT_SCOPE)
+  set(PYTHONLIBS_VERSION_STRING "${PYTHONLIBS_VERSION_STRING}"  PARENT_SCOPE)
+  set(PYTHON_VERSION_STRING     "${PYTHON_VERSION_STRING}"      PARENT_SCOPE)
+  set(PYTHON_VERSION_MAJOR      "${PYTHON_VERSION_MAJOR}"       PARENT_SCOPE)
+  set(PYTHON_VERSION_MINOR      "${PYTHON_VERSION_MINOR}"       PARENT_SCOPE)
+  set(PYTHON_VERSION_PATCH      "${PYTHON_VERSION_PATCH}"       PARENT_SCOPE)
 
   message(STATUS "LLDB Found PythonExecutable: ${PYTHON_EXECUTABLE} (${PYTHON_VERSION_STRING})")
-  message(STATUS "LLDB Found PythonLibs: ${PYTHON_LIB} (${PYTHONLIBS_VERSION_STRING})")
+  message(STATUS "LLDB Found PythonLibs: ${PYTHON_LIBRARY} (${PYTHONLIBS_VERSION_STRING})")
   message(STATUS "LLDB Found PythonDLL: ${PYTHON_DLL}")
   message(STATUS "LLDB Found PythonIncludeDirs: ${PYTHON_INCLUDE_DIR}")
 endfunction(find_python_libs_windows)
