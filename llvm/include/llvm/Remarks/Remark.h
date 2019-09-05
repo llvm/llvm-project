@@ -109,6 +109,36 @@ private:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Remark, LLVMRemarkEntryRef)
 
+/// Comparison operators for Remark objects and dependent objects.
+inline bool operator==(const RemarkLocation &LHS, const RemarkLocation &RHS) {
+  return LHS.SourceFilePath == RHS.SourceFilePath &&
+         LHS.SourceLine == RHS.SourceLine &&
+         LHS.SourceColumn == RHS.SourceColumn;
+}
+
+inline bool operator!=(const RemarkLocation &LHS, const RemarkLocation &RHS) {
+  return !(LHS == RHS);
+}
+
+inline bool operator==(const Argument &LHS, const Argument &RHS) {
+  return LHS.Key == RHS.Key && LHS.Val == RHS.Val && LHS.Loc == RHS.Loc;
+}
+
+inline bool operator!=(const Argument &LHS, const Argument &RHS) {
+  return !(LHS == RHS);
+}
+
+inline bool operator==(const Remark &LHS, const Remark &RHS) {
+  return LHS.RemarkType == RHS.RemarkType && LHS.PassName == RHS.PassName &&
+         LHS.RemarkName == RHS.RemarkName &&
+         LHS.FunctionName == RHS.FunctionName && LHS.Loc == RHS.Loc &&
+         LHS.Hotness == RHS.Hotness && LHS.Args == RHS.Args;
+}
+
+inline bool operator!=(const Remark &LHS, const Remark &RHS) {
+  return !(LHS == RHS);
+}
+
 } // end namespace remarks
 } // end namespace llvm
 
