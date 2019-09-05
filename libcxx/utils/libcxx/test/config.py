@@ -490,9 +490,10 @@ class Configuration(object):
             self.config.available_features.add('glibc-%s' % maj_v)
             self.config.available_features.add('glibc-%s.%s' % (maj_v, min_v))
 
-        if 'NOTFOUND' not in self.get_lit_conf('libcxx_gdb'):
+        libcxx_gdb = self.get_lit_conf('libcxx_gdb')
+        if libcxx_gdb and 'NOTFOUND' not in libcxx_gdb:
             self.config.available_features.add('libcxx_gdb')
-            self.cxx.libcxx_gdb = self.get_lit_conf('libcxx_gdb')
+            self.cxx.libcxx_gdb = libcxx_gdb
 
         # Support Objective-C++ only on MacOS and if the compiler supports it.
         if self.target_info.platform() == "darwin" and \
