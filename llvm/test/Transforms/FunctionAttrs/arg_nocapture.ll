@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=8 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=10 -S < %s | FileCheck %s
 ;
 ; Test cases specifically designed for the "no-capture" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.
@@ -90,7 +90,7 @@ entry:
 define i32* @srec16(i32* %a) #0 {
 entry:
   %call = call i32* @srec16(i32* %a)
-; CHECK:      %call = call i32* @srec16(i32* %a)
+; CHECK:      %call
 ; CHECK-NEXT: unreachable
   %call1 = call i32* @srec16(i32* %call)
   %call2 = call i32* @srec16(i32* %call1)

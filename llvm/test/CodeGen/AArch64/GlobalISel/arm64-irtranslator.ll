@@ -1394,6 +1394,16 @@ define i32 @test_ctpop_intrinsic(i32 %a) {
   ret i32 %res
 }
 
+declare i32 @llvm.bitreverse.i32(i32)
+define i32 @test_bitreverse_intrinsic(i32 %a) {
+; CHECK-LABEL: name: test_bitreverse
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_BITREVERSE [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.bitreverse.i32(i32 %a)
+  ret i32 %res
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {

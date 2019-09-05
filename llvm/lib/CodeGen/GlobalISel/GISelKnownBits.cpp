@@ -112,6 +112,19 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   default:
     TL.computeKnownBitsForTargetInstr(R, Known, DemandedElts, MRI, Depth);
     break;
+  case TargetOpcode::COPY: {
+    MachineOperand Dst = MI.getOperand(0);
+    MachineOperand Src = MI.getOperand(1);
+    // Look through trivial copies.
+    // We can't use NoSubRegister by name as it's defined by each target but
+    // it's always defined to be 0 by tablegen.
+    if (Dst.getSubReg() == 0 /*NoSubRegister*/ && Src.getReg().isVirtual() &&
+        Src.getSubReg() == 0 /*NoSubRegister*/) {
+      // Don't increment Depth for this one since we didn't do any work.
+      computeKnownBitsImpl(Src.getReg(), Known, DemandedElts, Depth);
+    }
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     auto CstVal = getConstantVRegVal(R, MRI);
     Known.One = *CstVal;

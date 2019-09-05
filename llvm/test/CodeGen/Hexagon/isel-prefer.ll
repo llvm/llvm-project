@@ -80,8 +80,8 @@ b2:
   ret i32 %v6
 }
 
-define i32 @Prefer_S2_ntstbit_r(i32 %a0, i32 %a1) #0 {
-; CHECK-LABEL: Prefer_S2_ntstbit_r:
+define i32 @Prefer_S4_ntstbit_r(i32 %a0, i32 %a1) #0 {
+; CHECK-LABEL: Prefer_S4_ntstbit_r:
 ; CHECK:       // %bb.0: // %b2
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = !tstbit(r0,r1)

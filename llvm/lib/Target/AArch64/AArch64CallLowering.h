@@ -43,6 +43,10 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
 
+  /// Returns true if the call can be lowered as a tail call.
+  bool isEligibleForTailCallOptimization(MachineIRBuilder &MIRBuilder,
+                                         CallLoweringInfo &Info) const;
+
   bool supportSwiftError() const override { return true; }
 
 private:

@@ -371,13 +371,19 @@ static std::error_code realPathFromHandle(HANDLE H,
   if (std::error_code EC = realPathFromHandle(H, Buffer))
     return EC;
 
-  const wchar_t *Data = Buffer.data();
+  // Strip the \\?\ prefix. We don't want it ending up in output, and such
+  // paths don't get canonicalized by file APIs.
+  wchar_t *Data = Buffer.data();
   DWORD CountChars = Buffer.size();
-  if (CountChars >= 4) {
-    if (0 == ::memcmp(Data, L"\\\\?\\", 8)) {
-      CountChars -= 4;
-      Data += 4;
-    }
+  if (CountChars >= 8 && ::memcmp(Data, L"\\\\?\\UNC\\", 16) == 0) {
+    // Convert \\?\UNC\foo\bar to \\foo\bar
+    CountChars -= 6;
+    Data += 6;
+    Data[0] = '\\';
+  } else if (CountChars >= 4 && ::memcmp(Data, L"\\\\?\\", 8) == 0) {
+    // Convert \\?\c:\foo to c:\foo
+    CountChars -= 4;
+    Data += 4;
   }
 
   // Convert the result from UTF-16 to UTF-8.

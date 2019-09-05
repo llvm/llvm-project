@@ -19,11 +19,17 @@ TEST_F(GISelMITest, TestKnownBitsCst) {
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
+  unsigned DstReg = FinalCopy->getOperand(1).getReg();
   GISelKnownBits Info(*MF);
   KnownBits Res = Info.getKnownBits(SrcReg);
   EXPECT_EQ((uint64_t)1, Res.One.getZExtValue());
   EXPECT_EQ((uint64_t)0xfe, Res.Zero.getZExtValue());
+
+  KnownBits Res2 = Info.getKnownBits(DstReg);
+  EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
+  EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
 }
+
 TEST_F(GISelMITest, TestKnownBitsPtrToIntViceVersa) {
   StringRef MIRString = "  %3:_(s16) = G_CONSTANT i16 256\n"
                         "  %4:_(p0) = G_INTTOPTR %3\n"
