@@ -18,7 +18,7 @@
 // RUN: mkdir %t/mcp
 // RUN: mkdir %t/lib
 // RUN: cp %S/Inputs/A.swift %t/AA.swift
-// RUN: %target-swiftc -module-name AA -emit-parseable-module-interface-path %t/lib/AA.swiftinterface -emit-library -o %t/lib/libAA%target-shared-library-suffix %t/AA.swift
+// RUN: %target-swiftc -module-name AA -emit-module-interface-path %t/lib/AA.swiftinterface -emit-library -o %t/lib/libAA%target-shared-library-suffix %t/AA.swift
 // RUN: sed -e 's/FromInterface/FromSerialized/g' %t/AA.swift | %target-swiftc -module-name AA -emit-module -o %t/lib/AA.swiftmodule -
 // RUN: rm %t/AA.swift
 
