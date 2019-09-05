@@ -866,8 +866,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *Exp =
-      MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO,
-                              OutContext);
+        MCSymbolRefExpr::create(MOSymbol,
+                                isPPC64 ? MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO
+                                        : MCSymbolRefExpr::VK_PPC_GOT_TPREL,
+                                OutContext);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;

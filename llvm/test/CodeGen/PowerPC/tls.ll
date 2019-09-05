@@ -43,7 +43,7 @@ entry:
 ;OPT0-PPC32-LABEL:    main2:
 ;OPT0-PPC32:       li [[REG1:[0-9]+]], _GLOBAL_OFFSET_TABLE_@l
 ;OPT0-PPC32:       addis [[REG1]], [[REG1]], _GLOBAL_OFFSET_TABLE_@ha
-;OPT0-PPC32:       lwz [[REG2:[0-9]+]], a2@got@tprel@l([[REG1]])
+;OPT0-PPC32:       lwz [[REG2:[0-9]+]], a2@got@tprel([[REG1]])
 ;OPT0-PPC32:       add 3, [[REG2]], a2@tls
 
 ;OPT0-PPC32-PIC-LABEL:  main2:
@@ -51,4 +51,4 @@ entry:
 ;OPT0-PPC32-PIC-NOT:    li {{[0-9]+}}, _GLOBAL_OFFSET_TABLE_@l
 ;OPT0-PPC32-PIC-NOT:    addis {{[0-9]+}}, {{[0-9+]}}, _GLOBAL_OFFSET_TABLE_@ha
 ;OPT0-PPC32-PIC-NOT:    bl __tls_get_addr(a2@tlsgd)@PLT
-;OPT0-PPC32-PIC:        lwz {{[0-9]+}}, a2@got@tprel@l({{[0-9]+}})
+;OPT0-PPC32-PIC:        lwz {{[0-9]+}}, a2@got@tprel({{[0-9]+}})
