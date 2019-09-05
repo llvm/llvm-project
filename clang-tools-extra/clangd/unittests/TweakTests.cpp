@@ -24,6 +24,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -33,6 +34,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
+#include <string>
+#include <vector>
 
 using ::testing::AllOf;
 using ::testing::HasSubstr;
@@ -878,6 +881,170 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp"}};
   for (auto C : Cases)
     EXPECT_EQ(C.second, apply(C.first)) << C.first;
+}
+
+TWEAK_TEST(DefineInline);
+TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
+  // Basic check for function body and signature.
+  EXPECT_AVAILABLE(R"cpp(
+  class Bar {
+    void baz();
+  };
+
+  [[void [[Bar::[[b^a^z]]]]() [[{
+    return;
+  }]]]]
+
+  void foo();
+  [[void [[f^o^o]]() [[{
+    return;
+  }]]]]
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // Not a definition
+  vo^i[[d^ ^f]]^oo();
+
+  [[vo^id ]]foo[[()]] {[[
+    [[(void)(5+3);
+    return;]]
+  }]]
+  )cpp");
+}
+
+TEST_F(DefineInlineTest, NoForwardDecl) {
+  Header = "void bar();";
+  EXPECT_UNAVAILABLE(R"cpp(
+  void bar() {
+    return;
+  }
+  // FIXME: Generate a decl in the header.
+  void fo^o() {
+    return;
+  })cpp");
+}
+
+TEST_F(DefineInlineTest, ReferencedDecls) {
+  EXPECT_AVAILABLE(R"cpp(
+    void bar();
+    void foo(int test);
+
+    void fo^o(int baz) {
+      int x = 10;
+      bar();
+    })cpp");
+
+  // Internal symbol usage.
+  Header = "void foo(int test);";
+  EXPECT_UNAVAILABLE(R"cpp(
+    void bar();
+    void fo^o(int baz) {
+      int x = 10;
+      bar();
+    })cpp");
+
+  // Becomes available after making symbol visible.
+  Header = "void bar();" + Header;
+  EXPECT_AVAILABLE(R"cpp(
+    void fo^o(int baz) {
+      int x = 10;
+      bar();
+    })cpp");
+
+  // FIXME: Move declaration below bar to make it visible.
+  Header.clear();
+  EXPECT_UNAVAILABLE(R"cpp(
+    void foo();
+    void bar();
+
+    void fo^o() {
+      bar();
+    })cpp");
+
+  // Order doesn't matter within a class.
+  EXPECT_AVAILABLE(R"cpp(
+    class Bar {
+      void foo();
+      void bar();
+    };
+
+    void Bar::fo^o() {
+      bar();
+    })cpp");
+
+  // FIXME: Perform include insertion to make symbol visible.
+  ExtraFiles["a.h"] = "void bar();";
+  Header = "void foo(int test);";
+  EXPECT_UNAVAILABLE(R"cpp(
+    #include "a.h"
+    void fo^o(int baz) {
+      int x = 10;
+      bar();
+    })cpp");
+}
+
+TEST_F(DefineInlineTest, TemplateSpec) {
+  EXPECT_UNAVAILABLE(R"cpp(
+    template <typename T> void foo();
+    template<> void foo<char>();
+
+    template<> void f^oo<int>() {
+    })cpp");
+  EXPECT_UNAVAILABLE(R"cpp(
+    template <typename T> void foo();
+
+    template<> void f^oo<int>() {
+    })cpp");
+  EXPECT_UNAVAILABLE(R"cpp(
+    template <typename T> struct Foo { void foo(); };
+
+    template <typename T> void Foo<T>::f^oo() {
+    })cpp");
+  EXPECT_AVAILABLE(R"cpp(
+    template <typename T> void foo();
+    void bar();
+    template <> void foo<int>();
+
+    template<> void f^oo<int>() {
+      bar();
+    })cpp");
+}
+
+TEST_F(DefineInlineTest, CheckForCanonDecl) {
+  EXPECT_UNAVAILABLE(R"cpp(
+    void foo();
+
+    void bar() {}
+    void f^oo() {
+      // This bar normally refers to the definition just above, but it is not
+      // visible from the forward declaration of foo.
+      bar();
+    })cpp");
+  // Make it available with a forward decl.
+  EXPECT_AVAILABLE(R"cpp(
+    void bar();
+    void foo();
+
+    void bar() {}
+    void f^oo() {
+      bar();
+    })cpp");
+}
+
+TEST_F(DefineInlineTest, UsingShadowDecls) {
+  EXPECT_UNAVAILABLE(R"cpp(
+  namespace ns1 { void foo(int); }
+  namespace ns2 { void foo(int*); }
+  template <typename T>
+  void bar();
+
+  using ns1::foo;
+  using ns2::foo;
+
+  template <typename T>
+  void b^ar() {
+    foo(T());
+  })cpp");
 }
 
 } // namespace
