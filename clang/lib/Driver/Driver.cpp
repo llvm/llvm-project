@@ -133,7 +133,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
-    this->VFS = llvm::vfs::createPhysicalFileSystem().release();
+    this->VFS = llvm::vfs::getRealFileSystem();
 
   Name = llvm::sys::path::filename(ClangExecutable);
   Dir = llvm::sys::path::parent_path(ClangExecutable);
@@ -1004,11 +1004,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
         }
     }
   }
-
-  // Check for working directory option before accessing any files
-  if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
-    if (VFS->setCurrentWorkingDirectory(WD->getValue()))
-      Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
 
   // FIXME: This stuff needs to go into the Compilation, not the driver.
   bool CCCPrintPhases;
@@ -1992,11 +1987,20 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
   if (Value == "-")
     return true;
 
-  if (getVFS().exists(Value))
+  SmallString<64> Path(Value);
+  if (Arg *WorkDir = Args.getLastArg(options::OPT_working_directory)) {
+    if (!llvm::sys::path::is_absolute(Path)) {
+      SmallString<64> Directory(WorkDir->getValue());
+      llvm::sys::path::append(Directory, Value);
+      Path.assign(Directory);
+    }
+  }
+
+  if (getVFS().exists(Path))
     return true;
 
   if (IsCLMode()) {
-    if (!llvm::sys::path::is_absolute(Twine(Value)) &&
+    if (!llvm::sys::path::is_absolute(Twine(Path)) &&
         llvm::sys::Process::FindInEnvPath("LIB", Value))
       return true;
 
@@ -2022,12 +2026,12 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
     if (getOpts().findNearest(Value, Nearest, IncludedFlagsBitmask,
                               ExcludedFlagsBitmask) <= 1) {
       Diag(clang::diag::err_drv_no_such_file_with_suggestion)
-          << Value << Nearest;
+          << Path << Nearest;
       return false;
     }
   }
 
-  Diag(clang::diag::err_drv_no_such_file) << Value;
+  Diag(clang::diag::err_drv_no_such_file) << Path;
   return false;
 }
 
