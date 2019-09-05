@@ -481,6 +481,12 @@ namespace llvm {
     return Vec;
   }
 
+  /// Construct an ArrayRef from a std::array.
+  template <typename T, std::size_t N>
+  ArrayRef<T> makeArrayRef(const std::array<T, N> &Arr) {
+    return Arr;
+  }
+
   /// Construct an ArrayRef from an ArrayRef (no-op) (const)
   template <typename T> ArrayRef<T> makeArrayRef(const ArrayRef<T> &Vec) {
     return Vec;

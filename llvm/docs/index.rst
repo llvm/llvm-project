@@ -71,22 +71,26 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
 :doc:`SubsystemDocumentation`
   For API clients and LLVM developers.
 
-Development Process Documentation
-=================================
+Community
+=========
 
-Information about LLVM's development process.
+LLVM has a thriving community of friendly and helpful developers.
+The two primary communication mechanisms in the LLVM community are mailing
+lists and IRC.
+
+Getting Involved
+----------------
+
+LLVM welcomes contributions of all kinds. To get started, please review the following topics:
 
 .. toctree::
    :hidden:
 
    Contributing
    DeveloperPolicy
-   Projects
-   LLVMBuild
-   HowToReleaseLLVM
-   Packaging
-   ReleaseProcess
+   SphinxQuickstartTemplate
    Phabricator
+   HowToSubmitABug
    BugLifeCycle
 
 :doc:`Contributing`
@@ -94,6 +98,35 @@ Information about LLVM's development process.
 
 :doc:`DeveloperPolicy`
    The LLVM project's policy towards developers and their contributions.
+
+:doc:`SphinxQuickstartTemplate`
+  A template + tutorial for writing new Sphinx documentation. It is meant
+  to be read in source form.
+
+:doc:`Phabricator`
+   Describes how to use the Phabricator code review tool hosted on
+   http://reviews.llvm.org/ and its command line interface, Arcanist.
+
+:doc:`HowToSubmitABug`
+   Instructions for properly submitting information about any bugs you run into
+   in the LLVM system.
+
+:doc:`BugLifeCycle`
+   Describes how bugs are reported, triaged and closed.
+
+Development Process
+-------------------
+
+Information about LLVM's development process.
+
+.. toctree::
+   :hidden:
+
+   Projects
+   LLVMBuild
+   HowToReleaseLLVM
+   Packaging
+   ReleaseProcess
 
 :doc:`Projects`
   How-to guide and templates for new projects that *use* the LLVM
@@ -113,20 +146,6 @@ Information about LLVM's development process.
 
 :doc:`Packaging`
    Advice on packaging LLVM into a distribution.
-
-:doc:`Phabricator`
-   Describes how to use the Phabricator code review tool hosted on
-   http://reviews.llvm.org/ and its command line interface, Arcanist.
-
-:doc:`BugLifeCycle`
-   Describes how bugs are reported, triaged and closed.
-
-Community
-=========
-
-LLVM has a thriving community of friendly and helpful developers.
-The two primary communication mechanisms in the LLVM community are mailing
-lists and IRC.
 
 Mailing Lists
 -------------

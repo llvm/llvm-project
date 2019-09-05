@@ -25,8 +25,6 @@ intermediate LLVM representation.
    Lexicon
    HowToAddABuilder
    yaml2obj
-   HowToSubmitABug
-   SphinxQuickstartTemplate
    MarkdownQuickstartTemplate
    Phabricator
    TestingGuide
@@ -87,14 +85,6 @@ intermediate LLVM representation.
 
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
-
-:doc:`HowToSubmitABug`
-   Instructions for properly submitting information about any bugs you run into
-   in the LLVM system.
-
-:doc:`SphinxQuickstartTemplate`
-  A template + tutorial for writing new Sphinx documentation. It is meant
-  to be read in source form.
 
 :doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
    A reference manual for using the LLVM testing infrastructure.
