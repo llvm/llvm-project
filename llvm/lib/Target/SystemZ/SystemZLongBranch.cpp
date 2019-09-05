@@ -257,7 +257,7 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
     }
     Terminator.Branch = &MI;
     Terminator.TargetBlock =
-      TII->getBranchInfo(MI).Target->getMBB()->getNumber();
+      TII->getBranchInfo(MI).getMBBTarget()->getNumber();
   }
   return Terminator;
 }
