@@ -11091,33 +11091,42 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   return GetSignedVectorType(vType);
 }
 
-static void diagnoseXorMisusedAsPow(Sema &S, ExprResult &LHS, ExprResult &RHS,
-                                    SourceLocation Loc) {
+static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
+                                    const ExprResult &XorRHS,
+                                    const SourceLocation Loc) {
   // Do not diagnose macros.
   if (Loc.isMacroID())
     return;
 
   bool Negative = false;
-  const auto *LHSInt = dyn_cast<IntegerLiteral>(LHS.get());
-  const auto *RHSInt = dyn_cast<IntegerLiteral>(RHS.get());
+  bool ExplicitPlus = false;
+  const auto *LHSInt = dyn_cast<IntegerLiteral>(XorLHS.get());
+  const auto *RHSInt = dyn_cast<IntegerLiteral>(XorRHS.get());
 
   if (!LHSInt)
     return;
   if (!RHSInt) {
     // Check negative literals.
-    if (const auto *UO = dyn_cast<UnaryOperator>(RHS.get())) {
-      if (UO->getOpcode() != UO_Minus)
+    if (const auto *UO = dyn_cast<UnaryOperator>(XorRHS.get())) {
+      UnaryOperatorKind Opc = UO->getOpcode();
+      if (Opc != UO_Minus && Opc != UO_Plus)
         return;
       RHSInt = dyn_cast<IntegerLiteral>(UO->getSubExpr());
       if (!RHSInt)
         return;
-      Negative = true;
+      Negative = (Opc == UO_Minus);
+      ExplicitPlus = !Negative;
     } else {
       return;
     }
   }
 
-  if (LHSInt->getValue().getBitWidth() != RHSInt->getValue().getBitWidth())
+  const llvm::APInt &LeftSideValue = LHSInt->getValue();
+  llvm::APInt RightSideValue = RHSInt->getValue();
+  if (LeftSideValue != 2 && LeftSideValue != 10)
+    return;
+
+  if (LeftSideValue.getBitWidth() != RightSideValue.getBitWidth())
     return;
 
   CharSourceRange ExprRange = CharSourceRange::getCharRange(
@@ -11133,10 +11142,6 @@ static void diagnoseXorMisusedAsPow(Sema &S, ExprResult &LHS, ExprResult &RHS,
   if (XorStr == "xor")
     return;
 
-  const llvm::APInt &LeftSideValue = LHSInt->getValue();
-  const llvm::APInt &RightSideValue = RHSInt->getValue();
-  const llvm::APInt XorValue = LeftSideValue ^ RightSideValue;
-
   std::string LHSStr = Lexer::getSourceText(
       CharSourceRange::getTokenRange(LHSInt->getSourceRange()),
       S.getSourceManager(), S.getLangOpts());
@@ -11144,23 +11149,30 @@ static void diagnoseXorMisusedAsPow(Sema &S, ExprResult &LHS, ExprResult &RHS,
       CharSourceRange::getTokenRange(RHSInt->getSourceRange()),
       S.getSourceManager(), S.getLangOpts());
 
-  int64_t RightSideIntValue = RightSideValue.getSExtValue();
   if (Negative) {
-    RightSideIntValue = -RightSideIntValue;
+    RightSideValue = -RightSideValue;
     RHSStr = "-" + RHSStr;
+  } else if (ExplicitPlus) {
+    RHSStr = "+" + RHSStr;
   }
 
   StringRef LHSStrRef = LHSStr;
   StringRef RHSStrRef = RHSStr;
-  // Do not diagnose binary, hexadecimal, octal literals.
+  // Do not diagnose literals with digit separators, binary, hexadecimal, octal
+  // literals.
   if (LHSStrRef.startswith("0b") || LHSStrRef.startswith("0B") ||
       RHSStrRef.startswith("0b") || RHSStrRef.startswith("0B") ||
       LHSStrRef.startswith("0x") || LHSStrRef.startswith("0X") ||
       RHSStrRef.startswith("0x") || RHSStrRef.startswith("0X") ||
       (LHSStrRef.size() > 1 && LHSStrRef.startswith("0")) ||
-      (RHSStrRef.size() > 1 && RHSStrRef.startswith("0")))
+      (RHSStrRef.size() > 1 && RHSStrRef.startswith("0")) ||
+      LHSStrRef.find('\'') != StringRef::npos ||
+      RHSStrRef.find('\'') != StringRef::npos)
     return;
 
+  bool SuggestXor = S.getLangOpts().CPlusPlus || S.getPreprocessor().isMacroDefined("xor");
+  const llvm::APInt XorValue = LeftSideValue ^ RightSideValue;
+  int64_t RightSideIntValue = RightSideValue.getSExtValue();
   if (LeftSideValue == 2 && RightSideIntValue >= 0) {
     std::string SuggestedExpr = "1 << " + RHSStr;
     bool Overflow = false;
@@ -11171,8 +11183,9 @@ static void diagnoseXorMisusedAsPow(Sema &S, ExprResult &LHS, ExprResult &RHS,
         S.Diag(Loc, diag::warn_xor_used_as_pow_base)
             << ExprStr << XorValue.toString(10, true) << ("1LL << " + RHSStr)
             << FixItHint::CreateReplacement(ExprRange, "1LL << " + RHSStr);
+      else if (RightSideIntValue == 64)
+        S.Diag(Loc, diag::warn_xor_used_as_pow) << ExprStr << XorValue.toString(10, true);
       else
-         // TODO: 2 ^ 64 - 1
         return;
     } else {
       S.Diag(Loc, diag::warn_xor_used_as_pow_base_extra)
@@ -11182,13 +11195,13 @@ static void diagnoseXorMisusedAsPow(Sema &S, ExprResult &LHS, ExprResult &RHS,
                  ExprRange, (RightSideIntValue == 0) ? "1" : SuggestedExpr);
     }
 
-    S.Diag(Loc, diag::note_xor_used_as_pow_silence) << ("0x2 ^ " + RHSStr);
+    S.Diag(Loc, diag::note_xor_used_as_pow_silence) << ("0x2 ^ " + RHSStr) << SuggestXor;
   } else if (LeftSideValue == 10) {
     std::string SuggestedValue = "1e" + std::to_string(RightSideIntValue);
     S.Diag(Loc, diag::warn_xor_used_as_pow_base)
         << ExprStr << XorValue.toString(10, true) << SuggestedValue
         << FixItHint::CreateReplacement(ExprRange, SuggestedValue);
-    S.Diag(Loc, diag::note_xor_used_as_pow_silence) << ("0xA ^ " + RHSStr);
+    S.Diag(Loc, diag::note_xor_used_as_pow_silence) << ("0xA ^ " + RHSStr) << SuggestXor;
   }
 }
 
@@ -11235,9 +11248,6 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
   if (Opc == BO_And)
     diagnoseLogicalNotOnLHSofCheck(*this, LHS, RHS, Loc, Opc);
 
-  if (Opc == BO_Xor)
-    diagnoseXorMisusedAsPow(*this, LHS, RHS, Loc);
-
   ExprResult LHSResult = LHS, RHSResult = RHS;
   QualType compType = UsualArithmeticConversions(LHSResult, RHSResult,
                                                  IsCompAssign);
@@ -11245,6 +11255,9 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
     return QualType();
   LHS = LHSResult.get();
   RHS = RHSResult.get();
+
+  if (Opc == BO_Xor)
+    diagnoseXorMisusedAsPow(*this, LHS, RHS, Loc);
 
   if (!compType.isNull() && compType->isIntegralOrUnscopedEnumerationType())
     return compType;
