@@ -315,7 +315,7 @@ FileHeader:
 # RUN: yaml2obj %s --docnum=16 -o %t16
 # RUN: not llvm-readobj -r %t16 2>&1 | FileCheck -DFILE=%t16 --check-prefix=INVALID-REL-SYM %s
 
-# INVALID-REL-SYM: error: '[[FILE]]': unable to access section [index 2] data at 0x18000180: offset goes past the end of file
+# INVALID-REL-SYM: error: '[[FILE]]': unable to access section [index 2] data at 0x18000040: offset goes past the end of file
 
 --- !ELF
 FileHeader:
@@ -565,7 +565,7 @@ Sections:
 # RUN: yaml2obj --docnum=26 %s -o %t26
 # RUN: not llvm-readobj -h %t26 2>&1 | FileCheck -DFILE=%t26 --check-prefix=INVALID-SEC-NUM1 %s
 
-# INVALID-SEC-NUM1: error: '[[FILE]]': invalid section header table offset (e_shoff = 0x40) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
+# INVALID-SEC-NUM1: error: '[[FILE]]': invalid section header table offset (e_shoff = 0x78) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
 
 --- !ELF
 FileHeader:

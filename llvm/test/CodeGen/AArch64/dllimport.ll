@@ -59,4 +59,4 @@ define i32 @call_internal() {
 ; CHECK-LABEL: call_internal
 ; DAG-ISEL: b internal
 ; FAST-ISEL: b internal
-; GLOBAL-ISEL: b internal
+; GLOBAL-ISEL: bl internal

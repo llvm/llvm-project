@@ -4,7 +4,7 @@
 
 # RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: not llvm-objcopy %t1.o 2>&1 | FileCheck %s --check-prefix=ERR1
-# ERR1: error: program header with offset 0x1b8 and file size 0x100000 goes past the end of the file
+# ERR1: error: program header with offset 0x78 and file size 0x100000 goes past the end of the file
 
 --- !ELF
 FileHeader:

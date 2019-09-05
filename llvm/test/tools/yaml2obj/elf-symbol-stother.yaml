@@ -4,7 +4,7 @@
 ## to a different machine type to what is specified by the YAML.
 
 # RUN: not yaml2obj --docnum=1 2>&1 %s | FileCheck %s --check-prefix=ERR
-# ERR: error: an unknown value is used for symbol's 'Other' field: STO_MIPS_OPTIONAL.
+# ERR: error: an unknown value is used for symbol's 'Other' field: STO_MIPS_OPTIONAL
 
 --- !ELF
 FileHeader:

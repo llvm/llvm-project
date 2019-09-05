@@ -2241,6 +2241,9 @@ bool X86SpeculativeLoadHardeningPass::canHardenRegister(unsigned Reg) {
     // We don't support post-load hardening of vectors.
     return false;
 
+  unsigned RegIdx = Log2_32(RegBytes);
+  assert(RegIdx < 4 && "Unsupported register size");
+
   // If this register class is explicitly constrained to a class that doesn't
   // require REX prefix, we may not be able to satisfy that constraint when
   // emitting the hardening instructions, so bail out here.
@@ -2251,13 +2254,13 @@ bool X86SpeculativeLoadHardeningPass::canHardenRegister(unsigned Reg) {
   const TargetRegisterClass *NOREXRegClasses[] = {
       &X86::GR8_NOREXRegClass, &X86::GR16_NOREXRegClass,
       &X86::GR32_NOREXRegClass, &X86::GR64_NOREXRegClass};
-  if (RC == NOREXRegClasses[Log2_32(RegBytes)])
+  if (RC == NOREXRegClasses[RegIdx])
     return false;
 
   const TargetRegisterClass *GPRRegClasses[] = {
       &X86::GR8RegClass, &X86::GR16RegClass, &X86::GR32RegClass,
       &X86::GR64RegClass};
-  return RC->hasSuperClassEq(GPRRegClasses[Log2_32(RegBytes)]);
+  return RC->hasSuperClassEq(GPRRegClasses[RegIdx]);
 }
 
 /// Harden a value in a register.

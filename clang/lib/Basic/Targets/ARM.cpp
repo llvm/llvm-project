@@ -885,19 +885,102 @@ bool ARMTargetInfo::validateAsmConstraint(
   switch (*Name) {
   default:
     break;
-  case 'l': // r0-r7
-  case 'h': // r8-r15
-  case 't': // VFP Floating point register single precision
-  case 'w': // VFP Floating point register double precision
+  case 'l': // r0-r7 if thumb, r0-r15 if ARM
     Info.setAllowsRegister();
     return true;
-  case 'I':
-  case 'J':
-  case 'K':
-  case 'L':
-  case 'M':
-    // FIXME
+  case 'h': // r8-r15, thumb only
+    if (isThumb()) {
+      Info.setAllowsRegister();
+      return true;
+    }
+    break;
+  case 's': // An integer constant, but allowing only relocatable values.
     return true;
+  case 't': // s0-s31, d0-d31, or q0-q15
+  case 'w': // s0-s15, d0-d7, or q0-q3
+  case 'x': // s0-s31, d0-d15, or q0-q7
+    Info.setAllowsRegister();
+    return true;
+  case 'j': // An immediate integer between 0 and 65535 (valid for MOVW)
+    // only available in ARMv6T2 and above
+    if (CPUAttr.equals("6T2") || ArchVersion >= 7) {
+      Info.setRequiresImmediate(0, 65535);
+      return true;
+    }
+    break;
+  case 'I':
+    if (isThumb()) {
+      if (!supportsThumb2())
+        Info.setRequiresImmediate(0, 255);
+      else
+        // FIXME: should check if immediate value would be valid for a Thumb2
+        // data-processing instruction
+        Info.setRequiresImmediate();
+    } else
+      // FIXME: should check if immediate value would be valid for an ARM
+      // data-processing instruction
+      Info.setRequiresImmediate();
+    return true;
+  case 'J':
+    if (isThumb() && !supportsThumb2())
+      Info.setRequiresImmediate(-255, -1);
+    else
+      Info.setRequiresImmediate(-4095, 4095);
+    return true;
+  case 'K':
+    if (isThumb()) {
+      if (!supportsThumb2())
+        // FIXME: should check if immediate value can be obtained from shifting
+        // a value between 0 and 255 left by any amount
+        Info.setRequiresImmediate();
+      else
+        // FIXME: should check if immediate value would be valid for a Thumb2
+        // data-processing instruction when inverted
+        Info.setRequiresImmediate();
+    } else
+      // FIXME: should check if immediate value would be valid for an ARM
+      // data-processing instruction when inverted
+      Info.setRequiresImmediate();
+    return true;
+  case 'L':
+    if (isThumb()) {
+      if (!supportsThumb2())
+        Info.setRequiresImmediate(-7, 7);
+      else
+        // FIXME: should check if immediate value would be valid for a Thumb2
+        // data-processing instruction when negated
+        Info.setRequiresImmediate();
+    } else
+      // FIXME: should check if immediate value  would be valid for an ARM
+      // data-processing instruction when negated
+      Info.setRequiresImmediate();
+    return true;
+  case 'M':
+    if (isThumb() && !supportsThumb2())
+      // FIXME: should check if immediate value is a multiple of 4 between 0 and
+      // 1020
+      Info.setRequiresImmediate();
+    else
+      // FIXME: should check if immediate value is a power of two or a integer
+      // between 0 and 32
+      Info.setRequiresImmediate();
+    return true;
+  case 'N':
+    // Thumb1 only
+    if (isThumb() && !supportsThumb2()) {
+      Info.setRequiresImmediate(0, 31);
+      return true;
+    }
+    break;
+  case 'O':
+    // Thumb1 only
+    if (isThumb() && !supportsThumb2()) {
+      // FIXME: should check if immediate value is a multiple of 4 between -508
+      // and 508
+      Info.setRequiresImmediate();
+      return true;
+    }
+    break;
   case 'Q': // A memory address that is a single base register.
     Info.setAllowsMemory();
     return true;

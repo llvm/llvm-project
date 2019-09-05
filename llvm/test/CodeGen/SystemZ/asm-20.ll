@@ -1,10 +1,10 @@
 ; Test that asm goto can be compiled.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14
 
 define i32 @c() {
 entry:
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@c, %d))
+  callbr void asm sideeffect "j d", "X"(i8* blockaddress(@c, %d))
           to label %asm.fallthrough [label %d]
 
 asm.fallthrough:               ; preds = %entry
