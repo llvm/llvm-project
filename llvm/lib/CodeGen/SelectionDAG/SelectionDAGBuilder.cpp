@@ -2262,7 +2262,7 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
   if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(CondVal)) {
     Instruction::BinaryOps Opcode = BOp->getOpcode();
     if (!DAG.getTargetLoweringInfo().isJumpExpensive() && BOp->hasOneUse() &&
-        !I.getMetadata(LLVMContext::MD_unpredictable) &&
+        !I.hasMetadata(LLVMContext::MD_unpredictable) &&
         (Opcode == Instruction::And || Opcode == Instruction::Or)) {
       FindMergedConditions(BOp, Succ0MBB, Succ1MBB, BrMBB, BrMBB,
                            Opcode,
@@ -4002,8 +4002,8 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Type *Ty = I.getType();
 
   bool isVolatile = I.isVolatile();
-  bool isNonTemporal = I.getMetadata(LLVMContext::MD_nontemporal) != nullptr;
-  bool isInvariant = I.getMetadata(LLVMContext::MD_invariant_load) != nullptr;
+  bool isNonTemporal = I.hasMetadata(LLVMContext::MD_nontemporal);
+  bool isInvariant = I.hasMetadata(LLVMContext::MD_invariant_load);
   bool isDereferenceable =
       isDereferenceablePointer(SV, I.getType(), DAG.getDataLayout());
   unsigned Alignment = I.getAlignment();
@@ -4132,8 +4132,8 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
          "call visitLoadFromSwiftError when backend supports swifterror");
 
   assert(!I.isVolatile() &&
-         I.getMetadata(LLVMContext::MD_nontemporal) == nullptr &&
-         I.getMetadata(LLVMContext::MD_invariant_load) == nullptr &&
+         !I.hasMetadata(LLVMContext::MD_nontemporal) &&
+         !I.hasMetadata(LLVMContext::MD_invariant_load) &&
          "Support volatile, non temporal, invariant for load_from_swift_error");
 
   const Value *SV = I.getOperand(0);
@@ -4209,7 +4209,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   auto MMOFlags = MachineMemOperand::MONone;
   if (I.isVolatile())
     MMOFlags |= MachineMemOperand::MOVolatile;
-  if (I.getMetadata(LLVMContext::MD_nontemporal) != nullptr)
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
   MMOFlags |= TLI.getMMOFlags(I);
 
@@ -4641,7 +4641,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   auto Flags = MachineMemOperand::MOLoad;
   if (I.isVolatile())
     Flags |= MachineMemOperand::MOVolatile;
-  if (I.getMetadata(LLVMContext::MD_invariant_load) != nullptr)
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
     Flags |= MachineMemOperand::MOInvariant;
   if (isDereferenceablePointer(I.getPointerOperand(), I.getType(),
                                DAG.getDataLayout()))

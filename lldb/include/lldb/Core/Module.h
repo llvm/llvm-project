@@ -895,6 +895,9 @@ public:
   bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
+  /// Update the ArchSpec to a more specific variant.
+  bool MergeArchitecture(const ArchSpec &arch_spec);
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///

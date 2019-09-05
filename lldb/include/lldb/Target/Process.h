@@ -1196,6 +1196,9 @@ public:
   ///     VersionTuple is returner.
   virtual llvm::VersionTuple GetHostOSVersion() { return llvm::VersionTuple(); }
 
+  /// \return the macCatalyst version of the host OS.
+  virtual llvm::VersionTuple GetHostMacCatalystVersion() { return {}; }
+
   /// Get the target object pointer for this module.
   ///
   /// \return

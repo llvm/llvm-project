@@ -702,7 +702,7 @@ void checkFailIfMismatch(StringRef arg, InputFile *source) {
 // Does what cvtres.exe does, but in-process and cross-platform.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
                                  ArrayRef<ObjFile *> objs) {
-  object::WindowsResourceParser parser;
+  object::WindowsResourceParser parser(/* MinGW */ config->mingw);
 
   std::vector<std::string> duplicates;
   for (MemoryBufferRef mb : mbs) {
@@ -727,6 +727,8 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
       fatal(toString(std::move(ec)));
   }
 
+  if (config->mingw)
+    parser.cleanUpManifests(duplicates);
 
   for (const auto &dupeDiag : duplicates)
     if (config->forceMultipleRes)

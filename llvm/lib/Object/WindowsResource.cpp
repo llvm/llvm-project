@@ -137,7 +137,8 @@ Error ResourceEntryRef::loadNext() {
   return Error::success();
 }
 
-WindowsResourceParser::WindowsResourceParser() : Root(false) {}
+WindowsResourceParser::WindowsResourceParser(bool MinGW)
+    : Root(false), MinGW(MinGW) {}
 
 void printResourceTypeName(uint16_t TypeID, raw_ostream &OS) {
   switch (TypeID) {
@@ -251,6 +252,80 @@ static std::string makeDuplicateResourceError(
   return OS.str();
 }
 
+// MinGW specific. Remove default manifests (with language zero) if there are
+// other manifests present, and report an error if there are more than one
+// manifest with a non-zero language code.
+// GCC has the concept of a default manifest resource object, which gets
+// linked in implicitly if present. This default manifest has got language
+// id zero, and should be dropped silently if there's another manifest present.
+// If the user resources surprisignly had a manifest with language id zero,
+// we should also ignore the duplicate default manifest.
+void WindowsResourceParser::cleanUpManifests(
+    std::vector<std::string> &Duplicates) {
+  auto TypeIt = Root.IDChildren.find(/* RT_MANIFEST */ 24);
+  if (TypeIt == Root.IDChildren.end())
+    return;
+
+  TreeNode *TypeNode = TypeIt->second.get();
+  auto NameIt =
+      TypeNode->IDChildren.find(/* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 1);
+  if (NameIt == TypeNode->IDChildren.end())
+    return;
+
+  TreeNode *NameNode = NameIt->second.get();
+  if (NameNode->IDChildren.size() <= 1)
+    return; // None or one manifest present, all good.
+
+  // If we have more than one manifest, drop the language zero one if present,
+  // and check again.
+  auto LangZeroIt = NameNode->IDChildren.find(0);
+  if (LangZeroIt != NameNode->IDChildren.end() &&
+      LangZeroIt->second->IsDataNode) {
+    uint32_t RemovedIndex = LangZeroIt->second->DataIndex;
+    NameNode->IDChildren.erase(LangZeroIt);
+    Data.erase(Data.begin() + RemovedIndex);
+    Root.shiftDataIndexDown(RemovedIndex);
+
+    // If we're now down to one manifest, all is good.
+    if (NameNode->IDChildren.size() <= 1)
+      return;
+  }
+
+  // More than one non-language-zero manifest
+  auto FirstIt = NameNode->IDChildren.begin();
+  uint32_t FirstLang = FirstIt->first;
+  TreeNode *FirstNode = FirstIt->second.get();
+  auto LastIt = NameNode->IDChildren.rbegin();
+  uint32_t LastLang = LastIt->first;
+  TreeNode *LastNode = LastIt->second.get();
+  Duplicates.push_back(
+      ("duplicate non-default manifests with languages " + Twine(FirstLang) +
+       " in " + InputFilenames[FirstNode->Origin] + " and " + Twine(LastLang) +
+       " in " + InputFilenames[LastNode->Origin])
+          .str());
+}
+
+// Ignore duplicates of manifests with language zero (the default manifest),
+// in case the user has provided a manifest with that language id. See
+// the function comment above for context. Only returns true if MinGW is set
+// to true.
+bool WindowsResourceParser::shouldIgnoreDuplicate(
+    const ResourceEntryRef &Entry) const {
+  return MinGW && !Entry.checkTypeString() &&
+         Entry.getTypeID() == /* RT_MANIFEST */ 24 &&
+         !Entry.checkNameString() &&
+         Entry.getNameID() == /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 1 &&
+         Entry.getLanguage() == 0;
+}
+
+bool WindowsResourceParser::shouldIgnoreDuplicate(
+    const std::vector<StringOrID> &Context) const {
+  return MinGW && Context.size() == 3 && !Context[0].IsString &&
+         Context[0].ID == /* RT_MANIFEST */ 24 && !Context[1].IsString &&
+         Context[1].ID == /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 1 &&
+         !Context[2].IsString && Context[2].ID == 0;
+}
+
 Error WindowsResourceParser::parse(WindowsResource *WR,
                                    std::vector<std::string> &Duplicates) {
   auto EntryOrErr = WR->getHeadEntry();
@@ -278,8 +353,9 @@ Error WindowsResourceParser::parse(WindowsResource *WR,
     TreeNode *Node;
     bool IsNewNode = Root.addEntry(Entry, Origin, Data, StringTable, Node);
     if (!IsNewNode) {
-      Duplicates.push_back(makeDuplicateResourceError(
-          Entry, InputFilenames[Node->Origin], WR->getFileName()));
+      if (!shouldIgnoreDuplicate(Entry))
+        Duplicates.push_back(makeDuplicateResourceError(
+            Entry, InputFilenames[Node->Origin], WR->getFileName()));
     }
 
     RETURN_IF_ERROR(Entry.moveNext(End));
@@ -362,8 +438,9 @@ Error WindowsResourceParser::addChildren(TreeNode &Node,
             reinterpret_cast<const uint8_t *>(Contents.data()),
             Contents.size()));
       } else {
-        Duplicates.push_back(makeDuplicateResourceError(
-            Context, InputFilenames[Child->Origin], InputFilenames.back()));
+        if (!shouldIgnoreDuplicate(Context))
+          Duplicates.push_back(makeDuplicateResourceError(
+              Context, InputFilenames[Child->Origin], InputFilenames.back()));
       }
       Context.pop_back();
 
@@ -506,6 +583,19 @@ uint32_t WindowsResourceParser::TreeNode::getTreeSize() const {
     Size += Child.second->getTreeSize();
   }
   return Size;
+}
+
+// Shift DataIndex of all data children with an Index greater or equal to the
+// given one, to fill a gap from removing an entry from the Data vector.
+void WindowsResourceParser::TreeNode::shiftDataIndexDown(uint32_t Index) {
+  if (IsDataNode && DataIndex >= Index) {
+    DataIndex--;
+  } else {
+    for (auto &Child : IDChildren)
+      Child.second->shiftDataIndexDown(Index);
+    for (auto &Child : StringChildren)
+      Child.second->shiftDataIndexDown(Index);
+  }
 }
 
 class WindowsResourceCOFFWriter {

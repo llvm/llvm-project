@@ -153,10 +153,11 @@ private:
 class WindowsResourceParser {
 public:
   class TreeNode;
-  WindowsResourceParser();
+  WindowsResourceParser(bool MinGW = false);
   Error parse(WindowsResource *WR, std::vector<std::string> &Duplicates);
   Error parse(ResourceSectionRef &RSR, StringRef Filename,
               std::vector<std::string> &Duplicates);
+  void cleanUpManifests(std::vector<std::string> &Duplicates);
   void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }
   const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
@@ -216,6 +217,7 @@ public:
     TreeNode &addIDChild(uint32_t ID);
     TreeNode &addNameChild(ArrayRef<UTF16> NameRef,
                            std::vector<std::vector<UTF16>> &StringTable);
+    void shiftDataIndexDown(uint32_t Index);
 
     bool IsDataNode = false;
     uint32_t StringIndex;
@@ -245,12 +247,16 @@ private:
                     const coff_resource_dir_table &Table, uint32_t Origin,
                     std::vector<StringOrID> &Context,
                     std::vector<std::string> &Duplicates);
+  bool shouldIgnoreDuplicate(const ResourceEntryRef &Entry) const;
+  bool shouldIgnoreDuplicate(const std::vector<StringOrID> &Context) const;
 
   TreeNode Root;
   std::vector<std::vector<uint8_t>> Data;
   std::vector<std::vector<UTF16>> StringTable;
 
   std::vector<std::string> InputFilenames;
+
+  bool MinGW;
 };
 
 Expected<std::unique_ptr<MemoryBuffer>>

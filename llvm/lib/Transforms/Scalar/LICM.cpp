@@ -1099,7 +1099,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     // in the same alias set as something that ends up being modified.
     if (AA->pointsToConstantMemory(LI->getOperand(0)))
       return true;
-    if (LI->getMetadata(LLVMContext::MD_invariant_load))
+    if (LI->hasMetadata(LLVMContext::MD_invariant_load))
       return true;
 
     if (LI->isAtomic() && !TargetExecutesOncePerLoop)

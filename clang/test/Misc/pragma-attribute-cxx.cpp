@@ -87,14 +87,14 @@ void testLambdaMethod() {
 int testCI1 = 1;
 // CHECK-LABEL: VarDecl{{.*}} testCI1
 // CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: RequireConstantInitAttr
+// CHECK-NEXT: ConstInitAttr
 
 #pragma clang attribute pop
 
 int testNoCI = 0;
 // CHECK-LABEL: VarDecl{{.*}} testNoCI
 // CHECK-NEXT: IntegerLiteral
-// CHECK-NOT: RequireConstantInitAttr
+// CHECK-NOT: ConstInitAttr
 
 // Check support for CXX11 style attributes
 #pragma clang attribute push ([[noreturn]], apply_to = function)

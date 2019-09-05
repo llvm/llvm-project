@@ -171,6 +171,12 @@ def G_BSWAP : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_BITREVERSE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 def G_ADDRSPACE_CAST : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);

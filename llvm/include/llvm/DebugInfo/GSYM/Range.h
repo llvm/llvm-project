@@ -80,6 +80,7 @@ public:
   void clear() { Ranges.clear(); }
   bool empty() const { return Ranges.empty(); }
   bool contains(uint64_t Addr) const;
+  bool contains(AddressRange Range) const;
   void insert(AddressRange Range);
   size_t size() const { return Ranges.size(); }
   bool operator==(const AddressRanges &RHS) const {

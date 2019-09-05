@@ -1,4 +1,4 @@
-; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=7 -S < %s | FileCheck %s
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=11 -S < %s | FileCheck %s
 
 declare void @no_return_call() nofree noreturn nounwind readnone
 
@@ -15,7 +15,7 @@ declare i32 @bar() nosync readnone
 ; This internal function has no live call sites, so all its BBs are considered dead,
 ; and nothing should be deduced for it.
 
-; FIXME-NOT: define internal i32 @dead_internal_func(i32 %0)
+; CHECK-NOT: define internal i32 @dead_internal_func(i32 %0)
 define internal i32 @dead_internal_func(i32 %0) {
   %2 = icmp slt i32 %0, 1
   br i1 %2, label %3, label %5
@@ -417,3 +417,249 @@ define void @test_unreachable() {
   unreachable
 }
 
+define linkonce_odr void @non_exact1() {
+  call void @non_dead_a0()
+  call void @non_dead_a1()
+  call void @non_dead_a2()
+  call void @non_dead_a3()
+  call void @non_dead_a4()
+  call void @non_dead_a5()
+  call void @non_dead_a6()
+  call void @non_dead_a7()
+  call void @non_dead_a8()
+  call void @non_dead_a9()
+  call void @non_dead_a10()
+  call void @non_dead_a11()
+  call void @non_dead_a12()
+  call void @non_dead_a13()
+  call void @non_dead_a14()
+  call void @non_dead_a15()
+  call void @middle()
+  ret void
+}
+define internal void @middle() {
+bb0:
+  call void @non_dead_b0()
+  call void @non_dead_b1()
+  call void @non_dead_b2()
+  call void @non_dead_b3()
+br label %bb1
+bb1:
+  call void @non_dead_b4()
+  call void @non_dead_b5()
+  call void @non_dead_b6()
+  call void @non_dead_b7()
+br label %bb2
+bb2:
+  call void @non_dead_b8()
+  call void @non_dead_b9()
+  call void @non_dead_b10()
+  call void @non_dead_b11()
+br label %bb3
+bb3:
+  call void @non_dead_b12()
+  call void @non_dead_b13()
+  call void @non_dead_b14()
+  call void @non_dead_b15()
+br label %bb4
+bb4:
+  call void @non_exact2()
+  ret void
+}
+define linkonce_odr void @non_exact2() {
+  call void @non_dead_c0()
+  call void @non_dead_c1()
+  call void @non_dead_c2()
+  call void @non_dead_c3()
+  call void @non_dead_c4()
+  call void @non_dead_c5()
+  call void @non_dead_c6()
+  call void @non_dead_c7()
+  call void @non_dead_c8()
+  call void @non_dead_c9()
+  call void @non_dead_c10()
+  call void @non_dead_c11()
+  call void @non_dead_c12()
+  call void @non_dead_c13()
+  call void @non_dead_c14()
+  call void @non_dead_c15()
+  call void @non_exact3()
+  ret void
+}
+define linkonce_odr void @non_exact3() {
+  call void @non_dead_d0()
+  call void @non_dead_d1()
+  call void @non_dead_d2()
+  call void @non_dead_d3()
+  call void @non_dead_d4()
+  call void @non_dead_d5()
+  call void @non_dead_d6()
+  call void @non_dead_d7()
+  call void @non_dead_d8()
+  call void @non_dead_d9()
+  call void @non_dead_d10()
+  call void @non_dead_d11()
+  call void @non_dead_d12()
+  call void @non_dead_d13()
+  call void @non_dead_d14()
+  call void @non_dead_d15()
+  %nr = call i32 @foo_noreturn()
+  call void @dead_e1()
+  ret void
+}
+; CHECK:       define linkonce_odr void @non_exact3() {
+; CHECK-NEXT:   call void @non_dead_d0()
+; CHECK-NEXT:   call void @non_dead_d1()
+; CHECK-NEXT:   call void @non_dead_d2()
+; CHECK-NEXT:   call void @non_dead_d3()
+; CHECK-NEXT:   call void @non_dead_d4()
+; CHECK-NEXT:   call void @non_dead_d5()
+; CHECK-NEXT:   call void @non_dead_d6()
+; CHECK-NEXT:   call void @non_dead_d7()
+; CHECK-NEXT:   call void @non_dead_d8()
+; CHECK-NEXT:   call void @non_dead_d9()
+; CHECK-NEXT:   call void @non_dead_d10()
+; CHECK-NEXT:   call void @non_dead_d11()
+; CHECK-NEXT:   call void @non_dead_d12()
+; CHECK-NEXT:   call void @non_dead_d13()
+; CHECK-NEXT:   call void @non_dead_d14()
+; CHECK-NEXT:   call void @non_dead_d15()
+; CHECK-NEXT:   %nr = call i32 @foo_noreturn()
+; CHECK-NEXT:   unreachable
+; CHECK-NEXT: }
+
+define internal void @non_dead_a0() { ret void }
+define internal void @non_dead_a1() { ret void }
+define internal void @non_dead_a2() { ret void }
+define internal void @non_dead_a3() { ret void }
+define internal void @non_dead_a4() { ret void }
+define internal void @non_dead_a5() { ret void }
+define internal void @non_dead_a6() { ret void }
+define internal void @non_dead_a7() { ret void }
+define internal void @non_dead_a8() { ret void }
+define internal void @non_dead_a9() { ret void }
+define internal void @non_dead_a10() { ret void }
+define internal void @non_dead_a11() { ret void }
+define internal void @non_dead_a12() { ret void }
+define internal void @non_dead_a13() { ret void }
+define internal void @non_dead_a14() { ret void }
+define internal void @non_dead_a15() { ret void }
+define internal void @non_dead_b0() { ret void }
+define internal void @non_dead_b1() { ret void }
+define internal void @non_dead_b2() { ret void }
+define internal void @non_dead_b3() { ret void }
+define internal void @non_dead_b4() { ret void }
+define internal void @non_dead_b5() { ret void }
+define internal void @non_dead_b6() { ret void }
+define internal void @non_dead_b7() { ret void }
+define internal void @non_dead_b8() { ret void }
+define internal void @non_dead_b9() { ret void }
+define internal void @non_dead_b10() { ret void }
+define internal void @non_dead_b11() { ret void }
+define internal void @non_dead_b12() { ret void }
+define internal void @non_dead_b13() { ret void }
+define internal void @non_dead_b14() { ret void }
+define internal void @non_dead_b15() { ret void }
+define internal void @non_dead_c0() { ret void }
+define internal void @non_dead_c1() { ret void }
+define internal void @non_dead_c2() { ret void }
+define internal void @non_dead_c3() { ret void }
+define internal void @non_dead_c4() { ret void }
+define internal void @non_dead_c5() { ret void }
+define internal void @non_dead_c6() { ret void }
+define internal void @non_dead_c7() { ret void }
+define internal void @non_dead_c8() { ret void }
+define internal void @non_dead_c9() { ret void }
+define internal void @non_dead_c10() { ret void }
+define internal void @non_dead_c11() { ret void }
+define internal void @non_dead_c12() { ret void }
+define internal void @non_dead_c13() { ret void }
+define internal void @non_dead_c14() { ret void }
+define internal void @non_dead_c15() { ret void }
+define internal void @non_dead_d0() { ret void }
+define internal void @non_dead_d1() { ret void }
+define internal void @non_dead_d2() { ret void }
+define internal void @non_dead_d3() { ret void }
+define internal void @non_dead_d4() { ret void }
+define internal void @non_dead_d5() { ret void }
+define internal void @non_dead_d6() { ret void }
+define internal void @non_dead_d7() { ret void }
+define internal void @non_dead_d8() { ret void }
+define internal void @non_dead_d9() { ret void }
+define internal void @non_dead_d10() { ret void }
+define internal void @non_dead_d11() { ret void }
+define internal void @non_dead_d12() { ret void }
+define internal void @non_dead_d13() { ret void }
+define internal void @non_dead_d14() { ret void }
+define internal void @non_dead_d15() { ret void }
+define internal void @dead_e0() { call void @dead_e1() ret void }
+define internal void @dead_e1() { call void @dead_e2() ret void }
+define internal void @dead_e2() { ret void }
+
+; CHECK: define internal void @non_dead_a0()
+; CHECK: define internal void @non_dead_a1()
+; CHECK: define internal void @non_dead_a2()
+; CHECK: define internal void @non_dead_a3()
+; CHECK: define internal void @non_dead_a4()
+; CHECK: define internal void @non_dead_a5()
+; CHECK: define internal void @non_dead_a6()
+; CHECK: define internal void @non_dead_a7()
+; CHECK: define internal void @non_dead_a8()
+; CHECK: define internal void @non_dead_a9()
+; CHECK: define internal void @non_dead_a10()
+; CHECK: define internal void @non_dead_a11()
+; CHECK: define internal void @non_dead_a12()
+; CHECK: define internal void @non_dead_a13()
+; CHECK: define internal void @non_dead_a14()
+; CHECK: define internal void @non_dead_a15()
+; CHECK: define internal void @non_dead_b0()
+; CHECK: define internal void @non_dead_b1()
+; CHECK: define internal void @non_dead_b2()
+; CHECK: define internal void @non_dead_b3()
+; CHECK: define internal void @non_dead_b4()
+; CHECK: define internal void @non_dead_b5()
+; CHECK: define internal void @non_dead_b6()
+; CHECK: define internal void @non_dead_b7()
+; CHECK: define internal void @non_dead_b8()
+; CHECK: define internal void @non_dead_b9()
+; CHECK: define internal void @non_dead_b10()
+; CHECK: define internal void @non_dead_b11()
+; CHECK: define internal void @non_dead_b12()
+; CHECK: define internal void @non_dead_b13()
+; CHECK: define internal void @non_dead_b14()
+; CHECK: define internal void @non_dead_b15()
+; CHECK: define internal void @non_dead_c0()
+; CHECK: define internal void @non_dead_c1()
+; CHECK: define internal void @non_dead_c2()
+; CHECK: define internal void @non_dead_c3()
+; CHECK: define internal void @non_dead_c4()
+; CHECK: define internal void @non_dead_c5()
+; CHECK: define internal void @non_dead_c6()
+; CHECK: define internal void @non_dead_c7()
+; CHECK: define internal void @non_dead_c8()
+; CHECK: define internal void @non_dead_c9()
+; CHECK: define internal void @non_dead_c10()
+; CHECK: define internal void @non_dead_c11()
+; CHECK: define internal void @non_dead_c12()
+; CHECK: define internal void @non_dead_c13()
+; CHECK: define internal void @non_dead_c14()
+; CHECK: define internal void @non_dead_c15()
+; CHECK: define internal void @non_dead_d0()
+; CHECK: define internal void @non_dead_d1()
+; CHECK: define internal void @non_dead_d2()
+; CHECK: define internal void @non_dead_d3()
+; CHECK: define internal void @non_dead_d4()
+; CHECK: define internal void @non_dead_d5()
+; CHECK: define internal void @non_dead_d6()
+; CHECK: define internal void @non_dead_d7()
+; CHECK: define internal void @non_dead_d8()
+; CHECK: define internal void @non_dead_d9()
+; CHECK: define internal void @non_dead_d10()
+; CHECK: define internal void @non_dead_d11()
+; CHECK: define internal void @non_dead_d12()
+; CHECK: define internal void @non_dead_d13()
+; CHECK: define internal void @non_dead_d14()
+; Verify we actually deduce information for these functions.
+; CHECK: Function Attrs: nofree nosync nounwind willreturn
+; CHECK-NEXT: define internal void @non_dead_d15()
+; CHECK-NOT: define internal void @dead_e

@@ -12,6 +12,11 @@
 
 let Component = "Common" in {
 
+// Substitutions.
+
+def select_constexpr_spec_kind : TextSubstitution<
+  "%select{<ERROR>|constexpr|consteval|constinit}0">;
+
 // Basic.
 
 def fatal_too_many_errors
@@ -112,6 +117,10 @@ def err_attribute_not_type_attr : Error<
   "%0 attribute cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
+def warn_cxx20_compat_consteval : Warning<
+  "'consteval' specifier is incompatible with C++ standards before C++20">,
+  InGroup<CXX2aCompat>, DefaultIgnore;
+
 }
 
 let CategoryName = "Nullability Issue" in {
@@ -177,9 +186,6 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
-def warn_cxx20_compat_consteval : Warning<
-  "consteval is incompatible with C++ standards before C++20">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
 def err_integer_literal_too_large : Error<
   "integer literal is too large to be represented in any %select{signed |}0"
   "integer type">;

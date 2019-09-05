@@ -34,6 +34,10 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
+#if check(constinit, 0, 0, 0, 0, 201907)
+#error "wrong value for __cpp_constinit"
+#endif
+
 #if check(impl_destroying_delete, 201806, 201806, 201806, 201806, 201806)
 #error "wrong value for __cpp_impl_destroying_delete"
 #endif

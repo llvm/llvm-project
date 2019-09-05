@@ -1346,7 +1346,7 @@ Value *AddressSanitizer::isInterestingMemoryAccess(Instruction *I,
                                                    unsigned *Alignment,
                                                    Value **MaybeMask) {
   // Skip memory accesses inserted by another instrumentation.
-  if (I->getMetadata("nosanitize")) return nullptr;
+  if (I->hasMetadata("nosanitize")) return nullptr;
 
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)
@@ -2686,7 +2686,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         if (CS) {
           // A call inside BB.
           TempsToInstrument.clear();
-          if (CS.doesNotReturn() && !CS->getMetadata("nosanitize"))
+          if (CS.doesNotReturn() && !CS->hasMetadata("nosanitize"))
             NoReturnCalls.push_back(CS.getInstruction());
         }
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))

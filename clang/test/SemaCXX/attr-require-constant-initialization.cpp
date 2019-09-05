@@ -300,6 +300,17 @@ ATTR TestCtor<NotC> t(42); // expected-error {{variable does not have a constant
 ATTR const char *foo[] = {"abc", "def"};
 ATTR PODType bar[] = {{}, {123, 456}};
 
+
+namespace AttrAddedTooLate {
+  struct A {
+    static const int n = 0; // expected-note {{here}}
+  };
+  ATTR const int A::n; // expected-warning {{added after initialization}}
+
+  int m = 0; // expected-note {{here}}
+  extern ATTR int m; // expected-warning {{added after initialization}}
+}
+
 #elif defined(TEST_TWO) // Test for duplicate warnings
 struct NotC {
   constexpr NotC(void *) {}

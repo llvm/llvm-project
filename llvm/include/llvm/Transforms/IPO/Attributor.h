@@ -620,7 +620,7 @@ struct Attributor {
   /// as the Attributor is not destroyed (it owns the attributes now).
   ///
   /// \Returns CHANGED if the IR was changed, otherwise UNCHANGED.
-  ChangeStatus run();
+  ChangeStatus run(Module &M);
 
   /// Lookup an abstract attribute of type \p AAType at position \p IRP. While
   /// no abstract attribute is found equivalent positions are checked, see
@@ -674,7 +674,10 @@ struct Attributor {
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
     IRPosition &IRP = AA.getIRPosition();
-    AAMap[IRP][&AAType::ID] = &AA;
+    auto &KindToAbstractAttributeMap = AAMap[IRP];
+    assert(!KindToAbstractAttributeMap.count(&AAType::ID) &&
+           "Attribute already in map!");
+    KindToAbstractAttributeMap[&AAType::ID] = &AA;
     AllAbstractAttributes.push_back(&AA);
     return AA;
   }
@@ -693,6 +696,16 @@ struct Attributor {
   /// instance, which can be queried without the need to look at the IR in
   /// various places.
   void identifyDefaultAbstractAttributes(Function &F);
+
+  /// Mark the internal function \p F as live.
+  ///
+  /// This will trigger the identification and initialization of attributes for
+  /// \p F.
+  void markLiveInternalFunction(const Function &F) {
+    assert(F.hasInternalLinkage() &&
+            "Only internal linkage is assumed dead initially.");
+    identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+  }
 
   /// Record that \p I is deleted after information was manifested.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
@@ -811,8 +824,7 @@ private:
 
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
-    const auto &KindToAbstractAttributeMap =
-        AAMap.lookup(const_cast<IRPosition &>(IRP));
+    const auto &KindToAbstractAttributeMap = AAMap.lookup(IRP);
     if (AAType *AA = static_cast<AAType *>(
             KindToAbstractAttributeMap.lookup(&AAType::ID))) {
       // Do not register a dependence on an attribute with an invalid state.
@@ -855,6 +867,9 @@ private:
 
   /// If not null, a set limiting the attribute opportunities.
   const DenseSet<const char *> *Whitelist;
+
+  /// A set to remember the functions we already assume to be live and visited.
+  DenseSet<const Function *> VisitedFunctions;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
