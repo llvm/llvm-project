@@ -1562,8 +1562,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   if (match(Expo, m_SpecificFP(-1.0)))
     return B.CreateFDiv(ConstantFP::get(Ty, 1.0), Base, "reciprocal");
 
-  // pow(x, 0.0) -> 1.0
-  if (match(Expo, m_SpecificFP(0.0)))
+  // pow(x, +/-0.0) -> 1.0
+  if (match(Expo, m_AnyZeroFP()))
     return ConstantFP::get(Ty, 1.0);
 
   // pow(x, 1.0) -> x

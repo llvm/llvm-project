@@ -35,7 +35,7 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
   SHEntSize: 64
-  SHOffset:  2
+  SHOff:     2
   SHNum:     3
   SHStrNdx:  4
 
@@ -56,6 +56,6 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
   SHEntSize: 1
-  SHOffset:  2
+  SHOff:     2
   SHNum:     3
   SHStrNdx:  4

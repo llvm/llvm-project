@@ -6,30 +6,21 @@
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t.exe
 // RUN: llvm-readobj -S --section-data -r %t.exe | FileCheck %s
 
+// Copy relocate x in a non-writable position.
         .global _start
 _start:
         .quad x
 
+// Resolved to 0 in a non-alloc section.
         .section foo
         .quad y
 
+// Produce a dynamic relocation in a writable position.
         .section bar, "aw"
         .quad z
 
 // CHECK:      Name: .text
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x201000
-// CHECK-NEXT: Offset: 0x1000
-// CHECK-NEXT: Size: 8
-// CHECK-NEXT: Link: 0
-// CHECK-NEXT: Info: 0
-// CHECK-NEXT: AddressAlignment: 4
-// CHECK-NEXT: EntrySize: 0
-// CHECK-NEXT: SectionData (
+// CHECK:      SectionData (
 // CHECK-NEXT:   0000: 10302000
 // CHECK-NEXT: )
 

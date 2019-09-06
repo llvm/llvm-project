@@ -105,3 +105,20 @@ class [[gsl::Owner(int)]] AddTheSameLater{};
 class [[gsl::Owner(int)]] AddTheSameLater;
 // CHECK: CXXRecordDecl {{.*}} prev {{.*}} AddTheSameLater
 // CHECK: OwnerAttr {{.*}} int
+
+template <class T>
+class [[gsl::Owner]] ForwardDeclared;
+// CHECK: ClassTemplateDecl {{.*}} ForwardDeclared
+// CHECK: OwnerAttr {{.*}}
+// CHECK: ClassTemplateSpecializationDecl {{.*}} ForwardDeclared
+// CHECK: TemplateArgument type 'int'
+// CHECK: OwnerAttr {{.*}}
+
+template <class T>
+class [[gsl::Owner]] ForwardDeclared {
+// CHECK: ClassTemplateDecl {{.*}} ForwardDeclared
+// CHECK: CXXRecordDecl {{.*}} ForwardDeclared definition
+// CHECK: OwnerAttr {{.*}}
+};
+
+static_assert(sizeof(ForwardDeclared<int>), ""); // Force instantiation.

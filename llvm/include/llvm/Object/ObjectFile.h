@@ -137,11 +137,6 @@ public:
 };
 
 struct SectionedAddress {
-  // TODO: constructors could be removed when C++14 would be adopted.
-  SectionedAddress() {}
-  SectionedAddress(uint64_t Addr, uint64_t SectIdx)
-      : Address(Addr), SectionIndex(SectIdx) {}
-
   const static uint64_t UndefSection = UINT64_MAX;
 
   uint64_t Address = 0;

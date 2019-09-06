@@ -7,18 +7,20 @@ int f(Ty (&Array)[N]) {
 
 typedef int int32;
 
-void test(int *p, int **q) {         // expected-note 5 {{pointer 'p' declared here}}
-  int a1 = sizeof(p) / sizeof(*p);   // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
-  int a2 = sizeof p / sizeof *p;     // expected-warning {{'sizeof p' will return the size of the pointer, not the array itself}}
-  int a3 = sizeof(p) / sizeof(int);  // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
-  int a4 = sizeof(p) / sizeof(p[0]); // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
+void test(int *p, int **q) {          // expected-note 5 {{pointer 'p' declared here}}
+  const int *r;                       // expected-note {{pointer 'r' declared here}}
+  int a1 = sizeof(p) / sizeof(*p);    // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
+  int a2 = sizeof p / sizeof *p;      // expected-warning {{'sizeof p' will return the size of the pointer, not the array itself}}
+  int a3 = sizeof(p) / sizeof(int);   // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
+  int a4 = sizeof(p) / sizeof(p[0]);  // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
   int a5 = sizeof(p) / sizeof(int32); // expected-warning {{'sizeof (p)' will return the size of the pointer, not the array itself}}
+  int a6 = sizeof(r) / sizeof(int);   // expected-warning {{'sizeof (r)' will return the size of the pointer, not the array itself}}
 
   int32 *d;                           // expected-note 2 {{pointer 'd' declared here}}
-  int a6 = sizeof(d) / sizeof(int32); // expected-warning {{'sizeof (d)' will return the size of the pointer, not the array itself}}
-  int a7 = sizeof(d) / sizeof(int);  // expected-warning {{'sizeof (d)' will return the size of the pointer, not the array itself}}
+  int a7 = sizeof(d) / sizeof(int32); // expected-warning {{'sizeof (d)' will return the size of the pointer, not the array itself}}
+  int a8 = sizeof(d) / sizeof(int);  // expected-warning {{'sizeof (d)' will return the size of the pointer, not the array itself}}
 
-  int a8 = sizeof(*q) / sizeof(**q); // expected-warning {{'sizeof (*q)' will return the size of the pointer, not the array itself}}
+  int a9 = sizeof(*q) / sizeof(**q); // expected-warning {{'sizeof (*q)' will return the size of the pointer, not the array itself}}
 
   // Should not warn
   int b1 = sizeof(int *) / sizeof(int);

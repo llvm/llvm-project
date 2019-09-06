@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
-# RUN: llvm-readobj --mips-plt-got --symbols %t.so \
+# RUN: llvm-readelf --mips-plt-got --symbols %t.so \
 # RUN:   | FileCheck -check-prefix=GOT %s
 
   .text
@@ -20,21 +20,11 @@ g1:
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
-# CHECK-NEXT:      10000:       lw   $8, -32744
+# CHECK-NEXT:      {{.*}}:  lw  $8, -32744
 
-# GOT:      Name: g1
-# GOT-NEXT: Value: 0x[[ADDR:[0-9A-F]+]]
+# GOT: Symbol table '.symtab'
+# GOT: {{.*}}:  [[G1:[0-9a-f]+]]  {{.*}} g1
 
-# GOT:      Local entries [
-# GOT-NEXT: ]
-# GOT-NEXT: Global entries [
-# GOT-NEXT:   Entry {
-# GOT-NEXT:     Address:
-# GOT-NEXT:     Access: -32744
-# GOT-NEXT:     Initial: 0x[[ADDR]]
-# GOT-NEXT:     Value: 0x[[ADDR]]
-# GOT-NEXT:     Type: Function
-# GOT-NEXT:     Section: .text
-# GOT-NEXT:     Name: g1
-# GOT-NEXT:   }
-# GOT-NEXT: ]
+# GOT: Primary GOT:
+# GOT:  Global entries:
+# GOT:   {{.*}} -32744(gp) [[G1]] [[G1]] FUNC 7 g1

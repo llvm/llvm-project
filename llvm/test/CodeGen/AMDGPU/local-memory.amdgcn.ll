@@ -38,18 +38,16 @@ entry:
 
 ; GCN-LABEL: {{^}}local_memory_two_objects:
 ; GCN: v_lshlrev_b32_e32 [[ADDRW:v[0-9]+]], 2, v0
+; CI-DAG: v_sub_i32_e32 [[SUB:v[0-9]+]], vcc, 0, [[ADDRW]]
 ; CI-DAG: ds_write2_b32 [[ADDRW]], {{v[0-9]+}}, {{v[0-9]+}} offset1:4
 ; SI-DAG: ds_write2_b32 [[ADDRW]], {{v[0-9]+}}, {{v[0-9]+}} offset1:4
-
-; GCN: s_barrier
-
 ; SI-DAG: v_sub_i32_e32 [[SUB0:v[0-9]+]], vcc, 28, [[ADDRW]]
 ; SI-DAG: v_sub_i32_e32 [[SUB1:v[0-9]+]], vcc, 12, [[ADDRW]]
 
+; GCN: s_barrier
+
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[SUB0]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[SUB1]]
-
-; CI: v_sub_i32_e32 [[SUB:v[0-9]+]], vcc, 0, [[ADDRW]]
 ; CI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, [[SUB]] offset0:3 offset1:7
 
 define amdgpu_kernel void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {

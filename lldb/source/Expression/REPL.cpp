@@ -206,7 +206,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       // Meta command
       // Strip the ':'
       code.erase(0, 1);
-      if (Args::StripSpaces(code)) {
+      if (!llvm::StringRef(code).trim().empty()) {
         // "lldb" was followed by arguments, so just execute the command dump
         // the results
 

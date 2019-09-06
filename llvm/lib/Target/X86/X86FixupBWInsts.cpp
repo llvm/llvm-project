@@ -247,7 +247,7 @@ bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
     assert((MO.isDef() || MO.isUse()) && "Expected Def or Use only!");
 
     if (MO.isDef() && TRI->isSuperRegisterEq(OrigDestReg, MO.getReg()))
-        IsDefined = true;
+      IsDefined = true;
 
     // If MO is a use of any part of the destination register but is not equal
     // to OrigDestReg or one of its subregisters, we cannot use SuperDestReg.

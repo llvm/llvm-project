@@ -1919,6 +1919,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create output sections described by SECTIONS commands.
   script->processSectionCommands();
 
+  // Linker scripts control how input sections are assigned to output sections.
+  // Input sections that were not handled by scripts are called "orphans", and
+  // they are assigned to output sections by the default rule. Process that.
+  script->addOrphanSections();
+
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {

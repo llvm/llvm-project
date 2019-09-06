@@ -31,6 +31,5 @@ GreenDragon builds and tests LLDB on macOS. It has a `dedicated tab
 * `lldb-cmake-matrix <http://green.lab.llvm.org/green/view/LLDB/job/lldb-cmake-matrix/>`_
 * `lldb-cmake-python3 <http://green.lab.llvm.org/green/view/LLDB/job/lldb-cmake-python3/>`_
 * `lldb-cmake-standalone <http://green.lab.llvm.org/green/view/LLDB/job/lldb-cmake-standalone/>`_
-* `lldb-sanitized <http://green.lab.llvm.org/green/view/LLDB/job/lldb-sanitized/>`_
-* `lldb-xcode <http://green.lab.llvm.org/green/view/LLDB/job/lldb-xcode/>`_
+* `lldb-cmake-sanitized <http://green.lab.llvm.org/green/view/LLDB/job/lldb-cmake-sanitized/>`_
 
