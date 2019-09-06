@@ -338,7 +338,9 @@ public:
       return Err;
 
     // Close the response message.
-    return C.endSendMessage();
+    if (auto Err = C.endSendMessage())
+      return Err;
+    return C.send();
   }
 
   template <typename ChannelT, typename FunctionIdT, typename SequenceNumberT>
@@ -350,7 +352,9 @@ public:
       return Err2;
     if (auto Err2 = serializeSeq(C, std::move(Err)))
       return Err2;
-    return C.endSendMessage();
+    if (auto Err2 = C.endSendMessage())
+      return Err2;
+    return C.send();
   }
 
 };
@@ -378,8 +382,11 @@ public:
                                                                C, *ResultOrErr))
       return Err;
 
-    // Close the response message.
-    return C.endSendMessage();
+    // End the response message.
+    if (auto Err = C.endSendMessage())
+      return Err;
+
+    return C.send();
   }
 
   template <typename ChannelT, typename FunctionIdT, typename SequenceNumberT>
@@ -389,7 +396,9 @@ public:
       return Err;
     if (auto Err2 = C.startSendMessage(ResponseId, SeqNo))
       return Err2;
-    return C.endSendMessage();
+    if (auto Err2 = C.endSendMessage())
+      return Err2;
+    return C.send();
   }
 
 };
@@ -1515,6 +1524,12 @@ public:
               return Error::success();
             },
             Args...)) {
+      detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
+          std::move(Result));
+      return std::move(Err);
+    }
+
+    if (auto Err = this->C.send()) {
       detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
           std::move(Result));
       return std::move(Err);

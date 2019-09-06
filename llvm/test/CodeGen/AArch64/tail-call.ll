@@ -1,4 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -tailcallopt | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -tailcallopt | FileCheck %s --check-prefixes=SDAG,COMMON
+; RUN: llc -global-isel -global-isel-abort=2 -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -tailcallopt | FileCheck %s --check-prefixes=GISEL,COMMON
 
 declare fastcc void @callee_stack0()
 declare fastcc void @callee_stack8([8 x i32], i64)
@@ -6,98 +7,98 @@ declare fastcc void @callee_stack16([8 x i32], i64, i64)
 declare extern_weak fastcc void @callee_weak()
 
 define fastcc void @caller_to0_from0() nounwind {
-; CHECK-LABEL: caller_to0_from0:
-; CHECK-NEXT: // %bb.
+; COMMON-LABEL: caller_to0_from0:
+; COMMON-NEXT: // %bb.
 
   tail call fastcc void @callee_stack0()
   ret void
 
-; CHECK-NEXT: b callee_stack0
+; COMMON-NEXT: b callee_stack0
 }
 
 define fastcc void @caller_to0_from8([8 x i32], i64) {
-; CHECK-LABEL: caller_to0_from8:
+; COMMON-LABEL: caller_to0_from8:
 
   tail call fastcc void @callee_stack0()
   ret void
 
-; CHECK: add sp, sp, #16
-; CHECK-NEXT: b callee_stack0
+; COMMON: add sp, sp, #16
+; COMMON-NEXT: b callee_stack0
 }
 
 define fastcc void @caller_to8_from0() {
-; CHECK-LABEL: caller_to8_from0:
-; CHECK: sub sp, sp, #32
+; COMMON-LABEL: caller_to8_from0:
+; COMMON: sub sp, sp, #32
 
 ; Key point is that the "42" should go #16 below incoming stack
 ; pointer (we didn't have arg space to reuse).
   tail call fastcc void @callee_stack8([8 x i32] undef, i64 42)
   ret void
 
-; CHECK: str {{x[0-9]+}}, [sp, #16]!
-; CHECK-NEXT: b callee_stack8
+; COMMON: str {{x[0-9]+}}, [sp, #16]!
+; COMMON-NEXT: b callee_stack8
 }
 
 define fastcc void @caller_to8_from8([8 x i32], i64 %a) {
-; CHECK-LABEL: caller_to8_from8:
-; CHECK: sub sp, sp, #16
+; COMMON-LABEL: caller_to8_from8:
+; COMMON: sub sp, sp, #16
 
 ; Key point is that the "%a" should go where at SP on entry.
   tail call fastcc void @callee_stack8([8 x i32] undef, i64 42)
   ret void
 
-; CHECK: str {{x[0-9]+}}, [sp, #16]!
-; CHECK-NEXT: b callee_stack8
+; COMMON: str {{x[0-9]+}}, [sp, #16]!
+; COMMON-NEXT: b callee_stack8
 }
 
 define fastcc void @caller_to16_from8([8 x i32], i64 %a) {
-; CHECK-LABEL: caller_to16_from8:
-; CHECK: sub sp, sp, #16
+; COMMON-LABEL: caller_to16_from8:
+; COMMON: sub sp, sp, #16
 
 ; Important point is that the call reuses the "dead" argument space
 ; above %a on the stack. If it tries to go below incoming-SP then the
 ; callee will not deallocate the space, even in fastcc.
   tail call fastcc void @callee_stack16([8 x i32] undef, i64 42, i64 2)
 
-; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]!
-; CHECK-NEXT: b callee_stack16
+; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]!
+; COMMON-NEXT: b callee_stack16
   ret void
 }
 
 
 define fastcc void @caller_to8_from24([8 x i32], i64 %a, i64 %b, i64 %c) {
-; CHECK-LABEL: caller_to8_from24:
-; CHECK: sub sp, sp, #16
+; COMMON-LABEL: caller_to8_from24:
+; COMMON: sub sp, sp, #16
 
 ; Key point is that the "%a" should go where at #16 above SP on entry.
   tail call fastcc void @callee_stack8([8 x i32] undef, i64 42)
   ret void
 
-; CHECK: str {{x[0-9]+}}, [sp, #32]!
-; CHECK-NEXT: b callee_stack8
+; COMMON: str {{x[0-9]+}}, [sp, #32]!
+; COMMON-NEXT: b callee_stack8
 }
 
 
 define fastcc void @caller_to16_from16([8 x i32], i64 %a, i64 %b) {
-; CHECK-LABEL: caller_to16_from16:
-; CHECK: sub sp, sp, #16
+; COMMON-LABEL: caller_to16_from16:
+; COMMON: sub sp, sp, #16
 
 ; Here we want to make sure that both loads happen before the stores:
 ; otherwise either %a or %b will be wrongly clobbered.
   tail call fastcc void @callee_stack16([8 x i32] undef, i64 %b, i64 %a)
   ret void
 
-; CHECK: ldp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
-; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]!
-; CHECK-NEXT: b callee_stack16
+; COMMON: ldp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
+; COMMON: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]!
+; COMMON-NEXT: b callee_stack16
 }
 
 
 ; Weakly-referenced extern functions cannot be tail-called, as AAELF does
 ; not define the behaviour of branch instructions to undefined weak symbols.
 define fastcc void @caller_weak() {
-; CHECK-LABEL: caller_weak:
-; CHECK: bl callee_weak
+; COMMON-LABEL: caller_weak:
+; COMMON: bl callee_weak
   tail call void @callee_weak()
   ret void
 }
@@ -105,10 +106,17 @@ define fastcc void @caller_weak() {
 declare { [2 x float] } @get_vec2()
 
 define { [3 x float] } @test_add_elem() {
-; CHECK-LABEL: test_add_elem:
-; CHECK: bl get_vec2
-; CHECK: fmov s2, #1.0
-; CHECK: ret
+; SDAG-LABEL: test_add_elem:
+; SDAG: bl get_vec2
+; SDAG: fmov s2, #1.0
+; SDAG: ret
+; GISEL-LABEL: test_add_elem:
+; GISEL: fmov	s8, #1.00000000
+; GISEL: bl get_vec2
+; GISEL: ldr	x30, [sp, #8]
+; GISEL: mov	v2.16b, v8.16b
+; GISEL: ldr	d8, [sp], #16
+; GISEL: ret
 
   %call = tail call { [2 x float] } @get_vec2()
   %arr = extractvalue { [2 x float] } %call, 0
@@ -123,11 +131,11 @@ define { [3 x float] } @test_add_elem() {
 
 declare double @get_double()
 define { double, [2 x double] } @test_mismatched_insert() {
-; CHECK-LABEL: test_mismatched_insert:
-; CHECK: bl get_double
-; CHECK: bl get_double
-; CHECK: bl get_double
-; CHECK: ret
+; COMMON-LABEL: test_mismatched_insert:
+; COMMON: bl get_double
+; COMMON: bl get_double
+; COMMON: bl get_double
+; COMMON: ret
 
   %val0 = call double @get_double()
   %val1 = call double @get_double()

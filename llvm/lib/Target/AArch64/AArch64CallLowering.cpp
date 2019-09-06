@@ -567,6 +567,12 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
   }
 
+  if (Info.IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
+    // TODO: Until we lower all tail calls, we should fall back on this.
+    LLVM_DEBUG(dbgs() << "Cannot handle -tailcallopt yet.\n");
+    return false;
+  }
+
   SmallVector<ArgInfo, 8> SplitArgs;
   for (auto &OrigArg : Info.OrigArgs) {
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI, Info.CallConv);

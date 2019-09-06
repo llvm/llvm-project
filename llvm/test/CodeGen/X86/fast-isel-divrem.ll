@@ -8,7 +8,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_sdiv8:
-; CHECK: movsbw
+; CHECK: movsbl
 ; CHECK: idivb
 
 define i8 @test_srem8(i8 %dividend, i8 %divisor) nounwind {
@@ -18,7 +18,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_srem8:
-; CHECK: movsbw
+; CHECK: movsbl
 ; CHECK: idivb
 
 define i8 @test_udiv8(i8 %dividend, i8 %divisor) nounwind {
@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_udiv8:
-; CHECK: movzbw
+; CHECK: movzbl
 ; CHECK: divb
 
 define i8 @test_urem8(i8 %dividend, i8 %divisor) nounwind {
@@ -38,7 +38,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_urem8:
-; CHECK: movzbw
+; CHECK: movzbl
 ; CHECK: divb
 
 define i16 @test_sdiv16(i16 %dividend, i16 %divisor) nounwind {

@@ -103,10 +103,10 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
   // the analysis to look through dependencies to find the path with the least
   // register pressure.
 
-  // We only need to update the RPDelata for instructions that increase
-  // register pressure.  Instructions that decrease or keep reg pressure
-  // the same will be marked as RegExcess in tryCandidate() when they
-  // are compared with instructions that increase the register pressure.
+  // We only need to update the RPDelta for instructions that increase register
+  // pressure. Instructions that decrease or keep reg pressure the same will be
+  // marked as RegExcess in tryCandidate() when they are compared with
+  // instructions that increase the register pressure.
   if (ShouldTrackVGPRs && NewVGPRPressure >= VGPRExcessLimit) {
     Cand.RPDelta.Excess = PressureChange(SRI->getVGPRPressureSet());
     Cand.RPDelta.Excess.setUnitInc(NewVGPRPressure - VGPRExcessLimit);
