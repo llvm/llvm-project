@@ -13,7 +13,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t3.o
 
 // Expect error for non-contiguous relro
-// RUN: not ld.lld %t3.o %t.so -z relro -o %t --script=%t.script 2>&1 | FileCheck %s
+// RUN: not ld.lld %t3.o %t.so -z relro -o /dev/null --script=%t.script 2>&1 | FileCheck %s
 // No error when we do not request relro.
 // RUN: ld.lld %t3.o %t.so -z norelro -o %t --script=%t.script
 

@@ -306,8 +306,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
     return false;
 
   // If two sections have different output sections, we cannot merge them.
-  if (getOutputSectionName(a) != getOutputSectionName(b) ||
-      a->getParent() != b->getParent())
+  assert(a->getParent() && b->getParent());
+  if (a->getParent() != b->getParent())
     return false;
 
   if (a->areRelocsRela)
