@@ -170,6 +170,34 @@ static void csan_destroy(void) {
   CilkSanImpl.deinit();
   fflush(stdout);
   delete_proc_maps();
+  if (call_pc) {
+    free(call_pc);
+    call_pc = nullptr;
+  }
+  if (spawn_pc) {
+    free(spawn_pc);
+    spawn_pc = nullptr;
+  }
+  if (loop_pc) {
+    free(loop_pc);
+    loop_pc = nullptr;
+  }
+  if (load_pc) {
+    free(load_pc);
+    load_pc = nullptr;
+  }
+  if (store_pc) {
+    free(store_pc);
+    store_pc = nullptr;
+  }
+  if (alloca_pc) {
+    free(alloca_pc);
+    alloca_pc = nullptr;
+  }
+  if (allocfn_pc) {
+    free(allocfn_pc);
+    allocfn_pc = nullptr;
+  }
 }
 
 CilkSanImpl_t::~CilkSanImpl_t() {

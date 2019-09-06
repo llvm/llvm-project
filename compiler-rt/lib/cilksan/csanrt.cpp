@@ -161,7 +161,7 @@ allocate_new_table_and_append_to_index(fed_table_index_t *index) {
     fed_table_t *old_tables = index->tables;
     fed_table_t *new_tables =
         (fed_table_t *)calloc(sizeof(fed_table_t), index->capacity * 2);
-    memcpy(index->tables, old_tables, sizeof(fed_table_t) * index->capacity);
+    memcpy(new_tables, old_tables, sizeof(fed_table_t) * index->capacity);
 
     index->capacity = index->capacity * 2;
     index->tables = new_tables;
