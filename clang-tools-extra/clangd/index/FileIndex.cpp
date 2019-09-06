@@ -17,6 +17,7 @@
 #include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
 #include "clang/Index/IndexingAction.h"
+#include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"

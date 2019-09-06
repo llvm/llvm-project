@@ -110,9 +110,8 @@ public:
                                  std::vector<SourceLocation> &MainFileMacroLocs)
       : SM(SM), MainFileMacroLocs(MainFileMacroLocs) {}
 
-  virtual void MacroExpands(const Token &MacroNameTok,
-                            const MacroDefinition &MD, SourceRange Range,
-                            const MacroArgs *Args) {
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
     SourceLocation L = MacroNameTok.getLocation();
     if (!L.isMacroID() && isInsideMainFile(L, SM))
       MainFileMacroLocs.push_back(L);
