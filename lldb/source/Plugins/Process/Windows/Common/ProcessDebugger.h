@@ -41,7 +41,7 @@ public:
   HANDLE m_initial_stop_event = nullptr;
   bool m_initial_stop_received = false;
   bool m_stop_at_entry;
-  std::map<lldb::tid_t, HostThread> m_new_threads;
+  std::map<lldb::tid_t, lldb::ThreadSP> m_new_threads;
   std::set<lldb::tid_t> m_exited_threads;
 };
 

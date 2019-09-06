@@ -17,6 +17,7 @@
 #include "TargetThreadWindows.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -52,13 +53,7 @@ bool RegisterContextWindows::WriteAllRegisterValues(
   assert(data_sp->GetByteSize() >= sizeof(m_context));
   memcpy(&m_context, data_sp->GetBytes(), sizeof(m_context));
 
-  TargetThreadWindows &wthread = static_cast<TargetThreadWindows &>(m_thread);
-  if (!::SetThreadContext(
-          wthread.GetHostThread().GetNativeThread().GetSystemHandle(),
-          &m_context))
-    return false;
-
-  return true;
+  return ApplyAllRegisterValues();
 }
 
 uint32_t RegisterContextWindows::ConvertRegisterKindToRegisterNumber(
@@ -76,37 +71,69 @@ uint32_t RegisterContextWindows::ConvertRegisterKindToRegisterNumber(
   return LLDB_INVALID_REGNUM;
 }
 
-// Subclasses can these functions if desired
-uint32_t RegisterContextWindows::NumSupportedHardwareBreakpoints() {
-  // Support for hardware breakpoints not yet implemented.
-  return 0;
-}
-
-uint32_t RegisterContextWindows::SetHardwareBreakpoint(lldb::addr_t addr,
-                                                       size_t size) {
-  return 0;
-}
-
-bool RegisterContextWindows::ClearHardwareBreakpoint(uint32_t hw_idx) {
-  return false;
-}
-
-uint32_t RegisterContextWindows::NumSupportedHardwareWatchpoints() {
-  // Support for hardware watchpoints not yet implemented.
-  return 0;
-}
-
-uint32_t RegisterContextWindows::SetHardwareWatchpoint(lldb::addr_t addr,
-                                                       size_t size, bool read,
-                                                       bool write) {
-  return 0;
-}
-
-bool RegisterContextWindows::ClearHardwareWatchpoint(uint32_t hw_index) {
-  return false;
-}
-
 bool RegisterContextWindows::HardwareSingleStep(bool enable) { return false; }
+
+bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,
+                                                   lldb::addr_t address,
+                                                   uint32_t size, bool read,
+                                                   bool write) {
+  if (slot >= NUM_HARDWARE_BREAKPOINT_SLOTS)
+    return false;
+
+  switch (size) {
+  case 1:
+  case 2:
+  case 4:
+#if defined(_M_AMD64)
+  case 8:
+#endif
+    break;
+  default:
+    return false;
+  }
+
+  if (!CacheAllRegisterValues())
+    return false;
+
+  unsigned shift = 2 * slot;
+  m_context.Dr7 |= 1ULL << shift;
+
+  (&m_context.Dr0)[slot] = address;
+
+  shift = 18 + 4 * slot;
+  m_context.Dr7 &= ~(3ULL << shift);
+  m_context.Dr7 |= (size == 8 ? 2ULL : size - 1) << shift;
+
+  shift = 16 + 4 * slot;
+  m_context.Dr7 &= ~(3ULL << shift);
+  m_context.Dr7 |= (read ? 3ULL : (write ? 1ULL : 0)) << shift;
+
+  return ApplyAllRegisterValues();
+}
+
+bool RegisterContextWindows::RemoveHardwareBreakpoint(uint32_t slot) {
+  if (slot >= NUM_HARDWARE_BREAKPOINT_SLOTS)
+    return false;
+
+  if (!CacheAllRegisterValues())
+    return false;
+
+  unsigned shift = 2 * slot;
+  m_context.Dr7 &= ~(1ULL << shift);
+
+  return ApplyAllRegisterValues();
+}
+
+uint32_t RegisterContextWindows::GetTriggeredHardwareBreakpointSlotId() {
+  if (!CacheAllRegisterValues())
+    return LLDB_INVALID_INDEX32;
+
+  for (unsigned i = 0UL; i < NUM_HARDWARE_BREAKPOINT_SLOTS; i++)
+    if (m_context.Dr6 & (1ULL << i))
+      return i;
+
+  return LLDB_INVALID_INDEX32;
+}
 
 bool RegisterContextWindows::CacheAllRegisterValues() {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
@@ -145,4 +172,10 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
   LLDB_LOG(log, "successfully updated the register values.");
   m_context_stale = false;
   return true;
+}
+
+bool RegisterContextWindows::ApplyAllRegisterValues() {
+  TargetThreadWindows &wthread = static_cast<TargetThreadWindows &>(m_thread);
+  return ::SetThreadContext(
+      wthread.GetHostThread().GetNativeThread().GetSystemHandle(), &m_context);
 }

@@ -36,7 +36,6 @@ class WatchpointConditionAPITestCase(TestBase):
         archs=["aarch64"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27710")
-    @skipIfWindows  # Watchpoints not supported on Windows, and this test hangs
     def test_watchpoint_cond_api(self):
         """Test watchpoint condition API."""
         self.build(dictionary=self.d)

@@ -98,6 +98,22 @@ public:
   void OnUnloadDll(lldb::addr_t module_addr) override;
   void OnDebugString(const std::string &string) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
+
+  Status GetWatchpointSupportInfo(uint32_t &num) override;
+  Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
+  Status EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
+  Status DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
+
+private:
+  struct WatchpointInfo {
+    uint32_t slot_id;
+    lldb::addr_t address;
+    uint32_t size;
+    bool read;
+    bool write;
+  };
+  std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
+  std::vector<lldb::break_id_t> m_watchpoint_ids;
 };
 } // namespace lldb_private
 
