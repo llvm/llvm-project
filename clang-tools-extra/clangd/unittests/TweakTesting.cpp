@@ -10,10 +10,13 @@
 
 #include "Annotations.h"
 #include "SourceCode.h"
+#include "TestFS.h"
 #include "refactor/Tweak.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -81,13 +84,15 @@ MATCHER_P5(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles,
 
 } // namespace
 
-std::string TweakTest::apply(llvm::StringRef MarkedCode) const {
+std::string TweakTest::apply(llvm::StringRef MarkedCode,
+                             llvm::StringMap<std::string> *EditedFiles) const {
   std::string WrappedCode = wrap(Context, MarkedCode);
   Annotations Input(WrappedCode);
   auto Selection = rangeOrPoint(Input);
 
   TestTU TU;
   TU.HeaderCode = Header;
+  TU.AdditionalFiles = std::move(ExtraFiles);
   TU.Code = Input.code();
   TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
@@ -105,14 +110,24 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode) const {
     return "message:\n" + *Result->ShowMessage;
   if (Result->ApplyEdits.empty())
     return "no effect";
-  if (Result->ApplyEdits.size() > 1)
-    return "received multi-file edits";
 
-  auto ApplyEdit = Result->ApplyEdits.begin()->second;
-  if (auto NewText = ApplyEdit.apply())
-    return unwrap(Context, *NewText);
-  else
-    return "bad edits: " + llvm::toString(NewText.takeError());
+  std::string EditedMainFile;
+  for (auto &It : Result->ApplyEdits) {
+    auto NewText = It.second.apply();
+    if (!NewText)
+      return "bad edits: " + llvm::toString(NewText.takeError());
+    llvm::StringRef Unwrapped = unwrap(Context, *NewText);
+    if (It.first() == testPath(TU.Filename))
+      EditedMainFile = Unwrapped;
+    else {
+      if (!EditedFiles)
+        ADD_FAILURE() << "There were changes to additional files, but client "
+                         "provided a nullptr for EditedFiles.";
+      else
+        EditedFiles->try_emplace(It.first(), Unwrapped.str());
+    }
+  }
+  return EditedMainFile;
 }
 
 ::testing::Matcher<llvm::StringRef> TweakTest::isAvailable() const {
