@@ -11,9 +11,9 @@
 #define LLVM_CLANG_LIB_INDEX_CLANGINDEXRECORDWRITER_H
 
 #include "IndexRecordHasher.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Index/IndexRecordWriter.h"
 #include "clang/Index/IndexingAction.h"
-#include "clang/Index/CodegenNameGenerator.h"
 #include "llvm/ADT/SmallString.h"
 
 namespace clang {
@@ -29,7 +29,7 @@ class ClangIndexRecordWriter {
   ASTContext &Ctx;
   RecordingOptions RecordOpts;
 
-  std::unique_ptr<CodegenNameGenerator> CGNameGen;
+  std::unique_ptr<ASTNameGenerator> ASTNameGen;
   llvm::BumpPtrAllocator Allocator;
   llvm::DenseMap<const Decl *, StringRef> USRByDecl;
   IndexRecordHasher Hasher;
@@ -39,7 +39,7 @@ public:
   ~ClangIndexRecordWriter();
 
   ASTContext &getASTContext() { return Ctx; }
-  CodegenNameGenerator *getCGNameGen() { return CGNameGen.get(); }
+  ASTNameGenerator *getASTNameGen() { return ASTNameGen.get(); }
 
   bool writeRecord(StringRef Filename, const FileIndexRecord &Record,
                    std::string &Error, std::string *RecordFile = nullptr);
