@@ -48,8 +48,8 @@ public:
     return ArgDescriptor(Reg, Mask, false, true);
   }
 
-  static ArgDescriptor createStack(Register Reg, unsigned Mask = ~0u) {
-    return ArgDescriptor(Reg, Mask, true, true);
+  static ArgDescriptor createStack(unsigned Offset, unsigned Mask = ~0u) {
+    return ArgDescriptor(Offset, Mask, true, true);
   }
 
   static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {

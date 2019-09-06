@@ -1,7 +1,16 @@
 ; Test that llvm-reduce can remove uninteresting Global Variables as well as
 ; their direct uses (which in turn are replaced with 'undef').
 ;
-; RUN: llvm-reduce --test %p/Inputs/remove-global-vars.py %s -o - | FileCheck %s
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; copy the test file to preserve executable bit
+; RUN: cp %p/Inputs/remove-global-vars.py %t/test.py
+; get the python path from lit
+; RUN: echo "#!" %python > %t/test.py
+; then include the rest of the test script
+; RUN: cat %p/Inputs/remove-global-vars.py >> %t/test.py
+
+; RUN: llvm-reduce --test %t/test.py %s -o - | FileCheck %s
 ; REQUIRES: plugins
 
 ; CHECK: @interesting = global

@@ -51,6 +51,14 @@
 # LLVM: Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # LLVM: Name: llvm_addrsig
 # LLVM: Type: SHT_LLVM_ADDRSIG
+# LLVM: Name: .deplibs
+# LLVM: Type: SHT_LLVM_DEPENDENT_LIBRARIES
+# LLVM: Name: .llvm_sympart.f
+# LLVM: Type: SHT_LLVM_SYMPART
+# LLVM: Name: part1
+# LLVM: Type: SHT_LLVM_PART_EHDR
+# LLVM: Name: .phdrs
+# LLVM: Type: SHT_LLVM_PART_PHDR
 # LLVM: Name: gnu_attributes
 # LLVM: Type: SHT_GNU_ATTRIBUTES
 # LLVM: Name: gnu_hash
@@ -107,6 +115,10 @@
 # GNU-NEXT: linker_options          LLVM_LINKER_OPTIONS
 # GNU-NEXT: llvm_call_graph_profile LLVM_CALL_GRAPH_PROFILE
 # GNU-NEXT: llvm_addrsig            LLVM_ADDRSIG
+# GNU-NEXT: .deplibs                LLVM_DEPENDENT_LIBRARIES
+# GNU-NEXT: .llvm_sympart.f         LLVM_SYMPART
+# GNU-NEXT: part1                   LLVM_PART_EHDR
+# GNU-NEXT: .phdrs                  LLVM_PART_PHDR
 # GNU-NEXT: gnu_attributes          ATTRIBUTES
 # GNU-NEXT: gnu_hash                GNU_HASH
 # GNU-NEXT: gnu_verdef              VERDEF
@@ -183,6 +195,14 @@ Sections:
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
   - Name: llvm_addrsig
     Type: SHT_LLVM_ADDRSIG
+  - Name: .deplibs
+    Type: SHT_LLVM_DEPENDENT_LIBRARIES
+  - Name: .llvm_sympart.f
+    Type: SHT_LLVM_SYMPART
+  - Name: part1
+    Type: SHT_LLVM_PART_EHDR
+  - Name: .phdrs
+    Type: SHT_LLVM_PART_PHDR
   - Name: gnu_attributes
     Type: SHT_GNU_ATTRIBUTES
   - Name: gnu_hash

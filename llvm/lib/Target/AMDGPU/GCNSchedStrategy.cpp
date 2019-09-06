@@ -71,8 +71,8 @@ void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU
   // the tracker, so we need to pass those function a non-const copy.
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker&>(RPTracker);
 
-  std::vector<unsigned> Pressure;
-  std::vector<unsigned> MaxPressure;
+  Pressure.clear();
+  MaxPressure.clear();
 
   if (AtTop)
     TempTracker.getDownwardPressure(SU->getInstr(), Pressure, MaxPressure);

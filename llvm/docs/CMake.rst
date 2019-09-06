@@ -615,6 +615,10 @@ LLVM-specific variables
 **LLVM_ENABLE_BINDINGS**:BOOL
   If disabled, do not try to build the OCaml and go bindings.
 
+**LLVM_ENABLE_Z3_SOLVER**:BOOL
+  If enabled, the Z3 constraint solver is activated for the Clang static analyzer.
+  A recent version of the z3 library needs to be available on the system.
+
 CMake Caches
 ============
 
