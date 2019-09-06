@@ -3168,10 +3168,10 @@ define i8 @combine_i8_sdiv_negpow2(i8 %x) {
 define i16 @combine_i16_sdiv_pow2(i16 %x) {
 ; CHECK-LABEL: combine_i16_sdiv_pow2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movswl %di, %eax
-; CHECK-NEXT:    shrl $27, %eax
-; CHECK-NEXT:    andl $15, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 15(%rdi), %eax
+; CHECK-NEXT:    testw %di, %di
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    shrl $4, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -3183,10 +3183,10 @@ define i16 @combine_i16_sdiv_pow2(i16 %x) {
 define i16 @combine_i16_sdiv_negpow2(i16 %x) {
 ; CHECK-LABEL: combine_i16_sdiv_negpow2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movswl %di, %eax
-; CHECK-NEXT:    shrl $23, %eax
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 255(%rdi), %eax
+; CHECK-NEXT:    testw %di, %di
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    sarl $8, %eax
 ; CHECK-NEXT:    negl %eax
@@ -3200,10 +3200,9 @@ define i32 @combine_i32_sdiv_pow2(i32 %x) {
 ; CHECK-LABEL: combine_i32_sdiv_pow2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    shrl $28, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal 15(%rdi), %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    sarl $4, %eax
 ; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, 16
@@ -3214,10 +3213,9 @@ define i32 @combine_i32_sdiv_negpow2(i32 %x) {
 ; CHECK-LABEL: combine_i32_sdiv_negpow2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    shrl $24, %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal 255(%rdi), %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    sarl $8, %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
@@ -3228,10 +3226,9 @@ define i32 @combine_i32_sdiv_negpow2(i32 %x) {
 define i64 @combine_i64_sdiv_pow2(i64 %x) {
 ; CHECK-LABEL: combine_i64_sdiv_pow2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    sarq $63, %rax
-; CHECK-NEXT:    shrq $60, %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    leaq 15(%rdi), %rax
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmovnsq %rdi, %rax
 ; CHECK-NEXT:    sarq $4, %rax
 ; CHECK-NEXT:    retq
   %1 = sdiv i64 %x, 16
@@ -3241,10 +3238,9 @@ define i64 @combine_i64_sdiv_pow2(i64 %x) {
 define i64 @combine_i64_sdiv_negpow2(i64 %x) {
 ; CHECK-LABEL: combine_i64_sdiv_negpow2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    sarq $63, %rax
-; CHECK-NEXT:    shrq $56, %rax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    leaq 255(%rdi), %rax
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmovnsq %rdi, %rax
 ; CHECK-NEXT:    sarq $8, %rax
 ; CHECK-NEXT:    negq %rax
 ; CHECK-NEXT:    retq

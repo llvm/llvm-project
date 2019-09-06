@@ -83,24 +83,25 @@ format_object<int64_t> MCInstPrinter::formatDec(int64_t Value) const {
 }
 
 format_object<int64_t> MCInstPrinter::formatHex(int64_t Value) const {
-  switch(PrintHexStyle) {
+  switch (PrintHexStyle) {
   case HexStyle::C:
-    if (Value < 0)
+    if (Value < 0) {
+      if (Value == std::numeric_limits<int64_t>::min())
+        return format<int64_t>("-0x8000000000000000", Value);
       return format("-0x%" PRIx64, -Value);
-    else
-      return format("0x%" PRIx64, Value);
+    }
+    return format("0x%" PRIx64, Value);
   case HexStyle::Asm:
     if (Value < 0) {
-      if (needsLeadingZero((uint64_t)(-Value)))
+      if (Value == std::numeric_limits<int64_t>::min())
+        return format<int64_t>("-8000000000000000h", Value);
+      if (needsLeadingZero(-(uint64_t)(Value)))
         return format("-0%" PRIx64 "h", -Value);
-      else
-        return format("-%" PRIx64 "h", -Value);
-    } else {
-      if (needsLeadingZero((uint64_t)(Value)))
-        return format("0%" PRIx64 "h", Value);
-      else
-        return format("%" PRIx64 "h", Value);
+      return format("-%" PRIx64 "h", -Value);
     }
+    if (needsLeadingZero((uint64_t)(Value)))
+      return format("0%" PRIx64 "h", Value);
+    return format("%" PRIx64 "h", Value);
   }
   llvm_unreachable("unsupported print style");
 }

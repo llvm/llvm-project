@@ -3111,6 +3111,12 @@ static std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "LLVM_ADDRSIG";
   case SHT_LLVM_DEPENDENT_LIBRARIES:
     return "LLVM_DEPENDENT_LIBRARIES";
+  case SHT_LLVM_SYMPART:
+    return "LLVM_SYMPART";
+  case SHT_LLVM_PART_EHDR:
+    return "LLVM_PART_EHDR";
+  case SHT_LLVM_PART_PHDR:
+    return "LLVM_PART_PHDR";
   // FIXME: Parse processor specific GNU attributes
   case SHT_GNU_ATTRIBUTES:
     return "ATTRIBUTES";

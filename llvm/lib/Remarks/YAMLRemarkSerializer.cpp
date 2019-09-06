@@ -153,15 +153,6 @@ YAMLRemarkSerializer::YAMLRemarkSerializer(raw_ostream &OS, SerializerMode Mode)
     : RemarkSerializer(OS, Mode), YAMLOutput(OS, reinterpret_cast<void *>(this)) {}
 
 void YAMLRemarkSerializer::emit(const Remark &Remark) {
-  // In standalone mode, emit the metadata first and set DidEmitMeta to avoid
-  // emitting it again.
-  if (Mode == SerializerMode::Standalone) {
-    std::unique_ptr<MetaSerializer> MetaSerializer =
-        metaSerializer(OS, /*ExternalFilename=*/None);
-    MetaSerializer->emit();
-    DidEmitMeta = true;
-  }
-
   // Again, YAMLTraits expect a non-const object for inputting, but we're not
   // using that here.
   auto R = const_cast<remarks::Remark *>(&Remark);
@@ -172,6 +163,20 @@ std::unique_ptr<MetaSerializer>
 YAMLRemarkSerializer::metaSerializer(raw_ostream &OS,
                                      Optional<StringRef> ExternalFilename) {
   return std::make_unique<YAMLMetaSerializer>(OS, ExternalFilename);
+}
+
+void YAMLStrTabRemarkSerializer::emit(const Remark &Remark) {
+  // In standalone mode, for the serializer with a string table, emit the
+  // metadata first and set DidEmitMeta to avoid emitting it again.
+  if (Mode == SerializerMode::Standalone && !DidEmitMeta) {
+    std::unique_ptr<MetaSerializer> MetaSerializer =
+        metaSerializer(OS, /*ExternalFilename=*/None);
+    MetaSerializer->emit();
+    DidEmitMeta = true;
+  }
+
+  // Then do the usual remark emission.
+  YAMLRemarkSerializer::emit(Remark);
 }
 
 std::unique_ptr<MetaSerializer> YAMLStrTabRemarkSerializer::metaSerializer(

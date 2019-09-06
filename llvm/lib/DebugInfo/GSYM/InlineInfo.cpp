@@ -65,7 +65,6 @@ llvm::Optional<InlineInfo::InlineArray> InlineInfo::getInlineStack(uint64_t Addr
 /// A local helper function to decode InlineInfo objects. This function is
 /// called recursively when parsing child InlineInfo objects.
 ///
-/// \param Inline The InlineInfo object to decode into.
 /// \param Data The data extractor to decode from.
 /// \param Offset The offset within \a Data to decode from.
 /// \param BaseAddr The base address to use when decoding address ranges.

@@ -17,19 +17,18 @@ let hasSideEffects = 0 in {
   let Defs = [EAX], Uses = [AX] in // EAX = signext(AX)
   def CWDE : I<0x98, RawFrm, (outs), (ins),
               "{cwtl|cwde}", []>, OpSize32, Sched<[WriteALU]>;
+  let Defs = [RAX], Uses = [EAX] in // RAX = signext(EAX)
+  def CDQE : RI<0x98, RawFrm, (outs), (ins),
+               "{cltq|cdqe}", []>, Sched<[WriteALU]>, Requires<[In64BitMode]>;
 
+  // FIXME: CWD/CDQ/CQO shouldn't Def the A register, but the fast register
+  // allocator crashes if you remove it.
   let Defs = [AX,DX], Uses = [AX] in // DX:AX = signext(AX)
   def CWD : I<0x99, RawFrm, (outs), (ins),
               "{cwtd|cwd}", []>, OpSize16, Sched<[WriteALU]>;
   let Defs = [EAX,EDX], Uses = [EAX] in // EDX:EAX = signext(EAX)
   def CDQ : I<0x99, RawFrm, (outs), (ins),
               "{cltd|cdq}", []>, OpSize32, Sched<[WriteALU]>;
-
-
-  let Defs = [RAX], Uses = [EAX] in // RAX = signext(EAX)
-  def CDQE : RI<0x98, RawFrm, (outs), (ins),
-               "{cltq|cdqe}", []>, Sched<[WriteALU]>, Requires<[In64BitMode]>;
-
   let Defs = [RAX,RDX], Uses = [RAX] in // RDX:RAX = signext(RAX)
   def CQO  : RI<0x99, RawFrm, (outs), (ins),
                 "{cqto|cqo}", []>, Sched<[WriteALU]>, Requires<[In64BitMode]>;

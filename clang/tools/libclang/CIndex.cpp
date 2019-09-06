@@ -21,6 +21,7 @@
 #include "CXType.h"
 #include "CursorVisitor.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCategories.h"
@@ -30,7 +31,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Index/CodegenNameGenerator.h"
 #include "clang/Index/CommentToXML.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
@@ -4737,8 +4737,8 @@ CXString clang_Cursor_getMangling(CXCursor C) {
     return cxstring::createEmpty();
 
   ASTContext &Ctx = D->getASTContext();
-  index::CodegenNameGenerator CGNameGen(Ctx);
-  return cxstring::createDup(CGNameGen.getName(D));
+  ASTNameGenerator ASTNameGen(Ctx);
+  return cxstring::createDup(ASTNameGen.getName(D));
 }
 
 CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
@@ -4750,8 +4750,8 @@ CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
     return nullptr;
 
   ASTContext &Ctx = D->getASTContext();
-  index::CodegenNameGenerator CGNameGen(Ctx);
-  std::vector<std::string> Manglings = CGNameGen.getAllManglings(D);
+  ASTNameGenerator ASTNameGen(Ctx);
+  std::vector<std::string> Manglings = ASTNameGen.getAllManglings(D);
   return cxstring::createSet(Manglings);
 }
 
@@ -4764,8 +4764,8 @@ CXStringSet *clang_Cursor_getObjCManglings(CXCursor C) {
     return nullptr;
 
   ASTContext &Ctx = D->getASTContext();
-  index::CodegenNameGenerator CGNameGen(Ctx);
-  std::vector<std::string> Manglings = CGNameGen.getAllManglings(D);
+  ASTNameGenerator ASTNameGen(Ctx);
+  std::vector<std::string> Manglings = ASTNameGen.getAllManglings(D);
   return cxstring::createSet(Manglings);
 }
 
