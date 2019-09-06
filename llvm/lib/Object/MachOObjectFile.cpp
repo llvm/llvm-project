@@ -2557,6 +2557,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
   case MachO::CPU_TYPE_X86_64:
     return "Mach-O 64-bit x86-64";
   case MachO::CPU_TYPE_ARM64:
+    if (getHeader().cpusubtype == MachO::CPU_SUBTYPE_ARM64E)
+      return "Mach-O arm64e";
     return "Mach-O arm64";
   case MachO::CPU_TYPE_POWERPC64:
     return "Mach-O 64-bit ppc64";
@@ -2680,6 +2682,12 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "arm64";
       return Triple("arm64-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM64E:
+      if (McpuDefault)
+        *McpuDefault = "vortex";
+      if (ArchFlag)
+        *ArchFlag = "arm64e";
+      return Triple("arm64e-apple-darwin");
     default:
       return Triple();
     }
@@ -2727,10 +2735,10 @@ bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
 }
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {
-  static const std::array<StringRef, 17> validArchs = {{
+  static const std::array<StringRef, 18> validArchs = {{
       "i386",   "x86_64", "x86_64h",  "armv4t",  "arm",    "armv5e",
       "armv6",  "armv6m", "armv7",    "armv7em", "armv7k", "armv7m",
-      "armv7s", "arm64",  "arm64_32", "ppc",     "ppc64",
+      "armv7s", "arm64",  "arm64e",   "arm64_32","ppc",    "ppc64",
   }};
 
   return validArchs;
