@@ -37,6 +37,9 @@ config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_P
 config.pstl_obj_root            = "@ParallelSTL_BINARY_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 config.libcxx_gdb               = "@LIBCXX_GDB@"
 
+# Code signing
+config.llvm_codesign_identity   = "@LLVM_CODESIGNING_IDENTITY@"
+
 # Let the main config do the real work.
 config.loaded_site_config = True
 lit_config.load_config(config, "@LIBCXX_SOURCE_DIR@/test/lit.cfg")

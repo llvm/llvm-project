@@ -52,6 +52,9 @@
 ; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Scalar Evolution Analysis
 ; CHECK-NEXT:      Hardware Loop Insertion
+; CHECK-NEXT:      Scalar Evolution Analysis
+; CHECK-NEXT:      Loop Pass Manager
+; CHECK-NEXT:        Transform predicated vector loops to use MVE tail predication
 ; CHECK-NEXT:      Safe Stack instrumentation pass
 ; CHECK-NEXT:      Insert stack protectors
 ; CHECK-NEXT:      Module Verifier

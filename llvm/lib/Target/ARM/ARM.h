@@ -35,6 +35,7 @@ class MachineInstr;
 class MCInst;
 class PassRegistry;
 
+Pass *createMVETailPredicationPass();
 FunctionPass *createARMLowOverheadLoopsPass();
 Pass *createARMParallelDSPPass();
 FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
@@ -67,6 +68,7 @@ void initializeThumb2SizeReducePass(PassRegistry &);
 void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeMVEVPTBlockPass(PassRegistry &);
 void initializeARMLowOverheadLoopsPass(PassRegistry &);
+void initializeMVETailPredicationPass(PassRegistry &);
 
 } // end namespace llvm
 

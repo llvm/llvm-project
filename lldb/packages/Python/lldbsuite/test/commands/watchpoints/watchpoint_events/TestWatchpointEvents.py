@@ -25,9 +25,6 @@ class TestWatchpointEvents (TestBase):
         archs=["aarch64"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27710")
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_with_python_api(self):
         """Test that adding, deleting and modifying watchpoints sends the appropriate events."""
         self.build()

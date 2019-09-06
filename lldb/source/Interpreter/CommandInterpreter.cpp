@@ -16,7 +16,6 @@
 
 #include "Commands/CommandObjectApropos.h"
 #include "Commands/CommandObjectBreakpoint.h"
-#include "Commands/CommandObjectBugreport.h"
 #include "Commands/CommandObjectCommands.h"
 #include "Commands/CommandObjectDisassemble.h"
 #include "Commands/CommandObjectExpression.h"
@@ -444,8 +443,6 @@ void CommandInterpreter::LoadCommandDictionary() {
   m_command_dict["apropos"] = CommandObjectSP(new CommandObjectApropos(*this));
   m_command_dict["breakpoint"] =
       CommandObjectSP(new CommandObjectMultiwordBreakpoint(*this));
-  m_command_dict["bugreport"] =
-      CommandObjectSP(new CommandObjectMultiwordBugreport(*this));
   m_command_dict["command"] =
       CommandObjectSP(new CommandObjectMultiwordCommands(*this));
   m_command_dict["disassemble"] =

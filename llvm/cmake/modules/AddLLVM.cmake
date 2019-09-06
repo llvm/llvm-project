@@ -58,7 +58,7 @@ function(llvm_update_compile_flags name)
   if(update_src_props)
     foreach(fn ${sources})
       get_filename_component(suf ${fn} EXT)
-      if("${suf}" STREQUAL ".cpp")
+      if("${suf}" STREQUAL ".cpp" OR "${suf}" STREQUAL ".c")
         set_property(SOURCE ${fn} APPEND_STRING PROPERTY
           COMPILE_FLAGS "${target_compile_flags}")
       endif()

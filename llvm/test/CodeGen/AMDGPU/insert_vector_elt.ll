@@ -1650,10 +1650,10 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)
 ; SI-NEXT:    v_mov_b32_e32 v13, s21
 ; SI-NEXT:    v_mov_b32_e32 v14, s22
 ; SI-NEXT:    v_mov_b32_e32 v15, s23
-; SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], s7 offset:112
 ; SI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], s7 offset:96
-; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], s7 offset:80
+; SI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], s7 offset:112
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], s7 offset:64
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], s7 offset:80
 ; SI-NEXT:    v_or_b32_e32 v16, s4, v16
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, 0x40200000
@@ -1696,10 +1696,10 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v13, s21
 ; VI-NEXT:    v_mov_b32_e32 v14, s22
 ; VI-NEXT:    v_mov_b32_e32 v15, s23
-; VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], s7 offset:112
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], s7 offset:96
-; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], s7 offset:80
+; VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], s7 offset:112
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], s7 offset:64
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], s7 offset:80
 ; VI-NEXT:    v_or_b32_e32 v16, s4, v16
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, 0x40200000

@@ -1316,13 +1316,14 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MemInfoMap &Visited,
     SmallPtrSet<MachineInstr *, 4> &AnchorList) {
 
-  // TODO: Support flat and scratch.
-  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0 ||
-      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != NULL)
+  if (!(MI.mayLoad() ^ MI.mayStore()))
     return false;
 
-  // TODO: Support Store.
-  if (!MI.mayLoad())
+  // TODO: Support flat and scratch.
+  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0)
+    return false;
+
+  if (MI.mayLoad() && TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != NULL)
     return false;
 
   if (AnchorList.count(&MI))

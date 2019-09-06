@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(MCTests
   Disassembler.cpp
   DwarfLineTables.cpp
+  MCInstPrinter.cpp
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
   )

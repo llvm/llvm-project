@@ -96,6 +96,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
 }
 
@@ -447,8 +448,10 @@ bool ARMPassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOpt::None) {
     addPass(createHardwareLoopsPass());
+    addPass(createMVETailPredicationPass());
+  }
 
   return false;
 }

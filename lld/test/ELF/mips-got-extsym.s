@@ -9,43 +9,23 @@
 # RUN: ld.lld -shared %t.so.o -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o %t.so -o %t.exe
-# RUN: llvm-readobj --dyn-syms --symbols --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readelf --dyn-syms --symbols --mips-plt-got %t.exe | FileCheck %s
 
-# CHECK:      Symbols [
-# CHECK:        Symbol {
-# CHECK:          Name: _foo
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
+# CHECK: Symbol table '.dynsym'
+# CHECK-NOT: bar
 
-# CHECK:        Symbol {
-# CHECK:          Name: bar
-# CHECK-NEXT:     Value: 0x20008
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Global
+# CHECK: Symbol table '.symtab'
+# CHECK: {{.*}}: 00000000            {{.*}} _foo
+# CHECK: {{.*}}: [[BAR:[0-9a-f]+]] {{.*}} bar
 
-# CHECK:     DynamicSymbols [
-# CHECK-NOT:      Name: bar
-
-# CHECK:      Local entries [
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32744
-# CHECK-NEXT:     Initial: 0x20008
-#                          ^-- bar
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
-# CHECK-NEXT: Global entries [
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32740
-# CHECK-NEXT:     Initial: 0x0
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:     Name: _foo
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
+# CHECK: Primary GOT:
+# CHECK:  Local entries:
+# CHECK-NEXT:    Address     Access  Initial
+# CHECK-NEXT:     {{.*}} -32744(gp)  [[BAR]]
+# CHECK-EMPTY:
+# CHECK-NEXT:  Global entries:
+# CHECK-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
+# CHECK-NEXT:     {{.*}} -32740(gp) 00000000 00000000 NOTYPE  UND _foo
 
   .text
   .globl  __start

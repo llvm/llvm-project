@@ -1,4 +1,7 @@
 // REQUIRES: x86
+
+// Reserve space for copy relocations of read-only symbols in .bss.rel.ro
+
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/relocation-copy-relro.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t.so

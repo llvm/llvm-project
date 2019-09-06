@@ -929,8 +929,8 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       Base = Builder.CreateVectorSplat(NumElts, Base);
     }
     return new ICmpInst(Cond, Base,
-                        ConstantExpr::getBitCast(cast<Constant>(RHS),
-                                                 Base->getType()));
+                        ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+                            cast<Constant>(RHS), Base->getType()));
   } else if (GEPOperator *GEPRHS = dyn_cast<GEPOperator>(RHS)) {
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.

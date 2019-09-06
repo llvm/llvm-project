@@ -34,9 +34,6 @@ class WatchpointPythonCommandTestCase(TestBase):
 
     @skipIfFreeBSD  # timing out on buildbot
     @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
         triple=no_match(".*-android"),
@@ -105,9 +102,6 @@ class WatchpointPythonCommandTestCase(TestBase):
                     substrs=['(int32_t)', 'cookie = 777'])
 
     @skipIfFreeBSD  # timing out on buildbot
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
