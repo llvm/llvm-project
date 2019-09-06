@@ -118,8 +118,7 @@ define void @si8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ; X32-LABEL: si8:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    cbtw
+; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    idivb {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -131,9 +130,7 @@ define void @si8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ;
 ; X64-LABEL: si8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    cbtw
+; X64-NEXT:    movsbl %dil, %eax
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %esi
 ; X64-NEXT:    movb %al, (%rdx)
@@ -263,7 +260,6 @@ define void @ui8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    # kill: def $eax killed $eax def $ax
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -276,7 +272,6 @@ define void @ui8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ; X64-LABEL: ui8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %esi
 ; X64-NEXT:    movb %al, (%rdx)

@@ -1076,8 +1076,6 @@ def S_BARRIER : SOPP <0x0000000a, (ins), "s_barrier",
   [(int_amdgcn_s_barrier)]> {
   let SchedRW = [WriteBarrier];
   let simm16 = 0;
-  let mayLoad = 1;
-  let mayStore = 1;
   let isConvergent = 1;
 }
 

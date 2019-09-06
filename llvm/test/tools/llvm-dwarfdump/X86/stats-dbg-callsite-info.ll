@@ -2,7 +2,7 @@
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ;
 ; The LLVM IR file was generated on this source code by using
-; option '-femit-param-entry-values'.
+; option '-femit-debug-entry-values'.
 ;
 ; extern void foo(int *a, int b, int c, int d, int e, int f);
 ; extern int getVal();

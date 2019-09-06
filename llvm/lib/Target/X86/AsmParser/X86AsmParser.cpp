@@ -874,7 +874,6 @@ private:
   bool parseSEHRegisterNumber(unsigned RegClassID, unsigned &RegNo);
   bool parseDirectiveSEHPushReg(SMLoc);
   bool parseDirectiveSEHSetFrame(SMLoc);
-  bool parseDirectiveSEHAllocStack(SMLoc);
   bool parseDirectiveSEHSaveReg(SMLoc);
   bool parseDirectiveSEHSaveXMM(SMLoc);
   bool parseDirectiveSEHPushFrame(SMLoc);
@@ -3816,19 +3815,6 @@ bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
 
   getParser().Lex();
   getStreamer().EmitWinCFISetFrame(Reg, Off, Loc);
-  return false;
-}
-
-bool X86AsmParser::parseDirectiveSEHAllocStack(SMLoc Loc) {
-  int64_t Size;
-  if (getParser().parseAbsoluteExpression(Size))
-    return true;
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
-
-  getParser().Lex();
-  getStreamer().EmitWinCFIAllocStack(Size, Loc);
   return false;
 }
 
