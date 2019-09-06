@@ -4533,31 +4533,24 @@ LValue CodeGenFunction::EmitCompoundAssignmentLValue(
   llvm_unreachable("Unhandled compound assignment operator");
 }
 
-Value *CodeGenFunction::EmitCheckedInBoundsGEP(Value *Ptr,
-                                               ArrayRef<Value *> IdxList,
-                                               bool SignedIndices,
-                                               bool IsSubtraction,
-                                               SourceLocation Loc,
-                                               const Twine &Name) {
-  Value *GEPVal = Builder.CreateInBoundsGEP(Ptr, IdxList, Name);
+struct GEPOffsetAndOverflow {
+  // The total (signed) byte offset for the GEP.
+  llvm::Value *TotalOffset;
+  // The offset overflow flag - true if the total offset overflows.
+  llvm::Value *OffsetOverflows;
+};
 
-  // If the pointer overflow sanitizer isn't enabled, do nothing.
-  if (!SanOpts.has(SanitizerKind::PointerOverflow))
-    return GEPVal;
-
-  // If the GEP has already been reduced to a constant, leave it be.
-  if (isa<llvm::Constant>(GEPVal))
-    return GEPVal;
-
-  // Only check for overflows in the default address space.
-  if (GEPVal->getType()->getPointerAddressSpace())
-    return GEPVal;
-
+/// Evaluate given GEPVal, which must be an inbounds GEP,
+/// and compute the total offset it applies from it's base pointer BasePtr.
+/// Returns offset in bytes and a boolean flag whether an overflow happened
+/// during evaluation.
+static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
+                                                 llvm::LLVMContext &VMContext,
+                                                 CodeGenModule &CGM,
+                                                 CGBuilderTy Builder) {
   auto *GEP = cast<llvm::GEPOperator>(GEPVal);
   assert(GEP->isInBounds() && "Expected inbounds GEP");
 
-  SanitizerScope SanScope(this);
-  auto &VMContext = getLLVMContext();
   const auto &DL = CGM.getDataLayout();
   auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
 
@@ -4627,41 +4620,89 @@ Value *CodeGenFunction::EmitCheckedInBoundsGEP(Value *Ptr,
       TotalOffset = eval(BO_Add, TotalOffset, LocalOffset);
   }
 
+  return {TotalOffset, OffsetOverflows};
+}
+
+Value *
+CodeGenFunction::EmitCheckedInBoundsGEP(Value *Ptr, ArrayRef<Value *> IdxList,
+                                        bool SignedIndices, bool IsSubtraction,
+                                        SourceLocation Loc, const Twine &Name) {
+  Value *GEPVal = Builder.CreateInBoundsGEP(Ptr, IdxList, Name);
+
+  // If the pointer overflow sanitizer isn't enabled, do nothing.
+  if (!SanOpts.has(SanitizerKind::PointerOverflow))
+    return GEPVal;
+
+  // If the GEP has already been reduced to a constant, leave it be.
+  if (isa<llvm::Constant>(GEPVal))
+    return GEPVal;
+
+  // Only check for overflows in the default address space.
+  if (GEPVal->getType()->getPointerAddressSpace())
+    return GEPVal;
+
+  SanitizerScope SanScope(this);
+
+  GEPOffsetAndOverflow EvaluatedGEP =
+      EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
+
+  auto *GEP = cast<llvm::GEPOperator>(GEPVal);
+
+  const auto &DL = CGM.getDataLayout();
+  auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
+
+  auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
+
   // Common case: if the total offset is zero, don't emit a check.
-  if (TotalOffset == Zero)
+  if (EvaluatedGEP.TotalOffset == Zero)
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with
   // wrapping semantics).
   auto *IntPtr = Builder.CreatePtrToInt(GEP->getPointerOperand(), IntPtrTy);
-  auto *ComputedGEP = Builder.CreateAdd(IntPtr, TotalOffset);
+  auto *ComputedGEP = Builder.CreateAdd(IntPtr, EvaluatedGEP.TotalOffset);
+
+  llvm::SmallVector<std::pair<llvm::Value *, SanitizerMask>, 1> Checks;
 
   // The GEP is valid if:
   // 1) The total offset doesn't overflow, and
   // 2) The sign of the difference between the computed address and the base
   // pointer matches the sign of the total offset.
   llvm::Value *ValidGEP;
-  auto *NoOffsetOverflow = Builder.CreateNot(OffsetOverflows);
+  auto *NoOffsetOverflow = Builder.CreateNot(EvaluatedGEP.OffsetOverflows);
   if (SignedIndices) {
+    // GEP is computed as `unsigned base + signed offset`, therefore:
+    // * If offset was positive, then the computed pointer can not be
+    //   [unsigned] less than the base pointer, unless it overflowed.
+    // * If offset was negative, then the computed pointer can not be
+    //   [unsigned] greater than the bas pointere, unless it overflowed.
     auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
-    auto *PosOrZeroOffset = Builder.CreateICmpSGE(TotalOffset, Zero);
+    auto *PosOrZeroOffset =
+        Builder.CreateICmpSGE(EvaluatedGEP.TotalOffset, Zero);
     llvm::Value *NegValid = Builder.CreateICmpULT(ComputedGEP, IntPtr);
-    ValidGEP = Builder.CreateAnd(
-        Builder.CreateSelect(PosOrZeroOffset, PosOrZeroValid, NegValid),
-        NoOffsetOverflow);
-  } else if (!SignedIndices && !IsSubtraction) {
-    auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
-    ValidGEP = Builder.CreateAnd(PosOrZeroValid, NoOffsetOverflow);
+    ValidGEP = Builder.CreateSelect(PosOrZeroOffset, PosOrZeroValid, NegValid);
+  } else if (!IsSubtraction) {
+    // GEP is computed as `unsigned base + unsigned offset`,  therefore the
+    // computed pointer can not be [unsigned] less than base pointer,
+    // unless there was an overflow.
+    // Equivalent to `@llvm.uadd.with.overflow(%base, %offset)`.
+    ValidGEP = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
   } else {
-    auto *NegOrZeroValid = Builder.CreateICmpULE(ComputedGEP, IntPtr);
-    ValidGEP = Builder.CreateAnd(NegOrZeroValid, NoOffsetOverflow);
+    // GEP is computed as `unsigned base - unsigned offset`, therefore the
+    // computed pointer can not be [unsigned] greater than base pointer,
+    // unless there was an overflow.
+    // Equivalent to `@llvm.usub.with.overflow(%base, sub(0, %offset))`.
+    ValidGEP = Builder.CreateICmpULE(ComputedGEP, IntPtr);
   }
+  ValidGEP = Builder.CreateAnd(ValidGEP, NoOffsetOverflow);
+  Checks.emplace_back(ValidGEP, SanitizerKind::PointerOverflow);
+
+  assert(!Checks.empty() && "Should have produced some checks.");
 
   llvm::Constant *StaticArgs[] = {EmitCheckSourceLocation(Loc)};
   // Pass the computed GEP to the runtime to avoid emitting poisoned arguments.
   llvm::Value *DynamicArgs[] = {IntPtr, ComputedGEP};
-  EmitCheck(std::make_pair(ValidGEP, SanitizerKind::PointerOverflow),
-            SanitizerHandler::PointerOverflow, StaticArgs, DynamicArgs);
+  EmitCheck(Checks, SanitizerHandler::PointerOverflow, StaticArgs, DynamicArgs);
 
   return GEPVal;
 }

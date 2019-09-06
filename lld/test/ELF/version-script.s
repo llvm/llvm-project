@@ -6,19 +6,19 @@
 # RUN: echo "{ global: foo1; foo3; local: *; };" > %t.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --version-script %t.script -shared %t.o %t2.so -o %t.so --fatal-warnings
-# RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
 # RUN: echo "# comment" > %t3.script
 # RUN: echo "{ local: *; # comment" >> %t3.script
 # RUN: echo -n "}; # comment" >> %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o %t2.so -o %t3.so
-# RUN: llvm-readobj --dyn-syms %t3.so | FileCheck --check-prefix=DSO2 %s
+# RUN: llvm-readelf --dyn-syms %t3.so | FileCheck --check-prefix=DSO2 %s
 
 ## Also check that both "global:" and "global :" forms are accepted
 # RUN: echo "VERSION_1.0 { global : foo1; local : *; };" > %t4.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" >> %t4.script
 # RUN: ld.lld --version-script %t4.script -shared %t.o %t2.so -o %t4.so --fatal-warnings
-# RUN: llvm-readobj --dyn-syms %t4.so | FileCheck --check-prefix=VERDSO %s
+# RUN: llvm-readelf --dyn-syms %t4.so | FileCheck --check-prefix=VERDSO %s
 
 # RUN: echo "VERSION_1.0 { global: foo1; local: *; };" > %t5.script
 # RUN: echo "{ global: foo3; local: *; };" >> %t5.script
@@ -40,172 +40,36 @@
 # RUN: echo "VERSION_1.0 { global : foo1; local : *; };" > %t7a.script
 # RUN: echo "VERSION_2.0 { global: foo3; local: *; };" > %t7b.script
 # RUN: ld.lld --version-script %t7a.script --version-script %t7b.script -shared %t.o %t2.so -o %t7.so
-# RUN: llvm-readobj --dyn-syms %t7.so | FileCheck --check-prefix=VERDSO %s
+# RUN: llvm-readelf --dyn-syms %t7.so | FileCheck --check-prefix=VERDSO %s
 
-# DSO:      DynamicSymbols [
-# DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name:
-# DSO-NEXT:     Value: 0x0
-# DSO-NEXT:     Size: 0
-# DSO-NEXT:     Binding: Local (0x0)
-# DSO-NEXT:     Type: None (0x0)
-# DSO-NEXT:     Other: 0
-# DSO-NEXT:     Section: Undefined (0x0)
-# DSO-NEXT:   }
-# DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: bar
-# DSO-NEXT:     Value: 0x0
-# DSO-NEXT:     Size: 0
-# DSO-NEXT:     Binding: Global (0x1)
-# DSO-NEXT:     Type: Function (0x2)
-# DSO-NEXT:     Other: 0
-# DSO-NEXT:     Section: Undefined (0x0)
-# DSO-NEXT:   }
-# DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: foo1
-# DSO-NEXT:     Value: 0x1000
-# DSO-NEXT:     Size: 0
-# DSO-NEXT:     Binding: Global (0x1)
-# DSO-NEXT:     Type: None (0x0)
-# DSO-NEXT:     Other: 0
-# DSO-NEXT:     Section: .text
-# DSO-NEXT:   }
-# DSO-NEXT:   Symbol {
-# DSO-NEXT:     Name: foo3
-# DSO-NEXT:     Value: 0x1007
-# DSO-NEXT:     Size: 0
-# DSO-NEXT:     Binding: Global (0x1)
-# DSO-NEXT:     Type: None (0x0)
-# DSO-NEXT:     Other: 0
-# DSO-NEXT:     Section: .text
-# DSO-NEXT:   }
-# DSO-NEXT: ]
+# DSO:      bar{{$}}
+# DSO-NEXT: foo1{{$}}
+# DSO-NEXT: foo3{{$}}
+# DSO-NOT:  {{.}}
 
-# DSO2:      DynamicSymbols [
-# DSO2-NEXT:   Symbol {
-# DSO2-NEXT:     Name:
-# DSO2-NEXT:     Value: 0x0
-# DSO2-NEXT:     Size: 0
-# DSO2-NEXT:     Binding: Local (0x0)
-# DSO2-NEXT:     Type: None (0x0)
-# DSO2-NEXT:     Other: 0
-# DSO2-NEXT:     Section: Undefined (0x0)
-# DSO2-NEXT:   }
-# DSO2-NEXT:   Symbol {
-# DSO2-NEXT:     Name: bar
-# DSO2-NEXT:     Value: 0x0
-# DSO2-NEXT:     Size: 0
-# DSO2-NEXT:     Binding: Global (0x1)
-# DSO2-NEXT:     Type: Function (0x2)
-# DSO2-NEXT:     Other: 0
-# DSO2-NEXT:     Section: Undefined (0x0)
-# DSO2-NEXT:   }
-# DSO2-NEXT: ]
+# DSO2:      bar{{$}}
+# DSO2-NOT:  {{.}}
 
-# VERDSO:      DynamicSymbols [
-# VERDSO-NEXT:   Symbol {
-# VERDSO-NEXT:     Name:
-# VERDSO-NEXT:     Value: 0x0
-# VERDSO-NEXT:     Size: 0
-# VERDSO-NEXT:     Binding: Local
-# VERDSO-NEXT:     Type: None
-# VERDSO-NEXT:     Other: 0
-# VERDSO-NEXT:     Section: Undefined
-# VERDSO-NEXT:   }
-# VERDSO-NEXT:   Symbol {
-# VERDSO-NEXT:     Name: bar
-# VERDSO-NEXT:     Value: 0x0
-# VERDSO-NEXT:     Size: 0
-# VERDSO-NEXT:     Binding: Global
-# VERDSO-NEXT:     Type: Function
-# VERDSO-NEXT:     Other: 0
-# VERDSO-NEXT:     Section: Undefined
-# VERDSO-NEXT:   }
-# VERDSO-NEXT:   Symbol {
-# VERDSO-NEXT:     Name: foo1@@VERSION_1.0
-# VERDSO-NEXT:     Value: 0x1000
-# VERDSO-NEXT:     Size: 0
-# VERDSO-NEXT:     Binding: Global
-# VERDSO-NEXT:     Type: None
-# VERDSO-NEXT:     Other: 0
-# VERDSO-NEXT:     Section: .text
-# VERDSO-NEXT:   }
-# VERDSO-NEXT:   Symbol {
-# VERDSO-NEXT:     Name: foo3@@VERSION_2.0
-# VERDSO-NEXT:     Value: 0x1007
-# VERDSO-NEXT:     Size: 0
-# VERDSO-NEXT:     Binding: Global
-# VERDSO-NEXT:     Type: None
-# VERDSO-NEXT:     Other: 0
-# VERDSO-NEXT:     Section: .text
-# VERDSO-NEXT:   }
-# VERDSO-NEXT: ]
+# VERDSO:      bar{{$}}
+# VERDSO-NEXT: foo1@@VERSION_1.0
+# VERDSO-NEXT: foo3@@VERSION_2.0
+# VERDSO-NOT:  {{.}}
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o %t2.so -o %t.so
-# RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
 
 # RUN: echo "{ global: foo1; foo3; };" > %t2.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv --version-script %t2.script -shared %t.o %t2.so -o %t.so
-# RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
 
-# ALL:      DynamicSymbols [
-# ALL-NEXT:   Symbol {
-# ALL-NEXT:     Name:
-# ALL-NEXT:     Value: 0x0
-# ALL-NEXT:     Size: 0
-# ALL-NEXT:     Binding: Local
-# ALL-NEXT:     Type: None
-# ALL-NEXT:     Other: 0
-# ALL-NEXT:     Section: Undefined
-# ALL-NEXT:   }
-# ALL-NEXT:  Symbol {
-# ALL-NEXT:    Name: _start
-# ALL-NEXT:    Value:
-# ALL-NEXT:    Size: 0
-# ALL-NEXT:    Binding: Global
-# ALL-NEXT:    Type: None
-# ALL-NEXT:    Other: 0
-# ALL-NEXT:    Section: .text
-# ALL-NEXT:  }
-# ALL-NEXT:  Symbol {
-# ALL-NEXT:    Name: bar
-# ALL-NEXT:    Value:
-# ALL-NEXT:    Size: 0
-# ALL-NEXT:    Binding: Global
-# ALL-NEXT:    Type: Function
-# ALL-NEXT:    Other: 0
-# ALL-NEXT:    Section: Undefined
-# ALL-NEXT:  }
-# ALL-NEXT:  Symbol {
-# ALL-NEXT:    Name: foo1
-# ALL-NEXT:    Value:
-# ALL-NEXT:    Size: 0
-# ALL-NEXT:    Binding: Global
-# ALL-NEXT:    Type: None
-# ALL-NEXT:    Other: 0
-# ALL-NEXT:    Section: .text
-# ALL-NEXT:  }
-# ALL-NEXT:  Symbol {
-# ALL-NEXT:    Name: foo2
-# ALL-NEXT:    Value:
-# ALL-NEXT:    Size: 0
-# ALL-NEXT:    Binding: Global
-# ALL-NEXT:    Type: None
-# ALL-NEXT:    Other: 0
-# ALL-NEXT:    Section: .text
-# ALL-NEXT:  }
-# ALL-NEXT:  Symbol {
-# ALL-NEXT:    Name: foo3
-# ALL-NEXT:    Value:
-# ALL-NEXT:    Size: 0
-# ALL-NEXT:    Binding: Global
-# ALL-NEXT:    Type: None
-# ALL-NEXT:    Other: 0
-# ALL-NEXT:    Section: .text
-# ALL-NEXT:  }
-# ALL-NEXT: ]
+# ALL:      _start{{$}}
+# ALL-NEXT: bar{{$}}
+# ALL-NEXT: foo1{{$}}
+# ALL-NEXT: foo2{{$}}
+# ALL-NEXT: foo3{{$}}
+# ALL-NOT:  {{.}}
 
 # RUN: echo "VERSION_1.0 { global: foo1; foo1; local: *; };" > %t8.script
 # RUN: ld.lld --version-script %t8.script -shared %t.o -o /dev/null --fatal-warnings
