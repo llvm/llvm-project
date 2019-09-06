@@ -33594,7 +33594,7 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
 }
 
 /// Eliminate a redundant shuffle of a horizontal math op.
-static SDValue foldShuffleOfHorizOp(SDNode *N) {
+static SDValue foldShuffleOfHorizOp(SDNode *N, SelectionDAG &DAG) {
   unsigned Opcode = N->getOpcode();
   if (Opcode != X86ISD::MOVDDUP && Opcode != X86ISD::VBROADCAST)
     if (Opcode != ISD::VECTOR_SHUFFLE || !N->getOperand(1).isUndef())
@@ -33625,6 +33625,25 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
       HOp.getOperand(0) != HOp.getOperand(1))
     return SDValue();
 
+  // The shuffle that we are eliminating may have allowed the horizontal op to
+  // have an undemanded (undefined) operand. Duplicate the other (defined)
+  // operand to ensure that the results are defined across all lanes without the
+  // shuffle.
+  auto updateHOp = [](SDValue HorizOp, SelectionDAG &DAG) {
+    SDValue X;
+    if (HorizOp.getOperand(0).isUndef()) {
+      assert(!HorizOp.getOperand(1).isUndef() && "Not expecting foldable h-op");
+      X = HorizOp.getOperand(1);
+    } else if (HorizOp.getOperand(1).isUndef()) {
+      assert(!HorizOp.getOperand(0).isUndef() && "Not expecting foldable h-op");
+      X = HorizOp.getOperand(0);
+    } else {
+      return HorizOp;
+    }
+    return DAG.getNode(HorizOp.getOpcode(), SDLoc(HorizOp),
+                       HorizOp.getValueType(), X, X);
+  };
+
   // When the operands of a horizontal math op are identical, the low half of
   // the result is the same as the high half. If a target shuffle is also
   // replicating low and high halves, we don't need the shuffle.
@@ -33635,7 +33654,7 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
       assert((HOp.getValueType() == MVT::v2f64 ||
         HOp.getValueType() == MVT::v4f64) && HOp.getValueType() == VT &&
         "Unexpected type for h-op");
-      return HOp;
+      return updateHOp(HOp, DAG);
     }
     return SDValue();
   }
@@ -33649,14 +33668,14 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
       (isTargetShuffleEquivalent(Mask, {0, 0}) ||
        isTargetShuffleEquivalent(Mask, {0, 1, 0, 1}) ||
        isTargetShuffleEquivalent(Mask, {0, 1, 2, 3, 0, 1, 2, 3})))
-    return HOp;
+    return updateHOp(HOp, DAG);
 
   if (HOp.getValueSizeInBits() == 256 &&
       (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2}) ||
        isTargetShuffleEquivalent(Mask, {0, 1, 0, 1, 4, 5, 4, 5}) ||
        isTargetShuffleEquivalent(
            Mask, {0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 8, 9, 10, 11})))
-    return HOp;
+    return updateHOp(HOp, DAG);
 
   return SDValue();
 }
@@ -33710,7 +33729,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     if (SDValue AddSub = combineShuffleToAddSubOrFMAddSub(N, Subtarget, DAG))
       return AddSub;
 
-    if (SDValue HAddSub = foldShuffleOfHorizOp(N))
+    if (SDValue HAddSub = foldShuffleOfHorizOp(N, DAG))
       return HAddSub;
   }
 
