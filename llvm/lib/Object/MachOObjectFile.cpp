@@ -2220,7 +2220,8 @@ void MachOObjectFile::getRelocationTypeName(
         "ARM64_RELOC_PAGEOFF12",          "ARM64_RELOC_GOT_LOAD_PAGE21",
         "ARM64_RELOC_GOT_LOAD_PAGEOFF12", "ARM64_RELOC_POINTER_TO_GOT",
         "ARM64_RELOC_TLVP_LOAD_PAGE21",   "ARM64_RELOC_TLVP_LOAD_PAGEOFF12",
-        "ARM64_RELOC_ADDEND"
+        "ARM64_RELOC_ADDEND",
+        "ARM64_RELOC_AUTHENTICATED_POINTER"
       };
 
       if (RType >= array_lengthof(Table))

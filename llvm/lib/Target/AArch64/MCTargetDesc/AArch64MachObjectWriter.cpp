@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64FixupKinds.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -390,6 +391,46 @@ void AArch64MachObjectWriter::recordRelocation(
 
     // Put zero into the instruction itself. The addend is in the relocation.
     Value = 0;
+  }
+
+  if (Target.getRefKind() == AArch64MCExpr::VK_AUTH ||
+      Target.getRefKind() == AArch64MCExpr::VK_AUTHADDR) {
+    auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
+
+    assert(Type == MachO::ARM64_RELOC_UNSIGNED);
+
+    if (IsPCRel) {
+      Asm.getContext().reportError(
+        Fixup.getLoc(), "invalid PC relative auth relocation");
+      return;
+    }
+
+    if (Log2Size != 3) {
+      Asm.getContext().reportError(
+        Fixup.getLoc(), "invalid auth relocation size, must be 8 bytes");
+      return;
+    }
+
+    if (Target.getSymB()) {
+      Asm.getContext().reportError(
+        Fixup.getLoc(), "invalid auth relocation, can't reference two symbols");
+      return;
+    }
+
+    uint16_t Discriminator = Expr->getDiscriminator();
+    AArch64PACKey::ID Key = Expr->getKey();
+
+    if (!isInt<32>(Value)) {
+      Asm.getContext().reportError(Fixup.getLoc(), "too wide addend '" +
+                                                       itostr(Value) +
+                                                       "' in auth relocation");
+      return;
+    }
+
+    Type = MachO::ARM64_RELOC_AUTHENTICATED_POINTER;
+    Value = (uint32_t(Value)) | (uint64_t(Discriminator) << 32) |
+            (uint64_t(Expr->hasAddressDiversity()) << 48) |
+            (uint64_t(Key) << 49) | (1ULL << 63);
   }
 
   // If there's any addend left to handle, encode it in the instruction.
