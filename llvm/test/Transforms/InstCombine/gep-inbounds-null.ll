@@ -206,3 +206,31 @@ entry:
   %cnd = icmp eq i8 addrspace(2)* %gep, null
   ret i1 %cnd
 }
+
+; Test for an assert from trying to create an invalid constantexpr
+; bitcast between different address spaces. The addrspacecast is
+; stripped off and the addrspace(0) null can be treated as invalid.
+; FIXME: This should be able to fold to ret i1 false
+define i1 @invalid_bitcast_icmp_addrspacecast_as0_null(i32 addrspace(5)* %ptr) {
+; CHECK-LABEL: @invalid_bitcast_icmp_addrspacecast_as0_null(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 addrspace(5)* [[PTR:%.*]], addrspacecast (i32* null to i32 addrspace(5)*)
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+bb:
+  %tmp1 = getelementptr inbounds i32, i32 addrspace(5)* %ptr, i32 1
+  %tmp2 = icmp eq i32 addrspace(5)* %tmp1, addrspacecast (i32* null to i32 addrspace(5)*)
+  ret i1 %tmp2
+}
+
+define i1 @invalid_bitcast_icmp_addrspacecast_as0_null_var(i32 addrspace(5)* %ptr, i32 %idx) {
+; CHECK-LABEL: @invalid_bitcast_icmp_addrspacecast_as0_null_var(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 addrspace(5)* [[PTR:%.*]], addrspacecast (i32* null to i32 addrspace(5)*)
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+bb:
+  %tmp1 = getelementptr inbounds i32, i32 addrspace(5)* %ptr, i32 %idx
+  %tmp2 = icmp eq i32 addrspace(5)* %tmp1, addrspacecast (i32* null to i32 addrspace(5)*)
+  ret i1 %tmp2
+}

@@ -224,21 +224,20 @@ void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream 
   Header.e_machine = Doc.Header.Machine;
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
-  Header.e_phoff = sizeof(Header);
+  Header.e_phoff = Doc.ProgramHeaders.size() ? sizeof(Header) : 0;
   Header.e_flags = Doc.Header.Flags;
   Header.e_ehsize = sizeof(Elf_Ehdr);
-  Header.e_phentsize = sizeof(Elf_Phdr);
+  Header.e_phentsize = Doc.ProgramHeaders.size() ? sizeof(Elf_Phdr) : 0;
   Header.e_phnum = Doc.ProgramHeaders.size();
 
   Header.e_shentsize =
       Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
   // Immediately following the ELF header and program headers.
   // Align the start of the section header and write the ELF header.
-  uint64_t ShOffset;
-  CBA.getOSAndAlignedOffset(ShOffset, sizeof(typename ELFT::uint));
-  Header.e_shoff = Doc.Header.SHOffset
-                       ? typename ELFT::uint(*Doc.Header.SHOffset)
-                       : ShOffset;
+  uint64_t SHOff;
+  CBA.getOSAndAlignedOffset(SHOff, sizeof(typename ELFT::uint));
+  Header.e_shoff =
+      Doc.Header.SHOff ? typename ELFT::uint(*Doc.Header.SHOff) : SHOff;
   Header.e_shnum =
       Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : Doc.Sections.size();
   Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
