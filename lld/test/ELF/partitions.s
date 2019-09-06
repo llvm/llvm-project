@@ -12,9 +12,9 @@
 // part1 and part2 should be aligned to a maximum page size boundary.
 
 // CHECK: [[MAIN:[0-9]+]]] .text
-// CHECK: part1 LOOS+0xFFF4C06 {{[0-9a-f]+}}0000 {{[0-9a-f]+}}0000
+// CHECK: part1 LLVM_PART_EHDR {{[0-9a-f]+}}0000 {{[0-9a-f]+}}0000
 // CHECK: [[P1:[0-9]+]]] .text
-// CHECK: part2 LOOS+0xFFF4C06 {{[0-9a-f]+}}0000 {{[0-9a-f]+}}0000
+// CHECK: part2 LLVM_PART_EHDR {{[0-9a-f]+}}0000 {{[0-9a-f]+}}0000
 // CHECK: [[P2:[0-9]+]]] .text
 
 // CHECK: Symbol table '.symtab'

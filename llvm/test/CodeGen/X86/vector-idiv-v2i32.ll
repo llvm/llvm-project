@@ -262,22 +262,6 @@ define void @test_urem_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    movlps %xmm0, (%eax)
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_urem_pow2_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    andps {{.*}}(%rip), %xmm0
-; X64_WIDEN-NEXT:    movlps %xmm0, (%rsi)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_urem_pow2_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    andps {{\.LCPI.*}}, %xmm0
-; X86_WIDEN-NEXT:    movlps %xmm0, (%eax)
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = urem <2 x i32> %a, <i32 8, i32 8>
   store <2 x i32> %b, <2 x i32>* %y
@@ -308,30 +292,6 @@ define void @test_sdiv_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    psrad $3, %xmm1
 ; X86-NEXT:    movq %xmm1, (%eax)
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_sdiv_pow2_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    movdqa %xmm0, %xmm1
-; X64_WIDEN-NEXT:    psrad $31, %xmm1
-; X64_WIDEN-NEXT:    psrld $29, %xmm1
-; X64_WIDEN-NEXT:    paddd %xmm0, %xmm1
-; X64_WIDEN-NEXT:    psrad $3, %xmm1
-; X64_WIDEN-NEXT:    movq %xmm1, (%rsi)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_sdiv_pow2_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    movdqa %xmm0, %xmm1
-; X86_WIDEN-NEXT:    psrad $31, %xmm1
-; X86_WIDEN-NEXT:    psrld $29, %xmm1
-; X86_WIDEN-NEXT:    paddd %xmm0, %xmm1
-; X86_WIDEN-NEXT:    psrad $3, %xmm1
-; X86_WIDEN-NEXT:    movq %xmm1, (%eax)
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = sdiv <2 x i32> %a, <i32 8, i32 8>
   store <2 x i32> %b, <2 x i32>* %y
@@ -354,22 +314,6 @@ define void @test_srem_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    psrld $3, %xmm0
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_srem_pow2_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    psrld $3, %xmm0
-; X64_WIDEN-NEXT:    movq %xmm0, (%rsi)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_srem_pow2_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    psrld $3, %xmm0
-; X86_WIDEN-NEXT:    movq %xmm0, (%eax)
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = udiv <2 x i32> %a, <i32 8, i32 8>
   store <2 x i32> %b, <2 x i32>* %y
@@ -422,52 +366,6 @@ define void @test_udiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    movq %xmm2, (%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_udiv_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movq %rdx, %rcx
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    movd %xmm1, %esi
-; X64_WIDEN-NEXT:    xorl %edx, %edx
-; X64_WIDEN-NEXT:    divl %esi
-; X64_WIDEN-NEXT:    movd %eax, %xmm2
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %esi
-; X64_WIDEN-NEXT:    xorl %edx, %edx
-; X64_WIDEN-NEXT:    divl %esi
-; X64_WIDEN-NEXT:    movd %eax, %xmm0
-; X64_WIDEN-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64_WIDEN-NEXT:    movq %xmm2, (%rcx)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_udiv_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    pushl %esi
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86_WIDEN-NEXT:    movd %xmm0, %eax
-; X86_WIDEN-NEXT:    movd %xmm1, %esi
-; X86_WIDEN-NEXT:    xorl %edx, %edx
-; X86_WIDEN-NEXT:    divl %esi
-; X86_WIDEN-NEXT:    movd %eax, %xmm2
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86_WIDEN-NEXT:    movd %xmm0, %eax
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
-; X86_WIDEN-NEXT:    movd %xmm1, %esi
-; X86_WIDEN-NEXT:    xorl %edx, %edx
-; X86_WIDEN-NEXT:    divl %esi
-; X86_WIDEN-NEXT:    movd %eax, %xmm0
-; X86_WIDEN-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X86_WIDEN-NEXT:    movq %xmm2, (%ecx)
-; X86_WIDEN-NEXT:    popl %esi
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load <2 x i32>, <2 x i32>* %y
   %c = udiv <2 x i32> %a, %b
@@ -521,52 +419,6 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    movq %xmm2, (%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_urem_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movq %rdx, %rcx
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    movd %xmm1, %esi
-; X64_WIDEN-NEXT:    xorl %edx, %edx
-; X64_WIDEN-NEXT:    divl %esi
-; X64_WIDEN-NEXT:    movd %edx, %xmm2
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %esi
-; X64_WIDEN-NEXT:    xorl %edx, %edx
-; X64_WIDEN-NEXT:    divl %esi
-; X64_WIDEN-NEXT:    movd %edx, %xmm0
-; X64_WIDEN-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64_WIDEN-NEXT:    movq %xmm2, (%rcx)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_urem_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    pushl %esi
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86_WIDEN-NEXT:    movd %xmm0, %eax
-; X86_WIDEN-NEXT:    movd %xmm1, %esi
-; X86_WIDEN-NEXT:    xorl %edx, %edx
-; X86_WIDEN-NEXT:    divl %esi
-; X86_WIDEN-NEXT:    movd %edx, %xmm2
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86_WIDEN-NEXT:    movd %xmm0, %eax
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
-; X86_WIDEN-NEXT:    movd %xmm1, %esi
-; X86_WIDEN-NEXT:    xorl %edx, %edx
-; X86_WIDEN-NEXT:    divl %esi
-; X86_WIDEN-NEXT:    movd %edx, %xmm0
-; X86_WIDEN-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X86_WIDEN-NEXT:    movq %xmm2, (%ecx)
-; X86_WIDEN-NEXT:    popl %esi
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load <2 x i32>, <2 x i32>* %y
   %c = urem <2 x i32> %a, %b
@@ -625,57 +477,6 @@ define void @test_sdiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_sdiv_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movq %rdx, %rcx
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    movd %xmm1, %esi
-; X64_WIDEN-NEXT:    cltd
-; X64_WIDEN-NEXT:    idivl %esi
-; X64_WIDEN-NEXT:    movd %eax, %xmm2
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %esi
-; X64_WIDEN-NEXT:    cltd
-; X64_WIDEN-NEXT:    idivl %esi
-; X64_WIDEN-NEXT:    movd %eax, %xmm0
-; X64_WIDEN-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64_WIDEN-NEXT:    movq %xmm2, (%rcx)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_sdiv_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    pushl %ebx
-; X86_WIDEN-NEXT:    pushl %edi
-; X86_WIDEN-NEXT:    pushl %esi
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86_WIDEN-NEXT:    movd %xmm0, %ecx
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86_WIDEN-NEXT:    movd %xmm0, %eax
-; X86_WIDEN-NEXT:    movd %xmm1, %edi
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
-; X86_WIDEN-NEXT:    movd %xmm1, %ebx
-; X86_WIDEN-NEXT:    cltd
-; X86_WIDEN-NEXT:    idivl %ebx
-; X86_WIDEN-NEXT:    movd %eax, %xmm0
-; X86_WIDEN-NEXT:    movl %ecx, %eax
-; X86_WIDEN-NEXT:    cltd
-; X86_WIDEN-NEXT:    idivl %edi
-; X86_WIDEN-NEXT:    movd %eax, %xmm1
-; X86_WIDEN-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86_WIDEN-NEXT:    movq %xmm1, (%esi)
-; X86_WIDEN-NEXT:    popl %esi
-; X86_WIDEN-NEXT:    popl %edi
-; X86_WIDEN-NEXT:    popl %ebx
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load <2 x i32>, <2 x i32>* %y
   %c = sdiv <2 x i32> %a, %b
@@ -734,57 +535,6 @@ define void @test_srem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
-;
-; X64_WIDEN-LABEL: test_srem_v2i32:
-; X64_WIDEN:       # %bb.0:
-; X64_WIDEN-NEXT:    movq %rdx, %rcx
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    movd %xmm1, %esi
-; X64_WIDEN-NEXT:    cltd
-; X64_WIDEN-NEXT:    idivl %esi
-; X64_WIDEN-NEXT:    movd %eax, %xmm2
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %eax
-; X64_WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; X64_WIDEN-NEXT:    movd %xmm0, %esi
-; X64_WIDEN-NEXT:    cltd
-; X64_WIDEN-NEXT:    idivl %esi
-; X64_WIDEN-NEXT:    movd %eax, %xmm0
-; X64_WIDEN-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64_WIDEN-NEXT:    movq %xmm2, (%rcx)
-; X64_WIDEN-NEXT:    retq
-;
-; X86_WIDEN-LABEL: test_srem_v2i32:
-; X86_WIDEN:       # %bb.0:
-; X86_WIDEN-NEXT:    pushl %ebx
-; X86_WIDEN-NEXT:    pushl %edi
-; X86_WIDEN-NEXT:    pushl %esi
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86_WIDEN-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86_WIDEN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86_WIDEN-NEXT:    movd %xmm0, %ecx
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86_WIDEN-NEXT:    movd %xmm0, %eax
-; X86_WIDEN-NEXT:    movd %xmm1, %edi
-; X86_WIDEN-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
-; X86_WIDEN-NEXT:    movd %xmm1, %ebx
-; X86_WIDEN-NEXT:    cltd
-; X86_WIDEN-NEXT:    idivl %ebx
-; X86_WIDEN-NEXT:    movd %eax, %xmm0
-; X86_WIDEN-NEXT:    movl %ecx, %eax
-; X86_WIDEN-NEXT:    cltd
-; X86_WIDEN-NEXT:    idivl %edi
-; X86_WIDEN-NEXT:    movd %eax, %xmm1
-; X86_WIDEN-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86_WIDEN-NEXT:    movq %xmm1, (%esi)
-; X86_WIDEN-NEXT:    popl %esi
-; X86_WIDEN-NEXT:    popl %edi
-; X86_WIDEN-NEXT:    popl %ebx
-; X86_WIDEN-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x
   %b = load <2 x i32>, <2 x i32>* %y
   %c = sdiv <2 x i32> %a, %b

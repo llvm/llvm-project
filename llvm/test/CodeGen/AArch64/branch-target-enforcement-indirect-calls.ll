@@ -1,4 +1,7 @@
 ; RUN: llc -mtriple aarch64--none-eabi -mattr=+bti < %s | FileCheck %s
+; RUN: llc -mtriple aarch64--none-eabi -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mattr=+bti %s -verify-machineinstrs -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,FALLBACK
+
+; FALLBACK: remark: <unknown>:0:0: unable to translate instruction: call: '  tail call void %p()' (in function: bti_enabled)
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-arm-none-eabi"

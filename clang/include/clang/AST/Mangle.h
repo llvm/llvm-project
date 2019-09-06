@@ -56,7 +56,7 @@ private:
 
   llvm::DenseMap<const BlockDecl*, unsigned> GlobalBlockIds;
   llvm::DenseMap<const BlockDecl*, unsigned> LocalBlockIds;
-  llvm::DenseMap<const TagDecl*, uint64_t> AnonStructIds;
+  llvm::DenseMap<const NamedDecl*, uint64_t> AnonStructIds;
 
 public:
   ManglerKind getKind() const { return Kind; }
@@ -82,9 +82,9 @@ public:
     return Result.first->second;
   }
 
-  uint64_t getAnonymousStructId(const TagDecl *TD) {
-    std::pair<llvm::DenseMap<const TagDecl *, uint64_t>::iterator, bool>
-        Result = AnonStructIds.insert(std::make_pair(TD, AnonStructIds.size()));
+  uint64_t getAnonymousStructId(const NamedDecl *D) {
+    std::pair<llvm::DenseMap<const NamedDecl *, uint64_t>::iterator, bool>
+        Result = AnonStructIds.insert(std::make_pair(D, AnonStructIds.size()));
     return Result.first->second;
   }
 
@@ -250,8 +250,16 @@ class ASTNameGenerator {
 public:
   explicit ASTNameGenerator(ASTContext &Ctx);
   ~ASTNameGenerator();
+
+  /// Writes name for \p D to \p OS.
+  /// \returns true on failure, false on success.
   bool writeName(const Decl *D, raw_ostream &OS);
+
+  /// \returns name for \p D
   std::string getName(const Decl *D);
+
+  /// \returns all applicable mangled names.
+  /// For example C++ constructors/destructors can have multiple.
   std::vector<std::string> getAllManglings(const Decl *D);
 
 private:

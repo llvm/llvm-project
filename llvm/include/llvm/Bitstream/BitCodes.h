@@ -168,6 +168,11 @@ class BitCodeAbbrev {
   SmallVector<BitCodeAbbrevOp, 32> OperandList;
 
 public:
+  BitCodeAbbrev() = default;
+
+  explicit BitCodeAbbrev(std::initializer_list<BitCodeAbbrevOp> OperandList)
+      : OperandList(OperandList) {}
+
   unsigned getNumOperandInfos() const {
     return static_cast<unsigned>(OperandList.size());
   }
