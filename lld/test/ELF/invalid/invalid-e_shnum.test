@@ -10,6 +10,6 @@ FileHeader:
   Data:      ELFDATA2LSB
   Type:      ET_REL
   Machine:   EM_X86_64
-  SHOffset:  0
+  SHOff:     0
   SHNum:     0x1
   SHStrNdx:  0

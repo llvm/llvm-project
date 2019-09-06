@@ -824,7 +824,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
 
   IO.mapOptional("SHEntSize", FileHdr.SHEntSize);
-  IO.mapOptional("SHOffset", FileHdr.SHOffset);
+  IO.mapOptional("SHOff", FileHdr.SHOff);
   IO.mapOptional("SHNum", FileHdr.SHNum);
   IO.mapOptional("SHStrNdx", FileHdr.SHStrNdx);
 }

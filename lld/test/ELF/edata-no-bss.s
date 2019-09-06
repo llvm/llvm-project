@@ -1,4 +1,7 @@
 # REQUIRES: x86
+
+## _edata points to the end of the last mapped initialized section.
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t --gc-sections
 # RUN: llvm-objdump -t -section-headers %t | FileCheck %s

@@ -361,8 +361,18 @@ private:
     }
   };
 
-  bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF,
-                          unsigned &Reg);
+  /// Tests whether this instruction is a spill to a stack location.
+  bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
+
+  /// Decide if @MI is a spill instruction and return true if it is. We use 2
+  /// criteria to make this decision:
+  /// - Is this instruction a store to a spill slot?
+  /// - Is there a register operand that is both used and killed?
+  /// TODO: Store optimization can fold spills into other stores (including
+  /// other spills). We do not handle this yet (more than one memory operand).
+  bool isLocationSpill(const MachineInstr &MI, MachineFunction *MF,
+                       unsigned &Reg);
+
   /// If a given instruction is identified as a spill, return the spill location
   /// and set \p Reg to the spilled register.
   Optional<VarLoc::SpillLoc> isRestoreInstruction(const MachineInstr &MI,
@@ -779,16 +789,8 @@ void LiveDebugValues::transferRegisterDef(
   }
 }
 
-/// Decide if @MI is a spill instruction and return true if it is. We use 2
-/// criteria to make this decision:
-/// - Is this instruction a store to a spill slot?
-/// - Is there a register operand that is both used and killed?
-/// TODO: Store optimization can fold spills into other stores (including
-/// other spills). We do not handle this yet (more than one memory operand).
 bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
-                                         MachineFunction *MF, unsigned &Reg) {
-  SmallVector<const MachineMemOperand*, 1> Accesses;
-
+                                         MachineFunction *MF) {
   // TODO: Handle multiple stores folded into one.
   if (!MI.hasOneMemOperand())
     return false;
@@ -796,6 +798,14 @@ bool LiveDebugValues::isSpillInstruction(const MachineInstr &MI,
   if (!MI.getSpillSize(TII) && !MI.getFoldedSpillSize(TII))
     return false; // This is not a spill instruction, since no valid size was
                   // returned from either function.
+
+  return true;
+}
+
+bool LiveDebugValues::isLocationSpill(const MachineInstr &MI,
+                                      MachineFunction *MF, unsigned &Reg) {
+  if (!isSpillInstruction(MI, MF))
+    return false;
 
   auto isKilledReg = [&](const MachineOperand MO, unsigned &Reg) {
     if (!MO.isReg() || !MO.isUse()) {
@@ -865,7 +875,39 @@ void LiveDebugValues::transferSpillOrRestoreInst(MachineInstr &MI,
 
   LLVM_DEBUG(dbgs() << "Examining instruction: "; MI.dump(););
 
-  if (isSpillInstruction(MI, MF, Reg)) {
+  // First, if there are any DBG_VALUEs pointing at a spill slot that is
+  // written to, then close the variable location. The value in memory
+  // will have changed.
+  VarLocSet KillSet;
+  if (isSpillInstruction(MI, MF)) {
+    Loc = extractSpillBaseRegAndOffset(MI);
+    for (unsigned ID : OpenRanges.getVarLocs()) {
+      const VarLoc &VL = VarLocIDs[ID];
+      if (VL.Kind == VarLoc::SpillLocKind && VL.Loc.SpillLocation == *Loc) {
+        // This location is overwritten by the current instruction -- terminate
+        // the open range, and insert an explicit DBG_VALUE $noreg.
+        //
+        // Doing this at a later stage would require re-interpreting all
+        // DBG_VALUes and DIExpressions to identify whether they point at
+        // memory, and then analysing all memory writes to see if they
+        // overwrite that memory, which is expensive.
+        //
+        // At this stage, we already know which DBG_VALUEs are for spills and
+        // where they are located; it's best to fix handle overwrites now.
+        KillSet.set(ID);
+        MachineInstr *NewDebugInstr =
+            BuildMI(*MF, VL.MI.getDebugLoc(), VL.MI.getDesc(),
+                    VL.MI.isIndirectDebugValue(), 0, // $noreg
+                    VL.MI.getDebugVariable(), VL.MI.getDebugExpression());
+        Transfers.push_back({&MI, NewDebugInstr});
+      }
+    }
+    OpenRanges.erase(KillSet, VarLocIDs);
+  }
+
+  // Try to recognise spill and restore instructions that may create a new
+  // variable location.
+  if (isLocationSpill(MI, MF, Reg)) {
     TKind = TransferKind::TransferSpill;
     LLVM_DEBUG(dbgs() << "Recognized as spill: "; MI.dump(););
     LLVM_DEBUG(dbgs() << "Register: " << Reg << " " << printReg(Reg, TRI)

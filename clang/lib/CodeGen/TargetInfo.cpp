@@ -2180,6 +2180,17 @@ class X86_64ABIInfo : public SwiftABIInfo {
     return true;
   }
 
+  // GCC classifies vectors of __int128 as memory.
+  bool passInt128VectorsInMem() const {
+    // Clang <= 9.0 did not do this.
+    if (getContext().getLangOpts().getClangABICompat() <=
+        LangOptions::ClangABI::Ver9)
+      return false;
+
+    const llvm::Triple &T = getTarget().getTriple();
+    return T.isOSLinux() || T.isOSNetBSD();
+  }
+
   X86AVXABILevel AVXLevel;
   // Some ABIs (e.g. X32 ABI and Native Client OS) use 32 bit pointers on
   // 64-bit hardware.
@@ -2660,6 +2671,14 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
         Hi = Lo;
     } else if (Size == 128 ||
                (isNamedArg && Size <= getNativeVectorSizeForAVXABI(AVXLevel))) {
+      QualType ElementType = VT->getElementType();
+
+      // gcc passes 256 and 512 bit <X x __int128> vectors in memory. :(
+      if (passInt128VectorsInMem() && Size != 128 &&
+          (ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
+           ElementType->isSpecificBuiltinType(BuiltinType::UInt128)))
+        return;
+
       // Arguments of 256-bits are split into four eightbyte chunks. The
       // least significant one belongs to class SSE and all the others to class
       // SSEUP. The original Lo and Hi design considers that types can't be
@@ -2902,6 +2921,11 @@ bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
     unsigned LargestVector = getNativeVectorSizeForAVXABI(AVXLevel);
     if (Size <= 64 || Size > LargestVector)
       return true;
+    QualType EltTy = VecTy->getElementType();
+    if (passInt128VectorsInMem() &&
+        (EltTy->isSpecificBuiltinType(BuiltinType::Int128) ||
+         EltTy->isSpecificBuiltinType(BuiltinType::UInt128)))
+      return true;
   }
 
   return false;
@@ -2976,13 +3000,27 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
     Ty = QualType(InnerTy, 0);
 
   llvm::Type *IRType = CGT.ConvertType(Ty);
-  if (isa<llvm::VectorType>(IRType) ||
-      IRType->getTypeID() == llvm::Type::FP128TyID)
+  if (isa<llvm::VectorType>(IRType)) {
+    // Don't pass vXi128 vectors in their native type, the backend can't
+    // legalize them.
+    if (passInt128VectorsInMem() &&
+        IRType->getVectorElementType()->isIntegerTy(128)) {
+      // Use a vXi64 vector.
+      uint64_t Size = getContext().getTypeSize(Ty);
+      return llvm::VectorType::get(llvm::Type::getInt64Ty(getVMContext()),
+                                   Size / 64);
+    }
+
+    return IRType;
+  }
+
+  if (IRType->getTypeID() == llvm::Type::FP128TyID)
     return IRType;
 
   // We couldn't find the preferred IR vector type for 'Ty'.
   uint64_t Size = getContext().getTypeSize(Ty);
   assert((Size == 128 || Size == 256 || Size == 512) && "Invalid type found!");
+
 
   // Return a LLVM IR vector type based on the size of 'Ty'.
   return llvm::VectorType::get(llvm::Type::getDoubleTy(getVMContext()),
