@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/RemarkStringTable.h"
+#include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
@@ -35,6 +36,22 @@ std::pair<unsigned, StringRef> StringTable::add(StringRef Str) {
     SerializedSize += KV.first->first().size() + 1; // +1 for the '\0'
   // Can be either NextID or the previous ID if the string is already there.
   return {KV.first->second, KV.first->first()};
+}
+
+void StringTable::internalize(Remark &R) {
+  auto Impl = [&](StringRef &S) { S = add(S).second; };
+  Impl(R.PassName);
+  Impl(R.RemarkName);
+  Impl(R.FunctionName);
+  if (R.Loc)
+    Impl(R.Loc->SourceFilePath);
+  for (Argument &Arg : R.Args) {
+    // We need to mutate elements from an ArrayRef here.
+    Impl(Arg.Key);
+    Impl(Arg.Val);
+    if (Arg.Loc)
+      Impl(Arg.Loc->SourceFilePath);
+  }
 }
 
 void StringTable::serialize(raw_ostream &OS) const {
