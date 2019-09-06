@@ -671,6 +671,35 @@ amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
+    llvm::ArrayRef<const char *> Args) {
+  std::string Exec = (Twine(env::getHIPPath()) + "/bin/hipcc").str();
+  std::vector<StringRef> ArgsV;
+  ArgsV.push_back(Exec);
+  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
+    if (strcmp(Args[I], "-hip-path") == 0) {
+      ++I;
+      if (I == E) {
+        LogS << "Error: -hip-path option misses argument.\n";
+        return AMD_COMGR_STATUS_ERROR;
+      } else {
+        Exec = (Twine(Args[I]) + "/bin/hipcc").str();
+        ArgsV[0] = Exec;
+      }
+    } else
+      ArgsV.push_back(Args[I]);
+  }
+
+  ArgsV.push_back("--genco");
+  std::vector<Optional<StringRef>> Redirects;
+  std::string ErrMsg;
+  int RC = sys::ExecuteAndWait(Exec, ArgsV,
+                               /*env=*/None, Redirects, /*secondsToWait=*/0,
+                               /*memoryLimit=*/0, &ErrMsg);
+  LogS << ErrMsg;
+  return RC ? AMD_COMGR_STATUS_ERROR : AMD_COMGR_STATUS_SUCCESS;
+}
+
 amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
                                                const char *OutputFilePath) {
   SmallVector<const char *, 128> Argv;
@@ -685,6 +714,10 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
 
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
+
+  // For HIP compilation, we launch a process.
+  if (getLanguage() == AMD_COMGR_LANGUAGE_HIP)
+    return executeOutOfProcessHIPCompilation(Argv);
 
   InProcessDriver TheDriver(LogS);
 
@@ -851,6 +884,16 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode() {
   Args.push_back("-emit-llvm");
 
   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
+}
+
+amd_comgr_status_t AMDGPUCompiler::compileToFatBin() {
+  if (auto Status = createTmpDirs())
+    return Status;
+
+  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  return processFiles(AMD_COMGR_DATA_KIND_FATBIN, ".fatbin");
 }
 
 amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {

@@ -154,6 +154,9 @@ dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.linkToRelocatable();
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
     return Compiler.linkToExecutable();
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
+    return Compiler.compileToFatBin();
+
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
@@ -1126,6 +1129,7 @@ amd_comgr_status_t AMD_API
   case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                           ResultSetP, *LogP);
     break;

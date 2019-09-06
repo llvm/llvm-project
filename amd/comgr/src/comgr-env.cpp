@@ -58,5 +58,12 @@ bool shouldEmitVerboseLogs() {
   return VerboseLogs && StringRef(VerboseLogs) != "0";
 }
 
+llvm::StringRef getHIPPath() {
+  static const char *HIPPath = std::getenv("HIP_PATH");
+  if (!HIPPath)
+    HIPPath = "/opt/rocm/hip";
+  return HIPPath;
+}
+
 } // namespace env
 } // namespace COMGR

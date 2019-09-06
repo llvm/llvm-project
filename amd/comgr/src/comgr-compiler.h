@@ -116,6 +116,8 @@ class AMDGPUCompiler {
                                   const char *OutputSuffix);
   amd_comgr_status_t addIncludeFlags();
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr);
+  amd_comgr_status_t
+  executeOutOfProcessHIPCompilation(llvm::ArrayRef<const char *> Args);
 
 public:
   AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet,
@@ -130,6 +132,9 @@ public:
   amd_comgr_status_t assembleToRelocatable();
   amd_comgr_status_t linkToRelocatable();
   amd_comgr_status_t linkToExecutable();
+  amd_comgr_status_t compileToFatBin();
+
+  amd_comgr_language_t getLanguage() const { return ActionInfo->Language; }
 };
 } // namespace COMGR
 

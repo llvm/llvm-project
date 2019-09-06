@@ -26,6 +26,7 @@ configure_file("source2.cl" "source2.cl" COPYONLY)
 configure_file("include-a.h" "include-a.h" COPYONLY)
 configure_file("source1.s" "source1.s" COPYONLY)
 configure_file("shared.cl" "shared.cl" COPYONLY)
+configure_file("source1.hip" "source1.hip" COPYONLY)
 
 # Create executable ${name} and accompanying test ${name} built from
 # test/${name}.cl
@@ -73,3 +74,8 @@ add_comgr_test(isa_name_parsing_test)
 add_comgr_test(get_data_isa_name_test)
 add_comgr_test(include_subdirectory_test)
 add_comgr_test(options_test)
+# Test : Compile HIP only if HIP-Clang is installed.
+find_package(hip CONFIG PATHS /opt/rocm/hip QUIET)
+if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
+  add_comgr_test(compile_hip_test)
+endif()
