@@ -188,3 +188,27 @@ body:             |
     %30:vreg_64 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
     %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, 0, implicit $exec
 ...
+---
+
+# GFX9-LABEL: name: diffoporder_add_store
+# GFX9: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub0, 1000, 0, 0, 0
+# GFX9: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0, 0, 0
+
+name: diffoporder_add_store
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_I32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    GLOBAL_STORE_DWORD %6, %0.sub0, 0, 0, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_I32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    GLOBAL_STORE_DWORD %13, %0.sub1, 0, 0, 0, 0, implicit $exec
+...

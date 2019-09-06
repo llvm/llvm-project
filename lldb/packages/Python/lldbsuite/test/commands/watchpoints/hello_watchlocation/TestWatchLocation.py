@@ -31,9 +31,6 @@ class HelloWatchLocationTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Most of the MIPS boards provide only one H/W watchpoints, and S/W
     # watchpoints are not supported yet
     @expectedFailureAll(triple=re.compile('^mips'))

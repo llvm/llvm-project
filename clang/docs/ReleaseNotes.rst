@@ -129,7 +129,10 @@ OpenCL C Language Changes in Clang
 ABI Changes in Clang
 --------------------
 
-- ...
+- gcc passes vectors of __int128 in memory on X86-64. Clang historically
+  broke the vectors into multiple scalars using two 64-bit values for each
+  element. Clang now matches the gcc behavior on Linux and NetBSD. You can
+  switch back to old API behavior with flag: -fclang-abi-compat=9.0.
 
 OpenMP Support in Clang
 -----------------------

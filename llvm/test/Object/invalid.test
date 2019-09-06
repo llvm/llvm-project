@@ -597,7 +597,7 @@ Sections:
   - Type: SHT_NULL
     Size: 288230376151711744
 
-## Check the case when SHOffset is too large. SHOffset + sizeof(Elf_Shdr) overflows the uint64 type.
+## Check the case when SHOff is too large. SHOff + sizeof(Elf_Shdr) overflows the uint64 type.
 
 # RUN: yaml2obj --docnum=28 %s -o %t28
 # RUN: not llvm-readobj -h %t28 2>&1 | FileCheck -DFILE=%t28 --check-prefix=INVALID-SEC-NUM3 %s
@@ -610,7 +610,7 @@ FileHeader:
   Data:     ELFDATA2LSB
   Type:     ET_REL
   Machine:  EM_X86_64
-  SHOffset: 0xffffffffffffffff
+  SHOff:    0xffffffffffffffff
 
 ## Check that llvm-objdump reports an error when it tries to dump a
 ## symbol name and .strtab is empty.

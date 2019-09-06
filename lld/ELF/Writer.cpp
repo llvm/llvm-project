@@ -534,11 +534,6 @@ template <class ELFT> void elf::createSyntheticSections() {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  // Linker scripts controls how input sections are assigned to output sections.
-  // Input sections that were not handled by scripts are called "orphans", and
-  // they are assigned to output sections by the default rule. Process that.
-  script->addOrphanSections();
-
   if (config->discard != DiscardPolicy::All)
     copyLocalSymbols();
 

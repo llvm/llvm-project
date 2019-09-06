@@ -11,7 +11,6 @@
 // RUN:   .data.rel.ro : { *(.data.rel.ro) } \
 // RUN: }" > %t.script
 // RUN: ld.lld -T %t.script %t -o %tout2
-// RUN: echo SCRIPT
 // RUN: llvm-readobj -S %tout2 | FileCheck %s
         .global _start
 _start:

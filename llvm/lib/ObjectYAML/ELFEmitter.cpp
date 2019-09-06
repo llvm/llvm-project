@@ -234,11 +234,10 @@ void ELFState<ELFT>::writeELFHeader(ContiguousBlobAccumulator &CBA, raw_ostream 
       Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
   // Immediately following the ELF header and program headers.
   // Align the start of the section header and write the ELF header.
-  uint64_t ShOffset;
-  CBA.getOSAndAlignedOffset(ShOffset, sizeof(typename ELFT::uint));
-  Header.e_shoff = Doc.Header.SHOffset
-                       ? typename ELFT::uint(*Doc.Header.SHOffset)
-                       : ShOffset;
+  uint64_t SHOff;
+  CBA.getOSAndAlignedOffset(SHOff, sizeof(typename ELFT::uint));
+  Header.e_shoff =
+      Doc.Header.SHOff ? typename ELFT::uint(*Doc.Header.SHOff) : SHOff;
   Header.e_shnum =
       Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : Doc.Sections.size();
   Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx

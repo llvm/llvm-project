@@ -4,42 +4,46 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
 # RUN:         %p/Inputs/mips-pic.s -o %t.so.o
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.exe.o
+# RUN: echo "SECTIONS { . = 0x30000; .text : { *(.text) } }" > %t.script
 # RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
-# RUN: ld.lld %t.exe.o %t.so -o %t.exe
+# RUN: ld.lld %t.exe.o --script %t.script %t.so -o %t.exe
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
-# RUN: llvm-readelf -r --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
+# RUN: llvm-readelf -r -s --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK:      __start:
+# CHECK-NEXT:    {{.*}}  ld      $2, -32736($gp)
+# CHECK-NEXT:    {{.*}}  daddiu  $2,  $2, 456
+# CHECK-NEXT:    {{.*}}  addiu   $2,  $2, -32704
+# CHECK-NEXT:    {{.*}}  addiu   $2,  $2, -32720
+# CHECK-NEXT:    {{.*}}  addiu   $2,  $2, -32712
 
-# CHECK-NEXT:    20000:       ld      $2, -32736($gp)
-# CHECK-NEXT:    20004:       daddiu  $2,  $2, 24
-# CHECK-NEXT:    20008:       addiu   $2,  $2, -32704
-# CHECK-NEXT:    2000c:       addiu   $2,  $2, -32720
-# CHECK-NEXT:    20010:       addiu   $2,  $2, -32712
+# CHECK: {{[0-9a-f]+}}1c8  .text  00000000 foo
 
-# CHECK: 0000000000020018   .text   00000000 foo
-# CHECK: 0000000000020000   .text   00000000 __start
-# CHECK: 0000000000020014   .text   00000000 bar
+# GOT: There are no relocations in this file.
 
-# GOT:      There are no relocations in this file.
-# GOT-NEXT: Primary GOT:
-# GOT-NEXT:  Canonical gp value: 0000000000038000
+# GOT: Symbol table '.symtab'
+# GOT: {{.*}}: [[FOO:[0-9a-f]+]]     {{.*}} foo
+# GOT: {{.*}}: [[GP:[0-9a-f]+]]      {{.*}} _gp
+# GOT: {{.*}}: [[BAR:[0-9a-f]+]]     {{.*}} bar
+
+# GOT:      Primary GOT:
+# GOT-NEXT:  Canonical gp value: [[GP]]
 # GOT-EMPTY:
 # GOT-NEXT:  Reserved entries:
-# GOT-NEXT:            Address     Access          Initial Purpose
-# GOT-NEXT:   0000000000030010 -32752(gp) 0000000000000000 Lazy resolver
-# GOT-NEXT:   0000000000030018 -32744(gp) 8000000000000000 Module pointer (GNU extension)
+# GOT-NEXT:  Address     Access          Initial Purpose
+# GOT-NEXT:   {{.*}} -32752(gp) 0000000000000000 Lazy resolver
+# GOT-NEXT:   {{.*}} -32744(gp) 8000000000000000 Module pointer (GNU extension)
 # GOT-EMPTY:
 # GOT-NEXT:  Local entries:
-# GOT-NEXT:            Address     Access          Initial
-# GOT-NEXT:   0000000000030020 -32736(gp) 0000000000020000
-# GOT-NEXT:   0000000000030028 -32728(gp) 0000000000030000
-# GOT-NEXT:   0000000000030030 -32720(gp) 0000000000020014
-# GOT-NEXT:   0000000000030038 -32712(gp) 0000000000020018
+# GOT-NEXT:  Address     Access          Initial
+# GOT-NEXT:   {{.*}} -32736(gp) 0000000000030000
+# GOT-NEXT:   {{.*}} -32728(gp) 0000000000040000
+# GOT-NEXT:   {{.*}} -32720(gp) [[BAR]]
+# GOT-NEXT:   {{.*}} -32712(gp) [[FOO]]
 # GOT-EMPTY:
 # GOT-NEXT:  Global entries:
-# GOT-NEXT:            Address     Access          Initial         Sym.Val. Type Ndx Name
-# GOT-NEXT:   0000000000030040 -32704(gp) 0000000000000000 0000000000000000 FUNC UND foo1a
+# GOT-NEXT:  Address     Access          Initial         Sym.Val. Type Ndx Name
+# GOT-NEXT:   {{.*}} -32704(gp) 0000000000000000 0000000000000000 FUNC UND foo1a
 
   .text
   .global  __start, bar

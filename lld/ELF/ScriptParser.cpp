@@ -720,7 +720,7 @@ Expr ScriptParser::readAssert() {
 
   return [=] {
     if (!e().getValue())
-      error(msg);
+      errorOrWarn(msg);
     return script->getDot();
   };
 }

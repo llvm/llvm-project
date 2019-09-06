@@ -3,36 +3,41 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-objdump -d %t.so | FileCheck %s
-# RUN: llvm-readelf -r --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
+# RUN: llvm-readelf -r -s --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: foo:
-# CHECK-NEXT:    10000:       3c 02 00 00     lui     $2, 0
-# CHECK-NEXT:    10004:       8c 42 80 20     lw      $2, -32736($2)
-# CHECK-NEXT:    10008:       3c 02 00 00     lui     $2, 0
-# CHECK-NEXT:    1000c:       8c 42 80 18     lw      $2, -32744($2)
-# CHECK-NEXT:    10010:       3c 02 00 00     lui     $2, 0
-# CHECK-NEXT:    10014:       8c 42 80 1c     lw      $2, -32740($2)
+# CHECK-NEXT:    {{.*}}:  lui  $2, 0
+# CHECK-NEXT:    {{.*}}:  lw   $2, -32736($2)
+# CHECK-NEXT:    {{.*}}:  lui  $2, 0
+# CHECK-NEXT:    {{.*}}:  lw   $2, -32744($2)
+# CHECK-NEXT:    {{.*}}:  lui  $2, 0
+# CHECK-NEXT:    {{.*}}:  lw   $2, -32740($2)
 
-# GOT:      There are no relocations in this file.
+# GOT: There are no relocations in this file.
+
+# GOT: Symbol table '.symtab'
+# GOT: {{.*}}:  [[LOC1:[0-9a-f]+]]  {{.*}} loc1
+# GOT: {{.*}}:  [[LOC2:[0-9a-f]+]]  {{.*}} loc2
+
 # GOT:      Primary GOT:
-# GOT-NEXT:  Canonical gp value: 00027ff0
+# GOT-NEXT:  Canonical gp value:
 # GOT-EMPTY:
 # GOT-NEXT:  Reserved entries:
 # GOT-NEXT:    Address     Access  Initial Purpose
-# GOT-NEXT:   00020000 -32752(gp) 00000000 Lazy resolver
-# GOT-NEXT:   00020004 -32748(gp) 80000000 Module pointer (GNU extension)
+# GOT-NEXT:   {{.*}} -32752(gp) 00000000 Lazy resolver
+# GOT-NEXT:   {{.*}} -32748(gp) 80000000 Module pointer (GNU extension)
 # GOT-EMPTY:
 # GOT-NEXT:  Local entries:
 # GOT-NEXT:    Address     Access  Initial
-# GOT-NEXT:   00020008 -32744(gp) 00010018
-# GOT-NEXT:   0002000c -32740(gp) 0001001c
+# GOT-NEXT:   {{.*}} -32744(gp) [[LOC1]]
+# GOT-NEXT:   {{.*}} -32740(gp) [[LOC2]]
 # GOT-EMPTY:
 # GOT-NEXT:  Global entries:
 # GOT-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
-# GOT-NEXT:   00020010 -32736(gp) 00000000 00000000 NOTYPE  UND bar
+# GOT-NEXT:   {{.*}} -32736(gp) 00000000 00000000 NOTYPE  UND bar
 
   .text
   .global foo
