@@ -571,7 +571,6 @@ static void getEHContPredecessors(BasicBlock *BB, Task *T,
 
   // Get the predecessor that comes from the unwind of the detach.
   BasicBlock *DetUnwind = DI->getUnwindDest();
-  Spindle *S = TI.getSpindleFor(DI->getParent());
   while (DetUnwind->getUniqueSuccessor() != BB)
     DetUnwind = DetUnwind->getUniqueSuccessor();
   Preds.push_back(DetUnwind);
@@ -607,13 +606,24 @@ static BasicBlock *NestDetachUnwindPredecessors(BasicBlock *EHCont,
   // corresponds to the EHCont landingpad value, set its incoming value from
   // OuterUD to be the new landingpad.  For all other PHI nodes, use the
   // incoming value associated with InnerUD.
+  Value *OuterUDTmpVal = nullptr;
   for (PHINode &PN : EHCont->phis()) {
-    if (&PN == EHContLPad)
-      PN.setIncomingValue(PN.getBasicBlockIndex(OuterUD), Clone);
-    else
+    if (&PN == EHContLPad) {
+      int OuterUDIdx = PN.getBasicBlockIndex(OuterUD);
+      OuterUDTmpVal = PN.getIncomingValue(OuterUDIdx);
+      PN.setIncomingValue(OuterUDIdx, Clone);
+    } else
       PN.setIncomingValue(PN.getBasicBlockIndex(OuterUD),
                           PN.getIncomingValueForBlock(InnerUD));
   }
+
+  if (Instruction *OuterUDTmpInst = dyn_cast<Instruction>(OuterUDTmpVal)) {
+    // Remove the temporary value for the new detach's unwind.
+    assert(OuterUDTmpInst->hasNUses(0) &&
+           "Unexpected uses of a detach-unwind temporary value.");
+    OuterUDTmpInst->eraseFromParent();
+  }
+
   // Remove InnerUD from the PHI nodes in EHCont.  Record the value of the
   // EHCont landingpad that comes from InnerUD.
   Value *InnerUDLPad = EHContLPad;
@@ -1029,7 +1039,7 @@ Loop *llvm::StripMineLoop(
         PN.addIncoming(UndefValue::get(PN.getType()), LoopDetach);
 
       // Nest the exceptional code in the original task into the new task.
-      BasicBlock *OuterUD = NestDetachUnwindPredecessors(
+      /* BasicBlock *OuterUD = */ NestDetachUnwindPredecessors(
           EHCont, EHContLPadVal, UDPreds, LoopDetach, ".strpm",
           ".strpm.detachloop.unwind", DI->getUnwindDest()->getLandingPadInst(),
           SyncReg, M, DT, LI, nullptr, PreserveLCSSA);
