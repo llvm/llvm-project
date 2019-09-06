@@ -465,9 +465,12 @@ void AccessPtrAnalysis::addAccess(Instruction *I) {
       // DepCands.insert(Access);
 
       SmallVector<Value *, 1> Objects;
+      LLVM_DEBUG(dbgs() << "Getting underlying objects for " << *Acc.getPtr()
+                 << "\n");
       GetUnderlyingObjects(const_cast<Value *>(Acc.getPtr()), Objects, DL, &LI,
                            0);
       for (Value *Obj : Objects) {
+        LLVM_DEBUG(dbgs() << "  Considering object: " << *Obj << "\n");
         // nullptr never alias, don't join sets for pointer that have "null" in
         // their UnderlyingObjects list.
         if (isa<ConstantPointerNull>(Obj) &&
@@ -497,6 +500,8 @@ void AccessPtrAnalysis::addAccess(Instruction *I) {
           // Assume that functions are read-only
           continue;
 
+        LLVM_DEBUG(dbgs() << "Adding object for access:\n  Obj: " << *Obj
+                   << "\n  Access: " << *Acc.getPtr() << "\n");
         AccessToObjs[Access].insert(Obj);
 
         // UnderlyingObjToAccessMap::iterator Prev = ObjToLastAccess.find(Obj);
@@ -509,12 +514,12 @@ void AccessPtrAnalysis::addAccess(Instruction *I) {
   }
 }
 
-static Loop *getCommonLoop(const BasicBlock *B1, const BasicBlock *B2,
-                           LoopInfo &LI) {
+static const Loop *getCommonLoop(const BasicBlock *B1, const BasicBlock *B2,
+                                 LoopInfo &LI) {
   unsigned B1Level = LI.getLoopDepth(B1);
   unsigned B2Level = LI.getLoopDepth(B2);
-  Loop *L1 = LI.getLoopFor(B1);
-  Loop *L2 = LI.getLoopFor(B2);
+  const Loop *L1 = LI.getLoopFor(B1);
+  const Loop *L2 = LI.getLoopFor(B2);
   while (B1Level > B2Level) {
     L1 = L1->getParentLoop();
     B1Level--;
@@ -522,6 +527,27 @@ static Loop *getCommonLoop(const BasicBlock *B1, const BasicBlock *B2,
   while (B2Level > B1Level) {
     L2 = L2->getParentLoop();
     B2Level--;
+  }
+  while (L1 != L2) {
+    L1 = L1->getParentLoop();
+    L2 = L2->getParentLoop();
+  }
+  return L1;
+}
+
+static const Loop *getCommonLoop(const Loop *L, const BasicBlock *B,
+                                 LoopInfo &LI) {
+  unsigned L1Level = L->getLoopDepth();
+  unsigned L2Level = LI.getLoopDepth(B);
+  const Loop *L1 = L;
+  const Loop *L2 = LI.getLoopFor(B);
+  while (L1Level > L2Level) {
+    L1 = L1->getParentLoop();
+    L1Level--;
+  }
+  while (L2Level > L1Level) {
+    L2 = L2->getParentLoop();
+    L2Level--;
   }
   while (L1 != L2) {
     L1 = L1->getParentLoop();
@@ -567,16 +593,22 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
 
   // Only dependencies that cross tasks can produce determinacy races.
   // Dependencies that cross loop iterations within the same task don't matter.
-  // To search the relevant loops, start at the spindle entry that most closely
-  // dominates both instructions, and check outwards, up to the topmost root for
-  // which Dst is in a maybe-parallel task.  Dominating blocks within the
-  // spindle are all guaranteed to execute in series with each other, so
-  // dependencies between those instructions matter.
+
+  // Find the deepest loop that contains both B1 and B2.
+  const Loop *CommonLoop = getCommonLoop(B1, B2, LI);
+  unsigned MaxLoopDepthToCheck = CommonLoop ? CommonLoop->getLoopDepth() : 0;
+
+  // Check if dependence does not depend on looping.
+  if (0 == MaxLoopDepthToCheck)
+    // If there's no loop to worry about, then the existence of the dependence
+    // implies the potential for a race.
+    return true;
 
   // Use the base objects for the addresses to try to further refine the checks.
 
   // TODO: Use lifetime_begin intrinsics to further refine checks.
-  unsigned MinObjDepth = static_cast<unsigned>(-1);
+  const Loop *CommonObjLoop = CommonLoop;
+  unsigned MinObjDepth = CommonLoop->getLoopDepth();
   SmallPtrSet<Value *, 1> BaseObjs;
   MemAccessInfo MA1(GA1.getPtr(), GA1.isMod());
   MemAccessInfo MA2(GA2.getPtr(), GA2.isMod());
@@ -596,46 +628,59 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
       break;
     }
   }
+  // Set MinObjDepth to 0 if there are not base objects to check.
+  if (BaseObjs.empty() || !CommonObjLoop)
+    MinObjDepth = 0;
+
   if (MinObjDepth != 0) {
     for (Value *Obj : BaseObjs) {
+      // If there are no more levels of common loop to check, return.
+      if (!CommonObjLoop)
+        break;
+
       LLVM_DEBUG(dbgs() << "Checking base object " << *Obj << "\n");
       assert(!(isa<ConstantPointerNull>(Obj) &&
                !NullPointerIsDefined(B1->getParent(),
                                      Obj->getType()->getPointerAddressSpace()))
              && "nullptr in list of base objects");
 
+      // If the object is not an instruction, then there's no common loop to
+      // find.
       if (!isa<Instruction>(Obj)) {
-        MinObjDepth = 0;
+        CommonObjLoop = nullptr;
         break;
       }
-      unsigned ObjDepth = LI.getLoopDepth(cast<Instruction>(Obj)->getParent());
-      if (ObjDepth < MinObjDepth)
-        MinObjDepth = ObjDepth;
+
+      // This optimization of bounding the loop nest to check only applies if
+      // the underlying objects perform an allocation.
+      Instruction *ObjI = dyn_cast<Instruction>(Obj);
+      if (!isa<AllocaInst>(ObjI) && !isa<CallBase>(ObjI)) {
+        CommonObjLoop = nullptr;
+        break;
+      }
+      if (isa<AllocaInst>(ObjI))
+        // Update the common loop for the underlying objects.
+        CommonObjLoop = getCommonLoop(CommonObjLoop, ObjI->getParent(), LI);
+      else if (CallBase *CB = dyn_cast<CallBase>(ObjI)) {
+        if (!CB->returnDoesNotAlias()) {
+          CommonObjLoop = nullptr;
+          break;
+        }
+        // Update the common loop for the underlying objects.
+        CommonObjLoop = getCommonLoop(CommonObjLoop, ObjI->getParent(), LI);
+      }
     }
   }
+  // Save the depth of the common loop as the lower bound on the loop depth to
+  // check.
+  if (!CommonObjLoop) {
+    LLVM_DEBUG(dbgs() << "No common loop found for underlying objects\n.");
+    MinObjDepth = 0;
+  } else
+    MinObjDepth = CommonObjLoop->getLoopDepth();
+
   LLVM_DEBUG(dbgs() << "Min loop depth " << MinObjDepth <<
              " for underlying object.\n");
-
-  // Find the basic block that dominates both instructions.
-  // BasicBlock *Dom = DT.findNearestCommonDominator(B1, B1);
-  // Find the deepest loop that contains both I1 and I2.
-  // Loop *CommonLoop = LI.getLoopFor(Dom);
-  // unsigned MaxLoopDepthToCheck = CommonLoop ? CommonLoop->getLoopDepth() : 0;
-  // while (MaxLoopDepthToCheck && (//!CommonLoop->contains(B1) ||
-  //                                !CommonLoop->contains(B2))) {
-  //   CommonLoop = CommonLoop->getParentLoop();
-  //   MaxLoopDepthToCheck--;
-  // }
-
-  // Find the deepest loop that contains both B1 and B2.
-  Loop *CommonLoop = getCommonLoop(B1, B2, LI);
-  unsigned MaxLoopDepthToCheck = CommonLoop ? CommonLoop->getLoopDepth() : 0;
-
-  // Check if dependence does not depend on looping.
-  if (0 == MaxLoopDepthToCheck)
-    // If there's no loop to worry about, then the existence of the dependence
-    // implies the potential for a race.
-    return true;
 
   LLVM_DEBUG({
       if (MinObjDepth > MaxLoopDepthToCheck) {
@@ -657,7 +702,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
          "than maximum loop depth of dependence.");
 
   // Get the task that encloses both B1 and B2.
-  Task *CommonTask = TI.getEnclosingTask(B1, B2);
+  const Task *CommonTask = TI.getEnclosingTask(B1, B2);
   // Get the representative spindles for both B1 and B2 in this common task.
   const Spindle *I1Spindle = GetRepSpindleInTask(TI.getSpindleFor(B1),
                                                  CommonTask, TI);
@@ -671,7 +716,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
   // because those are more complicated.
   if (!I1Spindle->isSharedEH() && !I2Spindle->isSharedEH()) {
     if (!CommonLoop->contains(CommonTask->getEntry())) {
-      Loop *CommonTaskLoop = LI.getLoopFor(CommonTask->getEntry());
+      const Loop *CommonTaskLoop = LI.getLoopFor(CommonTask->getEntry());
       assert(!CommonTaskLoop || CommonTaskLoop->contains(CommonLoop) &&
              "Loop for common task does not contain common loop.");
       CommonLoop = CommonTaskLoop;
@@ -681,9 +726,6 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
 
     // Check if dependence does not depend on looping.
     if (0 == MaxLoopDepthToCheck)
-      // // If there's no loop to worry about, then the existence of the dependence
-      // // implies the potential for a race.
-      // return true;
       MaxLoopDepthToCheck = MinObjDepth;
   }
 
@@ -715,8 +757,8 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
   }
 
   // Get the whole loop stack to check above the common loop.
-  SmallVector<Loop *, 4> LoopsToCheck;
-  Loop *CurrLoop = CommonLoop;
+  SmallVector<const Loop *, 4> LoopsToCheck;
+  const Loop *CurrLoop = CommonLoop;
   while (CurrLoop) {
     LoopsToCheck.push_back(CurrLoop);
     CurrLoop = CurrLoop->getParentLoop();
@@ -726,7 +768,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
   // dependence might cross parallel tasks.
   unsigned MinLoopDepthToCheck = 1;
   while (!LoopsToCheck.empty()) {
-    Loop *CurrLoop = LoopsToCheck.pop_back_val();
+    const Loop *CurrLoop = LoopsToCheck.pop_back_val();
     // If we're not yet at the minimum loop depth of the underlying object, go
     // deeper.
     if (MinLoopDepthToCheck < MinObjDepth) {
@@ -736,7 +778,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
 
     // Check the maybe-parallel tasks for the spindle containing the loop
     // header.
-    Spindle *CurrSpindle = TI.getSpindleFor(CurrLoop->getHeader());
+    const Spindle *CurrSpindle = TI.getSpindleFor(CurrLoop->getHeader());
     bool MPTEnclosesDst = false;
     for (const Task *MPT : MPTasks.TaskList[CurrSpindle]) {
       if (TI.encloses(MPT, B2)) {
@@ -842,10 +884,10 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
   // the pointers is null, we assume that the "minimum object depth" is 0.
   unsigned MinObjDepth = 0;
   LLVM_DEBUG(dbgs() << "Min loop depth " << MinObjDepth <<
-             " for underlying object.\n");
+             " used for opaque accesses.\n");
 
   // Find the deepest loop that contains both B1 and B2.
-  Loop *CommonLoop = getCommonLoop(B1, B2, LI);
+  const Loop *CommonLoop = getCommonLoop(B1, B2, LI);
   unsigned MaxLoopDepthToCheck = CommonLoop ? CommonLoop->getLoopDepth() : 0;
 
   // Check if dependence does not depend on looping.
@@ -866,7 +908,7 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
          "than maximum loop depth of dependence.");
 
   // Get the task that encloses both B1 and B2.
-  Task *CommonTask = TI.getEnclosingTask(B1, B2);
+  const Task *CommonTask = TI.getEnclosingTask(B1, B2);
   // Get the representative spindles for both B1 and B2 in this common task.
   const Spindle *I1Spindle = GetRepSpindleInTask(TI.getSpindleFor(B1),
                                                  CommonTask, TI);
@@ -880,7 +922,7 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
   // because those are more complicated.
   if (!I1Spindle->isSharedEH() && !I2Spindle->isSharedEH()) {
     if (!CommonLoop->contains(CommonTask->getEntry())) {
-      Loop *CommonTaskLoop = LI.getLoopFor(CommonTask->getEntry());
+      const Loop *CommonTaskLoop = LI.getLoopFor(CommonTask->getEntry());
       assert(!CommonTaskLoop || CommonTaskLoop->contains(CommonLoop) &&
              "Loop for common task does not contain common loop.");
       CommonLoop = CommonTaskLoop;
@@ -890,9 +932,6 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
 
     // Check if dependence does not depend on looping.
     if (0 == MaxLoopDepthToCheck)
-      // // If there's no loop to worry about, then the existence of the dependence
-      // // implies the potential for a race.
-      // return true;
       MaxLoopDepthToCheck = MinObjDepth;
   }
 
@@ -920,8 +959,8 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
   }
 
   // Get the whole loop stack to check above the common loop.
-  SmallVector<Loop *, 4> LoopsToCheck;
-  Loop *CurrLoop = CommonLoop;
+  SmallVector<const Loop *, 4> LoopsToCheck;
+  const Loop *CurrLoop = CommonLoop;
   while (CurrLoop) {
     LoopsToCheck.push_back(CurrLoop);
     CurrLoop = CurrLoop->getParentLoop();
@@ -931,7 +970,7 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
   // dependence might cross parallel tasks.
   unsigned MinLoopDepthToCheck = 1;
   while (!LoopsToCheck.empty()) {
-    Loop *CurrLoop = LoopsToCheck.pop_back_val();
+    const Loop *CurrLoop = LoopsToCheck.pop_back_val();
     // If we're not yet at the minimum loop depth of the underlying object, go
     // deeper.
     if (MinLoopDepthToCheck < MinObjDepth) {
@@ -941,7 +980,7 @@ bool AccessPtrAnalysis::checkOpaqueAccesses(GeneralAccess &GA1,
 
     // Check the maybe-parallel tasks for the spindle containing the loop
     // header.
-    Spindle *CurrSpindle = TI.getSpindleFor(CurrLoop->getHeader());
+    const Spindle *CurrSpindle = TI.getSpindleFor(CurrLoop->getHeader());
     bool MPTEnclosesDst = false;
     for (const Task *MPT : MPTasks.TaskList[CurrSpindle]) {
       if (TI.encloses(MPT, B2)) {
