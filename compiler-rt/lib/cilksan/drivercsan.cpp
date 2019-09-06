@@ -384,8 +384,8 @@ CILKSAN_API void __csi_before_loop(const csi_id_t loop_id,
   CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csi_before_loop(%ld)\n", loop_id);
 
-  // Record the address of this detach.
-  if (!loop_pc[loop_id])
+  // Record the address of this parallel loop.
+  if (__builtin_expect(!loop_pc[loop_id], false))
     loop_pc[loop_id] = CALLERPC;
 
   // Push the parallel loop onto the call stack.
@@ -436,7 +436,7 @@ CILKSAN_API void __csan_before_call(const csi_id_t call_id,
             call_id, func_id);
 
   // Record the address of this call site.
-  if (!call_pc[call_id])
+  if (__builtin_expect(!call_pc[call_id], false))
     call_pc[call_id] = CALLERPC;
 
   // Push the suppression count onto the stack.
@@ -480,7 +480,7 @@ CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
   WHEN_CILKSAN_DEBUG(last_event = NONE);
 
   // Record the address of this detach.
-  if (!spawn_pc[detach_id])
+  if (__builtin_expect(!spawn_pc[detach_id], false))
     spawn_pc[detach_id] = CALLERPC;
 
   // Update the parallel-execution state to reflect this detach.  Essentially,
@@ -623,7 +623,7 @@ void __csan_load(csi_id_t load_id, void *addr, int32_t size, load_prop_t prop) {
 
   CheckingRAII nocheck;
   // Record the address of this load.
-  if (!load_pc[load_id])
+  if (__builtin_expect(!load_pc[load_id], false))
     load_pc[load_id] = CALLERPC;
 
   DBG_TRACE(DEBUG_MEMORY, "%s read %p\n", __FUNCTION__, addr);
@@ -648,7 +648,7 @@ void __csan_large_load(csi_id_t load_id, void *addr, size_t size,
 
   CheckingRAII nocheck;
   // Record the address of this load.
-  if (!load_pc[load_id])
+  if (__builtin_expect(!load_pc[load_id], false))
     load_pc[load_id] = CALLERPC;
 
   DBG_TRACE(DEBUG_MEMORY, "%s read %p\n", __FUNCTION__, addr);
@@ -672,7 +672,7 @@ void __csan_store(csi_id_t store_id, void *addr, int32_t size, store_prop_t prop
 
   CheckingRAII nocheck;
   // Record the address of this store.
-  if (!store_pc[store_id])
+  if (__builtin_expect(!store_pc[store_id], false))
     store_pc[store_id] = CALLERPC;
 
   DBG_TRACE(DEBUG_MEMORY, "%s wrote %p\n", __FUNCTION__, addr);
@@ -697,7 +697,7 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
 
   CheckingRAII nocheck;
   // Record the address of this store.
-  if (!store_pc[store_id])
+  if (__builtin_expect(!store_pc[store_id], false))
     store_pc[store_id] = CALLERPC;
 
   DBG_TRACE(DEBUG_MEMORY, "%s wrote %p\n", __FUNCTION__, addr);
@@ -717,7 +717,7 @@ void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
 
   CheckingRAII nocheck;
   // Record the PC for this alloca
-  if (!alloca_pc[alloca_id])
+  if (__builtin_expect(!alloca_pc[alloca_id], false))
     alloca_pc[alloca_id] = CALLERPC;
 
   // Record the alloca and clear the allocated portion of the shadow memory.
@@ -742,7 +742,7 @@ void __csan_after_allocfn(const csi_id_t allocfn_id, const void *addr,
 
   // TODO: Use alignment information
   // Record the PC for this allocation-function call
-  if (!allocfn_pc[allocfn_id])
+  if (__builtin_expect(!allocfn_pc[allocfn_id], false))
     allocfn_pc[allocfn_id] = CALLERPC;
 
   // If this allocation function operated on an old address -- e.g., a realloc
