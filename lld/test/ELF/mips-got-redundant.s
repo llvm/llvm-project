@@ -3,34 +3,19 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-readobj --mips-plt-got %t.so | FileCheck %s
+# RUN: llvm-readelf -s --mips-plt-got %t.so | FileCheck %s
 
-# CHECK:      Local entries [
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32744
-# CHECK-NEXT:     Initial: 0x20000
-#                          ^-- loc1
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32740
-# CHECK-NEXT:     Initial: 0x30000
-#                          ^-- loc2, loc3, loc4
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32736
-# CHECK-NEXT:     Initial: 0x40000
-#                          ^-- redundant
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32732
-# CHECK-NEXT:     Initial: 0x30008
-#                          ^-- glb1
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
+# CHECK: Symbol table '.symtab'
+# CHECK: {{.*}}: [[VAL:[0-9a-f]+]]  {{.*}}  glb1
+
+# CHECK:      Primary GOT:
+# CHECK:       Local entries:
+# CHECK-NEXT:    Address     Access  Initial
+# CHECK-NEXT:     {{.*}} -32744(gp) 00020000
+# CHECK-NEXT:     {{.*}} -32740(gp) 00030000
+# CHECK-NEXT:     {{.*}} -32736(gp) 00040000
+# CHECK-NEXT:     {{.*}} -32732(gp) [[VAL]]
+# CHECK-NOT:      {{.*}} -32728(gp)
 
   .text
   .globl  foo
