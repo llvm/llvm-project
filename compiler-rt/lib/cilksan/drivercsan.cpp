@@ -388,8 +388,17 @@ CILKSAN_API void __csi_before_loop(const csi_id_t loop_id,
   if (!loop_pc[loop_id])
     loop_pc[loop_id] = CALLERPC;
 
-  // Push the detach onto the call stack.
+  // Push the parallel loop onto the call stack.
   CilkSanImpl.record_call(loop_id, LOOP);
+
+  // Propagate the parallel-execution state to the child.
+  uint8_t current_pe = *parallel_execution.head();
+  // First push the pe value on function entry.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
+  // Push an extra copy to the head, to be updated aggressively due to detaches.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
 
   CilkSanImpl.do_loop_begin();
 }
@@ -407,11 +416,9 @@ CILKSAN_API void __csi_after_loop(const csi_id_t loop_id,
 
   CilkSanImpl.do_loop_end();
 
-  // // Pop the parallel-execution state.
-  // parallel_execution.pop();
-  // parallel_execution.pop();
-
-  // CilkSanImpl.pop_stack_frame();
+  // Pop the parallel-execution state.
+  parallel_execution.pop();
+  parallel_execution.pop();
 
   // Pop the call off of the call stack.
   CilkSanImpl.record_call_return(loop_id, LOOP);
@@ -501,21 +508,21 @@ CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
             task_id, detach_id, prop.is_tapir_loop_body);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
 
-  // Propagate the parallel-execution state to the child.
-  uint8_t current_pe = *parallel_execution.head();
-  // First we push the pe value on function entry.
-  parallel_execution.push();
-  *parallel_execution.head() = current_pe;
-  // We push a second copy to update aggressively on detaches.
-  parallel_execution.push();
-  *parallel_execution.head() = current_pe;
-
   CilkSanImpl.push_stack_frame((uintptr_t)bp, (uintptr_t)sp);
 
   if (prop.is_tapir_loop_body && CilkSanImpl.handle_loop()) {
     CilkSanImpl.do_loop_iteration_begin((uintptr_t)sp);
     return;
   }
+
+  // Propagate the parallel-execution state to the child.
+  uint8_t current_pe = *parallel_execution.head();
+  // Push the pe value on function entry.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
+  // Push a second copy to update aggressively on detaches.
+  parallel_execution.push();
+  *parallel_execution.head() = current_pe;
 
   // Update tool for entering detach-helper function and performing detach.
   CilkSanImpl.do_enter_helper_begin();
@@ -539,21 +546,16 @@ CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
     // Update tool for leaving the parallel iteration.
     CilkSanImpl.do_loop_iteration_end();
 
+    // The parallel-execution state will be popped when the loop terminates.
+  } else {
+    // Update tool for leaving a detach-helper function.
+    CilkSanImpl.do_leave_begin();
+    CilkSanImpl.do_leave_end();
+
     // Pop the parallel-execution state.
     parallel_execution.pop();
     parallel_execution.pop();
-
-    CilkSanImpl.pop_stack_frame();
-    return;
   }
-
-  // Update tool for leaving a detach-helper function.
-  CilkSanImpl.do_leave_begin();
-  CilkSanImpl.do_leave_end();
-
-  // Pop the parallel-execution state.
-  parallel_execution.pop();
-  parallel_execution.pop();
 
   CilkSanImpl.pop_stack_frame();
 }
