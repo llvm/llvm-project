@@ -564,6 +564,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
   HelpText<"Check virtual function calls during construction/destruction">,
   CheckerOptions<[
     CmdLineOption<Boolean,
+                  "ShowFixIts",
+                  "Enable fix-it hints for this checker",
+                  "false",
+                  InAlpha>,
+    CmdLineOption<Boolean,
                   "PureOnly",
                   "Disables the checker. Keeps cplusplus.PureVirtualCall "
                   "enabled. This option is only provided for backwards "
@@ -654,7 +659,12 @@ def DeadStoresChecker : Checker<"DeadStores">,
                   "Warns for deadstores in nested assignments."
                   "E.g.: if ((P = f())) where P is unused.",
                   "true",
-                  Released>
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ShowFixIts",
+                  "Enable fix-it hints for this checker",
+                  "false",
+                  InAlpha>
   ]>,
   Documentation<HasDocumentation>;
 

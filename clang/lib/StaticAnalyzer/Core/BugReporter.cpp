@@ -2927,6 +2927,9 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
         Pieces.push_front(*I);
     }
 
+    for (const auto &I : report->getFixits())
+      Pieces.back()->addFixit(I);
+
     updateExecutedLinesWithDiagnosticPieces(*PD);
     Consumer->HandlePathDiagnostic(std::move(PD));
   }
@@ -3047,26 +3050,29 @@ BugReporter::generateDiagnosticForConsumerMap(
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
-                                  const CheckerBase *Checker,
-                                  StringRef Name, StringRef Category,
-                                  StringRef Str, PathDiagnosticLocation Loc,
-                                  ArrayRef<SourceRange> Ranges) {
+                                  const CheckerBase *Checker, StringRef Name,
+                                  StringRef Category, StringRef Str,
+                                  PathDiagnosticLocation Loc,
+                                  ArrayRef<SourceRange> Ranges,
+                                  ArrayRef<FixItHint> Fixits) {
   EmitBasicReport(DeclWithIssue, Checker->getCheckName(), Name, Category, Str,
-                  Loc, Ranges);
+                  Loc, Ranges, Fixits);
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
                                   CheckName CheckName,
                                   StringRef name, StringRef category,
                                   StringRef str, PathDiagnosticLocation Loc,
-                                  ArrayRef<SourceRange> Ranges) {
+                                  ArrayRef<SourceRange> Ranges,
+                                  ArrayRef<FixItHint> Fixits) {
   // 'BT' is owned by BugReporter.
   BugType *BT = getBugTypeForName(CheckName, name, category);
   auto R = llvm::make_unique<BugReport>(*BT, str, Loc);
   R->setDeclWithIssue(DeclWithIssue);
-  for (ArrayRef<SourceRange>::iterator I = Ranges.begin(), E = Ranges.end();
-       I != E; ++I)
-    R->addRange(*I);
+  for (const auto &SR : Ranges)
+    R->addRange(SR);
+  for (const auto &FH : Fixits)
+    R->addFixItHint(FH);
   emitReport(std::move(R));
 }
 

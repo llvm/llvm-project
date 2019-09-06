@@ -300,6 +300,14 @@ ANALYZER_OPTION(bool, ShouldTrackConditionsDebug, "track-conditions-debug",
                 "Whether to place an event at each tracked condition.",
                 false)
 
+ANALYZER_OPTION(bool, ShouldEmitFixItHintsAsRemarks, "fixits-as-remarks",
+                "Emit fix-it hints as remarks for testing purposes",
+                false)
+
+//===----------------------------------------------------------------------===//
+// Unsigned analyzer options.
+//===----------------------------------------------------------------------===//
+
 ANALYZER_OPTION(unsigned, CTUImportThreshold, "ctu-import-threshold",
                 "The maximal amount of translation units that is considered "
                 "for import when inlining functions during CTU analysis. "
@@ -307,10 +315,6 @@ ANALYZER_OPTION(unsigned, CTUImportThreshold, "ctu-import-threshold",
                 "analysis with many interdependent definitions located in "
                 "various translation units.",
                 100u)
-
-//===----------------------------------------------------------------------===//
-// Unsinged analyzer options.
-//===----------------------------------------------------------------------===//
 
 ANALYZER_OPTION(
     unsigned, AlwaysInlineSize, "ipa-always-inline-size",

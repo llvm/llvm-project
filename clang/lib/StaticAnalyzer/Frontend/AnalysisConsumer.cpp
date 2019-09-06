@@ -83,11 +83,11 @@ void ento::createTextPathDiagnosticConsumer(
 namespace {
 class ClangDiagPathDiagConsumer : public PathDiagnosticConsumer {
   DiagnosticsEngine &Diag;
-  bool IncludePath, ShouldEmitAsError;
+  bool IncludePath = false, ShouldEmitAsError = false, FixitsAsRemarks = false;
 
 public:
   ClangDiagPathDiagConsumer(DiagnosticsEngine &Diag)
-      : Diag(Diag), IncludePath(false), ShouldEmitAsError(false) {}
+      : Diag(Diag) {}
   ~ClangDiagPathDiagConsumer() override {}
   StringRef getName() const override { return "ClangDiags"; }
 
@@ -98,11 +98,9 @@ public:
     return IncludePath ? Minimal : None;
   }
 
-  void enablePaths() {
-    IncludePath = true;
-  }
-
+  void enablePaths() { IncludePath = true; }
   void enableWerror() { ShouldEmitAsError = true; }
+  void enableFixitsAsRemarks() { FixitsAsRemarks = true; }
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override {
@@ -111,22 +109,46 @@ public:
             ? Diag.getCustomDiagID(DiagnosticsEngine::Error, "%0")
             : Diag.getCustomDiagID(DiagnosticsEngine::Warning, "%0");
     unsigned NoteID = Diag.getCustomDiagID(DiagnosticsEngine::Note, "%0");
+    unsigned RemarkID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "%0");
 
-    for (std::vector<const PathDiagnostic*>::iterator I = Diags.begin(),
-         E = Diags.end(); I != E; ++I) {
+    auto reportPiece =
+        [&](unsigned ID, SourceLocation Loc, StringRef String,
+            ArrayRef<SourceRange> Ranges, ArrayRef<FixItHint> Fixits) {
+          if (!FixitsAsRemarks) {
+            Diag.Report(Loc, ID) << String << Ranges << Fixits;
+          } else {
+            Diag.Report(Loc, ID) << String << Ranges;
+            for (const FixItHint &Hint : Fixits) {
+              SourceManager &SM = Diag.getSourceManager();
+              llvm::SmallString<128> Str;
+              llvm::raw_svector_ostream OS(Str);
+              // FIXME: Add support for InsertFromRange and
+              // BeforePreviousInsertion.
+              assert(!Hint.InsertFromRange.isValid() && "Not implemented yet!");
+              assert(!Hint.BeforePreviousInsertions && "Not implemented yet!");
+              OS << SM.getSpellingColumnNumber(Hint.RemoveRange.getBegin())
+                 << "-" << SM.getSpellingColumnNumber(Hint.RemoveRange.getEnd())
+                 << ": '" << Hint.CodeToInsert << "'";
+              Diag.Report(Loc, RemarkID) << OS.str();
+            }
+          }
+        };
+
+    for (std::vector<const PathDiagnostic *>::iterator I = Diags.begin(),
+         E = Diags.end();
+         I != E; ++I) {
       const PathDiagnostic *PD = *I;
-      SourceLocation WarnLoc = PD->getLocation().asLocation();
-      Diag.Report(WarnLoc, WarnID) << PD->getShortDescription()
-                                   << PD->path.back()->getRanges();
+      reportPiece(WarnID, PD->getLocation().asLocation(),
+                  PD->getShortDescription(), PD->path.back()->getRanges(),
+                  PD->path.back()->getFixits());
 
       // First, add extra notes, even if paths should not be included.
       for (const auto &Piece : PD->path) {
         if (!isa<PathDiagnosticNotePiece>(Piece.get()))
           continue;
 
-        SourceLocation NoteLoc = Piece->getLocation().asLocation();
-        Diag.Report(NoteLoc, NoteID) << Piece->getString()
-                                     << Piece->getRanges();
+        reportPiece(NoteID, Piece->getLocation().asLocation(),
+                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
       }
 
       if (!IncludePath)
@@ -138,9 +160,8 @@ public:
         if (isa<PathDiagnosticNotePiece>(Piece.get()))
           continue;
 
-        SourceLocation NoteLoc = Piece->getLocation().asLocation();
-        Diag.Report(NoteLoc, NoteID) << Piece->getString()
-                                     << Piece->getRanges();
+        reportPiece(NoteID, Piece->getLocation().asLocation(),
+                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
       }
     }
   }
@@ -240,6 +261,9 @@ public:
 
       if (Opts->AnalyzerWerror)
         clangDiags->enableWerror();
+
+      if (Opts->ShouldEmitFixItHintsAsRemarks)
+        clangDiags->enableFixitsAsRemarks();
 
       if (Opts->AnalysisDiagOpt == PD_TEXT) {
         clangDiags->enablePaths();

@@ -1,17 +1,16 @@
-// RUN: %clang_analyze_cc1 -Wunused-variable -fblocks -Wno-unreachable-code     \
-// RUN:  -analyzer-checker=core,deadcode.DeadStores                             \
-// RUN:  -analyzer-config deadcode.DeadStores:WarnForDeadNestedAssignments=false\
-// RUN:  -analyzer-opt-analyze-nested-blocks -verify=non-nested %s
-//
-// RUN: %clang_analyze_cc1 -Wunused-variable -fblocks -Wno-unreachable-code     \
-// RUN:  -analyzer-checker=core,deadcode.DeadStores                             \
-// RUN:  -analyzer-config deadcode.DeadStores:WarnForDeadNestedAssignments=false\
-// RUN:  -analyzer-opt-analyze-nested-blocks -verify=non-nested                 \
-// RUN:  -analyzer-store=region %s
-//
-// RUN: %clang_analyze_cc1 -Wunused-variable -fblocks -Wno-unreachable-code     \
-// RUN:  -analyzer-checker=core,deadcode.DeadStores                             \
-// RUN:  -analyzer-opt-analyze-nested-blocks -verify=non-nested,nested %s
+// RUN: %clang_analyze_cc1 -Wunused-variable -fblocks -Wno-unreachable-code \
+// RUN:   -analyzer-checker=core,deadcode.DeadStores \
+// RUN:   -analyzer-config deadcode.DeadStores:ShowFixIts=true \
+// RUN:   -analyzer-config fixits-as-remarks=true \
+// RUN:   -analyzer-config \
+// RUN:       deadcode.DeadStores:WarnForDeadNestedAssignments=false \
+// RUN:   -verify=non-nested %s
+
+// RUN: %clang_analyze_cc1 -Wunused-variable -fblocks -Wno-unreachable-code \
+// RUN:   -analyzer-checker=core,deadcode.DeadStores \
+// RUN:   -analyzer-config deadcode.DeadStores:ShowFixIts=true \
+// RUN:   -analyzer-config fixits-as-remarks=true \
+// RUN:   -verify=non-nested,nested %s
 
 void f1() {
   int k, y; // non-nested-warning {{unused variable 'k'}}
@@ -19,12 +18,14 @@ void f1() {
   int abc = 1;
   long idx = abc + 3 * 5; // non-nested-warning {{never read}}
                           // non-nested-warning@-1 {{unused variable 'idx'}}
+                          // non-nested-remark@-2 {{11-24: ''}}
 }
 
 void f2(void *b) {
   char *c = (char *)b; // no-warning
   char *d = b + 1;     // non-nested-warning {{never read}}
                        // non-nested-warning@-1 {{unused variable 'd'}}
+                       // non-nested-remark@-2 {{10-17: ''}}
   printf("%s", c);
   // non-nested-warning@-1 {{implicitly declaring library function 'printf' with type 'int (const char *, ...)'}}
   // non-nested-note@-2 {{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}
@@ -50,6 +51,7 @@ void f5() {
   int x = 4;   // no-warning
   int *p = &x; // non-nested-warning {{never read}}
                // non-nested-warning@-1 {{unused variable 'p'}}
+               // non-nested-remark@-2 {{9-13: ''}}
 }
 
 int f6() {
@@ -413,6 +415,7 @@ void f23_pos(int argc, char **argv) {
   int shouldLog = (argc > 1);
   // non-nested-warning@-1 {{Value stored to 'shouldLog' during its initialization is never read}}
   // non-nested-warning@-2 {{unused variable 'shouldLog'}}
+  // non-nested-remark@-3 {{16-28: ''}}
   ^{
     f23_aux("I did too use it!\n");
   }();
@@ -425,6 +428,7 @@ void f24_A(int y) {
     int z = x + y;
     // non-nested-warning@-1 {{Value stored to 'z' during its initialization is never read}}
     // non-nested-warning@-2 {{unused variable 'z'}}
+    // non-nested-remark@-3 {{10-17: ''}}
   }();
 }
 

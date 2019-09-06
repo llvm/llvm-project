@@ -96,6 +96,7 @@ protected:
   SmallVector<SourceRange, 4> Ranges;
   const SourceRange ErrorNodeRange;
   NoteList Notes;
+  SmallVector<FixItHint, 4> Fixits;
 
   /// A (stack of) a set of symbols that are registered with this
   /// report as being "interesting", and thus used to help decide which
@@ -280,20 +281,17 @@ public:
   /// allows you to specify where exactly in the auto-generated path diagnostic
   /// the extra note should appear.
   void addNote(StringRef Msg, const PathDiagnosticLocation &Pos,
-               ArrayRef<SourceRange> Ranges) {
+               ArrayRef<SourceRange> Ranges = {},
+               ArrayRef<FixItHint> Fixits = {}) {
     auto P = std::make_shared<PathDiagnosticNotePiece>(Pos, Msg);
 
     for (const auto &R : Ranges)
       P->addRange(R);
 
-    Notes.push_back(std::move(P));
-  }
+    for (const auto &F : Fixits)
+      P->addFixit(F);
 
-  // FIXME: Instead of making an override, we could have default-initialized
-  // Ranges with {}, however it crashes the MSVC 2013 compiler.
-  void addNote(StringRef Msg, const PathDiagnosticLocation &Pos) {
-    std::vector<SourceRange> Ranges;
-    addNote(Msg, Pos, Ranges);
+    Notes.push_back(std::move(P));
   }
 
   virtual const NoteList &getNotes() {
@@ -319,7 +317,7 @@ public:
 
   const Stmt *getStmt() const;
 
-  /// Add a range to a bug report.
+  /// Add a range to the bug report.
   ///
   /// Ranges are used to highlight regions of interest in the source code.
   /// They should be at the same source code line as the BugReport location.
@@ -334,6 +332,20 @@ public:
 
   /// Get the SourceRanges associated with the report.
   virtual llvm::iterator_range<ranges_iterator> getRanges() const;
+
+  /// Add a fix-it hint to the warning message of the bug report.
+  ///
+  /// Fix-it hints are the suggested edits to the code that would resolve
+  /// the problem explained by the bug report. Fix-it hints should be
+  /// as conservative as possible because it is not uncommon for the user
+  /// to blindly apply all fixits to their project. It usually is very hard
+  /// to produce a good fix-it hint for most path-sensitive warnings.
+  /// Fix-it hints can also be added to notes through the addNote() interface.
+  void addFixItHint(const FixItHint &F) {
+    Fixits.push_back(F);
+  }
+
+  ArrayRef<FixItHint> getFixits() const { return Fixits; }
 
   /// Add custom or predefined bug report visitors to this report.
   ///
@@ -473,12 +485,14 @@ public:
   void EmitBasicReport(const Decl *DeclWithIssue, const CheckerBase *Checker,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = None);
+                       ArrayRef<SourceRange> Ranges = None,
+                       ArrayRef<FixItHint> Fixits = None);
 
   void EmitBasicReport(const Decl *DeclWithIssue, CheckName CheckName,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
-                       ArrayRef<SourceRange> Ranges = None);
+                       ArrayRef<SourceRange> Ranges = None,
+                       ArrayRef<FixItHint> Fixits = None);
 
 private:
   llvm::StringMap<BugType *> StrBugTypes;
