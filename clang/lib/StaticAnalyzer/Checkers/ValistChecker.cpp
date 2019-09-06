@@ -116,7 +116,9 @@ const SmallVector<ValistChecker::VAListAccepter, 15>
         // vswprintf is the wide version of vsnprintf,
         // vsprintf has no wide version
         {{"vswscanf", 3}, 2}};
-const CallDescription ValistChecker::VaStart("__builtin_va_start", 2),
+
+const CallDescription
+    ValistChecker::VaStart("__builtin_va_start", /*Args=*/2, /*Params=*/1),
     ValistChecker::VaCopy("__builtin_va_copy", 2),
     ValistChecker::VaEnd("__builtin_va_end", 1);
 } // end anonymous namespace
