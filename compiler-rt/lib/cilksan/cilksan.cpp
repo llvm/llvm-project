@@ -437,6 +437,7 @@ void CilkSanImpl_t::do_loop_iteration_end() {
   // having references to it.
   DisjointSet_t<SPBagInterface *> *my_sbag = func->Sbag;
   uint64_t func_id = my_sbag->get_set_node()->get_func_id();
+  uintptr_t stack_ptr = my_sbag->get_set_node()->get_rsp();
   if (func->is_Sbag_used()) {
     DBG_TRACE(DEBUG_BAGS,
               "Merge S-bag in loop frame %ld into P-bag.\n", func_id);
@@ -448,6 +449,7 @@ void CilkSanImpl_t::do_loop_iteration_end() {
     DBG_TRACE(DEBUG_BAGS, "frame %ld creates an S-bag ", func_id);
     func->set_sbag(new DisjointSet_t<SPBagInterface *>(
                        new SBag_t(func_id, call_stack)));
+    func->Sbag->get_node()->set_rsp(stack_ptr);
     my_pbag->get_node()->update_sibling(func->Sbag->get_node());
     DBG_TRACE(DEBUG_BAGS, "%p\n", func->Sbag);
   }
