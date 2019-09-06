@@ -765,17 +765,16 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_byval_align16:
 ; GCN-NOT: s32
-; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GCN: buffer_store_dword v33, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:16
-; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:20
+; GCN-NOT: buffer_store_dword v33
+; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GCN-NOT: buffer_store_dword v33
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:20
 
 ; GCN: s_getpc_b64
 
-; GCN: buffer_store_dword v33, off, s[0:3], s32 offset:4
-; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
-; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:16
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
@@ -806,12 +805,12 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_12xv3i32:
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: buffer_store_dword [[REG12]], {{.*$}}
 ; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
 ; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
 ; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; GCN: buffer_store_dword [[REG12]], {{.*$}}
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 v31, 11
 ; GCN: s_getpc
@@ -835,12 +834,12 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_12xv3f32:
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: buffer_store_dword [[REG12]], {{.*$}}
 ; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
 ; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
 ; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; GCN: buffer_store_dword [[REG12]], {{.*$}}
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 v31, 0x41300000
 ; GCN: s_getpc
@@ -865,20 +864,20 @@ entry:
 ; GCN-LABEL: {{^}}stack_8xv5i32:
 
 ; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
-; GCN: buffer_store_dword [[REG8]], {{.*$}}
 ; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
-; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
 ; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
-; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
 ; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
-; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; GCN: buffer_store_dword [[REG8]], {{.*$}}
+; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
+; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
+; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
 ; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
 ; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
 ; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
 ; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
 
 ; GCN: v_mov_b32_e32 v31, 7
@@ -899,20 +898,20 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_8xv5f32:
 ; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
-; GCN: buffer_store_dword [[REG8]], {{.*$}}
 ; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
-; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
 ; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
-; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
 ; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
-; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; GCN: buffer_store_dword [[REG8]], {{.*$}}
+; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
+; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
+; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
 ; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
 ; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
 ; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
 ; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
+; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
 
 ; GCN: v_mov_b32_e32 v31, 0x40e00000
