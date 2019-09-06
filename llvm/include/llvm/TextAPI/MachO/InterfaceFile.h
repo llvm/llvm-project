@@ -320,84 +320,35 @@ public:
     reference operator*() const { return I->second; }
     pointer operator->() const { return I->second; }
   };
+
   using const_symbol_range = iterator_range<const_symbol_iterator>;
 
-  // Custom iterator to return only exported symbols.
-  struct const_export_iterator
-      : public iterator_adaptor_base<
-            const_export_iterator, const_symbol_iterator,
-            std::forward_iterator_tag, const Symbol *> {
-    const_symbol_iterator _end;
-
-    void skipToNextSymbol() {
-      while (I != _end && I->isUndefined())
-        ++I;
-    }
-
-    const_export_iterator() = default;
-    template <typename U>
-    const_export_iterator(U &&it, U &&end)
-        : iterator_adaptor_base(std::forward<U &&>(it)),
-          _end(std::forward<U &&>(end)) {
-      skipToNextSymbol();
-    }
-
-    const_export_iterator &operator++() {
-      ++I;
-      skipToNextSymbol();
-      return *this;
-    }
-
-    const_export_iterator operator++(int) {
-      const_export_iterator tmp(*this);
-      ++(*this);
-      return tmp;
-    }
-  };
-  using const_export_range = llvm::iterator_range<const_export_iterator>;
-
-  // Custom iterator to return only undefined symbols.
-  struct const_undefined_iterator
-      : public iterator_adaptor_base<
-            const_undefined_iterator, const_symbol_iterator,
-            std::forward_iterator_tag, const Symbol *> {
-    const_symbol_iterator _end;
-
-    void skipToNextSymbol() {
-      while (I != _end && !I->isUndefined())
-        ++I;
-    }
-
-    const_undefined_iterator() = default;
-    template <typename U>
-    const_undefined_iterator(U &&it, U &&end)
-        : iterator_adaptor_base(std::forward<U &&>(it)),
-          _end(std::forward<U &&>(end)) {
-      skipToNextSymbol();
-    }
-
-    const_undefined_iterator &operator++() {
-      ++I;
-      skipToNextSymbol();
-      return *this;
-    }
-
-    const_undefined_iterator operator++(int) {
-      const_undefined_iterator tmp(*this);
-      ++(*this);
-      return tmp;
-    }
-  };
-  using const_undefined_range = llvm::iterator_range<const_undefined_iterator>;
+  using const_filtered_symbol_iterator =
+      filter_iterator<const_symbol_iterator,
+                      std::function<bool(const Symbol *)>>;
+  using const_filtered_symbol_range =
+      iterator_range<const_filtered_symbol_iterator>;
 
   const_symbol_range symbols() const {
     return {Symbols.begin(), Symbols.end()};
   }
-  const_export_range exports() const {
-    return {{Symbols.begin(), Symbols.end()}, {Symbols.end(), Symbols.end()}};
+
+  const_filtered_symbol_range exports() const {
+    std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
+      return !Symbol->isUndefined();
+    };
+    return make_filter_range(
+        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
+        fn);
   }
-  const_undefined_range undefineds() const {
-    return {{Symbols.begin(), Symbols.end()}, {Symbols.end(), Symbols.end()}};
+
+  const_filtered_symbol_range undefineds() const {
+    std::function<bool(const Symbol *)> fn = [](const Symbol *Symbol) {
+      return Symbol->isUndefined();
+    };
+    return make_filter_range(
+        make_range<const_symbol_iterator>({Symbols.begin()}, {Symbols.end()}),
+        fn);
   }
 
 private:

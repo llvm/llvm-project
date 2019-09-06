@@ -54,6 +54,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeLocalStackSlotPassPass(Registry);
   initializeLowerIntrinsicsPass(Registry);
   initializeMIRCanonicalizerPass(Registry);
+  initializeMIRNamerPass(Registry);
   initializeMachineBlockFrequencyInfoPass(Registry);
   initializeMachineBlockPlacementPass(Registry);
   initializeMachineBlockPlacementStatsPass(Registry);

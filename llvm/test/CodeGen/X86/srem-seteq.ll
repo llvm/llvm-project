@@ -318,10 +318,9 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 ; X86-LABEL: test_srem_pow2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    shrl $28, %edx
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    leal 15(%ecx), %edx
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    cmovnsl %ecx, %edx
 ; X86-NEXT:    andl $-16, %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
@@ -330,10 +329,10 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 ;
 ; X64-LABEL: test_srem_pow2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    sarl $31, %ecx
-; X64-NEXT:    shrl $28, %ecx
-; X64-NEXT:    addl %edi, %ecx
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 15(%rdi), %ecx
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    cmovnsl %edi, %ecx
 ; X64-NEXT:    andl $-16, %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl %ecx, %edi
@@ -350,10 +349,9 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 ; X86-LABEL: test_srem_int_min:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    shrl %edx
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    leal 2147483647(%ecx), %edx
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    cmovnsl %ecx, %edx
 ; X86-NEXT:    andl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    addl %ecx, %edx
@@ -362,10 +360,10 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 ;
 ; X64-LABEL: test_srem_int_min:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    sarl $31, %ecx
-; X64-NEXT:    shrl %ecx
-; X64-NEXT:    addl %edi, %ecx
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 2147483647(%rdi), %ecx
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    cmovnsl %edi, %ecx
 ; X64-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    addl %edi, %ecx

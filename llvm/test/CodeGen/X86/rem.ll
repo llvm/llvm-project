@@ -27,10 +27,9 @@ define i32 @test2(i32 %X) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    sarl $31, %ecx
-; CHECK-NEXT:    shrl $24, %ecx
-; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    leal 255(%eax), %ecx
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovnsl %eax, %ecx
 ; CHECK-NEXT:    andl $-256, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retl

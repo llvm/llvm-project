@@ -490,6 +490,10 @@ class Configuration(object):
             self.config.available_features.add('glibc-%s' % maj_v)
             self.config.available_features.add('glibc-%s.%s' % (maj_v, min_v))
 
+        if 'NOTFOUND' not in self.get_lit_conf('libcxx_gdb'):
+            self.config.available_features.add('libcxx_gdb')
+            self.cxx.libcxx_gdb = self.get_lit_conf('libcxx_gdb')
+
         # Support Objective-C++ only on MacOS and if the compiler supports it.
         if self.target_info.platform() == "darwin" and \
            self.target_info.is_host_macosx() and \
@@ -1072,6 +1076,8 @@ class Configuration(object):
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
         sub.append(('not ', not_str))
+        if self.get_lit_conf('libcxx_gdb'):
+            sub.append(('%libcxx_gdb', self.get_lit_conf('libcxx_gdb')))
 
     def can_use_deployment(self):
         # Check if the host is on an Apple platform using clang.

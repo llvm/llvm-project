@@ -19,13 +19,39 @@ TEST_F(GISelMITest, TestKnownBitsCst) {
   unsigned CopyReg = Copies[Copies.size() - 1];
   MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
   unsigned SrcReg = FinalCopy->getOperand(1).getReg();
-  unsigned DstReg = FinalCopy->getOperand(1).getReg();
+  unsigned DstReg = FinalCopy->getOperand(0).getReg();
   GISelKnownBits Info(*MF);
   KnownBits Res = Info.getKnownBits(SrcReg);
   EXPECT_EQ((uint64_t)1, Res.One.getZExtValue());
   EXPECT_EQ((uint64_t)0xfe, Res.Zero.getZExtValue());
 
   KnownBits Res2 = Info.getKnownBits(DstReg);
+  EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
+  EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
+}
+
+TEST_F(GISelMITest, TestKnownBitsCstWithClass) {
+  StringRef MIRString = "  %10:gpr32 = MOVi32imm 1\n"
+                        "  %4:_(s32) = COPY %10\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  unsigned CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  unsigned SrcReg = FinalCopy->getOperand(1).getReg();
+  unsigned DstReg = FinalCopy->getOperand(0).getReg();
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(SrcReg);
+  // We can't analyze %3 due to the register class constraint. We will get a
+  // default-constructed KnownBits back.
+  EXPECT_EQ((uint64_t)1, Res.getBitWidth());
+  EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
+  EXPECT_EQ((uint64_t)0, Res.Zero.getZExtValue());
+
+  KnownBits Res2 = Info.getKnownBits(DstReg);
+  // We still don't know the values due to the register class constraint but %4
+  // did reveal the size of %3.
+  EXPECT_EQ((uint64_t)32, Res2.getBitWidth());
   EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
   EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
 }
