@@ -44,7 +44,7 @@ ClangIndexRecordWriter::ClangIndexRecordWriter(ASTContext &Ctx,
     : Impl(Opts.DataDirPath), Ctx(Ctx), RecordOpts(std::move(Opts)),
       Hasher(Ctx) {
   if (Opts.RecordSymbolCodeGenName)
-    CGNameGen.reset(new CodegenNameGenerator(Ctx));
+    ASTNameGen.reset(new ASTNameGenerator(Ctx));
 }
 
 ClangIndexRecordWriter::~ClangIndexRecordWriter() {}
@@ -109,9 +109,9 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
     Sym.USR = getUSR(D);
     assert(!Sym.USR.empty() && "Recorded decl without USR!");
 
-    if (CGNameGen && ND) {
+    if (ASTNameGen && ND) {
       llvm::raw_svector_ostream OS(Scratch);
-      CGNameGen->writeName(ND, OS);
+      ASTNameGen->writeName(ND, OS);
     }
     unsigned CGNameLen = Scratch.size() - NameLen;
     Sym.CodeGenName = StringRef(Scratch.data() + NameLen, CGNameLen);
