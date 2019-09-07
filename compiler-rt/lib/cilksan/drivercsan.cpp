@@ -608,7 +608,8 @@ CILKSAN_API void __csan_sync(csi_id_t sync_id) {
 // right before the corresponding read / write in the user code.
 // the return addr of __csan_load/store is the rip for the read / write
 CILKSAN_API
-void __csan_load(csi_id_t load_id, void *addr, int32_t size, load_prop_t prop) {
+void __csan_load(csi_id_t load_id, const void *addr, int32_t size,
+                 load_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
   if (!should_check()) {
@@ -632,7 +633,7 @@ void __csan_load(csi_id_t load_id, void *addr, int32_t size, load_prop_t prop) {
 }
 
 CILKSAN_API
-void __csan_large_load(csi_id_t load_id, void *addr, size_t size,
+void __csan_large_load(csi_id_t load_id, const void *addr, size_t size,
                        load_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
@@ -657,7 +658,8 @@ void __csan_large_load(csi_id_t load_id, void *addr, size_t size,
 }
 
 CILKSAN_API
-void __csan_store(csi_id_t store_id, void *addr, int32_t size, store_prop_t prop) {
+void __csan_store(csi_id_t store_id, const void *addr, int32_t size,
+                  store_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
   if (!should_check()) {
@@ -681,7 +683,7 @@ void __csan_store(csi_id_t store_id, void *addr, int32_t size, store_prop_t prop
 }
 
 CILKSAN_API
-void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
+void __csan_large_store(csi_id_t store_id, const void *addr, size_t size,
                         store_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
