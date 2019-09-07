@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
 ; RUN: FileCheck --check-prefix=OBJ %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYMS %s
 
 ; RUN: not llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | \
 ; RUN: FileCheck --check-prefix=OBJ64 %s
@@ -45,3 +46,70 @@
 ; OBJ-NEXT:     Type: STYP_BSS (0x80)
 ; OBJ-NEXT:   }
 ; OBJ-NEXT: ]
+
+; SYMS:      File: {{.*}}aix-xcoff-lcomm.ll.tmp.o
+; SYMS-NEXT: Format: aixcoff-rs6000
+; SYMS-NEXT: Arch: powerpc
+; SYMS-NEXT: AddressSize: 32bit
+; SYMS-NEXT: Symbols [
+; SYMS-NEXT:   Symbol {
+; SYMS-NEXT:     Index: [[#Index:]]
+; SYMS-NEXT:     Name: a
+; SYMS-NEXT:     Value (RelocatableAddress): 0x0
+; SYMS-NEXT:     Section: .bss
+; SYMS-NEXT:     Type: 0x0
+; SYMS-NEXT:     StorageClass: C_HIDEXT (0x6B)
+; SYMS-NEXT:     NumberOfAuxEntries: 1
+; SYMS-NEXT:     CSECT Auxiliary Entry {
+; SYMS-NEXT:       Index: [[#Index + 1]]
+; SYMS-NEXT:       SectionLen: 4
+; SYMS-NEXT:       ParameterHashIndex: 0x0
+; SYMS-NEXT:       TypeChkSectNum: 0x0
+; SYMS-NEXT:       SymbolAlignmentLog2: 2
+; SYMS-NEXT:       SymbolType: XTY_CM (0x3)
+; SYMS-NEXT:       StorageMappingClass: XMC_BS (0x9)
+; SYMS-NEXT:       StabInfoIndex: 0x0
+; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS-NEXT:     }
+; SYMS-NEXT:   }
+; SYMS-NEXT:   Symbol {
+; SYMS-NEXT:     Index: [[#Index + 2]]
+; SYMS-NEXT:     Name: b
+; SYMS-NEXT:     Value (RelocatableAddress): 0x8
+; SYMS-NEXT:     Section: .bss
+; SYMS-NEXT:     Type: 0x0
+; SYMS-NEXT:     StorageClass: C_HIDEXT (0x6B)
+; SYMS-NEXT:     NumberOfAuxEntries: 1
+; SYMS-NEXT:     CSECT Auxiliary Entry {
+; SYMS-NEXT:       Index: [[#Index + 3]]
+; SYMS-NEXT:       SectionLen: 8
+; SYMS-NEXT:       ParameterHashIndex: 0x0
+; SYMS-NEXT:       TypeChkSectNum: 0x0
+; SYMS-NEXT:       SymbolAlignmentLog2: 3
+; SYMS-NEXT:       SymbolType: XTY_CM (0x3)
+; SYMS-NEXT:       StorageMappingClass: XMC_BS (0x9)
+; SYMS-NEXT:       StabInfoIndex: 0x0
+; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS-NEXT:     }
+; SYMS-NEXT:   }
+; SYMS-NEXT:   Symbol {
+; SYMS-NEXT:     Index: [[#Index + 4]]
+; SYMS-NEXT:     Name: c
+; SYMS-NEXT:     Value (RelocatableAddress): 0x10
+; SYMS-NEXT:     Section: .bss
+; SYMS-NEXT:     Type: 0x0
+; SYMS-NEXT:     StorageClass: C_HIDEXT (0x6B)
+; SYMS-NEXT:     NumberOfAuxEntries: 1
+; SYMS-NEXT:     CSECT Auxiliary Entry {
+; SYMS-NEXT:       Index: [[#Index + 5]]
+; SYMS-NEXT:       SectionLen: 2
+; SYMS-NEXT:       ParameterHashIndex: 0x0
+; SYMS-NEXT:       TypeChkSectNum: 0x0
+; SYMS-NEXT:       SymbolAlignmentLog2: 1
+; SYMS-NEXT:       SymbolType: XTY_CM (0x3)
+; SYMS-NEXT:       StorageMappingClass: XMC_BS (0x9)
+; SYMS-NEXT:       StabInfoIndex: 0x0
+; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS-NEXT:     }
+; SYMS-NEXT:   }
+; SYMS-NEXT: ]

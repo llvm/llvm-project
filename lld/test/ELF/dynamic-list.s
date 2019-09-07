@@ -7,7 +7,7 @@
 ## Check exporting only one symbol.
 # RUN: echo '{ foo1; };' > %t.list
 # RUN: ld.lld --dynamic-list %t.list %t.o %t2.so -o %t
-# RUN: nm -D %t | FileCheck %s --implicit-check-not=foo
+# RUN: llvm-nm -D %t | FileCheck %s --implicit-check-not=foo
 
 ## And now using quoted strings (the output is the same since it does not
 ## use any wildcard character).
@@ -26,7 +26,7 @@
 ## Now export all the foo1, foo2, and foo31 symbols
 # RUN: echo "{ foo1; foo2; foo31; };" > %t.list
 # RUN: ld.lld --dynamic-list %t.list %t.o %t2.so -o %t
-# RUN: nm -D %t | FileCheck --check-prefix=CHECK2 %s --implicit-check-not=foo
+# RUN: llvm-nm -D %t | FileCheck --check-prefix=CHECK2 %s --implicit-check-not=foo
 # RUN: echo "{ foo1; foo2; };" > %t1.list
 # RUN: echo "{ foo31; };" > %t2.list
 # RUN: ld.lld --dynamic-list %t1.list --dynamic-list %t2.list %t.o %t2.so -o %t2
@@ -39,7 +39,7 @@
 ## --export-dynamic is similar to --dynamic-list with '{ * }'
 # RUN: echo "{ foo2; };" > %t.list
 # RUN: ld.lld --dynamic-list %t.list --export-dynamic %t.o %t2.so -o %t
-# RUN: nm -D %t | FileCheck --check-prefix=CHECK3 %s --implicit-check-not=foo
+# RUN: llvm-nm -D %t | FileCheck --check-prefix=CHECK3 %s --implicit-check-not=foo
 
 ## The same with --export-dynamic-symbol.
 # RUN: ld.lld --export-dynamic-symbol=foo2 --export-dynamic %t.o %t2.so -o %t2

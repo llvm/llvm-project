@@ -14,48 +14,42 @@ namespace clang {
 using namespace ast_matchers;
 
 TEST(OwnerPointer, BothHaveAttributes) {
-  EXPECT_TRUE(matches(
-    R"cpp(
-      template<class T>
-      class [[gsl::Owner]] C;
+  EXPECT_TRUE(matches("template<class T>"
+                      "class [[gsl::Owner]] C;"
 
-      template<class T>
-      class [[gsl::Owner]] C {};
+                      "template<class T>"
+                      "class [[gsl::Owner]] C {};"
 
-      C<int> c;
-  )cpp",
-    classTemplateSpecializationDecl(hasName("C"), hasAttr(clang::attr::Owner))));
+                      "C<int> c;",
+                      classTemplateSpecializationDecl(
+                          hasName("C"), hasAttr(clang::attr::Owner))));
 }
 
 TEST(OwnerPointer, ForwardDeclOnly) {
-  EXPECT_TRUE(matches(
-    R"cpp(
-      template<class T>
-      class [[gsl::Owner]] C;
+  EXPECT_TRUE(matches("template<class T>"
+                      "class [[gsl::Owner]] C;"
 
-      template<class T>
-      class C {};
+                      "template<class T>"
+                      "class C {};"
 
-      C<int> c;
-  )cpp",
-    classTemplateSpecializationDecl(hasName("C"), hasAttr(clang::attr::Owner))));
+                      "C<int> c;",
+                      classTemplateSpecializationDecl(
+                          hasName("C"), hasAttr(clang::attr::Owner))));
 }
 
 TEST(OwnerPointer, LateForwardDeclOnly) {
-  EXPECT_TRUE(matches(
-    R"cpp(
-      template<class T>
-      class C;
+  EXPECT_TRUE(matches("template<class T>"
+                      "class C;"
 
-      template<class T>
-      class C {};
+                      "template<class T>"
+                      "class C {};"
 
-      template<class T>
-      class [[gsl::Owner]] C;
+                      "template<class T>"
+                      "class [[gsl::Owner]] C;"
 
-      C<int> c;
-  )cpp",
-    classTemplateSpecializationDecl(hasName("C"), hasAttr(clang::attr::Owner))));
+                      "C<int> c;",
+                      classTemplateSpecializationDecl(
+                          hasName("C"), hasAttr(clang::attr::Owner))));
 }
 
 } // namespace clang

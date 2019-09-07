@@ -1064,7 +1064,18 @@ class CallDescription {
   // e.g. "{a, b}" represent the qualified names, like "a::b".
   std::vector<const char *> QualifiedName;
   Optional<unsigned> RequiredArgs;
+  Optional<size_t> RequiredParams;
   int Flags;
+
+  // A constructor helper.
+  static Optional<size_t> readRequiredParams(Optional<unsigned> RequiredArgs,
+                                             Optional<size_t> RequiredParams) {
+    if (RequiredParams)
+      return RequiredParams;
+    if (RequiredArgs)
+      return static_cast<size_t>(*RequiredArgs);
+    return None;
+  }
 
 public:
   /// Constructs a CallDescription object.
@@ -1078,14 +1089,17 @@ public:
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
   CallDescription(int Flags, ArrayRef<const char *> QualifiedName,
-                  Optional<unsigned> RequiredArgs = None)
+                  Optional<unsigned> RequiredArgs = None,
+                  Optional<size_t> RequiredParams = None)
       : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs),
+        RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
         Flags(Flags) {}
 
   /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
-                  Optional<unsigned> RequiredArgs = None)
-      : CallDescription(0, QualifiedName, RequiredArgs) {}
+                  Optional<unsigned> RequiredArgs = None,
+                  Optional<size_t> RequiredParams = None)
+      : CallDescription(0, QualifiedName, RequiredArgs, RequiredParams) {}
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }

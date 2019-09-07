@@ -1,0 +1,3 @@
+settings set interpreter.stop-command-source-on-error false
+bogus
+print 123400000 + 56789

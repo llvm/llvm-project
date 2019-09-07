@@ -3391,10 +3391,6 @@ def note_pointer_declared_here : Note<
 def warn_division_sizeof_ptr : Warning<
   "'%0' will return the size of the pointer, not the array itself">,
   InGroup<DiagGroup<"sizeof-pointer-div">>;
-def warn_division_sizeof_array : Warning<
-  "expresion will return the incorrect number of elements in the array; the array "
-  "element type is %0, not %1">,
-  InGroup<DiagGroup<"sizeof-array-div">>;
 
 def note_function_warning_silence : Note<
     "prefix with the address-of operator to silence this warning">;

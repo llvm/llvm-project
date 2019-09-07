@@ -84,7 +84,7 @@ public:
       listener->Changed();
   }
 
-  bool Delete(KeyType name) {
+  bool Delete(const KeyType &name) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     MapIterator iter = m_map.find(name);
     if (iter == m_map.end())
@@ -102,7 +102,7 @@ public:
       listener->Changed();
   }
 
-  bool Get(KeyType name, ValueSP &entry) {
+  bool Get(const KeyType &name, ValueSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     MapIterator iter = m_map.find(name);
     if (iter == m_map.end())

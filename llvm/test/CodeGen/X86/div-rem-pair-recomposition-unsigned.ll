@@ -15,7 +15,6 @@ define i8 @scalar_i8(i8 %x, i8 %y, i8* %divdst) nounwind {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb %ch
 ; X86-NEXT:    movb %al, (%edx)
 ; X86-NEXT:    mulb %ch
@@ -183,82 +182,66 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst)
 ; X86-NEXT:    movdqa %xmm0, (%esp)
 ; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm2
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm3
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm4
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm2
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3],xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm3
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm4
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm5
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm3
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm5
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    movd %eax, %xmm6
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %edi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzbl %al, %ebx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    movzbl (%esp), %eax
-; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb {{[0-9]+}}(%esp)
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
 ; X86-NEXT:    movd %edx, %xmm4
@@ -312,68 +295,52 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst)
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    movd %eax, %xmm2
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r8d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r9d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r10d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r11d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r14d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r15d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r12d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r13d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %edi
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %esi
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %ebx
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %ebp
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %edx
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movd %r8d, %xmm3
 ; X64-NEXT:    movd %r9d, %xmm4

@@ -18,17 +18,15 @@ define i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    pextrb $1, %xmm0, %eax
+; CHECK-NEXT:    pextrb $1, %xmm0, %ecx
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    pextrb $1, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    pextrb $1, %xmm1, %eax
 ; CHECK-NEXT:    cbtw
+; CHECK-NEXT:    pextrb $0, %xmm0, %edx
+; CHECK-NEXT:    pextrb $0, %xmm1, %esi
 ; CHECK-NEXT:    idivb %cl
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    pextrb $0, %xmm0, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    pextrb $0, %xmm1, %edx
+; CHECK-NEXT:    movsbl %sil, %eax
 ; CHECK-NEXT:    idivb %dl
 ; CHECK-NEXT:    movzbl %cl, %ecx
 ; CHECK-NEXT:    movzbl %al, %eax

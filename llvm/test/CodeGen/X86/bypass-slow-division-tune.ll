@@ -20,7 +20,6 @@ define i32 @div32(i32 %a, i32 %b) {
 ; ATOM-NEXT:    retq
 ; ATOM-NEXT:  .LBB0_1:
 ; ATOM-NEXT:    movzbl %dil, %eax
-; ATOM-NEXT:    # kill: def $eax killed $eax def $ax
 ; ATOM-NEXT:    divb %sil
 ; ATOM-NEXT:    movzbl %al, %eax
 ; ATOM-NEXT:    retq

@@ -9154,29 +9154,17 @@ static void DiagnoseDivisionSizeofPointerOrArray(Sema &S, Expr *LHS, Expr *RHS,
   else
     RHSTy = RUE->getArgumentExpr()->IgnoreParens()->getType();
 
-  if (LHSTy->isPointerType() && !RHSTy->isPointerType()) {
-    if (LHSTy->getPointeeType().getCanonicalType().getUnqualifiedType() !=
-        RHSTy.getCanonicalType().getUnqualifiedType())
-      return;
+  if (!LHSTy->isPointerType() || RHSTy->isPointerType())
+    return;
+  if (LHSTy->getPointeeType().getCanonicalType().getUnqualifiedType() !=
+      RHSTy.getCanonicalType().getUnqualifiedType())
+    return;
 
-    S.Diag(Loc, diag::warn_division_sizeof_ptr) << LHS << LHS->getSourceRange();
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(LHSArg)) {
-      if (const ValueDecl *LHSArgDecl = DRE->getDecl())
-        S.Diag(LHSArgDecl->getLocation(), diag::note_pointer_declared_here)
-            << LHSArgDecl;
-    }
-  } else if (isa<ArrayType>(LHSTy) && !RHSTy->isArrayType()) {
-    QualType ArrayElemTy = cast<ArrayType>(LHSTy)->getElementType();
-    if (isa<ArrayType>(ArrayElemTy) ||
-        ArrayElemTy.getCanonicalType().getUnqualifiedType() ==
-            RHSTy.getCanonicalType().getUnqualifiedType())
-      return;
-    S.Diag(Loc, diag::warn_division_sizeof_array) << ArrayElemTy << RHSTy;
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(LHSArg)) {
-      if (const ValueDecl *LHSArgDecl = DRE->getDecl())
-        S.Diag(LHSArgDecl->getLocation(), diag::note_array_declared_here)
-            << LHSArgDecl;
-    }
+  S.Diag(Loc, diag::warn_division_sizeof_ptr) << LHS << LHS->getSourceRange();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(LHSArg)) {
+    if (const ValueDecl *LHSArgDecl = DRE->getDecl())
+      S.Diag(LHSArgDecl->getLocation(), diag::note_pointer_declared_here)
+          << LHSArgDecl;
   }
 }
 

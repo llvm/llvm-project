@@ -154,8 +154,8 @@ template <> struct CustomMappingTraits<std::set<IFSSymbol>> {
       IO.mapRequired(Sym.Name.c_str(), const_cast<IFSSymbol &>(Sym));
   }
 };
-} // End yaml namespace
-} // End llvm namespace
+} // namespace yaml
+} // namespace llvm
 
 // A cumulative representation of ELF stubs.
 // Both textual and binary stubs will read into and write from this object.
@@ -196,8 +196,8 @@ template <> struct MappingTraits<IFSStub> {
     IO.mapRequired("Symbols", Stub.Symbols);
   }
 };
-} // End yaml namespace
-} // End llvm namespace
+} // namespace yaml
+} // namespace llvm
 
 static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
   // Read in file.
@@ -224,7 +224,7 @@ int writeTbdStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
       [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::Architecture> {
     switch (T.getArch()) {
     default:
-      return createStringError(errc::not_supported, "Invalid Architecture.");
+      return createStringError(errc::not_supported, "Invalid Architecture.\n");
     case llvm::Triple::ArchType::x86:
       return AK_i386;
     case llvm::Triple::ArchType::x86_64:
@@ -236,15 +236,39 @@ int writeTbdStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
     }
   }(T);
 
+  auto PlatformKindOrError =
+      [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformKind> {
+    if (T.isMacOSX())
+      return llvm::MachO::PlatformKind::macOS;
+    if (T.isTvOS())
+      return llvm::MachO::PlatformKind::tvOS;
+    if (T.isWatchOS())
+      return llvm::MachO::PlatformKind::watchOS;
+    // Note: put isiOS last because tvOS and watchOS are also iOS according
+    // to the Triple.
+    if (T.isiOS())
+      return llvm::MachO::PlatformKind::iOS;
+
+    // TODO: Add an option for ForceTriple, but keep ForceFormat for now.
+    if (ForceFormat == "TBD")
+      return llvm::MachO::PlatformKind::macOS;
+
+    return createStringError(errc::not_supported, "Invalid Platform.\n");
+  }(T);
+
   if (!ArchOrError)
     return -1;
 
+  if (!PlatformKindOrError)
+    return -1;
+
   Architecture Arch = ArchOrError.get();
+  PlatformKind Plat = PlatformKindOrError.get();
 
   InterfaceFile File;
-  File.setFileType(FileType::TBD_V3);
+  File.setFileType(FileType::TBD_V3); // Only supporting v3 for now.
   File.setArchitectures(Arch);
-  File.setPlatform(PlatformKind::macOS);
+  File.setPlatform(Plat);
 
   for (const auto &Symbol : Symbols) {
     auto Name = Symbol.Name;
