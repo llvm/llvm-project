@@ -44,9 +44,10 @@ TEST(GlobalsModRef, OptNone) {
   Triple Trip(M->getTargetTriple());
   TargetLibraryInfoImpl TLII(Trip);
   TargetLibraryInfo TLI(TLII);
+  auto GetTLI = [&TLI](Function &F) -> TargetLibraryInfo & { return TLI; };
   llvm::CallGraph CG(*M);
 
-  auto AAR = GlobalsAAResult::analyzeModule(*M, TLI, CG);
+  auto AAR = GlobalsAAResult::analyzeModule(*M, GetTLI, CG);
 
   EXPECT_EQ(FMRB_UnknownModRefBehavior, AAR.getModRefBehavior(&F1));
   EXPECT_EQ(FMRB_DoesNotAccessMemory, AAR.getModRefBehavior(&F2));

@@ -82,7 +82,7 @@ bool ConstantPropagation::runOnFunction(Function &F) {
   bool Changed = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   TargetLibraryInfo *TLI =
-      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   while (!WorkList.empty()) {
     SmallVector<Instruction*, 16> NewWorkListVec;

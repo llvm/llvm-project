@@ -1587,7 +1587,7 @@ bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
   DominatorTreeWrapperPass *DTWP =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   Info.DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   if (Info.PImpl)
     getImpl(Info.PImpl, Info.AC, &DL, Info.DT).clear();

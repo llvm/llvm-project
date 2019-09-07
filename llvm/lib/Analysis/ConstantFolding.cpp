@@ -1773,13 +1773,16 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::log:
         return ConstantFoldFP(log, V, Ty);
       case Intrinsic::log2:
+        // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(Log2, V, Ty);
       case Intrinsic::log10:
+        // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, V, Ty);
       case Intrinsic::exp:
         return ConstantFoldFP(exp, V, Ty);
       case Intrinsic::exp2:
-        return ConstantFoldFP(exp2, V, Ty);
+        // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
+        return ConstantFoldBinaryFP(pow, 2.0, V, Ty);
       case Intrinsic::sin:
         return ConstantFoldFP(sin, V, Ty);
       case Intrinsic::cos:
@@ -1870,6 +1873,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_log10_finite:
     case LibFunc_log10f_finite:
       if (V > 0.0 && TLI->has(Func))
+        // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, V, Ty);
       break;
     case LibFunc_round:
@@ -2037,6 +2041,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       case LibFunc_fmod:
       case LibFunc_fmodf:
         if (TLI->has(Func))
+          // TODO: What about hosts that lack a C99 library?
           return ConstantFoldBinaryFP(fmod, Op1V, Op2V, Ty);
         break;
       case LibFunc_atan2:

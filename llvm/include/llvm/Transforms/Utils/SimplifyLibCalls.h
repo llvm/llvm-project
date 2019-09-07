@@ -126,6 +126,12 @@ private:
   /// Erase an instruction from its parent with our eraser.
   void eraseFromParent(Instruction *I);
 
+  /// Replace an instruction with a value and erase it from its parent.
+  void substituteInParent(Instruction *I, Value *With) {
+    replaceAllUsesWith(I, With);
+    eraseFromParent(I);
+  }
+
   Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B);
 
 public:

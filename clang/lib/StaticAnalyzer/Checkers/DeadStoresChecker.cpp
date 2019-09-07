@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -119,30 +120,37 @@ LookThroughTransitiveAssignmentsAndCommaOperators(const Expr *Ex) {
 }
 
 namespace {
+class DeadStoresChecker : public Checker<check::ASTCodeBody> {
+public:
+  bool ShowFixIts = false;
+  bool WarnForDeadNestedAssignments = true;
+
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
+                        BugReporter &BR) const;
+};
+
 class DeadStoreObs : public LiveVariables::Observer {
   const CFG &cfg;
   ASTContext &Ctx;
   BugReporter& BR;
-  const CheckerBase *Checker;
+  const DeadStoresChecker *Checker;
   AnalysisDeclContext* AC;
   ParentMap& Parents;
   llvm::SmallPtrSet<const VarDecl*, 20> Escaped;
   std::unique_ptr<ReachableCode> reachableCode;
   const CFGBlock *currentBlock;
   std::unique_ptr<llvm::DenseSet<const VarDecl *>> InEH;
-  const bool WarnForDeadNestedAssignments;
 
   enum DeadStoreKind { Standard, Enclosing, DeadIncrement, DeadInit };
 
 public:
   DeadStoreObs(const CFG &cfg, ASTContext &ctx, BugReporter &br,
-               const CheckerBase *checker, AnalysisDeclContext *ac,
+               const DeadStoresChecker *checker, AnalysisDeclContext *ac,
                ParentMap &parents,
                llvm::SmallPtrSet<const VarDecl *, 20> &escaped,
                bool warnForDeadNestedAssignments)
       : cfg(cfg), Ctx(ctx), BR(br), Checker(checker), AC(ac), Parents(parents),
-        Escaped(escaped), currentBlock(nullptr),
-        WarnForDeadNestedAssignments(warnForDeadNestedAssignments) {}
+        Escaped(escaped), currentBlock(nullptr) {}
 
   ~DeadStoreObs() override {}
 
@@ -205,12 +213,32 @@ public:
     llvm::raw_svector_ostream os(buf);
     const char *BugType = nullptr;
 
+    SmallVector<FixItHint, 1> Fixits;
+
     switch (dsk) {
-      case DeadInit:
+      case DeadInit: {
         BugType = "Dead initialization";
         os << "Value stored to '" << *V
            << "' during its initialization is never read";
+
+        ASTContext &ACtx = V->getASTContext();
+        if (Checker->ShowFixIts) {
+          if (V->getInit()->HasSideEffects(ACtx,
+                                           /*IncludePossibleEffects=*/true)) {
+            break;
+          }
+          SourceManager &SM = ACtx.getSourceManager();
+          const LangOptions &LO = ACtx.getLangOpts();
+          SourceLocation L1 =
+              Lexer::findNextToken(
+                  V->getTypeSourceInfo()->getTypeLoc().getEndLoc(),
+                  SM, LO)->getEndLoc();
+          SourceLocation L2 =
+              Lexer::getLocForEndOfToken(V->getInit()->getEndLoc(), 1, SM, LO);
+          Fixits.push_back(FixItHint::CreateRemoval({L1, L2}));
+        }
         break;
+      }
 
       case DeadIncrement:
         BugType = "Dead increment";
@@ -222,7 +250,7 @@ public:
 
       // eg.: f((x = foo()))
       case Enclosing:
-        if (!WarnForDeadNestedAssignments)
+        if (!Checker->WarnForDeadNestedAssignments)
           return;
         BugType = "Dead nested assignment";
         os << "Although the value stored to '" << *V
@@ -233,7 +261,7 @@ public:
     }
 
     BR.EmitBasicReport(AC->getDecl(), Checker, BugType, "Dead store", os.str(),
-                       L, R);
+                       L, R, Fixits);
   }
 
   void CheckVarDecl(const VarDecl *VD, const Expr *Ex, const Expr *Val,
@@ -479,42 +507,37 @@ public:
 // DeadStoresChecker
 //===----------------------------------------------------------------------===//
 
-namespace {
-class DeadStoresChecker : public Checker<check::ASTCodeBody> {
-public:
-  bool WarnForDeadNestedAssignments = true;
+void DeadStoresChecker::checkASTCodeBody(const Decl *D, AnalysisManager &mgr,
+                                         BugReporter &BR) const {
 
-  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
-                        BugReporter &BR) const {
+  // Don't do anything for template instantiations.
+  // Proving that code in a template instantiation is "dead"
+  // means proving that it is dead in all instantiations.
+  // This same problem exists with -Wunreachable-code.
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->isTemplateInstantiation())
+      return;
 
-    // Don't do anything for template instantiations.
-    // Proving that code in a template instantiation is "dead"
-    // means proving that it is dead in all instantiations.
-    // This same problem exists with -Wunreachable-code.
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-      if (FD->isTemplateInstantiation())
-        return;
-
-    if (LiveVariables *L = mgr.getAnalysis<LiveVariables>(D)) {
-      CFG &cfg = *mgr.getCFG(D);
-      AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D);
-      ParentMap &pmap = mgr.getParentMap(D);
-      FindEscaped FS;
-      cfg.VisitBlockStmts(FS);
-      DeadStoreObs A(cfg, BR.getContext(), BR, this, AC, pmap, FS.Escaped,
-                     WarnForDeadNestedAssignments);
-      L->runOnAllBlocks(A);
-    }
+  if (LiveVariables *L = mgr.getAnalysis<LiveVariables>(D)) {
+    CFG &cfg = *mgr.getCFG(D);
+    AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D);
+    ParentMap &pmap = mgr.getParentMap(D);
+    FindEscaped FS;
+    cfg.VisitBlockStmts(FS);
+    DeadStoreObs A(cfg, BR.getContext(), BR, this, AC, pmap, FS.Escaped,
+                   WarnForDeadNestedAssignments);
+    L->runOnAllBlocks(A);
   }
-};
 }
 
 void ento::registerDeadStoresChecker(CheckerManager &Mgr) {
-  auto Chk = Mgr.registerChecker<DeadStoresChecker>();
+  auto *Chk = Mgr.registerChecker<DeadStoresChecker>();
 
   const AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
   Chk->WarnForDeadNestedAssignments =
       AnOpts.getCheckerBooleanOption(Chk, "WarnForDeadNestedAssignments");
+  Chk->ShowFixIts =
+      AnOpts.getCheckerBooleanOption(Chk, "ShowFixIts");
 }
 
 bool ento::shouldRegisterDeadStoresChecker(const LangOptions &LO) {

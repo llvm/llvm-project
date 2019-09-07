@@ -65,20 +65,21 @@ private:
                                StringRef fmt, size_t num_ops) const;
 
   bool shouldPrintAsStr(char Specifier, Type *OpType) const;
-  bool lowerPrintfForGpu(Module &M);
+  bool
+  lowerPrintfForGpu(Module &M,
+                    function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
   }
 
-  Value *simplify(Instruction *I) {
+  Value *simplify(Instruction *I, const TargetLibraryInfo *TLI) {
     return SimplifyInstruction(I, {*TD, TLI, DT});
   }
 
   const DataLayout *TD;
   const DominatorTree *DT;
-  const TargetLibraryInfo *TLI;
   SmallVector<Value *, 32> Printfs;
 };
 } // namespace
@@ -102,7 +103,7 @@ ModulePass *createAMDGPUPrintfRuntimeBinding() {
 } // namespace llvm
 
 AMDGPUPrintfRuntimeBinding::AMDGPUPrintfRuntimeBinding()
-    : ModulePass(ID), TD(nullptr), DT(nullptr), TLI(nullptr) {
+    : ModulePass(ID), TD(nullptr), DT(nullptr) {
   initializeAMDGPUPrintfRuntimeBindingPass(*PassRegistry::getPassRegistry());
 }
 
@@ -152,7 +153,8 @@ bool AMDGPUPrintfRuntimeBinding::shouldPrintAsStr(char Specifier,
   return ElemIType->getBitWidth() == 8;
 }
 
-bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
+bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
+    Module &M, function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> Builder(Ctx);
   Type *I32Ty = Type::getInt32Ty(Ctx);
@@ -179,7 +181,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
     }
 
     if (auto I = dyn_cast<Instruction>(Op)) {
-      Value *Op_simplified = simplify(I);
+      Value *Op_simplified = simplify(I, &GetTLI(*I->getFunction()));
       if (Op_simplified)
         Op = Op_simplified;
     }
@@ -585,7 +587,9 @@ bool AMDGPUPrintfRuntimeBinding::runOnModule(Module &M) {
   TD = &M.getDataLayout();
   auto DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
+    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  };
 
-  return lowerPrintfForGpu(M);
+  return lowerPrintfForGpu(M, GetTLI);
 }

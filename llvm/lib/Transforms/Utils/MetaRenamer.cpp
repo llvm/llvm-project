@@ -121,15 +121,14 @@ namespace {
       }
 
       // Rename all functions
-      const TargetLibraryInfo &TLI =
-          getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
       for (auto &F : M) {
         StringRef Name = F.getName();
         LibFunc Tmp;
         // Leave library functions alone because their presence or absence could
         // affect the behavior of other passes.
         if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
-            TLI.getLibFunc(F, Tmp))
+            getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F).getLibFunc(
+                F, Tmp))
           continue;
 
         // Leave @main alone. The output of -metarenamer might be passed to
