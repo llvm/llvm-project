@@ -71,6 +71,7 @@
 #include "swift/SIL/SILDebuggerClient.h"
 #include "swift/SIL/SILFunction.h"
 #include "swift/SIL/SILModule.h"
+#include "swift/SIL/TypeLowering.h"
 #include "swift/SILOptimizer/PassManager/Passes.h"
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include "swift/Subsystems.h"
@@ -1633,8 +1634,14 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         variable_map[name] = *var_info;
       }
 
+  // FIXME: Should share TypeConverter instances
+  std::unique_ptr<swift::Lowering::TypeConverter> sil_types(
+      new swift::Lowering::TypeConverter(
+          *parsed_expr->source_file.getParentModule()));
+
   std::unique_ptr<swift::SILModule> sil_module(swift::performSILGeneration(
-      parsed_expr->source_file, swift_ast_ctx->GetSILOptions()));
+      parsed_expr->source_file, *sil_types,
+      swift_ast_ctx->GetSILOptions()));
 
   if (log) {
     std::string s;
