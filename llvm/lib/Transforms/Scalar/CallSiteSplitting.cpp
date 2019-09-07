@@ -562,7 +562,7 @@ struct CallSiteSplittingLegacyPass : public FunctionPass {
     if (skipFunction(F))
       return false;
 
-    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     return doCallSiteSplitting(F, TLI, TTI, DT);

@@ -1014,7 +1014,8 @@ void BranchProbabilityInfoWrapperPass::getAnalysisUsage(
 
 bool BranchProbabilityInfoWrapperPass::runOnFunction(Function &F) {
   const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  const TargetLibraryInfo &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  const TargetLibraryInfo &TLI =
+      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   BPI.calculate(F, LI, &TLI);
   return false;
 }

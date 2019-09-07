@@ -214,6 +214,8 @@ TEST(DummyRPC, TestCallAsyncVoidBool) {
     EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
   }
 
+  ServerThread.join();
+
   // The client should have made two calls to send: One implicit call to
   // negotiate the VoidBool function key, and a second to make the VoidBool
   // call.
@@ -224,8 +226,6 @@ TEST(DummyRPC, TestCallAsyncVoidBool) {
   // the negotiate call, and another to send the response to the VoidBool call.
   EXPECT_EQ(Channels.second->SendCalls, 2U)
       << "Expected two send calls to have been made by server";
-
-  ServerThread.join();
 }
 
 TEST(DummyRPC, TestCallAsyncIntInt) {

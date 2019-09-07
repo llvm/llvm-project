@@ -217,7 +217,8 @@ public:
     LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+            *L->getHeader()->getParent());
     const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
             *L->getHeader()->getParent());

@@ -24,6 +24,7 @@
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-CGSCC-PASS-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
@@ -410,6 +411,7 @@
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>

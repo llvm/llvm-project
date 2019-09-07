@@ -7,7 +7,7 @@
 ; RUN: llvm-readobj --dyn-syms %t | FileCheck %s
 
 ; CHECK:      Name:     __progname
-; CHECK-NEXT: Value:    0x201010
+; CHECK-NEXT: Value:
 ; CHECK-NEXT: Size:     1
 ; CHECK-NEXT: Binding:  Global (0x1)
 ; CHECK-NEXT: Type:     Function

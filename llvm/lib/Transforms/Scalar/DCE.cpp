@@ -47,7 +47,7 @@ namespace {
       if (skipBasicBlock(BB))
         return false;
       auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-      TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI() : nullptr;
+      TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(*BB.getParent()) : nullptr;
       bool Changed = false;
       for (BasicBlock::iterator DI = BB.begin(); DI != BB.end(); ) {
         Instruction *Inst = &*DI++;
@@ -154,7 +154,7 @@ struct DCELegacyPass : public FunctionPass {
       return false;
 
     auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI() : nullptr;
+    TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
 
     return eliminateDeadCode(F, TLI);
   }

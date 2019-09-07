@@ -37,7 +37,7 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: bar
-; CHECK-NEXT:     Value: 0x201010
+; CHECK-NEXT:     Value:
 ; CHECK-NEXT:     Size: 8
 ; CHECK-NEXT:     Binding: Local (0x0)
 ; CHECK-NEXT:     Type: Function (0x2)
@@ -48,7 +48,7 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: foo
-; CHECK-NEXT:     Value: 0x201000
+; CHECK-NEXT:     Value:
 ; CHECK-NEXT:     Size: 8
 ; CHECK-NEXT:     Binding: Global (0x1)
 ; CHECK-NEXT:     Type: Function (0x2)

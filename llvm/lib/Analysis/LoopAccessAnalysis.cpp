@@ -2420,7 +2420,7 @@ void LoopAccessLegacyAnalysis::print(raw_ostream &OS, const Module *M) const {
 bool LoopAccessLegacyAnalysis::runOnFunction(Function &F) {
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  TLI = TLIP ? &TLIP->getTLI() : nullptr;
+  TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();

@@ -51,7 +51,7 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  RegBankSelect
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-O0-NEXT:  Localizer
+; ENABLED-NEXT:  Localizer
 ; VERIFY-O0-NEXT:   Verify generated machine code
 ; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-NEXT:  InstructionSelect

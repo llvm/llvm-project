@@ -155,7 +155,8 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
 /// Given a value that is stored to a global but never read, determine whether
 /// it's safe to remove the store and the chain of computation that feeds the
 /// store.
-static bool IsSafeComputationToRemove(Value *V, const TargetLibraryInfo *TLI) {
+static bool IsSafeComputationToRemove(
+    Value *V, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   do {
     if (isa<Constant>(V))
       return true;
@@ -164,7 +165,7 @@ static bool IsSafeComputationToRemove(Value *V, const TargetLibraryInfo *TLI) {
     if (isa<LoadInst>(V) || isa<InvokeInst>(V) || isa<Argument>(V) ||
         isa<GlobalValue>(V))
       return false;
-    if (isAllocationFn(V, TLI))
+    if (isAllocationFn(V, GetTLI))
       return true;
 
     Instruction *I = cast<Instruction>(V);
@@ -184,8 +185,9 @@ static bool IsSafeComputationToRemove(Value *V, const TargetLibraryInfo *TLI) {
 /// This GV is a pointer root.  Loop over all users of the global and clean up
 /// any that obviously don't assign the global a value that isn't dynamically
 /// allocated.
-static bool CleanupPointerRootUsers(GlobalVariable *GV,
-                                    const TargetLibraryInfo *TLI) {
+static bool
+CleanupPointerRootUsers(GlobalVariable *GV,
+                        function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // A brief explanation of leak checkers.  The goal is to find bugs where
   // pointers are forgotten, causing an accumulating growth in memory
   // usage over time.  The common strategy for leak checkers is to whitelist the
@@ -241,18 +243,18 @@ static bool CleanupPointerRootUsers(GlobalVariable *GV,
         C->destroyConstant();
         // This could have invalidated UI, start over from scratch.
         Dead.clear();
-        CleanupPointerRootUsers(GV, TLI);
+        CleanupPointerRootUsers(GV, GetTLI);
         return true;
       }
     }
   }
 
   for (int i = 0, e = Dead.size(); i != e; ++i) {
-    if (IsSafeComputationToRemove(Dead[i].first, TLI)) {
+    if (IsSafeComputationToRemove(Dead[i].first, GetTLI)) {
       Dead[i].second->eraseFromParent();
       Instruction *I = Dead[i].first;
       do {
-        if (isAllocationFn(I, TLI))
+        if (isAllocationFn(I, GetTLI))
           break;
         Instruction *J = dyn_cast<Instruction>(I->getOperand(0));
         if (!J)
@@ -270,9 +272,9 @@ static bool CleanupPointerRootUsers(GlobalVariable *GV,
 /// We just marked GV constant.  Loop over all users of the global, cleaning up
 /// the obvious ones.  This is largely just a quick scan over the use list to
 /// clean up the easy and obvious cruft.  This returns true if it made a change.
-static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
-                                       const DataLayout &DL,
-                                       TargetLibraryInfo *TLI) {
+static bool CleanupConstantGlobalUsers(
+    Value *V, Constant *Init, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   bool Changed = false;
   // Note that we need to use a weak value handle for the worklist items. When
   // we delete a constant array, we may also be holding pointer to one of its
@@ -302,12 +304,12 @@ static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
         Constant *SubInit = nullptr;
         if (Init)
           SubInit = ConstantFoldLoadThroughGEPConstantExpr(Init, CE);
-        Changed |= CleanupConstantGlobalUsers(CE, SubInit, DL, TLI);
+        Changed |= CleanupConstantGlobalUsers(CE, SubInit, DL, GetTLI);
       } else if ((CE->getOpcode() == Instruction::BitCast &&
                   CE->getType()->isPointerTy()) ||
                  CE->getOpcode() == Instruction::AddrSpaceCast) {
         // Pointer cast, delete any stores and memsets to the global.
-        Changed |= CleanupConstantGlobalUsers(CE, nullptr, DL, TLI);
+        Changed |= CleanupConstantGlobalUsers(CE, nullptr, DL, GetTLI);
       }
 
       if (CE->use_empty()) {
@@ -321,7 +323,7 @@ static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
       Constant *SubInit = nullptr;
       if (!isa<ConstantExpr>(GEP->getOperand(0))) {
         ConstantExpr *CE = dyn_cast_or_null<ConstantExpr>(
-            ConstantFoldInstruction(GEP, DL, TLI));
+            ConstantFoldInstruction(GEP, DL, &GetTLI(*GEP->getFunction())));
         if (Init && CE && CE->getOpcode() == Instruction::GetElementPtr)
           SubInit = ConstantFoldLoadThroughGEPConstantExpr(Init, CE);
 
@@ -331,7 +333,7 @@ static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
         if (Init && isa<ConstantAggregateZero>(Init) && GEP->isInBounds())
           SubInit = Constant::getNullValue(GEP->getResultElementType());
       }
-      Changed |= CleanupConstantGlobalUsers(GEP, SubInit, DL, TLI);
+      Changed |= CleanupConstantGlobalUsers(GEP, SubInit, DL, GetTLI);
 
       if (GEP->use_empty()) {
         GEP->eraseFromParent();
@@ -348,7 +350,7 @@ static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
       // us, and if they are all dead, nuke them without remorse.
       if (isSafeToDestroyConstant(C)) {
         C->destroyConstant();
-        CleanupConstantGlobalUsers(V, Init, DL, TLI);
+        CleanupConstantGlobalUsers(V, Init, DL, GetTLI);
         return true;
       }
     }
@@ -745,9 +747,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
 /// are uses of the loaded value that would trap if the loaded value is
 /// dynamically null, then we know that they cannot be reachable with a null
 /// optimize away the load.
-static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV,
-                                            const DataLayout &DL,
-                                            TargetLibraryInfo *TLI) {
+static bool OptimizeAwayTrappingUsesOfLoads(
+    GlobalVariable *GV, Constant *LV, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   bool Changed = false;
 
   // Keep track of whether we are able to remove all the uses of the global
@@ -793,10 +795,10 @@ static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV,
   // nor is the global.
   if (AllNonStoreUsesGone) {
     if (isLeakCheckerRoot(GV)) {
-      Changed |= CleanupPointerRootUsers(GV, TLI);
+      Changed |= CleanupPointerRootUsers(GV, GetTLI);
     } else {
       Changed = true;
-      CleanupConstantGlobalUsers(GV, nullptr, DL, TLI);
+      CleanupConstantGlobalUsers(GV, nullptr, DL, GetTLI);
     }
     if (GV->use_empty()) {
       LLVM_DEBUG(dbgs() << "  *** GLOBAL NOW DEAD!\n");
@@ -1562,10 +1564,10 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
 
 // Try to optimize globals based on the knowledge that only one value (besides
 // its initializer) is ever stored to the global.
-static bool optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
-                                     AtomicOrdering Ordering,
-                                     const DataLayout &DL,
-                                     TargetLibraryInfo *TLI) {
+static bool
+optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
+                         AtomicOrdering Ordering, const DataLayout &DL,
+                         function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // Ignore no-op GEPs and bitcasts.
   StoredOnceVal = StoredOnceVal->stripPointerCasts();
 
@@ -1583,9 +1585,10 @@ static bool optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
         SOVC = ConstantExpr::getBitCast(SOVC, GV->getInitializer()->getType());
 
       // Optimize away any trapping uses of the loaded value.
-      if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, TLI))
+      if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
         return true;
-    } else if (CallInst *CI = extractMallocCall(StoredOnceVal, TLI)) {
+    } else if (CallInst *CI = extractMallocCall(StoredOnceVal, GetTLI)) {
+      auto *TLI = &GetTLI(*CI->getFunction());
       Type *MallocType = getMallocAllocatedType(CI, TLI);
       if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
                                                            Ordering, DL, TLI))
@@ -1916,9 +1919,10 @@ static void makeAllConstantUsesInstructions(Constant *C) {
 
 /// Analyze the specified global variable and optimize
 /// it if possible.  If we make a change, return true.
-static bool processInternalGlobal(
-    GlobalVariable *GV, const GlobalStatus &GS, TargetLibraryInfo *TLI,
-    function_ref<DominatorTree &(Function &)> LookupDomTree) {
+static bool
+processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
+                      function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                      function_ref<DominatorTree &(Function &)> LookupDomTree) {
   auto &DL = GV->getParent()->getDataLayout();
   // If this is a first class global and has only one accessing function and
   // this function is non-recursive, we replace the global with a local alloca
@@ -1965,11 +1969,12 @@ static bool processInternalGlobal(
     bool Changed;
     if (isLeakCheckerRoot(GV)) {
       // Delete any constant stores to the global.
-      Changed = CleanupPointerRootUsers(GV, TLI);
+      Changed = CleanupPointerRootUsers(GV, GetTLI);
     } else {
       // Delete any stores we can find to the global.  We may not be able to
       // make it completely dead though.
-      Changed = CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, TLI);
+      Changed =
+          CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
     }
 
     // If the global is dead now, delete it.
@@ -1991,7 +1996,7 @@ static bool processInternalGlobal(
       GV->setConstant(true);
 
     // Clean up any obviously simplifiable users now.
-    CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, TLI);
+    CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
 
     // If the global is dead now, just nuke it.
     if (GV->use_empty()) {
@@ -2021,7 +2026,7 @@ static bool processInternalGlobal(
         GV->setInitializer(SOVConstant);
 
         // Clean up any obviously simplifiable users now.
-        CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, TLI);
+        CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
 
         if (GV->use_empty()) {
           LLVM_DEBUG(dbgs() << "   *** Substituting initializer allowed us to "
@@ -2035,7 +2040,8 @@ static bool processInternalGlobal(
 
     // Try to optimize globals based on the knowledge that only one value
     // (besides its initializer) is ever stored to the global.
-    if (optimizeOnceStoredGlobal(GV, GS.StoredOnceValue, GS.Ordering, DL, TLI))
+    if (optimizeOnceStoredGlobal(GV, GS.StoredOnceValue, GS.Ordering, DL,
+                                 GetTLI))
       return true;
 
     // Otherwise, if the global was not a boolean, we can shrink it to be a
@@ -2056,7 +2062,8 @@ static bool processInternalGlobal(
 /// Analyze the specified global variable and optimize it if possible.  If we
 /// make a change, return true.
 static bool
-processGlobal(GlobalValue &GV, TargetLibraryInfo *TLI,
+processGlobal(GlobalValue &GV,
+              function_ref<TargetLibraryInfo &(Function &)> GetTLI,
               function_ref<DominatorTree &(Function &)> LookupDomTree) {
   if (GV.getName().startswith("llvm."))
     return false;
@@ -2088,7 +2095,7 @@ processGlobal(GlobalValue &GV, TargetLibraryInfo *TLI,
   if (GVar->isConstant() || !GVar->hasInitializer())
     return Changed;
 
-  return processInternalGlobal(GVar, GS, TLI, LookupDomTree) || Changed;
+  return processInternalGlobal(GVar, GS, GetTLI, LookupDomTree) || Changed;
 }
 
 /// Walk all of the direct calls of the specified function, changing them to
@@ -2236,7 +2243,8 @@ hasOnlyColdCalls(Function &F,
 }
 
 static bool
-OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
+OptimizeFunctions(Module &M,
+                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                   function_ref<TargetTransformInfo &(Function &)> GetTTI,
                   function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                   function_ref<DominatorTree &(Function &)> LookupDomTree,
@@ -2287,7 +2295,7 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
       }
     }
 
-    Changed |= processGlobal(*F, TLI, LookupDomTree);
+    Changed |= processGlobal(*F, GetTLI, LookupDomTree);
 
     if (!F->hasLocalLinkage())
       continue;
@@ -2344,7 +2352,8 @@ OptimizeFunctions(Module &M, TargetLibraryInfo *TLI,
 }
 
 static bool
-OptimizeGlobalVars(Module &M, TargetLibraryInfo *TLI,
+OptimizeGlobalVars(Module &M,
+                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                    function_ref<DominatorTree &(Function &)> LookupDomTree,
                    SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   bool Changed = false;
@@ -2359,7 +2368,10 @@ OptimizeGlobalVars(Module &M, TargetLibraryInfo *TLI,
     if (GV->hasInitializer())
       if (auto *C = dyn_cast<Constant>(GV->getInitializer())) {
         auto &DL = M.getDataLayout();
-        Constant *New = ConstantFoldConstant(C, DL, TLI);
+        // TLI is not used in the case of a Constant, so use default nullptr
+        // for that optional parameter, since we don't have a Function to
+        // provide GetTLI anyway.
+        Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
         if (New && New != C)
           GV->setInitializer(New);
       }
@@ -2369,7 +2381,7 @@ OptimizeGlobalVars(Module &M, TargetLibraryInfo *TLI,
       continue;
     }
 
-    Changed |= processGlobal(*GV, TLI, LookupDomTree);
+    Changed |= processGlobal(*GV, GetTLI, LookupDomTree);
   }
   return Changed;
 }
@@ -2811,7 +2823,14 @@ OptimizeGlobalAliases(Module &M,
   return Changed;
 }
 
-static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
+static Function *
+FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+  // Hack to get a default TLI before we have actual Function.
+  auto FuncIter = M.begin();
+  if (FuncIter == M.end())
+    return nullptr;
+  auto *TLI = &GetTLI(*FuncIter);
+
   LibFunc F = LibFunc_cxa_atexit;
   if (!TLI->has(F))
     return nullptr;
@@ -2819,6 +2838,9 @@ static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
   Function *Fn = M.getFunction(TLI->getName(F));
   if (!Fn)
     return nullptr;
+
+  // Now get the actual TLI for Fn.
+  TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
   if (!TLI->getLibFunc(*Fn, F) || F != LibFunc_cxa_atexit)
@@ -2891,7 +2913,8 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 }
 
 static bool optimizeGlobalsInModule(
-    Module &M, const DataLayout &DL, TargetLibraryInfo *TLI,
+    Module &M, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<TargetTransformInfo &(Function &)> GetTTI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     function_ref<DominatorTree &(Function &)> LookupDomTree) {
@@ -2916,24 +2939,24 @@ static bool optimizeGlobalsInModule(
           NotDiscardableComdats.insert(C);
 
     // Delete functions that are trivially dead, ccc -> fastcc
-    LocalChange |= OptimizeFunctions(M, TLI, GetTTI, GetBFI, LookupDomTree,
+    LocalChange |= OptimizeFunctions(M, GetTLI, GetTTI, GetBFI, LookupDomTree,
                                      NotDiscardableComdats);
 
     // Optimize global_ctors list.
     LocalChange |= optimizeGlobalCtorsList(M, [&](Function *F) {
-      return EvaluateStaticConstructor(F, DL, TLI);
+      return EvaluateStaticConstructor(F, DL, &GetTLI(*F));
     });
 
     // Optimize non-address-taken globals.
-    LocalChange |= OptimizeGlobalVars(M, TLI, LookupDomTree,
-                                      NotDiscardableComdats);
+    LocalChange |=
+        OptimizeGlobalVars(M, GetTLI, LookupDomTree, NotDiscardableComdats);
 
     // Resolve aliases, when possible.
     LocalChange |= OptimizeGlobalAliases(M, NotDiscardableComdats);
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    Function *CXAAtExitFn = FindCXAAtExit(M, TLI);
+    Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
     if (CXAAtExitFn)
       LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
 
@@ -2948,11 +2971,13 @@ static bool optimizeGlobalsInModule(
 
 PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     auto &DL = M.getDataLayout();
-    auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto LookupDomTree = [&FAM](Function &F) -> DominatorTree &{
       return FAM.getResult<DominatorTreeAnalysis>(F);
+    };
+    auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
+      return FAM.getResult<TargetLibraryAnalysis>(F);
     };
     auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
       return FAM.getResult<TargetIRAnalysis>(F);
@@ -2962,7 +2987,7 @@ PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
       return FAM.getResult<BlockFrequencyAnalysis>(F);
     };
 
-    if (!optimizeGlobalsInModule(M, DL, &TLI, GetTTI, GetBFI, LookupDomTree))
+    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
 }
@@ -2981,9 +3006,11 @@ struct GlobalOptLegacyPass : public ModulePass {
       return false;
 
     auto &DL = M.getDataLayout();
-    auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     auto LookupDomTree = [this](Function &F) -> DominatorTree & {
       return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    };
+    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
+      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     };
     auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
       return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
@@ -2993,7 +3020,8 @@ struct GlobalOptLegacyPass : public ModulePass {
       return this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
     };
 
-    return optimizeGlobalsInModule(M, DL, TLI, GetTTI, GetBFI, LookupDomTree);
+    return optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI,
+                                   LookupDomTree);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

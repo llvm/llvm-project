@@ -254,7 +254,7 @@ namespace {
 
       SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
       AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-      TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+      TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
       DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
       auto &TPC = getAnalysis<TargetPassConfig>();
 

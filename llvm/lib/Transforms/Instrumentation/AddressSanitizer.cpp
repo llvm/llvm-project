@@ -721,7 +721,7 @@ public:
     GlobalsMetadata &GlobalsMD =
         getAnalysis<ASanGlobalsMetadataWrapperPass>().getGlobalsMD();
     const TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     AddressSanitizer ASan(*F.getParent(), GlobalsMD, CompileKernel, Recover,
                           UseAfterScope);
     return ASan.instrumentFunction(F, TLI);
