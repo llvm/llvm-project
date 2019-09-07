@@ -1420,12 +1420,12 @@ void CilkSanitizerImpl::Instrumentor::InsertArgSuppressionFlags(
     // Create a new flag for this argument suppression.
     Value *NewFlag = IRB.CreateAlloca(getSuppressionIRValue(IRB, 0)->getType(),
                                       Arg.getType()->getPointerAddressSpace());
+    Value *FinalSV;
     // If this function is main, then it has no ancestors that can create races.
-    if (F.getName() == "main")
-      IRB.CreateStore(
-          getSuppressionIRValue(IRB, RaceTypeToFlagVal(RaceInfo::None)),
-          NewFlag);
-    else {
+    if (F.getName() == "main") {
+      FinalSV = getSuppressionIRValue(IRB, RaceTypeToFlagVal(RaceInfo::None));
+      IRB.CreateStore(FinalSV, NewFlag);
+    } else {
       // Call the runtime function to set the value of this flag.
       IRB.CreateCall(CilkSanImpl.GetSuppressionFlag, {NewFlag, FuncId,
                                                       IRB.getInt8(ArgIdx)});
@@ -1446,25 +1446,31 @@ void CilkSanitizerImpl::Instrumentor::InsertArgSuppressionFlags(
         ModRefInfo ArgMR = RI.GetObjectMRForRace(&Arg);
         // TODO: Possibly make these checks more precise using information we
         // get from instrumenting functions previously.
-        if (isRefSet(ArgMR))
+        if (isRefSet(ArgMR)) {
+          LLVM_DEBUG(dbgs() << "  Setting Mod\n");
           // If ref is set, then race detection found a local instruction that
           // might write arg, so we assume arg is modified.
           LocalSV |= static_cast<unsigned>(SuppressionVal::Mod);
-        if (isModSet(ArgMR))
+        }
+        if (isModSet(ArgMR)) {
+          LLVM_DEBUG(dbgs() << "  Setting Ref\n");
           // If mod is set, then race detection found a local instruction that
           // might read or write  arg, so we assume arg is read.
           LocalSV |= static_cast<unsigned>(SuppressionVal::Ref);
+        }
       }
       // Store this local suppression value.
-      IRB.CreateStore(IRB.CreateOr(getSuppressionIRValue(IRB, LocalSV),
-                                   IRB.CreateLoad(NewFlag)), NewFlag);
-
+      FinalSV = IRB.CreateOr(getSuppressionIRValue(IRB, LocalSV),
+                             IRB.CreateLoad(NewFlag));
+      IRB.CreateStore(FinalSV, NewFlag);
     }
     // Associate this flag with the argument for future lookups.
     LLVM_DEBUG(dbgs() << "Recording local suppression for arg " << Arg << ": "
                << *NewFlag << "\n");
-    LocalSuppressions[&Arg] = NewFlag;
-    ArgSuppressionFlags.insert(NewFlag);
+    // LocalSuppressions[&Arg] = NewFlag;
+    // ArgSuppressionFlags.insert(NewFlag);
+    LocalSuppressions[&Arg] = FinalSV;
+    ArgSuppressionFlags.insert(FinalSV);
     ++ArgIdx;
   }
 
@@ -1704,7 +1710,18 @@ Value *CilkSanitizerImpl::Instrumentor::readSuppressionVal(Value *V,
   // cast<Instruction>(Load)->setMetadata(LLVMContext::MD_invariant_load, MD);
 
   // TODO: See if there's a better way to annotate this load for optimization.
-  return IRB.CreateLoad(V);
+  // LoadInst *I = IRB.CreateLoad(V);
+  // if (auto *IMD = I->getMetadata(LLVMContext::MD_invariant_group))
+  //   I->setMetadata(LLVMContext::MD_invariant_group, IMD);
+  // else
+  //   I->setMetadata(LLVMContext::MD_invariant_group,
+  //                  MDNode::get(IRB.getContext(), {}));
+  Value *SV;
+  if (isa<AllocaInst>(V))
+    SV = IRB.CreateLoad(V);
+  else
+    SV = V;
+  return SV;
 }
 
 // Get the memory location for this instruction and operand.
