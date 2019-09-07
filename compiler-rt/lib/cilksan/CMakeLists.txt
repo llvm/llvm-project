@@ -4,11 +4,11 @@ set(CILKSAN_SOURCES
   cilksan.cpp
   debug_util.cpp
   print_addr.cpp
-  shadow_mem.cpp
   drivercsan.cpp
   csanrt.cpp)
   # mem_access.cpp
   # compresseddict_shadow_mem.cpp
+  # shadow_mem.cpp
   # static_dictionary.cpp
 
 include_directories(${COMPILER_RT_SOURCE_DIR}/include)

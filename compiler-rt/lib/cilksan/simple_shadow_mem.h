@@ -9,10 +9,8 @@
 #include "cilksan_internal.h"
 #include "debug_util.h"
 #include "dictionary.h"
-#include "shadow_mem.h"
 #include "shadow_mem_allocator.h"
 
-extern CilkSanImpl_t CilkSanImpl;
 static const unsigned ReadMAAllocator = 0;
 static const unsigned WriteMAAllocator = 1;
 static const unsigned AllocMAAllocator = 2;
@@ -108,6 +106,7 @@ private:
     }
 
     // Get the chunk after this chunk whose address is grainsize-aligned.
+    __attribute__((always_inline))
     Chunk_t next(unsigned lgGrainsize) const {
       cilksan_assert(((lgGrainsize == (LG_PAGE_SIZE + LG_LINE_SIZE)) ||
                       (lgGrainsize <= LG_LINE_SIZE)) && "Invalid lgGrainsize");
@@ -120,6 +119,7 @@ private:
     }
 
     // Returns true if this Chunk_t is entirely contained within the line.
+    __attribute__((always_inline))
     bool withinLine() const {
       uintptr_t nextLineAddr = alignByNextGrainsize(addr, LG_LINE_SIZE);
       return ((addr + size) < nextLineAddr);
@@ -127,6 +127,7 @@ private:
 
     // Returns the last byte address within this Chunk_t that lies within the
     // line.
+    __attribute__((always_inline))
     uintptr_t endAddrForLine() const {
       if (!withinLine())
         return alignByNextGrainsize(addr, LG_LINE_SIZE) - 1;
@@ -134,6 +135,7 @@ private:
     }
 
     // Computes a LgGrainsize for this Chunk_t based on its start and end.
+    __attribute__((always_inline))
     uintptr_t getLgGrainsize() const {
       cilksan_assert(0 != addr && "Chunk defined on null address.");
       // Compute the lg grainsize implied by addr.
@@ -199,17 +201,20 @@ private:
       return reinterpret_cast<MemoryAccess_t *>(
           reinterpret_cast<uintptr_t>(MemAccsPtr) & MemAccsMask);
     }
+    __attribute__((always_inline))
     void setMemAccs(MemoryAccess_t *newMemAccs) {
       MemAccsPtr = reinterpret_cast<MemoryAccess_t *>(
           (reinterpret_cast<uintptr_t>(MemAccsPtr) & ~MemAccsMask) |
           (reinterpret_cast<uintptr_t>(newMemAccs) & MemAccsMask));
     }
+    __attribute__((always_inline))
     void setLgGrainsize(unsigned newLgGrainsize) {
       MemAccsPtr = reinterpret_cast<MemoryAccess_t *>(
           (reinterpret_cast<uintptr_t>(MemAccsPtr) &
            ~(MetadataFieldMask << LgGrainsizeRShift)) | 
           (static_cast<uintptr_t>(newLgGrainsize) << LgGrainsizeRShift));
     }
+    __attribute__((always_inline))
     void scaleNumNonNullAccs(int replFactor) {
       MemAccsPtr = reinterpret_cast<MemoryAccess_t *>(
           (reinterpret_cast<uintptr_t>(MemAccsPtr) &
@@ -254,6 +259,7 @@ private:
       return noNonNullAccs();
     }
 
+    __attribute__((always_inline))
     int getNumNonNullAccs() const {
       return static_cast<int>(
           (reinterpret_cast<uintptr_t>(MemAccsPtr) >> NumNonNullAccsRShift)
@@ -264,6 +270,7 @@ private:
       return (0 == (reinterpret_cast<uintptr_t>(MemAccsPtr) &
                     (MetadataFieldMask << NumNonNullAccsRShift)));
     }
+    __attribute__((always_inline))
     void zeroNumNonNullAccs() {
       MemAccsPtr = reinterpret_cast<MemoryAccess_t *>(
           reinterpret_cast<uintptr_t>(MemAccsPtr) &
@@ -378,6 +385,7 @@ private:
     //
     // TODO: Check if C++ copy elision avoid unneccesary calls to the copy
     // constructor for the MemoryAccess_t, either in C++11, C++14, or C++17.
+    __attribute__((always_inline))
     void set(Chunk_t &Accessed, const MemoryAccess_t &MA) {
       cilksan_assert(MA.isValid() && "Setting to invalid MemoryAccess_t");
       // Get the grainsize of the access.
@@ -454,6 +462,7 @@ private:
     //
     // TODO: Check if C++ copy elision avoid unneccesary calls to the copy
     // constructor for the MemoryAccess_t, either in C++11, C++14, or C++17.
+    __attribute__((always_inline))
     void insert(Chunk_t &Accessed, unsigned PrevIdx, const MemoryAccess_t &MA) {
       cilksan_assert(MA.isValid() && "Setting to invalid MemoryAccess_t");
       // Get the grainsize of the access.
@@ -530,6 +539,7 @@ private:
     }
 
     // Reset all the entries of this line covered by Accessed.
+    __attribute__((always_inline))
     void clear(Chunk_t &Accessed) {
       // Get the grainsize of the access.
       unsigned AccessedLgGrainsize = Accessed.getLgGrainsize();
@@ -605,7 +615,7 @@ private:
 
   // A table is an array of pages.
   Page_t *Table[1 << LG_TABLE_SIZE] = { nullptr };
-  
+
 public:
   SimpleDictionary() {}
   ~SimpleDictionary() {
@@ -630,6 +640,7 @@ public:
 
     // Get the MemoryAcces_t object at this location.  Returns nullptr if no
     // valid MemoryAccess_t object exists at the current address.
+    __attribute__((always_inline))
     const MemoryAccess_t *get() const {
       // If there's no page, return nullptr.
       if (!Page)
@@ -677,12 +688,14 @@ public:
     }
 
     // Returns true if this iterator has reached the end of the chunk Accessed.
+    __attribute__((always_inline))
     bool isEnd() const {
       return Accessed.isEmpty();
     }
 
     // Get the MemoryAccess_t object at the current address.  Returns nullptr if
     // no valid MemoryAccess_t object exists at the current address.
+    __attribute__((always_inline))
     const MemoryAccess_t *get() const {
       if (isEnd())
         return nullptr;
@@ -704,6 +717,7 @@ public:
 
     // Scan the entries from Accessed until an entry with a new non-null
     // MemoryAccess_t is found.
+    __attribute__((always_inline))
     void next() {
       cilksan_assert(!isEnd() &&
                      "Cannot call next() on an empty Line iterator");
@@ -803,12 +817,14 @@ public:
     }
 
     // Returns true if this iterator has reached the end of the chunk Accessed.
+    __attribute__((always_inline))
     bool isEnd() const {
       return Accessed.isEmpty();
     }
 
     // Get the MemoryAccess_t object at the current address.  Returns nullptr if
     // no valid MemoryAccess_t object exists at the current address.
+    __attribute__((always_inline))
     MemoryAccess_t *get() const {
       if (isEnd() || !Page)
         return nullptr;
@@ -823,12 +839,14 @@ public:
     }
 
     // Get the current starting address being queried.
+    __attribute__((always_inline))
     uintptr_t getAddress() const {
       return Accessed.addr;
     }
 
     // Scan the entries from Accessed until we find a location with an invalid
     // MemoryAccess_t or a MemoryAccess_t that does not match the previous one.
+    __attribute__((always_inline))
     void next() {
       cilksan_assert(!isEnd() &&
                      "Cannot call next() on an empty Line iterator");
@@ -858,6 +876,7 @@ public:
     }
 
     // Insert MemoryAccess_t into all entries from Accessed.
+    __attribute__((always_inline))
     void set(const MemoryAccess_t &MA) {
       do {
         // Create a new page, if necessary.
@@ -887,6 +906,7 @@ public:
 
     // Insert MemoryAccess_t into all entries from Accessed until a new valid
     // MemoryAccess_t is discovered.
+    __attribute__((always_inline))
     void insert(const MemoryAccess_t &MA) {
       // Copy the MemoryAccess_t at the previous entry.  In case this method
       // changes the MemoryAccess_t at this previous entry, this copy ensures
@@ -922,6 +942,7 @@ public:
     }
 
     // Clear all entries covered by Accessed.
+    __attribute__((always_inline))
     void clear() {
       do {
         // Scan for a non-null Page.
@@ -1004,6 +1025,7 @@ public:
 
   // High-level method to check if this dictionary contains any entries covered
   // by the specified chunk of memory.
+  __attribute__((always_inline))
   bool includes(uintptr_t addr, size_t size) const {
     Query_iterator QI(*this, Chunk_t(addr, size));
     return !QI.isEnd();
@@ -1036,14 +1058,16 @@ public:
   }
 
   // Clear all entries for the specified chunk of memory.
+  __attribute__((always_inline))
   void clear(uintptr_t addr, size_t size) {
     Update_iterator UI(*this, Chunk_t(addr, size));
     UI.clear();
   }
 };
 
-class SimpleShadowMem : public ShadowMemoryType {
+class SimpleShadowMem /*: public ShadowMemoryType*/ {
 private:
+  CilkSanImpl_t &CilkSanImpl;
   // The shadow memory involves three dictionaries to separately handle reads,
   // writes, and allocations.  The template parameter allows each dictionary to
   // use a different memory allocator.
@@ -1052,19 +1076,21 @@ private:
   SimpleDictionary<AllocMAAllocator> Allocs;
 
 public:
-  SimpleShadowMem() {}
+  SimpleShadowMem(CilkSanImpl_t &CilkSanImpl) : CilkSanImpl(CilkSanImpl) {}
   ~SimpleShadowMem() { destruct(); }
 
-  bool does_access_exists(bool is_read, uintptr_t addr, size_t mem_size) {
+  template<bool is_read>
+  __attribute__((always_inline))
+  bool does_access_exists(uintptr_t addr, size_t mem_size) const {
     if (is_read)
       return Reads.includes(addr, mem_size);
     else
       return Writes.includes(addr, mem_size);
   }
 
-  void insert_access(bool is_read, const csi_id_t acc_id,
-                     uintptr_t addr, size_t mem_size, FrameData_t *f,
-                     const call_stack_t &call_stack) {
+  template<bool is_read>
+  void insert_access(const csi_id_t acc_id, uintptr_t addr, size_t mem_size,
+                     FrameData_t *f) {
     // std::cerr << "insert_access " << (is_read ? "read " : "write ")
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size
     //           << ", func node " << (void*)f->Sbag->get_node() << "\n";
@@ -1074,10 +1100,10 @@ public:
       Writes.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id));
   }
 
-  template<typename QITy>
-  void check_race(QITy &QI, bool prev_read, bool is_read, const csi_id_t acc_id,
-                  uintptr_t addr, size_t mem_size, bool on_stack,
-                  FrameData_t *f, const call_stack_t &call_stack) const {
+  template<typename QITy, bool prev_read, bool is_read>
+  __attribute__((always_inline))
+  void check_race(QITy &QI, const csi_id_t acc_id, uintptr_t addr,
+                  size_t mem_size, bool on_stack, FrameData_t *f) const {
     // std::cerr << "check_race " << (prev_read ? "vs. read " : "vs. write ")
     //           << std::hex << addr << std::dec << ", " << mem_size << "\n";
     while (!QI.isEnd()) {
@@ -1105,22 +1131,22 @@ public:
           AccessLoc_t AllocAccess =
             (nullptr == AllocFind) ? AccessLoc_t() : AllocFind->getLoc();
 
-          // if (PrevAccess->getLoc().getCallStack() != Func->get_node()->get_call_stack()->getTail())
-          //   std::cerr << "Mismatched call stacks in shadow memory and SBag_t\n";
-
           // Report the race
           if (prev_read)
             CilkSanImpl.report_race(
-                PrevAccess->getLoc(), AccessLoc_t(acc_id, call_stack),
+                PrevAccess->getLoc(),
+                AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
                 AllocAccess, AccAddr, RW_RACE);
           else {
             if (is_read)
               CilkSanImpl.report_race(
-                  PrevAccess->getLoc(), AccessLoc_t(acc_id, call_stack),
+                  PrevAccess->getLoc(),
+                  AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
                   AllocAccess, AccAddr, WR_RACE);
             else
               CilkSanImpl.report_race(
-                  PrevAccess->getLoc(), AccessLoc_t(acc_id, call_stack),
+                  PrevAccess->getLoc(),
+                  AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
                   AllocAccess, AccAddr, WW_RACE);
           }
         }
@@ -1129,30 +1155,32 @@ public:
     }
   }
 
+  __attribute__((always_inline))
   void check_race_with_prev_read(const csi_id_t acc_id, uintptr_t addr,
-                                 size_t mem_size, bool on_stack, FrameData_t *f,
-                                 const call_stack_t &call_stack) {
-    SimpleDictionary<ReadMAAllocator>::Query_iterator QI =
-      Reads.getQueryIterator(addr, mem_size);
+                                 size_t mem_size, bool on_stack,
+                                 FrameData_t *f) const {
+    using QITy = SimpleDictionary<ReadMAAllocator>::Query_iterator;
+    QITy QI = Reads.getQueryIterator(addr, mem_size);
     // The second argument does not matter here.
-    check_race(QI, true, false, acc_id, addr, mem_size, on_stack, f,
-               call_stack);
+    check_race<QITy, true, false>(QI, acc_id, addr, mem_size, on_stack, f);
   }
 
-  void check_race_with_prev_write(bool is_read, const csi_id_t acc_id,
-                                  uintptr_t addr, size_t mem_size,
-                                  bool on_stack, FrameData_t *f,
-                                  const call_stack_t &call_stack) {
-    SimpleDictionary<WriteMAAllocator>::Query_iterator QI =
-      Writes.getQueryIterator(addr, mem_size);
-    check_race(QI, false, is_read, acc_id, addr, mem_size, on_stack, f,
-               call_stack);
+  template<bool is_read>
+  __attribute__((always_inline))
+  void check_race_with_prev_write(const csi_id_t acc_id, uintptr_t addr,
+                                  size_t mem_size, bool on_stack,
+                                  FrameData_t *f) const {
+    using QITy = SimpleDictionary<WriteMAAllocator>::Query_iterator;
+    QITy QI = Writes.getQueryIterator(addr, mem_size);
+    // check_race(QI, false, is_read, acc_id, addr, mem_size, on_stack, f,
+    //            call_stack);
+    check_race<QITy, false, is_read>(QI, acc_id, addr, mem_size, on_stack, f);
   }
 
-  template <typename UITy>
-  void update(UITy &UI, bool with_read, const csi_id_t acc_id, uintptr_t addr,
-              size_t mem_size, bool on_stack, FrameData_t *f,
-              const call_stack_t &call_stack) {
+  template <typename UITy, bool with_read>
+  __attribute__((always_inline))
+  void update(UITy &UI, const csi_id_t acc_id, uintptr_t addr,
+              size_t mem_size, bool on_stack, FrameData_t *f) {
     // std::cerr << "update " << (with_read ? "read " : "write ")
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size << "\n";
     while (!UI.isEnd()) {
@@ -1186,25 +1214,25 @@ public:
     }    
   }
 
+  __attribute__((always_inline))
   void update_with_read(const csi_id_t acc_id, uintptr_t addr, size_t mem_size,
-                        bool on_stack, FrameData_t *f,
-                        const call_stack_t &call_stack) {
-    SimpleDictionary<ReadMAAllocator>::Update_iterator UI =
-      Reads.getUpdateIterator(addr, mem_size);
-    update(UI, true, acc_id, addr, mem_size, on_stack, f, call_stack);
+                        bool on_stack, FrameData_t *f) {
+    using UITy = SimpleDictionary<ReadMAAllocator>::Update_iterator;
+    UITy UI = Reads.getUpdateIterator(addr, mem_size);
+    update<UITy, true>(UI, acc_id, addr, mem_size, on_stack, f);
   }
 
+  __attribute__((always_inline))
   void update_with_write(const csi_id_t acc_id, uintptr_t addr, size_t mem_size,
-                         bool on_stack, FrameData_t *f,
-                         const call_stack_t &call_stack) {
-    SimpleDictionary<WriteMAAllocator>::Update_iterator UI = 
-      Writes.getUpdateIterator(addr, mem_size);
-    update(UI, false, acc_id, addr, mem_size, on_stack, f, call_stack);
+                         bool on_stack, FrameData_t *f) {
+    using UITy = SimpleDictionary<WriteMAAllocator>::Update_iterator;
+    UITy UI =  Writes.getUpdateIterator(addr, mem_size);
+    update<UITy, false>(UI, acc_id, addr, mem_size, on_stack, f);
   }
 
+  __attribute__((always_inline))
   void check_and_update_write(const csi_id_t acc_id, uintptr_t addr,
-                              size_t mem_size, bool on_stack, FrameData_t *f,
-                              const call_stack_t &call_stack) {
+                              size_t mem_size, bool on_stack, FrameData_t *f) {
     // std::cerr << "check_and_update_write "
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size << "\n";
     SimpleDictionary<WriteMAAllocator>::Update_iterator UI =
@@ -1238,19 +1266,12 @@ public:
           auto AllocFind = Allocs.find(AccAddr);
           AccessLoc_t AllocAccess =
             (nullptr == AllocFind) ? AccessLoc_t() : AllocFind->getLoc();
-
-          // if (PrevAccess->getLoc().getCallStack() != Func->get_node()->get_call_stack()->getTail())
-          //   std::cerr << "Mismatched call stacks in shadow memory and SBag_t\n"
-          //             << "  PrevAccess: " << (void*)PrevAccess->getLoc().getCallStack() << "\n"
-          //             << "  Func " << Func->get_node()->get_func_id()
-          //             << " get_call_stack: " << (void*)Func->get_node()->get_call_stack()->getTail() << "\n";
-          // else
-          //   std::cerr << "  PrevAccess: " << (void*)PrevAccess->getLoc().getCallStack() << "\n";
             
           // Report the race
-          CilkSanImpl.report_race(PrevAccess->getLoc(),
-                                  AccessLoc_t(acc_id, call_stack), AllocAccess,
-                                  AccAddr, WW_RACE);
+          CilkSanImpl.report_race(
+              PrevAccess->getLoc(),
+              AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
+              AllocAccess, AccAddr, WW_RACE);
         }
 
         // Update the table
@@ -1272,22 +1293,103 @@ public:
     }    
   }
 
+  __attribute__((always_inline))
   void clear(size_t start, size_t size) {
     Reads.clear(start, size);
     Writes.clear(start, size);
   }
 
   void record_alloc(size_t start, size_t size, FrameData_t *f,
-                    const call_stack_t &call_stack, csi_id_t alloca_id) {
-    Allocs.set(start, size,
-               MemoryAccess_t(f->getSbagForAccess(), alloca_id));
+                    csi_id_t alloca_id) {
+    Allocs.set(start, size, MemoryAccess_t(f->getSbagForAccess(),
+                                           alloca_id));
   }
 
+  __attribute__((always_inline))
   void clear_alloc(size_t start, size_t size) {
     Allocs.clear(start, size);
   }
 
   void destruct() {}
 };
+
+
+void Shadow_Memory::init(CilkSanImpl_t &CilkSanImpl) {
+  shadow_mem = new SimpleShadowMem(CilkSanImpl);
+}
+
+// Inserts access, and replaces any that are already in the shadow memory.
+template<bool is_read>
+void Shadow_Memory::insert_access(const csi_id_t acc_id, uintptr_t addr,
+                                  size_t mem_size, FrameData_t *f) {
+  shadow_mem->insert_access<is_read>(acc_id, addr, mem_size, f);
+}
+
+// Returns true if ANY bytes between addr and addr+mem_size are in the shadow
+// memory.
+template<bool is_read>
+__attribute__((always_inline))
+bool Shadow_Memory::does_access_exists(uintptr_t addr, size_t mem_size) const {
+  return shadow_mem->does_access_exists<is_read>(addr, mem_size);
+}
+
+__attribute__((always_inline))
+void Shadow_Memory::clear(size_t start, size_t size) {
+  shadow_mem->clear(start, size);
+}
+
+void Shadow_Memory::record_alloc(size_t start, size_t size, FrameData_t *f,
+                                 csi_id_t alloca_id) {
+  shadow_mem->record_alloc(start, size, f, alloca_id);
+}
+
+__attribute__((always_inline))
+void Shadow_Memory::clear_alloc(size_t start, size_t size) {
+  shadow_mem->clear_alloc(start, size);
+}
+
+void Shadow_Memory::check_race_with_prev_read(const csi_id_t acc_id,
+                                              uintptr_t addr, size_t mem_size,
+                                              bool on_stack,
+                                              FrameData_t *f) const {
+  shadow_mem->check_race_with_prev_read(acc_id, addr, mem_size, on_stack, f);
+}
+
+template<bool is_read>
+void Shadow_Memory::check_race_with_prev_write(const csi_id_t acc_id,
+                                               uintptr_t addr,
+                                               size_t mem_size, bool on_stack,
+                                               FrameData_t *f) const {
+  shadow_mem->check_race_with_prev_write<is_read>(acc_id, addr, mem_size,
+                                                  on_stack, f);
+}
+
+__attribute__((always_inline))
+void Shadow_Memory::update_with_write(const csi_id_t acc_id,
+                                      uintptr_t addr, size_t mem_size,
+                                      bool on_stack, FrameData_t *f) {
+  shadow_mem->update_with_write(acc_id, addr, mem_size, on_stack, f);
+}
+
+__attribute__((always_inline))
+void Shadow_Memory::update_with_read(const csi_id_t acc_id, uintptr_t addr,
+                                     size_t mem_size, bool on_stack,
+                                     FrameData_t *f) {
+  shadow_mem->update_with_read(acc_id, addr, mem_size, on_stack, f);
+}
+
+__attribute__((always_inline))
+void Shadow_Memory::check_and_update_write(const csi_id_t acc_id,
+                                           uintptr_t addr, size_t mem_size,
+                                           bool on_stack, FrameData_t *f) {
+  shadow_mem->check_and_update_write(acc_id, addr, mem_size, on_stack, f);
+}
+
+void Shadow_Memory::destruct() {
+  if (shadow_mem) {
+    delete shadow_mem;
+    shadow_mem = nullptr;
+  }
+}
 
 #endif // __SIMPLE_SHADOW_MEM__

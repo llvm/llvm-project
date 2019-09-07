@@ -141,6 +141,10 @@ public:
   void record_alloc(size_t start, size_t end, csi_id_t alloca_id);
   void clear_alloc(size_t start, size_t end);
 
+  const call_stack_t &get_current_call_stack() const {
+    return call_stack;
+  }
+
   // defined in print_addr.cpp
   void report_race(
       const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
@@ -162,7 +166,8 @@ private:
   inline void enter_detach_child();
   inline void return_from_detach();
   inline void complete_sync();
-  inline void record_mem_helper(bool is_read, const csi_id_t acc_id,
+  template<bool is_read>
+  inline void record_mem_helper(const csi_id_t acc_id,
                                 uintptr_t addr, size_t mem_size,
                                 bool on_stack);
   // inline void print_current_function_info();
