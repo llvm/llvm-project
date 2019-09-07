@@ -81,7 +81,9 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
     return swift::SILValue();
 
   swift::ASTContext &ast_ctx = m_builder.getASTContext();
-  swift::Lowering::TypeConverter converter(m_builder.getModule());
+
+  // FIXME: Creating a new TypeLowering every time is wasteful.
+  swift::Lowering::TypeConverter converter(*m_builder.getModule().getSwiftModule());
 
   swift::SILLocation null_loc((swift::Decl *)nullptr);
   swift::SILType raw_pointer_type = swift::SILType::getRawPointerType(ast_ctx);

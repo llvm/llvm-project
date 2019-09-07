@@ -52,6 +52,9 @@ namespace serialization {
 struct ValidationInfo;
 class ExtendedValidationInfo;
 }
+namespace Lowering {
+class TypeConverter;
+}
 }
 
 class DWARFASTParser;
@@ -747,6 +750,8 @@ protected:
 
   swift::ModuleDecl *GetScratchModule();
 
+  swift::Lowering::TypeConverter *GetSILTypes();
+
   swift::SILModule *GetSILModule();
 
   swift::MemoryBufferSerializedModuleLoader *GetMemoryBufferModuleLoader();
@@ -788,6 +793,7 @@ protected:
   /// should be printed by Process::PrintWarningCantLoadSwift().
   std::vector<std::string> m_module_import_warnings;
   swift::ModuleDecl *m_scratch_module = nullptr;
+  std::unique_ptr<swift::Lowering::TypeConverter> m_sil_types_ap;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
   /// Owned by the AST.
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
