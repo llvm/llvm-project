@@ -215,6 +215,17 @@ TEST(DummyRPC, TestCallAsyncVoidBool) {
   }
 
   ServerThread.join();
+
+  // The client should have made two calls to send: One implicit call to
+  // negotiate the VoidBool function key, and a second to make the VoidBool
+  // call.
+  EXPECT_EQ(Channels.first->SendCalls, 2U)
+      << "Expected one send call to have been made by client";
+
+  // The server should have made two calls to send: One to send the response to
+  // the negotiate call, and another to send the response to the VoidBool call.
+  EXPECT_EQ(Channels.second->SendCalls, 2U)
+      << "Expected two send calls to have been made by server";
 }
 
 TEST(DummyRPC, TestCallAsyncIntInt) {

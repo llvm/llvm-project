@@ -897,7 +897,7 @@ public:
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F)) return false;
-    const auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    const auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     // MergeICmps does not need the DominatorTree, but we update it if it's
     // already available.

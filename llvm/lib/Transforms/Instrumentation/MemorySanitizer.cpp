@@ -615,7 +615,7 @@ struct MemorySanitizerLegacyPass : public FunctionPass {
 
   bool runOnFunction(Function &F) override {
     return MSan->sanitizeFunction(
-        F, getAnalysis<TargetLibraryInfoWrapperPass>().getTLI());
+        F, getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));
   }
   bool doInitialization(Module &M) override;
 

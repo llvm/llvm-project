@@ -368,7 +368,8 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
 
   if (CD.Flags & CDF_MaybeBuiltin) {
     return CheckerContext::isCLibraryFunction(FD, CD.getFunctionName()) &&
-           (!CD.RequiredArgs || CD.RequiredArgs <= getNumArgs());
+           (!CD.RequiredArgs || CD.RequiredArgs <= getNumArgs()) &&
+           (!CD.RequiredParams || CD.RequiredParams <= parameters().size());
   }
 
   if (!CD.IsLookupDone) {
@@ -407,7 +408,8 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
       return false;
   }
 
-  return (!CD.RequiredArgs || CD.RequiredArgs == getNumArgs());
+  return (!CD.RequiredArgs || CD.RequiredArgs == getNumArgs()) &&
+         (!CD.RequiredParams || CD.RequiredParams == parameters().size());
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {

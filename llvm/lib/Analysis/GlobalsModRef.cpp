@@ -370,7 +370,8 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       // passing into the function.
       if (Call->isDataOperand(&U)) {
         // Detect calls to free.
-        if (Call->isArgOperand(&U) && isFreeCall(I, &TLI)) {
+        if (Call->isArgOperand(&U) &&
+            isFreeCall(I, &GetTLI(*Call->getFunction()))) {
           if (Writers)
             Writers->insert(Call->getParent()->getParent());
         } else {
@@ -432,7 +433,7 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
       Value *Ptr = GetUnderlyingObject(SI->getOperand(0),
                                        GV->getParent()->getDataLayout());
 
-      if (!isAllocLikeFn(Ptr, &TLI))
+      if (!isAllocLikeFn(Ptr, &GetTLI(*SI->getFunction())))
         return false; // Too hard to analyze.
 
       // Analyze all uses of the allocation.  If any of them are used in a
@@ -576,6 +577,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
         if (auto *Call = dyn_cast<CallBase>(&I)) {
+          auto &TLI = GetTLI(*Node->getFunction());
           if (isAllocationFn(Call, &TLI) || isFreeCall(Call, &TLI)) {
             // FIXME: It is completely unclear why this is necessary and not
             // handled by the above graph code.
@@ -937,12 +939,13 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
   return intersectModRef(Known, AAResultBase::getModRefInfo(Call, Loc, AAQI));
 }
 
-GlobalsAAResult::GlobalsAAResult(const DataLayout &DL,
-                                 const TargetLibraryInfo &TLI)
-    : AAResultBase(), DL(DL), TLI(TLI) {}
+GlobalsAAResult::GlobalsAAResult(
+    const DataLayout &DL,
+    std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
+    : AAResultBase(), DL(DL), GetTLI(std::move(GetTLI)) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
-    : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI),
+    : AAResultBase(std::move(Arg)), DL(Arg.DL), GetTLI(std::move(Arg.GetTLI)),
       NonAddressTakenGlobals(std::move(Arg.NonAddressTakenGlobals)),
       IndirectGlobals(std::move(Arg.IndirectGlobals)),
       AllocsForIndirectGlobals(std::move(Arg.AllocsForIndirectGlobals)),
@@ -957,10 +960,10 @@ GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
 
 GlobalsAAResult::~GlobalsAAResult() {}
 
-/*static*/ GlobalsAAResult
-GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
-                               CallGraph &CG) {
-  GlobalsAAResult Result(M.getDataLayout(), TLI);
+/*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
+    Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
+    CallGraph &CG) {
+  GlobalsAAResult Result(M.getDataLayout(), GetTLI);
 
   // Discover which functions aren't recursive, to feed into AnalyzeGlobals.
   Result.CollectSCCMembership(CG);
@@ -977,8 +980,12 @@ GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
 AnalysisKey GlobalsAA::Key;
 
 GlobalsAAResult GlobalsAA::run(Module &M, ModuleAnalysisManager &AM) {
-  return GlobalsAAResult::analyzeModule(M,
-                                        AM.getResult<TargetLibraryAnalysis>(M),
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+  return GlobalsAAResult::analyzeModule(M, GetTLI,
                                         AM.getResult<CallGraphAnalysis>(M));
 }
 
@@ -999,9 +1006,11 @@ GlobalsAAWrapperPass::GlobalsAAWrapperPass() : ModulePass(ID) {
 }
 
 bool GlobalsAAWrapperPass::runOnModule(Module &M) {
+  auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
+    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  };
   Result.reset(new GlobalsAAResult(GlobalsAAResult::analyzeModule(
-      M, getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
-      getAnalysis<CallGraphWrapperPass>().getCallGraph())));
+      M, GetTLI, getAnalysis<CallGraphWrapperPass>().getCallGraph())));
   return false;
 }
 

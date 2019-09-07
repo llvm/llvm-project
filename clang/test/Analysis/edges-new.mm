@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,deadcode.DeadStores,osx.cocoa.RetainCount,unix.Malloc,unix.MismatchedDeallocator -analyzer-output=plist -o %t -w %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,deadcode.DeadStores,osx.cocoa.RetainCount,unix.Malloc,unix.MismatchedDeallocator -analyzer-output=plist -analyzer-config deadcode.DeadStores:ShowFixIts=true -o %t -w %s
 // RUN: %normalize_plist <%t | diff -ub %S/Inputs/expected-plists/edges-new.mm.plist -
 
 //===----------------------------------------------------------------------===//

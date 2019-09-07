@@ -218,7 +218,9 @@ static const char DiamondOfTrianglesRefGraph[] =
 static LazyCallGraph buildCG(Module &M) {
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   TargetLibraryInfo TLI(TLII);
-  LazyCallGraph CG(M, TLI);
+  auto GetTLI = [&TLI](Function &F) -> TargetLibraryInfo & { return TLI; };
+
+  LazyCallGraph CG(M, GetTLI);
   return CG;
 }
 

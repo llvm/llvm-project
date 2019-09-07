@@ -22,7 +22,6 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    jne .LBB0_2
 ; SOURCE-SCHED-NEXT:  # %bb.1: # %bb11
 ; SOURCE-SCHED-NEXT:    movzbl %al, %eax
-; SOURCE-SCHED-NEXT:    # kill: def $eax killed $eax def $ax
 ; SOURCE-SCHED-NEXT:    divb %dl
 ; SOURCE-SCHED-NEXT:    movzbl %ah, %eax
 ; SOURCE-SCHED-NEXT:  .LBB0_2: # %bb12

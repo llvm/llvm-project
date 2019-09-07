@@ -8,11 +8,7 @@ struct A {
 };
 
 union u {
-    id u; // expected-error {{ARC forbids Objective-C objects in union}}
-};
-
-union u_nontrivial_c {
-  struct A a; // expected-error {{non-trivial C types are disallowed in union}}
+  id u;
 };
 
 // Volatile fields are fine.
