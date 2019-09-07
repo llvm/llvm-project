@@ -192,11 +192,6 @@ DependencyFileGenerator::DependencyFileGenerator(
 }
 
 void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
-  if (Targets.empty()) {
-    PP.getDiagnostics().Report(diag::err_fe_dependency_file_requires_MT);
-    return;
-  }
-
   // Disable the "file not found" diagnostic if the -MG option was given.
   if (AddMissingHeaderDeps)
     PP.SetSuppressIncludeNotFoundError(true);

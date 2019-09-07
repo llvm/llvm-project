@@ -161,7 +161,7 @@ public:
       return false;
 
     TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     return runPartiallyInlineLibCalls(F, TLI, TTI);

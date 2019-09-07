@@ -100,7 +100,7 @@ struct InstSimplifyLegacyPass : public FunctionPass {
     const DominatorTree *DT =
         &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     const TargetLibraryInfo *TLI =
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     AssumptionCache *AC =
         &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     OptimizationRemarkEmitter *ORE =

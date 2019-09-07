@@ -174,7 +174,7 @@ bool ThreadSanitizerLegacyPass::doInitialization(Module &M) {
 }
 
 bool ThreadSanitizerLegacyPass::runOnFunction(Function &F) {
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   TSan->sanitizeFunction(F, TLI);
   return true;
 }

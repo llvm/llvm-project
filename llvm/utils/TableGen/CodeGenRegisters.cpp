@@ -2368,6 +2368,21 @@ CodeGenRegBank::getRegClassForRegister(Record *R) {
   return FoundRC;
 }
 
+const CodeGenRegisterClass *
+CodeGenRegBank::getMinimalPhysRegClass(Record *RegRecord,
+                                       ValueTypeByHwMode *VT) {
+  const CodeGenRegister *Reg = getReg(RegRecord);
+  const CodeGenRegisterClass *BestRC = nullptr;
+  for (const auto &RC : getRegClasses()) {
+    if ((!VT || RC.hasType(*VT)) &&
+        RC.contains(Reg) && (!BestRC || BestRC->hasSubClass(&RC)))
+      BestRC = &RC;
+  }
+
+  assert(BestRC && "Couldn't find the register class");
+  return BestRC;
+}
+
 BitVector CodeGenRegBank::computeCoveredRegisters(ArrayRef<Record*> Regs) {
   SetVector<const CodeGenRegister*> Set;
 

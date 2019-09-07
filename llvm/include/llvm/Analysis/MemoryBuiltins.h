@@ -58,6 +58,9 @@ class Value;
 /// like).
 bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI,
                     bool LookThroughBitCast = false);
+bool isAllocationFn(const Value *V,
+                    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
+                    bool LookThroughBitCast = false);
 
 /// Tests if a value is a call or invoke to a function that returns a
 /// NoAlias pointer (including malloc/calloc/realloc/strdup-like functions).
@@ -67,6 +70,9 @@ bool isNoAliasFn(const Value *V, const TargetLibraryInfo *TLI,
 /// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory (such as malloc).
 bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                    bool LookThroughBitCast = false);
+bool isMallocLikeFn(const Value *V,
+                    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
                     bool LookThroughBitCast = false);
 
 /// Tests if a value is a call or invoke to a library function that
@@ -105,9 +111,13 @@ bool isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 /// extractMallocCall - Returns the corresponding CallInst if the instruction
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.
-const CallInst *extractMallocCall(const Value *I, const TargetLibraryInfo *TLI);
-inline CallInst *extractMallocCall(Value *I, const TargetLibraryInfo *TLI) {
-  return const_cast<CallInst*>(extractMallocCall((const Value*)I, TLI));
+const CallInst *
+extractMallocCall(const Value *I,
+                  function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
+inline CallInst *
+extractMallocCall(Value *I,
+                  function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
+  return const_cast<CallInst *>(extractMallocCall((const Value *)I, GetTLI));
 }
 
 /// getMallocType - Returns the PointerType resulting from the malloc call.

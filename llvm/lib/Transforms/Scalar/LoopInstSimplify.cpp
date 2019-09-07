@@ -192,7 +192,8 @@ public:
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
             *L->getHeader()->getParent());
     const TargetLibraryInfo &TLI =
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+            *L->getHeader()->getParent());
     MemorySSA *MSSA = nullptr;
     Optional<MemorySSAUpdater> MSSAU;
     if (EnableMSSALoopDependency) {

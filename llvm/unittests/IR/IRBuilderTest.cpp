@@ -171,6 +171,7 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   IRBuilder<> Builder(BB);
   Value *V;
   Value *VDouble;
+  Value *VInt;
   CallInst *Call;
   IntrinsicInst *II;
   GlobalVariable *GVDouble = new GlobalVariable(*M, Type::getDoubleTy(Ctx),
@@ -207,6 +208,16 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
+
+  VInt = Builder.CreateFPToUI(VDouble, Builder.getInt32Ty());
+  ASSERT_TRUE(isa<IntrinsicInst>(VInt));
+  II = cast<IntrinsicInst>(VInt);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fptoui);
+
+  VInt = Builder.CreateFPToSI(VDouble, Builder.getInt32Ty());
+  ASSERT_TRUE(isa<IntrinsicInst>(VInt));
+  II = cast<IntrinsicInst>(VInt);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fptosi);
 
   V = Builder.CreateFPTrunc(VDouble, Type::getFloatTy(Ctx));
   ASSERT_TRUE(isa<IntrinsicInst>(V));

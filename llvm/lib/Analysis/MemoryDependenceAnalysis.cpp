@@ -1816,7 +1816,7 @@ unsigned MemoryDependenceResults::getDefaultBlockScanLimit() const {
 bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &PV = getAnalysis<PhiValuesWrapperPass>().getResult();
   MemDep.emplace(AA, AC, TLI, DT, PV, BlockScanLimit);

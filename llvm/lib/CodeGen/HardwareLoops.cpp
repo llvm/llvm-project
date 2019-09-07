@@ -183,7 +183,7 @@ bool HardwareLoops::runOnFunction(Function &F) {
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   DL = &F.getParent()->getDataLayout();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  LibInfo = TLIP ? &TLIP->getTLI() : nullptr;
+  LibInfo = TLIP ? &TLIP->getTLI(F) : nullptr;
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   M = F.getParent();

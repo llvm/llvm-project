@@ -518,9 +518,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 }
 
 void AArch64PassConfig::addPreGlobalInstructionSelect() {
-  // Workaround the deficiency of the fast register allocator.
-  if (TM->getOptLevel() == CodeGenOpt::None)
-    addPass(new Localizer());
+  addPass(new Localizer());
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {

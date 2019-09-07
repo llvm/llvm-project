@@ -63,9 +63,10 @@
 ; CHECK-POSTLINK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
-; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-PRELINK-O-NODIS-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-O-NEXT: Running analysis: PassInstrumentationAnalysis
+; CHECK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-PRELINK-O-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass

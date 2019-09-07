@@ -527,7 +527,8 @@ static void setInlineRemark(CallSite &CS, StringRef message) {
 static bool
 inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                 std::function<AssumptionCache &(Function &)> GetAssumptionCache,
-                ProfileSummaryInfo *PSI, TargetLibraryInfo &TLI,
+                ProfileSummaryInfo *PSI,
+                std::function<TargetLibraryInfo &(Function &)> GetTLI,
                 bool InsertLifetime,
                 function_ref<InlineCost(CallSite CS)> GetInlineCost,
                 function_ref<AAResults &(Function &)> AARGetter,
@@ -626,7 +627,8 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
       Instruction *Instr = CS.getInstruction();
 
-      bool IsTriviallyDead = isInstructionTriviallyDead(Instr, &TLI);
+      bool IsTriviallyDead =
+          isInstructionTriviallyDead(Instr, &GetTLI(*Caller));
 
       int InlineHistoryID;
       if (!IsTriviallyDead) {
@@ -757,13 +759,16 @@ bool LegacyInlinerBase::inlineCalls(CallGraphSCC &SCC) {
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   ACT = &getAnalysis<AssumptionCacheTracker>();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {
+    return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  };
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return ACT->getAssumptionCache(F);
   };
-  return inlineCallsImpl(SCC, CG, GetAssumptionCache, PSI, TLI, InsertLifetime,
-                         [this](CallSite CS) { return getInlineCost(CS); },
-                         LegacyAARGetter(*this), ImportedFunctionsStats);
+  return inlineCallsImpl(
+      SCC, CG, GetAssumptionCache, PSI, GetTLI, InsertLifetime,
+      [this](CallSite CS) { return getInlineCost(CS); }, LegacyAARGetter(*this),
+      ImportedFunctionsStats);
 }
 
 /// Remove now-dead linkonce functions at the end of

@@ -2665,10 +2665,11 @@ public:
     return Impl.runImpl(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
         getAnalysis<AAResultsWrapperPass>().getAAResults(),
-        NoMemDepAnalysis ? nullptr
-                : &getAnalysis<MemoryDependenceWrapperPass>().getMemDep(),
+        NoMemDepAnalysis
+            ? nullptr
+            : &getAnalysis<MemoryDependenceWrapperPass>().getMemDep(),
         LIWP ? &LIWP->getLoopInfo() : nullptr,
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE());
   }

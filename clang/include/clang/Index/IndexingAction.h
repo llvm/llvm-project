@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -30,26 +31,6 @@ namespace serialization {
 
 namespace index {
   class IndexDataConsumer;
-
-struct IndexingOptions {
-  enum class SystemSymbolFilterKind {
-    None,
-    DeclarationsOnly,
-    All,
-  };
-
-  SystemSymbolFilterKind SystemSymbolFilter
-    = SystemSymbolFilterKind::DeclarationsOnly;
-  bool IndexFunctionLocals = false;
-  bool IndexImplicitInstantiation = false;
-  // Whether to index macro definitions in the Preprocesor when preprocessor
-  // callback is not available (e.g. after parsing has finished). Note that
-  // macro references are not available in Proprocessor.
-  bool IndexMacrosInPreprocessor = false;
-  // Has no effect if IndexFunctionLocals are false.
-  bool IndexParametersInDeclarations = false;
-  bool IndexTemplateParameters = false;
-};
 
 /// Creates an ASTConsumer that indexes all symbols (macros and AST decls).
 std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
