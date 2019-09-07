@@ -674,7 +674,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
   // Save the depth of the common loop as the lower bound on the loop depth to
   // check.
   if (!CommonObjLoop) {
-    LLVM_DEBUG(dbgs() << "No common loop found for underlying objects\n.");
+    LLVM_DEBUG(dbgs() << "No common loop found for underlying objects.\n");
     MinObjDepth = 0;
   } else
     MinObjDepth = CommonObjLoop->getLoopDepth();
@@ -1809,7 +1809,8 @@ void AccessPtrAnalysis::processAccessPtrs(
           });
         if (!GA.getPtr()) {
           ModRefInfo MRI = AA->getModRefInfo(GA.I, MemoryLocation(ArgPtr));
-          if (isModSet(MRI)) {
+          Argument *Arg = cast<Argument>(ArgPtr);
+          if (isModSet(MRI) && !Arg->onlyReadsMemory()) {
             LLVM_DEBUG(dbgs() << "  Mod is set.\n");
             // recordAncestorRace(GA, ArgPtr, Result, ObjectMRForRace);
             Result.recordRaceViaAncestorRef(GA);
