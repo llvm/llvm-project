@@ -22,7 +22,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: _Z3bari@@LIBSAMPLE_2.0
-# DSO-NEXT:      Value: 0x1001
+# DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -31,7 +31,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: _Z3fooi@@LIBSAMPLE_1.0
-# DSO-NEXT:      Value: 0x1000
+# DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -40,7 +40,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: _Z3zedi@@LIBSAMPLE_1.0
-# DSO-NEXT:      Value: 0x1002
+# DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global (0x1)
 # DSO-NEXT:      Type: Function (0x2)
@@ -49,7 +49,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: _ZN3abcC1Ev@@LIBSAMPLE_1.0
-# DSO-NEXT:      Value: 0x1003
+# DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global (0x1)
 # DSO-NEXT:      Type: Function (0x2)
@@ -58,7 +58,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: _ZN3abcC2Ev@@LIBSAMPLE_1.0
-# DSO-NEXT:      Value: 0x1004
+# DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global (0x1)
 # DSO-NEXT:      Type: Function (0x2)
@@ -68,8 +68,8 @@
 # DSO-NEXT:  ]
 # DSO-NEXT:  Version symbols {
 # DSO-NEXT:    Section Name: .gnu.version
-# DSO-NEXT:    Address: 0x258
-# DSO-NEXT:    Offset: 0x258
+# DSO-NEXT:    Address:
+# DSO-NEXT:    Offset:
 # DSO-NEXT:    Link: 1
 # DSO-NEXT:    Symbols [
 # DSO-NEXT:      Symbol {
