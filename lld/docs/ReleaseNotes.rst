@@ -228,4 +228,4 @@ MinGW Improvements
   MinGW frontend to be called by GCC.
 
 * The following options are added: ``--exclude-all-symbols``,
-  ``--appcontainer``, ``--emit-relocs``, ``--wrap``, ``--undefined``
+  ``--appcontainer``, ``--undefined``
