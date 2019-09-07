@@ -3371,6 +3371,11 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
+  if (!Res.getDependencyOutputOpts().OutputFile.empty() &&
+      Res.getDependencyOutputOpts().Targets.empty()) {
+    Diags.Report(diag::err_fe_dependency_file_requires_MT);
+    Success = false;
+  }
   Success &=
       ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                           false /*DefaultDiagColor*/, false /*DefaultShowOpt*/);
