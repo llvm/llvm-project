@@ -113,15 +113,31 @@ private:
   DisjointSet_t* find_set() {
     assert_not_freed();
     WHEN_CILKSAN_DEBUG(cilksan_assert(!_destructing));
-    // std::forward_list<DisjointSet_t *> djsList;
-    disjoint_set_list.lock();
+
     DisjointSet_t *node = this;
+    node->assert_not_freed();
+    DisjointSet_t *parent = node->_set_parent;
+    cilksan_assert(parent);
+    if (parent->_set_parent == parent)
+      return parent;
+    // // Fast test to see if node is the set.
+    // if (node->_set_parent == node)
+    //   return node;
+
+    // // Fast test to see if node->_set_parent is the set.
+    // DisjointSet_t *parent = node->_set_parent;
+    // cilksan_assert(parent);
+    // if (parent->_set_parent == parent)
+    //   return parent;
+
+    // Both fast tests failed.  Traverse the list to get to the set, and do path
+    // compression along the way.
+
+    disjoint_set_list.lock();
 
 #if CILKSAN_DEBUG
     int64_t tmp_ref_count = _ref_count;
 #endif
-
-    node->assert_not_freed();
 
     while (node->_set_parent != node) {
       cilksan_assert(node->_set_parent);
@@ -129,8 +145,11 @@ private:
       // if (__builtin_expect(!_destructing || node != this, 1)) {
       //   disjoint_set_list.push(node);
       // }
-      disjoint_set_list.push(node);
+      // disjoint_set_list.push(node);
+      DisjointSet_t *prev = node;
       node = node->_set_parent;
+      if (node->_set_parent != node)
+        disjoint_set_list.push(prev);
     }
 
     cilksan_assert(tmp_ref_count == _ref_count);
@@ -139,7 +158,7 @@ private:
     // of each of the nodes we saw.
     // We process backwards so that in case a node ought to be freed (i.e. its
     // child was the last referencing it), we don't process it after freeing.
-    for (int i = disjoint_set_list.length() - 2; i >= 0; i--) {
+    for (int i = disjoint_set_list.length() - 1; i >= 0; i--) {
       DisjointSet_t *p = (DisjointSet_t *)disjoint_set_list.list()[i];
       // We don't need to check that p != p->_set_parent because the root of
       // the set wasn't pushed to the list (see the while loop above).
