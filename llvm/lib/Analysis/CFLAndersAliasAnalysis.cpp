@@ -88,9 +88,11 @@ using namespace llvm::cflaa;
 
 #define DEBUG_TYPE "cfl-anders-aa"
 
-CFLAndersAAResult::CFLAndersAAResult(const TargetLibraryInfo &TLI) : TLI(TLI) {}
+CFLAndersAAResult::CFLAndersAAResult(
+    std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
+    : GetTLI(std::move(GetTLI)) {}
 CFLAndersAAResult::CFLAndersAAResult(CFLAndersAAResult &&RHS)
-    : AAResultBase(std::move(RHS)), TLI(RHS.TLI) {}
+    : AAResultBase(std::move(RHS)), GetTLI(std::move(RHS.GetTLI)) {}
 CFLAndersAAResult::~CFLAndersAAResult() = default;
 
 namespace {
@@ -779,7 +781,7 @@ static AliasAttrMap buildAttrMap(const CFLGraph &Graph,
 CFLAndersAAResult::FunctionInfo
 CFLAndersAAResult::buildInfoFrom(const Function &Fn) {
   CFLGraphBuilder<CFLAndersAAResult> GraphBuilder(
-      *this, TLI,
+      *this, GetTLI(const_cast<Function &>(Fn)),
       // Cast away the constness here due to GraphBuilder's API requirement
       const_cast<Function &>(Fn));
   auto &Graph = GraphBuilder.getCFLGraph();
@@ -898,7 +900,10 @@ AliasResult CFLAndersAAResult::alias(const MemoryLocation &LocA,
 AnalysisKey CFLAndersAA::Key;
 
 CFLAndersAAResult CFLAndersAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return CFLAndersAAResult(AM.getResult<TargetLibraryAnalysis>(F));
+  auto GetTLI = [&AM](Function &F) -> TargetLibraryInfo & {
+    return AM.getResult<TargetLibraryAnalysis>(F);
+  };
+  return CFLAndersAAResult(GetTLI);
 }
 
 char CFLAndersAAWrapperPass::ID = 0;
@@ -914,8 +919,10 @@ CFLAndersAAWrapperPass::CFLAndersAAWrapperPass() : ImmutablePass(ID) {
 }
 
 void CFLAndersAAWrapperPass::initializePass() {
-  auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
-  Result.reset(new CFLAndersAAResult(TLIWP.getTLI()));
+  auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
+    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  };
+  Result.reset(new CFLAndersAAResult(GetTLI));
 }
 
 void CFLAndersAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

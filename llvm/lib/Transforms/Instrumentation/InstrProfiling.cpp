@@ -157,7 +157,10 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    return InstrProf.run(M, getAnalysis<TargetLibraryInfoWrapperPass>().getTLI());
+    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
+      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    };
+    return InstrProf.run(M, GetTLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -370,8 +373,12 @@ private:
 } // end anonymous namespace
 
 PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
-  auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
-  if (!run(M, TLI))
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+  if (!run(M, GetTLI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -441,7 +448,7 @@ void InstrProfiling::promoteCounterLoadStores(Function *F) {
   std::unique_ptr<BlockFrequencyInfo> BFI;
   if (Options.UseBFIInPromotion) {
     std::unique_ptr<BranchProbabilityInfo> BPI;
-    BPI.reset(new BranchProbabilityInfo(*F, LI, TLI));
+    BPI.reset(new BranchProbabilityInfo(*F, LI, &GetTLI(*F)));
     BFI.reset(new BlockFrequencyInfo(*F, *BPI, LI));
   }
 
@@ -482,9 +489,10 @@ static bool containsProfilingIntrinsics(Module &M) {
   return false;
 }
 
-bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
+bool InstrProfiling::run(
+    Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI) {
   this->M = &M;
-  this->TLI = &TLI;
+  this->GetTLI = std::move(GetTLI);
   NamesVar = nullptr;
   NamesSize = 0;
   ProfileDataMap.clear();
@@ -601,6 +609,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   bool IsRange = (Ind->getValueKind()->getZExtValue() ==
                   llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
+  auto *TLI = &GetTLI(*Ind->getFunction());
   if (!IsRange) {
     Value *Args[3] = {Ind->getTargetValue(),
                       Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),

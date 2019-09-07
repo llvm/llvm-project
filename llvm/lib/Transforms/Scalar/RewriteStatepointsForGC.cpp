@@ -172,8 +172,6 @@ public:
 
   bool runOnModule(Module &M) override {
     bool Changed = false;
-    const TargetLibraryInfo &TLI =
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     for (Function &F : M) {
       // Nothing to do for declarations.
       if (F.isDeclaration() || F.empty())
@@ -186,6 +184,8 @@ public:
 
       TargetTransformInfo &TTI =
           getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+      const TargetLibraryInfo &TLI =
+          getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
       auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
 
       Changed |= Impl.runOnFunction(F, DT, TTI, TLI);

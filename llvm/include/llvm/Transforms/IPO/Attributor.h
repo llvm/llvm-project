@@ -1700,6 +1700,31 @@ struct AANoCapture
   static const char ID;
 };
 
+/// An abstract interface for value simplify abstract attribute.
+struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
+                         public IRPosition {
+  AAValueSimplify(const IRPosition &IRP) : IRPosition(IRP) {}
+
+  /// Return an IR position, see struct IRPosition.
+  ///
+  ///{
+  IRPosition &getIRPosition() { return *this; }
+  const IRPosition &getIRPosition() const { return *this; }
+  ///}
+
+  /// Return an assumed simplified value if a single candidate is found. If
+  /// there cannot be one, return original value. If it is not clear yet, return the
+  /// Optional::NoneType.
+  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const;
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAValueSimplify &createForPosition(const IRPosition &IRP,
+                                            Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

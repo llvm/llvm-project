@@ -1054,16 +1054,14 @@ Value *LibCallSimplifier::foldMallocMemset(CallInst *Memset, IRBuilder<> &B) {
   B.SetInsertPoint(Malloc->getParent(), ++Malloc->getIterator());
   const DataLayout &DL = Malloc->getModule()->getDataLayout();
   IntegerType *SizeType = DL.getIntPtrType(B.GetInsertBlock()->getContext());
-  Value *Calloc = emitCalloc(ConstantInt::get(SizeType, 1),
-                             Malloc->getArgOperand(0), Malloc->getAttributes(),
-                             B, *TLI);
-  if (!Calloc)
-    return nullptr;
+  if (Value *Calloc = emitCalloc(ConstantInt::get(SizeType, 1),
+                                 Malloc->getArgOperand(0),
+                                 Malloc->getAttributes(), B, *TLI)) {
+    substituteInParent(Malloc, Calloc);
+    return Calloc;
+  }
 
-  Malloc->replaceAllUsesWith(Calloc);
-  eraseFromParent(Malloc);
-
-  return Calloc;
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B,
@@ -1380,9 +1378,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
       // elimination cannot be trusted to remove it, since it may have side
       // effects (e.g., errno).  When the only consumer for the original
       // exp{,2}() is pow(), then it has to be explicitly erased.
-      BaseFn->replaceAllUsesWith(ExpFn);
-      eraseFromParent(BaseFn);
-
+      substituteInParent(BaseFn, ExpFn);
       return ExpFn;
     }
   }
@@ -2802,8 +2798,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       IRBuilder<> TmpBuilder(SimplifiedCI);
       if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, TmpBuilder)) {
         // If we were able to further simplify, remove the now redundant call.
-        SimplifiedCI->replaceAllUsesWith(V);
-        eraseFromParent(SimplifiedCI);
+        substituteInParent(SimplifiedCI, V);
         return V;
       }
     }

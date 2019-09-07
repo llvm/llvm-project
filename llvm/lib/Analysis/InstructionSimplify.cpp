@@ -5396,7 +5396,7 @@ const SimplifyQuery getBestSimplifyQuery(Pass &P, Function &F) {
   auto *DTWP = P.getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   auto *TLIWP = P.getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  auto *TLI = TLIWP ? &TLIWP->getTLI() : nullptr;
+  auto *TLI = TLIWP ? &TLIWP->getTLI(F) : nullptr;
   auto *ACWP = P.getAnalysisIfAvailable<AssumptionCacheTracker>();
   auto *AC = ACWP ? &ACWP->getAssumptionCache(F) : nullptr;
   return {F.getParent()->getDataLayout(), TLI, DT, AC};

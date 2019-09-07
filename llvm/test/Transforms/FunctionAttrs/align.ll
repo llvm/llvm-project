@@ -107,7 +107,7 @@ define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
 
 ; <label>:3:                                      ; preds = %1
 
-; ATTRIBUTOR: %4 = tail call i8* @f1(i8* nonnull align 8 dereferenceable(1) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: %4 = tail call i8* @f1(i8* nonnull align 8 dereferenceable(1) "no-capture-maybe-returned" @a1)
   %4 = tail call i8* @f1(i8* nonnull %0)
   br label %7
 
