@@ -341,7 +341,11 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetStopOthers(true);
+#if __has_feature(address_sanitizer)
   options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
+#else
+  options.SetTimeout(std::chrono::milliseconds(500));
+#endif
   options.SetTryAllThreads(false);
   options.SetIsForUtilityExpr(true);
   thread.CalculateExecutionContext(exe_ctx);
