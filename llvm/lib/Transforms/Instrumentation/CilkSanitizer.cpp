@@ -828,6 +828,14 @@ void CilkSanitizerImpl::initializeCsanHooks() {
                                              RetType, SuppressionFlagTy,
                                              IDType);
   SetSuppressionFlag->addFnAttr(Attribute::InaccessibleMemOnly);
+
+  // Cilksan-specific attributes on CSI hooks
+  CsiBeforeLoop->addFnAttr(Attribute::InaccessibleMemOnly);
+  CsiAfterLoop->addFnAttr(Attribute::InaccessibleMemOnly);
+
+  CsiAfterAlloca->addParamAttr(1, Attribute::NoCapture);
+  CsiAfterAlloca->addParamAttr(1, Attribute::ReadNone);
+  CsiAfterAlloca->addFnAttr(Attribute::InaccessibleMemOnly);
 }
 
 static BasicBlock *SplitOffPreds(
