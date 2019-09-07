@@ -4758,11 +4758,21 @@ swift::ModuleDecl *SwiftASTContext::GetScratchModule() {
   return m_scratch_module;
 }
 
+swift::Lowering::TypeConverter *SwiftASTContext::GetSILTypes() {
+  VALID_OR_RETURN(nullptr);
+
+  if (m_sil_types_ap.get() == NULL)
+    m_sil_types_ap.reset(new swift::Lowering::TypeConverter(*GetScratchModule()));
+
+  return m_sil_types_ap.get();
+}
+
 swift::SILModule *SwiftASTContext::GetSILModule() {
   VALID_OR_RETURN(nullptr);
 
   if (m_sil_module_ap.get() == NULL)
     m_sil_module_ap = swift::SILModule::createEmptyModule(GetScratchModule(),
+                                                          *GetSILTypes(),
                                                           GetSILOptions());
   return m_sil_module_ap.get();
 }
