@@ -10,10 +10,10 @@
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:     0x[[FOO_ADDR:.*]] R_X86_64_RELATIVE - 0x[[FOO_ADDR]]
 // CHECK-NEXT:     0x[[BAR_ADDR:.*]] R_X86_64_RELATIVE - 0x[[BAR_ADDR]]
-// CHECK-NEXT:     0x2010 R_X86_64_RELATIVE - 0x2009
+// CHECK-NEXT:     0x{{[0-9A-F]+}} R_X86_64_RELATIVE - 0x{{[0-9A-F]+}}
 // CHECK-NEXT:     0x{{.*}} R_X86_64_RELATIVE - 0x[[ZED_ADDR:.*]]
 // CHECK-NEXT:     0x{{.*}} R_X86_64_RELATIVE - 0x[[FOO_ADDR]]
-// CHECK-NEXT:     0x2028 R_X86_64_64 external 0x0
+// CHECK-NEXT:     0x{{[0-9A-F]+}} R_X86_64_64 external 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
