@@ -260,12 +260,6 @@ const char *Args::GetArgumentAtIndex(size_t idx) const {
   return nullptr;
 }
 
-char Args::GetArgumentQuoteCharAtIndex(size_t idx) const {
-  if (idx < m_entries.size())
-    return m_entries[idx].quote;
-  return '\0';
-}
-
 char **Args::GetArgumentVector() {
   assert(!m_argv.empty());
   // TODO: functions like execve and posix_spawnp exhibit undefined behavior
@@ -386,29 +380,6 @@ void Args::Clear() {
   m_entries.clear();
   m_argv.clear();
   m_argv.push_back(nullptr);
-}
-
-const char *Args::StripSpaces(std::string &s, bool leading, bool trailing,
-                              bool return_null_if_empty) {
-  static const char *k_white_space = " \t\v";
-  if (!s.empty()) {
-    if (leading) {
-      size_t pos = s.find_first_not_of(k_white_space);
-      if (pos == std::string::npos)
-        s.clear();
-      else if (pos > 0)
-        s.erase(0, pos);
-    }
-
-    if (trailing) {
-      size_t rpos = s.find_last_not_of(k_white_space);
-      if (rpos != std::string::npos && rpos + 1 < s.size())
-        s.erase(rpos + 1);
-    }
-  }
-  if (return_null_if_empty && s.empty())
-    return nullptr;
-  return s.c_str();
 }
 
 const char *Args::GetShellSafeArgument(const FileSpec &shell,

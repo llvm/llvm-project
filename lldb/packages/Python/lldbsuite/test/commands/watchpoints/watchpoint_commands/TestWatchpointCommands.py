@@ -34,9 +34,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_rw_watchpoint(self):
@@ -105,9 +102,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 2'])
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_rw_watchpoint_delete(self):
@@ -162,9 +156,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("process status",
                     substrs=['exited'])
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_rw_watchpoint_set_ignore_count(self):
@@ -222,9 +213,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 2', 'ignore_count = 2'])
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_rw_disable_after_first_stop(self):
@@ -292,9 +280,6 @@ class WatchpointCommandsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 1'])
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_rw_disable_then_enable(self):

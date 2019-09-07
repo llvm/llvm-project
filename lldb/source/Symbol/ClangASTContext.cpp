@@ -5016,6 +5016,22 @@ CompilerType ClangASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
 }
 // Exploring the type
 
+const llvm::fltSemantics &
+ClangASTContext::GetFloatTypeSemantics(size_t byte_size) {
+  if (auto *ast = getASTContext()) {
+    const size_t bit_size = byte_size * 8;
+    if (bit_size == ast->getTypeSize(ast->FloatTy))
+      return ast->getFloatTypeSemantics(ast->FloatTy);
+    else if (bit_size == ast->getTypeSize(ast->DoubleTy))
+      return ast->getFloatTypeSemantics(ast->DoubleTy);
+    else if (bit_size == ast->getTypeSize(ast->LongDoubleTy))
+      return ast->getFloatTypeSemantics(ast->LongDoubleTy);
+    else if (bit_size == ast->getTypeSize(ast->HalfTy))
+      return ast->getFloatTypeSemantics(ast->HalfTy);
+  }
+  return llvm::APFloatBase::Bogus();
+}
+
 Optional<uint64_t>
 ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {

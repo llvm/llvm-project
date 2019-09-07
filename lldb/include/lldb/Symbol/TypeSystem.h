@@ -14,6 +14,7 @@
 #include <mutex>
 #include <string>
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Casting.h"
@@ -301,6 +302,8 @@ public:
                                      const CompilerDeclContext &decl_ctx);
 
   // Exploring the type
+
+  virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
 
   virtual llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
