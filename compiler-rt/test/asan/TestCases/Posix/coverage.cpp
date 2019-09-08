@@ -18,7 +18,6 @@
 //
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // XFAIL: android
-// XFAIL: i386-netbsd
 // UNSUPPORTED: ios
 
 #include <assert.h>
