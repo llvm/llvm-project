@@ -1153,16 +1153,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
             EntryExitInstrumenterPass(/*PostInlining=*/false)));
       });
 
-      if (CodeGenOpts.SanitizeCoverageType ||
-          CodeGenOpts.SanitizeCoverageIndirectCalls ||
-          CodeGenOpts.SanitizeCoverageTraceCmp) {
-        auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-        PB.registerPipelineStartEPCallback(
-            [SancovOpts](ModulePassManager &MPM) {
-              MPM.addPass(ModuleSanitizerCoveragePass(SancovOpts));
-            });
-      }
-
       // Register callbacks to schedule sanitizer passes at the appropriate part of
       // the pipeline.
       // FIXME: either handle asan/the remaining sanitizers or error out
@@ -1230,6 +1220,13 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       }
     }
 
+    if (CodeGenOpts.SanitizeCoverageType ||
+        CodeGenOpts.SanitizeCoverageIndirectCalls ||
+        CodeGenOpts.SanitizeCoverageTraceCmp) {
+      auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
+      MPM.addPass(ModuleSanitizerCoveragePass(SancovOpts));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
       bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
       MPM.addPass(HWAddressSanitizerPass(
@@ -1241,13 +1238,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     }
 
     if (CodeGenOpts.OptimizationLevel == 0) {
-      if (CodeGenOpts.SanitizeCoverageType ||
-          CodeGenOpts.SanitizeCoverageIndirectCalls ||
-          CodeGenOpts.SanitizeCoverageTraceCmp) {
-        auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-        MPM.addPass(ModuleSanitizerCoveragePass(SancovOpts));
-      }
-
       addSanitizersAtO0(MPM, TargetTriple, LangOpts, CodeGenOpts);
     }
   }

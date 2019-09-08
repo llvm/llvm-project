@@ -735,9 +735,13 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                 SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
                                 const TemplateArgumentListInfo *TemplateArgs) {
+  // DependentScopeDeclRefExpr::Create requires a valid QualifierLoc
+  NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
+  if (!QualifierLoc)
+    return ExprError();
+
   return DependentScopeDeclRefExpr::Create(
-      Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
-      TemplateArgs);
+      Context, QualifierLoc, TemplateKWLoc, NameInfo, TemplateArgs);
 }
 
 
