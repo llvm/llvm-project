@@ -64,8 +64,8 @@ define i16 @test1(float %f) nounwind {
 ; X32_AVX512-NEXT:    vmulss LCPI0_1, %xmm0, %xmm0
 ; X32_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X32_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX512-NEXT:    vminss LCPI0_2, %xmm0, %xmm0
+; X32_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X32_AVX512-NEXT:    vcvttss2si %xmm0, %eax
 ; X32_AVX512-NEXT:    ## kill: def $ax killed $ax killed $eax
@@ -77,8 +77,8 @@ define i16 @test1(float %f) nounwind {
 ; X64_AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vminss {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vcvttss2si %xmm0, %eax
 ; X64_AVX512-NEXT:    ## kill: def $ax killed $ax killed $eax

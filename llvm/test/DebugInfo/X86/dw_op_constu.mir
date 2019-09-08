@@ -1,0 +1,377 @@
+# RUN: llc -o - %s -start-after=patchable-function -O0 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+
+# Test dwarf codegen of:
+#   - DW_OP_constu, X, DW_OP_minus
+#   - DW_OP_constu, X, DW_OP_plus
+#   - DW_OP_plus_uconst, X
+# when feeding a DW_OP_breg.
+#
+# Internally in LLVM the value X is saved as an "uint64_t".  But when
+# DwarfExpression::addMachineRegExpression is trying to simplify the DWARF by
+# folding such expressions into a DW_OP_breg (or DW_OP_fbreg) the offset is
+# converted to an "int".  We must be careful when doing those folds, checking
+# that X is in the range for "int".
+
+--- |
+  define void @test() !dbg !5 {
+  entry:
+    ret void, !dbg !14
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "1.cc", directory: "/tmp")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 4, type: !6, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null}
+  !8 = !{!9}
+  !9 = !DILocalVariable(name: "buf", scope: !5, file: !1, line: 5, type: !10)
+  !10 = !DICompositeType(tag: DW_TAG_array_type, baseType: !11, size: 3200, align: 32, elements: !12)
+  !11 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !12 = !{!13}
+  !13 = !DISubrange(count: 100)
+  !14 = !DILocation(line: 7, column: 1, scope: !5)
+
+...
+---
+name:            test
+tracksRegLiveness: true
+body:             |
+
+  bb.0: ;-------------------------- DW_OP_plus -------------------------------
+
+    ; UINT_MAX
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 4294967295, DW_OP_minus), debug-location !14
+
+    ; UINT_MAX+1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 4294967296, DW_OP_minus), debug-location !14
+
+    ; INT_MAX
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 2147483647, DW_OP_minus), debug-location !14
+
+    ; INT_MAX+1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 2147483648, DW_OP_minus), debug-location !14
+
+    ; 0
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 0, DW_OP_minus), debug-location !14
+
+    ; -1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 18446744073709551615, DW_OP_minus), debug-location !14
+
+    ; -2
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 18446744073709551614, DW_OP_minus), debug-location !14
+
+    RETQ debug-location !14
+
+
+  bb.1: ;-------------------------- DW_OP_plus -------------------------------
+
+    ; UINT_MAX
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 4294967295, DW_OP_plus), debug-location !14
+
+    ; UINT_MAX+1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 4294967296, DW_OP_plus), debug-location !14
+
+    ; INT_MAX
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 2147483647, DW_OP_plus), debug-location !14
+
+    ; INT_MAX+1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 2147483648, DW_OP_plus), debug-location !14
+
+    ; 0
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 0, DW_OP_plus), debug-location !14
+
+    ; -1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 18446744073709551615, DW_OP_plus), debug-location !14
+
+    ; -2
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 18446744073709551614, DW_OP_plus), debug-location !14
+
+    RETQ debug-location !14
+
+
+  bb.2: ;-------------------------- DW_OP_plus_uconst -------------------------------
+
+    ; UINT_MAX
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 4294967295), debug-location !14
+
+    ; UINT_MAX+1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 4294967296), debug-location !14
+
+    ; INT_MAX
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 2147483647), debug-location !14
+
+    ; INT_MAX+1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 2147483648), debug-location !14
+
+    ; 0
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 0), debug-location !14
+
+    ; -1
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 18446744073709551615), debug-location !14
+
+    ; -2
+    renamable $rcx = MOV64rm renamable $noreg, 1, $noreg, 0, $fs
+    DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_plus_uconst, 18446744073709551614), debug-location !14
+
+    RETQ debug-location !14
+
+...
+
+
+# CHECK-LABEL: .Ldebug_loc0:
+# CHECK-NEXT:         .quad   .Ltmp0-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp1-.Lfunc_begin0
+# CHECK-NEXT:         .short  9                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   255                     # 4294967295
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   15                      #
+# CHECK-NEXT:         .byte   28                      # DW_OP_minus
+# CHECK-NEXT:         .quad   .Ltmp1-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp2-.Lfunc_begin0
+# CHECK-NEXT:         .short  9                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   128                     # 4294967296
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   16                      #
+# CHECK-NEXT:         .byte   28                      # DW_OP_minus
+# CHECK-NEXT:         .quad   .Ltmp2-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp3-.Lfunc_begin0
+# CHECK-NEXT:         .short  6                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   129                     # -2147483647
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   120                     #
+# CHECK-NEXT:         .quad   .Ltmp3-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp4-.Lfunc_begin0
+# CHECK-NEXT:         .short  6                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   128                     # -2147483648
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   120                     #
+# CHECK-NEXT:         .quad   .Ltmp4-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp5-.Lfunc_begin0
+# CHECK-NEXT:         .short  2                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .quad   .Ltmp5-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp6-.Lfunc_begin0
+# CHECK-NEXT:         .short  5                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   48                      # DW_OP_lit0
+# CHECK-NEXT:         .byte   32                      # DW_OP_not
+# CHECK-NEXT:         .byte   28                      # DW_OP_minus
+# CHECK-NEXT:         .quad   .Ltmp6-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp7-.Lfunc_begin0
+# CHECK-NEXT:         .short  14                      # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   254                     # 18446744073709551614
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   1                       #
+# CHECK-NEXT:         .byte   28                      # DW_OP_minus
+#-----------------------------------------------------------------------
+# CHECK-NEXT:         .quad   .Ltmp8-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp9-.Lfunc_begin0
+# CHECK-NEXT:         .short  9                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   255                     # 4294967295
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   15                      #
+# CHECK-NEXT:         .byte   34                      # DW_OP_plus
+# CHECK-NEXT:         .quad   .Ltmp9-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp10-.Lfunc_begin0
+# CHECK-NEXT:         .short  9                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   128                     # 4294967296
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   16                      #
+# CHECK-NEXT:         .byte   34                      # DW_OP_plus
+# CHECK-NEXT:         .quad   .Ltmp10-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp11-.Lfunc_begin0
+# CHECK-NEXT:         .short  6                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   255                     # 2147483647
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   7                       #
+# CHECK-NEXT:         .quad   .Ltmp11-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp12-.Lfunc_begin0
+# CHECK-NEXT:         .short  9                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   128                     # 2147483648
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   8                       #
+# CHECK-NEXT:         .byte   34                      # DW_OP_plus
+# CHECK-NEXT:         .quad   .Ltmp12-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp13-.Lfunc_begin0
+# CHECK-NEXT:         .short  2                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .quad   .Ltmp13-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp14-.Lfunc_begin0
+# CHECK-NEXT:         .short  5                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   48                      # DW_OP_lit0
+# CHECK-NEXT:         .byte   32                      # DW_OP_not
+# CHECK-NEXT:         .byte   34                      # DW_OP_plus
+# CHECK-NEXT:         .quad   .Ltmp14-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp15-.Lfunc_begin0
+# CHECK-NEXT:         .short  14                      # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   16                      # DW_OP_constu
+# CHECK-NEXT:         .byte   254                     # 18446744073709551614
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   1                       #
+# CHECK-NEXT:         .byte   34                      # DW_OP_plus
+#-----------------------------------------------------------------------
+# CHECK-NEXT:         .quad   .Ltmp16-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp17-.Lfunc_begin0
+# CHECK-NEXT:         .short  8                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   35                      # DW_OP_plus_uconst
+# CHECK-NEXT:         .byte   255                     # 4294967295
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   15                      #
+# CHECK-NEXT:         .quad   .Ltmp17-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp18-.Lfunc_begin0
+# CHECK-NEXT:         .short  8                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   35                      # DW_OP_plus_uconst
+# CHECK-NEXT:         .byte   128                     # 4294967296
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   16                      #
+# CHECK-NEXT:         .quad   .Ltmp18-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp19-.Lfunc_begin0
+# CHECK-NEXT:         .short  6                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   255                     # 2147483647
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   7                       #
+# CHECK-NEXT:         .quad   .Ltmp19-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp20-.Lfunc_begin0
+# CHECK-NEXT:         .short  8                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   35                      # DW_OP_plus_uconst
+# CHECK-NEXT:         .byte   128                     # 2147483648
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   128                     #
+# CHECK-NEXT:         .byte   8                       #
+# CHECK-NEXT:         .quad   .Ltmp20-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp21-.Lfunc_begin0
+# CHECK-NEXT:         .short  2                       # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .quad   .Ltmp21-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Ltmp22-.Lfunc_begin0
+# CHECK-NEXT:         .short  13                      # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   35                      # DW_OP_plus_uconst
+# CHECK-NEXT:         .byte   255                     # 18446744073709551615
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   1                       #
+# CHECK-NEXT:         .quad   .Ltmp22-.Lfunc_begin0
+# CHECK-NEXT:         .quad   .Lfunc_end0-.Lfunc_begin0
+# CHECK-NEXT:         .short  13                      # Loc expr size
+# CHECK-NEXT:         .byte   114                     # DW_OP_breg2
+# CHECK-NEXT:         .byte   0                       # 0
+# CHECK-NEXT:         .byte   35                      # DW_OP_plus_uconst
+# CHECK-NEXT:         .byte   254                     # 18446744073709551614
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   255                     #
+# CHECK-NEXT:         .byte   1                       #
+# CHECK-NEXT:         .quad   0
+# CHECK-NEXT:         .quad   0

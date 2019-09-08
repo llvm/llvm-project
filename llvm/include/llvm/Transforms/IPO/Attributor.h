@@ -1713,9 +1713,9 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
   ///}
 
   /// Return an assumed simplified value if a single candidate is found. If
-  /// there cannot be one, return original value. If it is not clear yet, return the
-  /// Optional::NoneType.
-  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const;
+  /// there cannot be one, return original value. If it is not clear yet, return
+  /// the Optional::NoneType.
+  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueSimplify &createForPosition(const IRPosition &IRP,

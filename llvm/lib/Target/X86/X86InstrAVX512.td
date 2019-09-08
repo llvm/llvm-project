@@ -412,6 +412,11 @@ def AVX512_512_SETALLONES : I<0, Pseudo, (outs VR512:$dst), (ins), "",
                [(set VR512:$dst, (v16i32 immAllOnesV))]>;
 }
 
+let Predicates = [HasAVX512] in {
+def : Pat<(v16f32 immAllZerosV), (AVX512_512_SET0)>;
+def : Pat<(v8f64 immAllZerosV), (AVX512_512_SET0)>;
+}
+
 // Alias instructions that allow VPTERNLOG to be used with a mask to create
 // a mix of all ones and all zeros elements. This is done this way to force
 // the same register to be used as input for all three sources.
@@ -434,6 +439,13 @@ def AVX512_128_SET0 : I<0, Pseudo, (outs VR128X:$dst), (ins), "",
                [(set VR128X:$dst, (v4i32 immAllZerosV))]>;
 def AVX512_256_SET0 : I<0, Pseudo, (outs VR256X:$dst), (ins), "",
                [(set VR256X:$dst, (v8i32 immAllZerosV))]>;
+}
+
+let Predicates = [HasAVX512] in {
+def : Pat<(v4f32 immAllZerosV), (AVX512_128_SET0)>;
+def : Pat<(v2f64 immAllZerosV), (AVX512_128_SET0)>;
+def : Pat<(v8f32 immAllZerosV), (AVX512_256_SET0)>;
+def : Pat<(v4f64 immAllZerosV), (AVX512_256_SET0)>;
 }
 
 // Alias instructions that map fld0 to xorps for sse or vxorps for avx.
