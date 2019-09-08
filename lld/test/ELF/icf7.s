@@ -7,8 +7,8 @@
 # CHECK: selected section {{.*}}:(.text.f1)
 # CHECK:   removing identical section {{.*}}:(.text.f2)
 
-# ALIGN: 0000000000201000 .text 00000000 _start
-# ALIGN: 0000000000201100 .text 00000000 f1
+# ALIGN: .text 00000000 _start
+# ALIGN: .text 00000000 f1
 
 .globl _start, f1, f2
 _start:

@@ -6,7 +6,7 @@
 ; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 
 ; CHECK:      Name: g
-; CHECK-NEXT: Value: 0x1000
+; CHECK-NEXT: Value:
 ; CHECK-NEXT: Size: 0
 ; CHECK-NEXT: Binding: Local
 ; CHECK-NEXT: Type: None
@@ -16,7 +16,7 @@
 ; CHECK-NEXT: Section: .text
 
 ; CHECK:      Name: a
-; CHECK-NEXT: Value: 0x3000
+; CHECK-NEXT: Value:
 ; CHECK-NEXT: Size: 0
 ; CHECK-NEXT: Binding: Local
 ; CHECK-NEXT: Type: None

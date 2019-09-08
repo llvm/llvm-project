@@ -307,6 +307,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // Consume the vector width attribute or apply any target specific limit.
   if (PreferVectorWidthOverride)
     PreferVectorWidth = PreferVectorWidthOverride;
+  else if (Prefer128Bit)
+    PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
 }

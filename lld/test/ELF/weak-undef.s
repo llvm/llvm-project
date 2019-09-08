@@ -1,7 +1,10 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/dummy-shared.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: ld.lld %t.o -o %t --export-dynamic
+# RUN: llvm-readobj --dyn-syms %t | FileCheck %s
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/dummy-shared.s -o %t1.o
 # RUN: ld.lld %t1.o -shared -o %t1.so
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t %t1.so -pie
 # RUN: llvm-readobj --dyn-syms %t | FileCheck %s
 
@@ -27,9 +30,6 @@
 # CHECK-NEXT: ]
 
 .weak foo
-
-.globl _start
-_start:
 
 .data
   .dc.a foo

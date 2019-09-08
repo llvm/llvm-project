@@ -1152,6 +1152,13 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_STDOUT
 #endif
 
+// Some systems do not provide gets() in their C library, for security reasons.
+#ifndef _LIBCPP_C_HAS_NO_GETS
+#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD__) && __FreeBSD__ >= 13)
+#    define _LIBCPP_C_HAS_NO_GETS
+#  endif
+#endif
+
 #if defined(__BIONIC__) || defined(__CloudABI__) ||                            \
     defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE

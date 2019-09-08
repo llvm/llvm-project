@@ -187,6 +187,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
+  case ISD::UMULFIXSAT:
     R = ScalarizeVecRes_MULFIX(N);
     break;
   }
@@ -1002,6 +1003,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
+  case ISD::UMULFIXSAT:
     SplitVecRes_MULFIX(N, Lo, Hi);
     break;
   }
@@ -2765,6 +2767,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
+  case ISD::UMULFIXSAT:
     // These are binary operations, but with an extra operand that shouldn't
     // be widened (the scale).
     Res = WidenVecRes_BinaryWithExtraScalarOp(N);

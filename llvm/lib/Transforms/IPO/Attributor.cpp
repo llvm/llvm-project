@@ -218,7 +218,7 @@ bool genericValueTraversal(
       for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
         const BasicBlock *IncomingBB = PHI->getIncomingBlock(u);
         if (LivenessAA->isAssumedDead(IncomingBB->getTerminator())) {
-          AnyDead =true;
+          AnyDead = true;
           continue;
         }
         Worklist.push_back(PHI->getIncomingValue(u));
@@ -2900,6 +2900,238 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
   }
 };
 
+/// ------------------ Value Simplify Attribute ----------------------------
+struct AAValueSimplifyImpl : AAValueSimplify {
+  AAValueSimplifyImpl(const IRPosition &IRP) : AAValueSimplify(IRP) {}
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return getAssumed() ? (getKnown() ? "simplified" : "maybe-simple")
+                        : "not-simple";
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+
+  /// See AAValueSimplify::getAssumedSimplifiedValue()
+  Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
+    if (!getAssumed())
+      return const_cast<Value *>(&getAssociatedValue());
+    return SimplifiedAssociatedValue;
+  }
+  void initialize(Attributor &A) override {}
+
+  /// Helper function for querying AAValueSimplify and updating candicate.
+  /// \param QueryingValue Value trying to unify with SimplifiedValue
+  /// \param AccumulatedSimplifiedValue Current simplification result.
+  static bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
+                             Value &QueryingValue,
+                             Optional<Value *> &AccumulatedSimplifiedValue) {
+    // FIXME: Add a typecast support.
+
+    auto &ValueSimpifyAA = A.getAAFor<AAValueSimplify>(
+        QueryingAA, IRPosition::value(QueryingValue));
+
+    Optional<Value *> QueryingValueSimplified =
+        ValueSimpifyAA.getAssumedSimplifiedValue(A);
+
+    if (!QueryingValueSimplified.hasValue())
+      return true;
+
+    if (!QueryingValueSimplified.getValue())
+      return false;
+
+    Value &QueryingValueSimplifiedUnwrapped =
+        *QueryingValueSimplified.getValue();
+
+    if (isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
+      return true;
+
+    if (AccumulatedSimplifiedValue.hasValue())
+      return AccumulatedSimplifiedValue == QueryingValueSimplified;
+
+    LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << QueryingValue
+                      << " is assumed to be "
+                      << QueryingValueSimplifiedUnwrapped << "\n");
+
+    AccumulatedSimplifiedValue = QueryingValueSimplified;
+    return true;
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    if (!SimplifiedAssociatedValue.hasValue() ||
+        !SimplifiedAssociatedValue.getValue())
+      return Changed;
+
+    if (auto *C = dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())) {
+      // We can replace the AssociatedValue with the constant.
+      Value &V = getAssociatedValue();
+      if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
+        LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << V << " -> " << *C
+                          << "\n");
+        V.replaceAllUsesWith(C);
+        Changed = ChangeStatus::CHANGED;
+      }
+    }
+
+    return Changed | AAValueSimplify::manifest(A);
+  }
+
+protected:
+  // An assumed simplified value. Initially, it is set to Optional::None, which
+  // means that the value is not clear under current assumption. If in the
+  // pessimistic state, getAssumedSimplifiedValue doesn't return this value but
+  // returns orignal associated value.
+  Optional<Value *> SimplifiedAssociatedValue;
+};
+
+struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
+  AAValueSimplifyArgument(const IRPosition &IRP) : AAValueSimplifyImpl(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+
+    auto PredForCallSite = [&](CallSite CS) {
+      return checkAndUpdate(A, *this, *CS.getArgOperand(getArgNo()),
+                            SimplifiedAssociatedValue);
+    };
+
+    if (!A.checkForAllCallSites(PredForCallSite, *this, true))
+      return indicatePessimisticFixpoint();
+
+    // If a candicate was found in this update, return CHANGED.
+    return HasValueBefore == SimplifiedAssociatedValue.hasValue()
+               ? ChangeStatus::UNCHANGED
+               : ChangeStatus ::CHANGED;
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_ARG_ATTR(value_simplify)
+  }
+};
+
+struct AAValueSimplifyReturned : AAValueSimplifyImpl {
+  AAValueSimplifyReturned(const IRPosition &IRP) : AAValueSimplifyImpl(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+
+    auto PredForReturned = [&](Value &V) {
+      return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
+    };
+
+    if (!A.checkForAllReturnedValues(PredForReturned, *this))
+      return indicatePessimisticFixpoint();
+
+    // If a candicate was found in this update, return CHANGED.
+    return HasValueBefore == SimplifiedAssociatedValue.hasValue()
+               ? ChangeStatus::UNCHANGED
+               : ChangeStatus ::CHANGED;
+  }
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(value_simplify)
+  }
+};
+
+struct AAValueSimplifyFloating : AAValueSimplifyImpl {
+  AAValueSimplifyFloating(const IRPosition &IRP) : AAValueSimplifyImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    Value &V = getAnchorValue();
+
+    // TODO: add other stuffs
+    if (isa<Constant>(V) || isa<UndefValue>(V))
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+
+    auto VisitValueCB = [&](Value &V, BooleanState, bool Stripped) -> bool {
+      auto &AA = A.getAAFor<AAValueSimplify>(*this, IRPosition::value(V));
+      if (!Stripped && this == &AA) {
+        // TODO: Look the instruction and check recursively.
+        LLVM_DEBUG(
+            dbgs() << "[Attributor][ValueSimplify] Can't be stripped more : "
+                   << V << "\n");
+        indicatePessimisticFixpoint();
+        return false;
+      }
+      return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
+    };
+
+    if (!genericValueTraversal<AAValueSimplify, BooleanState>(
+            A, getIRPosition(), *this, static_cast<BooleanState &>(*this),
+            VisitValueCB))
+      return indicatePessimisticFixpoint();
+
+    // If a candicate was found in this update, return CHANGED.
+
+    return HasValueBefore == SimplifiedAssociatedValue.hasValue()
+               ? ChangeStatus::UNCHANGED
+               : ChangeStatus ::CHANGED;
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FLOATING_ATTR(value_simplify)
+  }
+};
+
+struct AAValueSimplifyFunction : AAValueSimplifyImpl {
+  AAValueSimplifyFunction(const IRPosition &IRP) : AAValueSimplifyImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    SimplifiedAssociatedValue = &getAnchorValue();
+    indicateOptimisticFixpoint();
+  }
+  /// See AbstractAttribute::initialize(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    llvm_unreachable(
+        "AAValueSimplify(Function|CallSite)::updateImpl will not be called");
+  }
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FN_ATTR(value_simplify)
+  }
+};
+
+struct AAValueSimplifyCallSite : AAValueSimplifyFunction {
+  AAValueSimplifyCallSite(const IRPosition &IRP)
+      : AAValueSimplifyFunction(IRP) {}
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CS_ATTR(value_simplify)
+  }
+};
+
+struct AAValueSimplifyCallSiteReturned : AAValueSimplifyReturned {
+  AAValueSimplifyCallSiteReturned(const IRPosition &IRP)
+      : AAValueSimplifyReturned(IRP) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(value_simplify)
+  }
+};
+struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
+  AAValueSimplifyCallSiteArgument(const IRPosition &IRP)
+      : AAValueSimplifyFloating(IRP) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(value_simplify)
+  }
+};
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -3380,8 +3612,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // though it is an argument attribute.
     getOrCreateAAFor<AAReturnedValues>(FPos);
 
+    IRPosition RetPos = IRPosition::returned(F);
+
+    // Every function might be simplified.
+    getOrCreateAAFor<AAValueSimplify>(RetPos);
+
     if (ReturnType->isPointerTy()) {
-      IRPosition RetPos = IRPosition::returned(F);
 
       // Every function with pointer return type might be marked align.
       getOrCreateAAFor<AAAlign>(RetPos);
@@ -3399,8 +3635,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   }
 
   for (Argument &Arg : F.args()) {
+    IRPosition ArgPos = IRPosition::argument(Arg);
+
+    // Every argument might be simplified.
+    getOrCreateAAFor<AAValueSimplify>(ArgPos);
+
     if (Arg.getType()->isPointerTy()) {
-      IRPosition ArgPos = IRPosition::argument(Arg);
       // Every argument with pointer type might be marked nonnull.
       getOrCreateAAFor<AANonNull>(ArgPos);
 
@@ -3465,9 +3705,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     CallSite CS(&I);
     if (CS && CS.getCalledFunction()) {
       for (int i = 0, e = CS.getCalledFunction()->arg_size(); i < e; i++) {
+
+        IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
+
+        // Call site argument might be simplified.
+        getOrCreateAAFor<AAValueSimplify>(CSArgPos);
+
         if (!CS.getArgument(i)->getType()->isPointerTy())
           continue;
-        IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
 
         // Call site argument attribute "non-null".
         getOrCreateAAFor<AANonNull>(CSArgPos);
@@ -3632,6 +3877,7 @@ const char AAIsDead::ID = 0;
 const char AADereferenceable::ID = 0;
 const char AAAlign::ID = 0;
 const char AANoCapture::ID = 0;
+const char AAValueSimplify::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -3677,6 +3923,22 @@ const char AANoCapture::ID = 0;
     return *AA;                                                                \
   }
 
+#define CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(CLASS)                      \
+  CLASS &CLASS::createForPosition(const IRPosition &IRP, Attributor &A) {      \
+    CLASS *AA = nullptr;                                                       \
+    switch (IRP.getPositionKind()) {                                           \
+      SWITCH_PK_INV(CLASS, IRP_INVALID, "invalid")                             \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_FUNCTION, Function)                     \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE, CallSite)                    \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_FLOAT, Floating)                        \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_ARGUMENT, Argument)                     \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_RETURNED, Returned)                     \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE_RETURNED, CallSiteReturned)   \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_CALL_SITE_ARGUMENT, CallSiteArgument)   \
+    }                                                                          \
+    return *AA;                                                                \
+  }
+
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUnwind)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoSync)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
@@ -3692,8 +3954,11 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AADereferenceable)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAlign)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 
+CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
+
 #undef CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION
+#undef CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef SWITCH_PK_CREATE
 #undef SWITCH_PK_INV
 

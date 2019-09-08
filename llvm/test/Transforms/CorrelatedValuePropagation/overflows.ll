@@ -850,11 +850,9 @@ define i1 @sadd_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[ADD]], 19
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %x.offset = add i32 %x, 9
@@ -897,11 +895,9 @@ define i1 @uadd_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[ADD]], 19
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp1 = icmp ult i32 %x, 10
@@ -940,11 +936,9 @@ define i1 @ssub_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[SUB]], 19
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp1 = icmp ult i32 %x, 10
@@ -985,11 +979,9 @@ define i1 @usub_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[SUB]], 19
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp1 = icmp ult i32 %x, 10
@@ -1031,13 +1023,10 @@ define i1 @smul_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[MUL]], 81
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[MUL]], -81
-; CHECK-NEXT:    [[CMP5:%.*]] = and i1 [[CMP3]], [[CMP4]]
+; CHECK-NEXT:    [[CMP5:%.*]] = and i1 true, true
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP5]], [[CONT3]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %x.offset = add i32 %x, 9
@@ -1080,11 +1069,9 @@ define i1 @umul_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[MUL]], 9801
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp1 = icmp ult i32 %x, 100

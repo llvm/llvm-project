@@ -23,6 +23,7 @@ declare <2 x float> @llvm.powi.v2f32(<2 x float>, i32)
 
 ; Binary int plus constant scalar operand
 declare <2 x i32> @llvm.smul.fix.sat.v2i32(<2 x i32>, <2 x i32>, i32)
+declare <2 x i32> @llvm.umul.fix.sat.v2i32(<2 x i32>, <2 x i32>, i32)
 
 
 ; CHECK-LABEL: @scalarize_sqrt_v2f32(
@@ -122,4 +123,15 @@ define <2 x float> @scalarize_powi_v2f32(<2 x float> %x, i32 %y) #0 {
 define <2 x i32> @scalarize_smul_fix_sat_v2i32(<2 x i32> %x) #0 {
   %smulfixsat = call <2 x i32> @llvm.smul.fix.sat.v2i32(<2 x i32> %x, <2 x i32> <i32 5, i32 19>, i32 31)
   ret <2 x i32> %smulfixsat
+}
+
+; CHECK-LABEL: @scalarize_umul_fix_sat_v2i32(
+; CHECK: %umulfixsat.i0 = call i32 @llvm.umul.fix.sat.i32(i32 %x.i0, i32 5, i32 31)
+; CHECK: %umulfixsat.i1 = call i32 @llvm.umul.fix.sat.i32(i32 %x.i1, i32 19, i32 31)
+; CHECK: %umulfixsat.upto0 = insertelement <2 x i32> undef, i32 %umulfixsat.i0, i32 0
+; CHECK: %umulfixsat = insertelement <2 x i32> %umulfixsat.upto0, i32 %umulfixsat.i1, i32 1
+; CHECK: ret <2 x i32> %umulfixsat
+define <2 x i32> @scalarize_umul_fix_sat_v2i32(<2 x i32> %x) #0 {
+  %umulfixsat = call <2 x i32> @llvm.umul.fix.sat.v2i32(<2 x i32> %x, <2 x i32> <i32 5, i32 19>, i32 31)
+  ret <2 x i32> %umulfixsat
 }

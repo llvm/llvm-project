@@ -6698,7 +6698,8 @@ SDValue
 TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert((Node->getOpcode() == ISD::SMULFIX ||
           Node->getOpcode() == ISD::UMULFIX ||
-          Node->getOpcode() == ISD::SMULFIXSAT) &&
+          Node->getOpcode() == ISD::SMULFIXSAT ||
+          Node->getOpcode() == ISD::UMULFIXSAT) &&
          "Expected a fixed point multiplication opcode");
 
   SDLoc dl(Node);
@@ -6706,15 +6707,19 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   SDValue RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
   unsigned Scale = Node->getConstantOperandVal(2);
-  bool Saturating = Node->getOpcode() == ISD::SMULFIXSAT;
+  bool Saturating = (Node->getOpcode() == ISD::SMULFIXSAT ||
+                     Node->getOpcode() == ISD::UMULFIXSAT);
+  bool Signed = (Node->getOpcode() == ISD::SMULFIX ||
+                 Node->getOpcode() == ISD::SMULFIXSAT);
   EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   unsigned VTSize = VT.getScalarSizeInBits();
 
   if (!Scale) {
     // [us]mul.fix(a, b, 0) -> mul(a, b)
-    if (!Saturating && isOperationLegalOrCustom(ISD::MUL, VT)) {
-      return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
-    } else if (Saturating && isOperationLegalOrCustom(ISD::SMULO, VT)) {
+    if (!Saturating) {
+      if (isOperationLegalOrCustom(ISD::MUL, VT))
+        return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+    } else if (Signed && isOperationLegalOrCustom(ISD::SMULO, VT)) {
       SDValue Result =
           DAG.getNode(ISD::SMULO, dl, DAG.getVTList(VT, BoolVT), LHS, RHS);
       SDValue Product = Result.getValue(0);
@@ -6728,11 +6733,18 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
       SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Product, Zero, ISD::SETLT);
       Result = DAG.getSelect(dl, VT, ProdNeg, SatMax, SatMin);
       return DAG.getSelect(dl, VT, Overflow, Result, Product);
+    } else if (!Signed && isOperationLegalOrCustom(ISD::UMULO, VT)) {
+      SDValue Result =
+          DAG.getNode(ISD::UMULO, dl, DAG.getVTList(VT, BoolVT), LHS, RHS);
+      SDValue Product = Result.getValue(0);
+      SDValue Overflow = Result.getValue(1);
+
+      APInt MaxVal = APInt::getMaxValue(VTSize);
+      SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
+      return DAG.getSelect(dl, VT, Overflow, SatMax, Product);
     }
   }
 
-  bool Signed =
-      Node->getOpcode() == ISD::SMULFIX || Node->getOpcode() == ISD::SMULFIXSAT;
   assert(((Signed && Scale < VTSize) || (!Signed && Scale <= VTSize)) &&
          "Expected scale to be less than the number of bits if signed or at "
          "most the number of bits if unsigned.");
@@ -6758,7 +6770,8 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
 
   if (Scale == VTSize)
     // Result is just the top half since we'd be shifting by the width of the
-    // operand.
+    // operand. Overflow impossible so this works for both UMULFIX and
+    // UMULFIXSAT.
     return Hi;
 
   // The result will need to be shifted right by the scale since both operands
@@ -6770,20 +6783,55 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   if (!Saturating)
     return Result;
 
-  unsigned OverflowBits = VTSize - Scale + 1; // +1 for the sign
-  SDValue HiMask =
-      DAG.getConstant(APInt::getHighBitsSet(VTSize, OverflowBits), dl, VT);
-  SDValue LoMask = DAG.getConstant(
-      APInt::getLowBitsSet(VTSize, VTSize - OverflowBits), dl, VT);
-  APInt MaxVal = APInt::getSignedMaxValue(VTSize);
-  APInt MinVal = APInt::getSignedMinValue(VTSize);
+  if (!Signed) {
+    // Unsigned overflow happened if the upper (VTSize - Scale) bits (of the
+    // widened multiplication) aren't all zeroes.
 
-  Result = DAG.getSelectCC(dl, Hi, LoMask,
-                           DAG.getConstant(MaxVal, dl, VT), Result,
-                           ISD::SETGT);
-  return DAG.getSelectCC(dl, Hi, HiMask,
-                         DAG.getConstant(MinVal, dl, VT), Result,
-                         ISD::SETLT);
+    // Saturate to max if ((Hi >> Scale) != 0),
+    // which is the same as if (Hi > ((1 << Scale) - 1))
+    APInt MaxVal = APInt::getMaxValue(VTSize);
+    SDValue LowMask = DAG.getConstant(APInt::getLowBitsSet(VTSize, Scale),
+                                      dl, VT);
+    Result = DAG.getSelectCC(dl, Hi, LowMask,
+                             DAG.getConstant(MaxVal, dl, VT), Result,
+                             ISD::SETUGT);
+
+    return Result;
+  }
+
+  // Signed overflow happened if the upper (VTSize - Scale + 1) bits (of the
+  // widened multiplication) aren't all ones or all zeroes.
+
+  SDValue SatMin = DAG.getConstant(APInt::getSignedMinValue(VTSize), dl, VT);
+  SDValue SatMax = DAG.getConstant(APInt::getSignedMaxValue(VTSize), dl, VT);
+
+  if (Scale == 0) {
+    SDValue Sign = DAG.getNode(ISD::SRA, dl, VT, Lo,
+                               DAG.getConstant(VTSize - 1, dl, ShiftTy));
+    SDValue Overflow = DAG.getSetCC(dl, BoolVT, Hi, Sign, ISD::SETNE);
+    // Saturated to SatMin if wide product is negative, and SatMax if wide
+    // product is positive ...
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    SDValue ResultIfOverflow = DAG.getSelectCC(dl, Hi, Zero, SatMin, SatMax,
+                                               ISD::SETLT);
+    // ... but only if we overflowed.
+    return DAG.getSelect(dl, VT, Overflow, ResultIfOverflow, Result);
+  }
+
+  //  We handled Scale==0 above so all the bits to examine is in Hi.
+
+  // Saturate to max if ((Hi >> (Scale - 1)) > 0),
+  // which is the same as if (Hi > (1 << (Scale - 1)) - 1)
+  SDValue LowMask = DAG.getConstant(APInt::getLowBitsSet(VTSize, Scale - 1),
+                                    dl, VT);
+  Result = DAG.getSelectCC(dl, Hi, LowMask, SatMax, Result, ISD::SETGT);
+  // Saturate to min if (Hi >> (Scale - 1)) < -1),
+  // which is the same as if (HI < (-1 << (Scale - 1))
+  SDValue HighMask =
+      DAG.getConstant(APInt::getHighBitsSet(VTSize, VTSize - Scale + 1),
+                      dl, VT);
+  Result = DAG.getSelectCC(dl, Hi, HighMask, SatMin, Result, ISD::SETLT);
+  return Result;
 }
 
 void TargetLowering::expandUADDSUBO(

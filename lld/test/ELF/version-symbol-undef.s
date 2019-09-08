@@ -9,29 +9,14 @@
 // RUN: ld.lld --shared --version-script %t2.ver %t2.o -o %t2.so
 // RUN: echo "LIBPKG_1.3 { };" > %t.ver
 // RUN: ld.lld --shared %t.o --version-script %t.ver %t2.so -o %t.so
-// RUN: llvm-readobj --dyn-symbols -r --expand-relocs %t.so | FileCheck %s
+// RUN: llvm-readobj --dyn-symbols -r %t.so | FileCheck %s
 
 // Test that each relocation points to the correct version.
 
 // CHECK:      Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:   Relocation {
-// CHECK-NEXT:     Offset: 0x2000
-// CHECK-NEXT:     Type: R_X86_64_64 (1)
-// CHECK-NEXT:     Symbol: basename@FBSD_1.1 (1)
-// CHECK-NEXT:     Addend: 0x0
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Relocation {
-// CHECK-NEXT:     Offset: 0x2008
-// CHECK-NEXT:     Type: R_X86_64_64 (1)
-// CHECK-NEXT:     Symbol: basename@FBSD_1.0 (2)
-// CHECK-NEXT:     Addend: 0x0
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Relocation {
-// CHECK-NEXT:     Offset: 0x2010
-// CHECK-NEXT:     Type: R_X86_64_64 (1)
-// CHECK-NEXT:     Symbol: basename@FBSD_1.1 (3)
-// CHECK-NEXT:     Addend: 0x0
-// CHECK-NEXT:   }
+// CHECK-NEXT:   R_X86_64_64 basename@FBSD_1.1 0x0
+// CHECK-NEXT:   R_X86_64_64 basename@FBSD_1.0 0x0
+// CHECK-NEXT:   R_X86_64_64 basename@FBSD_1.1 0x0
 // CHECK-NEXT: }
 
 
