@@ -124,16 +124,16 @@ define <2 x double> @test_mm_i32gather_pd(double *%a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_i32gather_pd:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vgatherdpd %xmm2, (%eax,%xmm0,2), %xmm1
 ; X32-NEXT:    vmovapd %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_i32gather_pd:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovapd %xmm1, %xmm0
 ; X64-NEXT:    retq

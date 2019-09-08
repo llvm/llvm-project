@@ -436,6 +436,9 @@ protected:
   // FIXME: this is a known good value for Yonah. How about others?
   unsigned MaxInlineSizeThreshold = 128;
 
+  /// Indicates target prefers 128 bit instructions.
+  bool Prefer128Bit = false;
+
   /// Indicates target prefers 256 bit instructions.
   bool Prefer256Bit = false;
 

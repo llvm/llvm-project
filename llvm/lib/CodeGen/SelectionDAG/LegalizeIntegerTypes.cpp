@@ -150,9 +150,12 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
   case ISD::USUBSAT:     Res = PromoteIntRes_ADDSUBSAT(N); break;
+
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
-  case ISD::UMULFIX:     Res = PromoteIntRes_MULFIX(N); break;
+  case ISD::UMULFIX:
+  case ISD::UMULFIXSAT:  Res = PromoteIntRes_MULFIX(N); break;
+
   case ISD::ABS:         Res = PromoteIntRes_ABS(N); break;
 
   case ISD::ATOMIC_LOAD:
@@ -689,6 +692,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {
   SDValue Op1Promoted, Op2Promoted;
   bool Signed =
       N->getOpcode() == ISD::SMULFIX || N->getOpcode() == ISD::SMULFIXSAT;
+  bool Saturating =
+      N->getOpcode() == ISD::SMULFIXSAT || N->getOpcode() == ISD::UMULFIXSAT;
   if (Signed) {
     Op1Promoted = SExtPromotedInteger(N->getOperand(0));
     Op2Promoted = SExtPromotedInteger(N->getOperand(1));
@@ -701,7 +706,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {
   unsigned DiffSize =
       PromotedType.getScalarSizeInBits() - OldType.getScalarSizeInBits();
 
-  bool Saturating = N->getOpcode() == ISD::SMULFIXSAT;
   if (Saturating) {
     // Promoting the operand and result values changes the saturation width,
     // which is extends the values that we clamp to on saturation. This could be
@@ -1164,7 +1168,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
-  case ISD::UMULFIX: Res = PromoteIntOp_MULFIX(N); break;
+  case ISD::UMULFIX:
+  case ISD::UMULFIXSAT: Res = PromoteIntOp_MULFIX(N); break;
 
   case ISD::FPOWI: Res = PromoteIntOp_FPOWI(N); break;
 
@@ -1739,7 +1744,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
-  case ISD::UMULFIX: ExpandIntRes_MULFIX(N, Lo, Hi); break;
+  case ISD::UMULFIX:
+  case ISD::UMULFIXSAT: ExpandIntRes_MULFIX(N, Lo, Hi); break;
 
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_MUL:
@@ -2810,7 +2816,8 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   uint64_t Scale = N->getConstantOperandVal(2);
-  bool Saturating = N->getOpcode() == ISD::SMULFIXSAT;
+  bool Saturating = (N->getOpcode() == ISD::SMULFIXSAT ||
+                     N->getOpcode() == ISD::UMULFIXSAT);
   bool Signed = (N->getOpcode() == ISD::SMULFIX ||
                  N->getOpcode() == ISD::SMULFIXSAT);
 
@@ -2821,22 +2828,34 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
       Result = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
     } else {
       EVT BoolVT = getSetCCResultType(VT);
-      Result = DAG.getNode(ISD::SMULO, dl, DAG.getVTList(VT, BoolVT), LHS, RHS);
+      unsigned MulOp = Signed ? ISD::SMULO : ISD::UMULO;
+      Result = DAG.getNode(MulOp, dl, DAG.getVTList(VT, BoolVT), LHS, RHS);
       SDValue Product = Result.getValue(0);
       SDValue Overflow = Result.getValue(1);
-      assert(Signed && "Unsigned saturation not supported (yet).");
-      APInt MinVal = APInt::getSignedMinValue(VTSize);
-      APInt MaxVal = APInt::getSignedMaxValue(VTSize);
-      SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
-      SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
-      SDValue Zero = DAG.getConstant(0, dl, VT);
-      SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Product, Zero, ISD::SETLT);
-      Result = DAG.getSelect(dl, VT, ProdNeg, SatMax, SatMin);
-      Result = DAG.getSelect(dl, VT, Overflow, Result, Product);
+      if (Signed) {
+        APInt MinVal = APInt::getSignedMinValue(VTSize);
+        APInt MaxVal = APInt::getSignedMaxValue(VTSize);
+        SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
+        SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
+        SDValue Zero = DAG.getConstant(0, dl, VT);
+        SDValue ProdNeg = DAG.getSetCC(dl, BoolVT, Product, Zero, ISD::SETLT);
+        Result = DAG.getSelect(dl, VT, ProdNeg, SatMax, SatMin);
+        Result = DAG.getSelect(dl, VT, Overflow, Result, Product);
+      } else {
+        // For unsigned multiplication, we only need to check the max since we
+        // can't really overflow towards zero.
+        APInt MaxVal = APInt::getMaxValue(VTSize);
+        SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
+        Result = DAG.getSelect(dl, VT, Overflow, SatMax, Product);
+      }
     }
     SplitInteger(Result, Lo, Hi);
     return;
   }
+
+  // For SMULFIX[SAT] we only expect to find Scale<VTSize, but this assert will
+  // cover for unhandled cases below, while still being valid for UMULFIX[SAT].
+  assert(Scale <= VTSize && "Scale can't be larger than the value type size.");
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue LL, LH, RL, RH;
@@ -2892,13 +2911,20 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   if (!Saturating)
     return;
 
+  // Can not overflow when there is no integer part.
+  if (Scale == VTSize)
+    return;
+
   // To handle saturation we must check for overflow in the multiplication.
+  //
+  // Unsigned overflow happened if the upper (VTSize - Scale) bits (of Result)
+  // aren't all zeroes.
   //
   // Signed overflow happened if the upper (VTSize - Scale + 1) bits (of Result)
   // aren't all ones or all zeroes.
   //
   // We cannot overflow past HH when multiplying 2 ints of size VTSize, so the
-  // highest bit of HH determines saturation direction in the event of
+  // highest bit of HH determines saturation direction in the event of signed
   // saturation.
 
   SDValue ResultHL = Result[2];
@@ -2909,8 +2935,30 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   SDValue NVTNeg1 = DAG.getConstant(-1, dl, NVT);
   EVT BoolNVT = getSetCCResultType(NVT);
 
-  if (!Signed)
-    llvm_unreachable("Unsigned saturation not supported (yet).");
+  if (!Signed) {
+    if (Scale < NVTSize) {
+      // Overflow happened if ((HH | (HL >> Scale)) != 0).
+      SDValue HLAdjusted = DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+                                       DAG.getConstant(Scale, dl, ShiftTy));
+      SDValue Tmp = DAG.getNode(ISD::OR, dl, NVT, HLAdjusted, ResultHH);
+      SatMax = DAG.getSetCC(dl, BoolNVT, Tmp, NVTZero, ISD::SETNE);
+    } else if (Scale == NVTSize) {
+      // Overflow happened if (HH != 0).
+      SatMax = DAG.getSetCC(dl, BoolNVT, ResultHH, NVTZero, ISD::SETNE);
+    } else if (Scale < VTSize) {
+      // Overflow happened if ((HH >> (Scale - NVTSize)) != 0).
+      SDValue HLAdjusted = DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+                                       DAG.getConstant(Scale - NVTSize, dl,
+                                                       ShiftTy));
+      SatMax = DAG.getSetCC(dl, BoolNVT, HLAdjusted, NVTZero, ISD::SETNE);
+    } else
+      llvm_unreachable("Scale must be less or equal to VTSize for UMULFIXSAT"
+                       "(and saturation can't happen with Scale==VTSize).");
+
+    Hi = DAG.getSelect(dl, NVT, SatMax, NVTNeg1, Hi);
+    Lo = DAG.getSelect(dl, NVT, SatMax, NVTNeg1, Lo);
+    return;
+  }
 
   if (Scale < NVTSize) {
     // The number of overflow bits we can check are VTSize - Scale + 1 (we

@@ -10,8 +10,8 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-# CHECK-NEXT:     0x2020B0 R_X86_64_GLOB_DAT bar 0x0
-# CHECK-NEXT:     0x2020B8 R_X86_64_GLOB_DAT zed 0x0
+# CHECK-NEXT:     R_X86_64_GLOB_DAT bar 0x0
+# CHECK-NEXT:     R_X86_64_GLOB_DAT zed 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

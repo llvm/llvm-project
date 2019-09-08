@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe 2>&1 | FileCheck -check-prefix=WARN %s
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -t --print-imm-hex --no-show-raw-insn %t.exe | FileCheck %s
 
   .text
   .globl  __start
@@ -15,14 +15,12 @@ _label:
 
 # WARN: can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16
 
-# CHECK:      Disassembly of section .text:
-# CHECK-EMPTY:
-# CHECK-NEXT: __start:
-# CHECK-NEXT:  20000:       lui    $8, 3
-#                                      ^-- %hi(__start) w/o addend
-# CHECK-NEXT   20004:       addi   $8, $8, 8
-#                                          ^-- %lo(_label)
+# CHECK:      __start:
+# CHECK-NEXT:  lui    $8, 0x3
+#                         ^-- %hi(__start) w/o addend
+# CHECK-NEXT:  addi   $8, $8, 0x[[VAL:[0-9a-f]+]]
+#                             ^-- %lo(_label)
 
 # CHECK: SYMBOL TABLE:
-# CHECK: 00020008    .text   00000000 _label
-# CHECK: 00020000    .text   00000000 __start
+# CHECK: 00020{{0*}}[[VAL]] .text   00000000 _label
+# CHECK: 00020{{.*}}        .text   00000000 __start
