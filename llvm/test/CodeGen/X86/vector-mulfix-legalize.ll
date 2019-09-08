@@ -8,6 +8,7 @@
 declare <4 x i16> @llvm.smul.fix.v4i16(<4 x i16>, <4 x i16>, i32 immarg)
 declare <4 x i16> @llvm.umul.fix.v4i16(<4 x i16>, <4 x i16>, i32 immarg)
 declare <4 x i16> @llvm.smul.fix.sat.v4i16(<4 x i16>, <4 x i16>, i32 immarg)
+declare <4 x i16> @llvm.umul.fix.sat.v4i16(<4 x i16>, <4 x i16>, i32 immarg)
 
 define <4 x i16> @smulfix(<4 x i16> %a) {
 ; CHECK-LABEL: smulfix:
@@ -99,3 +100,47 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 }
 
 
+define <4 x i16> @umulfixsat(<4 x i16> %a) {
+; CHECK-LABEL: umulfixsat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pextrw $2, %xmm0, %eax
+; CHECK-NEXT:    leal (%rax,%rax,2), %eax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    shrl $16, %edx
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    shldw $1, %ax, %cx
+; CHECK-NEXT:    cmpl $32767, %edx # imm = 0x7FFF
+; CHECK-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; CHECK-NEXT:    cmoval %eax, %ecx
+; CHECK-NEXT:    pextrw $1, %xmm0, %edx
+; CHECK-NEXT:    addl %edx, %edx
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    shrl $16, %esi
+; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    shldw $1, %dx, %di
+; CHECK-NEXT:    cmpl $32767, %esi # imm = 0x7FFF
+; CHECK-NEXT:    cmoval %eax, %edi
+; CHECK-NEXT:    movd %xmm0, %edx
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    shldw $1, %dx, %si
+; CHECK-NEXT:    movl $32767, %edx # imm = 0x7FFF
+; CHECK-NEXT:    negl %edx
+; CHECK-NEXT:    cmoval %eax, %esi
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pinsrw $0, %esi, %xmm1
+; CHECK-NEXT:    pinsrw $1, %edi, %xmm1
+; CHECK-NEXT:    pinsrw $2, %ecx, %xmm1
+; CHECK-NEXT:    pextrw $3, %xmm0, %ecx
+; CHECK-NEXT:    shll $2, %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    shrl $16, %edx
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    shldw $1, %cx, %si
+; CHECK-NEXT:    cmpl $32767, %edx # imm = 0x7FFF
+; CHECK-NEXT:    cmoval %eax, %esi
+; CHECK-NEXT:    pinsrw $3, %esi, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %t = call <4 x i16> @llvm.umul.fix.sat.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)
+  ret <4 x i16> %t
+}
