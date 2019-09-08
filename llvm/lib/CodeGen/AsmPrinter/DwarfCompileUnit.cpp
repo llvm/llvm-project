@@ -647,8 +647,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     int Offset = TFI->getFrameIndexReference(*Asm->MF, Fragment.FI, FrameReg);
     DwarfExpr.addFragmentOffset(Expr);
     SmallVector<uint64_t, 8> Ops;
-    Ops.push_back(dwarf::DW_OP_plus_uconst);
-    Ops.push_back(Offset);
+    DIExpression::appendOffset(Ops, Offset);
     // According to
     // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
     // cuda-gdb requires DW_AT_address_class for all variables to be able to
