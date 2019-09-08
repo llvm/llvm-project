@@ -184,7 +184,8 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
   auto &MDT = getAnalysis<MachineDominatorTree>();
   const WebAssemblyTargetLowering &TLI =
       *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
-  const auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  const auto &LibInfo =
+      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
   auto &LIS = getAnalysis<LiveIntervals>();
   bool Changed = false;
 

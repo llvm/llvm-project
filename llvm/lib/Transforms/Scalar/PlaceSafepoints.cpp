@@ -131,7 +131,7 @@ struct PlaceBackedgeSafepointsImpl : public FunctionPass {
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     for (Loop *I : *LI) {
       runOnLoopAndSubLoops(I);
     }
@@ -478,7 +478,7 @@ bool PlaceSafepoints::runOnFunction(Function &F) {
     return false;
 
   const TargetLibraryInfo &TLI =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   bool Modified = false;
 

@@ -220,7 +220,8 @@ struct LegacyLICMPass : public LoopPass {
                           &getAnalysis<AAResultsWrapperPass>().getAAResults(),
                           &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
                           &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+                          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+                              *L->getHeader()->getParent()),
                           &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
                               *L->getHeader()->getParent()),
                           SE ? &SE->getSE() : nullptr, MSSA, &ORE, false);

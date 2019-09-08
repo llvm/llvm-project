@@ -6,25 +6,27 @@
 # RUN:         %p/Inputs/mips-mgot-1.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %p/Inputs/mips-mgot-2.s -o %t2.o
-# RUN: ld.lld -shared -mips-got-size 52 %t0.o %t1.o %t2.o -o %t.so
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x10000; .text : { *(.text) } \
+# RUN:         . = 0x70000; .got  : { *(.got)  } \
+# RUN:       }" > %t.script
+# RUN: ld.lld -shared -mips-got-size 52 --script %t.script %t0.o %t1.o %t2.o -o %t.so
 # RUN: llvm-objdump -s -section=.got -t %t.so | FileCheck %s
 # RUN: llvm-readobj -r --dyn-syms --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK:      Contents of section .got:
-# CHECK-NEXT:  70000 00000000 80000000 00010000 00010030
-# CHECK-NEXT:  70010 00000000 00000004 00030000 00040000
-# CHECK-NEXT:  70020 00050000 00060000 00070000 00080000
+# CHECK-NEXT:  70000 00000000 80000000 [[FOO0:[0-9a-f]+]] [[FOO2:[0-9a-f]+]]
+# CHECK-NEXT:  70010 00000000 00000004 00010000 00020000
+# CHECK-NEXT:  70020 00030000 00040000 00050000 00060000
 # CHECK-NEXT:  70030 00000000 00000000 00000000 00000000
 # CHECK-NEXT:  70040 00000000 00000000 00000000
 
 # CHECK: SYMBOL TABLE:
 # CHECK: 00000000 l    O .tdata          00000000 loc0
-# CHECK: 00010000        .text           00000000 foo0
+# CHECK: [[FOO0]]        .text           00000000 foo0
 # CHECK: 00000000 g    O .tdata          00000000 tls0
-# CHECK: 00010020        .text           00000000 foo1
 # CHECK: 00000004 g    O .tdata          00000000 tls1
-# CHECK: 00010030        .text           00000000 foo2
-# CHECK: 00000008 g    O .tdata          00000000 tls2
+# CHECK: [[FOO2]]        .text           00000000 foo2
 
 # GOT:      Relocations [
 # GOT-NEXT:   Section (7) .rel.dyn {
@@ -48,11 +50,11 @@
 # GOT:      DynamicSymbols [
 # GOT:        Symbol {
 # GOT:          Name: foo0
-# GOT-NEXT:     Value: 0x10000
+# GOT-NEXT:     Value: 0x[[FOO0:[0-9A-F]+]]
 # GOT:        }
 # GOT-NEXT:   Symbol {
 # GOT-NEXT:     Name: foo2
-# GOT-NEXT:     Value: 0x10030
+# GOT-NEXT:     Value: 0x[[FOO2:[0-9A-F]+]]
 # GOT:        }
 # GOT-NEXT: ]
 
@@ -78,8 +80,8 @@
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32744
-# GOT-NEXT:       Initial: 0x10000
-# GOT-NEXT:       Value: 0x10000
+# GOT-NEXT:       Initial: 0x[[FOO0]]
+# GOT-NEXT:       Value: 0x[[FOO0]]
 # GOT-NEXT:       Type: None
 # GOT-NEXT:       Section: .text
 # GOT-NEXT:       Name: foo0
@@ -87,8 +89,8 @@
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32740
-# GOT-NEXT:       Initial: 0x10030
-# GOT-NEXT:       Value: 0x10030
+# GOT-NEXT:       Initial: 0x[[FOO2]]
+# GOT-NEXT:       Value: 0x[[FOO2]]
 # GOT-NEXT:       Type: None
 # GOT-NEXT:       Section: .text
 # GOT-NEXT:       Name: foo2

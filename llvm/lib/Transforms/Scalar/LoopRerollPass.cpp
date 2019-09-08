@@ -1644,7 +1644,8 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+      *L->getHeader()->getParent());
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 

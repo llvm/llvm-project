@@ -871,7 +871,7 @@ public:
       report_fatal_error("TargetLowering instance is required");
 
     auto *DL = &F.getParent()->getDataLayout();
-    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &ACT = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
     // Compute DT and LI only for functions that have the attribute.

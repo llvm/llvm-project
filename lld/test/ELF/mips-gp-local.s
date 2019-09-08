@@ -2,16 +2,19 @@
 # Check handling of relocations against __gnu_local_gp symbol.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
-# RUN: ld.lld -o %t.exe %t.o
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x10000; .text ALIGN(0x1000) : { *(.text) } \
+# RUN:         . = 0x30000; .got :  { *(.got) } \
+# RUN:       }" > %t.script
+# RUN: ld.lld --script %t.script -o %t.exe %t.o
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
 
-# CHECK:      Disassembly of section .text:
-# CHECK-EMPTY:
-# CHECK-NEXT: __start:
-# CHECK-NEXT:    20000:       lui   $8, 3
-# CHECK-NEXT:    20004:       addi  $8, $8, 32752
+# CHECK:      __start:
+# CHECK-NEXT:    lui   $8, 3
+# CHECK-NEXT:    addi  $8, $8, 32752
 
 # CHECK: 00037ff0  .got  00000000 .hidden _gp
+# CHECK: 00011000  .text 00000000 __start
 
   .text
   .globl  __start

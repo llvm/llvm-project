@@ -3,31 +3,30 @@
 # we use our own value.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
-# RUN: ld.lld -shared -o %t.so %t.o %S/Inputs/mips-gp-disp.so
-# RUN: llvm-readobj --symbols %t.so | FileCheck -check-prefix=INT-SO %s
-# RUN: llvm-readobj --symbols %S/Inputs/mips-gp-disp.so \
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x1000;  .text ALIGN(0x1000) : { *(.text) } \
+# RUN:         . = 0x30000; .got :  { *(.got) } \
+# RUN:       }" > %t.script
+# RUN: ld.lld -shared --script %t.script -o %t.so %t.o %S/Inputs/mips-gp-disp.so
+# RUN: llvm-readelf --symbols %t.so | FileCheck -check-prefix=INT-SO %s
+# RUN: llvm-readelf --symbols %S/Inputs/mips-gp-disp.so \
 # RUN:   | FileCheck -check-prefix=EXT-SO %s
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck -check-prefix=DIS %s
-# RUN: llvm-readobj -r %t.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readelf -r %t.so | FileCheck -check-prefix=REL %s
 
-# INT-SO:      Name: _gp_disp
-# INT-SO-NEXT: Value:
-# INT-SO-NEXT: Size:
-# INT-SO-NEXT: Binding: Local
-
-# EXT-SO:      Name: _gp_disp
-# EXT-SO-NEXT: Value: 0x20000
+# INT-SO: 00000000     0 NOTYPE  LOCAL  HIDDEN   ABS _gp_disp
+# EXT-SO: 00020000     0 NOTYPE  GLOBAL DEFAULT    9 _gp_disp
 
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
 # DIS-NEXT: __start:
-# DIS-NEXT:    10000:       lui   $8, 1
-# DIS-NEXT:    10004:       addi  $8, $8, 32752
-#                                         ^-- 0x37ff0 & 0xffff
-# DIS: 00027ff0  .got  00000000 .hidden _gp
+# DIS-NEXT:    lui   $8, 3
+# DIS-NEXT:    addi  $8, $8, 24560
+#                            ^-- (_gp - __start) & 0xffff
+# DIS: 00037ff0  .got   00000000 .hidden _gp
+# DIS: 00002000  .text  00000000 __start
 
-# REL:      Relocations [
-# REL-NEXT: ]
+# REL: There are no relocations in this file
 
   .text
   .globl  __start

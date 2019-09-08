@@ -1141,6 +1141,21 @@ bool LazyValueInfoImpl::solveBlockValueExtractValue(
     if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 0)
       return solveBlockValueOverflowIntrinsic(BBLV, WO, BB);
 
+  // Handle extractvalue of insertvalue to allow further simplification
+  // based on replaced with.overflow intrinsics.
+  if (Value *V = SimplifyExtractValueInst(
+          EVI->getAggregateOperand(), EVI->getIndices(),
+          EVI->getModule()->getDataLayout())) {
+    if (!hasBlockValue(V, BB)) {
+      if (pushBlockValue({ BB, V }))
+        return false;
+      BBLV = ValueLatticeElement::getOverdefined();
+      return true;
+    }
+    BBLV = getBlockValue(V, BB);
+    return true;
+  }
+
   LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
                     << "' - overdefined (unknown extractvalue).\n");
   BBLV = ValueLatticeElement::getOverdefined();
@@ -1587,7 +1602,7 @@ bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
   DominatorTreeWrapperPass *DTWP =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   Info.DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   if (Info.PImpl)
     getImpl(Info.PImpl, Info.AC, &DL, Info.DT).clear();

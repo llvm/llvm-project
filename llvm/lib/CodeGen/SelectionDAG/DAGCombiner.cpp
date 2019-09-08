@@ -1749,7 +1749,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SUBCARRY:           return visitSUBCARRY(N);
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
-  case ISD::UMULFIX:            return visitMULFIX(N);
+  case ISD::UMULFIX:
+  case ISD::UMULFIXSAT:         return visitMULFIX(N);
   case ISD::MUL:                return visitMUL(N);
   case ISD::SDIV:               return visitSDIV(N);
   case ISD::UDIV:               return visitUDIV(N);
@@ -3519,7 +3520,8 @@ SDValue DAGCombiner::visitSUBCARRY(SDNode *N) {
   return SDValue();
 }
 
-// Notice that "mulfix" can be any of SMULFIX, SMULFIXSAT and UMULFIX here.
+// Notice that "mulfix" can be any of SMULFIX, SMULFIXSAT, UMULFIX and
+// UMULFIXSAT here.
 SDValue DAGCombiner::visitMULFIX(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);

@@ -34,7 +34,7 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
   class FunctionInfo;
 
   const DataLayout &DL;
-  const TargetLibraryInfo &TLI;
+  std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
 
   /// The globals that do not have their addresses taken.
   SmallPtrSet<const GlobalValue *, 8> NonAddressTakenGlobals;
@@ -72,14 +72,18 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
   /// could perform to the memory utilization here if this becomes a problem.
   std::list<DeletionCallbackHandle> Handles;
 
-  explicit GlobalsAAResult(const DataLayout &DL, const TargetLibraryInfo &TLI);
+  explicit GlobalsAAResult(
+      const DataLayout &DL,
+      std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
 
 public:
   GlobalsAAResult(GlobalsAAResult &&Arg);
   ~GlobalsAAResult();
 
-  static GlobalsAAResult analyzeModule(Module &M, const TargetLibraryInfo &TLI,
-                                       CallGraph &CG);
+  static GlobalsAAResult
+  analyzeModule(Module &M,
+                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
+                CallGraph &CG);
 
   //------------------------------------------------
   // Implement the AliasAnalysis API

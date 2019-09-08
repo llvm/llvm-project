@@ -1,11 +1,14 @@
 ; REQUIRES: x86
+
+;; Test we parse dynamic lists before LTO, so symbols can be exported correctly.
+
 ; RUN: llvm-as %s -o %t.o
 ; RUN: echo "{ foo; };" > %t.list
 ; RUN: ld.lld -o %t --dynamic-list %t.list -pie %t.o
 ; RUN: llvm-readobj --dyn-syms %t | FileCheck %s
 
 ; CHECK:      Name:     foo
-; CHECK-NEXT: Value:    0x1010
+; CHECK-NEXT: Value:
 ; CHECK-NEXT: Size:     1
 ; CHECK-NEXT: Binding:  Global (0x1)
 ; CHECK-NEXT: Type:     Function

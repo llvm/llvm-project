@@ -1,4 +1,8 @@
 // REQUIRES: x86
+
+/// Test we use input r_offset when deciding if R_X86_64_GOTPCRELX
+/// relaxation is applicable.
+
 // RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-pc-linux %s \
 // RUN:   -o %t.o
 // RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-pc-linux \
@@ -9,5 +13,5 @@
         mov foo@gotpcrel(%rip), %rax
         nop
 
-// CHECK:      1004: {{.*}} leaq    -11(%rip), %rax
-// CHECK-NEXT: 100b: {{.*}} nop
+// CHECK:      leaq    -11(%rip), %rax
+// CHECK-NEXT: nop

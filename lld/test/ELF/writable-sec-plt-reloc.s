@@ -6,7 +6,7 @@
 # RUN: llvm-readelf --symbols -r %t | FileCheck %s
 
 # CHECK: R_X86_64_JUMP_SLOT {{.*}} foo + 0
-# CHECK: 0000000000201010     0 FUNC    GLOBAL DEFAULT  UND foo
+# CHECK: 0 FUNC    GLOBAL DEFAULT  UND foo
 
 .section .bar,"awx"
 .global _start
