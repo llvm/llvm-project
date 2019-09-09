@@ -6151,6 +6151,11 @@ bool SwiftASTContext::IsFixedSize(CompilerType compiler_type) {
   return false;
 }
 
+const llvm::fltSemantics &
+SwiftASTContext::GetFloatTypeSemantics(size_t byte_size) {
+  llvm_unreachable("SwiftASTContext::GetFloatTypeSemantics not implemented.");
+}
+
 llvm::Optional<uint64_t>
 SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {
