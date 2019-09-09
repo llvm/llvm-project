@@ -15,6 +15,7 @@ class FoundationDisassembleTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureDarwin('rdar://problem/54977700')
     def test_foundation_disasm(self):
         """Do 'disassemble -n func' on each and every 'Code' symbol entry from the Foundation.framework."""
         self.build()
