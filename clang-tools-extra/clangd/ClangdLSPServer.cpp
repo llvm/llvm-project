@@ -87,7 +87,7 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
 std::vector<std::vector<std::string>> buildHighlightScopeLookupTable() {
   std::vector<std::vector<std::string>> LookupTable;
   // HighlightingKind is using as the index.
-  for (int KindValue = 0; KindValue < (int)HighlightingKind::NumKinds;
+  for (int KindValue = 0; KindValue <= (int)HighlightingKind::LastKind;
        ++KindValue)
     LookupTable.push_back({toTextMateScope((HighlightingKind)(KindValue))});
   return LookupTable;

@@ -1,7 +1,10 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/startstop-shared2.s -o %t.o
-// RUN: ld.lld -o %t.so %t.o -shared
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
+
+/// Synthesize __start_* and __stop_* even if there exists a definition in a DSO.
+
+// RUN: echo '.globl __start_foo; __start_foo:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
+// RUN: ld.lld -o %t.so -soname=so %t.o -shared
+// RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t2.o
 // RUN: ld.lld -o %t %t2.o %t.so
 // RUN: llvm-objdump -s -h %t | FileCheck %s
 
