@@ -33,7 +33,7 @@ class Stmt;
 
 namespace ento {
 
-class BugReport;
+class PathSensitiveBugReport;
 class BugReporterContext;
 class ExplodedNode;
 class MemRegion;
@@ -60,29 +60,29 @@ public:
   /// BugReport while processing a node.
   virtual PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
                                            BugReporterContext &BRC,
-                                           BugReport &BR) = 0;
+                                           PathSensitiveBugReport &BR) = 0;
 
   /// Last function called on the visitor, no further calls to VisitNode
   /// would follow.
   virtual void finalizeVisitor(BugReporterContext &BRC,
                                const ExplodedNode *EndPathNode,
-                               BugReport &BR);
+                               PathSensitiveBugReport &BR);
 
   /// Provide custom definition for the final diagnostic piece on the
   /// path - the piece, which is displayed before the path is expanded.
   ///
   /// NOTE that this function can be implemented on at most one used visitor,
   /// and otherwise it crahes at runtime.
-  virtual PathDiagnosticPieceRef
-  getEndPath(BugReporterContext &BRC, const ExplodedNode *N,
-             BugReport &BR);
+  virtual PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
+                                            const ExplodedNode *N,
+                                            PathSensitiveBugReport &BR);
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) const = 0;
 
   /// Generates the default final diagnostic piece.
-  static PathDiagnosticPieceRef getDefaultEndPath(const BugReporterContext &BRC,
-                                                  const ExplodedNode *N,
-                                                  const BugReport &BR);
+  static PathDiagnosticPieceRef
+  getDefaultEndPath(const BugReporterContext &BRC, const ExplodedNode *N,
+                    const PathSensitiveBugReport &BR);
 };
 
 namespace bugreporter {
@@ -111,7 +111,8 @@ enum class TrackingKind {
 /// \return Whether or not the function was able to add visitors for this
 ///         statement. Note that returning \c true does not actually imply
 ///         that any visitors were added.
-bool trackExpressionValue(const ExplodedNode *N, const Expr *E, BugReport &R,
+bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
+                          PathSensitiveBugReport &R,
                           TrackingKind TKind = TrackingKind::Thorough,
                           bool EnableNullFPSuppression = true);
 
@@ -159,7 +160,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 };
 
 class TrackConstraintBRVisitor final : public BugReporterVisitor {
@@ -185,7 +186,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
 private:
   /// Checks if the constraint is valid in the current state.
@@ -203,7 +204,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
   /// If the statement is a message send expression with nil receiver, returns
   /// the receiver expression. Returns NULL otherwise.
@@ -230,40 +231,42 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
   PathDiagnosticPieceRef VisitNodeImpl(const ExplodedNode *N,
-                                       BugReporterContext &BRC, BugReport &BR);
+                                       BugReporterContext &BRC,
+                                       PathSensitiveBugReport &BR);
 
-  PathDiagnosticPieceRef VisitTerminator(const Stmt *Term,
-                                         const ExplodedNode *N,
-                                         const CFGBlock *SrcBlk,
-                                         const CFGBlock *DstBlk, BugReport &R,
-                                         BugReporterContext &BRC);
+  PathDiagnosticPieceRef
+  VisitTerminator(const Stmt *Term, const ExplodedNode *N,
+                  const CFGBlock *SrcBlk, const CFGBlock *DstBlk,
+                  PathSensitiveBugReport &R, BugReporterContext &BRC);
 
   PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond,
-                                       BugReporterContext &BRC, BugReport &R,
+                                       BugReporterContext &BRC,
+                                       PathSensitiveBugReport &R,
                                        const ExplodedNode *N, bool TookTrue);
 
   PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond, const DeclRefExpr *DR,
-                                       BugReporterContext &BRC, BugReport &R,
+                                       BugReporterContext &BRC,
+                                       PathSensitiveBugReport &R,
                                        const ExplodedNode *N, bool TookTrue,
                                        bool IsAssuming);
 
-  PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond,
-                                       const BinaryOperator *BExpr,
-                                       BugReporterContext &BRC, BugReport &R,
-                                       const ExplodedNode *N, bool TookTrue,
-                                       bool IsAssuming);
+  PathDiagnosticPieceRef
+  VisitTrueTest(const Expr *Cond, const BinaryOperator *BExpr,
+                BugReporterContext &BRC, PathSensitiveBugReport &R,
+                const ExplodedNode *N, bool TookTrue, bool IsAssuming);
 
   PathDiagnosticPieceRef VisitTrueTest(const Expr *Cond, const MemberExpr *ME,
-                                       BugReporterContext &BRC, BugReport &R,
+                                       BugReporterContext &BRC,
+                                       PathSensitiveBugReport &R,
                                        const ExplodedNode *N, bool TookTrue,
                                        bool IsAssuming);
 
   PathDiagnosticPieceRef
   VisitConditionVariable(StringRef LhsString, const Expr *CondVarExpr,
-                         BugReporterContext &BRC, BugReport &R,
+                         BugReporterContext &BRC, PathSensitiveBugReport &R,
                          const ExplodedNode *N, bool TookTrue);
 
   /// Tries to print the value of the given expression.
@@ -282,7 +285,7 @@ public:
                     const Expr *ParentEx,
                     raw_ostream &Out,
                     BugReporterContext &BRC,
-                    BugReport &R,
+                    PathSensitiveBugReport &R,
                     const ExplodedNode *N,
                     Optional<bool> &prunable,
                     bool IsSameFieldName);
@@ -306,12 +309,12 @@ public:
   }
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *, BugReporterContext &,
-                                   BugReport &) override {
+                                   PathSensitiveBugReport &) override {
     return nullptr;
   }
 
   void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *N,
-                       BugReport &BR) override;
+                       PathSensitiveBugReport &BR) override;
 };
 
 /// When a region containing undefined value or '0' value is passed
@@ -334,7 +337,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 };
 
 class SuppressInlineDefensiveChecksVisitor final : public BugReporterVisitor {
@@ -363,7 +366,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 };
 
 /// The bug visitor will walk all the nodes in a path and collect all the
@@ -381,10 +384,10 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
   void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
-                       BugReport &BR) override;
+                       PathSensitiveBugReport &BR) override;
 };
 
 
@@ -395,7 +398,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &R) override;
+                                   PathSensitiveBugReport &R) override;
 };
 
 } // namespace ento

@@ -53,7 +53,7 @@ private:
   static StringRef bugTypeToName(RefCountBugType BT);
 };
 
-class RefCountReport : public BugReport {
+class RefCountReport : public PathSensitiveBugReport {
 protected:
   SymbolRef Sym;
   bool isLeak = false;
@@ -67,16 +67,17 @@ public:
               ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
-  llvm::iterator_range<ranges_iterator> getRanges() const override {
+  ArrayRef<SourceRange> getRanges() const override {
     if (!isLeak)
-      return BugReport::getRanges();
-    return llvm::make_range(ranges_iterator(), ranges_iterator());
+      return PathSensitiveBugReport::getRanges();
+    return {};
   }
 };
 
 class RefLeakReport : public RefCountReport {
   const MemRegion* AllocBinding;
   const Stmt *AllocStmt;
+  PathDiagnosticLocation Location;
 
   // Finds the function declaration where a leak warning for the parameter
   // 'sym' should be raised.
@@ -90,7 +91,7 @@ public:
   RefLeakReport(const RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
                 SymbolRef sym, CheckerContext &Ctx);
 
-  PathDiagnosticLocation getLocation(const SourceManager &SM) const override {
+  PathDiagnosticLocation getLocation() const override {
     assert(Location.isValid());
     return Location;
   }

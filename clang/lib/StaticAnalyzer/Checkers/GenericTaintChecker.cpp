@@ -736,7 +736,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
   // Generate diagnostic.
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     initBugType();
-    auto report = llvm::make_unique<BugReport>(*BT, Msg, N);
+    auto report = llvm::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
     report->addVisitor(llvm::make_unique<TaintBugVisitor>(TaintedSVal));
     C.emitReport(std::move(report));

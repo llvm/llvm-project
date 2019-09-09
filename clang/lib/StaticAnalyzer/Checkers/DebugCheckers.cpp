@@ -333,7 +333,8 @@ public:
     if (!Node)
       return;
 
-    auto Report = llvm::make_unique<BugReport>(BT_stmtLoc, "Statement", Node);
+    auto Report =
+        llvm::make_unique<PathSensitiveBugReport>(BT_stmtLoc, "Statement", Node);
 
     C.emitReport(std::move(Report));
   }
