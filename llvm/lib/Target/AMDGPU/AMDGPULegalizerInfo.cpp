@@ -1101,6 +1101,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
+  getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
+        G_DYN_STACKALLOC, G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
+        G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
+    .unsupported();
+
   computeTables();
   verify(*ST.getInstrInfo());
 }
