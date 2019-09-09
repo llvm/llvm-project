@@ -1,5 +1,7 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s
+## Check we are able to produce an SHT_GROUP section with a custom Info value (12345).
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s
 
 --- !ELF
 FileHeader:
@@ -15,7 +17,6 @@ Sections:
     Members:
       - SectionOrType: GRP_COMDAT
 
-## Check we are able to produce SHT_GROUP section with a custom Info value (12345).
 # CHECK:      Name: .group
 # CHECK-NEXT: Type: SHT_GROUP
 # CHECK-NEXT: Flags [
@@ -25,3 +26,30 @@ Sections:
 # CHECK-NEXT: Size:
 # CHECK-NEXT: Link:
 # CHECK-NEXT: Info: 12345
+
+## Check we report multiple errors when multiple unknown symbols are referenced by SHT_GROUP sections.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: unknown symbol referenced: 'foo' by YAML section '.group1'
+# ERR: error: unknown symbol referenced: 'bar' by YAML section '.group2'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group1
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: foo
+    Members:
+      - SectionOrType: GRP_COMDAT
+  - Name: .group2
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: bar
+    Members:
+      - SectionOrType: GRP_COMDAT

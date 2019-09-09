@@ -6765,14 +6765,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       AMDGPUISD::EXPORT : AMDGPUISD::EXPORT_DONE;
     return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
   }
-  case Intrinsic::amdgcn_init_exec: {
-    return DAG.getNode(AMDGPUISD::INIT_EXEC, DL, MVT::Other, Chain,
-                       Op.getOperand(2));
-  }
-  case Intrinsic::amdgcn_init_exec_from_input: {
-    return DAG.getNode(AMDGPUISD::INIT_EXEC_FROM_INPUT, DL, MVT::Other, Chain,
-                       Op.getOperand(2), Op.getOperand(3));
-  }
   case Intrinsic::amdgcn_s_barrier: {
     if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
       const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();

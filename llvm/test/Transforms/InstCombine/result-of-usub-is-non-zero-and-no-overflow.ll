@@ -108,7 +108,7 @@ define i1 @t4_commutability1(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t4_commutability1(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[BASE]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
@@ -117,7 +117,7 @@ define i1 @t4_commutability1(i8 %base, i8 %offset) {
 ;
   %adjusted = sub i8 %base, %offset
   call void @use8(i8 %adjusted)
-  %no_underflow = icmp ule i8 %base, %offset ; swapped
+  %no_underflow = icmp uge i8 %base, %offset ; swapped
   call void @use1(i1 %no_underflow)
   %not_null = icmp ne i8 %adjusted, 0
   call void @use1(i1 %not_null)
