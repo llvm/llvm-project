@@ -4754,3 +4754,44 @@ define <16 x i16> @unpckh_v16i16(<16 x i16> %x, <16 x i16> %y) {
   ret <16 x i16> %unpckh
 }
 
+define <16 x i16> @pr43230(<16 x i16> %a, <16 x i16> %b) {
+; AVX1-LABEL: pr43230:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpsllw $12, %xmm1, %xmm2
+; AVX1-NEXT:    vpsllw $4, %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddw %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm3
+; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $2, %xmm0, %xmm1
+; AVX1-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm1
+; AVX1-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: pr43230:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm1 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
+; AVX2-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm0[26,27],zero,zero
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: pr43230:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpsrlvw %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+  %shr = lshr <16 x i16> %a, %b
+  %shuf = shufflevector <16 x i16> zeroinitializer, <16 x i16> %shr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 30, i32 15>
+  ret <16 x i16> %shuf
+}

@@ -31664,8 +31664,8 @@ static bool matchUnaryPermuteShuffle(MVT MaskVT, ArrayRef<int> Mask,
   if (!ContainsZeros && AllowIntDomain && MaskScalarSizeInBits == 16) {
     SmallVector<int, 4> RepeatedMask;
     if (is128BitLaneRepeatedShuffleMask(MaskEltVT, Mask, RepeatedMask)) {
-      ArrayRef<int> LoMask(Mask.data() + 0, 4);
-      ArrayRef<int> HiMask(Mask.data() + 4, 4);
+      ArrayRef<int> LoMask(RepeatedMask.data() + 0, 4);
+      ArrayRef<int> HiMask(RepeatedMask.data() + 4, 4);
 
       // PSHUFLW: permute lower 4 elements only.
       if (isUndefOrInRange(LoMask, 0, 4) &&
