@@ -66,6 +66,7 @@
 #include "llvm/Support/Threading.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangFunctionCaller.h"
+#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
 #include "lldb/Utility/ArchSpec.h"

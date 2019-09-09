@@ -22,6 +22,7 @@
 
 #include "llvm/Support/Threading.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 #include "CF.h"
