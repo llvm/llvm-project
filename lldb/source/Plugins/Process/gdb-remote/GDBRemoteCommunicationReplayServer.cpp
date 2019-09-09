@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "lldb/Host/Config.h"
+#include "llvm/ADT/ScopeExit.h"
 
 #include "GDBRemoteCommunicationReplayServer.h"
 #include "ProcessGDBRemoteLog.h"
@@ -256,11 +257,10 @@ void GDBRemoteCommunicationReplayServer::ReceivePacket(
 thread_result_t GDBRemoteCommunicationReplayServer::AsyncThread(void *arg) {
   GDBRemoteCommunicationReplayServer *server =
       (GDBRemoteCommunicationReplayServer *)arg;
-
+  auto D = make_scope_exit([&]() { server->Disconnect(); });
   EventSP event_sp;
   bool done = false;
-
-  while (true) {
+  while (!done) {
     if (server->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&server->m_async_broadcaster)) {
