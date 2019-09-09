@@ -97,6 +97,10 @@ New Compiler Flags
   You can also force vzeroupper insertion to be used on CPUs that normally
   wouldn't with -mvzeroupper.
 
+- -fstack-clash-protection will provide a protection against the stack clash
+  attack for x86 architecture through automatic probing of each page of
+  allocated stack.
+
 Deprecated Compiler Flags
 -------------------------
 

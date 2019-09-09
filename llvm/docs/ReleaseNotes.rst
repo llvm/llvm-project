@@ -145,6 +145,10 @@ Changes to the X86 Target
   feature flag which has the opposite polarity. So -vzeroupper has the same
   effect as +fast-partial-ymm-or-zmm-write.
 
+* Functions with the probe-stack attribute set to "inline-asm" are now protected
+  against stack clash without the need of a third-party probing function and
+  with limited impact on performance.
+
 Changes to the AMDGPU Target
 -----------------------------
 

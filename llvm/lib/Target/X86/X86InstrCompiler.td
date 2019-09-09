@@ -111,6 +111,23 @@ def SEG_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$size),
                       [(set GR64:$dst,
                          (X86SegAlloca GR64:$size))]>,
                     Requires<[In64BitMode]>;
+
+// To protect against stack clash, dynamic allocation should perform a memory
+// probe at each page.
+
+let Defs = [EAX, ESP, EFLAGS], Uses = [ESP] in
+def PROBED_ALLOCA_32 : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$size),
+                      "# variable sized alloca with probing",
+                      [(set GR32:$dst,
+                         (X86ProbedAlloca GR32:$size))]>,
+                    Requires<[NotLP64]>;
+
+let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
+def PROBED_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$size),
+                      "# variable sized alloca with probing",
+                      [(set GR64:$dst,
+                         (X86ProbedAlloca GR64:$size))]>,
+                    Requires<[In64BitMode]>;
 }
 
 // Dynamic stack allocation yields a _chkstk or _alloca call for all Windows

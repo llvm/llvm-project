@@ -17,6 +17,9 @@ def err_fe_error_backend : Error<"error in backend: %0">, DefaultFatal;
 
 def err_fe_inline_asm : Error<"%0">, CatInlineAsm;
 def warn_fe_inline_asm : Warning<"%0">, CatInlineAsm, InGroup<BackendInlineAsm>;
+def warn_fe_stack_clash_protection_inline_asm : Warning<
+    "Unable to protect inline asm that clobbers stack pointer against stack clash">,
+    CatInlineAsm, InGroup<BackendInlineAsm>;
 def note_fe_inline_asm : Note<"%0">, CatInlineAsm;
 def note_fe_inline_asm_here : Note<"instantiated into assembly here">;
 def err_fe_cannot_link_module : Error<"cannot link module '%0': %1">,
