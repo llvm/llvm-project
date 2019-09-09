@@ -72,7 +72,7 @@ using DiagnosticForConsumerMapTy =
 
 /// This class provides an interface through which checkers can create
 /// individual bug reports.
-class BugReport : public llvm::ilist_node<BugReport> {
+class BugReport {
 public:
   enum class Kind { Basic, PathSensitive };
 
@@ -465,28 +465,21 @@ class BugReportEquivClass : public llvm::FoldingSetNode {
   friend class BugReporter;
 
   /// List of *owned* BugReport objects.
-  llvm::ilist<BugReport> Reports;
+  llvm::SmallVector<std::unique_ptr<BugReport>, 4> Reports;
 
-  void AddReport(std::unique_ptr<BugReport> R) {
-    Reports.push_back(R.release());
+  void AddReport(std::unique_ptr<BugReport> &&R) {
+    Reports.push_back(std::move(R));
   }
 
 public:
   BugReportEquivClass(std::unique_ptr<BugReport> R) { AddReport(std::move(R)); }
 
+  ArrayRef<std::unique_ptr<BugReport>> getReports() const { return Reports; }
+
   void Profile(llvm::FoldingSetNodeID& ID) const {
     assert(!Reports.empty());
-    Reports.front().Profile(ID);
+    Reports.front()->Profile(ID);
   }
-
-  using iterator = llvm::ilist<BugReport>::iterator;
-  using const_iterator = llvm::ilist<BugReport>::const_iterator;
-
-  iterator begin() { return Reports.begin(); }
-  iterator end() { return Reports.end(); }
-
-  const_iterator begin() const { return Reports.begin(); }
-  const_iterator end() const { return Reports.end(); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -573,7 +566,7 @@ private:
   virtual BugReport *
   findReportInEquivalenceClass(BugReportEquivClass &eqClass,
                                SmallVectorImpl<BugReport *> &bugReports) {
-    return &*eqClass.begin();
+    return eqClass.getReports()[0].get();
   }
 
 protected:

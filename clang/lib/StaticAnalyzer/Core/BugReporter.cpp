@@ -2796,17 +2796,15 @@ struct FRIEC_WLItem {
 
 BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
     BugReportEquivClass &EQ, SmallVectorImpl<BugReport *> &bugReports) {
-  BugReportEquivClass::iterator I = EQ.begin(), E = EQ.end();
-  assert(I != E);
-  const BugType& BT = I->getBugType();
-
   // If we don't need to suppress any of the nodes because they are
   // post-dominated by a sink, simply add all the nodes in the equivalence class
   // to 'Nodes'.  Any of the reports will serve as a "representative" report.
+  assert(EQ.getReports().size() > 0);
+  const BugType& BT = EQ.getReports()[0]->getBugType();
   if (!BT.isSuppressOnSink()) {
-    BugReport *R = &*I;
-    for (auto &I : EQ) {
-      if (auto *PR = dyn_cast<PathSensitiveBugReport>(&I)) {
+    BugReport *R = EQ.getReports()[0].get();
+    for (auto &J : EQ.getReports()) {
+      if (auto *PR = dyn_cast<PathSensitiveBugReport>(J.get())) {
         R = PR;
         bugReports.push_back(PR);
       }
@@ -2822,8 +2820,8 @@ BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
   // stack for very long paths.
   BugReport *exampleReport = nullptr;
 
-  for (; I != E; ++I) {
-    auto *R = dyn_cast<PathSensitiveBugReport>(&*I);
+  for (const auto &I: EQ.getReports()) {
+    auto *R = dyn_cast<PathSensitiveBugReport>(I.get());
     if (!R)
       continue;
 
