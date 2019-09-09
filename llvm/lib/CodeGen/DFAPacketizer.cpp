@@ -74,7 +74,7 @@ static DFAInput getDFAInsnInput(const std::vector<unsigned> &InsnClass) {
 
 DFAPacketizer::DFAPacketizer(const InstrItineraryData *I,
                              const DFAStateInput (*SIT)[2], const unsigned *SET,
-                             const std::pair<unsigned, unsigned> *RTT,
+                             const unsigned (*RTT)[2],
                              const unsigned *RTET)
     : InstrItins(I), DFAStateInputTable(SIT), DFAStateEntryTable(SET),
       DFAResourceTransitionTable(RTT), DFAResourceTransitionEntryTable(RTET) {
@@ -159,9 +159,9 @@ void DFAPacketizer::reserveResources(const MCInstrDesc *MID) {
   if (TrackResources) {
     DenseMap<unsigned, SmallVector<unsigned, 8>> NewResourceStates;
     for (const auto &KV : CachedResourceTransitions[StateTrans]) {
-      assert(ResourceStates.count(KV.first));
-      NewResourceStates[KV.second] = ResourceStates[KV.first];
-      NewResourceStates[KV.second].push_back(KV.second);
+      assert(ResourceStates.count(KV[0]));
+      NewResourceStates[KV[1]] = ResourceStates[KV[0]];
+      NewResourceStates[KV[1]].push_back(KV[1]);
     }
     ResourceStates = NewResourceStates;
   }

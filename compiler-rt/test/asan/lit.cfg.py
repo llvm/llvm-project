@@ -197,7 +197,7 @@ if re.search('mthumb', config.target_cflags) is None:
 # Turn on leak detection on 64-bit Linux.
 leak_detection_linux = (config.host_os == 'Linux') and (not config.android) and (config.target_arch == 'x86_64' or config.target_arch == 'i386')
 leak_detection_mac = (config.host_os == 'Darwin') and (config.target_arch == 'x86_64')
-leak_detection_netbsd = (config.host_os == 'NetBSD') and (config.target_arch == 'x86_64')
+leak_detection_netbsd = (config.host_os == 'NetBSD') and (config.target_arch in ['x86_64', 'i386'])
 if leak_detection_linux or leak_detection_mac or leak_detection_netbsd:
   config.available_features.add('leak-detection')
 

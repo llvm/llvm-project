@@ -1534,6 +1534,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeIsAddrSpace(MI, MRI, B, AMDGPUAS::LOCAL_ADDRESS);
   case Intrinsic::amdgcn_is_private:
     return legalizeIsAddrSpace(MI, MRI, B, AMDGPUAS::PRIVATE_ADDRESS);
+  case Intrinsic::amdgcn_wavefrontsize: {
+    B.setInstr(MI);
+    B.buildConstant(MI.getOperand(0), ST.getWavefrontSize());
+    MI.eraseFromParent();
+    return true;
+  }
   default:
     return true;
   }

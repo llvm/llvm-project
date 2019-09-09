@@ -1,4 +1,5 @@
-# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+fp64 -show-encoding %s | FileCheck %s
+# RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+fp64 -show-encoding %s 2> %t | FileCheck %s
+# RUN: FileCheck --check-prefix=ERROR < %t %s
 # RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -show-encoding %s &> %t
 # RUN: FileCheck --check-prefix=CHECK-NOMVE < %t %s
 
@@ -181,6 +182,42 @@
 # CHECK: vmladavax.s16 lr, q0, q7  @ encoding: [0xf0,0xee,0x2e,0xfe]
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0xf0,0xee,0x2e,0xfe]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf8,0xfe,0x2a,0x1e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf8,0xfe,0x0a,0x1e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf9,0xfe,0x2a,0x1e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf9,0xfe,0x0a,0x1e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf8,0xfe,0x2a,0x1f]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf8,0xfe,0x0a,0x1f]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x98,0xfe,0x2a,0x3e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x98,0xfe,0x0a,0x3e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x99,0xfe,0x2a,0x3e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x99,0xfe,0x0a,0x3e]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x98,0xfe,0x2a,0x3f]
+
+# ERROR: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x98,0xfe,0x0a,0x3f]
 
 # CHECK: vmlav.s8 lr, q3, q0  @ encoding: [0xf6,0xee,0x00,0xef]
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding

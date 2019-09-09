@@ -645,7 +645,7 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
     return std::move(Err);
   if (auto Err = Result.add(replaceWithFuncCall(*ExtractedFunc, SM, LangOpts)))
     return std::move(Err);
-  return Effect::applyEdit(Result);
+  return Effect::mainFileEdit(SM, std::move(Result));
 }
 
 } // namespace

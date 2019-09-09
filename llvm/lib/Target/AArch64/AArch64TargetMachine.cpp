@@ -504,7 +504,8 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  addPass(createAArch64PreLegalizeCombiner());
+  bool IsOptNone = getOptLevel() == CodeGenOpt::None;
+  addPass(createAArch64PreLegalizeCombiner(IsOptNone));
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {

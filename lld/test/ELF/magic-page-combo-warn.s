@@ -13,7 +13,7 @@
 
 # OMAGIC:     ProgramHeader {
 # OMAGIC:      Type: PT_LOAD
-# OMAGIC-NEXT:   Offset: 0xE8
+# OMAGIC-NEXT:   Offset: 0xB0
 # OMAGIC-NEXT:   VirtualAddress:
 # OMAGIC-NEXT:   PhysicalAddress:
 # OMAGIC-NEXT:   FileSize:
@@ -23,7 +23,7 @@
 # OMAGIC-NEXT:     PF_W
 # OMAGIC-NEXT:     PF_X
 # OMAGIC-NEXT:   ]
-# OMAGIC-NEXT:   Alignment: 8
+# OMAGIC-NEXT:   Alignment: 4
 # OMAGIC-NEXT: }
 # OMAGIC-NEXT: ProgramHeader {
 # OMAGIC-NEXT:   Type: PT_GNU_STACK
@@ -35,7 +35,7 @@
 
 # NMAGIC:   ProgramHeader {
 # NMAGIC-NEXT:     Type: PT_LOAD
-# NMAGIC-NEXT:     Offset: 0x158
+# NMAGIC-NEXT:     Offset: 0x120
 # NMAGIC-NEXT:     VirtualAddress:
 # NMAGIC-NEXT:     PhysicalAddress:
 # NMAGIC-NEXT:     FileSize: 1
@@ -43,11 +43,11 @@
 # NMAGIC-NEXT:     Flags [
 # NMAGIC-NEXT:       PF_R
 # NMAGIC-NEXT:     ]
-# NMAGIC-NEXT:     Alignment: 8
+# NMAGIC-NEXT:     Alignment: 1
 # NMAGIC-NEXT:   }
 # NMAGIC-NEXT:   ProgramHeader {
 # NMAGIC-NEXT:     Type: PT_LOAD
-# NMAGIC-NEXT:     Offset: 0x15C
+# NMAGIC-NEXT:     Offset: 0x124
 # NMAGIC-NEXT:     VirtualAddress:
 # NMAGIC-NEXT:     PhysicalAddress:
 # NMAGIC-NEXT:     FileSize: 2
@@ -60,7 +60,7 @@
 # NMAGIC-NEXT:   }
 # NMAGIC-NEXT:   ProgramHeader {
 # NMAGIC-NEXT:     Type: PT_LOAD (0x1)
-# NMAGIC-NEXT:     Offset: 0x15E
+# NMAGIC-NEXT:     Offset: 0x126
 # NMAGIC-NEXT:     VirtualAddress:
 # NMAGIC-NEXT:     PhysicalAddress:
 # NMAGIC-NEXT:     FileSize: 1

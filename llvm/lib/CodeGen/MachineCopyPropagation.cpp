@@ -68,6 +68,7 @@ using namespace llvm;
 
 STATISTIC(NumDeletes, "Number of dead copies deleted");
 STATISTIC(NumCopyForwards, "Number of copy uses forwarded");
+STATISTIC(NumCopyBackwardPropagated, "Number of copy defs backward propagated");
 DEBUG_COUNTER(FwdCounter, "machine-cp-fwd",
               "Controls which register COPYs are forwarded");
 
@@ -211,11 +212,13 @@ private:
   void ReadRegister(unsigned Reg, MachineInstr &Reader,
                     DebugType DT);
   void CopyPropagateBlock(MachineBasicBlock &MBB);
+  bool eraseIfRedundant(MachineInstr &Copy);
   bool eraseIfRedundant(MachineInstr &Copy, unsigned Src, unsigned Def);
   void forwardUses(MachineInstr &MI);
   bool isForwardableRegClassCopy(const MachineInstr &Copy,
                                  const MachineInstr &UseI, unsigned UseIdx);
   bool hasImplicitOverlap(const MachineInstr &MI, const MachineOperand &Use);
+  bool isSafeBackwardCopyPropagation(MachineInstr &Copy, MachineInstr &SrcMI);
 
   /// Candidates for deletion.
   SmallSetVector<MachineInstr *, 8> MaybeDeadCopies;
@@ -272,6 +275,57 @@ static bool isNopCopy(const MachineInstr &PreviousCopy, unsigned Src,
     return false;
   unsigned SubIdx = TRI->getSubRegIndex(PreviousSrc, Src);
   return SubIdx == TRI->getSubRegIndex(PreviousDef, Def);
+}
+
+bool MachineCopyPropagation::isSafeBackwardCopyPropagation(
+    MachineInstr &Copy, MachineInstr &SrcMI) {
+  MachineOperand &SrcOp = SrcMI.getOperand(0);
+  if (!(SrcOp.isReg() && SrcOp.isDef() &&
+        SrcOp.getReg() == Copy.getOperand(1).getReg() && SrcOp.isRenamable() &&
+        !SrcOp.isTied() && !SrcOp.isImplicit() &&
+        !MRI->isReserved(SrcOp.getReg())))
+    return false;
+  if (const TargetRegisterClass *URC = SrcMI.getRegClassConstraint(0, TII, TRI))
+    return URC->contains(Copy.getOperand(0).getReg());
+  return false;
+}
+
+/// In a terminal BB, remove instruction \p Copy if \p Copy's src and dst are
+/// not used or defined between \p Copy and definition point of \p Copy's src.
+/// \p Copy's dst will be backward propagated to where \p Copy's src is defined.
+bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy) {
+  // Only take terminal BBs into account.
+  if (!Copy.getParent()->succ_empty())
+    return false;
+  if (!Copy.getOperand(1).isRenamable() || !Copy.getOperand(1).isKill())
+    return false;
+  unsigned Def = Copy.getOperand(0).getReg();
+  unsigned Src = Copy.getOperand(1).getReg();
+  if (MRI->isReserved(Src) || MRI->isReserved(Def))
+    return false;
+  MachineBasicBlock::reverse_iterator E = Copy.getParent()->rend(), It = Copy;
+  It++;
+  MachineInstr *SrcMI = nullptr;
+  for (; It != E; ++It) {
+    if (It->readsRegister(Src, TRI) || It->readsRegister(Def, TRI))
+      return false;
+    if (It->modifiesRegister(Def, TRI))
+      return false;
+    if (It->modifiesRegister(Src, TRI)) {
+      SrcMI = &*It;
+      break;
+    }
+  }
+  if (!SrcMI)
+    return false;
+  if (!isSafeBackwardCopyPropagation(Copy, *SrcMI))
+    return false;
+  SrcMI->getOperand(0).setReg(Def);
+  SrcMI->getOperand(0).setIsRenamable(Copy.getOperand(0).isRenamable());
+  Copy.eraseFromParent();
+  ++NumCopyBackwardPropagated;
+  ++NumDeletes;
+  return true;
 }
 
 /// Remove instruction \p Copy if there exists a previous copy that copies the
@@ -474,6 +528,17 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       assert(!Register::isVirtualRegister(Def) &&
              !Register::isVirtualRegister(Src) &&
              "MachineCopyPropagation should be run after register allocation!");
+
+      // In a terminal BB,
+      //  $reg0 = OP ...
+      //  ... <<< No uses of $reg0 and $reg1, no defs of $reg0 and $reg1
+      //  $reg1 = COPY $reg0 <<< $reg0 is killed
+      // =>
+      //  $reg1 = OP ...
+      //  ...
+      //  <RET>
+      if (eraseIfRedundant(*MI))
+        continue;
 
       // The two copies cancel out and the source of the first copy
       // hasn't been overridden, eliminate the second one. e.g.

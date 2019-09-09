@@ -1,4 +1,7 @@
 # REQUIRES: x86
+
+## Test linker synthesized symbols (e.g. __ehdr_start, _end) can be used in linker scripts.
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "PROVIDE_HIDDEN(newsym = __ehdr_start + 5);" > %t.script
 # RUN: ld.lld -o %t1 %t.script %t

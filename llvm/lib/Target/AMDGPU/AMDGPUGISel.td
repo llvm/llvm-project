@@ -173,11 +173,6 @@ def : GISelVop2Pat <or, V_OR_B32_e32, i32>;
 def : GISelVop3Pat2ModsPat <
   int_amdgcn_cvt_pkrtz, V_CVT_PKRTZ_F16_F32_e64, v2f16, f32>;
 
-defm : GISelVop2IntrPat <int_maxnum, V_MAX_F32_e32, f32>;
-def : GISelVop3Pat2ModsPat <int_maxnum, V_MAX_F64, f64>;
-defm : GISelVop2IntrPat <int_minnum, V_MIN_F32_e32, f32>;
-def : GISelVop3Pat2ModsPat <int_minnum, V_MIN_F64, f64>;
-
 // Since GlobalISel is more flexible then SelectionDAG, I think we can get
 // away with adding patterns for integer types and not legalizing all
 // loads and stores to vector types.  This should help simplify the load/store

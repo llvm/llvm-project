@@ -749,9 +749,6 @@ def int_aarch64_ttest   : GCCBuiltin<"__builtin_arm_ttest">,
                                     [IntrNoMem, IntrHasSideEffects]>;
 }
 
-//===----------------------------------------------------------------------===//
-// SVE
-
 def llvm_nxv2i1_ty  : LLVMType<nxv2i1>;
 def llvm_nxv4i1_ty  : LLVMType<nxv4i1>;
 def llvm_nxv8i1_ty  : LLVMType<nxv8i1>;
@@ -764,6 +761,13 @@ def llvm_nxv4f32_ty : LLVMType<nxv4f32>;
 def llvm_nxv2f64_ty : LLVMType<nxv2f64>;
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
+  class AdvSIMD_Merged1VectorArg_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMMatchType<0>],
+                [IntrNoMem]>;
+
   // This class of intrinsics are not intended to be useful within LLVM IR but
   // are instead here to support some of the more regid parts of the ACLE.
   class Builtin_SVCVT<string name, LLVMType OUT, LLVMType IN>
@@ -771,8 +775,21 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     Intrinsic<[OUT], [OUT, llvm_nxv16i1_ty, IN], [IntrNoMem]>;
 }
 
+//===----------------------------------------------------------------------===//
+// SVE
+
+let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
+
+//
+// Integer arithmetic
+//
+
+def int_aarch64_sve_abs : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;
+
 //
 // Floating-point comparisons
 //
 
 def int_aarch64_sve_fcvtzs_i32f16 : Builtin_SVCVT<"svcvt_s32_f16_m", llvm_nxv4i32_ty, llvm_nxv8f16_ty>;
+}

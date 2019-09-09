@@ -11,10 +11,8 @@ define i1 @t0(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -27,10 +25,8 @@ define i1 @t1(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ule i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -43,10 +39,8 @@ define i1 @t2(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t2(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -59,10 +53,8 @@ define i1 @t3(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ule i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -72,7 +64,7 @@ define i1 @t3(i8* nonnull %base, i64 %offset) {
   ret i1 %res
 }
 
-; If the joining operator was 'or', i.e. we check that either we produced null
+; If the joining operator was 'or', i.e. we check that either we produced non-null
 ; pointer, or no overflow happened, then the overflow check itself is redundant.
 
 define i1 @t4(i8* nonnull %base, i64 %offset) {
@@ -80,9 +72,7 @@ define i1 @t4(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -96,9 +86,7 @@ define i1 @t5(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ule i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -112,9 +100,7 @@ define i1 @t6(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -128,9 +114,7 @@ define i1 @t7(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp ne i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ule i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -148,10 +132,8 @@ define i1 @t8(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t8(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -164,10 +146,8 @@ define i1 @t9(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t9(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ugt i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -180,10 +160,8 @@ define i1 @t10(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t10(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -196,10 +174,8 @@ define i1 @t11(i8* nonnull %base, i64 %offset) {
 ; CHECK-LABEL: @t11(
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
-; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ugt i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -217,9 +193,7 @@ define i1 @t12(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -233,9 +207,7 @@ define i1 @t13(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ugt i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NON_NULL_AFTER_ADJUSTMENT]], [[NO_OVERFLOW_DURING_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -249,9 +221,7 @@ define i1 @t14(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE_INT]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
@@ -265,9 +235,7 @@ define i1 @t15(i8* nonnull %base, i64 %offset) {
 ; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint i8* [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE_INT]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    [[NON_NULL_AFTER_ADJUSTMENT:%.*]] = icmp eq i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp ugt i64 [[BASE_INT]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]], [[NON_NULL_AFTER_ADJUSTMENT]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[NON_NULL_AFTER_ADJUSTMENT]]
 ;
   %base_int = ptrtoint i8* %base to i64
   %adjusted = add i64 %base_int, %offset
