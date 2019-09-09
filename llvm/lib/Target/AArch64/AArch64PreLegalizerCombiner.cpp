@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
@@ -29,13 +30,14 @@ using namespace MIPatternMatch;
 namespace {
 class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
+  MachineDominatorTree *MDT;
 
 public:
   AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                                  GISelKnownBits *KB)
+                                  GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
-        KB(KB) {}
+        KB(KB), MDT(MDT) {}
   virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const override;
 };
@@ -43,7 +45,7 @@ public:
 bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB);
+  CombinerHelper Helper(Observer, B, KB, MDT);
 
   switch (MI.getOpcode()) {
   default:
@@ -54,8 +56,14 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return Helper.tryCombineBr(MI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
-  case TargetOpcode::G_ZEXTLOAD:
-    return Helper.tryCombineExtendingLoads(MI);
+  case TargetOpcode::G_ZEXTLOAD: {
+    bool Changed = false;
+    Changed |= Helper.tryCombineExtendingLoads(MI);
+    Changed |= Helper.tryCombineIndexedLoadStore(MI);
+    return Changed;
+  }
+  case TargetOpcode::G_STORE:
+    return Helper.tryCombineIndexedLoadStore(MI);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     switch (MI.getIntrinsicID()) {
     case Intrinsic::memcpy:
@@ -83,13 +91,15 @@ class AArch64PreLegalizerCombiner : public MachineFunctionPass {
 public:
   static char ID;
 
-  AArch64PreLegalizerCombiner();
+  AArch64PreLegalizerCombiner(bool IsOptNone = false);
 
   StringRef getPassName() const override { return "AArch64PreLegalizerCombiner"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+private:
+  bool IsOptNone;
 };
 }
 
@@ -99,10 +109,15 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
+  if (!IsOptNone) {
+    AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
+  }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner() : MachineFunctionPass(ID) {
+AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner(bool IsOptNone)
+    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   initializeAArch64PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 }
 
@@ -115,8 +130,10 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  MachineDominatorTree *MDT =
+      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
   AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                         F.hasMinSize(), KB);
+                                         F.hasMinSize(), KB, MDT);
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
 }
@@ -133,7 +150,7 @@ INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
 
 
 namespace llvm {
-FunctionPass *createAArch64PreLegalizeCombiner() {
-  return new AArch64PreLegalizerCombiner();
+FunctionPass *createAArch64PreLegalizeCombiner(bool IsOptNone) {
+  return new AArch64PreLegalizerCombiner(IsOptNone);
 }
 } // end namespace llvm

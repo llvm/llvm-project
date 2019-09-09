@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 
@@ -272,6 +273,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalIf(isPointer(0));
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE).customFor({LocalPtr});
+
 
   auto &FPOpActions = getActionDefinitionsBuilder(
     { G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA, G_FCANONICALIZE})
@@ -391,6 +394,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalForCartesianProduct(AddrSpaces64, {S64})
     .legalForCartesianProduct(AddrSpaces32, {S32})
     .scalarize(0);
+
+  getActionDefinitionsBuilder(G_PTR_MASK)
+    .scalarize(0)
+    .alwaysLegal();
 
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
@@ -715,6 +722,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalIf(isRegisterType(0))
       .minScalarOrElt(0, S32);
 
+  if (ST.hasScalarPackInsts()) {
+    getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
+      .legalFor({V2S16, S32})
+      .lower();
+  } else {
+    getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
+      .lower();
+  }
+
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
     .legalIf(isRegisterType(0));
 
@@ -829,6 +845,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
     return legalizeSinCos(MI, MRI, MIRBuilder);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return legalizeGlobalValue(MI, MRI, MIRBuilder);
   default:
     return false;
   }
@@ -1276,6 +1294,43 @@ bool AMDGPULegalizerInfo::legalizeSinCos(
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeGlobalValue(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  unsigned AS = Ty.getAddressSpace();
+
+  const GlobalValue *GV = MI.getOperand(1).getGlobal();
+  MachineFunction &MF = B.getMF();
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
+    B.setInstr(MI);
+
+    if (!MFI->isEntryFunction()) {
+      const Function &Fn = MF.getFunction();
+      DiagnosticInfoUnsupported BadLDSDecl(
+        Fn, "local memory global used by non-kernel function", MI.getDebugLoc());
+      Fn.getContext().diagnose(BadLDSDecl);
+    }
+
+    // TODO: We could emit code to handle the initialization somewhere.
+    if (!AMDGPUTargetLowering::hasDefinedInitializer(GV)) {
+      B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(), *GV));
+      MI.eraseFromParent();
+      return true;
+    }
+  } else
+    return false;
+
+  const Function &Fn = MF.getFunction();
+  DiagnosticInfoUnsupported BadInit(
+    Fn, "unsupported initializer for address space", MI.getDebugLoc());
+  Fn.getContext().diagnose(BadInit);
+  return true;
+}
+
 // Return the use branch instruction, otherwise null if the usage is invalid.
 static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
                                        MachineRegisterInfo &MRI) {
@@ -1534,6 +1589,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeIsAddrSpace(MI, MRI, B, AMDGPUAS::LOCAL_ADDRESS);
   case Intrinsic::amdgcn_is_private:
     return legalizeIsAddrSpace(MI, MRI, B, AMDGPUAS::PRIVATE_ADDRESS);
+  case Intrinsic::amdgcn_wavefrontsize: {
+    B.setInstr(MI);
+    B.buildConstant(MI.getOperand(0), ST.getWavefrontSize());
+    MI.eraseFromParent();
+    return true;
+  }
   default:
     return true;
   }

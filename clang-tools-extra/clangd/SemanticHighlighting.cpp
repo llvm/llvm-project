@@ -15,6 +15,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Basic/SourceLocation.h"
 #include <algorithm>
 
 namespace clang {
@@ -123,18 +126,16 @@ public:
   }
 
   bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
-    if (const auto *TSI = TD->getTypeSourceInfo())
-      addType(TD->getLocation(), TSI->getTypeLoc().getTypePtr());
+    addTokenForTypedef(TD->getLocation(), TD);
     return true;
   }
 
-  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc &TL) {
-    // TemplateTypeParmTypeLoc does not have a TagDecl in its type ptr.
-    addToken(TL.getBeginLoc(), TL.getDecl());
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    addTokenForTypedef(TL.getBeginLoc(), TL.getTypedefNameDecl());
     return true;
   }
 
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc &TL) {
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
     if (const TemplateDecl *TD =
             TL.getTypePtr()->getTemplateName().getAsTemplateDecl())
       addToken(TL.getBeginLoc(), TD);
@@ -181,14 +182,35 @@ public:
   }
 
 private:
-  void addType(SourceLocation Loc, const Type *TP) {
-    if (!TP)
+  void addTokenForTypedef(SourceLocation Loc, const TypedefNameDecl *TD) {
+    auto *TSI = TD->getTypeSourceInfo();
+    if (!TSI)
       return;
-    if (TP->isBuiltinType())
+    // Try to highlight as underlying type.
+    if (addType(Loc, TSI->getType().getTypePtrOrNull()))
+      return;
+    // Fallback to the typedef highlighting kind.
+    addToken(Loc, HighlightingKind::Typedef);
+  }
+
+  bool addType(SourceLocation Loc, const Type *TP) {
+    if (!TP)
+      return false;
+    if (TP->isBuiltinType()) {
       // Builtins must be special cased as they do not have a TagDecl.
       addToken(Loc, HighlightingKind::Primitive);
-    if (const TagDecl *TD = TP->getAsTagDecl())
+      return true;
+    }
+    if (auto *TD = dyn_cast<TemplateTypeParmType>(TP)) {
+      // TemplateTypeParmType also do not have a TagDecl.
+      addToken(Loc, TD->getDecl());
+      return true;
+    }
+    if (auto *TD = TP->getAsTagDecl()) {
       addToken(Loc, TD);
+      return true;
+    }
+    return false;
   }
 
   void addToken(SourceLocation Loc, const NamedDecl *D) {
@@ -351,6 +373,44 @@ takeLine(ArrayRef<HighlightingToken> AllTokens,
 }
 } // namespace
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
+  switch (K) {
+  case HighlightingKind::Variable:
+    return OS << "Variable";
+  case HighlightingKind::LocalVariable:
+    return OS << "LocalVariable";
+  case HighlightingKind::Parameter:
+    return OS << "Parameter";
+  case HighlightingKind::Function:
+    return OS << "Function";
+  case HighlightingKind::Method:
+    return OS << "Method";
+  case HighlightingKind::StaticMethod:
+    return OS << "StaticMethod";
+  case HighlightingKind::Field:
+    return OS << "Field";
+  case HighlightingKind::StaticField:
+    return OS << "StaticField";
+  case HighlightingKind::Class:
+    return OS << "Class";
+  case HighlightingKind::Enum:
+    return OS << "Enum";
+  case HighlightingKind::EnumConstant:
+    return OS << "EnumConstant";
+  case HighlightingKind::Typedef:
+    return OS << "Typedef";
+  case HighlightingKind::Namespace:
+    return OS << "Namespace";
+  case HighlightingKind::TemplateParameter:
+    return OS << "TemplateParameter";
+  case HighlightingKind::Primitive:
+    return OS << "Primitive";
+  case HighlightingKind::Macro:
+    return OS << "Macro";
+  }
+  llvm_unreachable("invalid HighlightingKind");
+}
+
 std::vector<LineHighlightings>
 diffHighlightings(ArrayRef<HighlightingToken> New,
                   ArrayRef<HighlightingToken> Old) {
@@ -466,6 +526,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.type.enum.cpp";
   case HighlightingKind::EnumConstant:
     return "variable.other.enummember.cpp";
+  case HighlightingKind::Typedef:
+    return "entity.name.type.typedef.cpp";
   case HighlightingKind::Namespace:
     return "entity.name.namespace.cpp";
   case HighlightingKind::TemplateParameter:
@@ -474,8 +536,6 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "storage.type.primitive.cpp";
   case HighlightingKind::Macro:
     return "entity.name.function.preprocessor.cpp";
-  case HighlightingKind::NumKinds:
-    llvm_unreachable("must not pass NumKinds to the function");
   }
   llvm_unreachable("unhandled HighlightingKind");
 }

@@ -441,19 +441,32 @@ def sextloadi16_local_m0 : PatFrag<(ops node:$ptr), (sextloadi16_glue node:$ptr)
 def zextloadi16_local_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)>;
 }
 
-def load_align8_local_m0 : LoadFrag <load_glue>, LocalAddress {
+def load_align8_local_m0 : PatFrag<(ops node:$ptr),
+                                   (load_local_m0 node:$ptr)> {
+  let IsLoad = 1;
+  let IsNonExtLoad = 1;
   let MinAlignment = 8;
-  let IsNonExtLoad = 1;
 }
-def load_align16_local_m0 : LoadFrag <load_glue>, LocalAddress {
-  let MinAlignment = 16;
+def load_align16_local_m0 : PatFrag<(ops node:$ptr),
+                                    (load_local_m0 node:$ptr)> {
+  let IsLoad = 1;
   let IsNonExtLoad = 1;
+  let MinAlignment = 16;
 }
 
 } // End IsLoad = 1
 
-def atomic_load_32_local_m0 : LoadFrag<atomic_load_32_glue>, LocalAddress;
-def atomic_load_64_local_m0 : LoadFrag<atomic_load_64_glue>, LocalAddress;
+let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
+def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_32_glue node:$ptr)> {
+  let MemoryVT = i32;
+}
+def atomic_load_64_local_m0 : PatFrag<(ops node:$ptr),
+                                       (atomic_load_64_glue node:$ptr)> {
+  let MemoryVT = i64;
+}
+
+} // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
 def AMDGPUst_glue : SDNode <"ISD::STORE", SDTStore,
@@ -463,10 +476,6 @@ def AMDGPUst_glue : SDNode <"ISD::STORE", SDTStore,
 def AMDGPUatomic_st_glue : SDNode <"ISD::ATOMIC_STORE", SDTAtomicStore,
   [SDNPHasChain, SDNPMayStore, SDNPMemOperand, SDNPInGlue]
 >;
-
-def atomic_store_glue : PatFrag<(ops node:$ptr, node:$val),
-  (AMDGPUatomic_st_glue node:$ptr, node:$val)> {
-}
 
 def unindexedstore_glue : PatFrag<(ops node:$val, node:$ptr),
                                    (AMDGPUst_glue node:$val, node:$ptr)> {
@@ -499,13 +508,8 @@ def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
 }
 
 let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
-def store_glue_align8 : PatFrag<(ops node:$val, node:$ptr),
-                                (store_glue node:$val, node:$ptr)>, Aligned<8>;
-def store_glue_align16 : PatFrag<(ops node:$val, node:$ptr),
-                                (store_glue node:$val, node:$ptr)>, Aligned<16>;
-
 def store_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                             (unindexedstore_glue node:$val, node:$ptr)> {
+                             (store_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let IsTruncStore = 0;
 }
@@ -516,23 +520,45 @@ def truncstorei8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
   let MemoryVT = i8;
 }
 
-
 def truncstorei16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
                                     (unindexedstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i16;
 }
-
-// FIXME: atomic store doesn't work.
-def atomic_store_local_m0 : StoreFrag<AMDGPUatomic_st_glue>, LocalAddress;
-def store_align8_local_m0 : StoreFrag<store_glue_align8>, LocalAddress {
-  let IsTruncStore = 0;
 }
 
-def store_align16_local_m0 : StoreFrag<store_glue_align16>, LocalAddress {
+def store_align16_local_m0 : PatFrag <
+  (ops node:$value, node:$ptr),
+  (store_local_m0 node:$value, node:$ptr)> {
+  let IsStore = 1;
   let IsTruncStore = 0;
+  let MinAlignment = 16;
 }
+
+def store_align8_local_m0 : PatFrag <
+  (ops node:$value, node:$ptr),
+  (store_local_m0 node:$value, node:$ptr)> {
+  let IsStore = 1;
+  let IsTruncStore = 0;
+  let MinAlignment = 8;
 }
+
+let AddressSpaces = StoreAddress_local.AddrSpaces in {
+
+def atomic_store_local_32_m0 : PatFrag <
+  (ops node:$value, node:$ptr),
+  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i32;
+}
+def atomic_store_local_64_m0 : PatFrag <
+  (ops node:$value, node:$ptr),
+  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+}
+} // End let AddressSpaces = StoreAddress_local.AddrSpaces
+
 
 def si_setcc_uniform : PatFrag <
   (ops node:$lhs, node:$rhs, node:$cond),

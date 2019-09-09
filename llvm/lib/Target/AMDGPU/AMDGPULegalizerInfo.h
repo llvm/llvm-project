@@ -58,6 +58,9 @@ public:
   bool legalizeSinCos(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &MIRBuilder) const;
 
+  bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &MIRBuilder) const;
+
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
 

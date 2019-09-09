@@ -28,6 +28,7 @@ class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
 class GISelKnownBits;
+class MachineDominatorTree;
 
 struct PreferredTuple {
   LLT Ty;                // The result type of the extend.
@@ -41,10 +42,12 @@ protected:
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;
   GISelKnownBits *KB;
+  MachineDominatorTree *MDT;
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                 GISelKnownBits *KB = nullptr);
+                 GISelKnownBits *KB = nullptr,
+                 MachineDominatorTree *MDT = nullptr);
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
@@ -60,17 +63,61 @@ public:
   bool matchCombineCopy(MachineInstr &MI);
   void applyCombineCopy(MachineInstr &MI);
 
+  /// \brief \returns true if \p DefMI precedes \p UseMI or they are the same
+  /// instruction. Both must be in the same basic block.
+  bool isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI);
+
+  /// \brief \returns true if \p DefMI dominates \p UseMI. By definition an
+  /// instruction dominates itself.
+  ///
+  /// If we haven't been provided with a MachineDominatorTree during
+  /// construction, this function returns a conservative result that tracks just
+  /// a single basic block.
+  bool dominates(MachineInstr &DefMI, MachineInstr &UseMI);
+
   /// If \p MI is extend that consumes the result of a load, try to combine it.
   /// Returns true if MI changed.
   bool tryCombineExtendingLoads(MachineInstr &MI);
   bool matchCombineExtendingLoads(MachineInstr &MI, PreferredTuple &MatchInfo);
   void applyCombineExtendingLoads(MachineInstr &MI, PreferredTuple &MatchInfo);
 
+  /// Combine \p MI into a pre-indexed or post-indexed load/store operation if
+  /// legal and the surrounding code makes it useful.
+  bool tryCombineIndexedLoadStore(MachineInstr &MI);
+
   bool matchCombineBr(MachineInstr &MI);
   bool tryCombineBr(MachineInstr &MI);
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
+  ///
+  /// For example (pre-indexed):
+  ///
+  ///     $addr = G_GEP $base, $offset
+  ///     [...]
+  ///     $val = G_LOAD $addr
+  ///     [...]
+  ///     $whatever = COPY $addr
+  ///
+  /// -->
+  ///
+  ///     $val, $addr = G_INDEXED_LOAD $base, $offset, 1 (IsPre)
+  ///     [...]
+  ///     $whatever = COPY $addr
+  ///
+  /// or (post-indexed):
+  ///
+  ///     G_STORE $val, $base
+  ///     [...]
+  ///     $addr = G_GEP $base, $offset
+  ///     [...]
+  ///     $whatever = COPY $addr
+  ///
+  /// -->
+  ///
+  ///     $addr = G_INDEXED_STORE $val, $base, $offset
+  ///     [...]
+  ///     $whatever = COPY $addr
   bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
 
   /// Try to transform \p MI by using all of the above
@@ -87,6 +134,20 @@ private:
                       bool IsVolatile);
   bool optimizeMemset(MachineInstr &MI, Register Dst, Register Val,
                       unsigned KnownLen, unsigned DstAlign, bool IsVolatile);
+
+  /// Given a non-indexed load or store instruction \p MI, find an offset that
+  /// can be usefully and legally folded into it as a post-indexing operation.
+  ///
+  /// \returns true if a candidate is found.
+  bool findPostIndexCandidate(MachineInstr &MI, Register &Addr, Register &Base,
+                              Register &Offset);
+
+  /// Given a non-indexed load or store instruction \p MI, find an offset that
+  /// can be usefully and legally folded into it as a pre-indexing operation.
+  ///
+  /// \returns true if a candidate is found.
+  bool findPreIndexCandidate(MachineInstr &MI, Register &Addr, Register &Base,
+                             Register &Offset);
 };
 } // namespace llvm
 

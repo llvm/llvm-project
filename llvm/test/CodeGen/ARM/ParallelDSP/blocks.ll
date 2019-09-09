@@ -1,4 +1,4 @@
-; RUN: opt -arm-parallel-dsp -mtriple=armv7-a -S %s -o - | FileCheck %s
+; RUN: opt -arm-parallel-dsp -dce -mtriple=armv7-a -S %s -o - | FileCheck %s
 
 ; CHECK-LABEL: single_block
 ; CHECK: [[CAST_A:%[^ ]+]] = bitcast i16* %a to i32*
