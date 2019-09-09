@@ -15,6 +15,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include <algorithm>
 
 namespace clang {
@@ -128,13 +130,12 @@ public:
     return true;
   }
 
-  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc &TL) {
-    // TemplateTypeParmTypeLoc does not have a TagDecl in its type ptr.
-    addToken(TL.getBeginLoc(), TL.getDecl());
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    addType(TL.getBeginLoc(), TL.getTypePtr());
     return true;
   }
 
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc &TL) {
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
     if (const TemplateDecl *TD =
             TL.getTypePtr()->getTemplateName().getAsTemplateDecl())
       addToken(TL.getBeginLoc(), TD);
@@ -187,7 +188,10 @@ private:
     if (TP->isBuiltinType())
       // Builtins must be special cased as they do not have a TagDecl.
       addToken(Loc, HighlightingKind::Primitive);
-    if (const TagDecl *TD = TP->getAsTagDecl())
+    if (auto *TD = dyn_cast<TemplateTypeParmType>(TP))
+      // TemplateTypeParmType also do not have a TagDecl.
+      addToken(Loc, TD->getDecl());
+    if (auto *TD = TP->getAsTagDecl())
       addToken(Loc, TD);
   }
 
@@ -351,6 +355,42 @@ takeLine(ArrayRef<HighlightingToken> AllTokens,
 }
 } // namespace
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
+  switch (K) {
+  case HighlightingKind::Variable:
+    return OS << "Variable";
+  case HighlightingKind::LocalVariable:
+    return OS << "LocalVariable";
+  case HighlightingKind::Parameter:
+    return OS << "Parameter";
+  case HighlightingKind::Function:
+    return OS << "Function";
+  case HighlightingKind::Method:
+    return OS << "Method";
+  case HighlightingKind::StaticMethod:
+    return OS << "StaticMethod";
+  case HighlightingKind::Field:
+    return OS << "Field";
+  case HighlightingKind::StaticField:
+    return OS << "StaticField";
+  case HighlightingKind::Class:
+    return OS << "Class";
+  case HighlightingKind::Enum:
+    return OS << "Enum";
+  case HighlightingKind::EnumConstant:
+    return OS << "EnumConstant";
+  case HighlightingKind::Namespace:
+    return OS << "Namespace";
+  case HighlightingKind::TemplateParameter:
+    return OS << "TemplateParameter";
+  case HighlightingKind::Primitive:
+    return OS << "Primitive";
+  case HighlightingKind::Macro:
+    return OS << "Macro";
+  }
+  llvm_unreachable("invalid HighlightingKind");
+}
+
 std::vector<LineHighlightings>
 diffHighlightings(ArrayRef<HighlightingToken> New,
                   ArrayRef<HighlightingToken> Old) {
@@ -474,8 +514,6 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "storage.type.primitive.cpp";
   case HighlightingKind::Macro:
     return "entity.name.function.preprocessor.cpp";
-  case HighlightingKind::NumKinds:
-    llvm_unreachable("must not pass NumKinds to the function");
   }
   llvm_unreachable("unhandled HighlightingKind");
 }

@@ -6,7 +6,7 @@
 # CHECK:       Symbols [
 # CHECK:        Symbol {
 # CHECK:          Name: hidden
-# CHECK-NEXT:     Value: 0x1000
+# CHECK-NEXT:     Value: [[ADDR:.*]]
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local
 # CHECK-NEXT:     Type: None
@@ -17,7 +17,7 @@
 # CHECK-NEXT:   }
 # CHECK:        Symbol {
 # CHECK:          Name: internal
-# CHECK-NEXT:     Value: 0x1000
+# CHECK-NEXT:     Value: [[ADDR]]
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local
 # CHECK-NEXT:     Type: None
@@ -28,7 +28,7 @@
 # CHECK-NEXT:   }
 # CHECK:        Symbol {
 # CHECK:          Name: default
-# CHECK-NEXT:     Value: 0x1000
+# CHECK-NEXT:     Value: [[ADDR]]
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: None
@@ -37,7 +37,7 @@
 # CHECK-NEXT:   }
 # CHECK:        Symbol {
 # CHECK:          Name: protected
-# CHECK-NEXT:     Value: 0x1000
+# CHECK-NEXT:     Value: [[ADDR]]
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type: None
