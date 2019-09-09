@@ -963,6 +963,10 @@ def fp64imm0 : PatLeaf<(f64 fpimm), [{
   return N->isExactlyValue(+0.0);
 }]>;
 
+def fp128imm0 : PatLeaf<(f128 fpimm), [{
+  return N->isExactlyValue(+0.0);
+}]>;
+
 // EXTRACT_get_vextract128_imm xform function: convert extract_subvector index
 // to VEXTRACTF128/VEXTRACTI128 imm.
 def EXTRACT_get_vextract128_imm : SDNodeXForm<extract_subvector, [{
