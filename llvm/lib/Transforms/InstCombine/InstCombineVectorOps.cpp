@@ -766,6 +766,55 @@ static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
   return new ShuffleVectorInst(Op0, UndefValue::get(Op0->getType()), NewMask);
 }
 
+/// Try to fold an extract+insert element into an existing identity shuffle by
+/// changing the shuffle's mask to include the index of this insert element.
+static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
+  // Check if the vector operand of this insert is an identity shuffle.
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
+  if (!Shuf || !isa<UndefValue>(Shuf->getOperand(1)) ||
+      !(Shuf->isIdentityWithExtract() || Shuf->isIdentityWithPadding()))
+    return nullptr;
+
+  // Check for a constant insertion index.
+  uint64_t IdxC;
+  if (!match(InsElt.getOperand(2), m_ConstantInt(IdxC)))
+    return nullptr;
+
+  // Check if this insert's scalar op is extracted from the identity shuffle's
+  // input vector.
+  Value *Scalar = InsElt.getOperand(1);
+  Value *X = Shuf->getOperand(0);
+  if (!match(Scalar, m_ExtractElement(m_Specific(X), m_SpecificInt(IdxC))))
+    return nullptr;
+
+  // Replace the shuffle mask element at the index of this extract+insert with
+  // that same index value.
+  // For example:
+  // inselt (shuf X, IdMask), (extelt X, IdxC), IdxC --> shuf X, IdMask'
+  unsigned NumMaskElts = Shuf->getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> NewMaskVec(NumMaskElts);
+  Type *I32Ty = IntegerType::getInt32Ty(Shuf->getContext());
+  Constant *NewMaskEltC = ConstantInt::get(I32Ty, IdxC);
+  Constant *OldMask = Shuf->getMask();
+  for (unsigned i = 0; i != NumMaskElts; ++i) {
+    if (i != IdxC) {
+      // All mask elements besides the inserted element remain the same.
+      NewMaskVec[i] = OldMask->getAggregateElement(i);
+    } else if (OldMask->getAggregateElement(i) == NewMaskEltC) {
+      // If the mask element was already set, there's nothing to do
+      // (demanded elements analysis may unset it later).
+      return nullptr;
+    } else {
+      assert(isa<UndefValue>(OldMask->getAggregateElement(i)) &&
+             "Unexpected shuffle mask element for identity shuffle");
+      NewMaskVec[i] = NewMaskEltC;
+    }
+  }
+
+  Constant *NewMask = ConstantVector::get(NewMaskVec);
+  return new ShuffleVectorInst(X, Shuf->getOperand(1), NewMask);
+}
+
 /// If we have an insertelement instruction feeding into another insertelement
 /// and the 2nd is inserting a constant into the vector, canonicalize that
 /// constant insertion before the insertion of a variable:
@@ -986,6 +1035,9 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Splat = foldInsEltIntoSplat(IE))
     return Splat;
+
+  if (Instruction *IdentityShuf = foldInsEltIntoIdentityShuffle(IE))
+    return IdentityShuf;
 
   return nullptr;
 }

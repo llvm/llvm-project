@@ -3797,15 +3797,18 @@ bool X86DAGToDAGISel::combineIncDecVector(SDNode *Node) {
     return false;
 
   SDLoc DL(Node);
-  SDValue AllOnesVec;
+  SDValue OneConstant, AllOnesVec;
 
   APInt Ones = APInt::getAllOnesValue(32);
   assert(VT.getSizeInBits() % 32 == 0 &&
          "Expected bit count to be a multiple of 32");
+  OneConstant = CurDAG->getConstant(Ones, DL, MVT::i32);
+  insertDAGNode(*CurDAG, X, OneConstant);
+
   unsigned NumElts = VT.getSizeInBits() / 32;
   assert(NumElts > 0 && "Expected to get non-empty vector.");
-  AllOnesVec =
-      CurDAG->getConstant(Ones, DL, MVT::getVectorVT(MVT::i32, NumElts));
+  AllOnesVec = CurDAG->getSplatBuildVector(MVT::getVectorVT(MVT::i32, NumElts),
+                                           DL, OneConstant);
   insertDAGNode(*CurDAG, X, AllOnesVec);
 
   AllOnesVec = CurDAG->getBitcast(VT, AllOnesVec);

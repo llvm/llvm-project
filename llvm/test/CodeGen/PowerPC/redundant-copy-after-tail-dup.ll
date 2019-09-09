@@ -26,8 +26,7 @@ define dso_local i1 @t(%class.A* %this, i32 %color, i32 %vertex) local_unnamed_a
 ; CHECK-P9-NEXT:    cmplwi r3, 2
 ; CHECK-P9-NEXT:    bge- cr0, .LBB0_6
 ; CHECK-P9-NEXT:  # %bb.3: # %land.lhs.true.1
-; CHECK-P9-NEXT:    li r5, 0
-; CHECK-P9-NEXT:    mr r3, r5
+; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    blr
 ; CHECK-P9-NEXT:  .LBB0_4: # %lor.lhs.false
 ; CHECK-P9-NEXT:    cmplwi cr0, r4, 0
