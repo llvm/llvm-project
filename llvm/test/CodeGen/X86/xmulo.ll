@@ -26,18 +26,14 @@ define {i64, i1} @t1() nounwind {
 define {i64, i1} @t2() nounwind {
 ; SDAG-LABEL: t2:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    xorl %ecx, %ecx
-; SDAG-NEXT:    movl $9, %eax
-; SDAG-NEXT:    mulq %rcx
-; SDAG-NEXT:    seto %dl
+; SDAG-NEXT:    xorl %eax, %eax
+; SDAG-NEXT:    xorl %edx, %edx
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: t2:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    xorl %ecx, %ecx
-; FAST-NEXT:    movl $9, %eax
-; FAST-NEXT:    mulq %rcx
-; FAST-NEXT:    seto %dl
+; FAST-NEXT:    xorl %eax, %eax
+; FAST-NEXT:    xorl %edx, %edx
 ; FAST-NEXT:    retq
   %1 = call {i64, i1} @llvm.umul.with.overflow.i64(i64 9, i64 0)
   ret {i64, i1} %1

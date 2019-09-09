@@ -373,6 +373,8 @@ class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4, list<dag> pattern=[]>
   let Inst{7-6} = 0b00;
   let Inst{5-4} = op5_4{1-0};
   let Inst{3-0} = 0b1101;
+
+  let Unpredictable{8-6} = 0b111;
 }
 
 def MVE_SQRSHR : MVE_ScalarShiftSRegReg<"sqrshr", 0b10>;

@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-/// A parser for the latest stackmap format.  At the moment, latest=V2.
+/// A parser for the latest stackmap format.  At the moment, latest=V3.
 template <support::endianness Endianness>
 class StackMapParser {
 public:
@@ -299,7 +299,7 @@ public:
     const uint8_t *P;
   };
 
-  /// Construct a parser for a version-2 stackmap. StackMap data will be read
+  /// Construct a parser for a version-3 stackmap. StackMap data will be read
   /// from the given array.
   StackMapParser(ArrayRef<uint8_t> StackMapSection)
       : StackMapSection(StackMapSection) {

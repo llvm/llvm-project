@@ -596,12 +596,13 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
   DenseMap<unsigned, unsigned> RegsForEntryValues;
 
-  // If the MI is an instruction defining a parameter's forwarding register,
-  // add it into the Defs. If the MI clobbers more then one register, we use
-  // the Defs in order to remove all the registers from
-  // the ForwardedRegWorklist, since we do not support such situations now.
+  // If the MI is an instruction defining one or more parameters' forwarding
+  // registers, add those defines. We can currently only describe forwarded
+  // registers that are explicitly defined, but keep track of implicit defines
+  // also to remove those registers from the work list.
   auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
-                                         SmallVectorImpl<unsigned> &Defs) {
+                                          SmallVectorImpl<unsigned> &Explicit,
+                                          SmallVectorImpl<unsigned> &Implicit) {
     if (MI.isDebugInstr())
       return;
 
@@ -610,7 +611,10 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
           Register::isPhysicalRegister(MO.getReg())) {
         for (auto FwdReg : ForwardedRegWorklist) {
           if (TRI->regsOverlap(FwdReg, MO.getReg())) {
-            Defs.push_back(FwdReg);
+            if (MO.isImplicit())
+              Implicit.push_back(FwdReg);
+            else
+              Explicit.push_back(FwdReg);
             break;
           }
         }
@@ -641,26 +645,32 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     if (ForwardedRegWorklist.empty())
       return;
 
-    SmallVector<unsigned, 4> Defs;
-    getForwardingRegsDefinedByMI(*I, Defs);
-    if (Defs.empty())
+    SmallVector<unsigned, 4> ExplicitFwdRegDefs;
+    SmallVector<unsigned, 4> ImplicitFwdRegDefs;
+    getForwardingRegsDefinedByMI(*I, ExplicitFwdRegDefs, ImplicitFwdRegDefs);
+    if (ExplicitFwdRegDefs.empty() && ImplicitFwdRegDefs.empty())
       continue;
 
     // If the MI clobbers more then one forwarding register we must remove
     // all of them from the working list.
-    for (auto Reg : Defs)
+    for (auto Reg : concat<unsigned>(ExplicitFwdRegDefs, ImplicitFwdRegDefs))
       ForwardedRegWorklist.erase(Reg);
-    if (I->getNumDefs() != 1)
+
+    // The describeLoadedValue() hook currently does not have any information
+    // about which register it should describe in case of multiple defines, so
+    // for now we only handle instructions where a forwarded register is (at
+    // least partially) defined by the instruction's single explicit define.
+    if (I->getNumExplicitDefs() != 1 || ExplicitFwdRegDefs.empty())
       continue;
-    unsigned Reg = Defs[0];
+    unsigned Reg = ExplicitFwdRegDefs[0];
 
     if (auto ParamValue = TII->describeLoadedValue(*I)) {
-      if (ParamValue->first->isImm()) {
-        unsigned Val = ParamValue->first->getImm();
+      if (ParamValue->first.isImm()) {
+        unsigned Val = ParamValue->first.getImm();
         DbgValueLoc DbgLocVal(ParamValue->second, Val);
         finishCallSiteParam(DbgLocVal, Reg);
-      } else if (ParamValue->first->isReg()) {
-        Register RegLoc = ParamValue->first->getReg();
+      } else if (ParamValue->first.isReg()) {
+        Register RegLoc = ParamValue->first.getReg();
         unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
         Register FP = TRI->getFrameRegister(*MF);
         bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
