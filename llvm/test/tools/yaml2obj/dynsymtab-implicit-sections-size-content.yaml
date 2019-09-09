@@ -27,10 +27,12 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
-## Specifying both `Size` and symbols at the same time is not allowed.
-# RUN: not yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=CASE2
+## Specifying both `Size` and symbols at the same time is not allowed for .dynsym.
 
-# CASE2: error: Cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'.
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE2
+
+# CASE2: error: cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'
+# CASE2: error: yaml2obj failed
 
 --- !ELF
 FileHeader:
@@ -42,14 +44,19 @@ Sections:
   - Name: .dynsym
     Type: SHT_DYNSYM
     Size: 0x100
+  - Name: .dynsym2
+    Type: SHT_DYNSYM
+    Size: 0x100
 DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
-## Specifying both `Content` and symbols at the same time is not allowed.
-# RUN: not yaml2obj --docnum=3 %s -o %t3 2>&1 | FileCheck %s --check-prefix=CASE3
+## Specifying both `Content` and symbols at the same time is not allowed for .dynsym.
 
-# CASE3: error: Cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'.
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE3
+
+# CASE3: error: cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'
+# CASE3: error: yaml2obj failed
 
 --- !ELF
 FileHeader:
@@ -59,6 +66,9 @@ FileHeader:
   Machine: EM_X86_64
 Sections:
   - Name: .dynsym
+    Type: SHT_DYNSYM
+    Content: "00"
+  - Name: .dynsym2
     Type: SHT_DYNSYM
     Content: "00"
 DynamicSymbols:

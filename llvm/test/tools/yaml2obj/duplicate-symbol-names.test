@@ -21,7 +21,7 @@ Symbols:
 ## symbols with equal names and suffixes.
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1| FileCheck %s --check-prefix=CASE2
-# CASE2: error: Repeated symbol name: 'localfoo [1]'.
+# CASE2-COUNT-2: error: repeated symbol name: 'localfoo [1]'
 
 --- !ELF
 FileHeader:
@@ -30,6 +30,7 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Symbols:
+  - Name: 'localfoo [1]'
   - Name: 'localfoo [1]'
   - Name: 'localfoo [1]'
 
@@ -38,7 +39,8 @@ Symbols:
 ## names are equal.
 
 # RUN: not yaml2obj --docnum=3 %s 2>&1| FileCheck %s --check-prefix=CASE3
-# CASE3: error: Repeated symbol name: 'localfoo'.
+# CASE3: error: repeated symbol name: 'localfoo'
+# CASE3: error: repeated symbol name: 'localfoo'
 
 --- !ELF
 FileHeader:
@@ -47,10 +49,9 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Symbols:
-  - Name:    localfoo
-    Section: .text.foo.1
-  - Name:    localfoo
-    Section: .text.foo.2
+  - Name: localfoo
+  - Name: localfoo
+  - Name: localfoo
 
 ## Check that yaml2obj can produce correct relocations that
 ## reference symbols with name suffixes.

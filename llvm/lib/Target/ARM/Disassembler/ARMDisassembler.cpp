@@ -6483,6 +6483,12 @@ static DecodeStatus DecodeMVEOverlappingLongShift(
     if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))
       return MCDisassembler::Fail;
 
+    if (fieldFromInstruction (Insn, 6, 3) != 4)
+      return MCDisassembler::SoftFail;
+
+    if (Rda == Rm)
+      return MCDisassembler::SoftFail;
+
     return S;
   }
 

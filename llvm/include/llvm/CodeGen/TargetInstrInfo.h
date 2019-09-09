@@ -60,7 +60,7 @@ class TargetSubtargetInfo;
 
 template <class T> class SmallVectorImpl;
 
-using ParamLoadedValue = std::pair<const MachineOperand*, DIExpression*>;
+using ParamLoadedValue = std::pair<MachineOperand, DIExpression*>;
 
 //---------------------------------------------------------------------------
 ///
