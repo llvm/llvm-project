@@ -1133,7 +1133,8 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     case 24:
       if (ARM::DTripleRegClass.hasSubClassEq(RC)) {
         // Use aligned spills if the stack can be realigned.
-        if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+        if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+            Subtarget.hasNEON()) {
           BuildMI(MBB, I, DebugLoc(), get(ARM::VST1d64TPseudo))
               .addFrameIndex(FI)
               .addImm(16)
@@ -1155,7 +1156,8 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       break;
     case 32:
       if (ARM::QQPRRegClass.hasSubClassEq(RC) || ARM::DQuadRegClass.hasSubClassEq(RC)) {
-        if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+        if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+            Subtarget.hasNEON()) {
           // FIXME: It's possible to only store part of the QQ register if the
           // spilled def has a sub-register index.
           BuildMI(MBB, I, DebugLoc(), get(ARM::VST1d64QPseudo))
@@ -1368,7 +1370,8 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     break;
   case 24:
     if (ARM::DTripleRegClass.hasSubClassEq(RC)) {
-      if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+      if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+          Subtarget.hasNEON()) {
         BuildMI(MBB, I, DL, get(ARM::VLD1d64TPseudo), DestReg)
             .addFrameIndex(FI)
             .addImm(16)
@@ -1390,7 +1393,8 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     break;
    case 32:
     if (ARM::QQPRRegClass.hasSubClassEq(RC) || ARM::DQuadRegClass.hasSubClassEq(RC)) {
-      if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+      if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+          Subtarget.hasNEON()) {
         BuildMI(MBB, I, DL, get(ARM::VLD1d64QPseudo), DestReg)
             .addFrameIndex(FI)
             .addImm(16)

@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s
 
 # CHECK:      Name: .text
 # CHECK-NEXT: Type: SHT_PROGBITS
@@ -23,3 +23,24 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Link:            12345
+
+## Check we report an error when an unknown section is referenced via a Link field.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: unknown section referenced: '.unknown1' by YAML section '.foo'
+# ERR: error: unknown section referenced: '.unknown2' by YAML section '.bar'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Link: .unknown1
+  - Name: .bar
+    Type: SHT_PROGBITS
+    Link: .unknown2

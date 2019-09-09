@@ -373,6 +373,8 @@ class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4, list<dag> pattern=[]>
   let Inst{7-6} = 0b00;
   let Inst{5-4} = op5_4{1-0};
   let Inst{3-0} = 0b1101;
+
+  let Unpredictable{8-6} = 0b111;
 }
 
 def MVE_SQRSHR : MVE_ScalarShiftSRegReg<"sqrshr", 0b10>;
@@ -3941,6 +3943,15 @@ def MVE_VCTP8  : MVE_VCTP<"8",  0b00>;
 def MVE_VCTP16 : MVE_VCTP<"16", 0b01>;
 def MVE_VCTP32 : MVE_VCTP<"32", 0b10>;
 def MVE_VCTP64 : MVE_VCTP<"64", 0b11>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(int_arm_vctp8 rGPR:$Rn),
+            (v16i1 (MVE_VCTP8 rGPR:$Rn))>;
+  def : Pat<(int_arm_vctp16 rGPR:$Rn),
+            (v8i1 (MVE_VCTP16 rGPR:$Rn))>;
+  def : Pat<(int_arm_vctp32 rGPR:$Rn),
+            (v4i1 (MVE_VCTP32 rGPR:$Rn))>;
+}
 
 // end of mve_qDest_rSrc
 

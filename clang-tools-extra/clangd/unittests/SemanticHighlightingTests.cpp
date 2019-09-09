@@ -10,9 +10,14 @@
 #include "ClangdServer.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
+#include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -59,6 +64,36 @@ std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
   return ExpectedTokens;
 }
 
+/// Annotates the input code with provided semantic highlightings. Results look
+/// something like:
+///   class $Class[[X]] {
+///     $Primitive[[int]] $Field[[a]] = 0;
+///   };
+std::string annotate(llvm::StringRef Input,
+                     llvm::ArrayRef<HighlightingToken> Tokens) {
+  assert(std::is_sorted(
+      Tokens.begin(), Tokens.end(),
+      [](const HighlightingToken &L, const HighlightingToken &R) {
+        return L.R.start < R.R.start;
+      }));
+
+  std::string Result;
+  unsigned NextChar = 0;
+  for (auto &T : Tokens) {
+    unsigned StartOffset = llvm::cantFail(positionToOffset(Input, T.R.start));
+    unsigned EndOffset = llvm::cantFail(positionToOffset(Input, T.R.end));
+    assert(StartOffset <= EndOffset);
+    assert(NextChar <= StartOffset);
+
+    Result += Input.substr(NextChar, StartOffset - NextChar);
+    Result += llvm::formatv("${0}[[{1}]]", T.Kind,
+                            Input.substr(StartOffset, EndOffset - StartOffset));
+    NextChar = EndOffset;
+  }
+  Result += Input.substr(NextChar);
+  return Result;
+}
+
 void checkHighlightings(llvm::StringRef Code,
                         std::vector<std::pair</*FileName*/ llvm::StringRef,
                                               /*FileContent*/ llvm::StringRef>>
@@ -68,8 +103,8 @@ void checkHighlightings(llvm::StringRef Code,
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, File.second});
   auto AST = TU.build();
-  std::vector<HighlightingToken> ActualTokens = getSemanticHighlightings(AST);
-  EXPECT_THAT(ActualTokens, getExpectedTokens(Test)) << Code;
+
+  EXPECT_EQ(Code, annotate(Test.code(), getSemanticHighlightings(AST)));
 }
 
 // Any annotations in OldCode and NewCode are converted into their corresponding
@@ -439,7 +474,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Macro[[assert]]($Variable[[x]] != $Function[[f]]());
       }
     )cpp",
-    R"cpp(
+      R"cpp(
       struct $Class[[S]] {
         $Primitive[[float]] $Field[[Value]];
         $Class[[S]] *$Field[[Next]];
@@ -453,6 +488,21 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         // Highlights references to BindingDecls.
         $Variable[[B1]]++;
       }
+    )cpp",
+      R"cpp(
+      template<class $TemplateParameter[[T]]>
+      class $Class[[A]] {
+        using $TemplateParameter[[TemplateParam1]] = $TemplateParameter[[T]];
+        typedef $TemplateParameter[[T]] $TemplateParameter[[TemplateParam2]];
+        using $Primitive[[IntType]] = $Primitive[[int]];
+
+        // These typedefs are not yet highlighted, their types are complicated.
+        using Pointer = $TemplateParameter[[T]] *;
+        using LVReference = $TemplateParameter[[T]] &;
+        using RVReference = $TemplateParameter[[T]]&&;
+        using Array = $TemplateParameter[[T]]*[3];
+        using MemberPointer = $Primitive[[int]] (A::*)($Primitive[[int]]);
+      };
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

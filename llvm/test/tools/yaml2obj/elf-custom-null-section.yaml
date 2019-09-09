@@ -130,7 +130,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=CASE4
 
-# CASE4: error: Unknown section referenced: '.foo' at YAML section ''.
+# CASE4: error: unknown section referenced: '.foo' by YAML section ''
 
 --- !ELF
 FileHeader:

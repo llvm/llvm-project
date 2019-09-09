@@ -356,6 +356,7 @@ def SI_INIT_EXEC : SPseudoInstSI <
   let WaveSizePredicate = isWave64;
 }
 
+// FIXME: Intrinsic should be mangled for wave size.
 def SI_INIT_EXEC_LO : SPseudoInstSI <
   (outs), (ins i32imm:$src), []> {
   let Defs = [EXEC_LO];
@@ -609,21 +610,19 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (AMDGPUinit_exec i64:$src),
-  (SI_INIT_EXEC (as_i64imm $src))
-> {
+  (int_amdgcn_init_exec i64:$src),
+  (SI_INIT_EXEC (as_i64imm $src))> {
   let WaveSizePredicate = isWave64;
 }
 
 def : GCNPat <
-  (AMDGPUinit_exec i64:$src),
-  (SI_INIT_EXEC_LO (as_i32imm $src))
-> {
+  (int_amdgcn_init_exec i64:$src),
+  (SI_INIT_EXEC_LO (as_i32imm $src))> {
   let WaveSizePredicate = isWave32;
 }
 
 def : GCNPat <
-  (AMDGPUinit_exec_from_input i32:$input, i32:$shift),
+  (int_amdgcn_init_exec_from_input i32:$input, i32:$shift),
   (SI_INIT_EXEC_FROM_INPUT (i32 $input), (as_i32imm $shift))
 >;
 

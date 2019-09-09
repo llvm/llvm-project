@@ -154,6 +154,8 @@ namespace {
 
     bool is64Bit() const { return Root->getType()->isIntegerTy(64); }
 
+    Type *getType() const { return Root->getType(); }
+
     /// Return the incoming value to be accumulated. This maybe null.
     Value *getAccumulator() { return Acc; }
 
@@ -652,9 +654,9 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     Value *Mul = MulCand->Root;
     LLVM_DEBUG(dbgs() << "Accumulating unpaired mul: " << *Mul << "\n");
 
-    if (R.getRoot()->getType() != Mul->getType()) {
+    if (R.getType() != Mul->getType()) {
       assert(R.is64Bit() && "expected 64-bit result");
-      Mul = Builder.CreateSExt(Mul, R.getRoot()->getType());
+      Mul = Builder.CreateSExt(Mul, R.getType());
     }
 
     if (!Acc) {
@@ -666,10 +668,14 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     InsertAfter = cast<Instruction>(Acc);
   }
 
-  if (!Acc)
+  if (!Acc) {
     Acc = R.is64Bit() ?
       ConstantInt::get(IntegerType::get(M->getContext(), 64), 0) :
       ConstantInt::get(IntegerType::get(M->getContext(), 32), 0);
+  } else if (Acc->getType() != R.getType()) {
+    Builder.SetInsertPoint(R.getRoot());
+    Acc = Builder.CreateSExt(Acc, R.getType());
+  }
 
   IntegerType *Ty = IntegerType::get(M->getContext(), 32);
   for (auto &Pair : R.getMulPairs()) {

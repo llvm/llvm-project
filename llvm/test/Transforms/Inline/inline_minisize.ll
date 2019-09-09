@@ -1,4 +1,4 @@
-; RUN: opt -O2 -S < %s | FileCheck %s
+; RUN: opt -inline -inline-threshold=225 -inlinehint-threshold=360 -S < %s | FileCheck %s
 
 @data = common global i32* null, align 8
 

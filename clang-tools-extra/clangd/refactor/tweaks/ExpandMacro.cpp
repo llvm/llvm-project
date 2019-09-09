@@ -104,7 +104,7 @@ bool ExpandMacro::prepare(const Selection &Inputs) {
 }
 
 Expected<Tweak::Effect> ExpandMacro::apply(const Selection &Inputs) {
-  auto &SM = Inputs.AST.getASTContext().getSourceManager();
+  auto &SM = Inputs.AST.getSourceManager();
 
   std::string Replacement;
   for (const syntax::Token &T : Expansion.Expanded) {
@@ -120,11 +120,9 @@ Expected<Tweak::Effect> ExpandMacro::apply(const Selection &Inputs) {
       CharSourceRange::getCharRange(Expansion.Spelled.front().location(),
                                     Expansion.Spelled.back().endLocation());
 
-  Tweak::Effect E;
-  E.ApplyEdit.emplace();
-  llvm::cantFail(
-      E.ApplyEdit->add(tooling::Replacement(SM, MacroRange, Replacement)));
-  return E;
+  tooling::Replacements Reps;
+  llvm::cantFail(Reps.add(tooling::Replacement(SM, MacroRange, Replacement)));
+  return Effect::mainFileEdit(SM, std::move(Reps));
 }
 
 std::string ExpandMacro::title() const {
