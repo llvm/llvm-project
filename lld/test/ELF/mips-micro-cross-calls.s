@@ -22,9 +22,9 @@
 # REG-NEXT:      20034:       08 00 80 11     j       131140 <bar>
 
 # MICRO:      micro:
-# MICRO-NEXT:    20010:       f0 00 80 00     jalx 65536
+# MICRO-NEXT:    20010:       f0 00 80 00     jalx 131072 <__start>
 # MICRO-NEXT:    20014:       00 00 00 00     nop
-# MICRO-NEXT:    20018:       f0 00 80 0c     jalx 65560
+# MICRO-NEXT:    20018:       f0 00 80 0c     jalx 131120 <__LA25Thunk_bar>
 
 # MICRO:      __microLA25Thunk_foo:
 # MICRO-NEXT:    20020:       41 b9 00 02     lui     $25, 2

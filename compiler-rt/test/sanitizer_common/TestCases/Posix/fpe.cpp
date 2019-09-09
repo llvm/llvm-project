@@ -26,4 +26,4 @@ int main(int argc, char **argv) {
 // CHECK1: ERROR: {{.*}}Sanitizer: FPE
 // CHECK1: {{#[0-9]+.* main .*fpe\.cpp}}:[[@LINE-5]]
 // CHECK1: DEATH CALLBACK
-// CHECK0-NOT: Sanitizer
+// CHECK0-NOT: {{.*}}Sanitizer: FPE

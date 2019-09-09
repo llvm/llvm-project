@@ -48,8 +48,8 @@ using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
-using namespace lld;
-using namespace lld::elf;
+namespace lld {
+namespace elf {
 
 // Helper functions to identify instructions and conditions needed to trigger
 // the Cortex-A53-843419 erratum.
@@ -374,7 +374,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
   return patchOff;
 }
 
-class lld::elf::Patch843419Section : public SyntheticSection {
+class Patch843419Section : public SyntheticSection {
 public:
   Patch843419Section(InputSection *p, uint64_t off);
 
@@ -392,7 +392,7 @@ public:
   Symbol *patchSym;
 };
 
-lld::elf::Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
+Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
       patchee(p), patcheeOffset(off) {
@@ -403,11 +403,11 @@ lld::elf::Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
   addSyntheticLocal(saver.save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
-uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {
+uint64_t Patch843419Section::getLDSTAddr() const {
   return patchee->getVA(patcheeOffset);
 }
 
-void lld::elf::Patch843419Section::writeTo(uint8_t *buf) {
+void Patch843419Section::writeTo(uint8_t *buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // Patchee Section.
   write32le(buf, read32le(patchee->data().begin() + patcheeOffset));
@@ -461,8 +461,6 @@ void AArch64Err843419Patcher::init() {
   // $d.0 $d.1 $x.1.
   for (auto &kv : sectionMap) {
     std::vector<const Defined *> &mapSyms = kv.second;
-    if (mapSyms.size() <= 1)
-      continue;
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
     });
@@ -511,7 +509,7 @@ void AArch64Err843419Patcher::insertPatches(
     (*patchIt)->outSecOff = isecLimit;
   }
 
-  // merge all patch sections. We use the outSecOff assigned above to
+  // Merge all patch sections. We use the outSecOff assigned above to
   // determine the insertion point. This is ok as we only merge into an
   // InputSectionDescription once per pass, and at the end of the pass
   // assignAddresses() will recalculate all the outSecOff values.
@@ -630,7 +628,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
 // Ouptut and Input Sections may have been changed.
 // Returns false if no patches were required and no changes were made.
 bool AArch64Err843419Patcher::createFixes() {
-  if (initialized == false)
+  if (!initialized)
     init();
 
   bool addressesChanged = false;
@@ -649,3 +647,5 @@ bool AArch64Err843419Patcher::createFixes() {
   }
   return addressesChanged;
 }
+} // namespace elf
+} // namespace lld
