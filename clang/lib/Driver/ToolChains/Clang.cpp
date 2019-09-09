@@ -3002,6 +3002,21 @@ static void RenderSSPOptions(const ToolChain &TC, const ArgList &Args,
   }
 }
 
+static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
+                             ArgStringList &CmdArgs) {
+  const llvm::Triple &EffectiveTriple = TC.getEffectiveTriple();
+
+  if (!EffectiveTriple.isOSLinux())
+    return;
+
+  if (!EffectiveTriple.isX86())
+    return;
+
+  if (Args.hasFlag(options::OPT_fstack_clash_protection,
+                   options::OPT_fnostack_clash_protection, false))
+    CmdArgs.push_back("-stack-clash-protection");
+}
+
 static void RenderTrivialAutoVarInitOptions(const Driver &D,
                                             const ToolChain &TC,
                                             const ArgList &Args,
@@ -5248,6 +5263,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-mspeculative-load-hardening"));
 
   RenderSSPOptions(TC, Args, CmdArgs, KernelOrKext);
+  RenderSCPOptions(TC, Args, CmdArgs);
   RenderTrivialAutoVarInitOptions(D, TC, Args, CmdArgs);
 
   // Translate -mstackrealign
