@@ -5,8 +5,6 @@
 // RUN: %clangxx_asan -O0 %s -o %t %ld_flags_rpath_exe && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
-// XFAIL: i386-netbsd
-
 #include <stdio.h>
 #include <string.h>
 

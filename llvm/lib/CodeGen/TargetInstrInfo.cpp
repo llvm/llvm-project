@@ -1129,10 +1129,10 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
 
   if (isCopyInstr(MI, SrcRegOp, DestRegOp)) {
     Op = SrcRegOp;
-    return ParamLoadedValue(Op, Expr);
+    return ParamLoadedValue(*Op, Expr);
   } else if (MI.isMoveImmediate()) {
     Op = &MI.getOperand(1);
-    return ParamLoadedValue(Op, Expr);
+    return ParamLoadedValue(*Op, Expr);
   } else if (MI.hasOneMemOperand()) {
     int64_t Offset;
     const auto &TRI = MF->getSubtarget().getRegisterInfo();
@@ -1144,7 +1144,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
 
     Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter, Offset);
     Op = BaseOp;
-    return ParamLoadedValue(Op, Expr);
+    return ParamLoadedValue(*Op, Expr);
   }
 
   return None;
