@@ -1917,6 +1917,10 @@ Use a strong heuristic to apply stack protectors to functions
 
 Emit section containing metadata on function stack sizes
 
+.. option:: -fstack-clash-protection, -fno-stack-clash-protection
+
+Instrument stack allocation to prevent stack clash attacks (x86, non-Windows only).
+
 .. option:: -fstandalone-debug, -fno-limit-debug-info, -fno-standalone-debug
 
 Emit full debug info for all types used by the program
