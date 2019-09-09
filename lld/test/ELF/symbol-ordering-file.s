@@ -4,9 +4,9 @@
 # RUN: llvm-objdump -s %t.out| FileCheck %s --check-prefix=BEFORE
 
 # BEFORE:      Contents of section .foo:
-# BEFORE-NEXT:  201000 11223344 5566
+# BEFORE-NEXT:  11223344 5566
 # BEFORE:      Contents of section .init:
-# BEFORE-NEXT:  201006 1122
+# BEFORE-NEXT:  1122
 
 # RUN: echo "_foo4  " > %t_order.txt
 # RUN: echo "  _foo3" >> %t_order.txt
@@ -25,9 +25,9 @@
 # RUN: llvm-objdump -s %t2.out| FileCheck %s --check-prefix=AFTER
 
 # AFTER:      Contents of section .foo:
-# AFTER-NEXT:  201000 44335566 2211
+# AFTER-NEXT:  44335566 2211
 # AFTER:      Contents of section .init:
-# AFTER-NEXT:  201006 1122
+# AFTER-NEXT:  1122
 
 .section .foo,"ax",@progbits,unique,1
 _foo1:

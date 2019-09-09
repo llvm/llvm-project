@@ -235,3 +235,92 @@ entry:
 }
 declare fp128 @llvm.cos.f128(fp128)
 
+define void @Test128Ceil(fp128 %d1) nounwind {
+; CHECK-LABEL: Test128Ceil:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq ceill
+; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %sqrt = call fp128 @llvm.ceil.f128(fp128 %d1)
+  store fp128 %sqrt, fp128* @vf128, align 16
+  ret void
+}
+declare fp128 @llvm.ceil.f128(fp128)
+
+define void @Test128Floor(fp128 %d1) nounwind {
+; CHECK-LABEL: Test128Floor:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq floorl
+; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %sqrt = call fp128 @llvm.floor.f128(fp128 %d1)
+  store fp128 %sqrt, fp128* @vf128, align 16
+  ret void
+}
+declare fp128 @llvm.floor.f128(fp128)
+
+define void @Test128Trunc(fp128 %d1) nounwind {
+; CHECK-LABEL: Test128Trunc:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq truncl
+; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %sqrt = call fp128 @llvm.trunc.f128(fp128 %d1)
+  store fp128 %sqrt, fp128* @vf128, align 16
+  ret void
+}
+declare fp128 @llvm.trunc.f128(fp128)
+
+define void @Test128Nearbyint(fp128 %d1) nounwind {
+; CHECK-LABEL: Test128Nearbyint:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq nearbyintl
+; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %sqrt = call fp128 @llvm.nearbyint.f128(fp128 %d1)
+  store fp128 %sqrt, fp128* @vf128, align 16
+  ret void
+}
+declare fp128 @llvm.nearbyint.f128(fp128)
+
+define void @Test128Rint(fp128 %d1) nounwind {
+; CHECK-LABEL: Test128Rint:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq rintl
+; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %sqrt = call fp128 @llvm.rint.f128(fp128 %d1)
+  store fp128 %sqrt, fp128* @vf128, align 16
+  ret void
+}
+declare fp128 @llvm.rint.f128(fp128)
+
+define void @Test128Round(fp128 %d1) nounwind {
+; CHECK-LABEL: Test128Round:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq roundl
+; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %sqrt = call fp128 @llvm.round.f128(fp128 %d1)
+  store fp128 %sqrt, fp128* @vf128, align 16
+  ret void
+}
+declare fp128 @llvm.round.f128(fp128)

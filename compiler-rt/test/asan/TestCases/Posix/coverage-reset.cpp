@@ -5,8 +5,6 @@
 //
 // UNSUPPORTED: ios
 
-// XFAIL: i386-netbsd
-
 #include <stdio.h>
 
 #include <sanitizer/coverage_interface.h>
