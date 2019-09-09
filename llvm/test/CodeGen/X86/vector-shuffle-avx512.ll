@@ -936,3 +936,41 @@ define <16 x float> @test_masked_permps_v16f32(<16 x float>* %vp, <16 x float> %
   %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec2
   ret <16 x float> %res
 }
+
+%union1= type { <16 x float> }
+@src1 = external dso_local local_unnamed_addr global %union1, align 64
+
+define void @PR43170(<16 x float>* %a0) {
+; SKX64-LABEL: PR43170:
+; SKX64:       # %bb.0: # %entry
+; SKX64-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; SKX64-NEXT:    vmovaps %zmm0, (%rdi)
+; SKX64-NEXT:    vzeroupper
+; SKX64-NEXT:    retq
+;
+; KNL64-LABEL: PR43170:
+; KNL64:       # %bb.0: # %entry
+; KNL64-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; KNL64-NEXT:    vmovaps %zmm0, (%rdi)
+; KNL64-NEXT:    retq
+;
+; SKX32-LABEL: PR43170:
+; SKX32:       # %bb.0: # %entry
+; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX32-NEXT:    vmovaps src1, %ymm0
+; SKX32-NEXT:    vmovaps %zmm0, (%eax)
+; SKX32-NEXT:    vzeroupper
+; SKX32-NEXT:    retl
+;
+; KNL32-LABEL: PR43170:
+; KNL32:       # %bb.0: # %entry
+; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL32-NEXT:    vmovaps src1, %ymm0
+; KNL32-NEXT:    vmovaps %zmm0, (%eax)
+; KNL32-NEXT:    retl
+entry:
+  %0 = load <8 x float>, <8 x float>* bitcast (%union1* @src1 to <8 x float>*), align 64
+  %1 = shufflevector <8 x float> %0, <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x float> %1, <16 x float>* %a0, align 64
+  ret void
+}
