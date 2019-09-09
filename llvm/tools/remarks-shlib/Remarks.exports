@@ -17,6 +17,7 @@ LLVMRemarkEntryGetNumArgs
 LLVMRemarkEntryGetFirstArg
 LLVMRemarkEntryGetNextArg
 LLVMRemarkParserCreateYAML
+LLVMRemarkParserCreateBitstream
 LLVMRemarkParserGetNext
 LLVMRemarkParserHasError
 LLVMRemarkParserGetErrorMessage

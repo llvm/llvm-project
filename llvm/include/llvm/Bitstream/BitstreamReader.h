@@ -375,6 +375,7 @@ public:
   using SimpleBitstreamCursor::Read;
   using SimpleBitstreamCursor::ReadVBR;
   using SimpleBitstreamCursor::ReadVBR64;
+  using SimpleBitstreamCursor::skipToEnd;
 
   /// Return the number of bits used to encode an abbrev #.
   unsigned getAbbrevIDWidth() const { return CurCodeSize; }
