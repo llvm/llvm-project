@@ -21,8 +21,6 @@ MATH_MANGLE(maxmag)(float x, float y)
 	            (-(ay > ax) & iy) |
 		    (-(ax == ay) & ((ix & iy) | (ax & 0x00400000))));
 #else
-    x = BUILTIN_CANONICALIZE_F32(x);
-    y = BUILTIN_CANONICALIZE_F32(y);
     float ret = BUILTIN_MAX_F32(x, y);
     float ax = BUILTIN_ABS_F32(x);
     float ay = BUILTIN_ABS_F32(y);

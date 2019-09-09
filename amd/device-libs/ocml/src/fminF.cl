@@ -16,11 +16,7 @@ MATH_MANGLE(fmin)(float x, float y)
         // XXX revisit this later
         ret = BUILTIN_CMIN_F32(x, y);
     } else {
-        if (FINITE_ONLY_OPT()) {
-            ret = BUILTIN_MIN_F32(x, y);
-        } else {
-            ret = BUILTIN_MIN_F32(x, y);
-        }
+        ret = BUILTIN_MIN_F32(x, y);
     }
 
     return ret;

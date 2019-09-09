@@ -19,8 +19,6 @@ MATH_MANGLE(minmag)(double x, double y)
 	            (-(ay < ax) & iy) |
 		    (-(ax == ay) & (ix | iy)));
 #else
-    x = BUILTIN_CANONICALIZE_F64(x);
-    y = BUILTIN_CANONICALIZE_F64(y);
     double ret = BUILTIN_MIN_F64(x, y);
     double ax = BUILTIN_ABS_F64(x);
     double ay = BUILTIN_ABS_F64(y);
