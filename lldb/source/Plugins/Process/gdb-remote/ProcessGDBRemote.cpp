@@ -63,7 +63,6 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
@@ -81,6 +80,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -3519,8 +3519,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 
     int our_socket = sockets[0];
     int gdb_socket = sockets[1];
-    CleanUp cleanup_our(close, our_socket);
-    CleanUp cleanup_gdb(close, gdb_socket);
+    auto cleanup_our = llvm::make_scope_exit([&]() { close(our_socket); });
+    auto cleanup_gdb = llvm::make_scope_exit([&]() { close(gdb_socket); });
 
     // Don't let any child processes inherit our communication socket
     SetCloexecFlag(our_socket);
@@ -3540,7 +3540,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
       // Our process spawned correctly, we can now set our connection to use
       // our end of the socket pair
-      cleanup_our.disable();
+      cleanup_our.release();
       m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket, true));
 #endif
       StartAsyncThread();
