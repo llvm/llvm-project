@@ -560,7 +560,7 @@ private:
   SDValue SoftenFloatOp_LRINT(SDNode *N);
   SDValue SoftenFloatOp_LLRINT(SDNode *N);
   SDValue SoftenFloatOp_SELECT(SDNode *N);
-  SDValue SoftenFloatOp_SELECT_CC(SDNode *N);
+  SDValue SoftenFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue SoftenFloatOp_SETCC(SDNode *N);
   SDValue SoftenFloatOp_STORE(SDNode *N, unsigned OpNo);
 

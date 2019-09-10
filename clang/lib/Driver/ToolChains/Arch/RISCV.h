@@ -19,7 +19,8 @@ namespace clang {
 namespace driver {
 namespace tools {
 namespace riscv {
-void getRISCVTargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
+void getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                            const llvm::opt::ArgList &Args,
                             std::vector<llvm::StringRef> &Features);
 StringRef getRISCVABI(const llvm::opt::ArgList &Args,
                       const llvm::Triple &Triple);

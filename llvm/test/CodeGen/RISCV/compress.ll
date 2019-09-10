@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+c -filetype=obj \
 ; RUN:   -disable-block-placement < %s \
-; RUN:   | llvm-objdump -d -triple=riscv32 -mattr=+c -riscv-no-aliases - \
+; RUN:   | llvm-objdump -d -triple=riscv32 -mattr=+c -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IC %s
 
 ; This acts as a sanity check for the codegen instruction compression path,

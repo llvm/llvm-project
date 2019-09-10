@@ -67,7 +67,7 @@ FileSpec HostInfoFreeBSD::GetProgramFileSpec() {
     char exe_path[PATH_MAX];
     size_t exe_path_size = sizeof(exe_path);
     if (sysctl(exe_path_mib, 4, exe_path, &exe_path_size, NULL, 0) == 0)
-      g_program_filespec.SetFile(exe_path, false);
+      g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
   }
   return g_program_filespec;
 }

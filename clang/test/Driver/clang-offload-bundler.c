@@ -1,6 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: powerpc-registered-target
-// UNSUPPORTED: darwin
+// REQUIRES: shell
+// UNSUPPORTED: ms-sdk, darwin
 
 //
 // Generate all the types of files we can bundle.

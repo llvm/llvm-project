@@ -1230,20 +1230,11 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
   return true;
 }
 
-bool SITargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
-    bool *IsFast) const {
+bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
+    unsigned Size, unsigned AddrSpace, unsigned Align,
+    MachineMemOperand::Flags Flags, bool *IsFast) const {
   if (IsFast)
     *IsFast = false;
-
-  // TODO: I think v3i32 should allow unaligned accesses on CI with DS_READ_B96,
-  // which isn't a simple VT.
-  // Until MVT is extended to handle this, simply check for the size and
-  // rely on the condition below: allow accesses if the size is a multiple of 4.
-  if (VT == MVT::Other || (VT != MVT::Other && VT.getSizeInBits() > 1024 &&
-                           VT.getStoreSize() > 16)) {
-    return false;
-  }
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
@@ -1283,7 +1274,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
   }
 
   // Smaller than dword value must be aligned.
-  if (VT.bitsLT(MVT::i32))
+  if (Size < 32)
     return false;
 
   // 8.1.6 - For Dword or larger reads or writes, the two LSBs of the
@@ -1292,7 +1283,26 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
   if (IsFast)
     *IsFast = true;
 
-  return VT.bitsGT(MVT::i32) && Align % 4 == 0;
+  return Size >= 32 && Align >= 4;
+}
+
+bool SITargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
+    bool *IsFast) const {
+  if (IsFast)
+    *IsFast = false;
+
+  // TODO: I think v3i32 should allow unaligned accesses on CI with DS_READ_B96,
+  // which isn't a simple VT.
+  // Until MVT is extended to handle this, simply check for the size and
+  // rely on the condition below: allow accesses if the size is a multiple of 4.
+  if (VT == MVT::Other || (VT != MVT::Other && VT.getSizeInBits() > 1024 &&
+                           VT.getStoreSize() > 16)) {
+    return false;
+  }
+
+  return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                            Align, Flags, IsFast);
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
@@ -10673,15 +10683,15 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
-unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
-  const unsigned PrefLogAlign = TargetLowering::getPrefLoopLogAlignment(ML);
-  const unsigned CacheLineLogAlign = 6; // log2(64)
+llvm::Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+  const llvm::Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
+  const llvm::Align CacheLineAlign = llvm::Align(64);
 
   // Pre-GFX10 target did not benefit from loop alignment
   if (!ML || DisableLoopAlignment ||
       (getSubtarget()->getGeneration() < AMDGPUSubtarget::GFX10) ||
       getSubtarget()->hasInstFwdPrefetchBug())
-    return PrefLogAlign;
+    return PrefAlign;
 
   // On GFX10 I$ is 4 x 64 bytes cache lines.
   // By default prefetcher keeps one cache line behind and reads two ahead.
@@ -10695,8 +10705,8 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
 
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   const MachineBasicBlock *Header = ML->getHeader();
-  if (Header->getLogAlignment() != PrefLogAlign)
-    return Header->getLogAlignment(); // Already processed.
+  if (Header->getAlignment() != PrefAlign)
+    return Header->getAlignment(); // Already processed.
 
   unsigned LoopSize = 0;
   for (const MachineBasicBlock *MBB : ML->blocks()) {
@@ -10708,15 +10718,15 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
     for (const MachineInstr &MI : *MBB) {
       LoopSize += TII->getInstSizeInBytes(MI);
       if (LoopSize > 192)
-        return PrefLogAlign;
+        return PrefAlign;
     }
   }
 
   if (LoopSize <= 64)
-    return PrefLogAlign;
+    return PrefAlign;
 
   if (LoopSize <= 128)
-    return CacheLineLogAlign;
+    return CacheLineAlign;
 
   // If any of parent loops is surrounded by prefetch instructions do not
   // insert new for inner loop, which would reset parent's settings.
@@ -10724,7 +10734,7 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
     if (MachineBasicBlock *Exit = P->getExitBlock()) {
       auto I = Exit->getFirstNonDebugInstr();
       if (I != Exit->end() && I->getOpcode() == AMDGPU::S_INST_PREFETCH)
-        return CacheLineLogAlign;
+        return CacheLineAlign;
     }
   }
 
@@ -10741,7 +10751,7 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
       .addImm(2); // prefetch 1 line behind PC
   }
 
-  return CacheLineLogAlign;
+  return CacheLineAlign;
 }
 
 LLVM_ATTRIBUTE_UNUSED

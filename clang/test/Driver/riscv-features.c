@@ -19,3 +19,14 @@
 // SAVE-RESTORE: warning: the clang compiler does not support '-msave-restore'
 // NO-SAVE-RESTORE-NOT: warning: the clang compiler does not support
 // DEFAULT-NOT: warning: the clang compiler does not support
+
+// RUN: %clang -target riscv32-linux -### %s -fsyntax-only 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=DEFAULT-LINUX
+// RUN: %clang -target riscv64-linux -### %s -fsyntax-only 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=DEFAULT-LINUX
+
+// DEFAULT-LINUX: "-target-feature" "+m"
+// DEFAULT-LINUX-SAME: "-target-feature" "+a"
+// DEFAULT-LINUX-SAME: "-target-feature" "+f"
+// DEFAULT-LINUX-SAME: "-target-feature" "+d"
+// DEFAULT-LINUX-SAME: "-target-feature" "+c"

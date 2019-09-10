@@ -54,7 +54,7 @@
 # DATA-NEXT:     SHF_STRINGS (0x20)
 # DATA-NEXT:   ]
 # DATA-NEXT:   Address: 0x0
-# DATA-NEXT:   Offset: 0x1060
+# DATA-NEXT:   Offset:
 # DATA-NEXT:   Size: 69
 # DATA-NEXT:   Link: 0
 # DATA-NEXT:   Info: 0

@@ -421,7 +421,9 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     AltMappings.push_back(&VSMapping);
     break;
   }
-  case TargetOpcode::G_LOAD: {
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_SEXTLOAD: {
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     LLT PtrTy = MRI.getType(MI.getOperand(1).getReg());
     unsigned PtrSize = PtrTy.getSizeInBits();
@@ -1427,7 +1429,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     }
     break;
   }
-  case AMDGPU::G_LOAD: {
+  case AMDGPU::G_LOAD:
+  case AMDGPU::G_ZEXTLOAD:
+  case AMDGPU::G_SEXTLOAD: {
     if (applyMappingWideLoad(MI, OpdMapper, MRI))
       return;
     break;
@@ -2321,6 +2325,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   case AMDGPU::G_LOAD:
+  case AMDGPU::G_ZEXTLOAD:
+  case AMDGPU::G_SEXTLOAD:
     return getInstrMappingForLoad(MI);
 
   case AMDGPU::G_ATOMICRMW_XCHG:
