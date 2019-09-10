@@ -58,6 +58,19 @@ using namespace llvm;
       setOperationAction((ISDNode), VT, (Action));                             \
   } while (0);
 
+#define setLibcallNameForAtomics(rtlib, name, size, size_string)               \
+  do {                                                                         \
+    setLibcallName(rtlib##size, name size_string);                             \
+  } while (0);
+
+#define setLibcallNameForAllTypesForAtomics(RTLIBNode, name_prefix)            \
+  do {                                                                         \
+    setLibcallNameForAtomics(RTLIBNode, name_prefix, 1, "1");                  \
+    setLibcallNameForAtomics(RTLIBNode, name_prefix, 2, "2");                  \
+    setLibcallNameForAtomics(RTLIBNode, name_prefix, 4, "4");                  \
+    setLibcallNameForAtomics(RTLIBNode, name_prefix, 8, "8");                  \
+  } while (0);
+
 DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
     : TargetLowering(TM), optLevel(TM.getOptLevel()) {
   // We need to be sure that the intrinsic will not generate instructions
@@ -229,6 +242,49 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
 
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+
+  setOperationActionForAllTypes(ISD::ATOMIC_FENCE, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_STORE, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_CMP_SWAP, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_SWAP, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_ADD, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_SUB, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_AND, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_CLR, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_OR, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_XOR, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_NAND, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_MIN, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_MAX, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_UMIN, Expand);
+  setOperationActionForAllTypes(ISD::ATOMIC_LOAD_UMAX, Expand);
+
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_VAL_COMPARE_AND_SWAP_,
+                                      "__dpu_sync_val_compare_and_swap_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_LOCK_TEST_AND_SET_,
+                                      "__dpu_sync_lock_test_and_set_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_ADD_,
+                                      "__dpu_sync_fetch_and_add_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_SUB_,
+                                      "__dpu_sync_fetch_and_sub_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_AND_,
+                                      "__dpu_sync_fetch_and_and_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_OR_,
+                                      "__dpu_sync_fetch_and_or_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_XOR_,
+                                      "__dpu_sync_fetch_and_xor_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_NAND_,
+                                      "__dpu_sync_fetch_and_nand_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_MAX_,
+                                      "__dpu_sync_fetch_and_max_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_UMAX_,
+                                      "__dpu_sync_fetch_and_umax_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_MIN_,
+                                      "__dpu_sync_fetch_and_min_");
+  setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_UMIN_,
+                                      "__dpu_sync_fetch_and_umin_");
 
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
