@@ -3990,10 +3990,7 @@ def note_implicit_member_target_infer_collision : Note<
 
 def note_ambiguous_type_conversion: Note<
     "because of ambiguity in conversion %diff{of $ to $|between types}0,1">;
-def note_ovl_builtin_binary_candidate : Note<
-    "built-in candidate %0">;
-def note_ovl_builtin_unary_candidate : Note<
-    "built-in candidate %0">;
+def note_ovl_builtin_candidate : Note<"built-in candidate %0">;
 def err_ovl_no_viable_function_in_init : Error<
   "no matching constructor for initialization of %0">;
 def err_ovl_no_conversion_in_cast : Error<

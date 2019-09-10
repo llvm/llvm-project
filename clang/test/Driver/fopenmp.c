@@ -31,6 +31,11 @@
 // RUN: %clang -target x86_64-linux-gnu -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-GOMP --check-prefix=CHECK-LD-GOMP-RT
 // RUN: %clang -target x86_64-linux-gnu -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-IOMP5
 //
+// RUN: %clang -target x86_64-linux-gnu -fopenmp=libomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-OMP
+// RUN: %clang -target x86_64-linux-gnu -fopenmp=libgomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-GOMP --check-prefix=CHECK-LD-STATIC-GOMP-RT
+// RUN: %clang -target x86_64-linux-gnu -fopenmp=libiomp5 -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5
+// RUN: %clang -target x86_64-linux-gnu -fopenmp=libiomp5 -static -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC
+//
 // RUN: %clang -nostdlib -target x86_64-linux-gnu -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OMP
 // RUN: %clang -nostdlib -target x86_64-linux-gnu -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-GOMP
 // RUN: %clang -nostdlib -target x86_64-linux-gnu -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-IOMP5
@@ -47,6 +52,11 @@
 // RUN: %clang -target x86_64-freebsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-GOMP --check-prefix=CHECK-LD-GOMP-NO-RT
 // RUN: %clang -target x86_64-freebsd -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-IOMP5
 //
+// RUN: %clang -target x86_64-freebsd -fopenmp=libomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-OMP
+// RUN: %clang -target x86_64-freebsd -fopenmp=libgomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-GOMP --check-prefix=CHECK-LD-STATIC-GOMP-NO-RT
+// RUN: %clang -target x86_64-freebsd -fopenmp=libiomp5 -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5
+// RUN: %clang -target x86_64-freebsd -fopenmp=libiomp5 -static -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC
+//
 // RUN: %clang -nostdlib -target x86_64-freebsd -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OMP
 // RUN: %clang -nostdlib -target x86_64-freebsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-GOMP
 // RUN: %clang -nostdlib -target x86_64-freebsd -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-IOMP5
@@ -54,6 +64,11 @@
 // RUN: %clang -target x86_64-netbsd -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-OMP
 // RUN: %clang -target x86_64-netbsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-GOMP --check-prefix=CHECK-LD-GOMP-NO-RT
 // RUN: %clang -target x86_64-netbsd -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-IOMP5
+//
+// RUN: %clang -target x86_64-netbsd -fopenmp=libomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-OMP
+// RUN: %clang -target x86_64-netbsd -fopenmp=libgomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-GOMP --check-prefix=CHECK-LD-STATIC-GOMP-NO-RT
+// RUN: %clang -target x86_64-netbsd -fopenmp=libiomp5 -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5
+// RUN: %clang -target x86_64-netbsd -fopenmp=libiomp5 -static -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC
 //
 // RUN: %clang -nostdlib -target x86_64-netbsd -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OMP
 // RUN: %clang -nostdlib -target x86_64-netbsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-GOMP
@@ -92,6 +107,22 @@
 //
 // CHECK-NO-IOMP5MD: "{{.*}}ld{{(.exe)?}}"
 // CHECK-NO-IOMP5MD-NOT: "-liomp5md"
+//
+// CHECK-LD-STATIC-OMP: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD-STATIC-OMP: "-Bstatic" "-lomp" "-Bdynamic"
+//
+// CHECK-LD-STATIC-GOMP: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD-STATIC-GOMP: "-Bstatic" "-lgomp" "-Bdynamic"
+// CHECK-LD-STATIC-GOMP-RT: "-lrt"
+// CHECK-LD-STATIC-NO-GOMP-RT-NOT: "-lrt"
+//
+// CHECK-LD-STATIC-IOMP5: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD-STATIC-IOMP5: "-Bstatic" "-liomp5" "-Bdynamic"
+//
+// CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC: "{{.*}}ld{{(.exe)?}}"
+// For x86 Gnu, the driver passes -static, while NetBSD and FreeBSD pass -Bstatic
+// CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC: "-{{B?}}static" {{.*}} "-liomp5"
+// CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC-NOT: "-Bdynamic"
 //
 // We'd like to check that the default is sane, but until we have the ability
 // to *always* semantically analyze OpenMP without always generating runtime

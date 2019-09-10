@@ -1990,16 +1990,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       R.clear();
     }
 
-    // In Microsoft mode, if we are performing lookup from within a friend
-    // function definition declared at class scope then we must set
-    // DC to the lexical parent to be able to search into the parent
-    // class.
-    if (getLangOpts().MSVCCompat && isa<FunctionDecl>(DC) &&
-        cast<FunctionDecl>(DC)->getFriendObjectKind() &&
-        DC->getLexicalParent()->isRecord())
-      DC = DC->getLexicalParent();
-    else
-      DC = DC->getParent();
+    DC = DC->getLookupParent();
   }
 
   // We didn't find anything, so try to correct for a typo.
