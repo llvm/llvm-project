@@ -6950,17 +6950,11 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::Error:
     return 0;
   case swift::TypeKind::BuiltinInteger:
-    return 1;
   case swift::TypeKind::BuiltinFloat:
-    return 1;
   case swift::TypeKind::BuiltinRawPointer:
-    return 1;
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
-    return 1;
   case swift::TypeKind::BuiltinNativeObject:
-    return 1;
   case swift::TypeKind::BuiltinUnknownObject:
-    return 1;
   case swift::TypeKind::BuiltinBridgeObject:
     return 1;
   case swift::TypeKind::BuiltinVector:
@@ -6971,55 +6965,33 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return GetNumPointeeChildren(
         swift::cast<swift::ReferenceStorageType>(swift_can_type).getPointer());
   case swift::TypeKind::Tuple:
-    return 0;
   case swift::TypeKind::GenericTypeParam:
-    return 0;
   case swift::TypeKind::DependentMember:
-    return 0;
   case swift::TypeKind::Enum:
-    return 0;
   case swift::TypeKind::Struct:
-    return 0;
   case swift::TypeKind::Class:
-    return 0;
   case swift::TypeKind::Protocol:
-    return 0;
   case swift::TypeKind::Metatype:
-    return 0;
   case swift::TypeKind::Module:
-    return 0;
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::NestedArchetype:
-    return 0;
   case swift::TypeKind::Function:
-    return 0;
   case swift::TypeKind::GenericFunction:
-    return 0;
   case swift::TypeKind::ProtocolComposition:
     return 0;
   case swift::TypeKind::LValue:
     return 1;
   case swift::TypeKind::UnboundGeneric:
-    return 0;
   case swift::TypeKind::BoundGenericClass:
-    return 0;
   case swift::TypeKind::BoundGenericEnum:
-    return 0;
   case swift::TypeKind::BoundGenericStruct:
-    return 0;
   case swift::TypeKind::TypeVariable:
-    return 0;
   case swift::TypeKind::ExistentialMetatype:
-    return 0;
   case swift::TypeKind::DynamicSelf:
-    return 0;
   case swift::TypeKind::SILBox:
-    return 0;
   case swift::TypeKind::SILFunction:
-    return 0;
   case swift::TypeKind::SILBlockStorage:
-    return 0;
   case swift::TypeKind::Unresolved:
     return 0;
 
