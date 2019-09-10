@@ -850,11 +850,12 @@ const Stmt *PathDiagnosticLocation::getNextStmt(const ExplodedNode *N) {
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createEndOfPath(const ExplodedNode *N,
-                                          const SourceManager &SM) {
+PathDiagnosticLocation::createEndOfPath(const ExplodedNode *N) {
   assert(N && "Cannot create a location with a null node.");
   const Stmt *S = getStmt(N);
   const LocationContext *LC = N->getLocationContext();
+  SourceManager &SM =
+      N->getState()->getStateManager().getContext().getSourceManager();
 
   if (!S) {
     // If this is an implicit call, return the implicit call point location.

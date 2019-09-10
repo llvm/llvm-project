@@ -108,7 +108,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   if (OS.str().empty())
     OS << DefaultMsg;
 
-  auto R = std::make_unique<BugReport>(*BT, OS.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
   if (ex) {
     R->addRange(ex->getSourceRange());
     bugreporter::trackExpressionValue(N, ex, *R);

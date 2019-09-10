@@ -60,7 +60,7 @@ body: |
   bb.3:
     successors: %bb.6(0x80000000)
     %15:vreg_128 = IMPLICIT_DEF
-    %16:vreg_1 = COPY killed %14
+    %16:vgpr_32 = COPY killed %14
     S_BRANCH %bb.6
 
   bb.4:
@@ -83,7 +83,7 @@ body: |
 
   bb.6:
     successors: %bb.8(0x40000000), %bb.10(0x40000000)
-    %25:vreg_1 = COPY killed %16
+    %25:vgpr_32 = COPY killed %16
     %26:vreg_128 = COPY killed %15
     %27:sreg_64 = V_CMP_NE_U32_e64 0, killed %25, implicit $exec
     %28:sreg_64 = S_AND_B64 $exec, killed %27, implicit-def dead $scc
@@ -97,7 +97,7 @@ body: |
     $exec = S_OR_B64 $exec, killed %23, implicit-def $scc
     %30:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %15:vreg_128 = COPY %13
-    %16:vreg_1 = COPY killed %30
+    %16:vgpr_32 = COPY killed %30
     S_BRANCH %bb.6
 
   bb.8:

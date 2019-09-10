@@ -5,8 +5,8 @@
 // -coverage -Xclang -coverage-no-function-names-in-data
 // -Xclang -coverage-cfg-checksum -Xclang -coverage-version='407*'
 
-// We need shell for cd
-// REQUIRES: shell
+
+
 
 // RUN: rm -rf %t
 // RUN: mkdir %t

@@ -1,13 +1,6 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
-extern "C" {
-void AnnotateIgnoreReadsBegin(const char *f, int l);
-void AnnotateIgnoreReadsEnd(const char *f, int l);
-void AnnotateIgnoreWritesBegin(const char *f, int l);
-void AnnotateIgnoreWritesEnd(const char *f, int l);
-}
-
 int *g;
 
 void *Thread(void *a) {

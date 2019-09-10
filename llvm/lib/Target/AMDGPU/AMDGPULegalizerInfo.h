@@ -32,34 +32,34 @@ public:
                       const GCNTargetMachine &TM);
 
   bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &MIRBuilder,
+                      MachineIRBuilder &B,
                       GISelChangeObserver &Observer) const override;
 
   Register getSegmentAperture(unsigned AddrSpace,
                               MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIRBuilder) const;
+                              MachineIRBuilder &B) const;
 
   bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &MIRBuilder) const;
+                             MachineIRBuilder &B) const;
   bool legalizeFrint(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &MIRBuilder) const;
+                     MachineIRBuilder &B) const;
   bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &MIRBuilder) const;
+                     MachineIRBuilder &B) const;
   bool legalizeIntrinsicTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIRBuilder) const;
+                              MachineIRBuilder &B) const;
   bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &MIRBuilder, bool Signed) const;
+                     MachineIRBuilder &B, bool Signed) const;
   bool legalizeMinNumMaxNum(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            MachineIRBuilder &MIRBuilder) const;
+                            MachineIRBuilder &B) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                MachineIRBuilder &MIRBuilder) const;
+                                MachineIRBuilder &B) const;
   bool legalizeInsertVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                               MachineIRBuilder &MIRBuilder) const;
+                               MachineIRBuilder &B) const;
   bool legalizeSinCos(MachineInstr &MI, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &MIRBuilder) const;
+                      MachineIRBuilder &B) const;
 
   bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &MIRBuilder) const;
+                           MachineIRBuilder &B) const;
 
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
@@ -78,7 +78,7 @@ public:
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
   bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &MIRBuilder) const override;
+                         MachineIRBuilder &B) const override;
 
 };
 } // End llvm namespace.

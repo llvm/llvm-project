@@ -1438,8 +1438,6 @@ const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
 // TargetRegisterClass to mark which classes are VGPRs to make this trivial.
 bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
   unsigned Size = getRegSizeInBits(*RC);
-  if (Size < 32)
-    return false;
   switch (Size) {
   case 32:
     return getCommonSubClass(&AMDGPU::VGPR_32RegClass, RC) != nullptr;
@@ -1457,8 +1455,11 @@ bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
     return getCommonSubClass(&AMDGPU::VReg_512RegClass, RC) != nullptr;
   case 1024:
     return getCommonSubClass(&AMDGPU::VReg_1024RegClass, RC) != nullptr;
+  case 1:
+    return getCommonSubClass(&AMDGPU::VReg_1RegClass, RC) != nullptr;
   default:
-    llvm_unreachable("Invalid register class size");
+    assert(Size < 32 && "Invalid register class size");
+    return false;
   }
 }
 
@@ -1506,6 +1507,8 @@ const TargetRegisterClass *SIRegisterInfo::getEquivalentVGPRClass(
     return &AMDGPU::VReg_512RegClass;
   case 1024:
     return &AMDGPU::VReg_1024RegClass;
+  case 1:
+    return &AMDGPU::VReg_1RegClass;
   default:
     llvm_unreachable("Invalid register class size");
   }

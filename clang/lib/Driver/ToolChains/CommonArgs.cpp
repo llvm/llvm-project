@@ -500,29 +500,40 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
 }
 
 bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
-                             const ArgList &Args, bool IsOffloadingHost,
-                             bool GompNeedsRT) {
+                             const ArgList &Args, bool ForceStaticHostRuntime,
+                             bool IsOffloadingHost, bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                     options::OPT_fno_openmp, false))
     return false;
 
-  switch (TC.getDriver().getOpenMPRuntime(Args)) {
+  Driver::OpenMPRuntimeKind RTKind = TC.getDriver().getOpenMPRuntime(Args);
+
+  if (RTKind == Driver::OMPRT_Unknown)
+    // Already diagnosed.
+    return false;
+
+  if (ForceStaticHostRuntime)
+    CmdArgs.push_back("-Bstatic");
+
+  switch (RTKind) {
   case Driver::OMPRT_OMP:
     CmdArgs.push_back("-lomp");
     break;
   case Driver::OMPRT_GOMP:
     CmdArgs.push_back("-lgomp");
-
-    if (GompNeedsRT)
-      CmdArgs.push_back("-lrt");
     break;
   case Driver::OMPRT_IOMP5:
     CmdArgs.push_back("-liomp5");
     break;
   case Driver::OMPRT_Unknown:
-    // Already diagnosed.
-    return false;
+    break;
   }
+
+  if (ForceStaticHostRuntime)
+    CmdArgs.push_back("-Bdynamic");
+
+  if (RTKind == Driver::OMPRT_GOMP && GompNeedsRT)
+      CmdArgs.push_back("-lrt");
 
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");

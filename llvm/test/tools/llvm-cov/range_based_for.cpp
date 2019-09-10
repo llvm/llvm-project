@@ -1,8 +1,8 @@
 // Make sure that compiler-added local variables (whose line number is zero)
 // don't crash llvm-cov.
 
-// We need shell for cd
-// REQUIRES: shell
+
+
 
 // RUN: rm -rf %t
 // RUN: mkdir %t

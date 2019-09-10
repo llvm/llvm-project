@@ -539,9 +539,9 @@ defm V_MAX_LEGACY_F32 : VOP2Inst <"v_max_legacy_f32", VOP_F32_F32_F32, AMDGPUfma
 let SubtargetPredicate = isGFX6GFX7GFX10 in {
 let isCommutable = 1 in {
 defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_F32_F32_F32>;
-defm V_LSHR_B32 : VOP2Inst <"v_lshr_b32", VOP_I32_I32_I32>;
-defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_I32_I32_I32>;
-defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_I32_I32_I32>;
+defm V_LSHR_B32 : VOP2Inst <"v_lshr_b32", VOP_I32_I32_I32, srl>;
+defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_I32_I32_I32, sra>;
+defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_I32_I32_I32, shl>;
 } // End isCommutable = 1
 } // End SubtargetPredicate = isGFX6GFX7GFX10
 

@@ -27,11 +27,11 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -798,12 +798,13 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                     "for path: %s", utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // Make sure we deallocate the input string memory:
-  CleanUp path_cleanup([process, path_addr] { 
-      process->DeallocateMemory(path_addr); 
+  auto path_cleanup = llvm::make_scope_exit([process, path_addr] {
+    // Deallocate the buffer.
+    process->DeallocateMemory(path_addr);
   });
-  
+
   process->WriteMemory(path_addr, path.c_str(), path_len, utility_error);
   if (utility_error.Fail()) {
     error.SetErrorStringWithFormat("dlopen error: could not write path string:"
@@ -824,21 +825,24 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   
   // Make sure we deallocate the result structure memory
-  CleanUp return_cleanup([process, return_addr] {
-      process->DeallocateMemory(return_addr);
+  auto return_cleanup = llvm::make_scope_exit([process, return_addr] {
+    // Deallocate the buffer
+    process->DeallocateMemory(return_addr);
   });
-  
+
   // This will be the address of the storage for paths, if we are using them,
   // or nullptr to signal we aren't.
   lldb::addr_t path_array_addr = 0x0;
-  llvm::Optional<CleanUp> path_array_cleanup;
+  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>>
+      path_array_cleanup;
 
   // This is the address to a buffer large enough to hold the largest path
   // conjoined with the library name we're passing in.  This is a convenience 
   // to avoid having to call malloc in the dlopen function.
   lldb::addr_t buffer_addr = 0x0;
-  llvm::Optional<CleanUp> buffer_cleanup;
-  
+  llvm::Optional<llvm::detail::scope_exit<std::function<void()>>>
+      buffer_cleanup;
+
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {
     // First insert the paths into the target.  This is expected to be a 
@@ -871,8 +875,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     }
     
     // Make sure we deallocate the paths array.
-    path_array_cleanup.emplace([process, path_array_addr] { 
-        process->DeallocateMemory(path_array_addr); 
+    path_array_cleanup.emplace([process, path_array_addr]() {
+      // Deallocate the path array.
+      process->DeallocateMemory(path_array_addr);
     });
 
     process->WriteMemory(path_array_addr, path_array.data(), 
@@ -898,8 +903,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     }
   
     // Make sure we deallocate the buffer memory:
-    buffer_cleanup.emplace([process, buffer_addr] { 
-        process->DeallocateMemory(buffer_addr); 
+    buffer_cleanup.emplace([process, buffer_addr]() {
+      // Deallocate the buffer.
+      process->DeallocateMemory(buffer_addr);
     });
   }
     
@@ -924,10 +930,11 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // Make sure we clean up the args structure.  We can't reuse it because the
   // Platform lives longer than the process and the Platforms don't get a
   // signal to clean up cached data when a process goes away.
-  CleanUp args_cleanup([do_dlopen_function, &exe_ctx, func_args_addr] {
-    do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
-  });
-  
+  auto args_cleanup =
+      llvm::make_scope_exit([do_dlopen_function, &exe_ctx, func_args_addr] {
+        do_dlopen_function->DeallocateFunctionResults(exe_ctx, func_args_addr);
+      });
+
   // Now run the caller:
   EvaluateExpressionOptions options;
   options.SetExecutionPolicy(eExecutionPolicyAlways);

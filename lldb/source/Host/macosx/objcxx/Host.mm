@@ -59,7 +59,6 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -71,8 +70,9 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 
-#include "llvm/Support/FileSystem.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
 
 #include "../cfcpp/CFCBundle.h"
 #include "../cfcpp/CFCMutableArray.h"
@@ -1092,7 +1092,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   }
 
   // Make sure we clean up the posix spawn attributes before exiting this scope.
-  CleanUp cleanup_attr(posix_spawnattr_destroy, &attr);
+  auto cleanup_attr =
+      llvm::make_scope_exit([&]() { posix_spawnattr_destroy(&attr); });
 
   sigset_t no_signals;
   sigset_t all_signals;
@@ -1195,7 +1196,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     }
 
     // Make sure we clean up the posix file actions before exiting this scope.
-    CleanUp cleanup_fileact(posix_spawn_file_actions_destroy, &file_actions);
+    auto cleanup_fileact = llvm::make_scope_exit(
+        [&]() { posix_spawn_file_actions_destroy(&file_actions); });
 
     for (size_t i = 0; i < num_file_actions; ++i) {
       const FileAction *launch_file_action =

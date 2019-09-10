@@ -755,7 +755,7 @@ define <8 x double> @test_getexp_round_pd_512(<8 x double> %a0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vgetexppd {sae}, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
-  %res = call <8 x double> @llvm.x86.avx512.mask.getexp.pd.512(<8 x double> %a0,  <8 x double> zeroinitializer, i8 -1, i32 8)
+  %res = call <8 x double> @llvm.x86.avx512.mask.getexp.pd.512(<8 x double> %a0,  <8 x double> zeroinitializer, i8 -1, i32 12)
   ret <8 x double> %res
 }
 declare <8 x double> @llvm.x86.avx512.mask.getexp.pd.512(<8 x double>, <8 x double>, i8, i32) nounwind readnone

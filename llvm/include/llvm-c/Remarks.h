@@ -30,7 +30,8 @@ extern "C" {
  * @{
  */
 
-#define REMARKS_API_VERSION 0
+// 0 -> 1: Bitstream remarks support.
+#define REMARKS_API_VERSION 1
 
 /**
  * The type of the emitted remark.
@@ -239,6 +240,20 @@ typedef struct LLVMRemarkOpaqueParser *LLVMRemarkParserRef;
  */
 extern LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
                                                       uint64_t Size);
+
+/**
+ * Creates a remark parser that can be used to parse the buffer located in \p
+ * Buf of size \p Size bytes.
+ *
+ * \p Buf cannot be `NULL`.
+ *
+ * This function should be paired with LLVMRemarkParserDispose() to avoid
+ * leaking resources.
+ *
+ * \since REMARKS_API_VERSION=1
+ */
+extern LLVMRemarkParserRef LLVMRemarkParserCreateBitstream(const void *Buf,
+                                                           uint64_t Size);
 
 /**
  * Returns the next remark in the file.

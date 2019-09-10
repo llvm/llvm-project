@@ -139,7 +139,7 @@ private:
 
     PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                      BugReporterContext &BRC,
-                                     BugReport &BR) override;
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     // The tracked region.
@@ -163,7 +163,7 @@ private:
     if (!BT)
       BT.reset(new BugType(this, "Nullability", categories::MemoryError));
 
-    auto R = std::make_unique<BugReport>(*BT, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     if (Region) {
       R->markInteresting(Region);
       R->addVisitor(std::make_unique<NullabilityBugVisitor>(Region));
@@ -291,7 +291,8 @@ NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
 }
 
 PathDiagnosticPieceRef NullabilityChecker::NullabilityBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC,
+    PathSensitiveBugReport &BR) {
   ProgramStateRef State = N->getState();
   ProgramStateRef StatePrev = N->getFirstPred()->getState();
 

@@ -14,6 +14,7 @@ class LetDummies {
   bit isReMaterializable;
   bit isAsCheapAsAMove;
   bit VOPAsmPrefer32Bit;
+  bit FPDPRounding;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -41,9 +42,7 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
                   string asm, list<dag> pattern> :
   InstSI <outs, ins, asm, pattern>,
   VOP <opName>,
-  SIMCInstr <opName#suffix, SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#suffix, opName> {
-
+  SIMCInstr <opName#suffix, SIEncodingFamily.NONE> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
   let UseNamedOperandTable = 1;
@@ -473,8 +472,7 @@ class VOP_SDWA9Be<VOPProfile P> : VOP_SDWA9e<P> {
 class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   InstSI <P.OutsSDWA, P.InsSDWA, "", pattern>,
   VOP <opName>,
-  SIMCInstr <opName#"_sdwa", SIEncodingFamily.NONE>,
-  MnemonicAlias <opName#"_sdwa", opName> {
+  SIMCInstr <opName#"_sdwa", SIEncodingFamily.NONE> {
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
@@ -595,8 +593,7 @@ class VOP_DPPe<VOPProfile P, bit IsDPP16=0> : Enc64 {
 class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   InstSI <P.OutsDPP, P.InsDPP, OpName#P.AsmDPP, pattern>,
   VOP <OpName>,
-  SIMCInstr <OpName#"_dpp", SIEncodingFamily.NONE>,
-  MnemonicAlias <OpName#"_dpp", OpName> {
+  SIMCInstr <OpName#"_dpp", SIEncodingFamily.NONE> {
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;

@@ -1704,7 +1704,8 @@ void CXXNameMangler::mangleTemplateParamDecl(const NamedDecl *Decl) {
       QualType T = Tn->getType();
       if (Tn->isParameterPack()) {
         Out << "Tp";
-        T = T->castAs<PackExpansionType>()->getPattern();
+        if (auto *PackExpansion = T->getAs<PackExpansionType>())
+          T = PackExpansion->getPattern();
       }
       Out << "Tn";
       mangleType(T);

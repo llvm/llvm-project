@@ -83,7 +83,8 @@ static void emitBug(CheckerContext &C, BuiltinBug &BT, const Expr *RetE,
   if (!N)
     return;
 
-  auto Report = std::make_unique<BugReport>(BT, BT.getDescription(), N);
+  auto Report =
+      std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
 
   Report->addRange(RetE->getSourceRange());
   bugreporter::trackExpressionValue(N, TrackingE ? TrackingE : RetE, *Report);

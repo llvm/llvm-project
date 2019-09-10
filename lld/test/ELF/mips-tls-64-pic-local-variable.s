@@ -1,11 +1,17 @@
 # REQUIRES: mips
-# MIPS TLS variables that are marked as local by a version script were previously
-# writing values to the GOT that caused runtime crashes. This was happending when
-# linking jemalloc_tsd.c in FreeBSD libc. Check that we do the right thing now:
+
+# MIPS TLS variables that are marked as local by a version script were
+# previously writing values to the GOT that caused runtime crashes. This
+# was happending when linking jemalloc_tsd.c in FreeBSD libc. Check that
+# we do the right thing now:
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-freebsd %s -o %t.o
 # RUN: echo "{ global: foo; local: *; };" > %t.script
-# RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x10000; .text : { *(.text) } \
+# RUN:         . = 0x20000; .got  : { *(.got)  } \
+# RUN:       }" > %t.script1
+# RUN: ld.lld --version-script %t.script -script %t.script1 -shared %t.o -o %t.so
 # RUN: llvm-objdump --section=.got -s %t.so | FileCheck %s -check-prefix GOT
 # RUN: llvm-readobj -r %t.so | FileCheck %s -check-prefix RELOCS
 
@@ -18,7 +24,9 @@
 # RELOCS-NEXT:  0x20018 R_MIPS_TLS_DTPMOD64/R_MIPS_NONE/R_MIPS_NONE
 # RELOCS-NEXT: }
 
-# Test case generated using clang -mcpu=mips4 -target mips64-unknown-freebsd12.0 -fpic -O -G0 -EB -mabi=n64 -msoft-float -std=gnu99 -S %s -o %t.s
+# Test case generated using:
+# clang -mcpu=mips4 -target mips64-unknown-freebsd12.0 \
+#       -fpic -O -G0 -EB -mabi=n64 -msoft-float -std=gnu99 -S %s -o %t.s
 # from the following source:
 #
 # _Thread_local int x;
@@ -45,5 +53,3 @@ foo:
 x:
         .4byte  0
         .size   x, 4
-
-

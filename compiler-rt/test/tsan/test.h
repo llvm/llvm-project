@@ -75,6 +75,11 @@ void AnnotateRWLockDestroy(const char *f, int l, void *m);
 void AnnotateRWLockAcquired(const char *f, int l, void *m, long is_w);
 void AnnotateRWLockReleased(const char *f, int l, void *m, long is_w);
 
+void AnnotateIgnoreReadsBegin(const char *f, int l);
+void AnnotateIgnoreReadsEnd(const char *f, int l);
+void AnnotateIgnoreWritesBegin(const char *f, int l);
+void AnnotateIgnoreWritesEnd(const char *f, int l);
+
 #ifdef __cplusplus
 }
 #endif

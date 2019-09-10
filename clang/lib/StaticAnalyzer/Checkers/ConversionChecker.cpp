@@ -121,7 +121,7 @@ void ConversionChecker::reportBug(ExplodedNode *N, CheckerContext &C,
         new BuiltinBug(this, "Conversion", "Possible loss of sign/precision."));
 
   // Generate a report for this bug.
-  auto R = std::make_unique<BugReport>(*BT, Msg, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
   C.emitReport(std::move(R));
 }
 
