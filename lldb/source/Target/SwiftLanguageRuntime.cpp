@@ -74,7 +74,7 @@
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Utility/Status.h"
 
-#include "lldb/Utility/CleanUp.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -318,8 +318,9 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
       log->Printf("[GetObjectDescription_ObjectCopy] copy_location invalid");
     return false;
   }
-  CleanUp cleanup(
-      [process, copy_location] { process->DeallocateMemory(copy_location); });
+
+  auto cleanup = llvm::make_scope_exit(
+      [&]() { process->DeallocateMemory(copy_location); });
 
   DataExtractor data_extractor;
   if (0 == static_sp->GetData(data_extractor, error)) {
