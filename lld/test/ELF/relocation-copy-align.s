@@ -1,4 +1,7 @@
 // REQUIRES: x86
+
+/// Alignment of the copy relocated symbol is respected.
+
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/relocation-copy-align.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t.so

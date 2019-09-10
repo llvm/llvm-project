@@ -9,12 +9,11 @@
 /// \file Break False Dependency pass.
 ///
 /// Some instructions have false dependencies which cause unnecessary stalls.
-/// For exmaple, instructions that only write part of a register, and implicitly
-/// need to read the other parts of the register.  This may cause unwanted
+/// For example, instructions may write part of a register and implicitly
+/// need to read the other parts of the register. This may cause unwanted
 /// stalls preventing otherwise unrelated instructions from executing in
 /// parallel in an out-of-order CPU.
-/// This pass is aimed at identifying and avoiding these depepndencies when
-/// possible.
+/// This pass is aimed at identifying and avoiding these dependencies.
 //
 //===----------------------------------------------------------------------===//
 

@@ -20,10 +20,10 @@
 # DATA-NEXT: 0x00202030 00001b00 00000000 0000
 
 # DISASM:      _start:
-# DISASM-NEXT:   201000: movl 25, %eax
-# DISASM-NEXT:   201007: movl 27, %eax
-# DISASM-NEXT:   20100e: movl 25, %eax
-# DISASM-NEXT:   201015: movl 27, %eax
+# DISASM-NEXT:   movl 25, %eax
+# DISASM-NEXT:   movl 27, %eax
+# DISASM-NEXT:   movl 25, %eax
+# DISASM-NEXT:   movl 27, %eax
 
 # RELOC2:      Relocations [
 # RELOC2-NEXT: Section ({{.*}}) .rela.dyn {
@@ -41,10 +41,10 @@
 # DATA2-NEXT: 00001b00 00000000 0000
 
 # DISASM2:      _start:
-# DISASM2-NEXT:   1000: movl 0, %eax
-# DISASM2-NEXT:   1007: movl 0, %eax
-# DISASM2-NEXT:   100e: movl 25, %eax
-# DISASM2-NEXT:   1015: movl 27, %eax
+# DISASM2-NEXT:   movl 0, %eax
+# DISASM2-NEXT:   movl 0, %eax
+# DISASM2-NEXT:   movl 25, %eax
+# DISASM2-NEXT:   movl 27, %eax
 
 .data
 .global foo, foohidden

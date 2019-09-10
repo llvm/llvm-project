@@ -2807,8 +2807,8 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    unsigned LogAlign = TLI->getPrefLoopLogAlignment(L);
-    if (!LogAlign)
+    const llvm::Align Align = TLI->getPrefLoopAlignment(L);
+    if (Align == 1)
       continue; // Don't care about loop alignment.
 
     // If the block is cold relative to the function entry don't waste space
@@ -2832,7 +2832,7 @@ void MachineBlockPlacement::alignBlocks() {
     // Force alignment if all the predecessors are jumps. We already checked
     // that the block isn't cold above.
     if (!LayoutPred->isSuccessor(ChainBB)) {
-      ChainBB->setLogAlignment(LogAlign);
+      ChainBB->setLogAlignment(Log2(Align));
       continue;
     }
 
@@ -2844,7 +2844,7 @@ void MachineBlockPlacement::alignBlocks() {
         MBPI->getEdgeProbability(LayoutPred, ChainBB);
     BlockFrequency LayoutEdgeFreq = MBFI->getBlockFreq(LayoutPred) * LayoutProb;
     if (LayoutEdgeFreq <= (Freq * ColdProb))
-      ChainBB->setLogAlignment(LogAlign);
+      ChainBB->setLogAlignment(Log2(Align));
   }
 }
 

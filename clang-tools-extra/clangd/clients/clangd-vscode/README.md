@@ -14,8 +14,8 @@ Provides C/C++ language IDE features for VS Code using [clangd](https://clang.ll
 ### `clangd` server
 
 `clangd` is a language server that must be installed separately, see
-[https://clangd.github.io/installation.html](getting started).
-The vscode-clangd plugin will look for `clangd` on your PATH (you can change
+[getting started](https://clang.llvm.org/extra/clangd/Installation.html#installing-clangd).
+The vscode-clangd extension will look for `clangd` on your PATH (you can change
 this in the settings).
 
 ### Project setup
@@ -63,7 +63,7 @@ Press `Ctrl-P #` to quickly navigate to a symbol by name.
 ### Include management
 
 Code completion works across your codebase and adds `#include` directives where
-needed. The `&bull;` shows includes that will be inserted.
+needed. The `•` shows includes that will be inserted.
 
 clangd can also suggest inserting missing #includes, where they cause errors.
 
