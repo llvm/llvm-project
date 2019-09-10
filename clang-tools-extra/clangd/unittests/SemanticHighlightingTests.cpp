@@ -427,18 +427,19 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       R"cpp(
       #define DEF_MULTIPLE(X) namespace X { class X { int X; }; }
       #define DEF_CLASS(T) class T {};
+      // Preamble ends.
       $Macro[[DEF_MULTIPLE]](XYZ);
       $Macro[[DEF_MULTIPLE]](XYZW);
       $Macro[[DEF_CLASS]]($Class[[A]])
-      #define MACRO_CONCAT(X, V, T) T foo##X = V
-      #define DEF_VAR(X, V) int X = V
-      #define DEF_VAR_T(T, X, V) T X = V
-      #define DEF_VAR_REV(V, X) DEF_VAR(X, V)
-      #define CPY(X) X
-      #define DEF_VAR_TYPE(X, Y) X Y
-      #define SOME_NAME variable
-      #define SOME_NAME_SET variable2 = 123
-      #define INC_VAR(X) X += 2
+      #define $Macro[[MACRO_CONCAT]](X, V, T) T foo##X = V
+      #define $Macro[[DEF_VAR]](X, V) int X = V
+      #define $Macro[[DEF_VAR_T]](T, X, V) T X = V
+      #define $Macro[[DEF_VAR_REV]](V, X) DEF_VAR(X, V)
+      #define $Macro[[CPY]](X) X
+      #define $Macro[[DEF_VAR_TYPE]](X, Y) X Y
+      #define $Macro[[SOME_NAME]] variable
+      #define $Macro[[SOME_NAME_SET]] variable2 = 123
+      #define $Macro[[INC_VAR]](X) X += 2
       $Primitive[[void]] $Function[[foo]]() {
         $Macro[[DEF_VAR]]($LocalVariable[[X]],  123);
         $Macro[[DEF_VAR_REV]](908, $LocalVariable[[XY]]);
@@ -457,8 +458,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       $Macro[[DEF_VAR]]($Variable[[XYZ]], 567);
       $Macro[[DEF_VAR_REV]](756, $Variable[[AB]]);
 
-      #define CALL_FN(F) F();
-      #define DEF_FN(F) void F ()
+      #define $Macro[[CALL_FN]](F) F();
+      #define $Macro[[DEF_FN]](F) void F ()
       $Macro[[DEF_FN]]($Function[[g]]) {
         $Macro[[CALL_FN]]($Function[[foo]]);
       }
@@ -466,6 +467,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       R"cpp(
       #define fail(expr) expr
       #define assert(COND) if (!(COND)) { fail("assertion failed" #COND); }
+      // Preamble ends.
       $Primitive[[int]] $Variable[[x]];
       $Primitive[[int]] $Variable[[y]];
       $Primitive[[int]] $Function[[f]]();
