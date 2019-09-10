@@ -38,6 +38,7 @@ namespace lldb_private {
 // follows the ANSI C type promotion rules.
 class Scalar {
 public:
+  // FIXME: These are host types which seems to be an odd choice.
   enum Type {
     e_void = 0,
     e_sint,
@@ -98,29 +99,13 @@ public:
   }
   Scalar(llvm::APInt v) : m_type(), m_float(static_cast<float>(0)) {
     m_integer = llvm::APInt(v);
-    switch (m_integer.getBitWidth()) {
-    case 8:
-    case 16:
-    case 32:
-      m_type = e_sint;
-      return;
-    case 64:
-      m_type = e_slonglong;
-      return;
-    case 128:
-      m_type = e_sint128;
-      return;
-    case 256:
-      m_type = e_sint256;
-      return;
-    case 512:
-      m_type = e_sint512;
-      return;
-    }
-    lldbassert(false && "unsupported bitwidth");
+    m_type = GetBestTypeForBitSize(m_integer.getBitWidth(), true);
   }
   // Scalar(const RegisterValue& reg_value);
   virtual ~Scalar();
+
+  /// Return the most efficient Scalar::Type for the requested bit size.
+  static Type GetBestTypeForBitSize(size_t bit_size, bool sign);
 
   bool SignExtend(uint32_t bit_pos);
 
@@ -153,6 +138,9 @@ public:
   bool IsValid() const {
     return (m_type >= e_sint) && (m_type <= e_long_double);
   }
+
+  /// Convert integer to \p type, limited to \p bits size.
+  void TruncOrExtendTo(Scalar::Type type, uint16_t bits);
 
   bool Promote(Scalar::Type type);
 

@@ -417,10 +417,6 @@ lldb::offset_t Section::GetSectionData(DataExtractor &section_data) {
 
 #pragma mark SectionList
 
-SectionList::SectionList() : m_sections() {}
-
-SectionList::~SectionList() {}
-
 SectionList &SectionList::operator=(const SectionList &rhs) {
   if (this != &rhs)
     m_sections = rhs.m_sections;
