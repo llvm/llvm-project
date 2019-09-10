@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SemanticHighlighting.h"
 #include "refactor/Tweak.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace clangd {
@@ -56,6 +57,7 @@ Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
   }
   auto &SM = Inputs.AST.getSourceManager();
   tooling::Replacements Result;
+  llvm::StringRef FilePath = SM.getFilename(Inputs.Cursor);
   for (const auto &Token : HighlightingTokens) {
     assert(Token.R.start.line == Token.R.end.line &&
            "Token must be at the same line");
@@ -64,12 +66,12 @@ Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
       return InsertOffset.takeError();
 
     auto InsertReplacement = tooling::Replacement(
-        SM.getFileEntryForID(SM.getMainFileID())->getName(), *InsertOffset, 0,
+        FilePath, *InsertOffset, 0,
         ("/* " + toTextMateScope(Token.Kind) + " */").str());
     if (auto Err = Result.add(InsertReplacement))
       return std::move(Err);
   }
-  return Effect::applyEdit(Result);
+  return Effect::mainFileEdit(SM, std::move(Result));
 }
 
 } // namespace

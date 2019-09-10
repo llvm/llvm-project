@@ -468,7 +468,7 @@ Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   // replace expression with variable name
   if (auto Err = Result.add(Target->replaceWithVar(Range, VarName)))
     return std::move(Err);
-  return Effect::applyEdit(Result);
+  return Effect::mainFileEdit(Inputs.AST.getSourceManager(), std::move(Result));
 }
 
 } // namespace

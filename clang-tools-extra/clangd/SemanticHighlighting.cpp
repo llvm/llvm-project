@@ -17,6 +17,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/SourceLocation.h"
 #include <algorithm>
 
 namespace clang {
@@ -125,13 +126,12 @@ public:
   }
 
   bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
-    if (const auto *TSI = TD->getTypeSourceInfo())
-      addType(TD->getLocation(), TSI->getTypeLoc().getTypePtr());
+    addTokenForTypedef(TD->getLocation(), TD);
     return true;
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-    addType(TL.getBeginLoc(), TL.getTypePtr());
+    addTokenForTypedef(TL.getBeginLoc(), TL.getTypedefNameDecl());
     return true;
   }
 
@@ -182,17 +182,35 @@ public:
   }
 
 private:
-  void addType(SourceLocation Loc, const Type *TP) {
-    if (!TP)
+  void addTokenForTypedef(SourceLocation Loc, const TypedefNameDecl *TD) {
+    auto *TSI = TD->getTypeSourceInfo();
+    if (!TSI)
       return;
-    if (TP->isBuiltinType())
+    // Try to highlight as underlying type.
+    if (addType(Loc, TSI->getType().getTypePtrOrNull()))
+      return;
+    // Fallback to the typedef highlighting kind.
+    addToken(Loc, HighlightingKind::Typedef);
+  }
+
+  bool addType(SourceLocation Loc, const Type *TP) {
+    if (!TP)
+      return false;
+    if (TP->isBuiltinType()) {
       // Builtins must be special cased as they do not have a TagDecl.
       addToken(Loc, HighlightingKind::Primitive);
-    if (auto *TD = dyn_cast<TemplateTypeParmType>(TP))
+      return true;
+    }
+    if (auto *TD = dyn_cast<TemplateTypeParmType>(TP)) {
       // TemplateTypeParmType also do not have a TagDecl.
       addToken(Loc, TD->getDecl());
-    if (auto *TD = TP->getAsTagDecl())
+      return true;
+    }
+    if (auto *TD = TP->getAsTagDecl()) {
       addToken(Loc, TD);
+      return true;
+    }
+    return false;
   }
 
   void addToken(SourceLocation Loc, const NamedDecl *D) {
@@ -379,6 +397,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Enum";
   case HighlightingKind::EnumConstant:
     return OS << "EnumConstant";
+  case HighlightingKind::Typedef:
+    return OS << "Typedef";
   case HighlightingKind::Namespace:
     return OS << "Namespace";
   case HighlightingKind::TemplateParameter:
@@ -506,6 +526,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.type.enum.cpp";
   case HighlightingKind::EnumConstant:
     return "variable.other.enummember.cpp";
+  case HighlightingKind::Typedef:
+    return "entity.name.type.typedef.cpp";
   case HighlightingKind::Namespace:
     return "entity.name.namespace.cpp";
   case HighlightingKind::TemplateParameter:

@@ -367,7 +367,7 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
   if (Preamble)
     CanonIncludes = Preamble->CanonIncludes;
   else
-    addSystemHeadersMapping(&CanonIncludes, Clang->getLangOpts());
+    CanonIncludes.addSystemHeadersMapping(Clang->getLangOpts());
   std::unique_ptr<CommentHandler> IWYUHandler =
       collectIWYUHeaderMaps(&CanonIncludes);
   Clang->getPreprocessor().addCommentHandler(IWYUHandler.get());
