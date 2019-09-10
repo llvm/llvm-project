@@ -2540,6 +2540,11 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
         // Spill the constant value to a global.
         Addr = CGM.createUnnamedGlobalFrom(*VD, Val,
                                            getContext().getDeclAlign(VD));
+        llvm::Type *VarTy = getTypes().ConvertTypeForMem(VD->getType());
+        auto *PTy = llvm::PointerType::get(
+            VarTy, getContext().getTargetAddressSpace(VD->getType()));
+        if (PTy != Addr.getType())
+          Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PTy);
       } else {
         // Should we be using the alignment of the constant pointer we emitted?
         CharUnits Alignment =
