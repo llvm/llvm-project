@@ -110,6 +110,21 @@ private:
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Remark, LLVMRemarkEntryRef)
 
 /// Comparison operators for Remark objects and dependent objects.
+
+template <typename T>
+bool operator<(const Optional<T> &LHS, const Optional<T> &RHS) {
+  // Sorting based on optionals should result in all `None` entries to appear
+  // before the valid entries. For example, remarks with no debug location will
+  // appear first.
+  if (!LHS && !RHS)
+    return false;
+  if (!LHS && RHS)
+    return true;
+  if (LHS && !RHS)
+    return false;
+  return *LHS < *RHS;
+}
+
 inline bool operator==(const RemarkLocation &LHS, const RemarkLocation &RHS) {
   return LHS.SourceFilePath == RHS.SourceFilePath &&
          LHS.SourceLine == RHS.SourceLine &&
@@ -120,12 +135,22 @@ inline bool operator!=(const RemarkLocation &LHS, const RemarkLocation &RHS) {
   return !(LHS == RHS);
 }
 
+inline bool operator<(const RemarkLocation &LHS, const RemarkLocation &RHS) {
+  return std::make_tuple(LHS.SourceFilePath, LHS.SourceLine, LHS.SourceColumn) <
+         std::make_tuple(RHS.SourceFilePath, RHS.SourceLine, RHS.SourceColumn);
+}
+
 inline bool operator==(const Argument &LHS, const Argument &RHS) {
   return LHS.Key == RHS.Key && LHS.Val == RHS.Val && LHS.Loc == RHS.Loc;
 }
 
 inline bool operator!=(const Argument &LHS, const Argument &RHS) {
   return !(LHS == RHS);
+}
+
+inline bool operator<(const Argument &LHS, const Argument &RHS) {
+  return std::make_tuple(LHS.Key, LHS.Val, LHS.Loc) <
+         std::make_tuple(RHS.Key, RHS.Val, RHS.Loc);
 }
 
 inline bool operator==(const Remark &LHS, const Remark &RHS) {
@@ -137,6 +162,13 @@ inline bool operator==(const Remark &LHS, const Remark &RHS) {
 
 inline bool operator!=(const Remark &LHS, const Remark &RHS) {
   return !(LHS == RHS);
+}
+
+inline bool operator<(const Remark &LHS, const Remark &RHS) {
+  return std::make_tuple(LHS.RemarkType, LHS.PassName, LHS.RemarkName,
+                         LHS.FunctionName, LHS.Loc, LHS.Hotness, LHS.Args) <
+         std::make_tuple(RHS.RemarkType, RHS.PassName, RHS.RemarkName,
+                         RHS.FunctionName, RHS.Loc, RHS.Hotness, RHS.Args);
 }
 
 } // end namespace remarks
