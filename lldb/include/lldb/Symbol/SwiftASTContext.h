@@ -420,6 +420,12 @@ public:
   bool IsFloatingPointType(void *type, uint32_t &count,
                            bool &is_complex) override;
 
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) {
+    // See: https://reviews.llvm.org/D67239. At this time of writing this API
+    // is only used by DumpDataExtractor for the C type system.
+    llvm_unreachable("Not implemented");
+  }
+
   bool IsFunctionType(void *type, bool *is_variadic_ptr) override;
 
   size_t GetNumberOfFunctionArguments(void *type) override;
