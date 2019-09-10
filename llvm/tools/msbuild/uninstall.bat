@@ -17,15 +17,15 @@ IF EXIST "%VCTargets%\LLVM.Cpp.Common.targets" del "%VCTargets%\LLVM.Cpp.Common.
 
 ECHO Uninstalling x64 Platform Toolset
 SET PlatformToolsets=%VCTargets%\Platforms\x64\PlatformToolsets
-IF EXIST "%PlatformToolsets%\llvm\Toolset.props" del "%PlatformToolsets%\llvm\Toolset.props"
-IF EXIST "%PlatformToolsets%\llvm\Toolset.targets" del "%PlatformToolsets%\llvm\Toolset.targets"
+IF EXIST "%PlatformToolsets%\CheckedC-llvm\Toolset.props" del "%PlatformToolsets%\CheckedC-llvm\Toolset.props"
+IF EXIST "%PlatformToolsets%\CheckedC-llvm\Toolset.targets" del "%PlatformToolsets%\CheckedC-llvm\Toolset.targets"
 IF EXIST "%PlatformToolsets%\llvm" rd "%PlatformToolsets%\llvm"
 
 ECHO Uninstalling Win32 Platform Toolset
 SET PlatformToolsets=%VCTargets%\Platforms\Win32\PlatformToolsets
-IF EXIST "%PlatformToolsets%\llvm\Toolset.props" del "%PlatformToolsets%\llvm\Toolset.props"
-IF EXIST "%PlatformToolsets%\llvm\Toolset.targets" del "%PlatformToolsets%\llvm\Toolset.targets"
-IF EXIST "%PlatformToolsets%\llvm" rd "%PlatformToolsets%\llvm"
+IF EXIST "%PlatformToolsets%\CheckedC-llvm\Toolset.props" del "%PlatformToolsets%\CheckedC-llvm\Toolset.props"
+IF EXIST "%PlatformToolsets%\CheckedC-llvm\Toolset.targets" del "%PlatformToolsets%\CheckedC-llvm\Toolset.targets"
+IF EXIST "%PlatformToolsets%\CheckedC-llvm" rd "%PlatformToolsets%\CheckedC-llvm"
 
 ECHO Uninstalling C++ Settings UI
 IF EXIST "%VCTargets%\1033\llvm-general.xml" del "%VCTargets%\1033\llvm-general.xml"

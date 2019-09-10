@@ -1,0 +1,6 @@
+[submodule "tools/clang"]
+	path = tools/clang
+	url = https://github.com/Microsoft/checkedc-clang 
+[submodule "projects/checkedc-wrapper/checkedc"]
+	path = projects/checkedc-wrapper/checkedc
+	url = https://github.com/Microsoft/checkedc
