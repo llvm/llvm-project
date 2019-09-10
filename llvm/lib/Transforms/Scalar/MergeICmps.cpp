@@ -866,7 +866,7 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
 
   // We only try merging comparisons if the target wants to expand memcmp later.
   // The rationale is to avoid turning small chains into memcmp calls.
-  if (!TTI.enableMemCmpExpansion(F.hasOptSize(), /*IsZeroCmp*/ true))
+  if (!TTI.enableMemCmpExpansion(F.hasOptSize(), true))
     return false;
 
   // If we don't have memcmp avaiable we can't emit calls to it.

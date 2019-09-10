@@ -375,12 +375,6 @@ Pass *createMergeICmpsLegacyPass();
 
 //===----------------------------------------------------------------------===//
 //
-// ExpandMemCmp - This pass expands memcmp() to load/stores.
-//
-Pass *createExpandMemCmpPass();
-
-//===----------------------------------------------------------------------===//
-//
 // ValuePropagation - Propagate CFG-derived value information
 //
 Pass *createCorrelatedValuePropagationPass();

@@ -14006,7 +14006,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
-unsigned PPCTargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
+llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   switch (Subtarget.getDarwinDirective()) {
   default: break;
   case PPC::DIR_970:
@@ -14027,7 +14027,7 @@ unsigned PPCTargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
       // Actual alignment of the loop will depend on the hotness check and other
       // logic in alignBlocks.
       if (ML->getLoopDepth() > 1 && ML->getSubLoops().empty())
-        return 5;
+        return llvm::Align(32);
     }
 
     const PPCInstrInfo *TII = Subtarget.getInstrInfo();
@@ -14043,13 +14043,13 @@ unsigned PPCTargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
       }
 
     if (LoopSize > 16 && LoopSize <= 32)
-      return 5;
+      return llvm::Align(32);
 
     break;
   }
   }
 
-  return TargetLowering::getPrefLoopLogAlignment(ML);
+  return TargetLowering::getPrefLoopAlignment(ML);
 }
 
 /// getConstraintType - Given a constraint, return the type of

@@ -1593,8 +1593,8 @@ public:
   }
 
   /// Return the preferred loop alignment.
-  virtual unsigned getPrefLoopLogAlignment(MachineLoop *ML = nullptr) const {
-    return Log2(PrefLoopAlignment);
+  virtual llvm::Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
+    return PrefLoopAlignment;
   }
 
   /// Should loops be aligned even when the function is marked OptSize (but not

@@ -188,8 +188,9 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       Archive *archive = file.get();
       make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
+      int memberIndex = 0;
       for (MemoryBufferRef m : getArchiveMembers(archive))
-        addArchiveBuffer(m, "<whole-archive>", filename, 0);
+        addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
       return;
     }
     symtab->addFile(make<ArchiveFile>(mbref));
