@@ -10673,15 +10673,15 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
-unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
-  const unsigned PrefLogAlign = TargetLowering::getPrefLoopLogAlignment(ML);
-  const unsigned CacheLineLogAlign = 6; // log2(64)
+llvm::Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+  const llvm::Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
+  const llvm::Align CacheLineAlign = llvm::Align(64);
 
   // Pre-GFX10 target did not benefit from loop alignment
   if (!ML || DisableLoopAlignment ||
       (getSubtarget()->getGeneration() < AMDGPUSubtarget::GFX10) ||
       getSubtarget()->hasInstFwdPrefetchBug())
-    return PrefLogAlign;
+    return PrefAlign;
 
   // On GFX10 I$ is 4 x 64 bytes cache lines.
   // By default prefetcher keeps one cache line behind and reads two ahead.
@@ -10695,8 +10695,8 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
 
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   const MachineBasicBlock *Header = ML->getHeader();
-  if (Header->getLogAlignment() != PrefLogAlign)
-    return Header->getLogAlignment(); // Already processed.
+  if (Header->getAlignment() != PrefAlign)
+    return Header->getAlignment(); // Already processed.
 
   unsigned LoopSize = 0;
   for (const MachineBasicBlock *MBB : ML->blocks()) {
@@ -10708,15 +10708,15 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
     for (const MachineInstr &MI : *MBB) {
       LoopSize += TII->getInstSizeInBytes(MI);
       if (LoopSize > 192)
-        return PrefLogAlign;
+        return PrefAlign;
     }
   }
 
   if (LoopSize <= 64)
-    return PrefLogAlign;
+    return PrefAlign;
 
   if (LoopSize <= 128)
-    return CacheLineLogAlign;
+    return CacheLineAlign;
 
   // If any of parent loops is surrounded by prefetch instructions do not
   // insert new for inner loop, which would reset parent's settings.
@@ -10724,7 +10724,7 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
     if (MachineBasicBlock *Exit = P->getExitBlock()) {
       auto I = Exit->getFirstNonDebugInstr();
       if (I != Exit->end() && I->getOpcode() == AMDGPU::S_INST_PREFETCH)
-        return CacheLineLogAlign;
+        return CacheLineAlign;
     }
   }
 
@@ -10741,7 +10741,7 @@ unsigned SITargetLowering::getPrefLoopLogAlignment(MachineLoop *ML) const {
       .addImm(2); // prefetch 1 line behind PC
   }
 
-  return CacheLineLogAlign;
+  return CacheLineAlign;
 }
 
 LLVM_ATTRIBUTE_UNUSED

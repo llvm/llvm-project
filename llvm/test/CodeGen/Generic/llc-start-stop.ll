@@ -13,15 +13,15 @@
 ; STOP-BEFORE-NOT: Loop Strength Reduction
 
 ; RUN: llc < %s -debug-pass=Structure -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-AFTER
-; START-AFTER: -gc-lowering
+; START-AFTER: -aa -mergeicmps
 ; START-AFTER: FunctionPass Manager
-; START-AFTER-NEXT: Lower Garbage Collection Instructions
+; START-AFTER-NEXT: Dominator Tree Construction
 
 ; RUN: llc < %s -debug-pass=Structure -start-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-BEFORE
 ; START-BEFORE: -machine-branch-prob -domtree
 ; START-BEFORE: FunctionPass Manager
 ; START-BEFORE: Loop Strength Reduction
-; START-BEFORE-NEXT: Lower Garbage Collection Instructions
+; START-BEFORE-NEXT: Basic Alias Analysis (stateless AA impl)
 
 ; RUN: not llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE
 ; RUN: not llc < %s -stop-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-STOP-BEFORE

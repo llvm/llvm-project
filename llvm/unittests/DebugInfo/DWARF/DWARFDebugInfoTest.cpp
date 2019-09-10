@@ -3168,8 +3168,8 @@ TEST(DWARFDebugInfo, TestDWARF64UnitLength) {
       "\0\0\0\0\0\0\0\0";                // Offset Into Abbrev. Sec.
   StringMap<std::unique_ptr<MemoryBuffer>> Sections;
   Sections.insert(std::make_pair(
-      "debug_info", MemoryBuffer::getMemBuffer(
-                        StringRef(DebugInfoSecRaw, sizeof(DebugInfoSecRaw)))));
+      "debug_info", MemoryBuffer::getMemBuffer(StringRef(
+                        DebugInfoSecRaw, sizeof(DebugInfoSecRaw) - 1))));
   auto Context = DWARFContext::create(Sections, /* AddrSize = */ 4,
                                       /* isLittleEndian = */ true);
   const auto &Obj = Context->getDWARFObj();

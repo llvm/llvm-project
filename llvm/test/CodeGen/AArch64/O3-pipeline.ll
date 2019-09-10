@@ -32,6 +32,10 @@
 ; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Induction Variable Users
 ; CHECK-NEXT:         Loop Strength Reduction
+; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:         Function Alias Analysis Results
+; CHECK-NEXT:       Merge contiguous icmps into a memcmp
+; CHECK-NEXT:       Expand memcmp() to load/stores
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG

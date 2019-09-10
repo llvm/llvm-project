@@ -369,5 +369,86 @@ define float @fmuladd_x_1_z_fast(float %x, float %z) {
   ret float %fmuladd
 }
 
+define <2 x double> @fmuladd_a_0_b(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fmuladd_a_0_b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
+;
+entry:
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> zeroinitializer, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+define <2 x double> @fmuladd_0_a_b(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fmuladd_0_a_b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
+;
+entry:
+  %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> %a, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+define <2 x double> @fmuladd_a_0_b_missing_flags(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fmuladd_a_0_b_missing_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call nnan <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> zeroinitializer, <2 x double> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+entry:
+  %res = call nnan <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> zeroinitializer, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)
+
+define <2 x double> @fma_a_0_b(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fma_a_0_b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
+;
+entry:
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> zeroinitializer, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+define <2 x double> @fma_0_a_b(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fma_0_a_b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
+;
+entry:
+  %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> zeroinitializer, <2 x double> %a, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+define <2 x double> @fma_0_a_b_missing_flags(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fma_0_a_b_missing_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call nsz <2 x double> @llvm.fma.v2f64(<2 x double> [[A:%.*]], <2 x double> zeroinitializer, <2 x double> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+entry:
+  %res = call nsz <2 x double> @llvm.fma.v2f64(<2 x double> zeroinitializer, <2 x double> %a, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+define <2 x double> @fma_sqrt(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fma_sqrt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = fadd fast <2 x double> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+entry:
+  %sqrt = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> %a)
+  %res = call fast <2 x double> @llvm.fma.v2f64(<2 x double> %sqrt, <2 x double> %sqrt, <2 x double> %b)
+  ret <2 x double> %res
+}
+
+
+declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
+
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

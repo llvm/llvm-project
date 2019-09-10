@@ -439,6 +439,9 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
+  // This pass expands memcmp() to load/stores.
+  FunctionPass *createExpandMemCmpPass();
+
   /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
   FunctionPass *createBreakFalseDeps();
 

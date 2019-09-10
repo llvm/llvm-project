@@ -100,6 +100,9 @@ static cl::opt<bool> EnableImplicitNullChecks(
     "enable-implicit-null-checks",
     cl::desc("Fold null checks into faulting memory operations"),
     cl::init(false), cl::Hidden);
+static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
+    cl::desc("Disable MergeICmps Pass"),
+    cl::init(false), cl::Hidden);
 static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
     cl::desc("Print LLVM IR produced by the loop-reduce pass"));
 static cl::opt<bool> PrintISelInput("print-isel-input", cl::Hidden,
@@ -638,6 +641,16 @@ void TargetPassConfig::addIRPasses() {
     addPass(createLoopStrengthReducePass());
     if (PrintLSR)
       addPass(createPrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
+  }
+
+  if (getOptLevel() != CodeGenOpt::None) {
+    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
+    // loads and compares. ExpandMemCmpPass then tries to expand those calls
+    // into optimally-sized loads and compares. The transforms are enabled by a
+    // target lowering hook.
+    if (!DisableMergeICmps)
+      addPass(createMergeICmpsLegacyPass());
+    addPass(createExpandMemCmpPass());
   }
 
   // Run GC lowering passes for builtin collectors

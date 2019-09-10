@@ -151,9 +151,6 @@
 ; CHECK-NEXT:         Scalar Evolution Analysis
 ; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
-; CHECK-NEXT:         Merge contiguous icmps into a memcmp
-; CHECK-NEXT:         Expand memcmp() to load/stores
-; CHECK-NEXT:         Early CSE
 ; CHECK-NEXT:         Post-Dominator Tree Construction
 ; CHECK-NEXT:         Aggressive Dead Code Elimination
 ; CHECK-NEXT:         Simplify the CFG
