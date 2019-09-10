@@ -1898,20 +1898,19 @@ SDValue SelectionDAG::expandVAArg(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   SDValue Tmp1 = Node->getOperand(0);
   SDValue Tmp2 = Node->getOperand(1);
-  unsigned Align = Node->getConstantOperandVal(3);
+  const llvm::MaybeAlign MA(Node->getConstantOperandVal(3));
 
   SDValue VAListLoad = getLoad(TLI.getPointerTy(getDataLayout()), dl, Tmp1,
                                Tmp2, MachinePointerInfo(V));
   SDValue VAList = VAListLoad;
 
-  if (Align > TLI.getMinStackArgumentAlignment()) {
-    assert(((Align & (Align-1)) == 0) && "Expected Align to be a power of 2");
-
+  if (MA && *MA > TLI.getMinStackArgumentAlignment()) {
     VAList = getNode(ISD::ADD, dl, VAList.getValueType(), VAList,
-                     getConstant(Align - 1, dl, VAList.getValueType()));
+                     getConstant(MA->value() - 1, dl, VAList.getValueType()));
 
-    VAList = getNode(ISD::AND, dl, VAList.getValueType(), VAList,
-                     getConstant(-(int64_t)Align, dl, VAList.getValueType()));
+    VAList =
+        getNode(ISD::AND, dl, VAList.getValueType(), VAList,
+                getConstant(-(int64_t)MA->value(), dl, VAList.getValueType()));
   }
 
   // Increment the pointer, VAList, to the next vaarg

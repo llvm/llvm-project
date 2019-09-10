@@ -1,6 +1,9 @@
 // REQUIRES: x86
+
+/// Test -z ifunc-noplt.
+
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-freebsd %S/Inputs/shared2-x86-64.s -o %t1.o
-// RUN: ld.lld %t1.o --shared -o %t.so
+// RUN: ld.lld %t1.o --shared -soname=so -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-freebsd %s -o %t.o
 // RUN: ld.lld -z ifunc-noplt -z notext --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM

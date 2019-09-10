@@ -98,23 +98,30 @@ private:
   std::vector<Decl *> TopLevelDecls;
 };
 
-// This collects macro expansions in the main file.
+// This collects macro expansions/definitions in the main file.
 // (Contrast with CollectMainFileMacros in Preamble.cpp, which collects macro
 // *definitions* in the preamble region of the main file).
-class CollectMainFileMacroExpansions : public PPCallbacks {
+class CollectMainFileMacros : public PPCallbacks {
   const SourceManager &SM;
   std::vector<SourceLocation> &MainFileMacroLocs;
 
+  void addLoc(SourceLocation Loc) {
+    if (!Loc.isMacroID() && isInsideMainFile(Loc, SM))
+      MainFileMacroLocs.push_back(Loc);
+  }
+
 public:
-  CollectMainFileMacroExpansions(const SourceManager &SM,
-                                 std::vector<SourceLocation> &MainFileMacroLocs)
+  CollectMainFileMacros(const SourceManager &SM,
+                        std::vector<SourceLocation> &MainFileMacroLocs)
       : SM(SM), MainFileMacroLocs(MainFileMacroLocs) {}
 
+  void MacroDefined(const Token &MacroNameTok,
+                    const MacroDirective *MD) override {
+    addLoc(MacroNameTok.getLocation());
+  }
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
-    SourceLocation L = MacroNameTok.getLocation();
-    if (!L.isMacroID() && isInsideMainFile(L, SM))
-      MainFileMacroLocs.push_back(L);
+    addLoc(MacroNameTok.getLocation());
   }
 };
 
@@ -358,8 +365,8 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
   // Collect the macro expansions in the main file.
   std::vector<SourceLocation> MainFileMacroExpLocs;
   Clang->getPreprocessor().addPPCallbacks(
-      std::make_unique<CollectMainFileMacroExpansions>(
-          Clang->getSourceManager(), MainFileMacroExpLocs));
+      std::make_unique<CollectMainFileMacros>(Clang->getSourceManager(),
+                                              MainFileMacroExpLocs));
 
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
@@ -453,8 +460,8 @@ llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
   return LocalTopLevelDecls;
 }
 
-llvm::ArrayRef<SourceLocation> ParsedAST::getMainFileExpansions() const {
-  return MainFileMacroExpLocs;
+llvm::ArrayRef<SourceLocation> ParsedAST::getMacros() const {
+  return MacroIdentifierLocs;
 }
 
 const std::vector<Diag> &ParsedAST::getDiagnostics() const { return Diags; }
@@ -503,13 +510,13 @@ ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      syntax::TokenBuffer Tokens,
-                     std::vector<SourceLocation> MainFileMacroExpLocs,
+                     std::vector<SourceLocation> MacroIdentifierLocs,
                      std::vector<Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, IncludeStructure Includes,
                      CanonicalIncludes CanonIncludes)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Tokens(std::move(Tokens)),
-      MainFileMacroExpLocs(std::move(MainFileMacroExpLocs)),
+      MacroIdentifierLocs(std::move(MacroIdentifierLocs)),
       Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {

@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
-// RUN: ld.lld -shared %t2.o -o %t2.so
+// RUN: ld.lld -shared %t2.o -soname=so -o %t2.so
 
 // RUN: ld.lld -shared %t1.o %t2.so -o %t.exe -z retpolineplt
 // RUN: llvm-objdump -d -s --no-show-raw-insn %t.exe | FileCheck %s

@@ -874,7 +874,7 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::LRINT:       Res = SoftenFloatOp_LRINT(N); break;
   case ISD::LLRINT:      Res = SoftenFloatOp_LLRINT(N); break;
   case ISD::SELECT:      Res = SoftenFloatOp_SELECT(N); break;
-  case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N); break;
+  case ISD::SELECT_CC:   Res = SoftenFloatOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:       Res = SoftenFloatOp_SETCC(N); break;
   case ISD::STORE:
     Res = SoftenFloatOp_STORE(N, OpNo);
@@ -1090,7 +1090,19 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_SELECT(SDNode *N) {
                  0);
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatOp_SELECT_CC(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatOp_SELECT_CC(SDNode *N, unsigned OpNo) {
+  if (OpNo == 2 || OpNo == 3) {
+    SDValue Op2 = GetSoftenedFloat(N->getOperand(2));
+    SDValue Op3 = GetSoftenedFloat(N->getOperand(3));
+
+    if (Op2 == N->getOperand(2) && Op3 == N->getOperand(3))
+      return SDValue();
+
+    return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
+                                          Op2, Op3, N->getOperand(4)),
+                   0);
+  }
+
   SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
   ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(4))->get();
 

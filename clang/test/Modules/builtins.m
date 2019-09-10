@@ -8,6 +8,7 @@
 // RUN: %clang_cc1 -fmodules-cache-path=%t.pch.cache -fmodules -fimplicit-module-maps -I %S/Inputs %s -include-pch %t.pch %s -verify
 
 // expected-no-diagnostics
+// REQUIRES: shell
 
 void use_constant_string_builtins1(void) {
   (void)__builtin___CFStringMakeConstantString("");

@@ -60,6 +60,9 @@ public:
 
   bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
+  bool legalizeLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B,
+                    GISelChangeObserver &Observer) const;
 
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;

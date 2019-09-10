@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -mattr=+e -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+e < %s \
-# RUN:     | llvm-objdump -riscv-no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefix=CHECK-ASM-AND-OBJ %s
 
 # This file provides a basic sanity check for RV32E, checking that the expected

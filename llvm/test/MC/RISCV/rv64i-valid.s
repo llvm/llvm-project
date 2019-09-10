@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 < %s \
-# RUN:     | llvm-objdump -riscv-no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 .equ CONST, 31

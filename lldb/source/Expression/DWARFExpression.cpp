@@ -2559,6 +2559,83 @@ bool DWARFExpression::Evaluate(
       stack.back().SetValueType(Value::eValueTypeScalar);
       break;
 
+    // OPCODE: DW_OP_convert
+    // OPERANDS: 1
+    //      A ULEB128 that is either a DIE offset of a
+    //      DW_TAG_base_type or 0 for the generic (pointer-sized) type.
+    //
+    // DESCRIPTION: Pop the top stack element, convert it to a
+    // different type, and push the result.
+    case DW_OP_convert: {
+      if (stack.size() < 1) {
+        if (error_ptr)
+          error_ptr->SetErrorString(
+              "Expression stack needs at least 1 item for DW_OP_convert.");
+        return false;
+      }
+      const uint64_t die_offset = opcodes.GetULEB128(&offset);
+      Scalar::Type type = Scalar::e_void;
+      uint64_t bit_size;
+      if (die_offset == 0) {
+        // The generic type has the size of an address on the target
+        // machine and an unspecified signedness. Scalar has no
+        // "unspecified signedness", so we use unsigned types.
+        if (!module_sp) {
+          if (error_ptr)
+            error_ptr->SetErrorString("No module");
+          return false;
+        }
+        bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
+        if (!bit_size) {
+          if (error_ptr)
+            error_ptr->SetErrorString("unspecified architecture");
+          return false;
+        }
+        type = Scalar::GetBestTypeForBitSize(bit_size, false);
+      } else {
+        // Retrieve the type DIE that the value is being converted to.
+        // FIXME: the constness has annoying ripple effects.
+        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_offset);
+        if (!die) {
+          if (error_ptr)
+            error_ptr->SetErrorString("Cannot resolve DW_OP_convert type DIE");
+          return false;
+        }
+        uint64_t encoding =
+            die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
+        bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+        if (!bit_size)
+          bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
+        if (!bit_size) {
+          if (error_ptr)
+            error_ptr->SetErrorString("Unsupported type size in DW_OP_convert");
+          return false;
+        }
+        switch (encoding) {
+        case DW_ATE_signed:
+        case DW_ATE_signed_char:
+          type = Scalar::GetBestTypeForBitSize(bit_size, true);
+          break;
+        case DW_ATE_unsigned:
+        case DW_ATE_unsigned_char:
+          type = Scalar::GetBestTypeForBitSize(bit_size, false);
+          break;
+        default:
+          if (error_ptr)
+            error_ptr->SetErrorString("Unsupported encoding in DW_OP_convert");
+          return false;
+        }
+      }
+      if (type == Scalar::e_void) {
+        if (error_ptr)
+          error_ptr->SetErrorString("Unsupported pointer size");
+        return false;
+      }
+      Scalar &top = stack.back().ResolveValue(exe_ctx);
+      top.TruncOrExtendTo(type, bit_size);
+      break;
+    }
+
     // OPCODE: DW_OP_call_frame_cfa
     // OPERANDS: None
     // DESCRIPTION: Specifies a DWARF expression that pushes the value of

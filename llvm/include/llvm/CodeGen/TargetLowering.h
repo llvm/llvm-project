@@ -1578,8 +1578,8 @@ public:
   }
 
   /// Return the minimum stack alignment of an argument.
-  unsigned getMinStackArgumentAlignment() const {
-    return MinStackArgumentAlignment.value();
+  llvm::Align getMinStackArgumentAlignment() const {
+    return MinStackArgumentAlignment;
   }
 
   /// Return the minimum function alignment.
@@ -1593,8 +1593,8 @@ public:
   }
 
   /// Return the preferred loop alignment.
-  virtual unsigned getPrefLoopLogAlignment(MachineLoop *ML = nullptr) const {
-    return Log2(PrefLoopAlignment);
+  virtual llvm::Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
+    return PrefLoopAlignment;
   }
 
   /// Should loops be aligned even when the function is marked OptSize (but not
@@ -2122,8 +2122,8 @@ protected:
   void setPrefLoopAlignment(llvm::Align Align) { PrefLoopAlignment = Align; }
 
   /// Set the minimum stack alignment of an argument.
-  void setMinStackArgumentAlignment(unsigned Align) {
-    MinStackArgumentAlignment = llvm::Align(Align);
+  void setMinStackArgumentAlignment(llvm::Align Align) {
+    MinStackArgumentAlignment = Align;
   }
 
   /// Set the maximum atomic operation size supported by the

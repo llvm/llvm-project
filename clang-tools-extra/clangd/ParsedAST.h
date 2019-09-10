@@ -89,9 +89,10 @@ public:
   const IncludeStructure &getIncludeStructure() const;
   const CanonicalIncludes &getCanonicalIncludes() const;
 
-  /// The start locations of all macro expansions spelled inside the main file.
-  /// Does not include expansions from inside other macro expansions.
-  llvm::ArrayRef<SourceLocation> getMainFileExpansions() const;
+  /// Gets all macro locations (definition, expansions) present in the main
+  /// file.
+  /// NOTE: macros inside the preamble are not included.
+  llvm::ArrayRef<SourceLocation> getMacros() const;
   /// Tokens recorded while parsing the main file.
   /// (!) does not have tokens from the preamble.
   const syntax::TokenBuffer &getTokens() const { return Tokens; }
@@ -120,9 +121,10 @@ private:
   ///   - Does not have spelled or expanded tokens for files from preamble.
   syntax::TokenBuffer Tokens;
 
-  /// The start locations of all macro expansions spelled inside the main file.
-  /// Does not include expansions from inside other macro expansions.
-  std::vector<SourceLocation> MainFileMacroExpLocs;
+  /// The start locations of all macro definitions/expansions spelled **after**
+  /// preamble.
+  /// Does not include locations from inside other macro expansions.
+  std::vector<SourceLocation> MacroIdentifierLocs;
   // Data, stored after parsing.
   std::vector<Diag> Diags;
   // Top-level decls inside the current file. Not that this does not include

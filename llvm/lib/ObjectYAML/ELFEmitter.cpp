@@ -645,16 +645,15 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
     PHeader.p_memsz = YamlPhdr.MemSize ? uint64_t(*YamlPhdr.MemSize)
                                        : MemOffset - PHeader.p_offset;
 
-    // Set the alignment of the segment to be the same as the maximum alignment
-    // of the sections with the same offset so that by default the segment
-    // has a valid and sensible alignment.
     if (YamlPhdr.Align) {
       PHeader.p_align = *YamlPhdr.Align;
     } else {
+      // Set the alignment of the segment to be the maximum alignment of the
+      // sections so that by default the segment has a valid and sensible
+      // alignment.
       PHeader.p_align = 1;
       for (Elf_Shdr *SHeader : Sections)
-        if (SHeader->sh_offset == PHeader.p_offset)
-          PHeader.p_align = std::max(PHeader.p_align, SHeader->sh_addralign);
+        PHeader.p_align = std::max(PHeader.p_align, SHeader->sh_addralign);
     }
   }
 }
