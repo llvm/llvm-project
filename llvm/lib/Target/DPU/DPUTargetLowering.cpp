@@ -52,6 +52,12 @@ using namespace llvm;
 #define MUTABLE false
 #define IMMUTABLE !MUTABLE
 
+#define setOperationActionForAllTypes(ISDNode, Action)                         \
+  do {                                                                         \
+    for (MVT VT : MVT::integer_valuetypes())                                   \
+      setOperationAction((ISDNode), VT, (Action));                             \
+  } while (0);
+
 DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
     : TargetLowering(TM), optLevel(TM.getOptLevel()) {
   // We need to be sure that the intrinsic will not generate instructions
@@ -132,27 +138,12 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
 
   // @todo MULHU and MULHS could work with 8 and 16 bits... need to implement it
   // for 8 bits... 16 is expansive.
-  setOperationAction(ISD::MULHU, MVT::i1, Expand);
-  setOperationAction(ISD::MULHU, MVT::i8, Expand);
-  setOperationAction(ISD::MULHU, MVT::i16, Expand);
-  setOperationAction(ISD::MULHU, MVT::i32, Expand);
-  setOperationAction(ISD::MULHU, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::MULHU, Expand);
 
-  setOperationAction(ISD::MULHS, MVT::i1, Expand);
-  setOperationAction(ISD::MULHS, MVT::i8, Expand);
-  setOperationAction(ISD::MULHS, MVT::i16, Expand);
-  setOperationAction(ISD::MULHS, MVT::i32, Expand);
-  setOperationAction(ISD::MULHS, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::MULHS, Expand);
 
-  setOperationAction(ISD::UMUL_LOHI, MVT::i1, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i8, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i8, Expand);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::UMUL_LOHI, Expand);
+  setOperationActionForAllTypes(ISD::SMUL_LOHI, Expand);
 
   setOperationAction(ISD::MUL, MVT::i8, Expand);
   setOperationAction(ISD::MUL, MVT::i16, Expand);
@@ -170,25 +161,13 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::SDIVREM, MVT::i32, LibCall);
   setOperationAction(ISD::SDIVREM, MVT::i64, LibCall);
 
-  setOperationAction(ISD::SDIV, MVT::i8, Expand);
-  setOperationAction(ISD::SDIV, MVT::i16, Expand);
-  setOperationAction(ISD::SDIV, MVT::i32, Expand);
-  setOperationAction(ISD::SDIV, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::SDIV, Expand);
 
-  setOperationAction(ISD::UDIV, MVT::i8, Expand);
-  setOperationAction(ISD::UDIV, MVT::i16, Expand);
-  setOperationAction(ISD::UDIV, MVT::i32, Expand);
-  setOperationAction(ISD::UDIV, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::UDIV, Expand);
 
-  setOperationAction(ISD::SREM, MVT::i8, Expand);
-  setOperationAction(ISD::SREM, MVT::i16, Expand);
-  setOperationAction(ISD::SREM, MVT::i32, Expand);
-  setOperationAction(ISD::SREM, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::SREM, Expand);
 
-  setOperationAction(ISD::UREM, MVT::i8, Expand);
-  setOperationAction(ISD::UREM, MVT::i16, Expand);
-  setOperationAction(ISD::UREM, MVT::i32, Expand);
-  setOperationAction(ISD::UREM, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::UREM, Expand);
 
   setOperationAction(ISD::CTLZ, MVT::i8, Promote);
   setOperationAction(ISD::CTLZ, MVT::i16, Promote);
@@ -209,23 +188,11 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::CTPOP, MVT::i8, Promote);
   setOperationAction(ISD::CTPOP, MVT::i16, Promote);
 
-  setOperationAction(ISD::SHL_PARTS, MVT::i1, Expand);
-  setOperationAction(ISD::SHL_PARTS, MVT::i8, Expand);
-  setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
-  setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
-  setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::SHL_PARTS, Expand);
 
-  setOperationAction(ISD::SRL_PARTS, MVT::i1, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i8, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i32, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::SRL_PARTS, Expand);
 
-  setOperationAction(ISD::SRA_PARTS, MVT::i1, Expand);
-  setOperationAction(ISD::SRA_PARTS, MVT::i8, Expand);
-  setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
-  setOperationAction(ISD::SRA_PARTS, MVT::i32, Expand);
-  setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
+  setOperationActionForAllTypes(ISD::SRA_PARTS, Expand);
 
   setOperationAction(ISD::BRCOND, MVT::i64, Expand);
 
@@ -242,12 +209,8 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setOperationAction(ISD::ADDE, MVT::i16, Expand);
   setOperationAction(ISD::ADDE, MVT::i32, Expand);
 
-  setOperationAction(ISD::SUBC, MVT::i8, Expand);
-  setOperationAction(ISD::SUBC, MVT::i16, Expand);
-  setOperationAction(ISD::SUBC, MVT::i32, Expand);
-  setOperationAction(ISD::SUBE, MVT::i8, Expand);
-  setOperationAction(ISD::SUBE, MVT::i16, Expand);
-  setOperationAction(ISD::SUBE, MVT::i32, Expand);
+  setOperationActionForAllTypes(ISD::SUBC, Expand);
+  setOperationActionForAllTypes(ISD::SUBE, Expand);
 
   // ID Register optimization
   setOperationAction(ISD::SHL, MVT::i32, Custom);
@@ -258,11 +221,7 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   // generated instructions to legalize the types (i.e. truncstore
   // and al.) and things become very complex for nothing
   // (see DAGTypeLegalizer::PromoteIntegerResult).
-  setOperationAction(ISD::STORE, MVT::i64, Custom);
-  setOperationAction(ISD::STORE, MVT::i1, Custom);
-  setOperationAction(ISD::STORE, MVT::i8, Custom);
-  setOperationAction(ISD::STORE, MVT::i16, Custom);
-  setOperationAction(ISD::STORE, MVT::i32, Custom);
+  setOperationActionForAllTypes(ISD::STORE, Custom);
 
   setOperationAction(ISD::VAARG, MVT::Other, Custom);
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
