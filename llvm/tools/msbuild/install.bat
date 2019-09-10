@@ -25,20 +25,20 @@ IF NOT %ERRORLEVEL% == 0 GOTO FAILED
 
 ECHO Installing x64 Platform Toolset
 SET PlatformToolsets=%VCTargets%\Platforms\x64\PlatformToolsets
-IF NOT EXIST "%PlatformToolsets%\llvm" mkdir "%PlatformToolsets%\llvm"
+IF NOT EXIST "%PlatformToolsets%\CheckedC-llvm" mkdir "%PlatformToolsets%\CheckedC-llvm"
 IF NOT %ERRORLEVEL% == 0 GOTO FAILED
-copy PlatformX64\Toolset.props "%PlatformToolsets%\llvm"
+copy PlatformX64\Toolset.props "%PlatformToolsets%\CheckedC-llvm"
 IF NOT %ERRORLEVEL% == 0 GOTO FAILED
-copy PlatformX64\Toolset.targets "%PlatformToolsets%\llvm"
+copy PlatformX64\Toolset.targets "%PlatformToolsets%\CheckedC-llvm"
 IF NOT %ERRORLEVEL% == 0 GOTO FAILED
 
 ECHO Installing Win32 Platform Toolset
 SET PlatformToolsets=%VCTargets%\Platforms\Win32\PlatformToolsets
-IF NOT EXIST "%PlatformToolsets%\llvm" mkdir "%PlatformToolsets%\llvm"
+IF NOT EXIST "%PlatformToolsets%\CheckedC-llvm" mkdir "%PlatformToolsets%\CheckedC-llvm"
 IF NOT %ERRORLEVEL% == 0 GOTO FAILED
-copy PlatformX86\Toolset.props "%PlatformToolsets%\llvm"
+copy PlatformX86\Toolset.props "%PlatformToolsets%\CheckedC-llvm"
 IF NOT %ERRORLEVEL% == 0 GOTO FAILED
-copy PlatformX86\Toolset.targets "%PlatformToolsets%\llvm"
+copy PlatformX86\Toolset.targets "%PlatformToolsets%\CheckedC-llvm"
 IF NOT %ERRORLEVEL% == 0 GOTO FAILED
 
 ECHO Installing C++ Settings UI
