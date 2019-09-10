@@ -335,7 +335,8 @@ public:
 
     PathDiagnosticLocation CELoc =
         PathDiagnosticLocation::create(RD, BR->getSourceManager());
-    auto Report = std::make_unique<BugReport>(*PaddingBug, Os.str(), CELoc);
+    auto Report =
+        std::make_unique<BasicBugReport>(*PaddingBug, Os.str(), CELoc);
     Report->setDeclWithIssue(RD);
     Report->addRange(RD->getSourceRange());
     BR->emitReport(std::move(Report));

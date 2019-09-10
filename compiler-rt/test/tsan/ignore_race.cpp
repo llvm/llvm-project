@@ -3,11 +3,6 @@
 
 int Global;
 
-extern "C" void AnnotateIgnoreWritesBegin(const char *f, int l);
-extern "C" void AnnotateIgnoreWritesEnd(const char *f, int l);
-extern "C" void AnnotateIgnoreReadsBegin(const char *f, int l);
-extern "C" void AnnotateIgnoreReadsEnd(const char *f, int l);
-
 void *Thread(void *x) {
   AnnotateIgnoreWritesBegin(__FILE__, __LINE__);
   AnnotateIgnoreReadsBegin(__FILE__, __LINE__);

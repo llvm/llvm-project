@@ -955,17 +955,18 @@ let DecoderNamespace = "MicroMips" in {
                EXT_FM_MM<0x0c>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Jump Instructions
-  let DecoderMethod = "DecodeJumpTargetMM" in
+  let DecoderMethod = "DecodeJumpTargetMM" in {
     def J_MM          : MMRel, JumpFJ<jmptarget_mm, "j", br, bb, "j">,
                         J_FM_MM<0x35>, AdditionalRequires<[RelocNotPIC]>,
                         IsBranch, ISA_MICROMIPS32_NOT_MIPS32R6;
-
-  let DecoderMethod = "DecodeJumpTargetMM" in {
     def JAL_MM      : MMRel, JumpLink<"jal", calltarget_mm>, J_FM_MM<0x3d>,
                       ISA_MICROMIPS32_NOT_MIPS32R6;
+  }
+
+  let DecoderMethod = "DecodeJumpTargetXMM" in
     def JALX_MM     : MMRel, JumpLink<"jalx", calltarget>, J_FM_MM<0x3c>,
                       ISA_MICROMIPS32_NOT_MIPS32R6;
-  }
+
   def JR_MM : MMRel, IndirectBranch<"jr", GPR32Opnd>, JR_FM_MM<0x3c>,
               ISA_MICROMIPS32_NOT_MIPS32R6;
   def JALR_MM : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM_MM<0x03c>,

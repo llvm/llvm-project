@@ -75,7 +75,7 @@ unreachable:                                      ; preds = %entry
 ; CHECK: popq %rbp
 ; CHECK: retq
 
-; CHECK: "?catch$2@?0?global_array@4HA":
+; CHECK: "?catch${{[0-9]+}}@?0?global_array@4HA":
 ; CHECK: pushq   %rbp
 ; CHECK: movslq  {{.*}}, %[[idx:[^ ]*]]
 ; CHECK: leaq    array(%rip), %[[base:[^ ]*]]
@@ -122,7 +122,7 @@ unreachable:                                      ; preds = %entry
 ; CHECK: popq %rbp
 ; CHECK: retq
 
-; CHECK: "?catch$2@?0?access_imported@4HA":
+; CHECK: "?catch${{[0-9]+}}@?0?access_imported@4HA":
 ; CHECK: pushq   %rbp
 ; CHECK: movq    __imp_imported(%rip), %[[base:[^ ]*]]
 ; CHECK: movl    $222, (%[[base]])

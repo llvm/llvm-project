@@ -206,7 +206,7 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
 
 PathDiagnosticPieceRef TaintBugVisitor::VisitNode(const ExplodedNode *N,
                                                   BugReporterContext &BRC,
-                                                  BugReport &BR) {
+                                                  PathSensitiveBugReport &BR) {
 
   // Find the ExplodedNode where the taint was first introduced
   if (!isTainted(N->getState(), V) ||

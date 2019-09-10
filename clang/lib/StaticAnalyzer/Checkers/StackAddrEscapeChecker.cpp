@@ -162,7 +162,8 @@ void StackAddrEscapeChecker::EmitStackError(CheckerContext &C,
   llvm::raw_svector_ostream os(buf);
   SourceRange range = genName(os, R, C.getASTContext());
   os << " returned to caller";
-  auto report = std::make_unique<BugReport>(*BT_returnstack, os.str(), N);
+  auto report =
+      std::make_unique<PathSensitiveBugReport>(*BT_returnstack, os.str(), N);
   report->addRange(RetE->getSourceRange());
   if (range.isValid())
     report->addRange(range);
@@ -199,8 +200,8 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
     llvm::raw_svector_ostream Out(Buf);
     SourceRange Range = genName(Out, Region, C.getASTContext());
     Out << " is captured by an asynchronously-executed block";
-    auto Report =
-        std::make_unique<BugReport>(*BT_capturedstackasync, Out.str(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(
+        *BT_capturedstackasync, Out.str(), N);
     if (Range.isValid())
       Report->addRange(Range);
     C.emitReport(std::move(Report));
@@ -222,8 +223,8 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
     llvm::raw_svector_ostream Out(Buf);
     SourceRange Range = genName(Out, Region, C.getASTContext());
     Out << " is captured by a returned block";
-    auto Report =
-        std::make_unique<BugReport>(*BT_capturedstackret, Out.str(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(*BT_capturedstackret,
+                                                           Out.str(), N);
     if (Range.isValid())
       Report->addRange(Range);
     C.emitReport(std::move(Report));
@@ -351,7 +352,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     const VarRegion *VR = cast<VarRegion>(P.first->getBaseRegion());
     Out << *VR->getDecl()
         << "' upon returning to the caller.  This will be a dangling reference";
-    auto Report = std::make_unique<BugReport>(*BT_stackleak, Out.str(), N);
+    auto Report =
+        std::make_unique<PathSensitiveBugReport>(*BT_stackleak, Out.str(), N);
     if (Range.isValid())
       Report->addRange(Range);
 

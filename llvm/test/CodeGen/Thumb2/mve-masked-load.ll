@@ -7,17 +7,29 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_zero(<4 x i32> *%dest, <4 
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    mov.w r12, #0
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #3, #1
+; CHECK-LE-NEXT:    and r1, r2, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    beq .LBB0_2
 ; CHECK-LE-NEXT:  @ %bb.1: @ %cond.load
-; CHECK-LE-NEXT:    movs r2, #0
-; CHECK-LE-NEXT:    ldr r3, [r0]
-; CHECK-LE-NEXT:    vdup.32 q0, r2
-; CHECK-LE-NEXT:    vmov.32 q0[0], r3
+; CHECK-LE-NEXT:    ldr r2, [r0]
+; CHECK-LE-NEXT:    vdup.32 q0, r12
+; CHECK-LE-NEXT:    vmov.32 q0[0], r2
 ; CHECK-LE-NEXT:    b .LBB0_3
 ; CHECK-LE-NEXT:  .LBB0_2:
 ; CHECK-LE-NEXT:    vmov.i32 q0, #0x0
@@ -42,17 +54,29 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_zero(<4 x i32> *%dest, <4 
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    mov.w r12, #0
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #3, #1
+; CHECK-BE-NEXT:    and r1, r2, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    beq .LBB0_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
-; CHECK-BE-NEXT:    movs r2, #0
-; CHECK-BE-NEXT:    ldr r3, [r0]
-; CHECK-BE-NEXT:    vdup.32 q1, r2
-; CHECK-BE-NEXT:    vmov.32 q1[0], r3
+; CHECK-BE-NEXT:    ldr r2, [r0]
+; CHECK-BE-NEXT:    vdup.32 q1, r12
+; CHECK-BE-NEXT:    vmov.32 q1[0], r2
 ; CHECK-BE-NEXT:    b .LBB0_3
 ; CHECK-BE-NEXT:  .LBB0_2:
 ; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
@@ -84,10 +108,22 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_undef(<4 x i32> *%dest, <4
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r2, [r0]
@@ -112,11 +148,23 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_undef(<4 x i32> *%dest, <4
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrne r2, [r0]
@@ -148,10 +196,22 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align1_undef(<4 x i32> *%dest, <4
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r2, [r0]
@@ -176,11 +236,23 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align1_undef(<4 x i32> *%dest, <4
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrne r2, [r0]
@@ -211,10 +283,22 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_other(<4 x i32> *%dest, <4
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r2, [r0]
@@ -239,10 +323,22 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_other(<4 x i32> *%dest, <4
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrne r2, [r0]
@@ -274,11 +370,23 @@ define arm_aapcs_vfpcc i8* @masked_v4i32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    adds r0, #4
-; CHECK-LE-NEXT:    ldrb.w r2, [sp]
+; CHECK-LE-NEXT:    and r3, r12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    and r2, r2, #15
 ; CHECK-LE-NEXT:    lsls r3, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r3, [r0]
@@ -304,12 +412,24 @@ define arm_aapcs_vfpcc i8* @masked_v4i32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
 ; CHECK-BE-NEXT:    adds r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r2, [sp]
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r3, r12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    and r2, r2, #15
 ; CHECK-BE-NEXT:    lsls r3, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrne r3, [r0]
@@ -345,11 +465,23 @@ define arm_aapcs_vfpcc i8* @masked_v4i32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
+; CHECK-LE-NEXT:    and r3, r12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
 ; CHECK-LE-NEXT:    add.w r12, r0, #4
-; CHECK-LE-NEXT:    ldrb.w r3, [sp]
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    and r3, r2, #15
 ; CHECK-LE-NEXT:    lsls r2, r3, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r2, [r0]
@@ -376,12 +508,24 @@ define arm_aapcs_vfpcc i8* @masked_v4i32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r3, r12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    add.w r12, r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r3, [sp]
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    and r3, r2, #15
 ; CHECK-BE-NEXT:    lsls r2, r3, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrne r2, [r0]
@@ -419,17 +563,41 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_zero(<8 x i16> *%dest, <8 
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    mov.w r12, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r2, r3, #0
+; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #3, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #4, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #5, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r3, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r3
+; CHECK-LE-NEXT:    lsls r2, r3, #31
 ; CHECK-LE-NEXT:    beq .LBB6_2
 ; CHECK-LE-NEXT:  @ %bb.1: @ %cond.load
-; CHECK-LE-NEXT:    movs r2, #0
-; CHECK-LE-NEXT:    ldrh r3, [r0]
-; CHECK-LE-NEXT:    vdup.16 q0, r2
-; CHECK-LE-NEXT:    vmov.16 q0[0], r3
+; CHECK-LE-NEXT:    ldrh r2, [r0]
+; CHECK-LE-NEXT:    vdup.16 q0, r12
+; CHECK-LE-NEXT:    vmov.16 q0[0], r2
 ; CHECK-LE-NEXT:    b .LBB6_3
 ; CHECK-LE-NEXT:  .LBB6_2:
 ; CHECK-LE-NEXT:    vmov.i32 q0, #0x0
@@ -470,17 +638,41 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_zero(<8 x i16> *%dest, <8 
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r2, r3, #0
+; CHECK-BE-NEXT:    movs r3, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #3, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #4, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #5, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r3, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r3
+; CHECK-BE-NEXT:    lsls r2, r3, #31
 ; CHECK-BE-NEXT:    beq .LBB6_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
-; CHECK-BE-NEXT:    movs r2, #0
-; CHECK-BE-NEXT:    ldrh r3, [r0]
-; CHECK-BE-NEXT:    vdup.16 q1, r2
-; CHECK-BE-NEXT:    vmov.16 q1[0], r3
+; CHECK-BE-NEXT:    ldrh r2, [r0]
+; CHECK-BE-NEXT:    vdup.16 q1, r12
+; CHECK-BE-NEXT:    vmov.16 q1[0], r2
 ; CHECK-BE-NEXT:    b .LBB6_3
 ; CHECK-BE-NEXT:  .LBB6_2:
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
@@ -529,11 +721,35 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_undef(<8 x i16> *%dest, <8
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrhne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.16 q0[0], r2
@@ -573,12 +789,36 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_undef(<8 x i16> *%dest, <8
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrhne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.16 q1[0], r2
@@ -625,11 +865,35 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align1_undef(<8 x i16> *%dest, <8
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrhne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.16 q0[0], r2
@@ -669,12 +933,36 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align1_undef(<8 x i16> *%dest, <8
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrhne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.16 q1[0], r2
@@ -720,11 +1008,35 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_other(<8 x i16> *%dest, <8
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrhne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.16 q0[0], r2
@@ -764,11 +1076,35 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_other(<8 x i16> *%dest, <8
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrhne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.16 q1[0], r2
@@ -817,12 +1153,36 @@ define i8* @masked_v8i16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp, #8]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    mov r2, sp
+; CHECK-LE-NEXT:    movs r3, #0
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    vstr p0, [r2]
-; CHECK-LE-NEXT:    ldrb.w r2, [sp]
-; CHECK-LE-NEXT:    lsls r3, r2, #31
+; CHECK-LE-NEXT:    vmrs r12, p0
+; CHECK-LE-NEXT:    and r2, r12, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #6, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #3, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #4, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #10, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #5, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #6, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #14, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #7, #1
+; CHECK-LE-NEXT:    uxtb r2, r3
+; CHECK-LE-NEXT:    lsls r3, r3, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrhne r3, [r0]
 ; CHECK-LE-NEXT:    vmovne.16 q0[0], r3
@@ -865,13 +1225,37 @@ define i8* @masked_v8i16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vldr d1, [sp, #8]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r3, #0
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r2, [sp]
-; CHECK-BE-NEXT:    lsls r3, r2, #31
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r2, r12, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #6, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #3, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #4, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #10, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #5, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #6, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #14, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #7, #1
+; CHECK-BE-NEXT:    uxtb r2, r3
+; CHECK-BE-NEXT:    lsls r3, r3, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrhne r3, [r0]
 ; CHECK-BE-NEXT:    vmovne.16 q0[0], r3
@@ -922,12 +1306,36 @@ define arm_aapcs_vfpcc i8* @masked_v8i16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
+; CHECK-LE-NEXT:    and r3, r12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
 ; CHECK-LE-NEXT:    add.w r12, r0, #4
-; CHECK-LE-NEXT:    ldrb.w r3, [sp]
-; CHECK-LE-NEXT:    lsls r2, r3, #31
+; CHECK-LE-NEXT:    bfi r2, r3, #7, #1
+; CHECK-LE-NEXT:    uxtb r3, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrhne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.16 q0[0], r2
@@ -969,13 +1377,37 @@ define arm_aapcs_vfpcc i8* @masked_v8i16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r3, r12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    add.w r12, r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r3, [sp]
-; CHECK-BE-NEXT:    lsls r2, r3, #31
+; CHECK-BE-NEXT:    bfi r2, r3, #7, #1
+; CHECK-BE-NEXT:    uxtb r3, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrhne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.16 q0[0], r2
@@ -1034,11 +1466,10 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_zero(<16 x i8> *%dest, <16
 ; CHECK-LE-NEXT:    mov r4, sp
 ; CHECK-LE-NEXT:    bfc r4, #0, #4
 ; CHECK-LE-NEXT:    mov sp, r4
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrh.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    vmrs r2, p0
+; CHECK-LE-NEXT:    uxth r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    beq .LBB12_2
 ; CHECK-LE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-LE-NEXT:    movs r2, #0
@@ -1125,11 +1556,10 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_zero(<16 x i8> *%dest, <16
 ; CHECK-BE-NEXT:    bfc r4, #0, #4
 ; CHECK-BE-NEXT:    mov sp, r4
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
 ; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrh.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    uxth r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    beq .LBB12_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-BE-NEXT:    movs r2, #0
@@ -1224,12 +1654,11 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_undef(<16 x i8> *%dest, <1
 ; CHECK-LE-NEXT:    bfc r4, #0, #4
 ; CHECK-LE-NEXT:    mov sp, r4
 ; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    sub.w r4, r7, #8
-; CHECK-LE-NEXT:    ldrh.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    vmrs r2, p0
+; CHECK-LE-NEXT:    uxth r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrbne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.8 q0[0], r2
@@ -1308,13 +1737,12 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_undef(<16 x i8> *%dest, <1
 ; CHECK-BE-NEXT:    bfc r4, #0, #4
 ; CHECK-BE-NEXT:    mov sp, r4
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    sub.w r4, r7, #8
 ; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    sub.w r4, r7, #8
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrh.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    uxth r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrbne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.8 q1[0], r2
@@ -1399,12 +1827,11 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_other(<16 x i8> *%dest, <1
 ; CHECK-LE-NEXT:    mov r4, sp
 ; CHECK-LE-NEXT:    bfc r4, #0, #4
 ; CHECK-LE-NEXT:    mov sp, r4
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
 ; CHECK-LE-NEXT:    sub.w r4, r7, #8
-; CHECK-LE-NEXT:    ldrh.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    vmrs r2, p0
+; CHECK-LE-NEXT:    uxth r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrbne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.8 q0[0], r2
@@ -1483,12 +1910,11 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_other(<16 x i8> *%dest, <1
 ; CHECK-BE-NEXT:    bfc r4, #0, #4
 ; CHECK-BE-NEXT:    mov sp, r4
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
-; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    sub.w r4, r7, #8
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrh.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    uxth r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrbne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.8 q1[0], r2
@@ -1574,13 +2000,12 @@ define arm_aapcs_vfpcc i8* @masked_v16i8_preinc(i8* %x, i8* %y, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    bfc r4, #0, #4
 ; CHECK-LE-NEXT:    mov sp, r4
 ; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    adds r0, #4
-; CHECK-LE-NEXT:    ldrh.w r2, [sp]
+; CHECK-LE-NEXT:    vmrs r3, p0
 ; CHECK-LE-NEXT:    sub.w r4, r7, #8
-; CHECK-LE-NEXT:    lsls r3, r2, #31
+; CHECK-LE-NEXT:    uxth r2, r3
+; CHECK-LE-NEXT:    lsls r3, r3, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrbne r3, [r0]
 ; CHECK-LE-NEXT:    vmovne.8 q0[0], r3
@@ -1660,14 +2085,13 @@ define arm_aapcs_vfpcc i8* @masked_v16i8_preinc(i8* %x, i8* %y, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    bfc r4, #0, #4
 ; CHECK-BE-NEXT:    mov sp, r4
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
-; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
 ; CHECK-BE-NEXT:    adds r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
+; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    sub.w r4, r7, #8
-; CHECK-BE-NEXT:    ldrh.w r2, [sp]
-; CHECK-BE-NEXT:    lsls r3, r2, #31
+; CHECK-BE-NEXT:    vmrs r3, p0
+; CHECK-BE-NEXT:    uxth r2, r3
+; CHECK-BE-NEXT:    lsls r3, r3, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrbne r3, [r0]
 ; CHECK-BE-NEXT:    vmovne.8 q0[0], r3
@@ -1757,13 +2181,12 @@ define arm_aapcs_vfpcc i8* @masked_v16i8_postinc(i8* %x, i8* %y, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    bfc r4, #0, #4
 ; CHECK-LE-NEXT:    mov sp, r4
 ; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    sub.w r4, r7, #8
-; CHECK-LE-NEXT:    ldrh.w r3, [sp]
+; CHECK-LE-NEXT:    vmrs r2, p0
 ; CHECK-LE-NEXT:    add.w r12, r0, #4
-; CHECK-LE-NEXT:    lsls r2, r3, #31
+; CHECK-LE-NEXT:    uxth r3, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrbne r2, [r0]
 ; CHECK-LE-NEXT:    vmovne.8 q0[0], r2
@@ -1844,14 +2267,13 @@ define arm_aapcs_vfpcc i8* @masked_v16i8_postinc(i8* %x, i8* %y, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    bfc r4, #0, #4
 ; CHECK-BE-NEXT:    mov sp, r4
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
-; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
 ; CHECK-BE-NEXT:    sub.w r4, r7, #8
-; CHECK-BE-NEXT:    vstr p0, [r2]
+; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    add.w r12, r0, #4
-; CHECK-BE-NEXT:    ldrh.w r3, [sp]
-; CHECK-BE-NEXT:    lsls r2, r3, #31
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    uxth r3, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrbne r2, [r0]
 ; CHECK-BE-NEXT:    vmovne.8 q0[0], r2
@@ -1935,10 +2357,22 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_zero(<4 x float> *%dest,
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    beq .LBB17_2
 ; CHECK-LE-NEXT:  @ %bb.1: @ %cond.load
@@ -1972,10 +2406,22 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_zero(<4 x float> *%dest,
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    beq .LBB17_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
@@ -2016,10 +2462,22 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_undef(<4 x float> *%dest
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    it ne
 ; CHECK-LE-NEXT:    vldrne s0, [r0]
@@ -2040,11 +2498,23 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_undef(<4 x float> *%dest
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    it ne
 ; CHECK-BE-NEXT:    vldrne s4, [r0]
@@ -2072,10 +2542,22 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(<4 x float> *%dest
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    itt ne
 ; CHECK-LE-NEXT:    ldrne r2, [r0]
@@ -2100,11 +2582,23 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(<4 x float> *%dest
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    itt ne
 ; CHECK-BE-NEXT:    ldrne r2, [r0]
@@ -2135,10 +2629,22 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_other(<4 x float> *%dest
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
+; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    vmrs r2, p0
+; CHECK-LE-NEXT:    and r3, r2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-LE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-LE-NEXT:    and r1, r1, #15
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    it ne
 ; CHECK-LE-NEXT:    vldrne s4, [r0]
@@ -2160,11 +2666,23 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_other(<4 x float> *%dest
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q2, zr
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
+; CHECK-BE-NEXT:    vmrs r2, p0
+; CHECK-BE-NEXT:    and r3, r2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r2, #8, #1
+; CHECK-BE-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r1, r3, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
+; CHECK-BE-NEXT:    and r1, r1, #15
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
 ; CHECK-BE-NEXT:    it ne
 ; CHECK-BE-NEXT:    vldrne s8, [r0]
@@ -2192,11 +2710,23 @@ define arm_aapcs_vfpcc i8* @masked_v4f32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
 ; CHECK-LE-NEXT:    adds r0, #4
-; CHECK-LE-NEXT:    ldrb.w r2, [sp]
+; CHECK-LE-NEXT:    and r3, r12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    and r2, r2, #15
 ; CHECK-LE-NEXT:    lsls r3, r2, #31
 ; CHECK-LE-NEXT:    it ne
 ; CHECK-LE-NEXT:    vldrne s0, [r0]
@@ -2218,12 +2748,24 @@ define arm_aapcs_vfpcc i8* @masked_v4f32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
 ; CHECK-BE-NEXT:    adds r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r2, [sp]
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r3, r12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    and r2, r2, #15
 ; CHECK-BE-NEXT:    lsls r3, r2, #31
 ; CHECK-BE-NEXT:    it ne
 ; CHECK-BE-NEXT:    vldrne s0, [r0]
@@ -2255,11 +2797,23 @@ define arm_aapcs_vfpcc i8* @masked_v4f32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
+; CHECK-LE-NEXT:    and r3, r12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
 ; CHECK-LE-NEXT:    add.w r12, r0, #4
-; CHECK-LE-NEXT:    ldrb.w r3, [sp]
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    and r3, r2, #15
 ; CHECK-LE-NEXT:    lsls r2, r3, #31
 ; CHECK-LE-NEXT:    it ne
 ; CHECK-LE-NEXT:    vldrne s0, [r0]
@@ -2282,12 +2836,24 @@ define arm_aapcs_vfpcc i8* @masked_v4f32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r3, r12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    add.w r12, r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r3, [sp]
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    and r3, r2, #15
 ; CHECK-BE-NEXT:    lsls r2, r3, #31
 ; CHECK-BE-NEXT:    it ne
 ; CHECK-BE-NEXT:    vldrne s0, [r0]
@@ -2320,11 +2886,35 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_zero(<8 x half> *%dest, <
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    beq .LBB23_2
 ; CHECK-LE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-LE-NEXT:    vldr.16 s0, .LCPI23_0
@@ -2411,11 +3001,35 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_zero(<8 x half> *%dest, <
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    beq .LBB23_2
 ; CHECK-BE-NEXT:  @ %bb.1: @ %cond.load
 ; CHECK-BE-NEXT:    vldr.16 s0, .LCPI23_0
@@ -2509,11 +3123,35 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_undef(<8 x half> *%dest, 
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    mov r1, sp
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    bne .LBB24_9
 ; CHECK-LE-NEXT:  @ %bb.1: @ %else
 ; CHECK-LE-NEXT:    lsls r2, r1, #30
@@ -2591,12 +3229,36 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    bne .LBB24_10
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
@@ -2680,11 +3342,35 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-LE-NEXT:    .pad #40
 ; CHECK-LE-NEXT:    sub sp, #40
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    add r1, sp, #32
-; CHECK-LE-NEXT:    vstr p0, [r1]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r1, [sp, #32]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    bne .LBB25_9
 ; CHECK-LE-NEXT:  @ %bb.1: @ %else
 ; CHECK-LE-NEXT:    lsls r2, r1, #30
@@ -2778,12 +3464,36 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    .pad #40
 ; CHECK-BE-NEXT:    sub sp, #40
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    add r1, sp, #32
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp, #32]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    bne .LBB25_10
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
@@ -2882,11 +3592,35 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_other(<8 x half> *%dest, 
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
-; CHECK-LE-NEXT:    mov r1, sp
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vstr p0, [r1]
-; CHECK-LE-NEXT:    ldrb.w r1, [sp]
-; CHECK-LE-NEXT:    lsls r2, r1, #31
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    and r3, r1, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    rsbs r1, r1, #0
+; CHECK-LE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r1, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    bne .LBB26_10
 ; CHECK-LE-NEXT:  @ %bb.1: @ %else
 ; CHECK-LE-NEXT:    lsls r2, r1, #30
@@ -2966,12 +3700,36 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_other(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
-; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q2, zr
 ; CHECK-BE-NEXT:    vrev64.16 q2, q1
-; CHECK-BE-NEXT:    vstr p0, [r1]
-; CHECK-BE-NEXT:    ldrb.w r1, [sp]
-; CHECK-BE-NEXT:    lsls r2, r1, #31
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    and r3, r1, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r1, #12, #1
+; CHECK-BE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    rsbs r1, r1, #0
+; CHECK-BE-NEXT:    bfi r2, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r1, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    bne .LBB26_10
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
@@ -3057,12 +3815,36 @@ define arm_aapcs_vfpcc i8* @masked_v8f16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r3, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    adds r0, #4
-; CHECK-LE-NEXT:    ldrb.w r2, [sp]
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    lsls r3, r2, #31
+; CHECK-LE-NEXT:    and r2, r12, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #6, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #3, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #4, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #10, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #5, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #6, #1
+; CHECK-LE-NEXT:    ubfx r2, r12, #14, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r3, r2, #7, #1
+; CHECK-LE-NEXT:    uxtb r2, r3
+; CHECK-LE-NEXT:    lsls r3, r3, #31
 ; CHECK-LE-NEXT:    bne .LBB27_10
 ; CHECK-LE-NEXT:  @ %bb.1: @ %else
 ; CHECK-LE-NEXT:    lsls r3, r2, #30
@@ -3140,13 +3922,37 @@ define arm_aapcs_vfpcc i8* @masked_v8f16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r3, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    adds r0, #4
-; CHECK-BE-NEXT:    vstr p0, [r2]
+; CHECK-BE-NEXT:    vmrs r12, p0
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
-; CHECK-BE-NEXT:    ldrb.w r2, [sp]
-; CHECK-BE-NEXT:    lsls r3, r2, #31
+; CHECK-BE-NEXT:    and r2, r12, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #0, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #2, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #1, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #2, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #6, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #3, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #4, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #10, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #5, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #6, #1
+; CHECK-BE-NEXT:    ubfx r2, r12, #14, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r3, r2, #7, #1
+; CHECK-BE-NEXT:    uxtb r2, r3
+; CHECK-BE-NEXT:    lsls r3, r3, #31
 ; CHECK-BE-NEXT:    bne .LBB27_10
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
 ; CHECK-BE-NEXT:    lsls r3, r2, #30
@@ -3234,11 +4040,35 @@ define arm_aapcs_vfpcc i8* @masked_v8f16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    .pad #8
 ; CHECK-LE-NEXT:    sub sp, #8
 ; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    mov r2, sp
-; CHECK-LE-NEXT:    vstr p0, [r2]
+; CHECK-LE-NEXT:    movs r2, #0
+; CHECK-LE-NEXT:    vmrs r12, p0
 ; CHECK-LE-NEXT:    @ implicit-def: $q0
-; CHECK-LE-NEXT:    ldrb.w r3, [sp]
-; CHECK-LE-NEXT:    lsls r2, r3, #31
+; CHECK-LE-NEXT:    and r3, r12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #2, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #6, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #10, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-LE-NEXT:    ubfx r3, r12, #14, #1
+; CHECK-LE-NEXT:    rsbs r3, r3, #0
+; CHECK-LE-NEXT:    bfi r2, r3, #7, #1
+; CHECK-LE-NEXT:    uxtb r3, r2
+; CHECK-LE-NEXT:    lsls r2, r2, #31
 ; CHECK-LE-NEXT:    bne .LBB28_12
 ; CHECK-LE-NEXT:  @ %bb.1: @ %else
 ; CHECK-LE-NEXT:    lsls r2, r3, #30
@@ -3314,12 +4144,36 @@ define arm_aapcs_vfpcc i8* @masked_v8f16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    .pad #8
 ; CHECK-BE-NEXT:    sub sp, #8
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    @ implicit-def: $q0
-; CHECK-BE-NEXT:    vstr p0, [r2]
-; CHECK-BE-NEXT:    ldrb.w r3, [sp]
-; CHECK-BE-NEXT:    lsls r2, r3, #31
+; CHECK-BE-NEXT:    vmrs r12, p0
+; CHECK-BE-NEXT:    and r3, r12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #0, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #2, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #1, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #4, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #2, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #6, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #3, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #8, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #4, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #10, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #5, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #12, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #6, #1
+; CHECK-BE-NEXT:    ubfx r3, r12, #14, #1
+; CHECK-BE-NEXT:    rsbs r3, r3, #0
+; CHECK-BE-NEXT:    bfi r2, r3, #7, #1
+; CHECK-BE-NEXT:    uxtb r3, r2
+; CHECK-BE-NEXT:    lsls r2, r2, #31
 ; CHECK-BE-NEXT:    bne .LBB28_12
 ; CHECK-BE-NEXT:  @ %bb.1: @ %else
 ; CHECK-BE-NEXT:    lsls r2, r3, #30

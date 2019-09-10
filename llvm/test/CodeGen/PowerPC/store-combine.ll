@@ -15,7 +15,7 @@ define void @store_i32_by_i8(i32 signext %m, i8* %p) {
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    stwbrx 3, 0, 4 
+; CHECK-PPC64-NEXT:    stwbrx 3, 0, 4
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %conv = trunc i32 %m to i8
@@ -187,18 +187,18 @@ entry:
 define void @store_i64_by_i8_bswap_uses(i32 signext %t, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i64_by_i8_bswap_uses:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    slwi [[REG:[0-9]+]], 3, 3
-; CHECK-PPC64LE-NEXT:    subf [[REG1:[0-9]+]], 3, [[REG]] 
-; CHECK-PPC64LE-NEXT:    extsw [[REG2:[0-9]+]], [[REG1]]
-; CHECK-PPC64LE-NEXT:    stdbrx [[REG2]], 0, 4
+; CHECK-PPC64LE-NEXT:    slwi 5, 3, 3
+; CHECK-PPC64LE-NEXT:    subf 3, 3, 5
+; CHECK-PPC64LE-NEXT:    extsw 3, 3
+; CHECK-PPC64LE-NEXT:    stdbrx 3, 0, 4
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i64_by_i8_bswap_uses:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    slwi [[REG:[0-9]+]], 3, 3
-; CHECK-PPC64-NEXT:    subf [[REG1:[0-9]+]], 3, [[REG]]
-; CHECK-PPC64-NEXT:    extsw [[REG2:[0-9]+]], [[REG1]]
-; CHECK-PPC64-NEXT:    stdx [[REG2]], 0, 4
+; CHECK-PPC64-NEXT:    slwi 5, 3, 3
+; CHECK-PPC64-NEXT:    subf 3, 3, 5
+; CHECK-PPC64-NEXT:    extsw 3, 3
+; CHECK-PPC64-NEXT:    stdx 3, 0, 4
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %mul = mul nsw i32 %t, 7
@@ -234,8 +234,6 @@ entry:
   %conv28 = trunc i64 %shr26 to i8
   store i8 %conv28, i8* %p, align 1
   ret void
-; CEHCK-PPC64LE: stdbrx [[REG2]], 0, 4
-; CEHCK-PPC64: stdx [[REG2]], 0, 4
 }
 
 ; One of the stores is volatile
@@ -248,11 +246,22 @@ entry:
 define void @store_i32_by_i8_bswap_volatile(i32 signext %m, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_volatile:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NOT:   stwbrx 
+; CHECK-PPC64LE-NEXT:    li 5, 2
+; CHECK-PPC64LE-NEXT:    sthbrx 3, 4, 5
+; CHECK-PPC64LE-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64LE-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64LE-NEXT:    stb 5, 1(4)
+; CHECK-PPC64LE-NEXT:    stb 3, 0(4)
+; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_volatile:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NOT:   stw 
+; CHECK-PPC64-NEXT:    sth 3, 2(4)
+; CHECK-PPC64-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64-NEXT:    stb 5, 1(4)
+; CHECK-PPC64-NEXT:    stb 3, 0(4)
+; CHECK-PPC64-NEXT:    blr
 entry:
   %conv = trunc i32 %m to i8
   %arrayidx = getelementptr inbounds i8, i8* %p, i64 3
@@ -281,11 +290,26 @@ entry:
 define void @store_i32_by_i8_bswap_store_in_between(i32 signext %m, i8* %p, i8* %q) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_store_in_between:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NOT:   stwbrx 
+; CHECK-PPC64LE-NEXT:    li 6, 2
+; CHECK-PPC64LE-NEXT:    sthbrx 3, 4, 6
+; CHECK-PPC64LE-NEXT:    li 6, 3
+; CHECK-PPC64LE-NEXT:    stb 6, 0(5)
+; CHECK-PPC64LE-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64LE-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64LE-NEXT:    stb 5, 1(4)
+; CHECK-PPC64LE-NEXT:    stb 3, 0(4)
+; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_store_in_between:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NOT:   stw 
+; CHECK-PPC64-NEXT:    li 6, 3
+; CHECK-PPC64-NEXT:    sth 3, 2(4)
+; CHECK-PPC64-NEXT:    stb 6, 0(5)
+; CHECK-PPC64-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64-NEXT:    stb 5, 1(4)
+; CHECK-PPC64-NEXT:    stb 3, 0(4)
+; CHECK-PPC64-NEXT:    blr
 entry:
   %conv = trunc i32 %m to i8
   %arrayidx = getelementptr inbounds i8, i8* %p, i64 3
@@ -308,11 +332,25 @@ entry:
 define void @store_i32_by_i8_bswap_unrelated_store(i32 signext %m, i8* %p, i8* %q) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_unrelated_store:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NOT:   stwbrx 
+; CHECK-PPC64LE-NEXT:    srwi 6, 3, 8
+; CHECK-PPC64LE-NEXT:    stb 3, 3(4)
+; CHECK-PPC64LE-NEXT:    stb 6, 2(5)
+; CHECK-PPC64LE-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64LE-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64LE-NEXT:    stb 5, 1(4)
+; CHECK-PPC64LE-NEXT:    stb 3, 0(4)
+; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_unrelated_store:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NOT:   stw 
+; CHECK-PPC64-NEXT:    srwi 6, 3, 8
+; CHECK-PPC64-NEXT:    stb 3, 3(4)
+; CHECK-PPC64-NEXT:    stb 6, 2(5)
+; CHECK-PPC64-NEXT:    srwi 5, 3, 16
+; CHECK-PPC64-NEXT:    srwi 3, 3, 24
+; CHECK-PPC64-NEXT:    stb 5, 1(4)
+; CHECK-PPC64-NEXT:    stb 3, 0(4)
+; CHECK-PPC64-NEXT:    blr
 entry:
   %conv = trunc i32 %m to i8
   %arrayidx = getelementptr inbounds i8, i8* %p, i64 3
@@ -339,8 +377,8 @@ entry:
 define void @store_i32_by_i8_bswap_nonzero_offset(i32 signext %m, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_nonzero_offset:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    addi [[REG1:[0-9]+]], 4, 1
-; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, [[REG1]] 
+; CHECK-PPC64LE-NEXT:    addi 4, 4, 1
+; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, 4
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_nonzero_offset:
@@ -379,8 +417,8 @@ define void @store_i32_by_i8_neg_offset(i32 signext %m, i8* %p) {
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_neg_offset:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    addi [[REG1:[0-9]+]], 4, -4
-; CHECK-PPC64-NEXT:    stwbrx 3, 0, [[REG1]] 
+; CHECK-PPC64-NEXT:    addi 4, 4, -4
+; CHECK-PPC64-NEXT:    stwbrx 3, 0, 4
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %0 = lshr i32 %m, 8
@@ -409,8 +447,8 @@ entry:
 define void @store_i32_by_i8_bswap_neg_offset(i32 signext %m, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_neg_offset:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    addi [[REG1:[0-9]+]], 4, -4
-; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, [[REG1]] 
+; CHECK-PPC64LE-NEXT:    addi 4, 4, -4
+; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, 4
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_neg_offset:
@@ -444,17 +482,17 @@ entry:
 define void @store_i32_by_i8_bswap_base_index_offset(i32 %m, i32 %i, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_base_index_offset:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    extsw [[REG1:[0-9]+]], 4
-; CHECK-PPC64LE-NEXT:    add [[REG2:[0-9]+]], 5, [[REG1]] 
-; CHECK-PPC64LE-NEXT:    addi [[REG3:[0-9]+]], [[REG2]], -4
-; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, [[REG3]] 
+; CHECK-PPC64LE-NEXT:    extsw 4, 4
+; CHECK-PPC64LE-NEXT:    add 4, 5, 4
+; CHECK-PPC64LE-NEXT:    addi 4, 4, -4
+; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, 4
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_base_index_offset:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    extsw [[REG1:[0-9]+]], 4
-; CHECK-PPC64-NEXT:    add [[REG2:[0-9]+]], 5, [[REG1]] 
-; CHECK-PPC64-NEXT:    stw 3, -4([[REG2]])
+; CHECK-PPC64-NEXT:    extsw 4, 4
+; CHECK-PPC64-NEXT:    add 4, 5, 4
+; CHECK-PPC64-NEXT:    stw 3, -4(4)
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %0 = lshr i32 %m, 16
@@ -496,17 +534,17 @@ entry:
 define void @store_i32_by_i8_bswap_complicated(i32 %m, i32 %i, i8* %p) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_complicated:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    extsw [[REG1:[0-9]+]], 4
-; CHECK-PPC64LE-NEXT:    add [[REG2:[0-9]+]], 5, [[REG1]] 
-; CHECK-PPC64LE-NEXT:    addi [[REG3:[0-9]+]], [[REG2]], 3 
-; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, [[REG3]] 
+; CHECK-PPC64LE-NEXT:    extsw 4, 4
+; CHECK-PPC64LE-NEXT:    add 4, 5, 4
+; CHECK-PPC64LE-NEXT:    addi 4, 4, 3
+; CHECK-PPC64LE-NEXT:    stwbrx 3, 0, 4
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_complicated:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    extsw [[REG1:[0-9]+]], 4
-; CHECK-PPC64-NEXT:    add [[REG2:[0-9]+]], 5, [[REG1]] 
-; CHECK-PPC64-NEXT:    stw 3, 3([[REG2]])
+; CHECK-PPC64-NEXT:    extsw 4, 4
+; CHECK-PPC64-NEXT:    add 4, 5, 4
+; CHECK-PPC64-NEXT:    stw 3, 3(4)
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %idx.ext = sext i32 %i to i64
@@ -579,15 +617,17 @@ entry:
 ; p[0] = v;
 ; p[1] = v;
 define void @store_same_value_to_consecutive_mem(i8* %p, i8 zeroext %v) {
-; CHECK-PPC64LE-LABEL: store_same_value_to_consecutive_mem 
-; CHECK-PPC64LE:       # %bb.0: # %entry 
-; CHECK-PPC64LE-NEXT:    stb 4, 0(3) 
-; CHECK-PPC64LE-NEXT:    stb 4, 1(3) 
+; CHECK-PPC64LE-LABEL: store_same_value_to_consecutive_mem:
+; CHECK-PPC64LE:       # %bb.0: # %entry
+; CHECK-PPC64LE-NEXT:    stb 4, 0(3)
+; CHECK-PPC64LE-NEXT:    stb 4, 1(3)
+; CHECK-PPC64LE-NEXT:    blr
 ;
-; CHECK-PPC64-LABEL: store_same_value_to_consecutive_mem 
+; CHECK-PPC64-LABEL: store_same_value_to_consecutive_mem:
 ; CHECK-PPC64:       # %bb.0: # %entry
 ; CHECK-PPC64-NEXT:    stb 4, 0(3)
 ; CHECK-PPC64-NEXT:    stb 4, 1(3)
+; CHECK-PPC64-NEXT:    blr
 entry:
   store i8 %v, i8* %p, align 1
   %arrayidx1 = getelementptr inbounds i8, i8* %p, i64 1

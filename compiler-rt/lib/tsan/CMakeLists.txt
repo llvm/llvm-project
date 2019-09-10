@@ -63,6 +63,7 @@ set(TSAN_CXX_SOURCES
 if(APPLE)
   list(APPEND TSAN_SOURCES
     rtl/tsan_interceptors_mac.cpp
+    rtl/tsan_interceptors_mach_vm.cpp
     rtl/tsan_platform_mac.cpp
     rtl/tsan_platform_posix.cpp
     )

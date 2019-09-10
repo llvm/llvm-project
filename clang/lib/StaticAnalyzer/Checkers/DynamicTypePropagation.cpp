@@ -85,7 +85,7 @@ class DynamicTypePropagation:
 
     PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                      BugReporterContext &BRC,
-                                     BugReport &BR) override;
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     // The tracked symbol.
@@ -911,8 +911,8 @@ void DynamicTypePropagation::reportGenericsBug(
   OS << "' to incompatible type '";
   QualType::print(To, Qualifiers(), OS, C.getLangOpts(), llvm::Twine());
   OS << "'";
-  std::unique_ptr<BugReport> R(
-      new BugReport(*ObjCGenericsBugType, OS.str(), N));
+  auto R = std::make_unique<PathSensitiveBugReport>(*ObjCGenericsBugType,
+                                                    OS.str(), N);
   R->markInteresting(Sym);
   R->addVisitor(std::make_unique<GenericsBugVisitor>(Sym));
   if (ReportedNode)
@@ -921,7 +921,8 @@ void DynamicTypePropagation::reportGenericsBug(
 }
 
 PathDiagnosticPieceRef DynamicTypePropagation::GenericsBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC,
+    PathSensitiveBugReport &BR) {
   ProgramStateRef state = N->getState();
   ProgramStateRef statePrev = N->getFirstPred()->getState();
 

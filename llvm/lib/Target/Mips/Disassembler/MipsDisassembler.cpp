@@ -267,6 +267,13 @@ static DecodeStatus DecodeJumpTargetMM(MCInst &Inst,
                                        uint64_t Address,
                                        const void *Decoder);
 
+// DecodeJumpTargetXMM - Decode microMIPS jump and link exchange target,
+// which is shifted left by 2 bit.
+static DecodeStatus DecodeJumpTargetXMM(MCInst &Inst,
+                                        unsigned Insn,
+                                        uint64_t Address,
+                                        const void *Decoder);
+
 static DecodeStatus DecodeMem(MCInst &Inst,
                               unsigned Insn,
                               uint64_t Address,
@@ -2287,6 +2294,15 @@ static DecodeStatus DecodeJumpTargetMM(MCInst &Inst,
                                        uint64_t Address,
                                        const void *Decoder) {
   unsigned JumpOffset = fieldFromInstruction(Insn, 0, 26) << 1;
+  Inst.addOperand(MCOperand::createImm(JumpOffset));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeJumpTargetXMM(MCInst &Inst,
+                                        unsigned Insn,
+                                        uint64_t Address,
+                                        const void *Decoder) {
+  unsigned JumpOffset = fieldFromInstruction(Insn, 0, 26) << 2;
   Inst.addOperand(MCOperand::createImm(JumpOffset));
   return MCDisassembler::Success;
 }

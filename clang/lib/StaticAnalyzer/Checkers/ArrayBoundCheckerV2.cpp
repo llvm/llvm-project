@@ -256,7 +256,7 @@ void ArrayBoundCheckerV2::reportOOB(
     break;
   }
 
-  auto BR = std::make_unique<BugReport>(*BT, os.str(), errorNode);
+  auto BR = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), errorNode);
   BR->addVisitor(std::move(Visitor));
   checkerContext.emitReport(std::move(BR));
 }

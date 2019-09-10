@@ -47,6 +47,7 @@ CanonicalIncludes::mapHeader(llvm::StringRef Header,
 
   int Components = 1;
 
+  // FIXME: check that this works on Windows and add tests.
   for (auto It = llvm::sys::path::rbegin(Header),
             End = llvm::sys::path::rend(Header);
        It != End && Components <= MaxSuffixComponents; ++It, ++Components) {
@@ -759,12 +760,14 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
   });
   // Check MaxSuffixComponents constant is correct.
   assert(llvm::all_of(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
-    return std::distance(llvm::sys::path::begin(Path),
-                         llvm::sys::path::end(Path)) <= MaxSuffixComponents;
+    return std::distance(
+               llvm::sys::path::begin(Path, llvm::sys::path::Style::posix),
+               llvm::sys::path::end(Path)) <= MaxSuffixComponents;
   }));
   // ... and precise.
   assert(llvm::find_if(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
-           return std::distance(llvm::sys::path::begin(Path),
+           return std::distance(llvm::sys::path::begin(
+                                    Path, llvm::sys::path::Style::posix),
                                 llvm::sys::path::end(Path)) ==
                   MaxSuffixComponents;
          }) != SystemHeaderMap->keys().end());

@@ -4999,24 +4999,6 @@ let Predicates = [HasMVEInt, IsBE] in {
   def : MVE_vector_offset_store_typed<v4f32, MVE_VSTRWU32_post, aligned32_post_store, 2>;
 }
 
-let Predicates = [HasMVEInt] in {
-  // Predicate loads
-  def  : Pat<(v16i1 (load t2addrmode_imm7<2>:$addr)),
-             (v16i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
-  def  : Pat<(v8i1 (load t2addrmode_imm7<2>:$addr)),
-             (v8i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
-  def  : Pat<(v4i1 (load t2addrmode_imm7<2>:$addr)),
-             (v4i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
-
-  // Predicate stores
-  def  : Pat<(store (v4i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
-             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
-  def  : Pat<(store (v8i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
-             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
-  def  : Pat<(store (v16i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
-             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
-}
-
 
 // Widening/Narrowing Loads/Stores
 

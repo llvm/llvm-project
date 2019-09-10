@@ -114,8 +114,8 @@ void CloneChecker::reportClones(
   for (const CloneDetector::CloneGroup &Group : CloneGroups) {
     // We group the clones by printing the first as a warning and all others
     // as a note.
-    auto R = std::make_unique<BugReport>(*BT_Exact, "Duplicate code detected",
-                                          makeLocation(Group.front(), Mgr));
+    auto R = std::make_unique<BasicBugReport>(
+        *BT_Exact, "Duplicate code detected", makeLocation(Group.front(), Mgr));
     R->addRange(Group.front().getSourceRange());
 
     for (unsigned i = 1; i < Group.size(); ++i)
@@ -169,7 +169,7 @@ void CloneChecker::reportSuspiciousClones(
     // which may confuse the user.
     // Think how to perform more accurate suggestions?
 
-    auto R = std::make_unique<BugReport>(
+    auto R = std::make_unique<BasicBugReport>(
         *BT_Suspicious,
         "Potential copy-paste error; did you really mean to use '" +
             Pair.FirstCloneInfo.Variable->getNameAsString() + "' here?",
