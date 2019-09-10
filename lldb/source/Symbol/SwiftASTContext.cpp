@@ -4619,14 +4619,13 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
   size_t before = results.size();
 
   if (name && name[0] && swift_module) {
-    swift::ModuleDecl::AccessPathTy access_path;
     llvm::SmallVector<swift::ValueDecl *, 4> value_decls;
     swift::Identifier identifier(GetIdentifier(llvm::StringRef(name)));
     if (strchr(name, '.'))
-      swift_module->lookupValue(access_path, identifier,
+      swift_module->lookupValue(identifier,
                                 swift::NLKind::QualifiedLookup, value_decls);
     else
-      swift_module->lookupValue(access_path, identifier,
+      swift_module->lookupValue(identifier,
                                 swift::NLKind::UnqualifiedLookup, value_decls);
     if (identifier.isOperator()) {
       swift::OperatorDecl *op_decl =
