@@ -372,8 +372,7 @@ define float @fmuladd_x_1_z_fast(float %x, float %z) {
 define <2 x double> @fmuladd_a_0_b(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_a_0_b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> zeroinitializer, <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
 ;
 entry:
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> zeroinitializer, <2 x double> %b)
@@ -383,8 +382,7 @@ entry:
 define <2 x double> @fmuladd_0_a_b(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @fmuladd_0_a_b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> zeroinitializer, <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
 ;
 entry:
   %res = call nnan nsz <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> %a, <2 x double> %b)
@@ -407,8 +405,7 @@ declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double
 define <2 x double> @fma_a_0_b(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @fma_a_0_b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> [[A:%.*]], <2 x double> zeroinitializer, <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
 ;
 entry:
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> zeroinitializer, <2 x double> %b)
@@ -418,8 +415,7 @@ entry:
 define <2 x double> @fma_0_a_b(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @fma_0_a_b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> [[A:%.*]], <2 x double> zeroinitializer, <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
 ;
 entry:
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> zeroinitializer, <2 x double> %a, <2 x double> %b)
@@ -440,8 +436,7 @@ entry:
 define <2 x double> @fma_sqrt(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @fma_sqrt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SQRT:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[A:%.*]])
-; CHECK-NEXT:    [[RES:%.*]] = call fast <2 x double> @llvm.fma.v2f64(<2 x double> [[SQRT]], <2 x double> [[SQRT]], <2 x double> [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = fadd fast <2 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
 entry:
