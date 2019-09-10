@@ -31,7 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/CleanUp.h"
+#include "llvm/ADT/ScopeExit.h"
 
 #include "llvm/Support/raw_ostream.h"
 #include "swift/Basic/Version.h"
@@ -213,10 +213,10 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   debugger.StartEventHandlerThread();
 
   // Destroy the process and the event handler thread after a fatal error.
-  CleanUp cleanup{[&] {
+  auto cleanup = llvm::make_scope_exit([&]() {
     process_sp->Destroy(/*force_kill=*/false);
     debugger.StopEventHandlerThread();
-  }};
+  });
 
   StateType state = process_sp->GetState();
 
@@ -258,7 +258,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   }
 
   // Disable the cleanup, since we have a valid repl session now.
-  cleanup.disable();
+  cleanup.release();
 
   std::string swift_full_version(swift::version::getSwiftFullVersion());
   printf("Welcome to %s.\nType :help for assistance.\n",
