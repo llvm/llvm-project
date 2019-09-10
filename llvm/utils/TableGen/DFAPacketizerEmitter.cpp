@@ -632,8 +632,8 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
   OS << "};\n";
 
   // Generate the resource transition table.
-  OS << "const std::pair<unsigned, unsigned> " << TargetName
-     << "DFAResourceTransitionTable[] = {  \n";
+  OS << "const unsigned " << TargetName
+     << "DFAResourceTransitionTable[][2] = {  \n";
   int N = 0;
   StateEntry.clear();
   for (const State &S : states) {

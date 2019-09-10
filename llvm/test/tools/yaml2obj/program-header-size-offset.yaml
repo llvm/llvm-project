@@ -11,7 +11,7 @@
 
 # CHECK:    Offset: 0x2000
 # CHECK:    FileSize: 6
-# CHECK:    MemSize: 6
+# CHECK:    MemSize: 4
 
 # CHECK:    Offset: 0x2000
 # CHECK:    FileSize: 4
@@ -28,6 +28,10 @@
 # CHECK:    Offset: 0x3000
 # CHECK:    FileSize: 3
 # CHECK:    MemSize: 2
+
+# CHECK:    Offset: 0x2004
+# CHECK:    FileSize: 4
+# CHECK:    MemSize: 6
 # CHECK: ]
 
 !ELF
@@ -40,14 +44,26 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
     Size: 4
+    ShOffset: 0x1000
     AddressAlign: 0x1000
   - Name: .rodata
     Type: SHT_PROGBITS
     Size: 4
+    ShOffset: 0x2000
     AddressAlign: 0x1000
   - Name: .data
     Type: SHT_PROGBITS
+    ShOffset: 0x2004
     Size: 4
+  - Name: .nobits1
+    Type: SHT_NOBITS
+    ShOffset: 0x2008
+    Size: 1
+  - Name: .nobits2
+    Type: SHT_NOBITS
+    # Intentionally set to 0x2009 though the previous section is SHT_NOBITS.
+    ShOffset: 0x2009
+    Size: 1
 ProgramHeaders:
   # Program header with no sections.
   - Type:     0x6abcdef0 # arbitrary type
@@ -83,3 +99,10 @@ ProgramHeaders:
     MemSize:  2
     Sections:
       - Section: .data
+  # Program header with 2 SHT_NOBITS sections.
+  - Type:     0x6abcdef0
+    Offset:   0x2004
+    Sections:
+      - Section: .data
+      - Section: .nobits1
+      - Section: .nobits2

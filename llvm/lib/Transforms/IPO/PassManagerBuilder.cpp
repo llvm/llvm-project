@@ -247,6 +247,18 @@ void PassManagerBuilder::addInstructionCombiningPass(
   PM.add(createInstructionCombiningPass(ExpensiveCombines));
 }
 
+void PassManagerBuilder::addMemcmpPasses(legacy::PassManagerBase &PM) const {
+  if (OptLevel > 0) {
+    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
+    // loads and compares. ExpandMemCmpPass then tries to expand those calls
+    // into optimally-sized loads and compares. The transforms are enabled by a
+    // target transform info hook.
+    PM.add(createMergeICmpsLegacyPass());
+    PM.add(createExpandMemCmpPass());
+    PM.add(createEarlyCSEPass());
+  }
+}
+
 void PassManagerBuilder::populateFunctionPassManager(
     legacy::FunctionPassManager &FPM) {
   addExtensionsToPM(EP_EarlyAsPossible, FPM);
@@ -410,6 +422,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 
   addExtensionsToPM(EP_ScalarOptimizerLate, MPM);
 
+  addMemcmpPasses(MPM);                       // Merge/Expand comparisons.
   if (RerollLoops)
     MPM.add(createLoopRerollPass());
 
@@ -912,6 +925,7 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(NewGVN ? createNewGVNPass()
                 : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies.
   PM.add(createMemCpyOptPass());            // Remove dead memcpys.
+  addMemcmpPasses(PM);                      // Merge/Expand comparisons.
 
   // Nuke dead stores.
   PM.add(createDeadStoreEliminationPass());

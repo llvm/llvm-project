@@ -1172,7 +1172,7 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-static bool hasDefinedInitializer(const GlobalValue *GV) {
+bool AMDGPUTargetLowering::hasDefinedInitializer(const GlobalValue *GV) {
   const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
   if (!GVar || !GVar->hasInitializer())
     return false;

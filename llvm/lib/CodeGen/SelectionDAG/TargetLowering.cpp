@@ -36,7 +36,7 @@ using namespace llvm;
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLowering::TargetLowering(const TargetMachine &tm)
-  : TargetLoweringBase(tm) {}
+    : TargetLoweringBase(tm) {}
 
 const char *TargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;

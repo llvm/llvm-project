@@ -130,6 +130,42 @@ vmladavx.s16 r0, q0, q7
 # CHECK: vmladavax.s16 lr, q0, q7  @ encoding: [0xf0,0xee,0x2e,0xfe]
 vmladavax.s16 lr, q0, q7
 
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmladavax.u16 r0, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmladavx.u16 r0, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmladavax.u32 r0, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmladavx.u32 r0, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmladavax.u8 r0, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmladavx.u8 r0, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmlaldavax.u16 r2, r3, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmlaldavx.u16 r2, r3, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmlaldavax.u32 r2, r3, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vmlaldavx.u32 r2, r3, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vrmlaldavhax.u32 r2, r3, q4, q5
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+vrmlaldavhx.u32 r2, r3, q4, q5
+
 # CHECK: vmlav.s8 lr, q3, q0  @ encoding: [0xf6,0xee,0x00,0xef]
 vmladav.s8 lr, q3, q0
 

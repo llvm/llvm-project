@@ -450,14 +450,6 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
-  if (!Info.OrigRet.Ty->isVoidTy()) {
-    // TODO: lowerCall will insert COPYs to handle the call's return value.
-    // This needs some refactoring to avoid this with tail call returns. For
-    // now, just don't handle that case.
-    LLVM_DEBUG(dbgs() << "... Cannot handle non-void return types yet.\n");
-    return false;
-  }
-
   if (!mayTailCallThisCC(CalleeCC)) {
     LLVM_DEBUG(dbgs() << "... Calling convention cannot be tail called.\n");
     return false;
@@ -649,6 +641,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(), Info.Callee,
         0));
 
+  // If we're tail calling, then we're the return from the block. So, we don't
+  // want to copy anything.
+  if (IsSibCall)
+    return true;
+
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an
   // implicit-define of the call instruction.
@@ -668,13 +665,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildCopy(Info.SwiftErrorVReg, Register(AArch64::X21));
   }
 
-  if (!IsSibCall) {
-    // If we aren't sibcalling, we need to move the stack.
-    CallSeqStart.addImm(Handler.StackSize).addImm(0);
-    MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
-        .addImm(Handler.StackSize)
-        .addImm(0);
-  }
+  CallSeqStart.addImm(Handler.StackSize).addImm(0);
+  MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
+      .addImm(Handler.StackSize)
+      .addImm(0);
 
   return true;
 }

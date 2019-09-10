@@ -1898,20 +1898,19 @@ SDValue SelectionDAG::expandVAArg(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   SDValue Tmp1 = Node->getOperand(0);
   SDValue Tmp2 = Node->getOperand(1);
-  unsigned Align = Node->getConstantOperandVal(3);
+  const llvm::MaybeAlign MA(Node->getConstantOperandVal(3));
 
   SDValue VAListLoad = getLoad(TLI.getPointerTy(getDataLayout()), dl, Tmp1,
                                Tmp2, MachinePointerInfo(V));
   SDValue VAList = VAListLoad;
 
-  if (Align > TLI.getMinStackArgumentAlignment()) {
-    assert(((Align & (Align-1)) == 0) && "Expected Align to be a power of 2");
-
+  if (MA && *MA > TLI.getMinStackArgumentAlignment()) {
     VAList = getNode(ISD::ADD, dl, VAList.getValueType(), VAList,
-                     getConstant(Align - 1, dl, VAList.getValueType()));
+                     getConstant(MA->value() - 1, dl, VAList.getValueType()));
 
-    VAList = getNode(ISD::AND, dl, VAList.getValueType(), VAList,
-                     getConstant(-(int64_t)Align, dl, VAList.getValueType()));
+    VAList =
+        getNode(ISD::AND, dl, VAList.getValueType(), VAList,
+                getConstant(-(int64_t)MA->value(), dl, VAList.getValueType()));
   }
 
   // Increment the pointer, VAList, to the next vaarg
@@ -5154,22 +5153,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N2C && N2C->isNullValue())
       return N1;
     break;
-  case ISD::FP_ROUND_INREG: {
-    EVT EVT = cast<VTSDNode>(N2)->getVT();
-    assert(VT == N1.getValueType() && "Not an inreg round!");
-    assert(VT.isFloatingPoint() && EVT.isFloatingPoint() &&
-           "Cannot FP_ROUND_INREG integer types");
-    assert(EVT.isVector() == VT.isVector() &&
-           "FP_ROUND_INREG type should be vector iff the operand "
-           "type is vector!");
-    assert((!EVT.isVector() ||
-            EVT.getVectorNumElements() == VT.getVectorNumElements()) &&
-           "Vector element counts must match in FP_ROUND_INREG");
-    assert(EVT.bitsLE(VT) && "Not rounding down!");
-    (void)EVT;
-    if (cast<VTSDNode>(N2)->getVT() == VT) return N1;  // Not actually rounding.
-    break;
-  }
   case ISD::FP_ROUND:
     assert(VT.isFloatingPoint() &&
            N1.getValueType().isFloatingPoint() &&
@@ -5380,7 +5363,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
-      case ISD::FP_ROUND_INREG:
       case ISD::SIGN_EXTEND_INREG:
       case ISD::SUB:
         return getUNDEF(VT);     // fold op(undef, arg2) -> undef
@@ -9157,8 +9139,7 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
                                getShiftAmountOperand(Operands[0].getValueType(),
                                                      Operands[1])));
       break;
-    case ISD::SIGN_EXTEND_INREG:
-    case ISD::FP_ROUND_INREG: {
+    case ISD::SIGN_EXTEND_INREG: {
       EVT ExtVT = cast<VTSDNode>(Operands[1])->getVT().getVectorElementType();
       Scalars.push_back(getNode(N->getOpcode(), dl, EltVT,
                                 Operands[0],

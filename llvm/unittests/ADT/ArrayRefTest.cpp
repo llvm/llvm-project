@@ -250,6 +250,16 @@ TEST(ArrayRefTest, OwningArrayRef) {
   EXPECT_EQ(A.data(), nullptr);
 }
 
+TEST(ArrayRefTest, makeArrayRefFromStdArray) {
+  std::array<int, 5> A1{42, -5, 0, 1000000, -1000000};
+  ArrayRef<int> A2 = makeArrayRef(A1);
+
+  EXPECT_EQ(A1.size(), A2.size());
+  for (std::size_t i = 0; i < A1.size(); ++i) {
+    EXPECT_EQ(A1[i], A2[i]);
+  }
+}
+
 static_assert(is_trivially_copyable<ArrayRef<int>>::value,
               "trivially copyable");
 

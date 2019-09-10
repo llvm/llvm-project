@@ -96,6 +96,7 @@ private:
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_BRCOND(MachineInstr &I) const;
   bool selectG_FRAME_INDEX(MachineInstr &I) const;
+  bool selectG_PTR_MASK(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
@@ -109,9 +110,16 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectVOP3Mods0Clamp0OMod(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectVOP3OpSelMods0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3OpSelMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;

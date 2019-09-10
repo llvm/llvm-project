@@ -912,6 +912,12 @@ void IfConverter::AnalyzeBranches(BBInfo &BBI) {
   BBI.BrCond.clear();
   BBI.IsBrAnalyzable =
       !TII->analyzeBranch(*BBI.BB, BBI.TrueBB, BBI.FalseBB, BBI.BrCond);
+  if (!BBI.IsBrAnalyzable) {
+    BBI.TrueBB = nullptr;
+    BBI.FalseBB = nullptr;
+    BBI.BrCond.clear();
+  }
+
   SmallVector<MachineOperand, 4> RevCond(BBI.BrCond.begin(), BBI.BrCond.end());
   BBI.IsBrReversible = (RevCond.size() == 0) ||
       !TII->reverseBranchCondition(RevCond);

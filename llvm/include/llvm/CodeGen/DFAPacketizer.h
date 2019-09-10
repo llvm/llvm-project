@@ -82,14 +82,14 @@ private:
   int CurrentState = 0;
   const DFAStateInput (*DFAStateInputTable)[2];
   const unsigned *DFAStateEntryTable;
-  const std::pair<unsigned, unsigned> *DFAResourceTransitionTable;
+  const unsigned (*DFAResourceTransitionTable)[2];
   const unsigned *DFAResourceTransitionEntryTable;
 
   // CachedTable is a map from <FromState, Input> to ToState.
   DenseMap<UnsignPair, unsigned> CachedTable;
   // CachedResourceTransitions is a map from <FromState, Input> to a list of
   // resource transitions.
-  DenseMap<UnsignPair, ArrayRef<std::pair<unsigned, unsigned>>>
+  DenseMap<UnsignPair, ArrayRef<unsigned[2]>>
       CachedResourceTransitions;
 
   // Read the DFA transition table and update CachedTable.
@@ -106,7 +106,7 @@ private:
 public:
   DFAPacketizer(const InstrItineraryData *I, const DFAStateInput (*SIT)[2],
                 const unsigned *SET,
-                const std::pair<unsigned, unsigned> *RTT = nullptr,
+                const unsigned (*RTT)[2] = nullptr,
                 const unsigned *RTET = nullptr);
 
   // Reset the current state to make all resources available.

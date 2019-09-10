@@ -38,6 +38,22 @@ define double @d(double %val) nounwind {
   ret double %res
 }
 
+define double @minsize(double %x, double %y) minsize {
+; CHECK-LABEL: minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsd %xmm0, %xmm0
+; CHECK-NEXT:    mulsd %xmm1, %xmm1
+; CHECK-NEXT:    addsd %xmm0, %xmm1
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    sqrtsd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %t3 = fmul fast double %x, %x
+  %t4 = fmul fast double %y, %y
+  %t5 = fadd fast double %t3, %t4
+  %t6 = tail call fast double @llvm.sqrt.f64(double %t5)
+  ret double %t6
+}
+
 declare float @sqrtf(float)
 declare double @sqrt(double)
-
+declare double @llvm.sqrt.f64(double)
