@@ -101,7 +101,7 @@ Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
       Expansion(SrcMgr, CharSourceRange(CachedLocation->getSourceRange(), true),
                 PrettyTypeName);
 
-  return Tweak::Effect::applyEdit(tooling::Replacements(Expansion));
+  return Effect::mainFileEdit(SrcMgr, tooling::Replacements(Expansion));
 }
 
 llvm::Error ExpandAutoType::createErrorMessage(const std::string& Message,

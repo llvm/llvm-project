@@ -974,7 +974,7 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
   CanonicalIncludes Includes;
   auto Language = LangOptions();
   Language.CPlusPlus = true;
-  addSystemHeadersMapping(&Includes, Language);
+  Includes.addSystemHeadersMapping(Language);
   CollectorOpts.Includes = &Includes;
   runSymbolCollector("namespace std { class string {}; }", /*Main=*/"");
   EXPECT_THAT(Symbols,

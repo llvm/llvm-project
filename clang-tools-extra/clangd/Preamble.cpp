@@ -78,7 +78,7 @@ public:
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
-    addSystemHeadersMapping(&CanonIncludes, CI.getLangOpts());
+    CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     SourceMgr = &CI.getSourceManager();
   }
 

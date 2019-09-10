@@ -12,6 +12,7 @@
 #include "Format.h"
 #include "FormattedString.h"
 #include "Headers.h"
+#include "Logger.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "Protocol.h"
@@ -388,32 +389,29 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<Tweak::Effect> CB) {
-  auto Action = [File = File.str(), Sel, TweakID = TweakID.str(),
-                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
-    if (!InpAST)
-      return CB(InpAST.takeError());
-    auto Selection = tweakSelection(Sel, *InpAST);
-    if (!Selection)
-      return CB(Selection.takeError());
-    auto A = prepareTweak(TweakID, *Selection);
-    if (!A)
-      return CB(A.takeError());
-    auto Effect = (*A)->apply(*Selection);
-    if (!Effect)
-      return CB(Effect.takeError());
-    if (Effect->ApplyEdit) {
-      // FIXME: this function has I/O operations (find .clang-format file),
-      // figure out a way to cache the format style.
-      auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                         InpAST->Inputs.FS.get());
-      if (auto Formatted = cleanupAndFormat(InpAST->Inputs.Contents,
-                                            *Effect->ApplyEdit, Style))
-        Effect->ApplyEdit = std::move(*Formatted);
-      else
-        elog("Failed to format replacements: {0}", Formatted.takeError());
-    }
-    return CB(std::move(*Effect));
-  };
+  auto Action =
+      [File = File.str(), Sel, TweakID = TweakID.str(), CB = std::move(CB),
+       FS = FSProvider.getFileSystem()](Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        auto Selection = tweakSelection(Sel, *InpAST);
+        if (!Selection)
+          return CB(Selection.takeError());
+        auto A = prepareTweak(TweakID, *Selection);
+        if (!A)
+          return CB(A.takeError());
+        auto Effect = (*A)->apply(*Selection);
+        if (!Effect)
+          return CB(Effect.takeError());
+        for (auto &It : Effect->ApplyEdits) {
+          Edit &E = It.second;
+          format::FormatStyle Style =
+              getFormatStyleForFile(File, E.InitialCode, FS.get());
+          if (llvm::Error Err = reformatEdit(E, Style))
+            elog("Failed to format {0}: {1}", It.first(), std::move(Err));
+        }
+        return CB(std::move(*Effect));
+      };
   WorkScheduler.runWithAST("ApplyTweak", File, std::move(Action));
 }
 

@@ -1182,7 +1182,10 @@ void forRangeSequences() {
 
 // If a variable is declared in an if, while or switch statement, the init
 // statement (for if and switch) is sequenced before the variable declaration,
-// which in turn is sequenced before the evaluation of the condition.
+// which in turn is sequenced before the evaluation of the condition. We place
+// all tests inside a for loop to ensure that the checker understands the
+// sequencing. If it didn't, then the loop would trigger the "moved twice"
+// logic.
 void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   for (int i = 0; i < 10; ++i) {
     A a1;
@@ -1192,12 +1195,41 @@ void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   }
   for (int i = 0; i < 10; ++i) {
     A a1;
+    if (A a2 = std::move(a1); a2) {
+      std::move(a2);
+    }
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
     if (A a2 = std::move(a1); A a3 = std::move(a2)) {
       std::move(a3);
     }
   }
+  for (int i = 0; i < 10; ++i) {
+    // init followed by condition with move, but without variable declaration.
+    if (A a1; A(std::move(a1)).getInt() > 0) {}
+  }
+  for (int i = 0; i < 10; ++i) {
+    if (A a1; A(std::move(a1)).getInt() > a1.getInt()) {}
+    // CHECK-NOTES: [[@LINE-1]]:43: warning: 'a1' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:15: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:43: note: the use and move are unsequenced
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
+    if (A a2 = std::move(a1); A(a1) > 0) {}
+    // CHECK-NOTES: [[@LINE-1]]:33: warning: 'a1' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:16: note: move occurred here
+  }
   while (A a = A()) {
     std::move(a);
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
+    switch (A a2 = std::move(a1); a2) {
+      case true:
+        std::move(a2);
+    }
   }
   for (int i = 0; i < 10; ++i) {
     A a1;
