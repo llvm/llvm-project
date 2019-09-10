@@ -84,6 +84,7 @@ void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
 /// Returns true, if an OpenMP runtime has been added.
 bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
                       const llvm::opt::ArgList &Args,
+                      bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);

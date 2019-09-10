@@ -282,8 +282,7 @@ public:
 
   /// Create a location corresponding to the next valid ExplodedNode as end
   /// of path location.
-  static PathDiagnosticLocation createEndOfPath(const ExplodedNode* N,
-                                                const SourceManager &SM);
+  static PathDiagnosticLocation createEndOfPath(const ExplodedNode* N);
 
   /// Convert the given location into a single kind location.
   static PathDiagnosticLocation createSingleLocation(

@@ -187,7 +187,7 @@ void UninitializedObjectChecker::checkEndFunction(
   if (Opts.ShouldConvertNotesToWarnings) {
     for (const auto &Pair : UninitFields) {
 
-      auto Report = std::make_unique<BugReport>(
+      auto Report = std::make_unique<PathSensitiveBugReport>(
           *BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
           Node->getLocationContext()->getDecl());
       Context.emitReport(std::move(Report));
@@ -201,7 +201,7 @@ void UninitializedObjectChecker::checkEndFunction(
             << (UninitFields.size() == 1 ? "" : "s")
             << " at the end of the constructor call";
 
-  auto Report = std::make_unique<BugReport>(
+  auto Report = std::make_unique<PathSensitiveBugReport>(
       *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
       Node->getLocationContext()->getDecl());
 

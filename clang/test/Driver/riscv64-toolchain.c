@@ -68,7 +68,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv64-unknown-linux-gnu \
+// RUN:   -target riscv64-unknown-linux-gnu -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-LINUX-MULTI-LP64 %s
@@ -84,7 +84,7 @@
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64"
 
 // RUN: %clang %s -### -no-canonical-prefixes -fuse-ld=ld \
-// RUN:   -target riscv64-unknown-linux-gnu -march=rv64imafd -mabi=lp64d \
+// RUN:   -target riscv64-unknown-linux-gnu -march=rv64imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-LINUX-MULTI-LP64D %s

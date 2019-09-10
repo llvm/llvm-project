@@ -211,7 +211,7 @@ void NilArgChecker::generateBugReport(ExplodedNode *N,
   if (!BT)
     BT.reset(new APIMisuse(this, "nil argument"));
 
-  auto R = std::make_unique<BugReport>(*BT, Msg, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
   R->addRange(Range);
   bugreporter::trackExpressionValue(N, E, *R);
   C.emitReport(std::move(R));
@@ -520,7 +520,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
     if (!BT)
       BT.reset(new APIMisuse(this, "Bad use of CFNumber APIs"));
 
-    auto report = std::make_unique<BugReport>(*BT, os.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
     report->addRange(CE->getArg(2)->getSourceRange());
     C.emitReport(std::move(report));
   }
@@ -575,7 +575,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
     OS << "Null pointer argument in call to "
        << cast<FunctionDecl>(Call.getDecl())->getName();
 
-    auto report = std::make_unique<BugReport>(BT, OS.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
     report->addRange(Call.getArgSourceRange(0));
     bugreporter::trackExpressionValue(N, Call.getArgExpr(0), *report);
     C.emitReport(std::move(report));
@@ -635,7 +635,7 @@ void ClassReleaseChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
           "of class '" << Class->getName()
        << "' and not the class directly";
 
-    auto report = std::make_unique<BugReport>(*BT, os.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
     report->addRange(msg.getSourceRange());
     C.emitReport(std::move(report));
   }
@@ -788,7 +788,8 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     ArgTy.print(os, C.getLangOpts());
     os << "'";
 
-    auto R = std::make_unique<BugReport>(*BT, os.str(), errorNode.getValue());
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(),
+                                                      errorNode.getValue());
     R->addRange(msg.getArgSourceRange(I));
     C.emitReport(std::move(R));
   }
