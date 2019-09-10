@@ -576,13 +576,6 @@ namespace ISD {
     ///  3 Round to -inf
     FLT_ROUNDS_,
 
-    /// X = FP_ROUND_INREG(Y, VT) - This operator takes an FP register, and
-    /// rounds it to a floating point value.  It then promotes it and returns it
-    /// in a register of the same size.  This operation effectively just
-    /// discards excess precision.  The type to round down to is specified by
-    /// the VT operand, a VTSDNode.
-    FP_ROUND_INREG,
-
     /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
     FP_EXTEND,
 

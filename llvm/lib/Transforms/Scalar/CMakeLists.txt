@@ -10,6 +10,7 @@ add_llvm_library(LLVMScalarOpts
   DeadStoreElimination.cpp
   DivRemPairs.cpp
   EarlyCSE.cpp
+  ExpandMemCmp.cpp
   FlattenCFGPass.cpp
   Float2Int.cpp
   GuardWidening.cpp

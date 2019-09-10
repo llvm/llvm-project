@@ -13,13 +13,15 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
@@ -46,7 +48,6 @@ static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
 
 namespace {
 
-
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
 class MemCmpExpansion {
@@ -65,18 +66,18 @@ class MemCmpExpansion {
   uint64_t NumLoadsNonOneByte;
   const uint64_t NumLoadsPerBlockForZeroCmp;
   std::vector<BasicBlock *> LoadCmpBlocks;
-  BasicBlock *EndBlock;
+  BasicBlock *EndBlock = nullptr;
   PHINode *PhiRes;
   const bool IsUsedForZeroCmp;
   const DataLayout &DL;
   IRBuilder<> Builder;
+  DomTreeUpdater DTU;
   // Represents the decomposition in blocks of the expansion. For example,
   // comparing 33 bytes on X86+sse can be done with 2x16-byte loads and
   // 1x1-byte load, which would be represented as [{16, 0}, {16, 16}, {32, 1}.
   struct LoadEntry {
     LoadEntry(unsigned LoadSize, uint64_t Offset)
-        : LoadSize(LoadSize), Offset(Offset) {
-    }
+        : LoadSize(LoadSize), Offset(Offset) {}
 
     // The size of the load for this block, in bytes.
     unsigned LoadSize;
@@ -113,7 +114,8 @@ class MemCmpExpansion {
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size,
                   const TargetTransformInfo::MemCmpExpansionOptions &Options,
-                  const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout);
+                  const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
+                  DominatorTree *DT);
 
   unsigned getNumBlocks();
   uint64_t getNumLoads() const { return LoadSequence.size(); }
@@ -202,10 +204,13 @@ MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
 MemCmpExpansion::MemCmpExpansion(
     CallInst *const CI, uint64_t Size,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
-    const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout)
+    const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
+    DominatorTree *DT)
     : CI(CI), Size(Size), MaxLoadSize(0), NumLoadsNonOneByte(0),
       NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
-      IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), Builder(CI) {
+      IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), Builder(CI),
+      DTU(DT, /*PostDominator*/ nullptr,
+          DomTreeUpdater::UpdateStrategy::Eager) {
   assert(Size > 0 && "zero blocks");
   // Scale the max size down if the target can load more bytes than we need.
   llvm::ArrayRef<unsigned> LoadSizes(Options.LoadSizes);
@@ -245,6 +250,7 @@ unsigned MemCmpExpansion::getNumBlocks() {
 }
 
 void MemCmpExpansion::createLoadCmpBlocks() {
+  assert(ResBlock.BB && "ResBlock must be created before LoadCmpBlocks");
   for (unsigned i = 0; i < getNumBlocks(); i++) {
     BasicBlock *BB = BasicBlock::Create(CI->getContext(), "loadbb",
                                         EndBlock->getParent(), EndBlock);
@@ -253,6 +259,7 @@ void MemCmpExpansion::createLoadCmpBlocks() {
 }
 
 void MemCmpExpansion::createResultBlock() {
+  assert(EndBlock && "EndBlock must be created before ResultBlock");
   ResBlock.BB = BasicBlock::Create(CI->getContext(), "res_block",
                                    EndBlock->getParent(), EndBlock);
 }
@@ -277,7 +284,8 @@ Value *MemCmpExpansion::getPtrToElementAtOffset(Value *Source,
 // final phi node for selecting the memcmp result.
 void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
                                                unsigned OffsetBytes) {
-  Builder.SetInsertPoint(LoadCmpBlocks[BlockIndex]);
+  BasicBlock *const BB = LoadCmpBlocks[BlockIndex];
+  Builder.SetInsertPoint(BB);
   Type *LoadSizeType = Type::getInt8Ty(CI->getContext());
   Value *Source1 =
       getPtrToElementAtOffset(CI->getArgOperand(0), LoadSizeType, OffsetBytes);
@@ -298,13 +306,16 @@ void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
     // next LoadCmpBlock,
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, Diff,
                                     ConstantInt::get(Diff->getType(), 0));
-    BranchInst *CmpBr =
-        BranchInst::Create(EndBlock, LoadCmpBlocks[BlockIndex + 1], Cmp);
+    BasicBlock *const NextBB = LoadCmpBlocks[BlockIndex + 1];
+    BranchInst *CmpBr = BranchInst::Create(EndBlock, NextBB, Cmp);
     Builder.Insert(CmpBr);
+    DTU.applyUpdates({{DominatorTree::Insert, BB, EndBlock},
+                      {DominatorTree::Insert, BB, NextBB}});
   } else {
     // The last block has an unconditional branch to EndBlock.
     BranchInst *CmpBr = BranchInst::Create(EndBlock);
     Builder.Insert(CmpBr);
+    DTU.applyUpdates({{DominatorTree::Insert, BB, EndBlock}});
   }
 }
 
@@ -412,14 +423,17 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // continue to next LoadCmpBlock or EndBlock.
   BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
   Builder.Insert(CmpBr);
+  BasicBlock *const BB = LoadCmpBlocks[BlockIndex];
 
   // Add a phi edge for the last LoadCmpBlock to Endblock with a value of 0
   // since early exit to ResultBlock was not taken (no difference was found in
   // any of the bytes).
   if (BlockIndex == LoadCmpBlocks.size() - 1) {
     Value *Zero = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 0);
-    PhiRes->addIncoming(Zero, LoadCmpBlocks[BlockIndex]);
+    PhiRes->addIncoming(Zero, BB);
   }
+  DTU.applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
+                    {DominatorTree::Insert, BB, NextBB}});
 }
 
 // This function creates the IR intructions for loading and comparing using the
@@ -445,7 +459,8 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   Type *MaxLoadType = IntegerType::get(CI->getContext(), MaxLoadSize * 8);
   assert(CurLoadEntry.LoadSize <= MaxLoadSize && "Unexpected load type");
 
-  Builder.SetInsertPoint(LoadCmpBlocks[BlockIndex]);
+  BasicBlock *const BB = LoadCmpBlocks[BlockIndex];
+  Builder.SetInsertPoint(BB);
 
   Value *Source1 = getPtrToElementAtOffset(CI->getArgOperand(0), LoadSizeType,
                                            CurLoadEntry.Offset);
@@ -489,8 +504,10 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // any of the bytes).
   if (BlockIndex == LoadCmpBlocks.size() - 1) {
     Value *Zero = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 0);
-    PhiRes->addIncoming(Zero, LoadCmpBlocks[BlockIndex]);
+    PhiRes->addIncoming(Zero, BB);
   }
+  DTU.applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
+                    {DominatorTree::Insert, BB, NextBB}});
 }
 
 // This function populates the ResultBlock with a sequence to calculate the
@@ -506,6 +523,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
     PhiRes->addIncoming(Res, ResBlock.BB);
     BranchInst *NewBr = BranchInst::Create(EndBlock);
     Builder.Insert(NewBr);
+    DTU.applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
     return;
   }
   BasicBlock::iterator InsertPt = ResBlock.BB->getFirstInsertionPt();
@@ -521,6 +539,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
   BranchInst *NewBr = BranchInst::Create(EndBlock);
   Builder.Insert(NewBr);
   PhiRes->addIncoming(Res, ResBlock.BB);
+  DTU.applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
 }
 
 void MemCmpExpansion::setupResultBlockPHINodes() {
@@ -612,6 +631,7 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
   if (getNumBlocks() != 1) {
     BasicBlock *StartBlock = CI->getParent();
     EndBlock = StartBlock->splitBasicBlock(CI, "endblock");
+    DTU.applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock}});
     setupEndBlockPHINodes();
     createResultBlock();
 
@@ -619,14 +639,18 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
     // calculate which source was larger. The calculation requires the
     // two loaded source values of each load compare block.
     // These will be saved in the phi nodes created by setupResultBlockPHINodes.
-    if (!IsUsedForZeroCmp) setupResultBlockPHINodes();
+    if (!IsUsedForZeroCmp)
+      setupResultBlockPHINodes();
 
     // Create the number of required load compare basic blocks.
     createLoadCmpBlocks();
 
     // Update the terminator added by splitBasicBlock to branch to the first
     // LoadCmpBlock.
-    StartBlock->getTerminator()->setSuccessor(0, LoadCmpBlocks[0]);
+    BasicBlock *const FirstLoadBB = LoadCmpBlocks[0];
+    StartBlock->getTerminator()->setSuccessor(0, FirstLoadBB);
+    DTU.applyUpdates({{DominatorTree::Delete, StartBlock, EndBlock},
+                      {DominatorTree::Insert, StartBlock, FirstLoadBB}});
   }
 
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
@@ -720,7 +744,7 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 ///  %phi.res = phi i32 [ %48, %loadbb3 ], [ %11, %res_block ]
 ///  ret i32 %phi.res
 static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
-                         const TargetLowering *TLI, const DataLayout *DL) {
+                         const DataLayout *DL, DominatorTree *DT) {
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -743,7 +767,8 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   const bool IsUsedForZeroCmp = isOnlyUsedInZeroEqualityComparison(CI);
   auto Options = TTI->enableMemCmpExpansion(CI->getFunction()->hasOptSize(),
                                             IsUsedForZeroCmp);
-  if (!Options) return false;
+  if (!Options)
+    return false;
 
   if (MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences())
     Options.NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock;
@@ -755,7 +780,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   if (!CI->getFunction()->hasOptSize() && MaxLoadsPerMemcmp.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmp;
 
-  MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL);
+  MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DT);
 
   // Don't expand if this will require more loads than desired by the target.
   if (Expansion.getNumLoads() == 0) {
@@ -774,8 +799,6 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   return true;
 }
 
-
-
 class ExpandMemCmpPass : public FunctionPass {
 public:
   static char ID;
@@ -785,20 +808,17 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipFunction(F)) return false;
-
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC) {
+    if (skipFunction(F))
       return false;
-    }
-    const TargetLowering* TL =
-        TPC->getTM<TargetMachine>().getSubtargetImpl(F)->getTargetLowering();
 
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto PA = runImpl(F, TLI, TTI, TL);
+    // ExpandMemCmp does not need the DominatorTree, but we update it if it's
+    // already available.
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto PA = runImpl(F, TLI, TTI, DTWP ? &DTWP->getDomTree() : nullptr);
     return !PA.areAllPreserved();
   }
 
@@ -806,23 +826,24 @@ private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addUsedIfAvailable<DominatorTreeWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
   PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
-                            const TargetTransformInfo *TTI,
-                            const TargetLowering* TL);
+                            const TargetTransformInfo *TTI, DominatorTree *DT);
   // Returns true if a change was made.
   bool runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
-                  const TargetTransformInfo *TTI, const TargetLowering* TL,
-                  const DataLayout& DL);
+                  const TargetTransformInfo *TTI, const DataLayout &DL,
+                  DominatorTree *DT);
 };
 
-bool ExpandMemCmpPass::runOnBlock(
-    BasicBlock &BB, const TargetLibraryInfo *TLI,
-    const TargetTransformInfo *TTI, const TargetLowering* TL,
-    const DataLayout& DL) {
-  for (Instruction& I : BB) {
+bool ExpandMemCmpPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
+                                  const TargetTransformInfo *TTI,
+                                  const DataLayout &DL, DominatorTree *DT) {
+  for (Instruction &I : BB) {
     CallInst *CI = dyn_cast<CallInst>(&I);
     if (!CI) {
       continue;
@@ -830,21 +851,21 @@ bool ExpandMemCmpPass::runOnBlock(
     LibFunc Func;
     if (TLI->getLibFunc(ImmutableCallSite(CI), Func) &&
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
-        expandMemCmp(CI, TTI, TL, &DL)) {
+        expandMemCmp(CI, TTI, &DL, DT)) {
       return true;
     }
   }
   return false;
 }
 
-
-PreservedAnalyses ExpandMemCmpPass::runImpl(
-    Function &F, const TargetLibraryInfo *TLI, const TargetTransformInfo *TTI,
-    const TargetLowering* TL) {
-  const DataLayout& DL = F.getParent()->getDataLayout();
+PreservedAnalyses ExpandMemCmpPass::runImpl(Function &F,
+                                            const TargetLibraryInfo *TLI,
+                                            const TargetTransformInfo *TTI,
+                                            DominatorTree *DT) {
+  const DataLayout &DL = F.getParent()->getDataLayout();
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
-    if (runOnBlock(*BBIt, TLI, TTI, TL, DL)) {
+    if (runOnBlock(*BBIt, TLI, TTI, DL, DT)) {
       MadeChanges = true;
       // If changes were made, restart the function from the beginning, since
       // the structure of the function was changed.
@@ -853,7 +874,12 @@ PreservedAnalyses ExpandMemCmpPass::runImpl(
       ++BBIt;
     }
   }
-  return MadeChanges ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (!MadeChanges)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<GlobalsAA>();
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
 
 } // namespace
@@ -866,6 +892,4 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ExpandMemCmpPass, "expandmemcmp",
                     "Expand memcmp() to load/stores", false, false)
 
-FunctionPass *llvm::createExpandMemCmpPass() {
-  return new ExpandMemCmpPass();
-}
+Pass *llvm::createExpandMemCmpPass() { return new ExpandMemCmpPass(); }

@@ -4222,3 +4222,229 @@ bb1:                                              ; preds = %bb1, %bb
 bb10:                                             ; preds = %bb1
   ret void
 }
+
+define void @bcast_unfold_cmp_v4f32(float* %arg) {
+; CHECK-LABEL: bcast_unfold_cmp_v4f32:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB120_1: # %bb1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %xmm2
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm2, %k1
+; CHECK-NEXT:    vblendmps %xmm2, %xmm1, %xmm2 {%k1}
+; CHECK-NEXT:    vmovups %xmm2, 4096(%rdi,%rax)
+; CHECK-NEXT:    addq $16, %rax
+; CHECK-NEXT:    jne .LBB120_1
+; CHECK-NEXT:  # %bb.2: # %bb10
+; CHECK-NEXT:    retq
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb1 ]
+  %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
+  %tmp3 = bitcast float* %tmp2 to <4 x float>*
+  %tmp4 = load <4 x float>, <4 x float>* %tmp3, align 4
+  %tmp5 = fcmp olt <4 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp6 = select <4 x i1> %tmp5, <4 x float> %tmp4, <4 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+  %tmp7 = bitcast float* %tmp2 to <4 x float>*
+  store <4 x float> %tmp6, <4 x float>* %tmp7, align 4
+  %tmp8 = add i64 %tmp, 4
+  %tmp9 = icmp eq i64 %tmp8, 1024
+  br i1 %tmp9, label %bb10, label %bb1
+
+bb10:                                             ; preds = %bb1
+  ret void
+}
+
+define void @bcast_unfold_cmp_v8f32(float* %arg) {
+; CHECK-LABEL: bcast_unfold_cmp_v8f32:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB121_1: # %bb1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %ymm2
+; CHECK-NEXT:    vcmpltps %ymm0, %ymm2, %k1
+; CHECK-NEXT:    vblendmps %ymm2, %ymm1, %ymm2 {%k1}
+; CHECK-NEXT:    vmovups %ymm2, 4096(%rdi,%rax)
+; CHECK-NEXT:    addq $32, %rax
+; CHECK-NEXT:    jne .LBB121_1
+; CHECK-NEXT:  # %bb.2: # %bb10
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb1 ]
+  %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
+  %tmp3 = bitcast float* %tmp2 to <8 x float>*
+  %tmp4 = load <8 x float>, <8 x float>* %tmp3, align 4
+  %tmp5 = fcmp olt <8 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp6 = select <8 x i1> %tmp5, <8 x float> %tmp4, <8 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+  %tmp7 = bitcast float* %tmp2 to <8 x float>*
+  store <8 x float> %tmp6, <8 x float>* %tmp7, align 4
+  %tmp8 = add i64 %tmp, 8
+  %tmp9 = icmp eq i64 %tmp8, 1024
+  br i1 %tmp9, label %bb10, label %bb1
+
+bb10:                                             ; preds = %bb1
+  ret void
+}
+
+define void @bcast_unfold_cmp_v16f32(float* %arg) {
+; CHECK-LABEL: bcast_unfold_cmp_v16f32:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB122_1: # %bb1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovups 4096(%rdi,%rax), %zmm2
+; CHECK-NEXT:    vcmpltps %zmm0, %zmm2, %k1
+; CHECK-NEXT:    vblendmps %zmm2, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vmovups %zmm2, 4096(%rdi,%rax)
+; CHECK-NEXT:    addq $64, %rax
+; CHECK-NEXT:    jne .LBB122_1
+; CHECK-NEXT:  # %bb.2: # %bb10
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb1 ]
+  %tmp2 = getelementptr inbounds float, float* %arg, i64 %tmp
+  %tmp3 = bitcast float* %tmp2 to <16 x float>*
+  %tmp4 = load <16 x float>, <16 x float>* %tmp3, align 4
+  %tmp5 = fcmp olt <16 x float> %tmp4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %tmp6 = select <16 x i1> %tmp5, <16 x float> %tmp4, <16 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+  %tmp7 = bitcast float* %tmp2 to <16 x float>*
+  store <16 x float> %tmp6, <16 x float>* %tmp7, align 4
+  %tmp8 = add i64 %tmp, 16
+  %tmp9 = icmp eq i64 %tmp8, 1024
+  br i1 %tmp9, label %bb10, label %bb1
+
+bb10:                                             ; preds = %bb1
+  ret void
+}
+
+define void @bcast_unfold_cmp_v2f64(double* %arg) {
+; CHECK-LABEL: bcast_unfold_cmp_v2f64:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
+; CHECK-NEXT:    vmovapd {{.*#+}} xmm0 = [2.0E+0,2.0E+0]
+; CHECK-NEXT:    vmovapd {{.*#+}} xmm1 = [3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB123_1: # %bb1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %xmm2
+; CHECK-NEXT:    vcmpltpd %xmm0, %xmm2, %k1
+; CHECK-NEXT:    vblendmpd %xmm2, %xmm1, %xmm2 {%k1}
+; CHECK-NEXT:    vmovupd %xmm2, 8192(%rdi,%rax)
+; CHECK-NEXT:    addq $16, %rax
+; CHECK-NEXT:    jne .LBB123_1
+; CHECK-NEXT:  # %bb.2: # %bb10
+; CHECK-NEXT:    retq
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb1 ]
+  %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
+  %tmp3 = bitcast double* %tmp2 to <2 x double>*
+  %tmp4 = load <2 x double>, <2 x double>* %tmp3, align 8
+  %tmp5 = fcmp olt <2 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00>
+  %tmp6 = select <2 x i1> %tmp5, <2 x double> %tmp4, <2 x double> <double 3.000000e+00, double 3.000000e+00>
+  %tmp7 = bitcast double* %tmp2 to <2 x double>*
+  store <2 x double> %tmp6, <2 x double>* %tmp7, align 8
+  %tmp8 = add i64 %tmp, 2
+  %tmp9 = icmp eq i64 %tmp8, 1024
+  br i1 %tmp9, label %bb10, label %bb1
+
+bb10:                                             ; preds = %bb1
+  ret void
+}
+
+define void @bcast_unfold_cmp_v4f64(double* %arg) {
+; CHECK-LABEL: bcast_unfold_cmp_v4f64:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB124_1: # %bb1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %ymm2
+; CHECK-NEXT:    vcmpltpd %ymm0, %ymm2, %k1
+; CHECK-NEXT:    vblendmpd %ymm2, %ymm1, %ymm2 {%k1}
+; CHECK-NEXT:    vmovupd %ymm2, 8192(%rdi,%rax)
+; CHECK-NEXT:    addq $32, %rax
+; CHECK-NEXT:    jne .LBB124_1
+; CHECK-NEXT:  # %bb.2: # %bb10
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb1 ]
+  %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
+  %tmp3 = bitcast double* %tmp2 to <4 x double>*
+  %tmp4 = load <4 x double>, <4 x double>* %tmp3, align 8
+  %tmp5 = fcmp olt <4 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %tmp6 = select <4 x i1> %tmp5, <4 x double> %tmp4, <4 x double> <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>
+  %tmp7 = bitcast double* %tmp2 to <4 x double>*
+  store <4 x double> %tmp6, <4 x double>* %tmp7, align 8
+  %tmp8 = add i64 %tmp, 4
+  %tmp9 = icmp eq i64 %tmp8, 1024
+  br i1 %tmp9, label %bb10, label %bb1
+
+bb10:                                             ; preds = %bb1
+  ret void
+}
+
+define void @bcast_unfold_cmp_v8f64(double* %arg) {
+; CHECK-LABEL: bcast_unfold_cmp_v8f64:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB125_1: # %bb1
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovupd 8192(%rdi,%rax), %zmm2
+; CHECK-NEXT:    vcmpltpd %zmm0, %zmm2, %k1
+; CHECK-NEXT:    vblendmpd %zmm2, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vmovupd %zmm2, 8192(%rdi,%rax)
+; CHECK-NEXT:    addq $64, %rax
+; CHECK-NEXT:    jne .LBB125_1
+; CHECK-NEXT:  # %bb.2: # %bb10
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ %tmp8, %bb1 ]
+  %tmp2 = getelementptr inbounds double, double* %arg, i64 %tmp
+  %tmp3 = bitcast double* %tmp2 to <8 x double>*
+  %tmp4 = load <8 x double>, <8 x double>* %tmp3, align 8
+  %tmp5 = fcmp olt <8 x double> %tmp4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %tmp6 = select <8 x i1> %tmp5, <8 x double> %tmp4, <8 x double> <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>
+  %tmp7 = bitcast double* %tmp2 to <8 x double>*
+  store <8 x double> %tmp6, <8 x double>* %tmp7, align 8
+  %tmp8 = add i64 %tmp, 8
+  %tmp9 = icmp eq i64 %tmp8, 1024
+  br i1 %tmp9, label %bb10, label %bb1
+
+bb10:                                             ; preds = %bb1
+  ret void
+}

@@ -700,56 +700,56 @@ class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
   let Inst{0} = bit_0;
 }
 
-multiclass MVE_VMLAMLSDAV_X<string iname, string suffix, dag iops, string cstr,
-                          bit sz, bit bit_28, bit A, bit bit_8, bit bit_0,
-                          list<dag> pattern=[]> {
-  def _noexch : MVE_VMLAMLSDAV<iname, suffix, iops, cstr, sz,
-                            bit_28, A, 0b0, bit_8, bit_0, pattern>;
-  def _exch   : MVE_VMLAMLSDAV<iname # "x", suffix, iops, cstr, sz,
-                            bit_28, A, 0b1, bit_8, bit_0, pattern>;
+multiclass MVE_VMLAMLSDAV_A<string iname, string x, string suffix,
+                            bit sz, bit bit_28, bit X, bit bit_8, bit bit_0,
+                            list<dag> pattern=[]> {
+  def ""#x#suffix : MVE_VMLAMLSDAV<iname # x, suffix,
+                                   (ins MQPR:$Qn, MQPR:$Qm), "",
+                                   sz, bit_28, 0b0, X, bit_8, bit_0, pattern>;
+  def "a"#x#suffix : MVE_VMLAMLSDAV<iname # "a" # x, suffix,
+                                    (ins tGPREven:$RdaSrc, MQPR:$Qn, MQPR:$Qm),
+                                    "$RdaDest = $RdaSrc",
+                                    sz, bit_28, 0b1, X, bit_8, bit_0, pattern>;
 }
 
-multiclass MVE_VMLAMLSDAV_XA<string iname, string suffix, bit sz, bit bit_28,
-                           bit bit_8, bit bit_0, list<dag> pattern=[]> {
-  defm _noacc : MVE_VMLAMLSDAV_X<iname, suffix, (ins MQPR:$Qn, MQPR:$Qm), "",
-                              sz, bit_28, 0b0, bit_8, bit_0, pattern>;
-  defm _acc   : MVE_VMLAMLSDAV_X<iname # "a", suffix,
-                             (ins tGPREven:$RdaSrc, MQPR:$Qn, MQPR:$Qm),
-                             "$RdaDest = $RdaSrc",
-                              sz, bit_28, 0b1, bit_8, bit_0, pattern>;
+multiclass MVE_VMLAMLSDAV_AX<string iname, string suffix, bit sz, bit bit_28,
+                             bit bit_8, bit bit_0, list<dag> pattern=[]> {
+  defm "" : MVE_VMLAMLSDAV_A<iname, "", suffix, sz, bit_28,
+                             0b0, bit_8, bit_0, pattern>;
+  defm "" : MVE_VMLAMLSDAV_A<iname, "x", suffix, sz, bit_28,
+                             0b1, bit_8, bit_0, pattern>;
 }
 
-multiclass MVE_VMLADAV_multi<string suffix, bit sz, bit U, bit bit_8,
-                           list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_XA<"vmladav", suffix, sz, U, bit_8, 0b0, pattern>;
-}
-
-defm MVE_VMLADAVs16 : MVE_VMLADAV_multi<"s16", 0b0, 0b0, 0b0>;
-defm MVE_VMLADAVs32 : MVE_VMLADAV_multi<"s32", 0b1, 0b0, 0b0>;
-defm MVE_VMLADAVu16 : MVE_VMLADAV_multi<"u16", 0b0, 0b1, 0b0>;
-defm MVE_VMLADAVu32 : MVE_VMLADAV_multi<"u32", 0b1, 0b1, 0b0>;
-
-defm MVE_VMLADAVs8 : MVE_VMLADAV_multi<"s8", 0b0, 0b0, 0b1>;
-defm MVE_VMLADAVu8 : MVE_VMLADAV_multi<"u8", 0b0, 0b1, 0b1>;
-
-// vmlav aliases vmladav
-foreach acc = ["_acc", "_noacc"] in {
-  foreach suffix = ["s8", "s16", "s32", "u8", "u16", "u32"] in {
-    def : MVEInstAlias<!strconcat("vmlav", !if(!eq(acc, "_acc"), "a", ""),
-                       "${vp}.", suffix, "\t$RdaDest, $Qn, $Qm"),
-                       (!cast<Instruction>("MVE_VMLADAV"#suffix#acc#"_noexch")
-                        tGPREven:$RdaDest, MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
-  }
+multiclass MVE_VMLADAV_multi<string suffix, bit sz, bit bit_8,
+                             list<dag> pattern=[]> {
+  defm "" : MVE_VMLAMLSDAV_AX<"vmladav", "s"#suffix,
+                              sz, 0b0, bit_8, 0b0, pattern>;
+  defm "" : MVE_VMLAMLSDAV_A<"vmladav", "", "u"#suffix,
+                             sz, 0b1, 0b0, bit_8, 0b0, pattern>;
 }
 
 multiclass MVE_VMLSDAV_multi<string suffix, bit sz, bit bit_28,
-                           list<dag> pattern=[]> {
-  defm "" : MVE_VMLAMLSDAV_XA<"vmlsdav", suffix, sz, bit_28, 0b0, 0b1, pattern>;
+                             list<dag> pattern=[]> {
+  defm "" : MVE_VMLAMLSDAV_AX<"vmlsdav", "s"#suffix,
+                              sz, bit_28, 0b0, 0b1, pattern>;
 }
 
-defm MVE_VMLSDAVs8  : MVE_VMLSDAV_multi<"s8", 0, 0b1>;
-defm MVE_VMLSDAVs16 : MVE_VMLSDAV_multi<"s16", 0, 0b0>;
-defm MVE_VMLSDAVs32 : MVE_VMLSDAV_multi<"s32", 1, 0b0>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi< "8", 0b0, 0b1>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<"16", 0b0, 0b0>;
+defm MVE_VMLADAV : MVE_VMLADAV_multi<"32", 0b1, 0b0>;
+
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi< "8", 0b0, 0b1>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<"16", 0b0, 0b0>;
+defm MVE_VMLSDAV : MVE_VMLSDAV_multi<"32", 0b1, 0b0>;
+
+// vmlav aliases vmladav
+foreach acc = ["", "a"] in {
+  foreach suffix = ["s8", "s16", "s32", "u8", "u16", "u32"] in {
+    def : MVEInstAlias<"vmlav"#acc#"${vp}."#suffix#"\t$RdaDest, $Qn, $Qm",
+                       (!cast<Instruction>("MVE_VMLADAV"#acc#suffix)
+                        tGPREven:$RdaDest, MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+  }
+}
 
 // Base class for VMLALDAV and VMLSLDAV, VRMLALDAVH, VRMLSLDAVH
 class MVE_VMLALDAVBase<string iname, string suffix, dag iops, string cstr,
@@ -775,82 +775,83 @@ class MVE_VMLALDAVBase<string iname, string suffix, dag iops, string cstr,
   let Inst{0} = bit_0;
 }
 
-multiclass MVE_VMLALDAVBase_X<string iname, string suffix, dag iops,
-                              string cstr, bit sz, bit bit_28, bit A,
-                              bit bit_8, bit bit_0, list<dag> pattern=[]> {
-  def _noexch : MVE_VMLALDAVBase<iname, suffix, iops, cstr, sz,
-                               bit_28, A, 0b0, bit_8, bit_0, pattern>;
-  def _exch   : MVE_VMLALDAVBase<iname # "x", suffix, iops, cstr, sz,
-                               bit_28, A, 0b1, bit_8, bit_0, pattern>;
-}
-
-multiclass MVE_VMLALDAVBase_XA<string iname, string suffix, bit sz, bit bit_28,
-                             bit bit_8, bit bit_0, list<dag> pattern=[]> {
-  defm _noacc : MVE_VMLALDAVBase_X<
-     iname, suffix, (ins MQPR:$Qn, MQPR:$Qm), "",
-     sz, bit_28, 0b0, bit_8, bit_0, pattern>;
-  defm _acc   : MVE_VMLALDAVBase_X<
-     iname # "a", suffix, (ins tGPREven:$RdaLoSrc, tGPROdd:$RdaHiSrc,
-                               MQPR:$Qn, MQPR:$Qm),
+multiclass MVE_VMLALDAVBase_A<string iname, string x, string suffix,
+                               bit sz, bit bit_28, bit X, bit bit_8, bit bit_0,
+                               list<dag> pattern=[]> {
+  def ""#x#suffix : MVE_VMLALDAVBase<
+     iname # x, suffix, (ins MQPR:$Qn, MQPR:$Qm), "",
+     sz, bit_28, 0b0, X, bit_8, bit_0, pattern>;
+  def "a"#x#suffix : MVE_VMLALDAVBase<
+     iname # "a" # x, suffix,
+     (ins tGPREven:$RdaLoSrc, tGPROdd:$RdaHiSrc, MQPR:$Qn, MQPR:$Qm),
      "$RdaLoDest = $RdaLoSrc,$RdaHiDest = $RdaHiSrc",
-     sz, bit_28, 0b1, bit_8, bit_0, pattern>;
+     sz, bit_28, 0b1, X, bit_8, bit_0, pattern>;
 }
 
-multiclass MVE_VRMLALDAVH_multi<string suffix, bit U, list<dag> pattern=[]> {
-  defm "" : MVE_VMLALDAVBase_XA<
-     "vrmlaldavh", suffix, 0b0, U, 0b1, 0b0, pattern>;
+
+multiclass MVE_VMLALDAVBase_AX<string iname, string suffix, bit sz, bit bit_28,
+                               bit bit_8, bit bit_0, list<dag> pattern=[]> {
+  defm "" : MVE_VMLALDAVBase_A<iname, "", suffix, sz,
+                               bit_28, 0b0, bit_8, bit_0, pattern>;
+  defm "" : MVE_VMLALDAVBase_A<iname, "x", suffix, sz,
+                               bit_28, 0b1, bit_8, bit_0, pattern>;
 }
 
-defm MVE_VRMLALDAVHs32 : MVE_VRMLALDAVH_multi<"s32", 0>;
-defm MVE_VRMLALDAVHu32 : MVE_VRMLALDAVH_multi<"u32", 1>;
+multiclass MVE_VRMLALDAVH_multi<string suffix, list<dag> pattern=[]> {
+  defm "" : MVE_VMLALDAVBase_AX<"vrmlaldavh", "s"#suffix,
+                                0b0, 0b0, 0b1, 0b0, pattern>;
+  defm "" : MVE_VMLALDAVBase_A<"vrmlaldavh", "", "u"#suffix,
+                               0b0, 0b1, 0b0, 0b1, 0b0, pattern>;
+}
+
+defm MVE_VRMLALDAVH : MVE_VRMLALDAVH_multi<"32">;
 
 // vrmlalvh aliases for vrmlaldavh
 def : MVEInstAlias<"vrmlalvh${vp}.s32\t$RdaLo, $RdaHi, $Qn, $Qm",
-                  (MVE_VRMLALDAVHs32_noacc_noexch
+                  (MVE_VRMLALDAVHs32
                    tGPREven:$RdaLo, tGPROdd:$RdaHi,
                    MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
 def : MVEInstAlias<"vrmlalvha${vp}.s32\t$RdaLo, $RdaHi, $Qn, $Qm",
-                  (MVE_VRMLALDAVHs32_acc_noexch
+                  (MVE_VRMLALDAVHas32
                    tGPREven:$RdaLo, tGPROdd:$RdaHi,
                    MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
 def : MVEInstAlias<"vrmlalvh${vp}.u32\t$RdaLo, $RdaHi, $Qn, $Qm",
-                  (MVE_VRMLALDAVHu32_noacc_noexch
+                  (MVE_VRMLALDAVHu32
                    tGPREven:$RdaLo, tGPROdd:$RdaHi,
                    MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
 def : MVEInstAlias<"vrmlalvha${vp}.u32\t$RdaLo, $RdaHi, $Qn, $Qm",
-                  (MVE_VRMLALDAVHu32_acc_noexch
+                  (MVE_VRMLALDAVHau32
                    tGPREven:$RdaLo, tGPROdd:$RdaHi,
                    MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
 
-multiclass MVE_VMLALDAV_multi<string suffix, bit sz, bit U,
-                              list<dag> pattern=[]> {
-  defm "" : MVE_VMLALDAVBase_XA<"vmlaldav", suffix, sz, U, 0b0, 0b0, pattern>;
+multiclass MVE_VMLALDAV_multi<string suffix, bit sz, list<dag> pattern=[]> {
+  defm "" : MVE_VMLALDAVBase_AX<"vmlaldav", "s"#suffix, sz, 0b0, 0b0, 0b0, pattern>;
+  defm "" : MVE_VMLALDAVBase_A<"vmlaldav", "", "u"#suffix,
+                               sz, 0b1, 0b0, 0b0, 0b0, pattern>;
 }
 
-defm MVE_VMLALDAVs16 : MVE_VMLALDAV_multi<"s16", 0b0, 0b0>;
-defm MVE_VMLALDAVs32 : MVE_VMLALDAV_multi<"s32", 0b1, 0b0>;
-defm MVE_VMLALDAVu16 : MVE_VMLALDAV_multi<"u16", 0b0, 0b1>;
-defm MVE_VMLALDAVu32 : MVE_VMLALDAV_multi<"u32", 0b1, 0b1>;
+defm MVE_VMLALDAV : MVE_VMLALDAV_multi<"16", 0b0>;
+defm MVE_VMLALDAV : MVE_VMLALDAV_multi<"32", 0b1>;
 
 // vmlalv aliases vmlaldav
-foreach acc = ["_acc", "_noacc"] in {
+foreach acc = ["", "a"] in {
   foreach suffix = ["s16", "s32", "u16", "u32"] in {
-    def : MVEInstAlias<!strconcat("vmlalv", !if(!eq(acc, "_acc"), "a", ""),
-                       "${vp}.", suffix, "\t$RdaLoDest, $RdaHiDest, $Qn, $Qm"),
-                       (!cast<Instruction>("MVE_VMLALDAV"#suffix#acc#"_noexch")
+    def : MVEInstAlias<"vmlalv" # acc # "${vp}." # suffix #
+                          "\t$RdaLoDest, $RdaHiDest, $Qn, $Qm",
+                       (!cast<Instruction>("MVE_VMLALDAV"#acc#suffix)
                        tGPREven:$RdaLoDest, tGPROdd:$RdaHiDest,
                        MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
   }
 }
 
 multiclass MVE_VMLSLDAV_multi<string iname, string suffix, bit sz,
-                            bit bit_28, list<dag> pattern=[]> {
-  defm "" : MVE_VMLALDAVBase_XA<iname, suffix, sz, bit_28, 0b0, 0b1, pattern>;
+                              bit bit_28, list<dag> pattern=[]> {
+  defm "" : MVE_VMLALDAVBase_AX<iname, suffix, sz, bit_28, 0b0, 0b1, pattern>;
 }
 
-defm MVE_VMLSLDAVs16   : MVE_VMLSLDAV_multi<"vmlsldav", "s16", 0b0, 0b0>;
-defm MVE_VMLSLDAVs32   : MVE_VMLSLDAV_multi<"vmlsldav", "s32", 0b1, 0b0>;
-defm MVE_VRMLSLDAVHs32 : MVE_VMLSLDAV_multi<"vrmlsldavh", "s32", 0b0, 0b1>;
+defm MVE_VMLSLDAV   : MVE_VMLSLDAV_multi<"vmlsldav", "s16", 0b0, 0b0>;
+defm MVE_VMLSLDAV   : MVE_VMLSLDAV_multi<"vmlsldav", "s32", 0b1, 0b0>;
+defm MVE_VRMLSLDAVH : MVE_VMLSLDAV_multi<"vrmlsldavh", "s32", 0b0, 0b1>;
 
 // end of mve_rDest instructions
 
@@ -3944,6 +3945,15 @@ def MVE_VCTP16 : MVE_VCTP<"16", 0b01>;
 def MVE_VCTP32 : MVE_VCTP<"32", 0b10>;
 def MVE_VCTP64 : MVE_VCTP<"64", 0b11>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(int_arm_vctp8 rGPR:$Rn),
+            (v16i1 (MVE_VCTP8 rGPR:$Rn))>;
+  def : Pat<(int_arm_vctp16 rGPR:$Rn),
+            (v8i1 (MVE_VCTP16 rGPR:$Rn))>;
+  def : Pat<(int_arm_vctp32 rGPR:$Rn),
+            (v4i1 (MVE_VCTP32 rGPR:$Rn))>;
+}
+
 // end of mve_qDest_rSrc
 
 // start of coproc mov
@@ -4987,24 +4997,6 @@ let Predicates = [HasMVEInt, IsBE] in {
   def : MVE_vector_offset_store_typed<v4i32, MVE_VSTRWU32_post, aligned32_post_store, 2>;
   def : MVE_vector_offset_store_typed<v4f32, MVE_VSTRWU32_pre, aligned32_pre_store, 2>;
   def : MVE_vector_offset_store_typed<v4f32, MVE_VSTRWU32_post, aligned32_post_store, 2>;
-}
-
-let Predicates = [HasMVEInt] in {
-  // Predicate loads
-  def  : Pat<(v16i1 (load t2addrmode_imm7<2>:$addr)),
-             (v16i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
-  def  : Pat<(v8i1 (load t2addrmode_imm7<2>:$addr)),
-             (v8i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
-  def  : Pat<(v4i1 (load t2addrmode_imm7<2>:$addr)),
-             (v4i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
-
-  // Predicate stores
-  def  : Pat<(store (v4i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
-             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
-  def  : Pat<(store (v8i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
-             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
-  def  : Pat<(store (v16i1 VCCR:$val), t2addrmode_imm7<2>:$addr),
-             (VSTR_P0_off VCCR:$val, t2addrmode_imm7<2>:$addr)>;
 }
 
 

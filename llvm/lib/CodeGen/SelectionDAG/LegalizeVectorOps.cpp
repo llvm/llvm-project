@@ -459,10 +459,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
                                               Node->getValueType(0), Scale);
     break;
   }
-  case ISD::FP_ROUND_INREG:
-    Action = TLI.getOperationAction(Node->getOpcode(),
-               cast<VTSDNode>(Node->getOperand(1))->getVT());
-    break;
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
   case ISD::VECREDUCE_ADD:

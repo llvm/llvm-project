@@ -47,12 +47,7 @@ declare i32 @nonvoid_ret()
 define i32 @test_nonvoid_ret() {
   ; COMMON-LABEL: name: test_nonvoid_ret
   ; COMMON: bb.1 (%ir-block.0):
-  ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   BL @nonvoid_ret, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
-  ; COMMON:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   $w0 = COPY [[COPY]](s32)
-  ; COMMON:   RET_ReallyLR implicit $w0
+  ; COMMON:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
   %call = tail call i32 @nonvoid_ret()
   ret i32 %call
 }

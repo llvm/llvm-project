@@ -107,6 +107,13 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
   foreach _ = BoolToList<P.HasExtDPP>.ret in
     def _dpp : VOP1_DPP_Pseudo <opName, P>;
+
+  def : MnemonicAlias<opName#"_e32", opName>, LetDummies;
+  def : MnemonicAlias<opName#"_e64", opName>, LetDummies;
+  def : MnemonicAlias<opName#"_sdwa", opName>, LetDummies;
+
+  foreach _ = BoolToList<P.HasExtDPP>.ret in
+    def : MnemonicAlias<opName#"_dpp", opName>, LetDummies;
 }
 
 // Special profile for instructions which have clamp

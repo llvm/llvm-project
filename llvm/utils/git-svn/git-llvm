@@ -190,8 +190,16 @@ def program_exists(cmd):
 
 
 def get_default_rev_range():
+    # Get the branch tracked by the current branch, as set by
+    # git branch --set-upstream-to  See http://serverfault.com/a/352236/38694.
+    cur_branch = git('rev-parse', '--symbolic-full-name', 'HEAD')
+    upstream_branch = git('for-each-ref', '--format=%(upstream:short)',
+                          cur_branch)
+    if not upstream_branch:
+        upstream_branch = 'origin/master'
+
     # Get the newest common ancestor between HEAD and our upstream branch.
-    upstream_rev = git('merge-base', 'HEAD', '@{upstream}')
+    upstream_rev = git('merge-base', 'HEAD', upstream_branch)
     return '%s..' % upstream_rev
 
 
@@ -629,7 +637,9 @@ if __name__ == '__main__':
         metavar='GIT_REVS',
         type=str,
         nargs='?',
-        help="revs to push (default: everything not in the upstream branch).")
+        help="revs to push (default: everything not in the branch's "
+        'upstream, or not in origin/master if the branch lacks '
+        'an explicit upstream)')
     parser_push.set_defaults(func=cmd_push)
 
     parser_revert = subcommands.add_parser(

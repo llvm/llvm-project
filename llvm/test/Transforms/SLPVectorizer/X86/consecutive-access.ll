@@ -549,6 +549,22 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+@g1 = external global i32, align 4
+@g2 = external global i32, align 4
+
+define void @PR33958(i32** nocapture %p) {
+; CHECK-LABEL: @PR33958(
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32*, i32** [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32** [[P]] to <2 x i32*>*
+; CHECK-NEXT:    store <2 x i32*> <i32* @g1, i32* @g2>, <2 x i32*>* [[TMP1]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i32* @g1, i32** %p, align 8
+  %arrayidx1 = getelementptr inbounds i32*, i32** %p, i64 1
+  store i32* @g2, i32** %arrayidx1, align 8
+  ret void
+}
+
 attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}

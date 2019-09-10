@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -run-pass=if-converter | FileCheck %s
+# RUN: llc %s -o - -run-pass=if-converter -verify-machineinstrs | FileCheck %s
 # Make sure we correctly if-convert blocks containing an INLINEASM_BR.
 # CHECK: t2CMPri killed renamable $r2, 34
 # CHECK-NEXT: $r0 = t2MOVi 2, 1, $cpsr, $noreg
@@ -48,9 +48,8 @@ body:             |
     t2B %bb.3, 14, $noreg
   
   bb.3:
-    successors: %bb.4(0x80000000)
-  
     INLINEASM &"", 1
+    $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
   
   bb.4.l_yes (address-taken):
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
