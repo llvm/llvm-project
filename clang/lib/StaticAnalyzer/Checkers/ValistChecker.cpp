@@ -79,19 +79,19 @@ private:
     }
     PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                       const ExplodedNode *EndPathNode,
-                                      BugReport &BR) override {
+                                      PathSensitiveBugReport &BR) override {
       if (!IsLeak)
         return nullptr;
 
-      PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(
-          EndPathNode, BRC.getSourceManager());
+      PathDiagnosticLocation L =
+          PathDiagnosticLocation::createEndOfPath(EndPathNode);
       // Do not add the statement itself as a range in case of leak.
       return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                         false);
     }
     PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                      BugReporterContext &BRC,
-                                     BugReport &BR) override;
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     const MemRegion *Reg;
@@ -256,7 +256,7 @@ void ValistChecker::reportUninitializedAccess(const MemRegion *VAList,
       BT_uninitaccess.reset(new BugType(CheckNames[CK_Uninitialized],
                                         "Uninitialized va_list",
                                         categories::MemoryError));
-    auto R = std::make_unique<BugReport>(*BT_uninitaccess, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_uninitaccess, Msg, N);
     R->markInteresting(VAList);
     R->addVisitor(std::make_unique<ValistBugVisitor>(VAList));
     C.emitReport(std::move(R));
@@ -297,7 +297,7 @@ void ValistChecker::reportLeakedVALists(const RegionVector &LeakedVALists,
       OS << " " << VariableName;
     OS << Msg2;
 
-    auto R = std::make_unique<BugReport>(
+    auto R = std::make_unique<PathSensitiveBugReport>(
         *BT_leakedvalist, OS.str(), N, LocUsedForUniqueing,
         StartNode->getLocationContext()->getDecl());
     R->markInteresting(Reg);
@@ -377,7 +377,7 @@ void ValistChecker::checkVAListEndCall(const CallEvent &Call,
 }
 
 PathDiagnosticPieceRef ValistChecker::ValistBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &) {
+    const ExplodedNode *N, BugReporterContext &BRC, PathSensitiveBugReport &) {
   ProgramStateRef State = N->getState();
   ProgramStateRef StatePrev = N->getFirstPred()->getState();
 

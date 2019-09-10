@@ -1,5 +1,3 @@
-REQUIRES: shell
-
 # The binary contains two (merged) covmap sections which
 # have duplicate CovMapRecords from comdat (template instantation).
 # This test makes sure the reader reads it properly. It also

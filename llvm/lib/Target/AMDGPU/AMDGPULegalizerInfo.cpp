@@ -713,14 +713,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   }
 
-  getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalForCartesianProduct(AllS32Vectors, {S32})
-      .legalForCartesianProduct(AllS64Vectors, {S64})
-      .clampNumElements(0, V16S32, V16S32)
-      .clampNumElements(0, V2S64, V8S64)
-      .minScalarSameAs(1, 0)
-      .legalIf(isRegisterType(0))
-      .minScalarOrElt(0, S32);
+  auto &BuildVector = getActionDefinitionsBuilder(G_BUILD_VECTOR)
+    .legalForCartesianProduct(AllS32Vectors, {S32})
+    .legalForCartesianProduct(AllS64Vectors, {S64})
+    .clampNumElements(0, V16S32, V16S32)
+    .clampNumElements(0, V2S64, V8S64);
+
+  if (ST.hasScalarPackInsts())
+    BuildVector.legalFor({V2S16, S32});
+
+  BuildVector
+    .minScalarSameAs(1, 0)
+    .legalIf(isRegisterType(0))
+    .minScalarOrElt(0, S32);
 
   if (ST.hasScalarPackInsts()) {
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
@@ -818,35 +823,35 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
 bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &MIRBuilder,
+                                         MachineIRBuilder &B,
                                          GISelChangeObserver &Observer) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
-    return legalizeAddrSpaceCast(MI, MRI, MIRBuilder);
+    return legalizeAddrSpaceCast(MI, MRI, B);
   case TargetOpcode::G_FRINT:
-    return legalizeFrint(MI, MRI, MIRBuilder);
+    return legalizeFrint(MI, MRI, B);
   case TargetOpcode::G_FCEIL:
-    return legalizeFceil(MI, MRI, MIRBuilder);
+    return legalizeFceil(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_TRUNC:
-    return legalizeIntrinsicTrunc(MI, MRI, MIRBuilder);
+    return legalizeIntrinsicTrunc(MI, MRI, B);
   case TargetOpcode::G_SITOFP:
-    return legalizeITOFP(MI, MRI, MIRBuilder, true);
+    return legalizeITOFP(MI, MRI, B, true);
   case TargetOpcode::G_UITOFP:
-    return legalizeITOFP(MI, MRI, MIRBuilder, false);
+    return legalizeITOFP(MI, MRI, B, false);
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
-    return legalizeMinNumMaxNum(MI, MRI, MIRBuilder);
+    return legalizeMinNumMaxNum(MI, MRI, B);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-    return legalizeExtractVectorElt(MI, MRI, MIRBuilder);
+    return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return legalizeInsertVectorElt(MI, MRI, MIRBuilder);
+    return legalizeInsertVectorElt(MI, MRI, B);
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
-    return legalizeSinCos(MI, MRI, MIRBuilder);
+    return legalizeSinCos(MI, MRI, B);
   case TargetOpcode::G_GLOBAL_VALUE:
-    return legalizeGlobalValue(MI, MRI, MIRBuilder);
+    return legalizeGlobalValue(MI, MRI, B);
   default:
     return false;
   }
@@ -857,8 +862,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
 Register AMDGPULegalizerInfo::getSegmentAperture(
   unsigned AS,
   MachineRegisterInfo &MRI,
-  MachineIRBuilder &MIRBuilder) const {
-  MachineFunction &MF = MIRBuilder.getMF();
+  MachineIRBuilder &B) const {
+  MachineFunction &MF = B.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const LLT S32 = LLT::scalar(32);
 
@@ -879,13 +884,13 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     Register ApertureReg = MRI.createGenericVirtualRegister(S32);
     Register GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-    MIRBuilder.buildInstr(AMDGPU::S_GETREG_B32)
+    B.buildInstr(AMDGPU::S_GETREG_B32)
       .addDef(GetReg)
       .addImm(Encoding);
     MRI.setType(GetReg, S32);
 
-    auto ShiftAmt = MIRBuilder.buildConstant(S32, WidthM1 + 1);
-    MIRBuilder.buildInstr(TargetOpcode::G_SHL)
+    auto ShiftAmt = B.buildConstant(S32, WidthM1 + 1);
+    B.buildInstr(TargetOpcode::G_SHL)
       .addDef(ApertureReg)
       .addUse(GetReg)
       .addUse(ShiftAmt.getReg(0));
@@ -897,7 +902,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  if (!loadInputValue(QueuePtr, MIRBuilder, &MFI->getArgInfo().QueuePtr))
+  if (!loadInputValue(QueuePtr, B, &MFI->getArgInfo().QueuePtr))
     return Register();
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
@@ -921,17 +926,17 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   Register LoadResult = MRI.createGenericVirtualRegister(S32);
   Register LoadAddr;
 
-  MIRBuilder.materializeGEP(LoadAddr, QueuePtr, LLT::scalar(64), StructOffset);
-  MIRBuilder.buildLoad(LoadResult, LoadAddr, *MMO);
+  B.materializeGEP(LoadAddr, QueuePtr, LLT::scalar(64), StructOffset);
+  B.buildLoad(LoadResult, LoadAddr, *MMO);
   return LoadResult;
 }
 
 bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &MIRBuilder) const {
-  MachineFunction &MF = MIRBuilder.getMF();
+  MachineIRBuilder &B) const {
+  MachineFunction &MF = B.getMF();
 
-  MIRBuilder.setInstr(MI);
+  B.setInstr(MI);
 
   const LLT S32 = LLT::scalar(32);
   Register Dst = MI.getOperand(0).getReg();
@@ -951,13 +956,13 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (ST.getTargetLowering()->isNoopAddrSpaceCast(SrcAS, DestAS)) {
-    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::G_BITCAST));
+    MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
     return true;
   }
 
   if (DestAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     // Truncate.
-    MIRBuilder.buildExtract(Dst, Src, 0);
+    B.buildExtract(Dst, Src, 0);
     MI.eraseFromParent();
     return true;
   }
@@ -969,9 +974,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     // FIXME: This is a bit ugly due to creating a merge of 2 pointers to
     // another. Merge operands are required to be the same type, but creating an
     // extra ptrtoint would be kind of pointless.
-    auto HighAddr = MIRBuilder.buildConstant(
+    auto HighAddr = B.buildConstant(
       LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32), AddrHiVal);
-    MIRBuilder.buildMerge(Dst, {Src, HighAddr.getReg(0)});
+    B.buildMerge(Dst, {Src, HighAddr.getReg(0)});
     MI.eraseFromParent();
     return true;
   }
@@ -981,17 +986,17 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
            DestAS == AMDGPUAS::PRIVATE_ADDRESS);
     unsigned NullVal = TM.getNullPointerValue(DestAS);
 
-    auto SegmentNull = MIRBuilder.buildConstant(DstTy, NullVal);
-    auto FlatNull = MIRBuilder.buildConstant(SrcTy, 0);
+    auto SegmentNull = B.buildConstant(DstTy, NullVal);
+    auto FlatNull = B.buildConstant(SrcTy, 0);
 
     Register PtrLo32 = MRI.createGenericVirtualRegister(DstTy);
 
     // Extract low 32-bits of the pointer.
-    MIRBuilder.buildExtract(PtrLo32, Src, 0);
+    B.buildExtract(PtrLo32, Src, 0);
 
     Register CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, FlatNull.getReg(0));
-    MIRBuilder.buildSelect(Dst, CmpRes, PtrLo32, SegmentNull.getReg(0));
+    B.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, FlatNull.getReg(0));
+    B.buildSelect(Dst, CmpRes, PtrLo32, SegmentNull.getReg(0));
 
     MI.eraseFromParent();
     return true;
@@ -1004,29 +1009,29 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     return false;
 
   auto SegmentNull =
-      MIRBuilder.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
+      B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
   auto FlatNull =
-      MIRBuilder.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+      B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
 
-  Register ApertureReg = getSegmentAperture(DestAS, MRI, MIRBuilder);
+  Register ApertureReg = getSegmentAperture(DestAS, MRI, B);
   if (!ApertureReg.isValid())
     return false;
 
   Register CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
-  MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, SegmentNull.getReg(0));
+  B.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, SegmentNull.getReg(0));
 
   Register BuildPtr = MRI.createGenericVirtualRegister(DstTy);
 
   // Coerce the type of the low half of the result so we can use merge_values.
   Register SrcAsInt = MRI.createGenericVirtualRegister(S32);
-  MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
+  B.buildInstr(TargetOpcode::G_PTRTOINT)
     .addDef(SrcAsInt)
     .addUse(Src);
 
   // TODO: Should we allow mismatched types but matching sizes in merges to
   // avoid the ptrtoint?
-  MIRBuilder.buildMerge(BuildPtr, {SrcAsInt, ApertureReg});
-  MIRBuilder.buildSelect(Dst, CmpRes, BuildPtr, FlatNull.getReg(0));
+  B.buildMerge(BuildPtr, {SrcAsInt, ApertureReg});
+  B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull.getReg(0));
 
   MI.eraseFromParent();
   return true;
@@ -1034,8 +1039,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
 bool AMDGPULegalizerInfo::legalizeFrint(
   MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &MIRBuilder) const {
-  MIRBuilder.setInstr(MI);
+  MachineIRBuilder &B) const {
+  B.setInstr(MI);
 
   Register Src = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Src);
@@ -1044,18 +1049,18 @@ bool AMDGPULegalizerInfo::legalizeFrint(
   APFloat C1Val(APFloat::IEEEdouble(), "0x1.0p+52");
   APFloat C2Val(APFloat::IEEEdouble(), "0x1.fffffffffffffp+51");
 
-  auto C1 = MIRBuilder.buildFConstant(Ty, C1Val);
-  auto CopySign = MIRBuilder.buildFCopysign(Ty, C1, Src);
+  auto C1 = B.buildFConstant(Ty, C1Val);
+  auto CopySign = B.buildFCopysign(Ty, C1, Src);
 
   // TODO: Should this propagate fast-math-flags?
-  auto Tmp1 = MIRBuilder.buildFAdd(Ty, Src, CopySign);
-  auto Tmp2 = MIRBuilder.buildFSub(Ty, Tmp1, CopySign);
+  auto Tmp1 = B.buildFAdd(Ty, Src, CopySign);
+  auto Tmp2 = B.buildFSub(Ty, Tmp1, CopySign);
 
-  auto C2 = MIRBuilder.buildFConstant(Ty, C2Val);
-  auto Fabs = MIRBuilder.buildFAbs(Ty, Src);
+  auto C2 = B.buildFConstant(Ty, C2Val);
+  auto Fabs = B.buildFAbs(Ty, Src);
 
-  auto Cond = MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), Fabs, C2);
-  MIRBuilder.buildSelect(MI.getOperand(0).getReg(), Cond, Src, Tmp2);
+  auto Cond = B.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), Fabs, C2);
+  B.buildSelect(MI.getOperand(0).getReg(), Cond, Src, Tmp2);
   return true;
 }
 
@@ -1202,7 +1207,7 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
   LegalizerHelper Helper(MF, DummyObserver, HelperBuilder);
-  HelperBuilder.setMBB(*MI.getParent());
+  HelperBuilder.setInstr(MI);
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
 }
 

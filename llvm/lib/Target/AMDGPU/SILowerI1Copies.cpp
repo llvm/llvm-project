@@ -489,6 +489,15 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &TheMF) {
   return true;
 }
 
+#ifndef NDEBUG
+static bool isVRegCompatibleReg(const SIRegisterInfo &TRI,
+                                const MachineRegisterInfo &MRI,
+                                Register Reg) {
+  unsigned Size = TRI.getRegSizeInBits(Reg, MRI);
+  return Size == 1 || Size == 32;
+}
+#endif
+
 void SILowerI1Copies::lowerCopiesFromI1() {
   SmallVector<MachineInstr *, 4> DeadCopies;
 
@@ -509,7 +518,7 @@ void SILowerI1Copies::lowerCopiesFromI1() {
       LLVM_DEBUG(dbgs() << "Lower copy from i1: " << MI);
       DebugLoc DL = MI.getDebugLoc();
 
-      assert(TII->getRegisterInfo().getRegSizeInBits(DstReg, *MRI) == 32);
+      assert(isVRegCompatibleReg(TII->getRegisterInfo(), *MRI, DstReg));
       assert(!MI.getOperand(0).getSubReg());
 
       ConstrainRegs.insert(SrcReg);

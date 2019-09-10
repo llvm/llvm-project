@@ -146,7 +146,7 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
     return;
   }
 
-  auto Report = std::make_unique<BugReport>(*BT, OS.str(), N);
+  auto Report = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
 
   if (ShowFixIts && !IsPure) {
     // FIXME: These hints are valid only when the virtual call is made

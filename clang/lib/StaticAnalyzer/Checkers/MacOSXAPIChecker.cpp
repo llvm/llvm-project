@@ -139,7 +139,8 @@ void MacOSXAPIChecker::CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
     BT_dispatchOnce.reset(new BugType(this, "Improper use of 'dispatch_once'",
                                       "API Misuse (Apple)"));
 
-  auto report = std::make_unique<BugReport>(*BT_dispatchOnce, os.str(), N);
+  auto report =
+      std::make_unique<PathSensitiveBugReport>(*BT_dispatchOnce, os.str(), N);
   report->addRange(CE->getArg(0)->getSourceRange());
   C.emitReport(std::move(report));
 }

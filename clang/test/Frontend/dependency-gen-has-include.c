@@ -1,5 +1,3 @@
-// REQUIRES: shell
-
 // Basic test
 // RUN: rm -rf %t.dir
 // RUN: mkdir %t.dir
@@ -19,16 +17,16 @@
 // RUN: FileCheck -input-file=%t.dir/file.deps %s
 // CHECK: dependency-gen-has-include.o
 // CHECK: dependency-gen-has-include.c
-// CHECK: a/header.h
-// CHECK-NOT: missing/file.h
-// CHECK: system/system-header.h
-// CHECK: next-a/next-header.h
-// CHECK: next-b/next-header.h
+// CHECK: a{{[/\\]}}header.h
+// CHECK-NOT: missing{{[/\\]}}file.h
+// CHECK: system{{[/\\]}}system-header.h
+// CHECK: next-a{{[/\\]}}next-header.h
+// CHECK: next-b{{[/\\]}}next-header.h
 
 // Verify that we ignore system headers in user-only headers mode.
 // RUN: %clang -MMD -MF %t.dir/user-headers.deps %s -fsyntax-only -I %t.dir -isystem %t.dir/system -I %t.dir/next-a -I %t.dir/next-b
 // RUN: FileCheck -input-file=%t.dir/user-headers.deps --check-prefix CHECK-USER-HEADER %s
-// CHECK-USER-HEADER-NOT: system/system-header.h
+// CHECK-USER-HEADER-NOT: system{{[/\\]}}system-header.h
 
 #if __has_include("a/header.h")
 #endif

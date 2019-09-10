@@ -18,7 +18,6 @@
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolVendor.h"

@@ -950,7 +950,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT , MVT::v4f64, Expand);
 
     setOperationAction(ISD::FP_ROUND , MVT::v4f32, Legal);
-    setOperationAction(ISD::FP_ROUND_INREG , MVT::v4f32, Expand);
     setOperationAction(ISD::FP_EXTEND, MVT::v4f64, Legal);
 
     setOperationAction(ISD::FNEG , MVT::v4f64, Legal);

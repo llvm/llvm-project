@@ -23,7 +23,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -33,6 +32,7 @@
 #include "lldb/Utility/UUID.h"
 #include "mach/machine.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
@@ -264,7 +264,7 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
     return {};
 
   // Make sure we close the directory before exiting this scope.
-  CleanUp cleanup_dir(closedir, dirp);
+  auto cleanup_dir = llvm::make_scope_exit([&]() { closedir(dirp); });
 
   FileSpec dsym_fspec;
   dsym_fspec.GetDirectory().SetCString(path);

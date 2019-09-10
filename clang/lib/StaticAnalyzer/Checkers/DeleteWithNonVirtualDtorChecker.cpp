@@ -47,7 +47,7 @@ class DeleteWithNonVirtualDtorChecker
     }
     PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                      BugReporterContext &BRC,
-                                     BugReport &BR) override;
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     bool Satisfied;
@@ -92,7 +92,7 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
                          "Logic error"));
 
   ExplodedNode *N = C.generateNonFatalErrorNode();
-  auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getName(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
@@ -102,7 +102,8 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
 
 PathDiagnosticPieceRef
 DeleteWithNonVirtualDtorChecker::DeleteBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC,
+    PathSensitiveBugReport &BR) {
   // Stop traversal after the first conversion was found on a path.
   if (Satisfied)
     return nullptr;

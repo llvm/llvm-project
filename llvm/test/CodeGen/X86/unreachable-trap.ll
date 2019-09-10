@@ -1,10 +1,13 @@
-; RUN: llc -o - %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
+; RUN: llc -o - %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -o - %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -o - %s -mtriple=x86_64-scei-ps4 | FileCheck %s --check-prefixes=CHECK,TRAP_AFTER_NORETURN
 ; RUN: llc -o - %s -mtriple=x86_64-apple-darwin | FileCheck %s --check-prefixes=CHECK,NO_TRAP_AFTER_NORETURN
 
 ; CHECK-LABEL: call_exit:
 ; CHECK: callq {{_?}}exit
 ; TRAP_AFTER_NORETURN: ud2
 ; NO_TRAP_AFTER_NORETURN-NOT: ud2
+; NORMAL-NOT: ud2
 define i32 @call_exit() noreturn nounwind {
   tail call void @exit(i32 0)
   unreachable
@@ -14,13 +17,17 @@ define i32 @call_exit() noreturn nounwind {
 ; CHECK: ud2
 ; TRAP_AFTER_NORETURN: ud2
 ; NO_TRAP_AFTER_NORETURN-NOT: ud2
+; NORMAL-NOT: ud2
 define i32 @trap() noreturn nounwind {
   tail call void @llvm.trap()
   unreachable
 }
 
 ; CHECK-LABEL: unreachable:
-; CHECK: ud2
+; TRAP_AFTER_NORETURN: ud2
+; NO_TRAP_AFTER_NORETURN: ud2
+; NORMAL-NOT: ud2
+; NORMAL: # -- End function
 define i32 @unreachable() noreturn nounwind {
   unreachable
 }
