@@ -23,6 +23,7 @@ add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
   X86AsmPrinter.cpp
+  X86AvoidTrailingCall.cpp
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
   X86CallLowering.cpp

@@ -54,6 +54,12 @@ inline void collision() {
 }
 void use_collision() { collision(); }
 
+namespace pack_not_pack_expansion {
+  template<typename T, int, T...> struct X;
+  // CHECK: @_ZNK23pack_not_pack_expansion1xMUlTyTtTyTnT_TpTnTL0__ETpTyvE_clIiNS_1XEJfEEEDav
+  inline auto x = []<typename T, template<typename U, T, U...> typename, typename ...V>(){}; void f() { x.operator()<int, X, float>(); }
+}
+
 template<typename> void f() {
   // CHECK: define linkonce_odr {{.*}} @_ZZ1fIiEvvENKUlT_E_clIiEEDaS0_(
   auto x = [](auto){};

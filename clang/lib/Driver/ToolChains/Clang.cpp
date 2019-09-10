@@ -336,7 +336,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
-    riscv::getRISCVTargetFeatures(D, Args, Features);
+    riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
     systemz::getSystemZTargetFeatures(Args, Features);

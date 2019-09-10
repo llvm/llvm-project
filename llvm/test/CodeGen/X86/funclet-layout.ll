@@ -9,6 +9,8 @@ target triple = "x86_64-pc-windows-msvc"
 @"\01??_7type_info@@6B@" = external constant i8*
 @"\01??_R0H@8" = internal global %rtti.TypeDescriptor2 { i8** @"\01??_7type_info@@6B@", i8* null, [3 x i8] c".H\00" }
 
+declare void @llvm.trap()
+
 define void @test1(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   invoke void @g()
@@ -31,6 +33,7 @@ try.cont:
   ret void
 
 unreachable:
+  call void @llvm.trap()
   unreachable
 }
 
@@ -76,6 +79,7 @@ try.cont.5:                                       ; preds = %try.cont
   ret i32 0
 
 unreachable:                                      ; preds = %catch, %entry
+  call void @llvm.trap()
   unreachable
 }
 
@@ -125,11 +129,13 @@ try.cont:                                         ; preds = %entry
   br i1 %V, label %exit_one, label %exit_two
 
 exit_one:
-  tail call void @exit(i32 0)
+  tail call void @g()
+  call void @llvm.trap()
   unreachable
 
 exit_two:
-  tail call void @exit(i32 0)
+  tail call void @g()
+  call void @llvm.trap()
   unreachable
 }
 
@@ -138,7 +144,7 @@ exit_two:
 ; The entry funclet contains %entry and %try.cont
 ; CHECK: # %entry
 ; CHECK: # %try.cont
-; CHECK: callq exit
+; CHECK: callq g
 ; CHECK-NOT: # exit_one
 ; CHECK-NOT: # exit_two
 ; CHECK: ud2
@@ -146,12 +152,12 @@ exit_two:
 ; The catch(...) funclet contains %catch.2
 ; CHECK: # %catch.2{{$}}
 ; CHECK: callq exit
-; CHECK: ud2
+; CHECK-NEXT: int3
 
 ; The catch(int) funclet contains %catch
 ; CHECK: # %catch{{$}}
 ; CHECK: callq exit
-; CHECK: ud2
+; CHECK-NEXT: int3
 
 declare void @exit(i32) noreturn nounwind
 declare void @_CxxThrowException(i8*, %eh.ThrowInfo*)

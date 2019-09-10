@@ -38,10 +38,8 @@ public:
     TraverseAST(AST.getASTContext());
     // Add highlightings for macro expansions as they are not traversed by the
     // visitor.
-    // FIXME: Should add highlighting to the macro definitions as well. But this
-    // information is not collected in ParsedAST right now.
-    for (const SourceLocation &L : AST.getMainFileExpansions())
-      addToken(L, HighlightingKind::Macro);
+    for (SourceLocation Loc : AST.getMacros())
+      addToken(Loc, HighlightingKind::Macro);
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);

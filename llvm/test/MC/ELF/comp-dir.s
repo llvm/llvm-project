@@ -1,4 +1,6 @@
-// REQUIRES: shell
+// Don't try to make symlinks on Windows.
+// UNSUPPORTED: system-windows
+//
 // RUN: llvm-mc -triple=x86_64-linux-unknown -g -fdebug-compilation-dir=/test/comp/dir %s -filetype=obj -o %t.o
 // RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
 
