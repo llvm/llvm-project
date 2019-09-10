@@ -281,6 +281,20 @@ llvm::MutableArrayRef<CallEdge> Function::GetTailCallingEdges() {
   });
 }
 
+CallEdge *Function::GetCallEdgeForReturnAddress(addr_t return_pc,
+                                                Target &target) {
+  auto edges = GetCallEdges();
+  auto edge_it =
+      std::lower_bound(edges.begin(), edges.end(), return_pc,
+                       [&](const CallEdge &edge, addr_t pc) {
+                         return edge.GetReturnPCAddress(*this, target) < pc;
+                       });
+  if (edge_it == edges.end() ||
+      edge_it->GetReturnPCAddress(*this, target) != return_pc)
+    return nullptr;
+  return &const_cast<CallEdge &>(*edge_it);
+}
+
 Block &Function::GetBlock(bool can_create) {
   if (!m_block.BlockInfoHasBeenParsed() && can_create) {
     ModuleSP module_sp = CalculateSymbolContextModule();

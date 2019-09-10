@@ -2212,11 +2212,15 @@ class TestBase(Base):
             self,
             command,
             check_file,
-            filecheck_options = ''):
+            filecheck_options = '',
+            expect_cmd_failure = False):
         # Run the command.
         self.runCmd(
                 command,
+                check=(not expect_cmd_failure),
                 msg="FileCheck'ing result of `{0}`".format(command))
+
+        self.assertTrue((not expect_cmd_failure) == self.res.Succeeded())
 
         # Get the error text if there was an error, and the regular text if not.
         output = self.res.GetOutput() if self.res.Succeeded() \
