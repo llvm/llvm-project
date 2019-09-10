@@ -125,7 +125,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.Add(NonLocalizedString);
@@ -761,8 +761,8 @@ void NonLocalizedStringChecker::reportLocalizationError(
     return;
 
   // Generate the bug report.
-  std::unique_ptr<BugReport> R(new BugReport(
-      *BT, "User-facing text should use localized string macro", ErrNode));
+  auto R = std::make_unique<PathSensitiveBugReport>(
+      *BT, "User-facing text should use localized string macro", ErrNode);
   if (argumentNumber) {
     R->addRange(M.getArgExpr(argumentNumber - 1)->getSourceRange());
   } else {
@@ -999,7 +999,8 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
 
 PathDiagnosticPieceRef
 NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                       BugReporterContext &BRC, BugReport &BR) {
+                                       BugReporterContext &BRC,
+                                       PathSensitiveBugReport &BR) {
   if (Satisfied)
     return nullptr;
 

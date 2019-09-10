@@ -81,6 +81,19 @@ __mmask16 test__builtin_ia32_cmpps512_mask_rounding(__m512 __a, __m512 __b, __mm
   return __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 0); // expected-error {{invalid rounding argument}}
 }
 
+// Make sure we allow 4(CUR_DIRECTION), 8(NO_EXC), and 12(CUR_DIRECTION|NOEXC) for SAE arguments.
+__mmask16 test__builtin_ia32_cmpps512_mask_rounding_cur_dir(__m512 __a, __m512 __b, __mmask16 __u) {
+  return __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 4); // no-error
+}
+
+__mmask16 test__builtin_ia32_cmpps512_mask_rounding_sae1(__m512 __a, __m512 __b, __mmask16 __u) {
+  return __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 8); // no-error
+}
+
+__mmask16 test__builtin_ia32_cmpps512_mask_rounding_sae2(__m512 __a, __m512 __b, __mmask16 __u) {
+  return __builtin_ia32_cmpps512_mask(__a, __b, 0, __u, 12); // no-error
+}
+
 __m512 test__builtin_ia32_getmantps512_mask(__m512 a, __m512 b) {
   return __builtin_ia32_getmantps512_mask(a, 0, b, (__mmask16)-1, 10); // expected-error {{invalid rounding argument}}
 }

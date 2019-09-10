@@ -627,35 +627,23 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
         PHeader.p_offset = std::min(PHeader.p_offset, SHeader->sh_offset);
     }
 
-    // Find the maximum offset of the end of a section in order to set p_filesz,
-    // if not set explicitly.
-    if (YamlPhdr.FileSize) {
-      PHeader.p_filesz = *YamlPhdr.FileSize;
-    } else {
-      PHeader.p_filesz = 0;
-      for (Elf_Shdr *SHeader : Sections) {
-        uint64_t EndOfSection;
-        if (SHeader->sh_type == llvm::ELF::SHT_NOBITS)
-          EndOfSection = SHeader->sh_offset;
-        else
-          EndOfSection = SHeader->sh_offset + SHeader->sh_size;
-        uint64_t EndOfSegment = PHeader.p_offset + PHeader.p_filesz;
-        EndOfSegment = std::max(EndOfSegment, EndOfSection);
-        PHeader.p_filesz = EndOfSegment - PHeader.p_offset;
-      }
+    // Find the maximum offset of the end of a section in order to set p_filesz
+    // and p_memsz. When setting p_filesz, trailing SHT_NOBITS sections are not
+    // counted.
+    uint64_t FileOffset = PHeader.p_offset, MemOffset = PHeader.p_offset;
+    for (Elf_Shdr *SHeader : Sections) {
+      uint64_t End = SHeader->sh_offset + SHeader->sh_size;
+      MemOffset = std::max(MemOffset, End);
+
+      if (SHeader->sh_type != llvm::ELF::SHT_NOBITS)
+        FileOffset = std::max(FileOffset, End);
     }
 
-    // If not set explicitly, find the memory size by adding the size of
-    // sections at the end of the segment. These should be empty (size of zero)
-    // and NOBITS sections.
-    if (YamlPhdr.MemSize) {
-      PHeader.p_memsz = *YamlPhdr.MemSize;
-    } else {
-      PHeader.p_memsz = PHeader.p_filesz;
-      for (Elf_Shdr *SHeader : Sections)
-        if (SHeader->sh_offset == PHeader.p_offset + PHeader.p_filesz)
-          PHeader.p_memsz += SHeader->sh_size;
-    }
+    // Set the file size and the memory size if not set explicitly.
+    PHeader.p_filesz = YamlPhdr.FileSize ? uint64_t(*YamlPhdr.FileSize)
+                                         : FileOffset - PHeader.p_offset;
+    PHeader.p_memsz = YamlPhdr.MemSize ? uint64_t(*YamlPhdr.MemSize)
+                                       : MemOffset - PHeader.p_offset;
 
     // Set the alignment of the segment to be the same as the maximum alignment
     // of the sections with the same offset so that by default the segment

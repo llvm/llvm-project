@@ -385,12 +385,12 @@ def V_TRIG_PREOP_F64 : VOP3Inst <"v_trig_preop_f64", VOP3_Profile<VOP_F64_F64_I3
 }
 
 let SchedRW = [Write64Bit] in {
-let SubtargetPredicate = isGFX6GFX7GFX10, Predicates = [isGFX6GFX7GFX10] in {
-def V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_PAT_GEN<VOP_I64_I64_I32>>, shl>;
-def V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_PAT_GEN<VOP_I64_I64_I32>>, srl>;
-def V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_PAT_GEN<VOP_I64_I64_I32>>, sra>;
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
+def V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>, shl>;
+def V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_I64_I64_I32>, srl>;
+def V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, sra>;
 def V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
-} // End SubtargetPredicate = isGFX6GFX7GFX10, Predicates = [isGFX6GFX7GFX10]
+} // End SubtargetPredicate = isGFX6GFX7GFX10
 
 let SubtargetPredicate = isGFX8Plus in {
 def V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, lshl_rev>;
@@ -398,21 +398,6 @@ def V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, ls
 def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, ashr_rev>;
 } // End SubtargetPredicate = isGFX8Plus
 } // End SchedRW = [Write64Bit]
-
-let Predicates = [isGFX8Plus] in {
-def : GCNPat <
- (getDivergentFrag<shl>.ret i64:$x, i32:$y),
- (V_LSHLREV_B64 $y, $x)
->;
-def : AMDGPUPat <
- (getDivergentFrag<srl>.ret i64:$x, i32:$y),
- (V_LSHRREV_B64 $y, $x)
->;
-def : AMDGPUPat <
- (getDivergentFrag<sra>.ret i64:$x, i32:$y),
- (V_ASHRREV_I64 $y, $x)
->;
-}
 
 
 let SchedRW = [Write32Bit] in {

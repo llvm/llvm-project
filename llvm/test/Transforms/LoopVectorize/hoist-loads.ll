@@ -42,12 +42,12 @@ for.end:
 ; CHECK: load <2 x float>
 ; CHECK-NOT: load <2 x float>
 
-define void @dont_hoist_cond_load() {
+define void @dont_hoist_cond_load([1024 x float]* %a) {
 entry:
   br label %for.body
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end9 ]
-  %arrayidx = getelementptr inbounds [1024 x float], [1024 x float]* @A, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds [1024 x float], [1024 x float]* %a, i64 0, i64 %indvars.iv
   %arrayidx2 = getelementptr inbounds [1024 x float], [1024 x float]* @B, i64 0, i64 %indvars.iv
   %0 = load float, float* %arrayidx2, align 4
   %cmp3 = fcmp oeq float %0, 0.000000e+00

@@ -73,7 +73,7 @@ define i128 @sequence_sizes([8 x i8] %in) {
 }
 
 ; Just to make sure we don't accidentally emit a normal load/store.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %2:gpr(s64) = G_LOAD %0:gpr(p0) :: (load seq_cst 8 from %ir.addr)  (in function: atomic_ops)
+; FALLBACK-WITH-REPORT-ERR: cannot select: G_STORE %1:gpr(s64), %0:gpr64sp(p0) :: (store unordered 8 into %ir.addr) (in function: atomic_ops)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for atomic_ops
 ; FALLBACK-WITH-REPORT-LABEL: atomic_ops:
 define i64 @atomic_ops(i64* %addr) {

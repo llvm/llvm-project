@@ -141,7 +141,7 @@ public:
   std::unique_ptr<ASTConsumer>
   CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
     CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
-    addSystemHeadersMapping(Includes.get(), CI.getLangOpts());
+    Includes->addSystemHeadersMapping(CI.getLangOpts());
     if (IncludeGraphCallback != nullptr)
       CI.getPreprocessor().addPPCallbacks(
           std::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));

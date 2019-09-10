@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "index/CanonicalIncludes.h"
+#include "clang/Basic/LangOptions.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -17,7 +18,7 @@ TEST(CanonicalIncludesTest, CStandardLibrary) {
   CanonicalIncludes CI;
   auto Language = LangOptions();
   Language.C11 = true;
-  addSystemHeadersMapping(&CI, Language);
+  CI.addSystemHeadersMapping(Language);
   // Usual standard library symbols are mapped correctly.
   EXPECT_EQ("<stdio.h>", CI.mapHeader("path/stdio.h", "printf"));
 }
@@ -26,7 +27,7 @@ TEST(CanonicalIncludesTest, CXXStandardLibrary) {
   CanonicalIncludes CI;
   auto Language = LangOptions();
   Language.CPlusPlus = true;
-  addSystemHeadersMapping(&CI, Language);
+  CI.addSystemHeadersMapping(Language);
 
   // Usual standard library symbols are mapped correctly.
   EXPECT_EQ("<vector>", CI.mapHeader("path/vector.h", "std::vector"));
@@ -54,19 +55,32 @@ TEST(CanonicalIncludesTest, PathMapping) {
 TEST(CanonicalIncludesTest, SymbolMapping) {
   // As used for standard library.
   CanonicalIncludes CI;
-  CI.addSymbolMapping("some::symbol", "<baz>");
+  LangOptions Language;
+  Language.CPlusPlus = true;
+  // Ensures 'std::vector' is mapped to '<vector>'.
+  CI.addSystemHeadersMapping(Language);
 
-  EXPECT_EQ("<baz>", CI.mapHeader("foo/bar", "some::symbol"));
+  EXPECT_EQ("<vector>", CI.mapHeader("foo/bar", "std::vector"));
   EXPECT_EQ("foo/bar", CI.mapHeader("foo/bar", "other::symbol"));
 }
 
 TEST(CanonicalIncludesTest, Precedence) {
   CanonicalIncludes CI;
   CI.addMapping("some/path", "<path>");
-  CI.addSymbolMapping("some::symbol", "<symbol>");
+  LangOptions Language;
+  Language.CPlusPlus = true;
+  CI.addSystemHeadersMapping(Language);
 
-  // Symbol mapping beats path mapping.
-  EXPECT_EQ("<symbol>", CI.mapHeader("some/path", "some::symbol"));
+  // We added a mapping from some/path to <path>.
+  ASSERT_EQ("<path>", CI.mapHeader("some/path", ""));
+  // We should have a path from 'bits/stl_vector.h' to '<vector>'.
+  ASSERT_EQ("<vector>", CI.mapHeader("bits/stl_vector.h", ""));
+  // We should also have a symbol mapping from 'std::map' to '<map>'.
+  ASSERT_EQ("<map>", CI.mapHeader("some/header.h", "std::map"));
+
+  // And the symbol mapping should take precedence over paths mapping.
+  EXPECT_EQ("<map>", CI.mapHeader("bits/stl_vector.h", "std::map"));
+  EXPECT_EQ("<map>", CI.mapHeader("some/path", "std::map"));
 }
 
 } // namespace

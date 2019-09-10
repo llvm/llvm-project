@@ -67,7 +67,7 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
       if (!N)
         return;
 
-      auto Report = std::make_unique<BugReport>(
+      auto Report = std::make_unique<PathSensitiveBugReport>(
           *BT, "Both PROT_WRITE and PROT_EXEC flags are set. This can "
                "lead to exploitable memory regions, which could be overwritten "
                "with malicious code", N);

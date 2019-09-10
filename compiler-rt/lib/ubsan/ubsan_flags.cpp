@@ -54,7 +54,6 @@ void InitializeFlags() {
   {
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
-    cf.print_summary = false;
     cf.external_symbolizer_path = GetFlag("UBSAN_SYMBOLIZER_PATH");
     OverrideCommonFlags(cf);
   }

@@ -11,14 +11,14 @@
 # RUN: llvm-readobj -r --mips-plt-got %t.so | FileCheck -check-prefix=SO %s
 
 # DIS:      __start:
-# DIS-NEXT:    20000:       addiu   $2, $3, 0
-#                       %hi(loc0 - .tdata - 0x8000) --^
-# DIS-NEXT:    20004:       addiu   $2, $3, -32768
-#                       %lo(loc0 - .tdata - 0x8000) --^
-# DIS-NEXT:    20008:       addiu   $2, $3, 0
-#                       %hi(loc0 - .tdata - 0x7000) --^
-# DIS-NEXT:    2000c:       addiu   $2, $3, -28672
-#                       %lo(loc0 - .tdata - 0x7000) --^
+# DIS-NEXT:    addiu   $2, $3, 0
+#                              ^-- %hi(loc0 - .tdata - 0x8000)
+# DIS-NEXT:    addiu   $2, $3, -32768
+#                              ^-- %lo(loc0 - .tdata - 0x8000)
+# DIS-NEXT:    addiu   $2, $3, 0
+#                              ^-- %hi(loc0 - .tdata - 0x7000)
+# DIS-NEXT:    addiu   $2, $3, -28672
+#                              ^-- %lo(loc0 - .tdata - 0x7000)
 
 # DIS: 00000000 l    O .tdata          00000000 loc0
 

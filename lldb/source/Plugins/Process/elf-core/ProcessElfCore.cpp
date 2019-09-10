@@ -118,16 +118,20 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
   FileRange file_range(header.p_offset, header.p_filesz);
   VMRangeToFileOffset::Entry range_entry(addr, header.p_memsz, file_range);
 
-  VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
-  if (last_entry && last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
-      last_entry->data.GetRangeEnd() == range_entry.data.GetRangeBase() &&
-      last_entry->GetByteSize() == last_entry->data.GetByteSize()) {
-    last_entry->SetRangeEnd(range_entry.GetRangeEnd());
-    last_entry->data.SetRangeEnd(range_entry.data.GetRangeEnd());
-  } else {
-    m_core_aranges.Append(range_entry);
+  // Only add to m_core_aranges if the file size is non zero. Some core files
+  // have PT_LOAD segments for all address ranges, but set f_filesz to zero for
+  // the .text sections since they can be retrieved from the object files.
+  if (header.p_filesz > 0) {
+    VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
+    if (last_entry && last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
+        last_entry->data.GetRangeEnd() == range_entry.data.GetRangeBase() &&
+        last_entry->GetByteSize() == last_entry->data.GetByteSize()) {
+      last_entry->SetRangeEnd(range_entry.GetRangeEnd());
+      last_entry->data.SetRangeEnd(range_entry.data.GetRangeEnd());
+    } else {
+      m_core_aranges.Append(range_entry);
+    }
   }
-
   // Keep a separate map of permissions that that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =

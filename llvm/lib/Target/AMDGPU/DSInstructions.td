@@ -714,8 +714,8 @@ foreach vt = VGPR_32.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B32, vt, "store_local">;
 }
 
-defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local">;
+defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local_32">;
+defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local_64">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_local_hi16>;

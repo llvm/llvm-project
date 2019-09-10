@@ -496,12 +496,16 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         typedef $TemplateParameter[[T]] $TemplateParameter[[TemplateParam2]];
         using $Primitive[[IntType]] = $Primitive[[int]];
 
-        // These typedefs are not yet highlighted, their types are complicated.
-        using Pointer = $TemplateParameter[[T]] *;
-        using LVReference = $TemplateParameter[[T]] &;
-        using RVReference = $TemplateParameter[[T]]&&;
-        using Array = $TemplateParameter[[T]]*[3];
-        using MemberPointer = $Primitive[[int]] (A::*)($Primitive[[int]]);
+        using $Typedef[[Pointer]] = $TemplateParameter[[T]] *;
+        using $Typedef[[LVReference]] = $TemplateParameter[[T]] &;
+        using $Typedef[[RVReference]] = $TemplateParameter[[T]]&&;
+        using $Typedef[[Array]] = $TemplateParameter[[T]]*[3];
+        using $Typedef[[MemberPointer]] = $Primitive[[int]] (A::*)($Primitive[[int]]);
+
+        // Use various previously defined typedefs in a function type.
+        $Primitive[[void]] $Method[[func]](
+          $Typedef[[Pointer]], $Typedef[[LVReference]], $Typedef[[RVReference]],
+          $Typedef[[Array]], $Typedef[[MemberPointer]]);
       };
     )cpp"};
   for (const auto &TestCase : TestCases) {

@@ -745,6 +745,8 @@ TSAN_INTERCEPTOR(char*, strdup, const char *str) {
   return REAL(strdup)(str);
 }
 
+// Zero out addr if it points into shadow memory and was provided as a hint
+// only, i.e., MAP_FIXED is not set.
 static bool fix_mmap_addr(void **addr, long_t sz, int flags) {
   if (*addr) {
     if (!IsAppMem((uptr)*addr) || !IsAppMem((uptr)*addr + sz - 1)) {
@@ -767,22 +769,14 @@ static void *mmap_interceptor(ThreadState *thr, uptr pc, Mmap real_mmap,
   void *res = real_mmap(addr, sz, prot, flags, fd, off);
   if (res != MAP_FAILED) {
     if (fd > 0) FdAccess(thr, pc, fd);
-    if (thr->ignore_reads_and_writes == 0)
-      MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
-    else
-      MemoryResetRange(thr, pc, (uptr)res, sz);
+    MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, sz);
   }
   return res;
 }
 
 TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
   SCOPED_TSAN_INTERCEPTOR(munmap, addr, sz);
-  if (sz != 0) {
-    // If sz == 0, munmap will return EINVAL and don't unmap any memory.
-    DontNeedShadowFor((uptr)addr, sz);
-    ScopedGlobalProcessor sgp;
-    ctx->metamap.ResetRange(thr->proc(), (uptr)addr, (uptr)sz);
-  }
+  UnmapShadow(thr, (uptr)addr, sz);
   int res = REAL(munmap)(addr, sz);
   return res;
 }

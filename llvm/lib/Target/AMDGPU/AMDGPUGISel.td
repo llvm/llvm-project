@@ -34,6 +34,18 @@ def gi_vop3omods :
     GIComplexOperandMatcher<s32, "selectVOP3OMods">,
     GIComplexPatternEquiv<VOP3OMods>;
 
+def gi_vop3omods0clamp0omod :
+    GIComplexOperandMatcher<s32, "selectVOP3Mods0Clamp0OMod">,
+    GIComplexPatternEquiv<VOP3Mods0Clamp0OMod>;
+
+def gi_vop3opselmods0 :
+    GIComplexOperandMatcher<s32, "selectVOP3OpSelMods0">,
+    GIComplexPatternEquiv<VOP3OpSelMods0>;
+
+def gi_vop3opselmods :
+    GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
+    GIComplexPatternEquiv<VOP3OpSelMods>;
+
 def gi_smrd_imm :
     GIComplexOperandMatcher<s64, "selectSmrdImm">,
     GIComplexPatternEquiv<SMRDImm>;
@@ -46,12 +58,19 @@ def gi_smrd_sgpr :
     GIComplexOperandMatcher<s64, "selectSmrdSgpr">,
     GIComplexPatternEquiv<SMRDSgpr>;
 
+// FIXME: Why are the atomic versions separated?
 def gi_flat_offset :
     GIComplexOperandMatcher<s64, "selectFlatOffset">,
     GIComplexPatternEquiv<FLATOffset>;
 def gi_flat_offset_signed :
     GIComplexOperandMatcher<s64, "selectFlatOffsetSigned">,
     GIComplexPatternEquiv<FLATOffsetSigned>;
+def gi_flat_atomic :
+    GIComplexOperandMatcher<s64, "selectFlatOffset">,
+    GIComplexPatternEquiv<FLATAtomic>;
+def gi_flat_signed_atomic :
+    GIComplexOperandMatcher<s64, "selectFlatOffsetSigned">,
+    GIComplexPatternEquiv<FLATSignedAtomic>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -69,8 +88,20 @@ def gi_ds_1addr_1offset :
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before before selecting a glue-less load, so hide this
 // distinction.
-def : GINodeEquiv<G_LOAD, AMDGPUld_glue>;
-def : GINodeEquiv<G_STORE, AMDGPUst_glue>;
+
+def : GINodeEquiv<G_LOAD, AMDGPUld_glue> {
+  let CheckMMOIsNonAtomic = 1;
+}
+
+def : GINodeEquiv<G_STORE, AMDGPUst_glue> {
+  let CheckMMOIsNonAtomic = 1;
+}
+
+def : GINodeEquiv<G_LOAD, AMDGPUatomic_ld_glue> {
+  bit CheckMMOIsAtomic = 1;
+}
+
+
 
 def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap_glue>;
 def : GINodeEquiv<G_ATOMICRMW_XCHG, atomic_swap_glue>;
@@ -172,11 +203,6 @@ def : GISelVop2Pat <or, V_OR_B32_e32, i32>;
 // this is even supported yet.
 def : GISelVop3Pat2ModsPat <
   int_amdgcn_cvt_pkrtz, V_CVT_PKRTZ_F16_F32_e64, v2f16, f32>;
-
-defm : GISelVop2IntrPat <int_maxnum, V_MAX_F32_e32, f32>;
-def : GISelVop3Pat2ModsPat <int_maxnum, V_MAX_F64, f64>;
-defm : GISelVop2IntrPat <int_minnum, V_MIN_F32_e32, f32>;
-def : GISelVop3Pat2ModsPat <int_minnum, V_MIN_F64, f64>;
 
 // Since GlobalISel is more flexible then SelectionDAG, I think we can get
 // away with adding patterns for integer types and not legalizing all

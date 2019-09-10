@@ -319,7 +319,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_ROUND:                   return "fp_round";
   case ISD::STRICT_FP_ROUND:            return "strict_fp_round";
   case ISD::FLT_ROUNDS_:                return "flt_rounds";
-  case ISD::FP_ROUND_INREG:             return "fp_round_inreg";
   case ISD::FP_EXTEND:                  return "fp_extend";
   case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
 

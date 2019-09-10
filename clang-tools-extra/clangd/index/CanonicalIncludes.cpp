@@ -9,6 +9,7 @@
 #include "CanonicalIncludes.h"
 #include "Headers.h"
 #include "clang/Driver/Types.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 
@@ -18,43 +19,41 @@ namespace {
 const char IWYUPragma[] = "// IWYU pragma: private, include ";
 } // namespace
 
-void CanonicalIncludes::addPathSuffixMapping(llvm::StringRef Suffix,
-                                             llvm::StringRef CanonicalPath) {
-  int Components = std::distance(llvm::sys::path::begin(Suffix),
-                                 llvm::sys::path::end(Suffix));
-  MaxSuffixComponents = std::max(MaxSuffixComponents, Components);
-  SuffixHeaderMapping[Suffix] = CanonicalPath;
-}
-
 void CanonicalIncludes::addMapping(llvm::StringRef Path,
                                    llvm::StringRef CanonicalPath) {
   FullPathMapping[Path] = CanonicalPath;
 }
 
-void CanonicalIncludes::addSymbolMapping(llvm::StringRef QualifiedName,
-                                         llvm::StringRef CanonicalPath) {
-  this->SymbolMapping[QualifiedName] = CanonicalPath;
-}
+/// The maximum number of path components in a key from StdSuffixHeaderMapping.
+/// Used to minimize the number of lookups in suffix path mappings.
+constexpr int MaxSuffixComponents = 3;
 
 llvm::StringRef
 CanonicalIncludes::mapHeader(llvm::StringRef Header,
                              llvm::StringRef QualifiedName) const {
   assert(!Header.empty());
-  auto SE = SymbolMapping.find(QualifiedName);
-  if (SE != SymbolMapping.end())
-    return SE->second;
+  if (StdSymbolMapping) {
+    auto SE = StdSymbolMapping->find(QualifiedName);
+    if (SE != StdSymbolMapping->end())
+      return SE->second;
+  }
 
   auto MapIt = FullPathMapping.find(Header);
   if (MapIt != FullPathMapping.end())
     return MapIt->second;
 
+  if (!StdSuffixHeaderMapping)
+    return Header;
+
   int Components = 1;
+
+  // FIXME: check that this works on Windows and add tests.
   for (auto It = llvm::sys::path::rbegin(Header),
             End = llvm::sys::path::rend(Header);
        It != End && Components <= MaxSuffixComponents; ++It, ++Components) {
     auto SubPath = Header.substr(It->data() - Header.begin());
-    auto MappingIt = SuffixHeaderMapping.find(SubPath);
-    if (MappingIt != SuffixHeaderMapping.end())
+    auto MappingIt = StdSuffixHeaderMapping->find(SubPath);
+    if (MappingIt != StdSuffixHeaderMapping->end())
       return MappingIt->second;
   }
   return Header;
@@ -86,29 +85,27 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
   return std::make_unique<PragmaCommentHandler>(Includes);
 }
 
-void addSystemHeadersMapping(CanonicalIncludes *Includes,
-                             const LangOptions &Language) {
-  static constexpr std::pair<const char *, const char *> SymbolMap[] = {
-#define SYMBOL(Name, NameSpace, Header) { #NameSpace#Name, #Header },
-      #include "StdSymbolMap.inc"
-#undef SYMBOL
-  };
-  static constexpr std::pair<const char *, const char *> CSymbolMap[] = {
-#define SYMBOL(Name, NameSpace, Header) { #Name, #Header },
-      #include "CSymbolMap.inc"
-#undef SYMBOL
-  };
+void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
   if (Language.CPlusPlus) {
-    for (const auto &Pair : SymbolMap)
-      Includes->addSymbolMapping(Pair.first, Pair.second);
+    static const auto *Symbols = new llvm::StringMap<llvm::StringRef>({
+#define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name, #Header},
+#include "StdSymbolMap.inc"
+#undef SYMBOL
+    });
+    StdSymbolMapping = Symbols;
   } else if (Language.C11) {
-    for (const auto &Pair : CSymbolMap)
-      Includes->addSymbolMapping(Pair.first, Pair.second);
+    static const auto *CSymbols = new llvm::StringMap<llvm::StringRef>({
+#define SYMBOL(Name, NameSpace, Header) {#Name, #Header},
+#include "CSymbolMap.inc"
+#undef SYMBOL
+    });
+    StdSymbolMapping = CSymbols;
   }
+
   // FIXME: remove the std header mapping once we support ambiguous symbols, now
   // it serves as a fallback to disambiguate:
   //   - symbols with multiple headers (e.g. std::move)
-  static constexpr std::pair<const char *, const char *> SystemHeaderMap[] = {
+  static const auto *SystemHeaderMap = new llvm::StringMap<llvm::StringRef>({
       {"include/__stddef_max_align_t.h", "<cstddef>"},
       {"include/__wmmintrin_aes.h", "<wmmintrin.h>"},
       {"include/__wmmintrin_pclmul.h", "<wmmintrin.h>"},
@@ -760,9 +757,22 @@ void addSystemHeadersMapping(CanonicalIncludes *Includes,
       {"bits/waitflags.h", "<sys/wait.h>"},
       {"bits/waitstatus.h", "<sys/wait.h>"},
       {"bits/xtitypes.h", "<stropts.h>"},
-  };
-  for (const auto &Pair : SystemHeaderMap)
-    Includes->addPathSuffixMapping(Pair.first, Pair.second);
+  });
+  // Check MaxSuffixComponents constant is correct.
+  assert(llvm::all_of(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
+    return std::distance(
+               llvm::sys::path::begin(Path, llvm::sys::path::Style::posix),
+               llvm::sys::path::end(Path)) <= MaxSuffixComponents;
+  }));
+  // ... and precise.
+  assert(llvm::find_if(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
+           return std::distance(llvm::sys::path::begin(
+                                    Path, llvm::sys::path::Style::posix),
+                                llvm::sys::path::end(Path)) ==
+                  MaxSuffixComponents;
+         }) != SystemHeaderMap->keys().end());
+
+  StdSuffixHeaderMapping = SystemHeaderMap;
 }
 
 } // namespace clangd
