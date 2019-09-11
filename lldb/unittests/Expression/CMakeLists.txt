@@ -1,7 +1,7 @@
 add_lldb_unittest(ExpressionTests
+  ClangParserTest.cpp
   DiagnosticManagerTest.cpp
   DWARFExpressionTest.cpp
-  ClangParserTest.cpp
 
   LINK_LIBS
     lldbCore
