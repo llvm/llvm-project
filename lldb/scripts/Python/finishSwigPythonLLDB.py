@@ -681,8 +681,8 @@ def get_pylib_for_platform(vstrPythonInstallDir):
             linux_distro = linux_distribution()[0]
         else:
             linux_distro = platform.linux_distribution()[0]
-        if linux_distro == 'Fedora':
-            dbg.dump_text("Platform is Fedora Linux")
+        if linux_distro == 'Fedora' or linux_distro == 'Red Hat Enterprise Linux' or linux_distro == 'CentOS Linux':
+            dbg.dump_text("Platform is a Fedora-based Linux")
             # On Fedora the installation gets split into lib and lib64,
             # which prevents building lldb from completing successfully.
             return get_python_lib(False, False, vstrPythonInstallDir)
