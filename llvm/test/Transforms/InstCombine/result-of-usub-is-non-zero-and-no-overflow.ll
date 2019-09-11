@@ -6,6 +6,7 @@
 ; between the base and offset.
 
 declare void @use8(i8)
+declare void @use64(i64)
 declare void @use1(i1)
 
 declare {i8, i1} @llvm.usub.with.overflow(i8, i8)
@@ -426,54 +427,117 @@ define i1 @t13(i8 %base, i8 %offset) {
 
 ;-------------------------------------------------------------------------------
 
-define i1 @t15(i8 %base, i8 %offset) {
+define i1 @t15(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-LABEL: @t15(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET]]
-; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
+; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %cmp = icmp ne i8 %offset, 0
-  call void @llvm.assume(i1 %cmp)
+  %offset = ptrtoint i64* %offsetptr to i64
 
-  %adjusted = sub i8 %base, %offset
-  call void @use8(i8 %adjusted)
-  %no_underflow = icmp ult i8 %adjusted, %base
+  %adjusted = sub i64 %base, %offset
+  call void @use64(i64 %adjusted)
+  %no_underflow = icmp ult i64 %adjusted, %base
   call void @use1(i1 %no_underflow)
-  %not_null = icmp ne i8 %adjusted, 0
+  %not_null = icmp ne i64 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %r = and i1 %not_null, %no_underflow
+  ret i1 %r
+}
+define i1 @t16_commutative(i64 %base, i64* nonnull %offsetptr) {
+; CHECK-LABEL: @t16_commutative(
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
+; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i64 [[ADJUSTED]], 0
+; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %offset = ptrtoint i64* %offsetptr to i64
+
+  %adjusted = sub i64 %base, %offset
+  call void @use64(i64 %adjusted)
+  %no_underflow = icmp ugt i64 %base, %adjusted ; swapped
+  call void @use1(i1 %no_underflow)
+  %not_null = icmp ne i64 %adjusted, 0
   call void @use1(i1 %not_null)
   %r = and i1 %not_null, %no_underflow
   ret i1 %r
 }
 
-define i1 @t20(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t20(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET]]
-; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[ADJUSTED]], [[BASE]]
+define i1 @t17(i64 %base, i64* nonnull %offsetptr) {
+; CHECK-LABEL: @t17(
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
+; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i64 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %cmp = icmp ne i8 %offset, 0
-  call void @llvm.assume(i1 %cmp)
+  %offset = ptrtoint i64* %offsetptr to i64
 
-  %adjusted = sub i8 %base, %offset
-  call void @use8(i8 %adjusted)
-  %no_underflow = icmp uge i8 %adjusted, %base
+  %adjusted = sub i64 %base, %offset
+  call void @use64(i64 %adjusted)
+  %no_underflow = icmp uge i64 %adjusted, %base
   call void @use1(i1 %no_underflow)
-  %not_null = icmp eq i8 %adjusted, 0
+  %not_null = icmp eq i64 %adjusted, 0
   call void @use1(i1 %not_null)
   %r = or i1 %not_null, %no_underflow
+  ret i1 %r
+}
+define i1 @t18(i64 %base, i64* nonnull %offsetptr) {
+; CHECK-LABEL: @t18(
+; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
+; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i64 [[ADJUSTED]], 0
+; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %offset = ptrtoint i64* %offsetptr to i64
+
+  %adjusted = sub i64 %base, %offset
+  call void @use64(i64 %adjusted)
+  %no_underflow = icmp ule i64 %base, %adjusted ; swapped
+  call void @use1(i1 %no_underflow)
+  %not_null = icmp eq i64 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %r = or i1 %not_null, %no_underflow
+  ret i1 %r
+}
+
+define i1 @t19_bad(i64 %base, i64 %offset) {
+; CHECK-LABEL: @t19_bad(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use64(i64 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i64 [[ADJUSTED]], 0
+; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %adjusted = sub i64 %base, %offset
+  call void @use64(i64 %adjusted)
+  %no_underflow = icmp ult i64 %adjusted, %base
+  call void @use1(i1 %no_underflow)
+  %not_null = icmp ne i64 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %r = and i1 %not_null, %no_underflow
   ret i1 %r
 }

@@ -211,6 +211,24 @@ protected:
                          SmallVectorImpl<ArgInfo> &Args,
                          ValueHandler &Handler) const;
 
+  /// Analyze the return values of a call, incorporating info about the passed
+  /// values into \p CCState.
+  bool analyzeCallResult(CCState &CCState, SmallVectorImpl<ArgInfo> &Args,
+                         CCAssignFn &Fn) const;
+
+  /// \returns True if the calling convention for a callee and its caller pass
+  /// results in the same way. Typically used for tail call eligibility checks.
+  ///
+  /// \p Info is the CallLoweringInfo for the call.
+  /// \p MF is the MachineFunction for the caller.
+  /// \p InArgs contains the results of the call.
+  /// \p CalleeAssignFn is the CCAssignFn to be used for the callee.
+  /// \p CallerAssignFn is the CCAssignFn to be used for the caller.
+  bool resultsCompatible(CallLoweringInfo &Info, MachineFunction &MF,
+                         SmallVectorImpl<ArgInfo> &InArgs,
+                         CCAssignFn &CalleeAssignFn,
+                         CCAssignFn &CallerAssignFn) const;
+
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
   virtual ~CallLowering() = default;

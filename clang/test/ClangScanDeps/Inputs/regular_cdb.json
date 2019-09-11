@@ -1,12 +1,12 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -E -fsyntax-only DIR/regular_cdb2.cpp -IInputs -D INCLUDE_HEADER2 -MD -MF DIR/regular_cdb2.d",
-  "file": "DIR/regular_cdb2.cpp"
+  "command": "clang -E -fsyntax-only DIR/regular_cdb_input2.cpp -IInputs -D INCLUDE_HEADER2 -MD -MF DIR/regular_cdb2.d",
+  "file": "DIR/regular_cdb_input2.cpp"
 },
 {
   "directory": "DIR",
-  "command": "clang -E DIR/regular_cdb.cpp -IInputs",
-  "file": "DIR/regular_cdb.cpp"
+  "command": "clang -E DIR/regular_cdb_input.cpp -IInputs",
+  "file": "DIR/regular_cdb_input.cpp"
 }
 ]

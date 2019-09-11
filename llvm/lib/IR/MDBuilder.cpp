@@ -309,3 +309,15 @@ MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {
   };
   return MDNode::get(Context, Vals);
 }
+
+MDNode *MDBuilder::createMisExpect(uint64_t Index, uint64_t LikleyWeight,
+                                   uint64_t UnlikleyWeight) {
+  auto *IntType = Type::getInt64Ty(Context);
+  Metadata *Vals[] = {
+      createString("misexpect"),
+      createConstant(ConstantInt::get(IntType, Index)),
+      createConstant(ConstantInt::get(IntType, LikleyWeight)),
+      createConstant(ConstantInt::get(IntType, UnlikleyWeight)),
+  };
+  return MDNode::get(Context, Vals);
+}

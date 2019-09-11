@@ -20,7 +20,9 @@
 namespace llvm {
 
 class DataLayout;
+class Loop;
 class MDNode;
+class ScalarEvolution;
 
 /// Return true if this is always a dereferenceable pointer. If the context
 /// instruction is specified perform context-sensitive analysis and return true
@@ -60,6 +62,17 @@ bool isSafeToLoadUnconditionally(Value *V, unsigned Align, APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
                                  const DominatorTree *DT = nullptr);
+
+/// Return true if we can prove that the given load (which is assumed to be
+/// within the specified loop) would access only dereferenceable memory, and
+/// be properly aligned on every iteration of the specified loop regardless of
+/// its placement within the loop. (i.e. does not require predication beyond
+/// that required by the the header itself and could be hoisted into the header
+/// if desired.)  This is more powerful than the variants above when the
+/// address loaded from is analyzeable by SCEV.  
+bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
+                                       ScalarEvolution &SE,
+                                       DominatorTree &DT);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

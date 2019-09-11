@@ -29,6 +29,7 @@ static_library("Support") {
   ]
   sources = [
     "AArch64TargetParser.cpp",
+    "ABIBreak.cpp",
     "AMDGPUMetadata.cpp",
     "APFloat.cpp",
     "APInt.cpp",

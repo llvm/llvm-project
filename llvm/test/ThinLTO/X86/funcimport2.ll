@@ -33,7 +33,7 @@
 ; RUN: llvm-dis %t.o.2.3.import.bc -o - | FileCheck %s --check-prefix=NOIMPORT
 ; NOIMPORT: declare dso_local void @foo(...)
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
 define void @foo() #0 {

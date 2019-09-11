@@ -285,6 +285,11 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
       return {false, NoAlias};
+    case Intrinsic::dbg_addr:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_label:
+    case Intrinsic::dbg_value:
+      llvm_unreachable("debuginfo shouldn't have associated defs!");
     default:
       break;
     }
@@ -1725,11 +1730,13 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
                                            AliasAnalysisType *AAP,
                                            const MemoryUseOrDef *Template) {
   // The assume intrinsic has a control dependency which we model by claiming
-  // that it writes arbitrarily. Ignore that fake memory dependency here.
+  // that it writes arbitrarily. Debuginfo intrinsics may be considered
+  // clobbers when we have a nonstandard AA pipeline. Ignore these fake memory
+  // dependencies here.
   // FIXME: Replace this special casing with a more accurate modelling of
   // assume's control dependency.
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::assume)
+    if (II->getIntrinsicID() == Intrinsic::assume || isa<DbgInfoIntrinsic>(II))
       return nullptr;
 
   bool Def, Use;

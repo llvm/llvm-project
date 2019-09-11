@@ -233,17 +233,6 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val,
                                       ArrayRef<Register> VRegs,
                                       Register SwiftErrorVReg) const {
-
-  // Check if a tail call was lowered in this block. If so, we already handled
-  // the terminator.
-  MachineFunction &MF = MIRBuilder.getMF();
-  if (MF.getFrameInfo().hasTailCall()) {
-    MachineBasicBlock &MBB = MIRBuilder.getMBB();
-    auto FirstTerm = MBB.getFirstTerminator();
-    if (FirstTerm != MBB.end() && FirstTerm->isCall())
-      return true;
-  }
-
   auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
@@ -431,13 +420,44 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
+bool AArch64CallLowering::doCallerAndCalleePassArgsTheSameWay(
+    CallLoweringInfo &Info, MachineFunction &MF,
+    SmallVectorImpl<ArgInfo> &InArgs) const {
+  const Function &CallerF = MF.getFunction();
+  CallingConv::ID CalleeCC = Info.CallConv;
+  CallingConv::ID CallerCC = CallerF.getCallingConv();
+
+  // If the calling conventions match, then everything must be the same.
+  if (CalleeCC == CallerCC)
+    return true;
+
+  // Check if the caller and callee will handle arguments in the same way.
+  const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
+  CCAssignFn *CalleeAssignFn = TLI.CCAssignFnForCall(CalleeCC, Info.IsVarArg);
+  CCAssignFn *CallerAssignFn =
+      TLI.CCAssignFnForCall(CallerCC, CallerF.isVarArg());
+
+  if (!resultsCompatible(Info, MF, InArgs, *CalleeAssignFn, *CallerAssignFn))
+    return false;
+
+  // Make sure that the caller and callee preserve all of the same registers.
+  auto TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
+  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
+  const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
+  if (MF.getSubtarget<AArch64Subtarget>().hasCustomCallingConv()) {
+    TRI->UpdateCustomCallPreservedMask(MF, &CallerPreserved);
+    TRI->UpdateCustomCallPreservedMask(MF, &CalleePreserved);
+  }
+
+  return TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved);
+}
+
 bool AArch64CallLowering::isEligibleForTailCallOptimization(
-    MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info) const {
+    MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
+    SmallVectorImpl<ArgInfo> &InArgs) const {
   CallingConv::ID CalleeCC = Info.CallConv;
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &CallerF = MF.getFunction();
-  CallingConv::ID CallerCC = CallerF.getCallingConv();
-  bool CCMatch = CallerCC == CalleeCC;
 
   LLVM_DEBUG(dbgs() << "Attempting to lower call as tail call\n");
 
@@ -509,11 +529,11 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   assert((!Info.IsVarArg || CalleeCC == CallingConv::C) &&
          "Unexpected variadic calling convention");
 
-  // For now, only support the case where the calling conventions match.
-  if (!CCMatch) {
+  // Look at the incoming values.
+  if (!doCallerAndCalleePassArgsTheSameWay(Info, MF, InArgs)) {
     LLVM_DEBUG(
         dbgs()
-        << "... Cannot tail call with mismatched calling conventions yet.\n");
+        << "... Caller and callee have incompatible calling conventions.\n");
     return false;
   }
 
@@ -552,6 +572,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
+  const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
 
   if (Info.IsMustTailCall) {
     // TODO: Until we lower all tail calls, we should fall back on this.
@@ -573,13 +594,16 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       SplitArgs.back().Flags[0].setZExt();
   }
 
-  bool IsSibCall =
-      Info.IsTailCall && isEligibleForTailCallOptimization(MIRBuilder, Info);
+  SmallVector<ArgInfo, 8> InArgs;
+  if (!Info.OrigRet.Ty->isVoidTy())
+    splitToValueTypes(Info.OrigRet, InArgs, DL, MRI, F.getCallingConv());
+
+  bool IsSibCall = Info.IsTailCall &&
+                   isEligibleForTailCallOptimization(MIRBuilder, Info, InArgs);
   if (IsSibCall)
     MF.getFrameInfo().setHasTailCall();
 
   // Find out which ABI gets to decide where things go.
-  const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   CCAssignFn *AssignFnFixed =
       TLI.CCAssignFnForCall(Info.CallConv, /*IsVarArg=*/false);
   CCAssignFn *AssignFnVarArg =
@@ -649,14 +673,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an
   // implicit-define of the call instruction.
-  CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
   if (!Info.OrigRet.Ty->isVoidTy()) {
-    SplitArgs.clear();
-
-    splitToValueTypes(Info.OrigRet, SplitArgs, DL, MRI, F.getCallingConv());
-
+    CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
     CallReturnHandler Handler(MIRBuilder, MRI, MIB, RetAssignFn);
-    if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
+    if (!handleAssignments(MIRBuilder, InArgs, Handler))
       return false;
   }
 

@@ -220,9 +220,13 @@ body: |
     liveins: $vgpr0_vgpr1
     ; GCN-LABEL: name: fneg_s64_vv
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GCN: [[FNEG:%[0-9]+]]:vreg_64(s64) = G_FNEG [[COPY]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[FNEG]](s64)
+    ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2147483648, implicit $exec
+    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_XOR_B32_e32_]], %subreg.sub1
+    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FNEG %0
     $vgpr0_vgpr1 = COPY %1
@@ -481,10 +485,13 @@ body: |
     liveins: $vgpr0_vgpr1
     ; GCN-LABEL: name: fneg_fabs_s64_vv
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GCN: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
-    ; GCN: [[FNEG:%[0-9]+]]:vreg_64(s64) = G_FNEG [[FABS]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[FNEG]](s64)
+    ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2147483648, implicit $exec
+    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; GCN: [[V_OR_B32_e32_:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_OR_B32_e32_]], %subreg.sub1
+    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FABS %0
     %2:vgpr(s64) = G_FNEG %1
@@ -503,9 +510,13 @@ body: |
     ; GCN-LABEL: name: fneg_fabs_s64_vs
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FABS:%[0-9]+]]:vgpr(s64) = G_FABS [[COPY]]
-    ; GCN: [[FNEG:%[0-9]+]]:vreg_64(s64) = G_FNEG [[FABS]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[FNEG]](s64)
+    ; GCN: [[FABS:%[0-9]+]]:vreg_64(s64) = G_FABS [[COPY]]
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32(s32) = V_MOV_B32_e32 2147483648, implicit $exec
+    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FABS]].sub1(s64)
+    ; GCN: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32(s16) = V_XOR_B32_e32 [[COPY1]](s32), [[V_MOV_B32_e32_]](s32), implicit $exec
+    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY [[FABS]].sub0(s64)
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64(s64) = REG_SEQUENCE [[COPY2]](s32), %subreg.sub0, [[V_XOR_B32_e32_]](s16), %subreg.sub1
+    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]](s64)
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = G_FABS %0
     %2:vgpr(s64) = G_FNEG %1
