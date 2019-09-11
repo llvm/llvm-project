@@ -21,6 +21,7 @@ class TestSwiftUnitTests(TestBase):
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.
     @skipIf(debug_info=no_match("dsym"))
+    @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
     def test_cross_module_extension(self):
         """Test that XCTest-based unit tests work"""
         self.build()

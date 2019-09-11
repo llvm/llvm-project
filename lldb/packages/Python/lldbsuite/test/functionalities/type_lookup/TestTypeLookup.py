@@ -23,6 +23,7 @@ class TypeLookupTestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIf(archs=['i386'])
+    @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
     def test_type_lookup(self):
         """Test type lookup command."""
         self.build()
