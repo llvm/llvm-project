@@ -3876,7 +3876,10 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       // OpenMP [2.16, Nesting of Regions]
       // If specified, a teams construct must be contained within a target
       // construct.
-      NestingProhibited = ParentRegion != OMPD_target;
+      NestingProhibited =
+          (SemaRef.LangOpts.OpenMP <= 45 && ParentRegion != OMPD_target) ||
+          (SemaRef.LangOpts.OpenMP >= 50 && ParentRegion != OMPD_unknown &&
+           ParentRegion != OMPD_target);
       OrphanSeen = ParentRegion == OMPD_unknown;
       Recommend = ShouldBeInTargetRegion;
     }

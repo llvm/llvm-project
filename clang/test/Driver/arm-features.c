@@ -37,7 +37,8 @@
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.2a+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO2 %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.3a+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO2 %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.4a+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO2 %s
-// CHECK-CRYPTO2: "-cc1"{{.*}} "-target-cpu" "generic"{{.*}} "-target-feature" "+crypto" "-target-feature" "+sha2" "-target-feature" "+aes"
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.5a+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO2 %s
+// CHECK-CRYPTO2: "-cc1"{{.*}} "-target-cpu" "generic"{{.*}} "-target-feature" "+crypto"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
 //
 // Check -crypto:
 //
@@ -45,14 +46,36 @@
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.2a+nocrypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO2 %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.3a+nocrypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO2 %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.4a+nocrypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO2 %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.5a+nocrypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO2 %s
 // CHECK-NOCRYPTO2-NOT: "-target-feature" "+crypto" "-target-feature" "+sha2" "-target-feature" "+aes"
+//
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO2-CPU %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO2-CPU %s
+// CHECK-CRYPTO2-CPU: "-cc1"{{.*}} "-target-cpu" "cortex-a57"{{.*}} "-target-feature" "+crypto"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
+//
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57+norypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO2-CPU %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57 -mfpu=neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO2-CPU %s
+// CHECK-NOCRYPTO2-CPU-NOT: "-cc1"{{.*}} "-target-cpu" "cortex-a57"{{.*}} "-target-feature" "+crypto"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
 //
 // Check +crypto -sha2 -aes:
 //
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1a+crypto+nosha2+noaes -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO3 %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57+crypto+nosha2+noaes -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO3 %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57+nosha2+noaes -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO3 %s
 // CHECK-CRYPTO3-NOT: "-target-feature" "+sha2" "-target-feature" "+aes"
 //
 // Check -crypto +sha2 +aes:
 //
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1a+nocrypto+sha2+aes -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO4 %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57+nocrypto+sha2+aes -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO4 %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-a57+sha2+aes -mfpu=neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO4 %s
 // CHECK-CRYPTO4: "-target-feature" "+sha2" "-target-feature" "+aes"
+//
+// Check +crypto for M and R profiles:
+//
+// RUN: %clang -target arm-arm-none-eabi -march=armv8-r+crypto   -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8-m.base+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv8-m.main+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
+// RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-m23+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
+// CHECK-NOCRYPTO5: warning: ignoring extension 'crypto' because the {{.*}} architecture does not support it
+// CHECK-NOCRYPTO5-NOT: "-target-feature" "+crypto"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"

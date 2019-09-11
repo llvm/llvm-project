@@ -17,7 +17,7 @@ int bar() {
   return Free(1) + Free(2);
 }
 
-// LINUX: @foo.ifunc = ifunc i32 (i32), i32 (i32)* ()* @foo.resolver
+// LINUX: @foo.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @foo.resolver
 // LINUX: define i32 @foo.sse4.2(
 // LINUX: ret i32 0
 // LINUX: define i32 @foo.arch_ivybridge(
