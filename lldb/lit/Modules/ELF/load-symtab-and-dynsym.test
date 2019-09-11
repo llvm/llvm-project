@@ -16,7 +16,7 @@
 #     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
 #     1: 0000000000401110    15 FUNC    GLOBAL DEFAULT   10 functionInSymtab
 
-# We want to keep the symbol "functionInDynsym" in the .dynamic section and not
+# We want to keep the symbol "functionInDynsym" in the .dynsym section and not
 # have it put the default .symtab section.
 # RUN: echo "{functionInDynsym;};" > %T/dynmic-symbols.txt
 # RUN: %clang -Wl,--dynamic-list=%T/dynmic-symbols.txt -g -o %t.binary %p/Inputs/load-symtab-and-dynsym.c

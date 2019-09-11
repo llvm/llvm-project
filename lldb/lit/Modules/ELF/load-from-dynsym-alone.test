@@ -11,7 +11,7 @@
 #        2: 0000000000000000     0 NOTYPE  WEAK   DEFAULT  UND __gmon_start__
 #        3: 0000000000401110    13 FUNC    GLOBAL DEFAULT   10 functionInDynsym
 
-# We want to keep the symbol "functionInDynsym" in the .dynamic section and not
+# We want to keep the symbol "functionInDynsym" in the .dynsym section and not
 # have it put the default .symtab section.
 # RUN: echo "{functionInDynsym;};" > %T/dynmic-symbols.txt
 # RUN: %clang -Wl,--dynamic-list=%T/dynmic-symbols.txt -g -o %t.binary %p/Inputs/load-from-dynsym-alone.c

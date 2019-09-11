@@ -2655,12 +2655,11 @@ Symtab *ObjectFileELF::GetSymtab() {
 
     // Sharable objects and dynamic executables usually have 2 distinct symbol
     // tables, one named ".symtab", and the other ".dynsym". The dynsym is a
-    // smaller version of the symtab that only contains global symbols. The
-    // information found in the dynsym is therefore also found in the symtab,
-    // while the reverse is not necessarily true.
-    // One exception to the above rule is when we have minidebuginfo embedded
-    // into a compressed .gnu_debugdata section. This section contains a .symtab
-    // from which all symbols already contained in the .dynsym are stripped.
+    // smaller version of the symtab that only contains global symbols.
+    // Information in the dynsym section is *usually* also found in the symtab,
+    // but this is not required as symtab entries can be removed after linking.
+    // The minidebuginfo format makes use of this facility to create smaller
+    // symbol tables.
     Section *symtab =
         section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
     if (symtab) {
