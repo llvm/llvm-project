@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/undef-with-plt-addr.s -o %t2.o
-// RUN: ld.lld %t2.o -o %t2.so -shared
+// RUN: ld.lld %t2.o -o %t2.so -shared -soname=so
 // RUN: ld.lld %t.o %t2.so -o %t3
 // RUN: llvm-readobj --symbols -S -r %t3 | FileCheck %s
 

@@ -1,7 +1,7 @@
 // REQUIRES: x86
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t1.o
-// RUN: ld.lld -o %t.so -shared %t1.o
+// RUN: ld.lld -o %t.so -shared %t1.o -soname=so
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
 // RUN: ld.lld -o %t1.exe %t2.o %t.so -image-base=0xcafe00000000
