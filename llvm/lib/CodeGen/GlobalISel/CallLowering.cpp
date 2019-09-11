@@ -370,6 +370,75 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
   return true;
 }
 
+bool CallLowering::analyzeCallResult(CCState &CCState,
+                                     SmallVectorImpl<ArgInfo> &Args,
+                                     CCAssignFn &Fn) const {
+  for (unsigned i = 0, e = Args.size(); i < e; ++i) {
+    MVT VT = MVT::getVT(Args[i].Ty);
+    if (Fn(i, VT, VT, CCValAssign::Full, Args[i].Flags[0], CCState)) {
+      // Bail out on anything we can't handle.
+      LLVM_DEBUG(dbgs() << "Cannot analyze " << EVT(VT).getEVTString()
+                        << " (arg number = " << i << "\n");
+      return false;
+    }
+  }
+  return true;
+}
+
+bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
+                                     MachineFunction &MF,
+                                     SmallVectorImpl<ArgInfo> &InArgs,
+                                     CCAssignFn &CalleeAssignFn,
+                                     CCAssignFn &CallerAssignFn) const {
+  const Function &F = MF.getFunction();
+  CallingConv::ID CalleeCC = Info.CallConv;
+  CallingConv::ID CallerCC = F.getCallingConv();
+
+  if (CallerCC == CalleeCC)
+    return true;
+
+  SmallVector<CCValAssign, 16> ArgLocs1;
+  CCState CCInfo1(CalleeCC, false, MF, ArgLocs1, F.getContext());
+  if (!analyzeCallResult(CCInfo1, InArgs, CalleeAssignFn))
+    return false;
+
+  SmallVector<CCValAssign, 16> ArgLocs2;
+  CCState CCInfo2(CallerCC, false, MF, ArgLocs2, F.getContext());
+  if (!analyzeCallResult(CCInfo2, InArgs, CallerAssignFn))
+    return false;
+
+  // We need the argument locations to match up exactly. If there's more in
+  // one than the other, then we are done.
+  if (ArgLocs1.size() != ArgLocs2.size())
+    return false;
+
+  // Make sure that each location is passed in exactly the same way.
+  for (unsigned i = 0, e = ArgLocs1.size(); i < e; ++i) {
+    const CCValAssign &Loc1 = ArgLocs1[i];
+    const CCValAssign &Loc2 = ArgLocs2[i];
+
+    // We need both of them to be the same. So if one is a register and one
+    // isn't, we're done.
+    if (Loc1.isRegLoc() != Loc2.isRegLoc())
+      return false;
+
+    if (Loc1.isRegLoc()) {
+      // If they don't have the same register location, we're done.
+      if (Loc1.getLocReg() != Loc2.getLocReg())
+        return false;
+
+      // They matched, so we can move to the next ArgLoc.
+      continue;
+    }
+
+    // Loc1 wasn't a RegLoc, so they both must be MemLocs. Check if they match.
+    if (Loc1.getLocMemOffset() != Loc2.getLocMemOffset())
+      return false;
+  }
+
+  return true;
+}
+
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
                                                     CCValAssign &VA) {
   LLT LocTy{VA.getLocVT()};

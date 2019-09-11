@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/DataTypes.h"
 #include <utility>
@@ -74,6 +75,10 @@ public:
 
   /// Return metadata containing the section prefix for a function.
   MDNode *createFunctionSectionPrefix(StringRef Prefix);
+
+  /// return metadata containing expected value
+  MDNode *createMisExpect(uint64_t Index, uint64_t LikelyWeight,
+                          uint64_t UnlikelyWeight);
 
   //===------------------------------------------------------------------===//
   // Range metadata.

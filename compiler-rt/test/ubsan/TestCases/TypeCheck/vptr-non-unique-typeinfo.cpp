@@ -4,7 +4,6 @@
 //
 // REQUIRES: cxxabi
 // UNSUPPORTED: windows-msvc
-// XFAIL: i386-netbsd
 
 struct X {
   virtual ~X() {}

@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/MisExpect.h"
 
 using namespace llvm;
 
@@ -71,15 +72,20 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   unsigned n = SI.getNumCases(); // +1 for default case.
   SmallVector<uint32_t, 16> Weights(n + 1, UnlikelyBranchWeight);
 
-  if (Case == *SI.case_default())
-    Weights[0] = LikelyBranchWeight;
-  else
-    Weights[Case.getCaseIndex() + 1] = LikelyBranchWeight;
+  uint64_t Index = (Case == *SI.case_default()) ? 0 : Case.getCaseIndex() + 1;
+  Weights[Index] = LikelyBranchWeight;
+
+  SI.setMetadata(
+      LLVMContext::MD_misexpect,
+      MDBuilder(CI->getContext())
+          .createMisExpect(Index, LikelyBranchWeight, UnlikelyBranchWeight));
+
+  SI.setCondition(ArgValue);
+  misexpect::checkFrontendInstrumentation(SI);
 
   SI.setMetadata(LLVMContext::MD_prof,
                  MDBuilder(CI->getContext()).createBranchWeights(Weights));
 
-  SI.setCondition(ArgValue);
   return true;
 }
 
@@ -280,19 +286,28 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
 
   MDBuilder MDB(CI->getContext());
   MDNode *Node;
+  MDNode *ExpNode;
 
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
-      (Predicate == CmpInst::ICMP_EQ))
+      (Predicate == CmpInst::ICMP_EQ)) {
     Node = MDB.createBranchWeights(LikelyBranchWeight, UnlikelyBranchWeight);
-  else
+    ExpNode = MDB.createMisExpect(0, LikelyBranchWeight, UnlikelyBranchWeight);
+  } else {
     Node = MDB.createBranchWeights(UnlikelyBranchWeight, LikelyBranchWeight);
+    ExpNode = MDB.createMisExpect(1, LikelyBranchWeight, UnlikelyBranchWeight);
+  }
 
-  BSI.setMetadata(LLVMContext::MD_prof, Node);
+  BSI.setMetadata(LLVMContext::MD_misexpect, ExpNode);
 
   if (CmpI)
     CmpI->setOperand(0, ArgValue);
   else
     BSI.setCondition(ArgValue);
+
+  misexpect::checkFrontendInstrumentation(BSI);
+
+  BSI.setMetadata(LLVMContext::MD_prof, Node);
+
   return true;
 }
 
