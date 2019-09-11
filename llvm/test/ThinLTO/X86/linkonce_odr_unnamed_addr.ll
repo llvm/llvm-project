@@ -17,7 +17,7 @@
 ; RUN: llvm-lto2 run -save-temps -o %t6.bc %t.bc %t4.bc -r=%t.bc,linkonceodrunnamed,p -r=%t.bc,odrunnamed,p -r=%t4.bc,linkonceodrunnamed, -r=%t4.bc,odrunnamed,
 ; RUN: llvm-dis %t6.bc.1.1.promote.bc -o - | FileCheck %s --check-prefix=NOSUMMARY
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
 ; In this case all copies are linkonce_odr, so it may be hidden.

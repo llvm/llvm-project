@@ -53,6 +53,7 @@ endif()
 
 add_llvm_library(LLVMSupport
   AArch64TargetParser.cpp
+  ABIBreak.cpp
   ARMTargetParser.cpp
   AMDGPUMetadata.cpp
   APFloat.cpp

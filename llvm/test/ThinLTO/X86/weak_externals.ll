@@ -12,7 +12,7 @@
 ; CHECK: @_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = available_externally dso_local global %struct.S* null, align 8
 ; CHECK: define internal dereferenceable(16) %struct.S* @_ZN9SingletonI1SE11getInstanceEv() comdat
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.S = type { i64, i64 }

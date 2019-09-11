@@ -1,9 +1,9 @@
 # RUN: llvm-mc %s -triple=riscv32 | FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc %s -triple=riscv64 | FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:   | llvm-objdump -d -riscv-no-aliases - | FileCheck -check-prefix=DISASM %s
+# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck -check-prefix=DISASM %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:   | llvm-objdump -d -riscv-no-aliases - | FileCheck -check-prefix=DISASM %s
+# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck -check-prefix=DISASM %s
 
 # Checks change of options does not cause error: could not find corresponding %pcrel_hi 
 # when assembling pseudoinstruction and its extended form.

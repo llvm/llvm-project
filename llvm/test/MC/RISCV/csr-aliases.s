@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d -mattr=+f -riscv-no-aliases - \
+# RUN:     | llvm-objdump -d -mattr=+f -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
 # RUN:     | llvm-objdump -d -mattr=+f - \
@@ -18,7 +18,7 @@
 # RUN:     | FileCheck -check-prefix=CHECK-EXT-F-OFF %s
 
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d -mattr=+f -riscv-no-aliases - \
+# RUN:     | llvm-objdump -d -mattr=+f -M no-aliases - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
 # RUN:     | llvm-objdump -d -mattr=+f - \

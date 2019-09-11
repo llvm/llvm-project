@@ -143,12 +143,7 @@ body: |
     ; SI-LABEL: name: test_store_global_v3s32
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr2_vgpr3_vgpr4
-    ; SI: [[EXTRACT:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT [[COPY1]](<3 x s32>), 0
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY1]](<3 x s32>), 64
-    ; SI: G_STORE [[EXTRACT]](<2 x s32>), [[COPY]](p1) :: (store 8, align 4, addrspace 1)
-    ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; SI: [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](s32), [[GEP]](p1) :: (store 4, addrspace 1)
+    ; SI: G_STORE [[COPY1]](<3 x s32>), [[COPY]](p1) :: (store 12, align 4, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s32
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr2_vgpr3_vgpr4
@@ -327,12 +322,7 @@ body: |
     ; SI-LABEL: name: test_store_global_96
     ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; SI: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr3_vgpr4
-    ; SI: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY]](s96), 0
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s96), 64
-    ; SI: G_STORE [[EXTRACT]](s64), [[COPY1]](p1) :: (store 8, align 16, addrspace 1)
-    ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; SI: [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY1]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](s32), [[GEP]](p1) :: (store 4, align 8, addrspace 1)
+    ; SI: G_STORE [[COPY]](s96), [[COPY1]](p1) :: (store 12, align 16, addrspace 1)
     ; VI-LABEL: name: test_store_global_96
     ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; VI: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr3_vgpr4
@@ -392,14 +382,46 @@ body: |
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[DEF:%[0-9]+]]:_(<3 x s8>) = G_IMPLICIT_DEF
     ; SI: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[DEF]](<3 x s8>), 0
-    ; SI: G_STORE [[INSERT]](<4 x s8>), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
+    ; SI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF1]](<4 x s8>)
+    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[DEF]](<3 x s8>), 0
+    ; SI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
+    ; SI: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<4 x s8>)
+    ; SI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; SI: G_STORE [[ANYEXT1]](s32), [[COPY]](p1) :: (store 1, align 4, addrspace 1)
+    ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; SI: [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C]](s64)
+    ; SI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; SI: G_STORE [[ANYEXT2]](s32), [[GEP]](p1) :: (store 1, addrspace 1)
+    ; SI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; SI: [[GEP1:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C1]](s64)
+    ; SI: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; SI: G_STORE [[ANYEXT3]](s32), [[GEP1]](p1) :: (store 1, align 2, addrspace 1)
+    ; SI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; SI: [[GEP2:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C2]](s64)
+    ; SI: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; SI: G_STORE [[ANYEXT4]](s32), [[GEP2]](p1) :: (store 1, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s8_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[DEF:%[0-9]+]]:_(<3 x s8>) = G_IMPLICIT_DEF
     ; VI: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[DEF]](<3 x s8>), 0
-    ; VI: G_STORE [[INSERT]](<4 x s8>), [[COPY]](p1) :: (store 3, align 4, addrspace 1)
+    ; VI: [[ANYEXT:%[0-9]+]]:_(<4 x s16>) = G_ANYEXT [[DEF1]](<4 x s8>)
+    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[ANYEXT]], [[DEF]](<3 x s8>), 0
+    ; VI: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[INSERT]](<4 x s16>)
+    ; VI: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<4 x s8>)
+    ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; VI: G_STORE [[ANYEXT1]](s32), [[COPY]](p1) :: (store 1, align 4, addrspace 1)
+    ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; VI: [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C]](s64)
+    ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; VI: G_STORE [[ANYEXT2]](s32), [[GEP]](p1) :: (store 1, addrspace 1)
+    ; VI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; VI: [[GEP1:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C1]](s64)
+    ; VI: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; VI: G_STORE [[ANYEXT3]](s32), [[GEP1]](p1) :: (store 1, align 2, addrspace 1)
+    ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; VI: [[GEP2:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C2]](s64)
+    ; VI: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; VI: G_STORE [[ANYEXT4]](s32), [[GEP2]](p1) :: (store 1, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<3 x s8>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store 3, addrspace 1, align 4)

@@ -15,15 +15,15 @@
 #include "deltas/Delta.h"
 #include "deltas/ReduceFunctions.h"
 #include "deltas/ReduceGlobalVars.h"
+#include "deltas/ReduceMetadata.h"
 
 namespace llvm {
 
 // TODO: Add CLI option to run only specified Passes (for unit tests)
 inline void runDeltaPasses(TestRunner &Tester) {
-  outs() << "Reducing functions...\n";
   reduceFunctionsDeltaPass(Tester);
-  outs() << "Reducing GVs...\n";
   reduceGlobalsDeltaPass(Tester);
+  reduceMetadataDeltaPass(Tester);
   // TODO: Implement the remaining Delta Passes
 }
 

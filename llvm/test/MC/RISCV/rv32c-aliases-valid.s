@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=riscv32 -mattr=+c -riscv-no-aliases < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -d -riscv-no-aliases - \
+# RUN:     | llvm-objdump -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 
 # The following check prefixes are used in this test:

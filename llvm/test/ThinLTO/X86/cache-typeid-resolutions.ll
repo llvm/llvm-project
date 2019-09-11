@@ -22,7 +22,7 @@
 ; RUN: llvm-lto2 run -o %t.o %t.bc %t-import.bc %t3.bc -cache-dir %t.cache -r=%t.bc,f1,plx -r=%t.bc,f2,plx -r=%t.bc,f1_actual,plx -r=%t3.bc,vt2a,plx -r=%t3.bc,vt2b,plx -r=%t-import.bc,importf1,plx -r=%t-import.bc,f1,lx -r=%t-import.bc,importf2,plx -r=%t-import.bc,f2,lx
 ; RUN: ls %t.cache | count 6
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @f1 = alias i1(i8*), i1 (i8*)* @f1_actual
