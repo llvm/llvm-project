@@ -132,11 +132,11 @@ def AMDGPUrsq_clamp_impl : SDNode<"AMDGPUISD::RSQ_CLAMP", SDTFPUnaryOp>;
 
 def AMDGPUldexp_impl : SDNode<"AMDGPUISD::LDEXP", AMDGPULdExpOp>;
 
-def AMDGPUpkrtz_f16_f32 : SDNode<"AMDGPUISD::CVT_PKRTZ_F16_F32", AMDGPUFPPackOp>;
-def AMDGPUpknorm_i16_f32 : SDNode<"AMDGPUISD::CVT_PKNORM_I16_F32", AMDGPUFPPackOp>;
-def AMDGPUpknorm_u16_f32 : SDNode<"AMDGPUISD::CVT_PKNORM_U16_F32", AMDGPUFPPackOp>;
-def AMDGPUpk_i16_i32 : SDNode<"AMDGPUISD::CVT_PK_I16_I32", AMDGPUIntPackOp>;
-def AMDGPUpk_u16_u32 : SDNode<"AMDGPUISD::CVT_PK_U16_U32", AMDGPUIntPackOp>;
+def AMDGPUpkrtz_f16_f32_impl : SDNode<"AMDGPUISD::CVT_PKRTZ_F16_F32", AMDGPUFPPackOp>;
+def AMDGPUpknorm_i16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_I16_F32", AMDGPUFPPackOp>;
+def AMDGPUpknorm_u16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_U16_F32", AMDGPUFPPackOp>;
+def AMDGPUpk_i16_i32_impl : SDNode<"AMDGPUISD::CVT_PK_I16_I32", AMDGPUIntPackOp>;
+def AMDGPUpk_u16_u32_impl : SDNode<"AMDGPUISD::CVT_PK_U16_U32", AMDGPUIntPackOp>;
 def AMDGPUfp_to_f16 : SDNode<"AMDGPUISD::FP_TO_FP16" , SDTFPToIntOp>;
 def AMDGPUfp16_zext : SDNode<"AMDGPUISD::FP16_ZEXT" , SDTFPToIntOp>;
 
@@ -284,7 +284,7 @@ def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
 def AMDGPUffbh_u32 : SDNode<"AMDGPUISD::FFBH_U32", SDTIntUnaryOp>;
-def AMDGPUffbh_i32 : SDNode<"AMDGPUISD::FFBH_I32", SDTIntUnaryOp>;
+def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntUnaryOp>;
 
 def AMDGPUffbl_b32 : SDNode<"AMDGPUISD::FFBL_B32", SDTIntUnaryOp>;
 
@@ -445,3 +445,27 @@ def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUfmed3 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_fmed3 node:$src0, node:$src1, node:$src2),
    (AMDGPUfmed3_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUffbh_i32 : PatFrags<(ops node:$src),
+  [(int_amdgcn_sffbh node:$src),
+   (AMDGPUffbh_i32_impl node:$src)]>;
+
+def AMDGPUpkrtz_f16_f32 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_cvt_pkrtz node:$src0, node:$src1),
+  (AMDGPUpkrtz_f16_f32_impl node:$src0, node:$src1)]>;
+
+def AMDGPUpknorm_i16_f32 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_cvt_pknorm_i16 node:$src0, node:$src1),
+  (AMDGPUpknorm_i16_f32_impl node:$src0, node:$src1)]>;
+
+def AMDGPUpknorm_u16_f32 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_cvt_pknorm_u16 node:$src0, node:$src1),
+  (AMDGPUpknorm_u16_f32_impl node:$src0, node:$src1)]>;
+
+def AMDGPUpk_i16_i32 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_cvt_pk_i16 node:$src0, node:$src1),
+  (AMDGPUpk_i16_i32_impl node:$src0, node:$src1)]>;
+
+def AMDGPUpk_u16_u32 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_cvt_pk_u16 node:$src0, node:$src1),
+  (AMDGPUpk_u16_u32_impl node:$src0, node:$src1)]>;

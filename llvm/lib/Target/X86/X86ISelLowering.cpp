@@ -7569,7 +7569,7 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
   // the shuffle mask.
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(SrcOp)) {
     SDValue Ptr = LD->getBasePtr();
-    if (!ISD::isNormalLoad(LD) || LD->isVolatile())
+    if (!ISD::isNormalLoad(LD) || !LD->isSimple())
       return SDValue();
     EVT PVT = LD->getValueType(0);
     if (PVT != MVT::i32 && PVT != MVT::f32)
@@ -12512,7 +12512,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     // If we can't broadcast from a register, check that the input is a load.
     if (!BroadcastFromReg && !isShuffleFoldableLoad(V))
       return SDValue();
-  } else if (MayFoldLoad(V) && !cast<LoadSDNode>(V)->isVolatile()) {
+  } else if (MayFoldLoad(V) && cast<LoadSDNode>(V)->isSimple()) {
     // 32-bit targets need to load i64 as a f64 and then bitcast the result.
     if (!Subtarget.is64Bit() && VT.getScalarType() == MVT::i64) {
       BroadcastVT = MVT::getVectorVT(MVT::f64, VT.getVectorNumElements());
@@ -21561,7 +21561,7 @@ static SDValue splitVectorStore(StoreSDNode *Store, SelectionDAG &DAG) {
   // Splitting volatile memory ops is not allowed unless the operation was not
   // legal to begin with. We are assuming the input op is legal (this transform
   // is only used for targets with AVX).
-  if (Store->isVolatile())
+  if (!Store->isSimple())
     return SDValue();
 
   MVT StoreVT = StoredVal.getSimpleValueType();
@@ -21597,7 +21597,7 @@ static SDValue scalarizeVectorStore(StoreSDNode *Store, MVT StoreVT,
   // Splitting volatile memory ops is not allowed unless the operation was not
   // legal to begin with. We are assuming the input op is legal (this transform
   // is only used for targets with AVX).
-  if (Store->isVolatile())
+  if (!Store->isSimple())
     return SDValue();
 
   MVT StoreSVT = StoreVT.getScalarType();
@@ -34317,7 +34317,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() == X86ISD::VZEXT_MOVL && N->getOperand(0).hasOneUse() &&
       ISD::isNormalLoad(N->getOperand(0).getNode())) {
     LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
-    if (!LN->isVolatile()) {
+    if (LN->isSimple()) {
       SDVTList Tys = DAG.getVTList(VT, MVT::Other);
       SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
       SDValue VZLoad =
@@ -35238,7 +35238,7 @@ XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
 
   LoadSDNode *LN0 = cast<LoadSDNode>(LdNode);
 
-  if (!LN0 || !LN0->hasNUsesOfValue(AllowedUses, 0) || LN0->isVolatile())
+  if (!LN0 || !LN0->hasNUsesOfValue(AllowedUses, 0) || !LN0->isSimple())
     return SDValue();
 
   // If there's a bitcast before the shuffle, check if the load type and
@@ -40877,8 +40877,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
         !ExperimentalVectorWideningLegalization) ||
        (VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit())) &&
       isa<LoadSDNode>(St->getValue()) &&
-      !cast<LoadSDNode>(St->getValue())->isVolatile() &&
-      St->getChain().hasOneUse() && !St->isVolatile()) {
+      cast<LoadSDNode>(St->getValue())->isSimple() &&
+      St->getChain().hasOneUse() && St->isSimple()) {
     LoadSDNode *Ld = cast<LoadSDNode>(St->getValue().getNode());
     SmallVector<SDValue, 8> Ops;
 
@@ -42044,8 +42044,8 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
     assert(InVT.is128BitVector() && "Expected 128-bit input vector");
     LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
-    // Unless the load is volatile.
-    if (!LN->isVolatile()) {
+    // Unless the load is volatile or atomic.
+    if (LN->isSimple()) {
       SDLoc dl(N);
       unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
       MVT MemVT = MVT::getIntegerVT(NumBits);
@@ -42079,8 +42079,8 @@ static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
       ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
     assert(InVT.is128BitVector() && "Expected 128-bit input vector");
     LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
-    // Unless the load is volatile.
-    if (!LN->isVolatile()) {
+    // Unless the load is volatile or atomic.
+    if (LN->isSimple()) {
       SDLoc dl(N);
       unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
       MVT MemVT = MVT::getFloatingPointVT(NumBits);
@@ -43346,7 +43346,7 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     if (Subtarget.hasDQI() && VT != MVT::f80)
       return SDValue();
 
-    if (!Ld->isVolatile() && !VT.isVector() &&
+    if (Ld->isSimple() && !VT.isVector() &&
         ISD::isNON_EXTLoad(Op0.getNode()) && Op0.hasOneUse() &&
         !Subtarget.is64Bit() && LdVT == MVT::i64) {
       SDValue FILDChain = Subtarget.getTargetLowering()->BuildFILD(
@@ -44873,7 +44873,7 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
   if (!DCI.isBeforeLegalizeOps() && ISD::isNormalLoad(In.getNode()) &&
       In.hasOneUse()) {
     auto *Ld = cast<LoadSDNode>(In);
-    if (!Ld->isVolatile()) {
+    if (Ld->isSimple()) {
       MVT SVT = In.getSimpleValueType().getVectorElementType();
       ISD::LoadExtType Ext = N->getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
       EVT MemVT = EVT::getVectorVT(*DAG.getContext(), SVT,

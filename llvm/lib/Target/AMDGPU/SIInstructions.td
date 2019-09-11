@@ -1079,50 +1079,145 @@ def : GCNPat <
 /********** ================================ **********/
 
 // Prevent expanding both fneg and fabs.
+// TODO: Add IgnoredBySelectionDAG bit?
+let AddedComplexity = 1 in { // Prefer SALU to VALU patterns for DAG
 
 def : GCNPat <
-  (fneg (fabs f32:$src)),
-  (S_OR_B32 $src, (S_MOV_B32(i32 0x80000000))) // Set sign bit
+  (fneg (fabs (f32 SReg_32:$src))),
+  (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000))) // Set sign bit
 >;
 
-// FIXME: Should use S_OR_B32
 def : GCNPat <
-  (fneg (fabs f64:$src)),
+  (fabs (f32 SReg_32:$src)),
+  (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x7fffffff)))
+>;
+
+def : GCNPat <
+  (fneg (f32 SReg_32:$src)),
+  (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
+>;
+
+def : GCNPat <
+  (fneg (f16 SReg_32:$src)),
+  (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
+>;
+
+def : GCNPat <
+  (fabs (f16 SReg_32:$src)),
+  (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
+>;
+
+def : GCNPat <
+  (fneg (fabs (f16 SReg_32:$src))),
+  (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
+>;
+
+def : GCNPat <
+  (fneg (v2f16 SReg_32:$src)),
+  (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000)))
+>;
+
+def : GCNPat <
+  (fabs (v2f16 SReg_32:$src)),
+  (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x7fff7fff)))
+>;
+
+// This is really (fneg (fabs v2f16:$src))
+//
+// fabs is not reported as free because there is modifier for it in
+// VOP3P instructions, so it is turned into the bit op.
+def : GCNPat <
+  (fneg (v2f16 (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
+  (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
+>;
+
+def : GCNPat <
+  (fneg (v2f16 (fabs SReg_32:$src))),
+  (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
+>;
+
+// FIXME: The implicit-def of scc from S_[X]OR_B32 is mishandled
+ // def : GCNPat <
+//   (fneg (f64 SReg_64:$src)),
+//   (REG_SEQUENCE SReg_64,
+//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+//     sub0,
+//     (S_XOR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+//                (i32 (S_MOV_B32 (i32 0x80000000)))),
+//     sub1)
+// >;
+
+// def : GCNPat <
+//   (fneg (fabs (f64 SReg_64:$src))),
+//   (REG_SEQUENCE SReg_64,
+//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+//     sub0,
+//     (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+//               (S_MOV_B32 (i32 0x80000000))), // Set sign bit.
+//     sub1)
+// >;
+
+} // End let AddedComplexity = 1
+
+def : GCNPat <
+  (fabs (f32 VGPR_32:$src)),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x7fffffff)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (f32 VGPR_32:$src)),
+  (V_XOR_B32_e32 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fabs (f16 VGPR_32:$src)),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (v2f16 VGPR_32:$src)),
+  (V_XOR_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fabs (v2f16 VGPR_32:$src)),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x7fff7fff)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (v2f16 (fabs VGPR_32:$src))),
+  (V_OR_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src) // Set sign bit
+>;
+
+def : GCNPat <
+  (fabs (f64 VReg_64:$src)),
   (REG_SEQUENCE VReg_64,
-    (i32 (EXTRACT_SUBREG f64:$src, sub0)),
+    (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
     sub0,
-    (V_OR_B32_e32 (i32 (EXTRACT_SUBREG f64:$src, sub1)),
-                  (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
-    sub1)
->;
-
-def : GCNPat <
-  (fabs f32:$src),
-  (S_AND_B32 $src, (S_MOV_B32 (i32 0x7fffffff)))
->;
-
-def : GCNPat <
-  (fneg f32:$src),
-  (V_XOR_B32_e32 $src, (V_MOV_B32_e32 (i32 0x80000000)))
->;
-
-def : GCNPat <
-  (fabs f64:$src),
-  (REG_SEQUENCE VReg_64,
-    (i32 (EXTRACT_SUBREG f64:$src, sub0)),
-    sub0,
-    (V_AND_B32_e64 (i32 (EXTRACT_SUBREG f64:$src, sub1)),
+    (V_AND_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
                    (V_MOV_B32_e32 (i32 0x7fffffff))), // Set sign bit.
      sub1)
 >;
 
+// TODO: Use SGPR for constant
 def : GCNPat <
-  (fneg f64:$src),
+  (fneg (f64 VReg_64:$src)),
   (REG_SEQUENCE VReg_64,
-    (i32 (EXTRACT_SUBREG f64:$src, sub0)),
+    (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
     sub0,
-    (V_XOR_B32_e32 (i32 (EXTRACT_SUBREG f64:$src, sub1)),
+    (V_XOR_B32_e32 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
                    (i32 (V_MOV_B32_e32 (i32 0x80000000)))),
+    sub1)
+>;
+
+// TODO: Use SGPR for constant
+def : GCNPat <
+  (fneg (fabs (f64 VReg_64:$src))),
+  (REG_SEQUENCE VReg_64,
+    (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+    sub0,
+    (V_OR_B32_e32 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
+                  (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
     sub1)
 >;
 
@@ -1155,45 +1250,6 @@ def : GCNPat <
   (fcopysign f16:$src0, f64:$src1),
   (V_BFI_B32 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
->;
-
-def : GCNPat <
-  (fneg f16:$src),
-  (S_XOR_B32 $src, (S_MOV_B32 (i32 0x00008000)))
->;
-
-def : GCNPat <
-  (fabs f16:$src),
-  (S_AND_B32 $src, (S_MOV_B32 (i32 0x00007fff)))
->;
-
-def : GCNPat <
-  (fneg (fabs f16:$src)),
-  (S_OR_B32 $src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
->;
-
-def : GCNPat <
-  (fneg v2f16:$src),
-  (S_XOR_B32 $src, (S_MOV_B32 (i32 0x80008000)))
->;
-
-def : GCNPat <
-  (fabs v2f16:$src),
-  (S_AND_B32 $src, (S_MOV_B32 (i32 0x7fff7fff)))
->;
-
-// This is really (fneg (fabs v2f16:$src))
-//
-// fabs is not reported as free because there is modifier for it in
-// VOP3P instructions, so it is turned into the bit op.
-def : GCNPat <
-  (fneg (v2f16 (bitconvert (and_oneuse i32:$src, 0x7fff7fff)))),
-  (S_OR_B32 $src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
->;
-
-def : GCNPat <
-  (fneg (v2f16 (fabs v2f16:$src))),
-  (S_OR_B32 $src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
 /********** ================== **********/

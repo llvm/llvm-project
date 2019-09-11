@@ -25,6 +25,8 @@ public:
                    const MCRegisterInfo &MRI)
       : MCInstPrinter(MAI, MII, MRI) {}
 
+  bool applyTargetSpecificCLOption(StringRef Opt) override;
+
   void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
                  const MCSubtargetInfo &STI) override;
   void printRegName(raw_ostream &O, unsigned RegNo) const override;
@@ -48,8 +50,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
                                unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo,
-                                     unsigned AltIdx = RISCV::ABIRegAltName);
+  static const char *getRegisterName(unsigned RegNo);
+  static const char *getRegisterName(unsigned RegNo, unsigned AltIdx);
 };
 } // namespace llvm
 

@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -d -riscv-no-aliases - | FileCheck -check-prefix=INSTR %s
+# RUN:     | llvm-objdump -d -M no-aliases - | FileCheck -check-prefix=INSTR %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c,+relax < %s \
-# RUN:     | llvm-objdump -d -riscv-no-aliases - | FileCheck -check-prefix=RELAX-INSTR %s
+# RUN:     | llvm-objdump -d -M no-aliases - | FileCheck -check-prefix=RELAX-INSTR %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c,+relax < %s \
 # RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX-RELOC %s
 
