@@ -272,14 +272,26 @@ void VersionProvider::Keep() {
   os << m_version << "\n";
 }
 
+llvm::raw_ostream *ProcessGDBRemoteProvider::GetHistoryStream() {
+  FileSpec history_file = GetRoot().CopyByAppendingPathComponent(Info::file);
+
+  std::error_code EC;
+  m_stream_up = std::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
+                                                 sys::fs::OpenFlags::OF_Text);
+  return m_stream_up.get();
+}
+
 void ProviderBase::anchor() {}
-char ProviderBase::ID = 0;
 char CommandProvider::ID = 0;
 char FileProvider::ID = 0;
+char ProcessGDBRemoteProvider::ID = 0;
+char ProviderBase::ID = 0;
 char VersionProvider::ID = 0;
 const char *CommandProvider::Info::file = "command-interpreter.yaml";
 const char *CommandProvider::Info::name = "command-interpreter";
 const char *FileProvider::Info::file = "files.yaml";
 const char *FileProvider::Info::name = "files";
+const char *ProcessGDBRemoteProvider::Info::file = "gdb-remote.yaml";
+const char *ProcessGDBRemoteProvider::Info::name = "gdb-remote";
 const char *VersionProvider::Info::file = "version.txt";
 const char *VersionProvider::Info::name = "version";
