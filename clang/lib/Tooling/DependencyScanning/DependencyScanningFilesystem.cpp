@@ -203,7 +203,8 @@ createFile(const CachedFileSystemEntry *Entry,
   if (!Entry->getPPSkippedRangeMapping().empty() && PPSkipMappings)
     (*PPSkipMappings)[Result->getBufferPtr()] =
         &Entry->getPPSkippedRangeMapping();
-  return Result;
+  return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
+      std::unique_ptr<llvm::vfs::File>(std::move(Result)));
 }
 
 } // end anonymous namespace
