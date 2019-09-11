@@ -83,8 +83,7 @@ private:
       if (!IsLeak)
         return nullptr;
 
-      PathDiagnosticLocation L =
-          PathDiagnosticLocation::createEndOfPath(EndPathNode);
+      PathDiagnosticLocation L = BR.getLocation();
       // Do not add the statement itself as a range in case of leak.
       return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                         false);
@@ -285,7 +284,7 @@ void ValistChecker::reportLeakedVALists(const RegionVector &LeakedVALists,
     const ExplodedNode *StartNode = getStartCallSite(N, Reg);
     PathDiagnosticLocation LocUsedForUniqueing;
 
-    if (const Stmt *StartCallStmt = PathDiagnosticLocation::getStmt(StartNode))
+    if (const Stmt *StartCallStmt = StartNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
           StartCallStmt, C.getSourceManager(), StartNode->getLocationContext());
 
@@ -381,7 +380,7 @@ PathDiagnosticPieceRef ValistChecker::ValistBugVisitor::VisitNode(
   ProgramStateRef State = N->getState();
   ProgramStateRef StatePrev = N->getFirstPred()->getState();
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 

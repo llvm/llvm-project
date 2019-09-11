@@ -90,10 +90,13 @@ class RefLeakReport : public RefCountReport {
 public:
   RefLeakReport(const RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
                 SymbolRef sym, CheckerContext &Ctx);
-
   PathDiagnosticLocation getLocation() const override {
     assert(Location.isValid());
     return Location;
+  }
+
+  PathDiagnosticLocation getEndOfPath() const {
+    return PathSensitiveBugReport::getLocation();
   }
 };
 

@@ -284,7 +284,7 @@ PathDiagnosticPieceRef InnerPointerChecker::InnerPointerBRVisitor::VisitNode(
       isSymbolTracked(N->getFirstPred()->getState(), PtrToBuf))
     return nullptr;
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 

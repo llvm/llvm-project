@@ -267,6 +267,30 @@ public:
   /// Trivial nodes may be skipped while printing exploded graph.
   bool isTrivial() const;
 
+  /// If the node's program point corresponds to a statement, retrieve that
+  /// statement. Useful for figuring out where to put a warning or a note.
+  /// If the statement belongs to a body-farmed definition,
+  /// retrieve the call site for that definition.
+  const Stmt *getStmtForDiagnostics() const;
+
+  /// Find the next statement that was executed on this node's execution path.
+  /// Useful for explaining control flow that follows the current node.
+  /// If the statement belongs to a body-farmed definition, retrieve the
+  /// call site for that definition.
+  const Stmt *getNextStmtForDiagnostics() const;
+
+  /// Find the statement that was executed immediately before this node.
+  /// Useful when the node corresponds to a CFG block entrance.
+  /// If the statement belongs to a body-farmed definition, retrieve the
+  /// call site for that definition.
+  const Stmt *getPreviousStmtForDiagnostics() const;
+
+  /// Find the statement that was executed at or immediately before this node.
+  /// Useful when any nearby statement will do.
+  /// If the statement belongs to a body-farmed definition, retrieve the
+  /// call site for that definition.
+  const Stmt *getCurrentOrPreviousStmtForDiagnostics() const;
+
 private:
   void replaceSuccessor(ExplodedNode *node) { Succs.replaceNode(node); }
   void replacePredecessor(ExplodedNode *node) { Preds.replaceNode(node); }

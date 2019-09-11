@@ -937,7 +937,7 @@ PathDiagnosticPieceRef DynamicTypePropagation::GenericsBugVisitor::VisitNode(
     return nullptr;
 
   // Retrieve the associated statement.
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 

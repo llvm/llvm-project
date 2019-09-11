@@ -108,7 +108,7 @@ DeleteWithNonVirtualDtorChecker::DeleteBugVisitor::VisitNode(
   if (Satisfied)
     return nullptr;
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 

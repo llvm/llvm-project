@@ -289,7 +289,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
     return nullptr;
 
   // Retrieve the associated statement.
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
   Found = true;
@@ -401,7 +401,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     PathDiagnosticLocation LocUsedForUniqueing;
     const ExplodedNode *MoveNode = getMoveLocation(N, Region, C);
 
-    if (const Stmt *MoveStmt = PathDiagnosticLocation::getStmt(MoveNode))
+    if (const Stmt *MoveStmt = MoveNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
           MoveStmt, C.getSourceManager(), MoveNode->getLocationContext());
 

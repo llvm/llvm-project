@@ -308,9 +308,7 @@ PathDiagnosticPieceRef
 BugReporterVisitor::getDefaultEndPath(const BugReporterContext &BRC,
                                       const ExplodedNode *EndPathNode,
                                       const PathSensitiveBugReport &BR) {
-  PathDiagnosticLocation L =
-      PathDiagnosticLocation::createEndOfPath(EndPathNode);
-
+  PathDiagnosticLocation L = BR.getLocation();
   const auto &Ranges = BR.getRanges();
 
   // Only add the statement itself as a range if we didn't specify any
@@ -852,7 +850,7 @@ private:
   /// \return Source location of right hand side of an assignment
   /// into \c RegionOfInterest, empty optional if none found.
   Optional<SourceLocation> matchAssignment(const ExplodedNode *N) {
-    const Stmt *S = PathDiagnosticLocation::getStmt(N);
+    const Stmt *S = N->getStmtForDiagnostics();
     ProgramStateRef State = N->getState();
     auto *LCtx = N->getLocationContext();
     if (!S)
@@ -1919,7 +1917,7 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
 static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
                                                  const Expr *Inner) {
   while (N) {
-    if (PathDiagnosticLocation::getStmt(N) == Inner)
+    if (N->getStmtForDiagnostics() == Inner)
       return N;
     N = N->getFirstPred();
   }

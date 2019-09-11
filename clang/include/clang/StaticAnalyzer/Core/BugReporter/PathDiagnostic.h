@@ -52,11 +52,6 @@ class SourceManager;
 
 namespace ento {
 
-class ExplodedNode;
-class SymExpr;
-
-using SymbolRef = const SymExpr *;
-
 //===----------------------------------------------------------------------===//
 // High-level interface for handlers of path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
@@ -276,17 +271,20 @@ public:
   static PathDiagnosticLocation createDeclEnd(const LocationContext *LC,
                                                    const SourceManager &SM);
 
-  /// Create a location corresponding to the given valid ExplodedNode.
+  /// Create a location corresponding to the given valid ProgramPoint.
   static PathDiagnosticLocation create(const ProgramPoint &P,
                                        const SourceManager &SMng);
-
-  /// Create a location corresponding to the next valid ExplodedNode as end
-  /// of path location.
-  static PathDiagnosticLocation createEndOfPath(const ExplodedNode* N);
 
   /// Convert the given location into a single kind location.
   static PathDiagnosticLocation createSingleLocation(
                                              const PathDiagnosticLocation &PDL);
+
+  /// Construct a source location that corresponds to either the beginning
+  /// or the end of the given statement, or a nearby valid source location
+  /// if the statement does not have a valid source location of its own.
+  static SourceLocation
+  getValidSourceLocation(const Stmt *S, LocationOrAnalysisDeclContext LAC,
+                         bool UseEndOfStatement = false);
 
   bool operator==(const PathDiagnosticLocation &X) const {
     return K == X.K && Loc == X.Loc && Range == X.Range;
@@ -332,13 +330,6 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const;
 
   void dump() const;
-
-  /// Given an exploded node, retrieve the statement that should be used
-  /// for the diagnostic location.
-  static const Stmt *getStmt(const ExplodedNode *N);
-
-  /// Retrieve the statement corresponding to the successor node.
-  static const Stmt *getNextStmt(const ExplodedNode *N);
 };
 
 class PathDiagnosticLocationPair {

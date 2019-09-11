@@ -738,11 +738,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   const MemRegion* FirstBinding = AllocI.R;
   BR.markInteresting(AllocI.InterestingMethodContext);
 
-  // Compute an actual location for the leak.  Sometimes a leak doesn't
-  // occur at an actual statement (e.g., transition between blocks; end
-  // of function) so we need to walk the graph and compute a real location.
-  const ExplodedNode *LeakN = EndN;
-  PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(LeakN);
+  PathDiagnosticLocation L = cast<RefLeakReport>(BR).getEndOfPath();
 
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
@@ -872,7 +868,7 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
   // FIXME: This will crash the analyzer if an allocation comes from an
   // implicit call (ex: a destructor call).
   // (Currently there are no such allocations in Cocoa, though.)
-  AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  AllocStmt = AllocNode->getStmtForDiagnostics();
 
   if (!AllocStmt) {
     AllocBinding = nullptr;

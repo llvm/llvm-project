@@ -335,26 +335,6 @@ std::string StackHintGeneratorForSymbol::getMessageForArg(const Expr *ArgE,
 }
 
 //===----------------------------------------------------------------------===//
-// Helper routines for walking the ExplodedGraph and fetching statements.
-//===----------------------------------------------------------------------===//
-
-static const Stmt *GetPreviousStmt(const ExplodedNode *N) {
-  for (N = N->getFirstPred(); N; N = N->getFirstPred())
-    if (const Stmt *S = PathDiagnosticLocation::getStmt(N))
-      return S;
-
-  return nullptr;
-}
-
-static inline const Stmt*
-GetCurrentOrPreviousStmt(const ExplodedNode *N) {
-  if (const Stmt *S = PathDiagnosticLocation::getStmt(N))
-    return S;
-
-  return GetPreviousStmt(N);
-}
-
-//===----------------------------------------------------------------------===//
 // Diagnostic cleanup.
 //===----------------------------------------------------------------------===//
 
@@ -593,7 +573,7 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     const PathDiagnosticConstruct &C) const {
-  if (const Stmt *S = PathDiagnosticLocation::getNextStmt(C.getCurrentNode()))
+  if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
     return PathDiagnosticLocation(S, getSourceManager(),
                                   C.getCurrLocationContext());
 
@@ -888,7 +868,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
   case Stmt::GotoStmtClass:
   case Stmt::IndirectGotoStmtClass: {
-    if (const Stmt *S = PathDiagnosticLocation::getNextStmt(C.getCurrentNode()))
+    if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
       C.getActivePath().push_front(generateDiagForGotoOP(C, S, Start));
     break;
   }
@@ -2176,8 +2156,11 @@ void PathSensitiveBugReport::Profile(llvm::FoldingSetNodeID &hash) const {
   if (UL.isValid()) {
     UL.Profile(hash);
   } else {
-    assert(ErrorNode);
-    hash.AddPointer(GetCurrentOrPreviousStmt(ErrorNode));
+    // TODO: The statement may be null if the report was emitted before any
+    // statements were executed. In particular, some checkers by design
+    // occasionally emit their reports in empty functions (that have no
+    // statements in their body). Do we profile correctly in this case?
+    hash.AddPointer(ErrorNode->getCurrentOrPreviousStmtForDiagnostics());
   }
 
   for (SourceRange range : Ranges) {
@@ -2332,10 +2315,10 @@ const Stmt *PathSensitiveBugReport::getStmt() const {
   if (Optional<BlockEntrance> BE = ProgP.getAs<BlockEntrance>()) {
     CFGBlock &Exit = ProgP.getLocationContext()->getCFG()->getExit();
     if (BE->getBlock() == &Exit)
-      S = GetPreviousStmt(ErrorNode);
+      S = ErrorNode->getPreviousStmtForDiagnostics();
   }
   if (!S)
-    S = PathDiagnosticLocation::getStmt(ErrorNode);
+    S = ErrorNode->getStmtForDiagnostics();
 
   return S;
 }
@@ -2352,7 +2335,45 @@ PathSensitiveBugReport::getRanges() const {
 
 PathDiagnosticLocation
 PathSensitiveBugReport::getLocation() const {
-  return PathDiagnosticLocation::createEndOfPath(ErrorNode);
+  assert(ErrorNode && "Cannot create a location with a null node.");
+  const Stmt *S = ErrorNode->getStmtForDiagnostics();
+    ProgramPoint P = ErrorNode->getLocation();
+  const LocationContext *LC = P.getLocationContext();
+  SourceManager &SM =
+      ErrorNode->getState()->getStateManager().getContext().getSourceManager();
+
+  if (!S) {
+    // If this is an implicit call, return the implicit call point location.
+    if (Optional<PreImplicitCall> PIE = P.getAs<PreImplicitCall>())
+      return PathDiagnosticLocation(PIE->getLocation(), SM);
+    if (auto FE = P.getAs<FunctionExitPoint>()) {
+      if (const ReturnStmt *RS = FE->getStmt())
+        return PathDiagnosticLocation::createBegin(RS, SM, LC);
+    }
+    S = ErrorNode->getNextStmtForDiagnostics();
+  }
+
+  if (S) {
+    // For member expressions, return the location of the '.' or '->'.
+    if (const auto *ME = dyn_cast<MemberExpr>(S))
+      return PathDiagnosticLocation::createMemberLoc(ME, SM);
+
+    // For binary operators, return the location of the operator.
+    if (const auto *B = dyn_cast<BinaryOperator>(S))
+      return PathDiagnosticLocation::createOperatorLoc(B, SM);
+
+    if (P.getAs<PostStmtPurgeDeadSymbols>())
+      return PathDiagnosticLocation::createEnd(S, SM, LC);
+
+    if (S->getBeginLoc().isValid())
+      return PathDiagnosticLocation(S, SM, LC);
+
+    return PathDiagnosticLocation(
+        PathDiagnosticLocation::getValidSourceLocation(S, LC), SM);
+  }
+
+  return PathDiagnosticLocation::createDeclEnd(ErrorNode->getLocationContext(),
+                                               SM);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3068,7 +3089,7 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
       // Inlined function: show signature.
       const Decl* D = CE->getCalleeContext()->getDecl();
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
-    } else if (const Stmt *S = PathDiagnosticLocation::getStmt(N)) {
+    } else if (const Stmt *S = N->getStmtForDiagnostics()) {
       populateExecutedLinesWithStmt(S, SM, *ExecutedLines);
 
       // Show extra context for some parent kinds.

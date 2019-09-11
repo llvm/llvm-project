@@ -30,7 +30,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
@@ -524,12 +523,12 @@ PathDiagnosticConsumer::FilesMade::getFiles(const PathDiagnostic &PD) {
 // PathDiagnosticLocation methods.
 //===----------------------------------------------------------------------===//
 
-static SourceLocation getValidSourceLocation(const Stmt* S,
-                                             LocationOrAnalysisDeclContext LAC,
-                                             bool UseEnd = false) {
-  SourceLocation L = UseEnd ? S->getEndLoc() : S->getBeginLoc();
-  assert(!LAC.isNull() && "A valid LocationContext or AnalysisDeclContext should "
-                          "be passed to PathDiagnosticLocation upon creation.");
+SourceLocation PathDiagnosticLocation::getValidSourceLocation(
+    const Stmt *S, LocationOrAnalysisDeclContext LAC, bool UseEndOfStatement) {
+  SourceLocation L = UseEndOfStatement ? S->getEndLoc() : S->getBeginLoc();
+  assert(!LAC.isNull() &&
+         "A valid LocationContext or AnalysisDeclContext should be passed to "
+         "PathDiagnosticLocation upon creation.");
 
   // S might be a temporary statement that does not have a location in the
   // source code, so find an enclosing statement and use its location.
@@ -559,7 +558,7 @@ static SourceLocation getValidSourceLocation(const Stmt* S,
         break;
       }
 
-      L = UseEnd ? Parent->getEndLoc() : Parent->getBeginLoc();
+      L = UseEndOfStatement ? Parent->getEndLoc() : Parent->getBeginLoc();
     } while (!L.isValid());
   }
 
@@ -776,117 +775,6 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
   }
 
   return PathDiagnosticLocation(S, SMng, P.getLocationContext());
-}
-
-static const LocationContext *
-findTopAutosynthesizedParentContext(const LocationContext *LC) {
-  assert(LC->getAnalysisDeclContext()->isBodyAutosynthesized());
-  const LocationContext *ParentLC = LC->getParent();
-  assert(ParentLC && "We don't start analysis from autosynthesized code");
-  while (ParentLC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    LC = ParentLC;
-    ParentLC = LC->getParent();
-    assert(ParentLC && "We don't start analysis from autosynthesized code");
-  }
-  return LC;
-}
-
-const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
-  // We cannot place diagnostics on autosynthesized code.
-  // Put them onto the call site through which we jumped into autosynthesized
-  // code for the first time.
-  const LocationContext *LC = N->getLocationContext();
-  if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
-        ->getCallSite();
-  }
-  // Otherwise, see if the node's program point directly points to a statement.
-  ProgramPoint P = N->getLocation();
-  if (auto SP = P.getAs<StmtPoint>())
-    return SP->getStmt();
-  if (auto BE = P.getAs<BlockEdge>())
-    return BE->getSrc()->getTerminatorStmt();
-  if (auto CE = P.getAs<CallEnter>())
-    return CE->getCallExpr();
-  if (auto CEE = P.getAs<CallExitEnd>())
-    return CEE->getCalleeContext()->getCallSite();
-  if (auto PIPP = P.getAs<PostInitializer>())
-    return PIPP->getInitializer()->getInit();
-  if (auto CEB = P.getAs<CallExitBegin>())
-    return CEB->getReturnStmt();
-  if (auto FEP = P.getAs<FunctionExitPoint>())
-    return FEP->getStmt();
-
-  return nullptr;
-}
-
-const Stmt *PathDiagnosticLocation::getNextStmt(const ExplodedNode *N) {
-  for (N = N->getFirstSucc(); N; N = N->getFirstSucc()) {
-    if (const Stmt *S = getStmt(N)) {
-      // Check if the statement is '?' or '&&'/'||'.  These are "merges",
-      // not actual statement points.
-      switch (S->getStmtClass()) {
-        case Stmt::ChooseExprClass:
-        case Stmt::BinaryConditionalOperatorClass:
-        case Stmt::ConditionalOperatorClass:
-          continue;
-        case Stmt::BinaryOperatorClass: {
-          BinaryOperatorKind Op = cast<BinaryOperator>(S)->getOpcode();
-          if (Op == BO_LAnd || Op == BO_LOr)
-            continue;
-          break;
-        }
-        default:
-          break;
-      }
-      // We found the statement, so return it.
-      return S;
-    }
-  }
-
-  return nullptr;
-}
-
-PathDiagnosticLocation
-PathDiagnosticLocation::createEndOfPath(const ExplodedNode *N) {
-  assert(N && "Cannot create a location with a null node.");
-  const Stmt *S = getStmt(N);
-  const LocationContext *LC = N->getLocationContext();
-  SourceManager &SM =
-      N->getState()->getStateManager().getContext().getSourceManager();
-
-  if (!S) {
-    // If this is an implicit call, return the implicit call point location.
-    if (Optional<PreImplicitCall> PIE = N->getLocationAs<PreImplicitCall>())
-      return PathDiagnosticLocation(PIE->getLocation(), SM);
-    if (auto FE = N->getLocationAs<FunctionExitPoint>()) {
-      if (const ReturnStmt *RS = FE->getStmt())
-        return PathDiagnosticLocation::createBegin(RS, SM, LC);
-    }
-    S = getNextStmt(N);
-  }
-
-  if (S) {
-    ProgramPoint P = N->getLocation();
-
-    // For member expressions, return the location of the '.' or '->'.
-    if (const auto *ME = dyn_cast<MemberExpr>(S))
-      return PathDiagnosticLocation::createMemberLoc(ME, SM);
-
-    // For binary operators, return the location of the operator.
-    if (const auto *B = dyn_cast<BinaryOperator>(S))
-      return PathDiagnosticLocation::createOperatorLoc(B, SM);
-
-    if (P.getAs<PostStmtPurgeDeadSymbols>())
-      return PathDiagnosticLocation::createEnd(S, SM, LC);
-
-    if (S->getBeginLoc().isValid())
-      return PathDiagnosticLocation(S, SM, LC);
-    return PathDiagnosticLocation(getValidSourceLocation(S, LC), SM);
-  }
-
-  return createDeclEnd(N->getLocationContext(), SM);
 }
 
 PathDiagnosticLocation PathDiagnosticLocation::createSingleLocation(

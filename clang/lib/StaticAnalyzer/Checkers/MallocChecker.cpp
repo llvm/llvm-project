@@ -532,8 +532,7 @@ private:
       if (!IsLeak)
         return nullptr;
 
-      PathDiagnosticLocation L =
-          PathDiagnosticLocation::createEndOfPath(EndPathNode);
+      PathDiagnosticLocation L = BR.getLocation();
       // Do not add the statement itself as a range in case of leak.
       return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
@@ -2332,7 +2331,7 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
   const MemRegion *Region = nullptr;
   std::tie(AllocNode, Region) = getAllocationSite(N, Sym, C);
 
-  const Stmt *AllocationStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  const Stmt *AllocationStmt = AllocNode->getStmtForDiagnostics();
   if (AllocationStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
                                               C.getSourceManager(),
@@ -2920,7 +2919,7 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
   const RefState *RS = state->get<RegionState>(Sym);
   const RefState *RSPrev = statePrev->get<RegionState>(Sym);
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   // When dealing with containers, we sometimes want to give a note
   // even if the statement is missing.
   if (!S && (!RS || RS->getAllocationFamily() != AF_InnerBuffer))
