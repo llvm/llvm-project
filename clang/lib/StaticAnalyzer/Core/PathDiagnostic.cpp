@@ -29,7 +29,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
@@ -129,69 +128,6 @@ PathDiagnostic::PathDiagnostic(
       Category(StripTrailingDots(category)), UniqueingLoc(LocationToUnique),
       UniqueingDecl(DeclToUnique), ExecutedLines(std::move(ExecutedLines)),
       path(pathImpl) {}
-
-static PathDiagnosticCallPiece *
-getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
-                                const SourceManager &SMgr) {
-  SourceLocation CallLoc = CP->callEnter.asLocation();
-
-  // If the call is within a macro, don't do anything (for now).
-  if (CallLoc.isMacroID())
-    return nullptr;
-
-  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
-         "The call piece should not be in a header file.");
-
-  // Check if CP represents a path through a function outside of the main file.
-  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
-    return CP;
-
-  const PathPieces &Path = CP->path;
-  if (Path.empty())
-    return nullptr;
-
-  // Check if the last piece in the callee path is a call to a function outside
-  // of the main file.
-  if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
-    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
-
-  // Otherwise, the last piece is in the main file.
-  return nullptr;
-}
-
-void PathDiagnostic::resetDiagnosticLocationToMainFile() {
-  if (path.empty())
-    return;
-
-  PathDiagnosticPiece *LastP = path.back().get();
-  assert(LastP);
-  const SourceManager &SMgr = LastP->getLocation().getManager();
-
-  // We only need to check if the report ends inside headers, if the last piece
-  // is a call piece.
-  if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
-    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
-    if (CP) {
-      // Mark the piece.
-       CP->setAsLastInMainSourceFile();
-
-      // Update the path diagnostic message.
-      const auto *ND = dyn_cast<NamedDecl>(CP->getCallee());
-      if (ND) {
-        SmallString<200> buf;
-        llvm::raw_svector_ostream os(buf);
-        os << " (within a call to '" << ND->getDeclName() << "')";
-        appendToDesc(os.str());
-      }
-
-      // Reset the report containing declaration and location.
-      DeclWithIssue = CP->getCaller();
-      Loc = CP->getLocation();
-
-      return;
-    }
-  }
-}
 
 void PathDiagnosticConsumer::anchor() {}
 

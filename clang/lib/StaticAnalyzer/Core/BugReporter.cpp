@@ -3123,6 +3123,71 @@ BugReporter::generateDiagnosticForConsumerMap(
   return Out;
 }
 
+static PathDiagnosticCallPiece *
+getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
+                                const SourceManager &SMgr) {
+  SourceLocation CallLoc = CP->callEnter.asLocation();
+
+  // If the call is within a macro, don't do anything (for now).
+  if (CallLoc.isMacroID())
+    return nullptr;
+
+  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
+         "The call piece should not be in a header file.");
+
+  // Check if CP represents a path through a function outside of the main file.
+  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
+    return CP;
+
+  const PathPieces &Path = CP->path;
+  if (Path.empty())
+    return nullptr;
+
+  // Check if the last piece in the callee path is a call to a function outside
+  // of the main file.
+  if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
+    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
+
+  // Otherwise, the last piece is in the main file.
+  return nullptr;
+}
+
+static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
+  if (PD.path.empty())
+    return;
+
+  PathDiagnosticPiece *LastP = PD.path.back().get();
+  assert(LastP);
+  const SourceManager &SMgr = LastP->getLocation().getManager();
+
+  // We only need to check if the report ends inside headers, if the last piece
+  // is a call piece.
+  if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
+    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
+    if (CP) {
+      // Mark the piece.
+       CP->setAsLastInMainSourceFile();
+
+      // Update the path diagnostic message.
+      const auto *ND = dyn_cast<NamedDecl>(CP->getCallee());
+      if (ND) {
+        SmallString<200> buf;
+        llvm::raw_svector_ostream os(buf);
+        os << " (within a call to '" << ND->getDeclName() << "')";
+        PD.appendToDesc(os.str());
+      }
+
+      // Reset the report containing declaration and location.
+      PD.setDeclWithIssue(CP->getCaller());
+      PD.setLocation(CP->getLocation());
+
+      return;
+    }
+  }
+}
+
+
+
 std::unique_ptr<DiagnosticForConsumerMapTy>
 PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
     BugReport *exampleReport, ArrayRef<PathDiagnosticConsumer *> consumers,
@@ -3157,7 +3222,7 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
   const AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
     if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
-      P.second->resetDiagnosticLocationToMainFile();
+      resetDiagnosticLocationToMainFile(*P.second);
 
   return Out;
 }

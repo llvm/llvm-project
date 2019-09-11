@@ -792,11 +792,6 @@ public:
     VerboseDesc += S;
   }
 
-  /// If the last piece of the report point to the header file, resets
-  /// the location of the report to be the last location in the main source
-  /// file.
-  void resetDiagnosticLocationToMainFile();
-
   StringRef getVerboseDescription() const { return VerboseDesc; }
 
   StringRef getShortDescription() const {
@@ -806,11 +801,6 @@ public:
   StringRef getCheckName() const { return CheckName; }
   StringRef getBugType() const { return BugType; }
   StringRef getCategory() const { return Category; }
-
-  /// Return the semantic context where an issue occurred.  If the
-  /// issue occurs along a path, this represents the "central" area
-  /// where the bug manifests.
-  const Decl *getDeclWithIssue() const { return DeclWithIssue; }
 
   using meta_iterator = std::deque<std::string>::const_iterator;
 
@@ -826,8 +816,21 @@ public:
     return *ExecutedLines;
   }
 
+  /// Return the semantic context where an issue occurred.  If the
+  /// issue occurs along a path, this represents the "central" area
+  /// where the bug manifests.
+  const Decl *getDeclWithIssue() const { return DeclWithIssue; }
+
+  void setDeclWithIssue(const Decl *D) {
+    DeclWithIssue = D;
+  }
+
   PathDiagnosticLocation getLocation() const {
     return Loc;
+  }
+
+  void setLocation(PathDiagnosticLocation NewLoc) {
+    Loc = NewLoc;
   }
 
   /// Get the location on which the report should be uniqued.
