@@ -36,6 +36,7 @@ class ProcessIOTestCase(TestBase):
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
+    @skipIfDarwinEmbedded # I/O redirection like this is not supported on remote iOS devices yet <rdar://problem/54581135>
     def test_stdin_by_api(self):
         """Exercise SBProcess.PutSTDIN()."""
         self.setup_test()
