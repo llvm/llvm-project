@@ -8,36 +8,36 @@
 // NORELOC-NEXT: ]
 
 // DISASM:      _start:
-// DISASM-NEXT: 201000:       movq $-8, %rax
-// DISASM-NEXT: 201007:       movq $-8, %r15
-// DISASM-NEXT: 20100e:       leaq -8(%rax), %rax
-// DISASM-NEXT: 201015:       leaq -8(%r15), %r15
-// DISASM-NEXT: 20101c:       addq $-8, %rsp
-// DISASM-NEXT: 201023:       addq $-8, %r12
-// DISASM-NEXT: 20102a:       movq $-4, %rax
-// DISASM-NEXT: 201031:       movq $-4, %r15
-// DISASM-NEXT: 201038:       leaq -4(%rax), %rax
-// DISASM-NEXT: 20103f:       leaq -4(%r15), %r15
-// DISASM-NEXT: 201046:       addq $-4, %rsp
-// DISASM-NEXT: 20104d:       addq $-4, %r12
+// DISASM-NEXT:   movq $-8, %rax
+// DISASM-NEXT:   movq $-8, %r15
+// DISASM-NEXT:   leaq -8(%rax), %rax
+// DISASM-NEXT:   leaq -8(%r15), %r15
+// DISASM-NEXT:   addq $-8, %rsp
+// DISASM-NEXT:   addq $-8, %r12
+// DISASM-NEXT:   movq $-4, %rax
+// DISASM-NEXT:   movq $-4, %r15
+// DISASM-NEXT:   leaq -4(%rax), %rax
+// DISASM-NEXT:   leaq -4(%r15), %r15
+// DISASM-NEXT:   addq $-4, %rsp
+// DISASM-NEXT:   addq $-4, %r12
 
 // LD to LE:
-// DISASM-NEXT: 201054:       movq %fs:0, %rax
-// DISASM-NEXT: 201060:       leaq -8(%rax), %rcx
-// DISASM-NEXT: 201067:       movq %fs:0, %rax
-// DISASM-NEXT: 201073:       leaq -4(%rax), %rcx
+// DISASM-NEXT:   movq %fs:0, %rax
+// DISASM-NEXT:   leaq -8(%rax), %rcx
+// DISASM-NEXT:   movq %fs:0, %rax
+// DISASM-NEXT:   leaq -4(%rax), %rcx
 
 // GD to LE:
-// DISASM-NEXT: 20107a:       movq %fs:0, %rax
-// DISASM-NEXT: 201083:       leaq -8(%rax), %rax
-// DISASM-NEXT: 20108a:       movq %fs:0, %rax
-// DISASM-NEXT: 201093:       leaq -4(%rax), %rax
+// DISASM-NEXT:   movq %fs:0, %rax
+// DISASM-NEXT:   leaq -8(%rax), %rax
+// DISASM-NEXT:   movq %fs:0, %rax
+// DISASM-NEXT:   leaq -4(%rax), %rax
 
 // LD to LE:
 // DISASM:     _DTPOFF64_1:
-// DISASM-NEXT: 20109a:       clc
+// DISASM-NEXT:   clc
 // DISASM:      _DTPOFF64_2:
-// DISASM-NEXT: 2010a3:       cld
+// DISASM-NEXT:   cld
 
 .type tls0,@object
 .section .tbss,"awT",@nobits

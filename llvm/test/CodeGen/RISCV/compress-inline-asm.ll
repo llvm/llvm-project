@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+c  -filetype=obj < %s\
-; RUN: | llvm-objdump -triple=riscv32 -mattr=+c -d -riscv-no-aliases -\
+; RUN: | llvm-objdump -triple=riscv32 -mattr=+c -d -M no-aliases -\
 ; RUN: | FileCheck -check-prefix=CHECK %s
 
 @ext = external global i32

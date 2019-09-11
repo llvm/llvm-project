@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o -o %t1
 # RUN: llvm-readobj --symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
-# RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
 ## There is no relocations.
 # SYMRELOC:      Relocations [
@@ -16,19 +16,19 @@
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: _start:
-# DISASM-NEXT:   201000: {{.*}} adcq  $2105344, %rax
-# DISASM-NEXT:   201007: {{.*}} addq  $2105344, %rbx
-# DISASM-NEXT:   20100e: {{.*}} andq  $2105344, %rcx
-# DISASM-NEXT:   201015: {{.*}} cmpq  $2105344, %rdx
-# DISASM-NEXT:   20101c: {{.*}} orq   $2105344, %rdi
-# DISASM-NEXT:   201023: {{.*}} sbbq  $2105344, %rsi
-# DISASM-NEXT:   20102a: {{.*}} subq  $2105344, %rbp
-# DISASM-NEXT:   201031: {{.*}} xorq  $2105344, %r8
-# DISASM-NEXT:   201038: {{.*}} testq $2105344, %r15
+# DISASM-NEXT:   201000:       adcq  $2105344, %rax
+# DISASM-NEXT:                 addq  $2105344, %rbx
+# DISASM-NEXT:                 andq  $2105344, %rcx
+# DISASM-NEXT:                 cmpq  $2105344, %rdx
+# DISASM-NEXT:                 orq   $2105344, %rdi
+# DISASM-NEXT:                 sbbq  $2105344, %rsi
+# DISASM-NEXT:                 subq  $2105344, %rbp
+# DISASM-NEXT:                 xorq  $2105344, %r8
+# DISASM-NEXT:                 testq $2105344, %r15
 
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t2
 # RUN: llvm-readobj -S -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
-# RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=DISASM-PIC %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck --check-prefix=DISASM-PIC %s
 # SEC-PIC:      Section {
 # SEC-PIC:        Index:
 # SEC-PIC:        Name: .got
@@ -58,15 +58,15 @@
 # DISASM-PIC:      Disassembly of section .text:
 # DISASM-PIC-EMPTY:
 # DISASM-PIC-NEXT: _start:
-# DISASM-PIC-NEXT: 1000: {{.*}} adcq  4249(%rip), %rax
-# DISASM-PIC-NEXT: 1007: {{.*}} addq  4242(%rip), %rbx
-# DISASM-PIC-NEXT: 100e: {{.*}} andq  4235(%rip), %rcx
-# DISASM-PIC-NEXT: 1015: {{.*}} cmpq  4228(%rip), %rdx
-# DISASM-PIC-NEXT: 101c: {{.*}} orq   4221(%rip), %rdi
-# DISASM-PIC-NEXT: 1023: {{.*}} sbbq  4214(%rip), %rsi
-# DISASM-PIC-NEXT: 102a: {{.*}} subq  4207(%rip), %rbp
-# DISASM-PIC-NEXT: 1031: {{.*}} xorq  4200(%rip), %r8
-# DISASM-PIC-NEXT: 1038: {{.*}} testq %r15, 4193(%rip)
+# DISASM-PIC-NEXT: 1000:       adcq  4249(%rip), %rax
+# DISASM-PIC-NEXT:             addq  4242(%rip), %rbx
+# DISASM-PIC-NEXT:             andq  4235(%rip), %rcx
+# DISASM-PIC-NEXT:             cmpq  4228(%rip), %rdx
+# DISASM-PIC-NEXT:             orq   4221(%rip), %rdi
+# DISASM-PIC-NEXT:             sbbq  4214(%rip), %rsi
+# DISASM-PIC-NEXT:             subq  4207(%rip), %rbp
+# DISASM-PIC-NEXT:             xorq  4200(%rip), %r8
+# DISASM-PIC-NEXT:             testq %r15, 4193(%rip)
 
 .data
 .type   bar, @object

@@ -2296,6 +2296,7 @@ public:
     OR_CopyConstantAsImm,
     OR_CopyFConstantAsFPImm,
     OR_Imm,
+    OR_SubRegIndex,
     OR_Register,
     OR_TempRegister,
     OR_ComplexPattern,
@@ -2610,6 +2611,28 @@ public:
   }
 };
 
+/// Adds an enum value for a subreg index to the instruction being built.
+class SubRegIndexRenderer : public OperandRenderer {
+protected:
+  unsigned InsnID;
+  const CodeGenSubRegIndex *SubRegIdx;
+
+public:
+  SubRegIndexRenderer(unsigned InsnID, const CodeGenSubRegIndex *SRI)
+      : OperandRenderer(OR_SubRegIndex), InsnID(InsnID), SubRegIdx(SRI) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_SubRegIndex;
+  }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
+          << MatchTable::IntValue(InsnID) << MatchTable::Comment("SubRegIndex")
+          << MatchTable::IntValue(SubRegIdx->EnumValue)
+          << MatchTable::LineBreak;
+  }
+};
+
 /// Adds operands by calling a renderer function supplied by the ComplexPattern
 /// matcher function.
 class RenderComplexPatternOperand : public OperandRenderer {
@@ -2890,7 +2913,9 @@ private:
 
 public:
   MakeTempRegisterAction(const LLTCodeGen &Ty, unsigned TempRegID)
-      : Ty(Ty), TempRegID(TempRegID) {}
+      : Ty(Ty), TempRegID(TempRegID) {
+    KnownTypes.insert(Ty);
+  }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIR_MakeTempReg")
@@ -4163,12 +4188,9 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
 
   // COPY_TO_REGCLASS is just a copy with a ConstrainOperandToRegClassAction
   // attached. Similarly for EXTRACT_SUBREG except that's a subregister copy.
-  if (DstI->TheDef->getName() == "COPY_TO_REGCLASS")
+  StringRef Name = DstI->TheDef->getName();
+  if (Name == "COPY_TO_REGCLASS" || Name == "EXTRACT_SUBREG")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
-  else if (DstI->TheDef->getName() == "EXTRACT_SUBREG")
-    DstI = &Target.getInstruction(RK.getDef("COPY"));
-  else if (DstI->TheDef->getName() == "REG_SEQUENCE")
-    return failedImport("Unable to emit REG_SEQUENCE");
 
   return M.insertAction<BuildMIAction>(InsertPt, M.allocateOutputInsnID(),
                                        DstI);
@@ -4189,8 +4211,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst->getOperator());
 
+  StringRef Name = OrigDstI->TheDef->getName();
+  unsigned ExpectedDstINumUses = Dst->getNumChildren();
+
   // EXTRACT_SUBREG needs to use a subregister COPY.
-  if (OrigDstI->TheDef->getName() == "EXTRACT_SUBREG") {
+  if (Name == "EXTRACT_SUBREG") {
     if (!Dst->getChild(0)->isLeaf())
       return failedImport("EXTRACT_SUBREG child #1 is not a leaf");
 
@@ -4220,10 +4245,41 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
   }
 
+  if (Name == "REG_SEQUENCE") {
+    if (!Dst->getChild(0)->isLeaf())
+      return failedImport("REG_SEQUENCE child #0 is not a leaf");
+
+    Record *RCDef = getInitValueAsRegClass(Dst->getChild(0)->getLeafValue());
+    if (!RCDef)
+      return failedImport("REG_SEQUENCE child #0 could not "
+                          "be coerced to a register class");
+
+    if ((ExpectedDstINumUses - 1) % 2 != 0)
+      return failedImport("Malformed REG_SEQUENCE");
+
+    for (unsigned I = 1; I != ExpectedDstINumUses; I += 2) {
+      TreePatternNode *ValChild = Dst->getChild(I);
+      TreePatternNode *SubRegChild = Dst->getChild(I + 1);
+
+      if (DefInit *SubRegInit =
+              dyn_cast<DefInit>(SubRegChild->getLeafValue())) {
+        CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
+
+        auto InsertPtOrError =
+            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild);
+        if (auto Error = InsertPtOrError.takeError())
+          return std::move(Error);
+        InsertPt = InsertPtOrError.get();
+        DstMIBuilder.addRenderer<SubRegIndexRenderer>(SubIdx);
+      }
+    }
+
+    return InsertPt;
+  }
+
   // Render the explicit uses.
   unsigned DstINumUses = OrigDstI->Operands.size() - OrigDstI->Operands.NumDefs;
-  unsigned ExpectedDstINumUses = Dst->getNumChildren();
-  if (OrigDstI->TheDef->getName() == "COPY_TO_REGCLASS") {
+  if (Name == "COPY_TO_REGCLASS") {
     DstINumUses--; // Ignore the class constraint.
     ExpectedDstINumUses--;
   }

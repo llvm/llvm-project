@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Demangle
   Object
   Support
+  TextAPI
   )
 
 add_llvm_tool(llvm-nm

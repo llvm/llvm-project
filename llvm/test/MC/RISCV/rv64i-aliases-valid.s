@@ -3,7 +3,7 @@
 # RUN: llvm-mc %s -triple=riscv64 \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:     | llvm-objdump -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \

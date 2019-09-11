@@ -5,7 +5,7 @@
 ; RUN: lld-link /lib /out:%t.lib %t.obj
 ; RUN: llvm-nm -M %t.lib | FileCheck %s
 
-target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
+target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.11.0"
 
 module asm ".global global_asm_sym"

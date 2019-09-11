@@ -451,8 +451,9 @@ b:
 define void @f25(float %val1, float %val2) {
 ; CHECK-LABEL: f25:
 ; CHECK: cebr %f0, %f2
-; CHECK: bor %r1
+; CHECK: jo
 ; CHECK: br %r14
+; CHECK: br %r1
   %fun_a = load volatile void() *, void()** @fun_a;
   %cond = fcmp uno float %val1, %val2;
   br i1 %cond, label %a, label %b;

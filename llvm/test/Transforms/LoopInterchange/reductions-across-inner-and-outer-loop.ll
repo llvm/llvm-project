@@ -31,6 +31,8 @@ define i64 @test1([100 x [100 x i64]]* %Arr) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* [[ARR:%.*]], i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV23]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i64, i64* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[SUM_INC]] = add i64 [[SUM_INNER]], [[LV]]
+; CHECK-NEXT:    [[IV_ORIGINAL:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXIT1_ORIGINAL:%.*]] = icmp eq i64 [[IV_ORIGINAL]], 100
 ; CHECK-NEXT:    br label [[FOR1_INC]]
 ; CHECK:       for2.split:
 ; CHECK-NEXT:    [[SUM_INC_LCSSA]] = phi i64 [ [[SUM_INC]], %for1.inc ]
