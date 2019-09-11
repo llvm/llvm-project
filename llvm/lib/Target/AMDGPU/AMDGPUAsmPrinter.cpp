@@ -417,7 +417,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
-  MF.setLogAlignment(MFI->isEntryFunction() ? 8 : 2);
+  MF.setAlignment(MFI->isEntryFunction() ? llvm::Align(256) : llvm::Align(4));
 
   SetupMachineFunction(MF);
 

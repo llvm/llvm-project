@@ -6,7 +6,7 @@
 # Check that the machine verifier checks the position operand is in the range 0..31
 ---
 name:            dextm
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

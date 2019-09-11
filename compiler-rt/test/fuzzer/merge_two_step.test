@@ -1,0 +1,31 @@
+RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest
+
+RUN: rm -rf %t/T0 %t/T1 %t/T2
+RUN: mkdir -p %t/T0 %t/T1 %t/T2
+RUN: echo F..... > %t/T1/1
+RUN: echo .U.... > %t/T1/2
+RUN: echo ..Z... > %t/T1/3
+
+# T1 has 3 elements, T0 is empty.
+RUN: rm -f %t/MCF
+RUN: %run %t-FullCoverageSetTest -merge=1 -merge_control_file=%t/MCF %t/T0 %t/T1 2>&1 | FileCheck %s --check-prefix=CHECK1
+CHECK1: MERGE-OUTER: 3 files, 0 in the initial corpus
+CHECK1: MERGE-OUTER: 3 new files with 11 new features added; 11 new coverage edges
+
+RUN: echo ...Z.. > %t/T2/1
+RUN: echo ....E. > %t/T2/2
+RUN: echo .....R > %t/T2/3
+RUN: echo F..... > %t/T2/a
+
+RUN: rm -rf %t/T0
+RUN: mkdir -p %t/T0
+
+# T1 has 3 elements, T2 has 4 elements, T0 is empty.
+RUN: %run %t-FullCoverageSetTest -merge=1 -merge_control_file=%t/MCF %t/T0 %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=CHECK2
+CHECK2: MERGE-OUTER: non-empty control file provided
+CHECK2: MERGE-OUTER: control file ok, 3 files total, first not processed file 3
+CHECK2: MERGE-OUTER: starting merge from scratch, but reusing coverage information from the given control file
+CHECK2: MERGE-OUTER: 7 files, 0 in the initial corpus, 3 processed earlier
+CHECK2: MERGE-INNER: using the control file 
+CHECK2: MERGE-INNER: 4 total files; 0 processed earlier; will process 4 files now
+CHECK2: MERGE-OUTER: 6 new files with 14 new features added; 14 new coverage edges

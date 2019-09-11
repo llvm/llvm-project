@@ -35,7 +35,7 @@
 ...
 ---
 name:            a
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -135,7 +135,7 @@ body:             |
 ...
 ---
 name:            b
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

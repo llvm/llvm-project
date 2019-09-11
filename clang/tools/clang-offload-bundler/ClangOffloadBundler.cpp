@@ -17,6 +17,7 @@
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -41,7 +42,6 @@
 #include <memory>
 #include <string>
 #include <system_error>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -611,24 +611,15 @@ static FileHandler *CreateObjectFileHandler(MemoryBuffer &FirstInput) {
   // Check if the input file format is one that we know how to deal with.
   Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(FirstInput);
 
-  // Failed to open the input as a known binary. Use the default binary handler.
-  if (!BinaryOrErr) {
-    // We don't really care about the error (we just consume it), if we could
-    // not get a valid device binary object we use the default binary handler.
-    consumeError(BinaryOrErr.takeError());
-    return new BinaryFileHandler();
-  }
-
-  // We only support regular object files. If this is not an object file,
-  // default to the binary handler. The handler will be owned by the client of
-  // this function.
-  std::unique_ptr<ObjectFile> Obj(
-      dyn_cast<ObjectFile>(BinaryOrErr.get().release()));
-
-  if (!Obj)
+  // We only support regular object files. If failed to open the input as a
+  // known binary or this is not an object file use the default binary handler.
+  if (errorToBool(BinaryOrErr.takeError()) || !isa<ObjectFile>(*BinaryOrErr))
     return new BinaryFileHandler();
 
-  return new ObjectFileHandler(std::move(Obj));
+  // Otherwise create an object file handler. The handler will be owned by the
+  // client of this function.
+  return new ObjectFileHandler(
+      std::unique_ptr<ObjectFile>(cast<ObjectFile>(BinaryOrErr->release())));
 }
 
 /// Return an appropriate handler given the input files and options.
@@ -667,10 +658,8 @@ static bool BundleFiles() {
   }
 
   // Open input files.
-  std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers(
-      InputFileNames.size());
-
-  unsigned Idx = 0;
+  SmallVector<std::unique_ptr<MemoryBuffer>, 8u> InputBuffers;
+  InputBuffers.reserve(InputFileNames.size());
   for (auto &I : InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
         MemoryBuffer::getFileOrSTDIN(I);
@@ -678,7 +667,7 @@ static bool BundleFiles() {
       errs() << "error: Can't open file " << I << ": " << EC.message() << "\n";
       return true;
     }
-    InputBuffers[Idx++] = std::move(CodeOrErr.get());
+    InputBuffers.emplace_back(std::move(CodeOrErr.get()));
   }
 
   // Get the file handler. We use the host buffer as reference.

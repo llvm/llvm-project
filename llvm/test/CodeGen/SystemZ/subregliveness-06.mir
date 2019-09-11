@@ -144,7 +144,7 @@
 ...
 ---
 name:            func_32
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$r2d', virtual-reg: '%10' }

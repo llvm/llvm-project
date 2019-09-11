@@ -9,7 +9,7 @@
 # CHECK:  jrc16 $ra                     # encoding: [0x47,0xe3]
 ---
 name:            a
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

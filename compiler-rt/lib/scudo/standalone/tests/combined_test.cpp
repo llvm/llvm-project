@@ -97,6 +97,21 @@ template <class Config> static void testAllocator() {
   }
   Allocator->deallocate(P, Origin);
 
+  // Check that reallocating a chunk to a slightly smaller or larger size
+  // returns the same chunk. This requires that all the sizes we iterate on use
+  // the same block size, but that should be the case for 2048 with our default
+  // class size maps.
+  P  = Allocator->allocate(DataSize, Origin);
+  memset(P, Marker, DataSize);
+  for (scudo::sptr Delta = -32; Delta < 32; Delta += 8) {
+    const scudo::uptr NewSize = DataSize + Delta;
+    void *NewP = Allocator->reallocate(P, NewSize);
+    EXPECT_EQ(NewP, P);
+    for (scudo::uptr I = 0; I < scudo::Min(DataSize, NewSize); I++)
+      EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
+  }
+  Allocator->deallocate(P, Origin);
+
   // Allocates a bunch of chunks, then iterate over all the chunks, ensuring
   // they are the ones we allocated. This requires the allocator to not have any
   // other allocated chunk at this point (eg: won't work with the Quarantine).

@@ -128,7 +128,7 @@ body:             |
 ...
 ---
 name:            add_v8i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -151,7 +151,7 @@ body:             |
 ...
 ---
 name:            add_v16i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |

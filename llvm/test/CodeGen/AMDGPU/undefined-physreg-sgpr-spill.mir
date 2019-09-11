@@ -22,7 +22,7 @@
 # CHECK-NEXT: $sgpr2_sgpr3 = S_AND_B64 killed $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
 # CHECK: $exec = COPY killed $sgpr2_sgpr3
 name:            undefined_physreg_sgpr_spill
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -87,7 +87,7 @@ body:             |
 # CHECK: SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store 8 into %stack.0, align 4, addrspace 5)
 # CHECK: $exec = COPY killed $sgpr2_sgpr3
 name:            undefined_physreg_sgpr_spill_reorder
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

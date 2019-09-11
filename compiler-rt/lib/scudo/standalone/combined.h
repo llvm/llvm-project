@@ -311,18 +311,30 @@ public:
                                   OldHeader.Origin, Chunk::Origin::Malloc);
     }
 
-    const uptr OldSize = getSize(OldPtr, &OldHeader);
-    // If the new size is identical to the old one, or lower but within an
-    // acceptable range, we just keep the old chunk, and update its header.
-    if (UNLIKELY(NewSize == OldSize))
-      return OldPtr;
-    if (NewSize < OldSize) {
-      const uptr Delta = OldSize - NewSize;
-      if (Delta < (SizeClassMap::MaxSize / 2)) {
+    void *BlockBegin = getBlockBegin(OldPtr, &OldHeader);
+    uptr BlockEnd;
+    uptr OldSize;
+    const uptr ClassId = OldHeader.ClassId;
+    if (LIKELY(ClassId)) {
+      BlockEnd = reinterpret_cast<uptr>(BlockBegin) +
+                 SizeClassMap::getSizeByClassId(ClassId);
+      OldSize = OldHeader.SizeOrUnusedBytes;
+    } else {
+      BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
+      OldSize = BlockEnd -
+                (reinterpret_cast<uptr>(OldPtr) + OldHeader.SizeOrUnusedBytes);
+    }
+    // If the new chunk still fits in the previously allocated block (with a
+    // reasonable delta), we just keep the old block, and update the chunk
+    // header to reflect the size change.
+    if (reinterpret_cast<uptr>(OldPtr) + NewSize <= BlockEnd) {
+      const uptr Delta =
+          OldSize < NewSize ? NewSize - OldSize : OldSize - NewSize;
+      if (Delta <= SizeClassMap::MaxSize / 2) {
         Chunk::UnpackedHeader NewHeader = OldHeader;
         NewHeader.SizeOrUnusedBytes =
-            (OldHeader.ClassId ? NewHeader.SizeOrUnusedBytes - Delta
-                               : NewHeader.SizeOrUnusedBytes + Delta) &
+            (ClassId ? NewSize
+                     : BlockEnd - (reinterpret_cast<uptr>(OldPtr) + NewSize)) &
             Chunk::SizeOrUnusedBytesMask;
         Chunk::compareExchangeHeader(Cookie, OldPtr, &NewHeader, &OldHeader);
         return OldPtr;
@@ -335,6 +347,7 @@ public:
     // are currently unclear.
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (NewPtr) {
+      const uptr OldSize = getSize(OldPtr, &OldHeader);
       memcpy(NewPtr, OldPtr, Min(NewSize, OldSize));
       quarantineOrDeallocateChunk(OldPtr, &OldHeader, OldSize);
     }

@@ -10,7 +10,7 @@
 ...
 ---
 name:            test_fptrunc
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

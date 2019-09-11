@@ -14,7 +14,7 @@
 ...
 ---
 name:            select_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -48,7 +48,7 @@ body:             |
 ...
 ---
 name:            select_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -82,7 +82,7 @@ body:             |
 ...
 ---
 name:            select_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -110,7 +110,7 @@ body:             |
 ...
 ---
 name:            select_ptr
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -138,7 +138,7 @@ body:             |
 ...
 ---
 name:            select_with_negation
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -175,7 +175,7 @@ body:             |
 ...
 ---
 name:            select_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 20, size: 4, alignment: 4, isImmutable: true }
@@ -222,7 +222,7 @@ body:             |
 ...
 ---
 name:            select_float
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -250,7 +250,7 @@ body:             |
 ...
 ---
 name:            select_double
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, isImmutable: true }

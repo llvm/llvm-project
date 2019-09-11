@@ -12,7 +12,7 @@
 ...
 ---
 name:            test_insert_128
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -38,7 +38,7 @@ body:             |
 ...
 ---
 name:            test_insert_256
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

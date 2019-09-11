@@ -9,7 +9,7 @@
 ...
 ---
 name:            e_single_precision
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -34,7 +34,7 @@ body:             |
 ...
 ---
 name:            e_double_precision
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

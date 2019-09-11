@@ -6,7 +6,7 @@
 # Check that the machine verifier checks the position operand is in the range 0..31
 ---
 name:            f
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

@@ -35,7 +35,7 @@
 ...
 ---
 name:            test_cmp_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -64,7 +64,7 @@ body:             |
 ...
 ---
 name:            test_cmp_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -93,7 +93,7 @@ body:             |
 ...
 ---
 name:            test_cmp_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -122,7 +122,7 @@ body:             |
 ...
 ---
 name:            test_cmp_i64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -151,7 +151,7 @@ body:             |
 ...
 ---
 name:            test_cmp_p0
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

@@ -8,7 +8,7 @@
 ...
 ---
 name:            call_global
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

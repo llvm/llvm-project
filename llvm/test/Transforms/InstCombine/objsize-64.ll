@@ -24,7 +24,7 @@ define i64 @f1(i8 **%esc) {
 define i64 @f2(i8** %esc) nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = invoke noalias dereferenceable_or_null(13) i8* @_Znwm(i64 13)
+; CHECK-NEXT:    [[CALL:%.*]] = invoke noalias dereferenceable(13) i8* @_Znwm(i64 13)
 ; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    store i8* [[CALL]], i8** [[ESC:%.*]], align 8

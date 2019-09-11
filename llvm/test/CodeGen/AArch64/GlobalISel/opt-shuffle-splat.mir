@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -O1 -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            splat_4xi32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -27,7 +27,7 @@ body:             |
 ...
 ---
 name:            splat_2xi64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -52,7 +52,7 @@ body:             |
 ...
 ---
 name:            splat_4xf32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            splat_2xf64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -106,7 +106,7 @@ body:             |
 ...
 ---
 name:            splat_2xf64_copies
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -137,7 +137,7 @@ body:             |
 ...
 ---
 name:            not_all_zeros
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

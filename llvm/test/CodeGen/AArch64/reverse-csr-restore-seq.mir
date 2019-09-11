@@ -78,7 +78,7 @@ body:             |
 # false.
 name:            baz
 # CHECK-LABEL: name: baz
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true

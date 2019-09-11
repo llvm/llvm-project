@@ -542,7 +542,7 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
-  MF->ensureLogAlignment(BB->getLogAlignment());
+  MF->ensureAlignment(BB->getAlignment());
 
   // Order the entries in BB by descending alignment.  That ensures correct
   // alignment of all entries as long as BB is sufficiently aligned.  Keep
@@ -1259,7 +1259,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   // Try to split the block so it's fully aligned.  Compute the latest split
   // point where we can add a 4-byte branch instruction, and then align to
   // LogAlign which is the largest possible alignment in the function.
-  unsigned LogAlign = MF->getLogAlignment();
+  unsigned LogAlign = Log2(MF->getAlignment());
   assert(LogAlign >= CPELogAlign && "Over-aligned constant pool entry");
   unsigned BaseInsertOffset = UserOffset + U.getMaxDisp();
   LLVM_DEBUG(dbgs() << format("Split in middle of big block before %#x",

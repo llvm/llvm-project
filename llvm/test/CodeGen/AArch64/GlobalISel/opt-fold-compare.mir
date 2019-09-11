@@ -32,7 +32,7 @@
 ...
 ---
 name:            cmn_s32_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -64,7 +64,7 @@ body:             |
 ...
 ---
 name:            cmn_s32_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -96,7 +96,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s32_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -129,7 +129,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s32_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -162,7 +162,7 @@ body:             |
 ...
 ---
 name:            cmn_s64_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -195,7 +195,7 @@ body:             |
 ...
 ---
 name:            cmn_s64_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -228,7 +228,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s64_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -262,7 +262,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s64_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -296,7 +296,7 @@ body:             |
 ...
 ---
 name:            tst_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -327,7 +327,7 @@ body:             |
 ...
 ---
 name:            tst_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -359,7 +359,7 @@ body:             |
 ...
 ---
 name:            no_tst_unsigned_compare
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -391,7 +391,7 @@ body:             |
 ...
 ---
 name:            no_tst_nonzero
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -423,7 +423,7 @@ body:             |
 ...
 ---
 name:            imm_tst
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -455,7 +455,7 @@ body:             |
 ...
 ---
 name:            no_imm_tst_not_logical_imm
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -487,7 +487,7 @@ body:             |
 ...
 ---
 name:            test_physreg_copy
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

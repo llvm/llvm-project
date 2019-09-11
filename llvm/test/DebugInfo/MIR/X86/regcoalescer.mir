@@ -34,7 +34,7 @@
 ...
 ---
 name:            main
-alignment:       4
+alignment:       16
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
 body:             |

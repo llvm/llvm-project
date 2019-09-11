@@ -9,7 +9,7 @@
 ...
 ---
 name:            i32tof32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -36,7 +36,7 @@ body:             |
 ...
 ---
 name:            i32tof64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

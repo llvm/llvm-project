@@ -4,7 +4,7 @@
 ...
 ---
 name:            uaddo_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            uaddo_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

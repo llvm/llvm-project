@@ -9,7 +9,7 @@
 ...
 ---
 name:            ptr_arg_in_regs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            ptr_arg_on_stack
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -61,7 +61,7 @@ body:             |
 ...
 ---
 name:            ret_ptr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -1,6 +1,6 @@
-; RUN: llc -O3 -mtriple=thumbv7em %s -o - | FileCheck %s
+; RUN: llc -O3 -mtriple=thumbv7em -mcpu=cortex-m4 %s -o - | FileCheck %s --check-prefix=CHECK-REG-PRESSURE
 ; RUN: llc -O3 -mtriple=thumbv7eb %s -o - | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
-; RUN: llc -O3 -mtriple=thumbv8m.main -mattr=+dsp %s -o - | FileCheck %s
+; RUN: llc -O3 -mtriple=thumbv8m.main -mattr=+dsp %s -o - | FileCheck %s --check-prefix=CHECK
 
 ; CHECK-UNSUPPORTED-LABEL: unroll_n_jam_smlad
 ; CHECK-UNSUPPORTED-NOT: smlad r{{.}}
@@ -36,6 +36,18 @@ entry:
 ; CHECK: smlad
 ; CHECK: smlad
 ; CHECK-NOT: smlad r{{.*}}
+
+; CHECK-REG-PRESSURE: .LBB0_1:
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
+; CHECK-REG-PRESSURE: bne .LBB0_1
 
 for.body:
   %A3 = phi i32 [ %add9.us.i.3361.i, %for.body ], [ 0, %entry ]

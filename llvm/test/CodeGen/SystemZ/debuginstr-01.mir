@@ -50,7 +50,7 @@
 ...
 ---
 name:            f1
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$r2d' }

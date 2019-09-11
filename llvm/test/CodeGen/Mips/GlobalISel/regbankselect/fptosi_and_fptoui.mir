@@ -9,7 +9,7 @@
 ...
 ---
 name:            f32toi32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -36,7 +36,7 @@ body:             |
 ...
 ---
 name:            f64toi32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

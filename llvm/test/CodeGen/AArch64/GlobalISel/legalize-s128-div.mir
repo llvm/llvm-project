@@ -11,7 +11,7 @@
 ...
 ---
 name:            udiv_test
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
@@ -52,7 +52,7 @@ body:             |
 ...
 ---
 name:            sdiv_test
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }

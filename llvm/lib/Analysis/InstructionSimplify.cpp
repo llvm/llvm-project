@@ -1372,7 +1372,7 @@ Value *llvm::SimplifyAShrInst(Value *Op0, Value *Op1, bool isExact,
 /// with the parameters swapped.
 static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
                                          ICmpInst *UnsignedICmp, bool IsAnd,
-                                         const DataLayout &DL) {
+                                         const SimplifyQuery &Q) {
   Value *X, *Y;
 
   ICmpInst::Predicate EqPred;
@@ -1399,13 +1399,13 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   // X <= Y && Y != 0  -->  X <= Y  iff X != 0
   // X <= Y || Y != 0  -->  Y != 0  iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
-      isKnownNonZero(X, DL))
+      isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? UnsignedICmp : ZeroICmp;
 
   // X > Y && Y == 0  -->  Y == 0  iff X != 0
   // X > Y || Y == 0  -->  X > Y   iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-      isKnownNonZero(X, DL))
+      isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
     return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X >= Y || Y != 0  -->  true
@@ -1600,11 +1600,10 @@ static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
 }
 
 static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
-                                 const InstrInfoQuery &IIQ,
-                                 const DataLayout &DL) {
-  if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true, DL))
+                                 const SimplifyQuery &Q) {
+  if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true, Q))
     return X;
-  if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/true, DL))
+  if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/true, Q))
     return X;
 
   if (Value *X = simplifyAndOfICmpsWithSameOperands(Op0, Op1))
@@ -1618,9 +1617,9 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
     return X;
 
-  if (Value *X = simplifyAndOfICmpsWithAdd(Op0, Op1, IIQ))
+  if (Value *X = simplifyAndOfICmpsWithAdd(Op0, Op1, Q.IIQ))
     return X;
-  if (Value *X = simplifyAndOfICmpsWithAdd(Op1, Op0, IIQ))
+  if (Value *X = simplifyAndOfICmpsWithAdd(Op1, Op0, Q.IIQ))
     return X;
 
   return nullptr;
@@ -1674,11 +1673,10 @@ static Value *simplifyOrOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
 }
 
 static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
-                                const InstrInfoQuery &IIQ,
-                                const DataLayout &DL) {
-  if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false, DL))
+                                const SimplifyQuery &Q) {
+  if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false, Q))
     return X;
-  if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/false, DL))
+  if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/false, Q))
     return X;
 
   if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
@@ -1692,9 +1690,9 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
     return X;
 
-  if (Value *X = simplifyOrOfICmpsWithAdd(Op0, Op1, IIQ))
+  if (Value *X = simplifyOrOfICmpsWithAdd(Op0, Op1, Q.IIQ))
     return X;
-  if (Value *X = simplifyOrOfICmpsWithAdd(Op1, Op0, IIQ))
+  if (Value *X = simplifyOrOfICmpsWithAdd(Op1, Op0, Q.IIQ))
     return X;
 
   return nullptr;
@@ -1753,8 +1751,8 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q,
   auto *ICmp0 = dyn_cast<ICmpInst>(Op0);
   auto *ICmp1 = dyn_cast<ICmpInst>(Op1);
   if (ICmp0 && ICmp1)
-    V = IsAnd ? simplifyAndOfICmps(ICmp0, ICmp1, Q.IIQ, Q.DL)
-              : simplifyOrOfICmps(ICmp0, ICmp1, Q.IIQ, Q.DL);
+    V = IsAnd ? simplifyAndOfICmps(ICmp0, ICmp1, Q)
+              : simplifyOrOfICmps(ICmp0, ICmp1, Q);
 
   auto *FCmp0 = dyn_cast<FCmpInst>(Op0);
   auto *FCmp1 = dyn_cast<FCmpInst>(Op1);

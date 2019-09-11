@@ -16,7 +16,7 @@
 ...
 ---
 name:            add_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
@@ -38,7 +38,7 @@ body:             |
 ...
 ---
 name:            add_i8_sext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -69,7 +69,7 @@ body:             |
 ...
 ---
 name:            add_i8_zext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -99,7 +99,7 @@ body:             |
 ...
 ---
 name:            add_i8_aext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -127,7 +127,7 @@ body:             |
 ...
 ---
 name:            add_i16_sext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -158,7 +158,7 @@ body:             |
 ...
 ---
 name:            add_i16_zext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -188,7 +188,7 @@ body:             |
 ...
 ---
 name:            add_i16_aext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -216,7 +216,7 @@ body:             |
 ...
 ---
 name:            add_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -253,7 +253,7 @@ body:             |
 ...
 ---
 name:            add_i128
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 28, size: 4, alignment: 4, stack-id: default, isImmutable: true }
@@ -325,7 +325,7 @@ body:             |
 ...
 ---
 name:            uadd_with_overflow
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):

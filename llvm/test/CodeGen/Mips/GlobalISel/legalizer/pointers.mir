@@ -9,7 +9,7 @@
 ...
 ---
 name:            ptr_arg_in_regs
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -29,7 +29,7 @@ body:             |
 ...
 ---
 name:            ptr_arg_on_stack
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, stack-id: default, isImmutable: true }
@@ -61,7 +61,7 @@ body:             |
 ...
 ---
 name:            ret_ptr
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

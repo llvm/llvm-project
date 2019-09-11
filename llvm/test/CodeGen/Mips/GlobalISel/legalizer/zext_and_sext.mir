@@ -8,7 +8,7 @@
 ...
 ---
 name:            zext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            sext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

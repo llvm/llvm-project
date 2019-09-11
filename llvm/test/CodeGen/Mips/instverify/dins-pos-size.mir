@@ -6,7 +6,7 @@
 # Check that the machine verifier checks the pos + size is in the range 1..32
 ---
 name:            dins
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

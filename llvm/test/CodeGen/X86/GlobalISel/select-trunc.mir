@@ -34,7 +34,7 @@
 ...
 ---
 name:            trunc_i32toi1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -59,7 +59,7 @@ body:             |
 ...
 ---
 name:            trunc_i32toi8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -82,7 +82,7 @@ body:             |
 ...
 ---
 name:            trunc_i32toi16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -105,7 +105,7 @@ body:             |
 ...
 ---
 name:            trunc_i64toi8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -128,7 +128,7 @@ body:             |
 ...
 ---
 name:            trunc_i64toi16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -151,7 +151,7 @@ body:             |
 ...
 ---
 name:            trunc_i64toi32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

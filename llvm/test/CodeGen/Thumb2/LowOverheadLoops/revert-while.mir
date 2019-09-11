@@ -61,7 +61,7 @@
 ...
 ---
 name:            ne_trip_count
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

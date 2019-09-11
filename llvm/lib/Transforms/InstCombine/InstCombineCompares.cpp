@@ -2249,6 +2249,44 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
+Instruction *InstCombiner::foldICmpSRemConstant(ICmpInst &Cmp,
+                                                BinaryOperator *SRem,
+                                                const APInt &C) {
+  // Match an 'is positive' or 'is negative' comparison of remainder by a
+  // constant power-of-2 value:
+  // (X % pow2C) sgt/slt 0
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+  if (Pred != ICmpInst::ICMP_SGT && Pred != ICmpInst::ICMP_SLT)
+    return nullptr;
+
+  // TODO: The one-use check is standard because we do not typically want to
+  //       create longer instruction sequences, but this might be a special-case
+  //       because srem is not good for analysis or codegen.
+  if (!SRem->hasOneUse())
+    return nullptr;
+
+  const APInt *DivisorC;
+  if (!C.isNullValue() || !match(SRem->getOperand(1), m_Power2(DivisorC)))
+    return nullptr;
+
+  // Mask off the sign bit and the modulo bits (low-bits).
+  Type *Ty = SRem->getType();
+  APInt SignMask = APInt::getSignMask(Ty->getScalarSizeInBits());
+  Constant *MaskC = ConstantInt::get(Ty, SignMask | (*DivisorC - 1));
+  Value *And = Builder.CreateAnd(SRem->getOperand(0), MaskC);
+
+  // For 'is positive?' check that the sign-bit is clear and at least 1 masked
+  // bit is set. Example:
+  // (i8 X % 32) s> 0 --> (X & 159) s> 0
+  if (Pred == ICmpInst::ICMP_SGT)
+    return new ICmpInst(ICmpInst::ICMP_SGT, And, ConstantInt::getNullValue(Ty));
+
+  // For 'is negative?' check that the sign-bit is set and at least 1 masked
+  // bit is set. Example:
+  // (i16 X % 4) s< 0 --> (X & 32771) u> 32768
+  return new ICmpInst(ICmpInst::ICMP_UGT, And, ConstantInt::get(Ty, SignMask));
+}
+
 /// Fold icmp (udiv X, Y), C.
 Instruction *InstCombiner::foldICmpUDivConstant(ICmpInst &Cmp,
                                                 BinaryOperator *UDiv,
@@ -2804,6 +2842,10 @@ Instruction *InstCombiner::foldICmpInstWithConstant(ICmpInst &Cmp) {
     case Instruction::LShr:
     case Instruction::AShr:
       if (Instruction *I = foldICmpShrConstant(Cmp, BO, *C))
+        return I;
+      break;
+    case Instruction::SRem:
+      if (Instruction *I = foldICmpSRemConstant(Cmp, BO, *C))
         return I;
       break;
     case Instruction::UDiv:

@@ -83,7 +83,7 @@
 
 ---
 name:            fun1
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: grx32bit }

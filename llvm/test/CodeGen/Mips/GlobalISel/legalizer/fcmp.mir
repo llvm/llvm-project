@@ -9,7 +9,7 @@
 ...
 ---
 name:            oeq_s
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -41,7 +41,7 @@ body:             |
 ...
 ---
 name:            oeq_d
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

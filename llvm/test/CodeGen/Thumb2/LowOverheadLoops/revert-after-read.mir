@@ -40,7 +40,7 @@
 ...
 ---
 name:            mov_between_dec_end
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

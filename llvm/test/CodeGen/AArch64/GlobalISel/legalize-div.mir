@@ -41,7 +41,7 @@ body:             |
 ...
 ---
 name:            sdiv_v4s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
