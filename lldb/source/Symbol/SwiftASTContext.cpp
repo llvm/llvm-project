@@ -6153,6 +6153,8 @@ bool SwiftASTContext::IsFixedSize(CompilerType compiler_type) {
 
 const llvm::fltSemantics &
 SwiftASTContext::GetFloatTypeSemantics(size_t byte_size) {
+  // See: https://reviews.llvm.org/D67239. At this time of writing this API
+  // is only used by DumpDataExtractor for the C type system.
   llvm_unreachable("SwiftASTContext::GetFloatTypeSemantics not implemented.");
 }
 
