@@ -7835,6 +7835,16 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
       "};",
       NoBinPacking);
 
+  NoBinPacking.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  EXPECT_EQ("static uint8 CddDp83848Reg[] = {\n"
+            "    CDDDP83848_BMCR_REGISTER,\n"
+            "    CDDDP83848_BMSR_REGISTER,\n"
+            "    CDDDP83848_RBR_REGISTER};",
+            format("static uint8 CddDp83848Reg[] = {CDDDP83848_BMCR_REGISTER,\n"
+                   "                                CDDDP83848_BMSR_REGISTER,\n"
+                   "                                CDDDP83848_RBR_REGISTER};",
+                   NoBinPacking));
+
   // FIXME: The alignment of these trailing comments might be bad. Then again,
   // this might be utterly useless in real code.
   verifyFormat("Constructor::Constructor()\n"

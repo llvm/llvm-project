@@ -752,7 +752,7 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     return false;
   LoadSDNode *LD = dyn_cast<LoadSDNode>(Callee.getNode());
   if (!LD ||
-      LD->isVolatile() ||
+      !LD->isSimple() ||
       LD->getAddressingMode() != ISD::UNINDEXED ||
       LD->getExtensionType() != ISD::NON_EXTLOAD)
     return false;
@@ -2311,10 +2311,10 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root, SDNode *Parent,
     return false;
 
   // We can allow a full vector load here since narrowing a load is ok unless
-  // it's volatile.
+  // it's volatile or atomic.
   if (ISD::isNON_EXTLoad(N.getNode())) {
     LoadSDNode *LD = cast<LoadSDNode>(N);
-    if (!LD->isVolatile() &&
+    if (LD->isSimple() &&
         IsProfitableToFold(N, LD, Root) &&
         IsLegalToFold(N, Parent, Root, OptLevel)) {
       PatternNodeWithChain = N;

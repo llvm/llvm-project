@@ -775,9 +775,11 @@ public:
     if (Triple.getArch() == llvm::Triple::arm) {
       // Handled in ARM's setABI().
     } else if (Triple.getArch() == llvm::Triple::x86) {
-      this->resetDataLayout("e-m:e-p:32:32-i64:64-n8:16:32-S128");
+      this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
+                            "i64:64-n8:16:32-S128");
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      this->resetDataLayout("e-m:e-p:32:32-i64:64-n8:16:32:64-S128");
+      this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
+                            "i64:64-n8:16:32:64-S128");
     } else if (Triple.getArch() == llvm::Triple::mipsel) {
       // Handled on mips' setDataLayout.
     } else {

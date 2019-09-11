@@ -9,4 +9,6 @@
 #include "header2.h"
 
 // CHECK: fatal error: file {{.*}} has been modified since the precompiled header {{.*}} was built
-// REQUIRES: shell
+
+// FIXME: Flaky on Windows, timestamp resolution?
+// UNSUPPORTED: win32

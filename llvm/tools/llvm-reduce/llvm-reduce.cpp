@@ -99,8 +99,6 @@ int main(int argc, char **argv) {
         OutputFilename = InputFilename.c_str();
       else if (OutputFilename.empty())
         OutputFilename = "reduced.ll";
-      else
-        OutputFilename += ".ll";
 
       sys::fs::copy_file(Tester.getReducedFilepath(), OutputFilename);
       errs() << "\nDone reducing! Reduced testcase: " << OutputFilename << "\n";

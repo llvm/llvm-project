@@ -147,15 +147,17 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; GFX9-DENORM-LABEL: name: fcanonicalize_fneg_fabs_f32
-    ; GFX9-DENORM: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX9-DENORM: [[FNEG:%[0-9]+]]:vgpr_32(s32) = G_FNEG [[COPY]]
-    ; GFX9-DENORM: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32(s32) = V_MAX_F32_e64 2, [[FNEG]](s32), 2, [[FNEG]](s32), 0, 0, implicit $exec
-    ; GFX9-DENORM: S_ENDPGM 0, implicit [[V_MAX_F32_e64_]](s32)
+    ; GFX9-DENORM: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-DENORM: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX9-DENORM: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[S_MOV_B32_]], [[COPY]], implicit $exec
+    ; GFX9-DENORM: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_F32_e64 2, [[V_XOR_B32_e32_]], 2, [[V_XOR_B32_e32_]], 0, 0, implicit $exec
+    ; GFX9-DENORM: S_ENDPGM 0, implicit [[V_MAX_F32_e64_]]
     ; GFX9-FLUSH-LABEL: name: fcanonicalize_fneg_fabs_f32
-    ; GFX9-FLUSH: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX9-FLUSH: [[FNEG:%[0-9]+]]:vgpr_32(s32) = G_FNEG [[COPY]]
-    ; GFX9-FLUSH: [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32(s32) = V_MUL_F32_e64 0, 1065353216, 2, [[FNEG]](s32), 0, 0, implicit $exec
-    ; GFX9-FLUSH: S_ENDPGM 0, implicit [[V_MUL_F32_e64_]](s32)
+    ; GFX9-FLUSH: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX9-FLUSH: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX9-FLUSH: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[S_MOV_B32_]], [[COPY]], implicit $exec
+    ; GFX9-FLUSH: [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 0, 1065353216, 2, [[V_XOR_B32_e32_]], 0, 0, implicit $exec
+    ; GFX9-FLUSH: S_ENDPGM 0, implicit [[V_MUL_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FABS %1

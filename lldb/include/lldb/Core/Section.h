@@ -43,9 +43,8 @@ public:
   const_iterator begin() { return m_sections.begin(); }
   const_iterator end() { return m_sections.end(); }
 
-  SectionList();
-
-  ~SectionList();
+  /// Create an empty list.
+  SectionList() = default;
 
   SectionList &operator=(const SectionList &rhs);
 

@@ -157,13 +157,13 @@ define amdgpu_kernel void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, fl
 }
 
 ; GCN-LABEL: {{^}}v_fneg_add_store_use_fneg_x_f32:
-; GCN-SAFE: v_bfrev_b32_e32 [[SIGNBIT:v[0-9]+]], 1{{$}}
+; GCN-SAFE: s_brev_b32 [[SIGNBIT:s[0-9]+]], 1{{$}}
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
-; GCN-SAFE: v_xor_b32_e32 [[NEG_A:v[0-9]+]], [[A]], [[SIGNBIT]]
+; GCN-SAFE: v_xor_b32_e32 [[NEG_A:v[0-9]+]], [[SIGNBIT]], [[A]]
 ; GCN-SAFE: v_sub_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-SAFE: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], [[ADD]], [[SIGNBIT]]
+; GCN-SAFE: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], [[SIGNBIT]], [[ADD]]
 
 ; GCN-NSZ-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
 ; GCN-NSZ-DAG: v_sub_f32_e32 [[NEG_ADD:v[0-9]+]], [[A]], [[B]]

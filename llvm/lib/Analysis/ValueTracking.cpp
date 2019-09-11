@@ -3877,6 +3877,18 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
   return true;
 }
 
+bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
+  if (!LI.isUnordered())
+    return true;
+  const Function &F = *LI.getFunction();
+  // Speculative load may create a race that did not exist in the source.
+  return F.hasFnAttribute(Attribute::SanitizeThread) ||
+    // Speculative load may load data from dirty regions.
+    F.hasFnAttribute(Attribute::SanitizeAddress) ||
+    F.hasFnAttribute(Attribute::SanitizeHWAddress);
+}
+
+
 bool llvm::isSafeToSpeculativelyExecute(const Value *V,
                                         const Instruction *CtxI,
                                         const DominatorTree *DT) {
@@ -3921,12 +3933,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   }
   case Instruction::Load: {
     const LoadInst *LI = cast<LoadInst>(Inst);
-    if (!LI->isUnordered() ||
-        // Speculative load may create a race that did not exist in the source.
-        LI->getFunction()->hasFnAttribute(Attribute::SanitizeThread) ||
-        // Speculative load may load data from dirty regions.
-        LI->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
-        LI->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
+    if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
     return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),

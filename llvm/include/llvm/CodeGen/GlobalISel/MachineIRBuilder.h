@@ -532,6 +532,11 @@ public:
     return buildInstr(TargetOpcode::G_BITCAST, {Dst}, {Src});
   }
 
+    /// Build and insert \p Dst = G_ADDRSPACE_CAST \p Src
+  MachineInstrBuilder buildAddrSpaceCast(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_ADDRSPACE_CAST, {Dst}, {Src});
+  }
+
   /// \return The opcode of the extension the target wants to use for boolean
   /// values.
   unsigned getBoolExtOp(bool IsVec, bool IsFP) const;

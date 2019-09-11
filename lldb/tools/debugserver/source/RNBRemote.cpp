@@ -2091,9 +2091,6 @@ rnb_err_t set_logging(const char *p) {
         } else if (strncmp(p, "LOG_SHLIB", sizeof("LOG_SHLIB") - 1) == 0) {
           p += sizeof("LOG_SHLIB") - 1;
           bitmask |= LOG_SHLIB;
-        } else if (strncmp(p, "LOG_MEMORY", sizeof("LOG_MEMORY") - 1) == 0) {
-          p += sizeof("LOG_MEMORY") - 1;
-          bitmask |= LOG_MEMORY;
         } else if (strncmp(p, "LOG_MEMORY_DATA_SHORT",
                            sizeof("LOG_MEMORY_DATA_SHORT") - 1) == 0) {
           p += sizeof("LOG_MEMORY_DATA_SHORT") - 1;
@@ -2106,6 +2103,9 @@ rnb_err_t set_logging(const char *p) {
                            sizeof("LOG_MEMORY_PROTECTIONS") - 1) == 0) {
           p += sizeof("LOG_MEMORY_PROTECTIONS") - 1;
           bitmask |= LOG_MEMORY_PROTECTIONS;
+        } else if (strncmp(p, "LOG_MEMORY", sizeof("LOG_MEMORY") - 1) == 0) {
+          p += sizeof("LOG_MEMORY") - 1;
+          bitmask |= LOG_MEMORY;
         } else if (strncmp(p, "LOG_BREAKPOINTS",
                            sizeof("LOG_BREAKPOINTS") - 1) == 0) {
           p += sizeof("LOG_BREAKPOINTS") - 1;

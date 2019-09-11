@@ -1,7 +1,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -E DIR/no-werror.cpp -IInputs -std=c++17 -Weverything -Werror",
+  "command": "clang -E DIR/no-werror_input.cpp -IInputs -std=c++17 -Weverything -Werror",
   "file": "DIR/no-werror.cpp"
 }
 ]

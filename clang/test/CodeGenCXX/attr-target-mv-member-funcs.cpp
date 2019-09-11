@@ -65,13 +65,13 @@ int templ_use() {
   return a.foo(1) + b.foo(2);
 }
 
-// LINUX: @_ZN1SaSERKS_.ifunc = ifunc %struct.S* (%struct.S*, %struct.S*), %struct.S* (%struct.S*, %struct.S*)* ()* @_ZN1SaSERKS_.resolver
-// LINUX: @_ZNK9ConvertTocv1SEv.ifunc = ifunc void (%struct.ConvertTo*), void (%struct.ConvertTo*)* ()* @_ZNK9ConvertTocv1SEv.resolver
-// LINUX: @_ZN1S3fooEi.ifunc = ifunc i32 (%struct.S*, i32), i32 (%struct.S*, i32)* ()* @_ZN1S3fooEi.resolver
-// LINUX: @_ZN2S23fooEi.ifunc = ifunc i32 (%struct.S2*, i32), i32 (%struct.S2*, i32)* ()* @_ZN2S23fooEi.resolver
+// LINUX: @_ZN1SaSERKS_.ifunc = weak_odr ifunc %struct.S* (%struct.S*, %struct.S*), %struct.S* (%struct.S*, %struct.S*)* ()* @_ZN1SaSERKS_.resolver
+// LINUX: @_ZNK9ConvertTocv1SEv.ifunc = weak_odr ifunc void (%struct.ConvertTo*), void (%struct.ConvertTo*)* ()* @_ZNK9ConvertTocv1SEv.resolver
+// LINUX: @_ZN1S3fooEi.ifunc = weak_odr ifunc i32 (%struct.S*, i32), i32 (%struct.S*, i32)* ()* @_ZN1S3fooEi.resolver
+// LINUX: @_ZN2S23fooEi.ifunc = weak_odr ifunc i32 (%struct.S2*, i32), i32 (%struct.S2*, i32)* ()* @_ZN2S23fooEi.resolver
 // Templates:
-// LINUX: @_ZN5templIiE3fooEi.ifunc = ifunc i32 (%struct.templ*, i32), i32 (%struct.templ*, i32)* ()* @_ZN5templIiE3fooEi.resolver
-// LINUX: @_ZN5templIdE3fooEi.ifunc = ifunc i32 (%struct.templ.0*, i32), i32 (%struct.templ.0*, i32)* ()* @_ZN5templIdE3fooEi.resolver
+// LINUX: @_ZN5templIiE3fooEi.ifunc = weak_odr ifunc i32 (%struct.templ*, i32), i32 (%struct.templ*, i32)* ()* @_ZN5templIiE3fooEi.resolver
+// LINUX: @_ZN5templIdE3fooEi.ifunc = weak_odr ifunc i32 (%struct.templ.0*, i32), i32 (%struct.templ.0*, i32)* ()* @_ZN5templIdE3fooEi.resolver
 
 // LINUX: define i32 @_Z3barv()
 // LINUX: %s = alloca %struct.S, align 1
@@ -91,29 +91,29 @@ int templ_use() {
 // WINDOWS: call dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %s, i32 0)
 
-// LINUX: define %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver() comdat
+// LINUX: define weak_odr %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver() comdat
 // LINUX: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.arch_ivybridge
 // LINUX: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_
 
-// WINDOWS: define dso_local %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %0, %struct.S* %1)
+// WINDOWS: define weak_odr dso_local %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %0, %struct.S* %1)
 // WINDOWS: call %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.arch_ivybridge"
 // WINDOWS: call %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z"
 
-// LINUX: define void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.resolver() comdat
+// LINUX: define weak_odr void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.resolver() comdat
 // LINUX: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.arch_ivybridge
 // LINUX: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv
 
-// WINDOWS: define dso_local void @"??BConvertTo@@QEBA?AUS@@XZ.resolver"(%struct.ConvertTo* %0, %struct.S* %1)
+// WINDOWS: define weak_odr dso_local void @"??BConvertTo@@QEBA?AUS@@XZ.resolver"(%struct.ConvertTo* %0, %struct.S* %1)
 // WINDOWS: call void @"??BConvertTo@@QEBA?AUS@@XZ.arch_ivybridge"
 // WINDOWS: call void @"??BConvertTo@@QEBA?AUS@@XZ"
 
-// LINUX: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat
+// LINUX: define weak_odr i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_sandybridge
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_ivybridge
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.sse4.2
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %0, i32 %1)
+// WINDOWS: define weak_odr dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.sse4.2"
@@ -125,13 +125,13 @@ int templ_use() {
 // WINDOWS: define dso_local i32 @"?bar2@@YAHXZ"()
 // WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.resolver"
 
-// LINUX: define i32 (%struct.S2*, i32)* @_ZN2S23fooEi.resolver() comdat
+// LINUX: define weak_odr i32 (%struct.S2*, i32)* @_ZN2S23fooEi.resolver() comdat
 // LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_sandybridge
 // LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_ivybridge
 // LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.sse4.2
 // LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi
 
-// WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z.resolver"(%struct.S2* %0, i32 %1)
+// WINDOWS: define weak_odr dso_local i32 @"?foo@S2@@QEAAHH@Z.resolver"(%struct.S2* %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.sse4.2"
@@ -153,25 +153,25 @@ int templ_use() {
 // WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.resolver"
 // WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"
 
-// LINUX: define i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.resolver() comdat
+// LINUX: define weak_odr i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.resolver() comdat
 // LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_sandybridge
 // LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_ivybridge
 // LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.sse4.2
 // LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi
 
-// WINDOWS: define dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z.resolver"(%struct.templ* %0, i32 %1)
+// WINDOWS: define weak_odr dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z.resolver"(%struct.templ* %0, i32 %1)
 // WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.sse4.2"
 // WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z"
 
-// LINUX: define i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.resolver() comdat
+// LINUX: define weak_odr i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.resolver() comdat
 // LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_sandybridge
 // LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_ivybridge
 // LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.sse4.2
 // LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi
 
-// WINDOWS: define dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"(%struct.templ.0* %0, i32 %1) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"(%struct.templ.0* %0, i32 %1) comdat
 // WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.sse4.2"

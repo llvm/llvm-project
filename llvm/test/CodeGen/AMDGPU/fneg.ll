@@ -1,11 +1,13 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=R600 -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}s_fneg_f32:
 ; R600: -PV
 
-; GCN: v_xor_b32
+; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCN: s_xor_b32 [[NEG_VAL:s[0-9]+]], [[VAL]], 0x80000000
+; GCN: v_mov_b32_e32 v{{[0-9]+}}, [[NEG_VAL]]
 define amdgpu_kernel void @s_fneg_f32(float addrspace(1)* %out, float %in) {
   %fneg = fsub float -0.000000e+00, %in
   store float %fneg, float addrspace(1)* %out
@@ -16,6 +18,7 @@ define amdgpu_kernel void @s_fneg_f32(float addrspace(1)* %out, float %in) {
 ; R600: -PV
 ; R600: -PV
 
+; GCN: s_brev_b32 [[SIGNBIT:s[0-9]+]], 1
 ; GCN: v_xor_b32
 ; GCN: v_xor_b32
 define amdgpu_kernel void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out, <2 x float> %in) {
@@ -60,9 +63,9 @@ define amdgpu_kernel void @fsub0_f32(float addrspace(1)* %out, i32 %in) {
 ; SI: s_load_dword [[NEG_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI: s_load_dword [[NEG_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 
-; GCN: v_bfrev_b32_e32 [[SIGNBIT:v[0-9]+]], 1{{$}}
-; GCN: v_xor_b32_e32 [[RES:v[0-9]+]], [[NEG_VALUE]], [[SIGNBIT]]
-; GCN: buffer_store_dword [[RES]]
+; GCN: s_xor_b32 [[RES:s[0-9]+]], [[NEG_VALUE]], 0x80000000
+; GCN: v_mov_b32_e32 [[V_RES:v[0-9]+]], [[RES]]
+; GCN: buffer_store_dword [[V_RES]]
 
 ; R600-NOT: XOR
 ; R600: -PV.W

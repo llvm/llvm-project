@@ -14,6 +14,12 @@
 
 #include "Delta.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include <fstream>
+#include <set>
+
+using namespace llvm;
 
 /// Writes IR code to the given Filepath
 static bool writeProgramToFile(StringRef Filepath, int FD, const Module &M) {

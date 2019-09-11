@@ -41,7 +41,7 @@ void usage() {
 // WINDOWS: %[[ARGMEM:[0-9a-zA-Z]+]] = alloca inalloca <{ %struct.Foo }>
 // WINDOWS: %[[CALL:[0-9a-zA-Z]+]] = call i32 @"?bar@@YAHUFoo@@@Z.resolver"(<{ %struct.Foo }>* inalloca %[[ARGMEM]])
 
-// WINDOWS: define dso_local i32 @"?bar@@YAHUFoo@@@Z.resolver"(<{ %struct.Foo }>* %0)
+// WINDOWS: define weak_odr dso_local i32 @"?bar@@YAHUFoo@@@Z.resolver"(<{ %struct.Foo }>* %0)
 // WINDOWS: %[[RET:[0-9a-zA-Z]+]] = musttail call i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(<{ %struct.Foo }>* %0)
 // WINDOWS-NEXT: ret i32 %[[RET]]
 // WINDOWS: %[[RET:[0-9a-zA-Z]+]] = musttail call i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(<{ %struct.Foo }>* %0)
@@ -72,7 +72,7 @@ void usage() {
 // WINDOWS64: %[[ARG:[0-9a-zA-Z.]+]] = alloca %struct.Foo
 // WINDOWS64: %[[CALL:[0-9a-zA-Z]+]] = call i32 @"?bar@@YAHUFoo@@@Z.resolver"(%struct.Foo* %[[ARG]])
 
-// WINDOWS64: define dso_local i32 @"?bar@@YAHUFoo@@@Z.resolver"(%struct.Foo* %0)
+// WINDOWS64: define weak_odr dso_local i32 @"?bar@@YAHUFoo@@@Z.resolver"(%struct.Foo* %0)
 // WINDOWS64: %[[RET:[0-9a-zA-Z]+]] = musttail call i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(%struct.Foo* %0)
 // WINDOWS64-NEXT: ret i32 %[[RET]]
 // WINDOWS64: %[[RET:[0-9a-zA-Z]+]] = musttail call i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(%struct.Foo* %0)
