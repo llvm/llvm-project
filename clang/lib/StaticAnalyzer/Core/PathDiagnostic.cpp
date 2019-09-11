@@ -31,7 +31,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
@@ -1301,70 +1300,6 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
     ID.Add(*I);
   for (meta_iterator I = meta_begin(), E = meta_end(); I != E; ++I)
     ID.AddString(*I);
-}
-
-StackHintGenerator::~StackHintGenerator() = default;
-
-std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
-  if (!N)
-    return getMessageForSymbolNotFound();
-
-  ProgramPoint P = N->getLocation();
-  CallExitEnd CExit = P.castAs<CallExitEnd>();
-
-  // FIXME: Use CallEvent to abstract this over all calls.
-  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
-  const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
-  if (!CE)
-    return {};
-
-  // Check if one of the parameters are set to the interesting symbol.
-  unsigned ArgIndex = 0;
-  for (CallExpr::const_arg_iterator I = CE->arg_begin(),
-                                    E = CE->arg_end(); I != E; ++I, ++ArgIndex){
-    SVal SV = N->getSVal(*I);
-
-    // Check if the variable corresponding to the symbol is passed by value.
-    SymbolRef AS = SV.getAsLocSymbol();
-    if (AS == Sym) {
-      return getMessageForArg(*I, ArgIndex);
-    }
-
-    // Check if the parameter is a pointer to the symbol.
-    if (Optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
-      // Do not attempt to dereference void*.
-      if ((*I)->getType()->isVoidPointerType())
-        continue;
-      SVal PSV = N->getState()->getSVal(Reg->getRegion());
-      SymbolRef AS = PSV.getAsLocSymbol();
-      if (AS == Sym) {
-        return getMessageForArg(*I, ArgIndex);
-      }
-    }
-  }
-
-  // Check if we are returning the interesting symbol.
-  SVal SV = N->getSVal(CE);
-  SymbolRef RetSym = SV.getAsLocSymbol();
-  if (RetSym == Sym) {
-    return getMessageForReturn(CE);
-  }
-
-  return getMessageForSymbolNotFound();
-}
-
-std::string StackHintGeneratorForSymbol::getMessageForArg(const Expr *ArgE,
-                                                          unsigned ArgIndex) {
-  // Printed parameters start at 1, not 0.
-  ++ArgIndex;
-
-  SmallString<200> buf;
-  llvm::raw_svector_ostream os(buf);
-
-  os << Msg << " via " << ArgIndex << llvm::getOrdinalSuffix(ArgIndex)
-     << " parameter";
-
-  return os.str();
 }
 
 LLVM_DUMP_METHOD void PathPieces::dump() const {
