@@ -547,6 +547,8 @@ public:
 
   // Exploring the type
 
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
+
   llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
