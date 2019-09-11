@@ -148,6 +148,6 @@ def use_support_substitutions(config):
 
     support_tools = ['yaml2obj', 'obj2yaml', 'llvm-pdbutil',
                      'llvm-mc', 'llvm-readobj', 'llvm-objdump',
-                     'llvm-objcopy', 'lli']
+                     'llvm-objcopy', 'lli', 'llvm-strip']
     additional_tool_dirs += [config.lldb_tools_dir, config.llvm_tools_dir]
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)

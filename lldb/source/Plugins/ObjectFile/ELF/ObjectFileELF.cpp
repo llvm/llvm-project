@@ -2658,19 +2658,29 @@ Symtab *ObjectFileELF::GetSymtab() {
     // smaller version of the symtab that only contains global symbols. The
     // information found in the dynsym is therefore also found in the symtab,
     // while the reverse is not necessarily true.
+    // One exception to the above rule is when we have minidebuginfo embedded
+    // into a compressed .gnu_debugdata section. This section contains a .symtab
+    // from which all symbols already contained in the .dynsym are stripped.
     Section *symtab =
         section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
-    if (!symtab) {
-      // The symtab section is non-allocable and can be stripped, so if it
-      // doesn't exist then use the dynsym section which should always be
-      // there.
-      symtab =
-          section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
-              .get();
-    }
     if (symtab) {
       m_symtab_up.reset(new Symtab(symtab->GetObjectFile()));
       symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, symtab);
+    }
+
+    // The symtab section is non-allocable and can be stripped, while the dynsym
+    // section which should always be always be there. If both exist we load
+    // both to support the minidebuginfo case. Otherwise we just load the dynsym
+    // section.
+    Section *dynsym =
+        section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
+            .get();
+    if (dynsym) {
+      if (!m_symtab_up) {
+        auto sec = symtab ? symtab : dynsym;
+        m_symtab_up.reset(new Symtab(sec->GetObjectFile()));
+      }
+      symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, dynsym);
     }
 
     // DT_JMPREL
