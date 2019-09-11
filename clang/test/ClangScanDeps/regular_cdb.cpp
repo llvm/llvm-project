@@ -12,6 +12,8 @@
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-minimized-sources \
+// RUN:   -skip-excluded-pp-ranges=0 | FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
 //
 // Make sure we didn't produce any dependency files!
 // RUN: not cat %t.dir/regular_cdb.d

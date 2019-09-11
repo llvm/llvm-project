@@ -168,6 +168,14 @@ llvm::cl::opt<bool> ReuseFileManager(
     llvm::cl::desc("Reuse the file manager and its cache between invocations."),
     llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<bool> SkipExcludedPPRanges(
+    "skip-excluded-pp-ranges",
+    llvm::cl::desc(
+        "Use the preprocessor optimization that skips excluded conditionals by "
+        "bumping the buffer pointer in the lexer instead of lexing the tokens  "
+        "until reaching the end directive."),
+    llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
+
 } // end anonymous namespace
 
 int main(int argc, const char **argv) {
@@ -214,7 +222,8 @@ int main(int argc, const char **argv) {
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
-  DependencyScanningService Service(ScanMode, ReuseFileManager);
+  DependencyScanningService Service(ScanMode, ReuseFileManager,
+                                    SkipExcludedPPRanges);
 #if LLVM_ENABLE_THREADS
   unsigned NumWorkers =
       NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;

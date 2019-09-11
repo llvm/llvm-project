@@ -369,6 +369,37 @@ SourceLocation Preprocessor::CheckEndOfDirective(const char *DirType,
   return DiscardUntilEndOfDirective().getEnd();
 }
 
+Optional<unsigned> Preprocessor::getSkippedRangeForExcludedConditionalBlock(
+    SourceLocation HashLoc) {
+  if (!ExcludedConditionalDirectiveSkipMappings)
+    return None;
+  if (!HashLoc.isFileID())
+    return None;
+
+  std::pair<FileID, unsigned> HashFileOffset =
+      SourceMgr.getDecomposedLoc(HashLoc);
+  const llvm::MemoryBuffer *Buf = SourceMgr.getBuffer(HashFileOffset.first);
+  auto It = ExcludedConditionalDirectiveSkipMappings->find(Buf);
+  if (It == ExcludedConditionalDirectiveSkipMappings->end())
+    return None;
+
+  const PreprocessorSkippedRangeMapping &SkippedRanges = *It->getSecond();
+  // Check if the offset of '#' is mapped in the skipped ranges.
+  auto MappingIt = SkippedRanges.find(HashFileOffset.second);
+  if (MappingIt == SkippedRanges.end())
+    return None;
+
+  unsigned BytesToSkip = MappingIt->getSecond();
+  unsigned CurLexerBufferOffset = CurLexer->getCurrentBufferOffset();
+  assert(CurLexerBufferOffset >= HashFileOffset.second &&
+         "lexer is before the hash?");
+  // Take into account the fact that the lexer has already advanced, so the
+  // number of bytes to skip must be adjusted.
+  unsigned LengthDiff = CurLexerBufferOffset - HashFileOffset.second;
+  assert(BytesToSkip >= LengthDiff && "lexer is after the skipped range?");
+  return BytesToSkip - LengthDiff;
+}
+
 /// SkipExcludedConditionalBlock - We just read a \#if or related directive and
 /// decided that the subsequent tokens are in the \#if'd out portion of the
 /// file.  Lex the rest of the file, until we see an \#endif.  If
@@ -395,6 +426,11 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // disabling warnings, etc.
   CurPPLexer->LexingRawMode = true;
   Token Tok;
+  if (auto SkipLength =
+          getSkippedRangeForExcludedConditionalBlock(HashTokenLoc)) {
+    // Skip to the next '#endif' / '#else' / '#elif'.
+    CurLexer->skipOver(*SkipLength);
+  }
   while (true) {
     CurLexer->Lex(Tok);
 
