@@ -469,7 +469,7 @@ ClangUserExpression::GetModulesToImport(ExecutionContext &exe_ctx) {
   }
 
   for (const SourceModule &m : sc.comp_unit->GetImportedModules())
-    m_include_directories.push_back(m.search_path);
+    m_include_directories.emplace_back(m.search_path.GetCString());
 
   // Check if we imported 'std' or any of its submodules.
   // We currently don't support importing any other modules in the expression
