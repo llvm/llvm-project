@@ -75,3 +75,6 @@ int realop[(__real__ 4) == 4 ? 1 : -1];
 int imagop[(__imag__ 4) == 0 ? 1 : -1];
 
 int *PR14729 = 0 ?: 1/0; // expected-error {{not a compile-time constant}} expected-warning 3{{}}
+
+int bcp_call_v;
+int bcp_call_a[] = {__builtin_constant_p(bcp_call_v && 0) ? bcp_call_v && 0 : -1};

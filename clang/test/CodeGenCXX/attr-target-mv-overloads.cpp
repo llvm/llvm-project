@@ -14,8 +14,8 @@ int bar2() {
   return foo_overload() + foo_overload(1);
 }
 
-// LINUX: @_Z12foo_overloadv.ifunc = ifunc i32 (), i32 ()* ()* @_Z12foo_overloadv.resolver
-// LINUX: @_Z12foo_overloadi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_Z12foo_overloadi.resolver
+// LINUX: @_Z12foo_overloadv.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @_Z12foo_overloadv.resolver
+// LINUX: @_Z12foo_overloadi.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @_Z12foo_overloadi.resolver
 
 // LINUX: define i32 @_Z12foo_overloadi.sse4.2(i32 %0)
 // LINUX: ret i32 0
@@ -51,25 +51,25 @@ int bar2() {
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.resolver"()
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.resolver"(i32 1)
 
-// LINUX: define i32 ()* @_Z12foo_overloadv.resolver() comdat
+// LINUX: define weak_odr i32 ()* @_Z12foo_overloadv.resolver() comdat
 // LINUX: ret i32 ()* @_Z12foo_overloadv.arch_sandybridge
 // LINUX: ret i32 ()* @_Z12foo_overloadv.arch_ivybridge
 // LINUX: ret i32 ()* @_Z12foo_overloadv.sse4.2
 // LINUX: ret i32 ()* @_Z12foo_overloadv
 
-// WINDOWS: define dso_local i32 @"?foo_overload@@YAHXZ.resolver"() comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo_overload@@YAHXZ.resolver"() comdat
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.arch_sandybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.arch_ivybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ.sse4.2"
 // WINDOWS: call i32 @"?foo_overload@@YAHXZ"
 
-// LINUX: define i32 (i32)* @_Z12foo_overloadi.resolver() comdat
+// LINUX: define weak_odr i32 (i32)* @_Z12foo_overloadi.resolver() comdat
 // LINUX: ret i32 (i32)* @_Z12foo_overloadi.arch_sandybridge
 // LINUX: ret i32 (i32)* @_Z12foo_overloadi.arch_ivybridge
 // LINUX: ret i32 (i32)* @_Z12foo_overloadi.sse4.2
 // LINUX: ret i32 (i32)* @_Z12foo_overloadi
 
-// WINDOWS: define dso_local i32 @"?foo_overload@@YAHH@Z.resolver"(i32 %0) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo_overload@@YAHH@Z.resolver"(i32 %0) comdat
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.arch_ivybridge"
 // WINDOWS: call i32 @"?foo_overload@@YAHH@Z.sse4.2"

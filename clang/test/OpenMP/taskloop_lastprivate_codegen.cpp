@@ -15,8 +15,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -DLOOP -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
-// It doesn't pass on win32.
-// REQUIRES: shell
+
 #if !defined(ARRAY) && !defined(LOOP)
 #ifndef HEADER
 #define HEADER

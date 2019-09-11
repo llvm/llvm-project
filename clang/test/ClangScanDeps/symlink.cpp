@@ -2,8 +2,8 @@
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
 // RUN: mkdir -p %t.dir
-// RUN: cp %s %t.dir/symlink.cpp
-// RUN: cp %s %t.dir/symlink2.cpp
+// RUN: cp %s %t.dir/symlink_input.cpp
+// RUN: cp %s %t.dir/symlink_input2.cpp
 // RUN: mkdir %t.dir/Inputs
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: ln -s %t.dir/Inputs/header.h %t.dir/Inputs/symlink.h
@@ -14,10 +14,10 @@
 #include "symlink.h"
 #include "header.h"
 
-// CHECK: symlink.cpp
+// CHECK: symlink_input.cpp
 // CHECK-NEXT: Inputs{{/|\\}}symlink.h
 // CHECK-NEXT: Inputs{{/|\\}}header.h
 
-// CHECK: symlink2.cpp
+// CHECK: symlink_input2.cpp
 // CHECK-NEXT: Inputs{{/|\\}}symlink.h
 // CHECK-NEXT: Inputs{{/|\\}}header.h
