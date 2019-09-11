@@ -281,6 +281,40 @@ llvm::raw_ostream *ProcessGDBRemoteProvider::GetHistoryStream() {
   return m_stream_up.get();
 }
 
+std::unique_ptr<CommandLoader> CommandLoader::Create(Loader *loader) {
+  if (!loader)
+    return {};
+
+  FileSpec file = loader->GetFile<repro::CommandProvider::Info>();
+  if (!file)
+    return {};
+
+  auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
+  if (auto err = error_or_file.getError())
+    return {};
+
+  std::vector<std::string> files;
+  llvm::yaml::Input yin((*error_or_file)->getBuffer());
+  yin >> files;
+
+  if (auto err = yin.error())
+    return {};
+
+  for (auto &file : files) {
+    FileSpec absolute_path =
+        loader->GetRoot().CopyByAppendingPathComponent(file);
+    file = absolute_path.GetPath();
+  }
+
+  return std::make_unique<CommandLoader>(std::move(files));
+}
+
+llvm::Optional<std::string> CommandLoader::GetNextFile() {
+  if (m_index >= m_files.size())
+    return {};
+  return m_files[m_index++];
+}
+
 void ProviderBase::anchor() {}
 char CommandProvider::ID = 0;
 char FileProvider::ID = 0;

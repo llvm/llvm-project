@@ -324,6 +324,19 @@ private:
   mutable std::mutex m_mutex;
 };
 
+/// Helper class for replaying commands through the reproducer.
+class CommandLoader {
+public:
+  CommandLoader(std::vector<std::string> files) : m_files(files) {}
+
+  static std::unique_ptr<CommandLoader> Create(Loader *loader);
+  llvm::Optional<std::string> GetNextFile();
+
+private:
+  std::vector<std::string> m_files;
+  unsigned m_index = 0;
+};
+
 } // namespace repro
 } // namespace lldb_private
 
