@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"

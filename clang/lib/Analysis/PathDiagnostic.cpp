@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"

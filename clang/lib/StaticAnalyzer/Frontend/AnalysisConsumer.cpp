@@ -12,6 +12,7 @@
 
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "ModelInjector.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -27,7 +28,6 @@
 #include "clang/StaticAnalyzer/Checkers/LocalCheckers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
