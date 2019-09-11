@@ -29,7 +29,7 @@
 ---
 # CHECK-LABEL: name: foo
 name:            foo
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

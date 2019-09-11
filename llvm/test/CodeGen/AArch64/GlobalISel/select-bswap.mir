@@ -48,7 +48,7 @@ body:             |
 ...
 ---
 name:            bswap_v4s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -71,7 +71,7 @@ body:             |
 ...
 ---
 name:            bswap_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -94,7 +94,7 @@ body:             |
 ...
 ---
 name:            bswap_v2s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

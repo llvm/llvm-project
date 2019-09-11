@@ -102,7 +102,7 @@
 ...
 ---
 name:            header_not_target_unrolled_loop
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

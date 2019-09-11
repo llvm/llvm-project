@@ -19,7 +19,7 @@
 ...
 ---
 name:            foo
-alignment:       1
+alignment:       2
 liveins:
   - { reg: '$r0' }
 body:             |

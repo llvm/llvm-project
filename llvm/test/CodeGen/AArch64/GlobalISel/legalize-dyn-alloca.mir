@@ -22,7 +22,7 @@
 ...
 ---
 name:            test_simple_alloca
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            test_aligned_alloca
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
@@ -116,7 +116,7 @@ body:             |
 ...
 ---
 name:            test_natural_alloca
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }

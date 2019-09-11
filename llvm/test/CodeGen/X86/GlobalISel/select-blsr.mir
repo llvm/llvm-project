@@ -7,7 +7,7 @@
 
 ---
 name:            test_blsr32rr
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            test_blsr32rr_nomatch
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

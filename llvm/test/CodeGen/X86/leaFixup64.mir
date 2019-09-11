@@ -151,7 +151,7 @@
 ...
 ---
 name:            testleaadd_64_32_1
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -186,7 +186,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_64_32_1
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -221,7 +221,7 @@ body:             |
 ...
 ---
 name:            test1lea_rbp_64_32_1
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -255,7 +255,7 @@ body:             |
 ...
 ---
 name:            test2add_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -290,7 +290,7 @@ body:             |
 ...
 ---
 name:            test2add_rbp_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -325,7 +325,7 @@ body:             |
 ...
 ---
 name:            test1add_rbp_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -359,7 +359,7 @@ body:             |
 ...
 ---
 name:            testleaadd_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -395,7 +395,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -431,7 +431,7 @@ body:             |
 ...
 ---
 name:            test1lea_rbp_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -466,7 +466,7 @@ body:             |
 ...
 ---
 name:            testleaadd_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -502,7 +502,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -538,7 +538,7 @@ body:             |
 ...
 ---
 name:            test1lea_rbp_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -573,7 +573,7 @@ body:             |
 ...
 ---
 name:            test8
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -609,7 +609,7 @@ body:             |
 ...
 ---
 name:            testleaaddi32_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -644,7 +644,7 @@ body:             |
 ...
 ---
 name:            test1mov1add_rbp_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -678,7 +678,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_index_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -712,7 +712,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_index2_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -746,7 +746,7 @@ body:             |
 ...
 ---
 name:            test2addi32_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -781,7 +781,7 @@ body:             |
 ...
 ---
 name:            test1mov1add_rbp_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -816,7 +816,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_index_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -851,7 +851,7 @@ body:             |
 ...
 ---
 name:            testleaadd_rbp_index2_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -886,7 +886,7 @@ body:             |
 ...
 ---
 name:            test_skip_opt_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -920,7 +920,7 @@ body:             |
 ...
 ---
 name:            test_skip_eflags_64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -962,7 +962,7 @@ body:             |
 ...
 ---
 name:            test_skip_opt_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -996,7 +996,7 @@ body:             |
 ...
 ---
 name:            test_skip_eflags_64_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

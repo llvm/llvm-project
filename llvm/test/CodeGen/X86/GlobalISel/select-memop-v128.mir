@@ -28,7 +28,7 @@
 ---
 # ALL-LABEL: name:            test_load_v4i32_noalign
 name:            test_load_v4i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -53,7 +53,7 @@ body:             |
 ---
 # ALL-LABEL: name:            test_load_v4i32_align
 name:            test_load_v4i32_align
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -78,7 +78,7 @@ body:             |
 ---
 # ALL-LABEL: name:            test_store_v4i32_align
 name:            test_store_v4i32_align
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -106,7 +106,7 @@ body:             |
 ---
 # ALL-LABEL: name:            test_store_v4i32_noalign
 name:            test_store_v4i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

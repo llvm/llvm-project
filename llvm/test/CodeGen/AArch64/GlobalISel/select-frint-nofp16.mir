@@ -4,7 +4,7 @@
 ...
 ---
 name:            test_f16.rint
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            test_v4f16.rint
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -100,7 +100,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.rint
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

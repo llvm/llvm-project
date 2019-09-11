@@ -8,7 +8,7 @@
 ...
 ---
 name:            inttoptr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -29,7 +29,7 @@ body:             |
 ...
 ---
 name:            ptrtoint
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

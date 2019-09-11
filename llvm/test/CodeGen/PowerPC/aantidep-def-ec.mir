@@ -42,7 +42,7 @@
 ...
 ---
 name:            mm_update_next_owner
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 tracksRegLiveness: true
 liveins:         

@@ -151,7 +151,7 @@ body: |
 ...
 ---
 name:            store_4xi16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -172,7 +172,7 @@ body:             |
 ...
 ---
 name:            store_4xi32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -193,7 +193,7 @@ body:             |
 ...
 ---
 name:            store_8xi16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -214,7 +214,7 @@ body:             |
 ...
 ---
 name:            store_16xi8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -235,7 +235,7 @@ body:             |
 ...
 ---
 name:            load_4xi16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -256,7 +256,7 @@ body:             |
 ...
 ---
 name:            load_4xi32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -277,7 +277,7 @@ body:             |
 ...
 ---
 name:            load_8xi16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -298,7 +298,7 @@ body:             |
 ...
 ---
 name:            load_16xi8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -319,7 +319,7 @@ body:             |
 ...
 ---
 name:            load_8xi8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |

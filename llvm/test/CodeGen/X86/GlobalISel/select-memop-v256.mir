@@ -29,7 +29,7 @@
 ---
 name:            test_load_v8i32_noalign
 # ALL-LABEL: name:  test_load_v8i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # NO_AVX512F:       registers:
@@ -69,7 +69,7 @@ body:             |
 ---
 name:            test_load_v8i32_align
 # ALL-LABEL: name:  test_load_v8i32_align
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -102,7 +102,7 @@ body:             |
 ---
 name:            test_store_v8i32_noalign
 # ALL-LABEL: name:  test_store_v8i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # NO_AVX512F:       registers:
@@ -142,7 +142,7 @@ body:             |
 ---
 name:            test_store_v8i32_align
 # ALL-LABEL: name:  test_store_v8i32_align
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # NO_AVX512F:       registers:

@@ -25,7 +25,7 @@
 ...
 ---
 name:            test_or_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -55,7 +55,7 @@ body:             |
 ...
 ---
 name:            test_or_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -85,7 +85,7 @@ body:             |
 ...
 ---
 name:            test_or_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -115,7 +115,7 @@ body:             |
 ...
 ---
 name:            test_or_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

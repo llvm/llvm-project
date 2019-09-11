@@ -14,7 +14,7 @@
 ...
 ---
 name:            fcmp_more_than_one_user_no_fold
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -50,7 +50,7 @@ body:             |
 ...
 ---
 name:            using_icmp
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -81,7 +81,7 @@ body:             |
 ...
 ---
 name:            foeq
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -111,7 +111,7 @@ body:             |
 ...
 ---
 name:            fueq
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -147,7 +147,7 @@ body:             |
 ...
 ---
 name:            fone
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -183,7 +183,7 @@ body:             |
 ...
 ---
 name:            fune
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -213,7 +213,7 @@ body:             |
 ...
 ---
 name:            doeq
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -243,7 +243,7 @@ body:             |
 ...
 ---
 name:            dueq
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -279,7 +279,7 @@ body:             |
 ...
 ---
 name:            done
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -315,7 +315,7 @@ body:             |
 ...
 ---
 name:            dune
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -345,7 +345,7 @@ body:             |
 ...
 ---
 name:            copy_from_physreg
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

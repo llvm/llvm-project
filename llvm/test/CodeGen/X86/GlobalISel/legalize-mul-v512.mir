@@ -24,7 +24,7 @@
 ---
 name:            test_mul_v32i16
 # ALL-LABEL: name:  test_mul_v32i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:
@@ -54,7 +54,7 @@ body:             |
 ---
 name:            test_mul_v16i32
 # ALL-LABEL: name:  test_mul_v16i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:
@@ -84,7 +84,7 @@ body:             |
 ---
 name:            test_mul_v8i64
 # ALL-LABEL: name:  test_mul_v8i64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:

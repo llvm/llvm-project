@@ -34,7 +34,7 @@
 ...
 ---
 name:            and_i1
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -62,7 +62,7 @@ body:             |
 ...
 ---
 name:            and_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -90,7 +90,7 @@ body:             |
 ...
 ---
 name:            and_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -118,7 +118,7 @@ body:             |
 ...
 ---
 name:            and_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -140,7 +140,7 @@ body:             |
 ...
 ---
 name:            and_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -172,7 +172,7 @@ body:             |
 ...
 ---
 name:            or_i1
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -200,7 +200,7 @@ body:             |
 ...
 ---
 name:            or_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -228,7 +228,7 @@ body:             |
 ...
 ---
 name:            or_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -256,7 +256,7 @@ body:             |
 ...
 ---
 name:            or_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -278,7 +278,7 @@ body:             |
 ...
 ---
 name:            or_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -310,7 +310,7 @@ body:             |
 ...
 ---
 name:            xor_i1
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -338,7 +338,7 @@ body:             |
 ...
 ---
 name:            xor_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -366,7 +366,7 @@ body:             |
 ...
 ---
 name:            xor_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -394,7 +394,7 @@ body:             |
 ...
 ---
 name:            xor_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -416,7 +416,7 @@ body:             |
 ...
 ---
 name:            xor_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -448,7 +448,7 @@ body:             |
 ...
 ---
 name:            shl
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -470,7 +470,7 @@ body:             |
 ...
 ---
 name:            ashr
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -492,7 +492,7 @@ body:             |
 ...
 ---
 name:            lshr
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -514,7 +514,7 @@ body:             |
 ...
 ---
 name:            lshr_i64_shift_amount
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -538,7 +538,7 @@ body:             |
 ...
 ---
 name:            shlv
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -560,7 +560,7 @@ body:             |
 ...
 ---
 name:            ashrv
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -582,7 +582,7 @@ body:             |
 ...
 ---
 name:            lshrv
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -604,7 +604,7 @@ body:             |
 ...
 ---
 name:            shl_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -633,7 +633,7 @@ body:             |
 ...
 ---
 name:            ashr_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -665,7 +665,7 @@ body:             |
 ...
 ---
 name:            lshr_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -695,7 +695,7 @@ body:             |
 ...
 ---
 name:            shl_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -747,7 +747,7 @@ body:             |
 ...
 ---
 name:            ashl_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -801,7 +801,7 @@ body:             |
 ...
 ---
 name:            lshr_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

@@ -54,7 +54,7 @@
 ...
 ---
 name:            adcx32_commute
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -99,7 +99,7 @@ body:             |
 ...
 ---
 name:            adcx64_commute
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -144,7 +144,7 @@ body:             |
 ...
 ---
 name:            adox32_commute
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -189,7 +189,7 @@ body:             |
 ...
 ---
 name:            adox64_commute
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }

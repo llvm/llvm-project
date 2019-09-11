@@ -43,7 +43,7 @@
 ...
 ---
 name:            legalize_phi
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -130,7 +130,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_ptr
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -184,7 +184,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_empty
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -270,7 +270,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_loop
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -338,7 +338,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_cycle
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -395,7 +395,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_same_bb
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -496,7 +496,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_diff_bb
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

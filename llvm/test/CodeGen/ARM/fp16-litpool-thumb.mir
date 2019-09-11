@@ -35,7 +35,7 @@
 ...
 ---
 name:            THUMB
-alignment:       1
+alignment:       2
 tracksRegLiveness: true
 frameInfo:
   stackSize:       8

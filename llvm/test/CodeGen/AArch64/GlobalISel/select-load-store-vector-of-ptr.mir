@@ -17,7 +17,7 @@
 ...
 ---
 name:            store_v2p0
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -45,7 +45,7 @@ body:             |
 ...
 ---
 name:            load_v2p0
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

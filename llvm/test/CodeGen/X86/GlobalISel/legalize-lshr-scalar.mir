@@ -7,7 +7,7 @@
 ...
 ---
 name:            test_lshr
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 tracksRegLiveness: true
@@ -54,7 +54,7 @@ body:             |
 ...
 ---
 name:            test_lshr_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 tracksRegLiveness: true

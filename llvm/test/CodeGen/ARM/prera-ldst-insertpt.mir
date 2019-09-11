@@ -17,7 +17,7 @@
 ---
 # CHECK-LABEL: name: a
 name:            a
-alignment:       1
+alignment:       2
 tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
@@ -60,7 +60,7 @@ body:             |
 ---
 # CHECK-LABEL: name: b
 name:            b
-alignment:       1
+alignment:       2
 tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }

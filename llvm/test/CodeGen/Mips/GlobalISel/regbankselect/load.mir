@@ -12,7 +12,7 @@
 ...
 ---
 name:            load_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            load_i64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -60,7 +60,7 @@ body:             |
 ...
 ---
 name:            load_ambiguous_i64_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -83,7 +83,7 @@ body:             |
 ...
 ---
 name:            load_float
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -104,7 +104,7 @@ body:             |
 ...
 ---
 name:            load_ambiguous_float_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -127,7 +127,7 @@ body:             |
 ...
 ---
 name:            load_double
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

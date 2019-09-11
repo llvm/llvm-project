@@ -26,7 +26,7 @@
 ...
 ---
 name:            Unconditional_branch
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: Unconditional_branch
@@ -57,7 +57,7 @@ body:             |
 ...
 ---
 name:            Conditional_branch
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: Conditional_branch

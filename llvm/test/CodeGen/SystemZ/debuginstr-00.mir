@@ -52,7 +52,7 @@
 ...
 ---
 name:            put_charge_groups_in_box
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 frameInfo:       
   maxCallFrameSize: 0

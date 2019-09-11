@@ -53,8 +53,8 @@ struct AndroidSvelteConfig {
   // 512MB regions
   typedef SizeClassAllocator64<SizeClassMap, 29U> Primary;
 #else
-  // 256KB regions
-  typedef SizeClassAllocator32<SizeClassMap, 18U> Primary;
+  // 64KB regions
+  typedef SizeClassAllocator32<SizeClassMap, 16U> Primary;
 #endif
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 1U>; // Shared, only 1 TSD.

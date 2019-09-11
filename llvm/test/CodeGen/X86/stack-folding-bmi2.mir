@@ -33,7 +33,7 @@
 ...
 ---
 name:            stack_fold_mulx_u32
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            stack_fold_mulx_u64
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }

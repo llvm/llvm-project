@@ -10,7 +10,7 @@
 ---
 name:            test_unmerge
 #
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 #

@@ -45,7 +45,7 @@
 ...
 ---
 name:            test_load_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -70,7 +70,7 @@ body:             |
 ...
 ---
 name:            test_load_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -95,7 +95,7 @@ body:             |
 ...
 ---
 name:            test_load_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -120,7 +120,7 @@ body:             |
 ...
 ---
 name:            test_store_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -150,7 +150,7 @@ body:             |
 ...
 ---
 name:            test_store_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -180,7 +180,7 @@ body:             |
 ...
 ---
 name:            test_store_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -210,7 +210,7 @@ body:             |
 ...
 ---
 name:            test_load_ptr
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -235,7 +235,7 @@ body:             |
 ...
 ---
 name:            test_store_ptr
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

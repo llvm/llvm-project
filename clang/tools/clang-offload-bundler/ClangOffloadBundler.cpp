@@ -611,24 +611,15 @@ static FileHandler *CreateObjectFileHandler(MemoryBuffer &FirstInput) {
   // Check if the input file format is one that we know how to deal with.
   Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(FirstInput);
 
-  // Failed to open the input as a known binary. Use the default binary handler.
-  if (!BinaryOrErr) {
-    // We don't really care about the error (we just consume it), if we could
-    // not get a valid device binary object we use the default binary handler.
-    consumeError(BinaryOrErr.takeError());
-    return new BinaryFileHandler();
-  }
-
-  // We only support regular object files. If this is not an object file,
-  // default to the binary handler. The handler will be owned by the client of
-  // this function.
-  std::unique_ptr<ObjectFile> Obj(
-      dyn_cast<ObjectFile>(BinaryOrErr.get().release()));
-
-  if (!Obj)
+  // We only support regular object files. If failed to open the input as a
+  // known binary or this is not an object file use the default binary handler.
+  if (errorToBool(BinaryOrErr.takeError()) || !isa<ObjectFile>(*BinaryOrErr))
     return new BinaryFileHandler();
 
-  return new ObjectFileHandler(std::move(Obj));
+  // Otherwise create an object file handler. The handler will be owned by the
+  // client of this function.
+  return new ObjectFileHandler(
+      std::unique_ptr<ObjectFile>(cast<ObjectFile>(BinaryOrErr->release())));
 }
 
 /// Return an appropriate handler given the input files and options.

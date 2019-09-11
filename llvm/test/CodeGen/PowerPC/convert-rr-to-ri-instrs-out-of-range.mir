@@ -213,7 +213,7 @@
 ---
 name:            testRLWNM
 # CHECK-ALL: name: testRLWNM
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -265,7 +265,7 @@ body:             |
 ---
 name:            testRLWNM8
 # CHECK-ALL: name: testRLWNM8
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -313,7 +313,7 @@ body:             |
 ---
 name:            testRLWNMo
 # CHECK-ALL: name: testRLWNMo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -377,7 +377,7 @@ body:             |
 ---
 name:            testRLWNM8o
 # CHECK-ALL: name: testRLWNM8o
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -436,7 +436,7 @@ body:             |
 ---
 name:            testSLW
 # CHECK-ALL: name: testSLW
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -493,7 +493,7 @@ body:             |
 ---
 name:            testSLWo
 # CHECK-ALL: name: testSLWo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -556,7 +556,7 @@ body:             |
 ---
 name:            testSRW
 # CHECK-ALL: name: testSRW
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -613,7 +613,7 @@ body:             |
 ---
 name:            testSRWo
 # CHECK-ALL: name: testSRWo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -676,7 +676,7 @@ body:             |
 ---
 name:            testSRAW
 # CHECK-ALL: name: testSRAW
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -732,7 +732,7 @@ body:             |
 ---
 name:            testSRAWo
 # CHECK-ALL: name: testSRAWo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -791,7 +791,7 @@ body:             |
 ---
 name:            testRLDCL
 # CHECK-ALL: name: testRLDCL
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -844,7 +844,7 @@ body:             |
 ---
 name:            testRLDCLo
 # CHECK-ALL: name: testRLDCLo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -901,7 +901,7 @@ body:             |
 ---
 name:            testRLDCR
 # CHECK-ALL: name: testRLDCR
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -954,7 +954,7 @@ body:             |
 ---
 name:            testRLDCRo
 # CHECK-ALL: name: testRLDCRo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1011,7 +1011,7 @@ body:             |
 ---
 name:            testSLD
 # CHECK-ALL: name: testSLD
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1062,7 +1062,7 @@ body:             |
 ---
 name:            testSLDo
 # CHECK-ALL: name: testSLDo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1117,7 +1117,7 @@ body:             |
 ---
 name:            testSRD
 # CHECK-ALL: name: testSRD
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1168,7 +1168,7 @@ body:             |
 ---
 name:            testSRDo
 # CHECK-ALL: name: testSRDo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1223,7 +1223,7 @@ body:             |
 ---
 name:            testSRAD
 # CHECK-ALL: name: testSRAD
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1274,7 +1274,7 @@ body:             |
 ---
 name:            testSRADo
 # CHECK-ALL: name: testSRADo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

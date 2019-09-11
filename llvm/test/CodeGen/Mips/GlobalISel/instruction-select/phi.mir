@@ -66,7 +66,7 @@
 ...
 ---
 name:            phi_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -136,7 +136,7 @@ body:             |
 ...
 ---
 name:            phi_i64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -227,7 +227,7 @@ body:             |
 ...
 ---
 name:            phi_float
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -297,7 +297,7 @@ body:             |
 ...
 ---
 name:            phi_double
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

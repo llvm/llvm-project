@@ -1583,14 +1583,10 @@ public:
   }
 
   /// Return the minimum function alignment.
-  unsigned getMinFunctionLogAlignment() const {
-    return Log2(MinFunctionAlignment);
-  }
+  llvm::Align getMinFunctionAlignment() const { return MinFunctionAlignment; }
 
   /// Return the preferred function alignment.
-  unsigned getPrefFunctionLogAlignment() const {
-    return Log2(PrefFunctionAlignment);
-  }
+  llvm::Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
   /// Return the preferred loop alignment.
   virtual llvm::Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {

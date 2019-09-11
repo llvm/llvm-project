@@ -20,7 +20,7 @@
 # in the middle. Because the non-select depends on the result of a previous
 # select, we cannot optimize the sequence to share control-flow.
 name:            cmov_interleaved_bad
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
@@ -106,7 +106,7 @@ body:             |
 # the tail basic block, while debug info associated with non-selects is left
 # in the head basic block.
 name:            cmov_interleaved_debug_value
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }

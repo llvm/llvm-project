@@ -83,7 +83,7 @@ body:             |
 ---
 name:            test_add_i16
 # ALL-LABEL: name:            test_add_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -108,7 +108,7 @@ body:             |
 ---
 name:            test_add_i8
 # ALL-LABEL: name:            test_add_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -133,7 +133,7 @@ body:             |
 ---
 name:            test_add_v4i32
 # ALL-LABEL: name:            test_add_v4i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -164,7 +164,7 @@ body:             |
 ---
 name:            test_add_v4f32
 # ALL-LABEL: name:            test_add_v4f32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false

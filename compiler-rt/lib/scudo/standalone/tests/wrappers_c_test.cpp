@@ -12,6 +12,7 @@
 
 #include <limits.h>
 #include <malloc.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 extern "C" {

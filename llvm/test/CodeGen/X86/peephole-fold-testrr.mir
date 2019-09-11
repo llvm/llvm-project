@@ -22,7 +22,7 @@
 ...
 ---
 name:            atomic
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
@@ -55,7 +55,7 @@ body:             |
 ...
 ---
 name:            nonatomic_unoptimized
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }

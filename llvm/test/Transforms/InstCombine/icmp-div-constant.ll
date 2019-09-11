@@ -3,8 +3,8 @@
 
 define i1 @is_rem2_neg_i8(i8 %x) {
 ; CHECK-LABEL: @is_rem2_neg_i8(
-; CHECK-NEXT:    [[S:%.*]] = srem i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[S]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -127
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], -127
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = srem i8 %x, 2
@@ -14,8 +14,8 @@ define i1 @is_rem2_neg_i8(i8 %x) {
 
 define <2 x i1> @is_rem2_pos_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: @is_rem2_pos_v2i8(
-; CHECK-NEXT:    [[S:%.*]] = srem <2 x i8> [[X:%.*]], <i8 2, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[S]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -127, i8 -127>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = srem <2 x i8> %x, <i8 2, i8 2>
@@ -23,10 +23,12 @@ define <2 x i1> @is_rem2_pos_v2i8(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
+; i8 -97 == 159 == 0b10011111
+
 define i1 @is_rem32_pos_i8(i8 %x) {
 ; CHECK-LABEL: @is_rem32_pos_i8(
-; CHECK-NEXT:    [[S:%.*]] = srem i8 [[X:%.*]], 32
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[S]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -97
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = srem i8 %x, 32
@@ -34,10 +36,12 @@ define i1 @is_rem32_pos_i8(i8 %x) {
   ret i1 %r
 }
 
+; i16 -32765 == 32771 == 0b1000000000000011
+
 define i1 @is_rem4_neg_i16(i16 %x) {
 ; CHECK-LABEL: @is_rem4_neg_i16(
-; CHECK-NEXT:    [[S:%.*]] = srem i16 [[X:%.*]], 4
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i16 [[S]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], -32765
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i16 [[TMP1]], -32768
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = srem i16 %x, 4
@@ -46,6 +50,8 @@ define i1 @is_rem4_neg_i16(i16 %x) {
 }
 
 declare void @use(i32)
+
+; TODO: This is still worth folding because srem is difficult?
 
 define i1 @is_rem32_neg_i32_extra_use(i32 %x) {
 ; CHECK-LABEL: @is_rem32_neg_i32_extra_use(
@@ -60,6 +66,8 @@ define i1 @is_rem32_neg_i32_extra_use(i32 %x) {
   ret i1 %r
 }
 
+; Negative test - wrong compare constant
+
 define i1 @is_rem8_nonneg_i16(i16 %x) {
 ; CHECK-LABEL: @is_rem8_nonneg_i16(
 ; CHECK-NEXT:    [[S:%.*]] = srem i16 [[X:%.*]], 8
@@ -71,6 +79,8 @@ define i1 @is_rem8_nonneg_i16(i16 %x) {
   ret i1 %r
 }
 
+; Negative test - wrong remainder constant
+
 define i1 @is_rem3_neg_i8(i8 %x) {
 ; CHECK-LABEL: @is_rem3_neg_i8(
 ; CHECK-NEXT:    [[S:%.*]] = srem i8 [[X:%.*]], 3
@@ -81,6 +91,8 @@ define i1 @is_rem3_neg_i8(i8 %x) {
   %r = icmp slt i8 %s, 0
   ret i1 %r
 }
+
+; Negative test - wrong compare constant
 
 define i1 @is_rem16_something_i8(i8 %x) {
 ; CHECK-LABEL: @is_rem16_something_i8(
