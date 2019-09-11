@@ -32,7 +32,7 @@
 ...
 ---
 name:            test_v2s64_unmerge
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -58,7 +58,7 @@ body:             |
 ...
 ---
 name:            test_v4s32_unmerge
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -88,7 +88,7 @@ body:             |
 ...
 ---
 name:            test_v4s16_unmerge
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -126,7 +126,7 @@ body:             |
 ...
 ---
 name:            test_v8s16_unmerge
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -164,7 +164,7 @@ body:             |
 ...
 ---
 name:            test_vecsplit_2v2s32_v4s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -187,7 +187,7 @@ body:             |
 ...
 ---
 name:            test_vecsplit_2v2s16_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -212,7 +212,7 @@ body:             |
 ...
 ---
 name:            test_s128
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

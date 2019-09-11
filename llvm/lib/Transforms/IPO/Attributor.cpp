@@ -1672,8 +1672,9 @@ struct AANoAliasFloating final : AANoAliasImpl {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    // TODO: It isn't sound to initialize as the same with `AANoAliasImpl`
-    // because `noalias` may not be valid in the current position.
+    AANoAliasImpl::initialize(A);
+    if (isa<AllocaInst>(getAnchorValue()))
+      indicateOptimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -1711,8 +1712,53 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Implement this.
-    return indicatePessimisticFixpoint();
+    // We can deduce "noalias" if the following conditions hold.
+    // (i)   Associated value is assumed to be noalias in the definition.
+    // (ii)  Associated value is assumed to be no-capture in all the uses
+    //       possibly executed before this callsite.
+    // (iii) There is no other pointer argument which could alias with the
+    //       value.
+
+    const Value &V = getAssociatedValue();
+    const IRPosition IRP = IRPosition::value(V);
+
+    // (i) Check whether noalias holds in the definition.
+
+    auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP);
+
+    if (!NoAliasAA.isAssumedNoAlias())
+      return indicatePessimisticFixpoint();
+
+    LLVM_DEBUG(dbgs() << "[Attributor][AANoAliasCSArg] " << V
+                      << " is assumed NoAlias in the definition\n");
+
+    // (ii) Check whether the value is captured in the scope using AANoCapture.
+    //      FIXME: This is conservative though, it is better to look at CFG and
+    //             check only uses possibly executed before this callsite.
+
+    auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
+    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned())
+      return indicatePessimisticFixpoint();
+
+    // (iii) Check there is no other pointer argument which could alias with the
+    // value.
+    ImmutableCallSite ICS(&getAnchorValue());
+    for (unsigned i = 0; i < ICS.getNumArgOperands(); i++) {
+      if (getArgNo() == (int)i)
+        continue;
+      const Value *ArgOp = ICS.getArgOperand(i);
+      if (!ArgOp->getType()->isPointerTy())
+        continue;
+
+      // TODO: Use AliasAnalysis
+      //       AAResults& AAR = ..;
+      //       if(AAR.isNoAlias(&getAssociatedValue(), ArgOp))
+      //          return indicatePessimitisicFixpoint();
+
+      return indicatePessimisticFixpoint();
+    }
+
+    return ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2594,10 +2640,12 @@ struct AANoCaptureImpl : public AANoCapture {
     if (!isAssumedNoCaptureMaybeReturned())
       return;
 
-    if (isAssumedNoCapture())
-      Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
-    else if (ManifestInternal)
-      Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
+    if (getArgNo() >= 0) {
+      if (isAssumedNoCapture())
+        Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
+      else if (ManifestInternal)
+        Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
+    }
   }
 
   /// Set the NOT_CAPTURED_IN_MEM and NOT_CAPTURED_IN_RET bits in \p Known

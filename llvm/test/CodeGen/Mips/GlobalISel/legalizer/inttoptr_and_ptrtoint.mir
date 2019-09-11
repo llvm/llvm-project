@@ -8,7 +8,7 @@
 ...
 ---
 name:            inttoptr
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -28,7 +28,7 @@ body:             |
 ...
 ---
 name:            ptrtoint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

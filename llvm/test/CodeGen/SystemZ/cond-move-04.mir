@@ -37,7 +37,7 @@
 
 ---
 name:            fun
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:       
   - { id: 0, class: gr32bit }

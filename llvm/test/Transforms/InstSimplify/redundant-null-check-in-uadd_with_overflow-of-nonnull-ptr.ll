@@ -244,3 +244,22 @@ define i1 @t15(i8* nonnull %base, i64 %offset) {
   %res = and i1 %no_overflow_during_adjustment, %non_null_after_adjustment ; swapped
   ret i1 %res
 }
+
+declare void @llvm.assume(i1)
+define i1 @t16(i64 %base, i64 %offset) {
+; CHECK-LABEL: @t16(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[BASE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i64 [[BASE]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[NO_OVERFLOW_DURING_ADJUSTMENT:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[NO_OVERFLOW_DURING_ADJUSTMENT]]
+;
+  %cmp = icmp slt i64 %base, 0
+  call void @llvm.assume(i1 %cmp)
+
+  %adjusted = add i64 %base, %offset
+  %non_null_after_adjustment = icmp ne i64 %adjusted, 0
+  %no_overflow_during_adjustment = icmp uge i64 %adjusted, %base
+  %res = and i1 %non_null_after_adjustment, %no_overflow_during_adjustment
+  ret i1 %res
+}

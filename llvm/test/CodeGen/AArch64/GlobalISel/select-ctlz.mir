@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple=arm64-unknown-unknown -global-isel -run-pass=instruction-select %s -o - | FileCheck %s
 
 name:            test_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -24,7 +24,7 @@ body:             |
 ...
 ---
 name:            test_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -46,7 +46,7 @@ body:             |
 ...
 ---
 name:            test_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            test_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -92,7 +92,7 @@ body:             |
 ...
 ---
 name:            test_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -115,7 +115,7 @@ body:             |
 ...
 ---
 name:            test_v16s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -137,7 +137,7 @@ body:             |
 ...
 ---
 name:            test_v8s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -159,7 +159,7 @@ body:             |
 ...
 ---
 name:            test_v4s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -181,7 +181,7 @@ body:             |
 ...
 ---
 name:            test_v2s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

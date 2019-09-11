@@ -24,7 +24,7 @@
 ...
 ---
 name:            test_load_v16i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -47,7 +47,7 @@ body:             |
 ...
 ---
 name:            test_load_v16i32_align
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -70,7 +70,7 @@ body:             |
 ...
 ---
 name:            test_store_v16i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -93,7 +93,7 @@ body:             |
 ...
 ---
 name:            test_store_v16i32_align
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

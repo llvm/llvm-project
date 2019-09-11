@@ -20,7 +20,7 @@
 
 ---
 name:            foo
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }

@@ -11,7 +11,7 @@
 ...
 ---
 name:            ceil_f32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -45,7 +45,7 @@ body:             |
 ...
 ---
 name:            ceil_f64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            floor_f32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -113,7 +113,7 @@ body:             |
 ...
 ---
 name:            floor_f64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

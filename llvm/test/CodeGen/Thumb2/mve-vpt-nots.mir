@@ -49,7 +49,7 @@
 ...
 ---
 name:            vpnot
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
@@ -83,7 +83,7 @@ body:             |
 ...
 ---
 name:            vpnot_end
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
@@ -125,7 +125,7 @@ body:             |
 ...
 ---
 name:            vpnot_two
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
@@ -161,7 +161,7 @@ body:             |
 ...
 ---
 name:            vpnot_lots
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
@@ -203,7 +203,7 @@ body:             |
 ...
 ---
 name:            vpnot_first
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
@@ -234,7 +234,7 @@ body:             |
 ...
 ---
 name:            vpnot_many
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }

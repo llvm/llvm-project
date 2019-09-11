@@ -47,12 +47,12 @@ void bar5() {
   fwd_decl_avx();
 }
 
-// LINUX: @foo.ifunc = ifunc i32 (), i32 ()* ()* @foo.resolver
-// LINUX: @foo_inline.ifunc = ifunc i32 (), i32 ()* ()* @foo_inline.resolver
-// LINUX: @foo_decls.ifunc = ifunc void (), void ()* ()* @foo_decls.resolver
-// LINUX: @foo_multi.ifunc = ifunc void (i32, double), void (i32, double)* ()* @foo_multi.resolver
-// LINUX: @fwd_decl_default.ifunc = ifunc i32 (), i32 ()* ()* @fwd_decl_default.resolver
-// LINUX: @fwd_decl_avx.ifunc = ifunc i32 (), i32 ()* ()* @fwd_decl_avx.resolver
+// LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
+// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
+// LINUX: @foo_decls.ifunc = weak_odr ifunc void (), void ()* ()* @foo_decls.resolver
+// LINUX: @foo_multi.ifunc = weak_odr ifunc void (i32, double), void (i32, double)* ()* @foo_multi.resolver
+// LINUX: @fwd_decl_default.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @fwd_decl_default.resolver
+// LINUX: @fwd_decl_avx.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @fwd_decl_avx.resolver
 
 // LINUX: define i32 @foo.sse4.2()
 // LINUX: ret i32 0
@@ -72,14 +72,14 @@ void bar5() {
 // WINDOWS: define dso_local i32 @bar()
 // WINDOWS: call i32 @foo.resolver()
 
-// LINUX: define i32 ()* @foo.resolver() comdat
+// LINUX: define weak_odr i32 ()* @foo.resolver() comdat
 // LINUX: call void @__cpu_indicator_init()
 // LINUX: ret i32 ()* @foo.arch_sandybridge
 // LINUX: ret i32 ()* @foo.arch_ivybridge
 // LINUX: ret i32 ()* @foo.sse4.2
 // LINUX: ret i32 ()* @foo
 
-// WINDOWS: define dso_local i32 @foo.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @foo.arch_sandybridge
 // WINDOWS: call i32 @foo.arch_ivybridge
@@ -92,14 +92,14 @@ void bar5() {
 // WINDOWS: define dso_local i32 @bar2()
 // WINDOWS: call i32 @foo_inline.resolver()
 
-// LINUX: define i32 ()* @foo_inline.resolver() comdat
+// LINUX: define weak_odr i32 ()* @foo_inline.resolver() comdat
 // LINUX: call void @__cpu_indicator_init()
 // LINUX: ret i32 ()* @foo_inline.arch_sandybridge
 // LINUX: ret i32 ()* @foo_inline.arch_ivybridge
 // LINUX: ret i32 ()* @foo_inline.sse4.2
 // LINUX: ret i32 ()* @foo_inline
 
-// WINDOWS: define dso_local i32 @foo_inline.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @foo_inline.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @foo_inline.arch_sandybridge
 // WINDOWS: call i32 @foo_inline.arch_ivybridge
@@ -112,11 +112,11 @@ void bar5() {
 // WINDOWS: define dso_local void @bar3()
 // WINDOWS: call void @foo_decls.resolver()
 
-// LINUX: define void ()* @foo_decls.resolver() comdat
+// LINUX: define weak_odr void ()* @foo_decls.resolver() comdat
 // LINUX: ret void ()* @foo_decls.sse4.2
 // LINUX: ret void ()* @foo_decls
 
-// WINDOWS: define dso_local void @foo_decls.resolver() comdat
+// WINDOWS: define weak_odr dso_local void @foo_decls.resolver() comdat
 // WINDOWS: call void @foo_decls.sse4.2
 // WINDOWS: call void @foo_decls
 
@@ -126,7 +126,7 @@ void bar5() {
 // WINDOWS: define dso_local void @bar4()
 // WINDOWS: call void @foo_multi.resolver(i32 1, double 5.{{[0+e]*}})
 
-// LINUX: define void (i32, double)* @foo_multi.resolver() comdat
+// LINUX: define weak_odr void (i32, double)* @foo_multi.resolver() comdat
 // LINUX: and i32 %{{.*}}, 4352
 // LINUX: icmp eq i32 %{{.*}}, 4352
 // LINUX: ret void (i32, double)* @foo_multi.fma4_sse4.2
@@ -139,7 +139,7 @@ void bar5() {
 // LINUX: ret void (i32, double)* @foo_multi.avx_sse4.2
 // LINUX: ret void (i32, double)* @foo_multi
 
-// WINDOWS: define dso_local void @foo_multi.resolver(i32 %0, double %1) comdat
+// WINDOWS: define weak_odr dso_local void @foo_multi.resolver(i32 %0, double %1) comdat
 // WINDOWS: and i32 %{{.*}}, 4352
 // WINDOWS: icmp eq i32 %{{.*}}, 4352
 // WINDOWS: call void @foo_multi.fma4_sse4.2(i32 %0, double %1)
@@ -178,18 +178,18 @@ void bar5() {
 // WINDOWS: call i32 @fwd_decl_default.resolver()
 // WINDOWS: call i32 @fwd_decl_avx.resolver()
 
-// LINUX: define i32 ()* @fwd_decl_default.resolver() comdat
+// LINUX: define weak_odr i32 ()* @fwd_decl_default.resolver() comdat
 // LINUX: call void @__cpu_indicator_init()
 // LINUX: ret i32 ()* @fwd_decl_default
-// LINUX: define i32 ()* @fwd_decl_avx.resolver() comdat
+// LINUX: define weak_odr i32 ()* @fwd_decl_avx.resolver() comdat
 // LINUX: call void @__cpu_indicator_init()
 // LINUX: ret i32 ()* @fwd_decl_avx.avx
 // LINUX: ret i32 ()* @fwd_decl_avx
 
-// WINDOWS: define dso_local i32 @fwd_decl_default.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @fwd_decl_default.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_default
-// WINDOWS: define dso_local i32 @fwd_decl_avx.resolver() comdat
+// WINDOWS: define weak_odr dso_local i32 @fwd_decl_avx.resolver() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx

@@ -396,7 +396,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // Functions with jump tables need an alignment of 4 because they use the ADR
   // instruction, which aligns the PC to 4 bytes before adding an offset.
   if (!T2JumpTables.empty())
-    MF->ensureLogAlignment(2);
+    MF->ensureAlignment(llvm::Align(4));
 
   /// Remove dead constant pool entries.
   MadeChange |= removeUnusedCPEntries();
@@ -493,7 +493,7 @@ ARMConstantIslands::doInitialConstPlacement(std::vector<MachineInstr*> &CPEMIs) 
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
-  MF->ensureLogAlignment(BB->getLogAlignment());
+  MF->ensureAlignment(BB->getAlignment());
 
   // Order the entries in BB by descending alignment.  That ensures correct
   // alignment of all entries as long as BB is sufficiently aligned.  Keep
@@ -686,7 +686,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   // The known bits of the entry block offset are determined by the function
   // alignment.
-  BBInfo.front().KnownBits = MF->getLogAlignment();
+  BBInfo.front().KnownBits = Log2(MF->getAlignment());
 
   // Compute block offsets and known bits.
   BBUtils->adjustBBOffsetsAfter(&MF->front());
@@ -1041,7 +1041,8 @@ bool ARMConstantIslands::isWaterInRange(unsigned UserOffset,
     // the offset of the instruction. Also account for unknown alignment padding
     // in blocks between CPE and the user.
     if (CPEOffset < UserOffset)
-      UserOffset += Growth + UnknownPadding(MF->getLogAlignment(), CPELogAlign);
+      UserOffset +=
+          Growth + UnknownPadding(Log2(MF->getAlignment()), CPELogAlign);
   } else
     // CPE fits in existing padding.
     Growth = 0;
@@ -1316,7 +1317,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   // Try to split the block so it's fully aligned.  Compute the latest split
   // point where we can add a 4-byte branch instruction, and then align to
   // LogAlign which is the largest possible alignment in the function.
-  unsigned LogAlign = MF->getLogAlignment();
+  unsigned LogAlign = Log2(MF->getAlignment());
   assert(LogAlign >= CPELogAlign && "Over-aligned constant pool entry");
   unsigned KnownBits = UserBBI.internalKnownBits();
   unsigned UPad = UnknownPadding(LogAlign, KnownBits);

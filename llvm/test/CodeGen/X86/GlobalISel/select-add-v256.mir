@@ -26,7 +26,7 @@
 ---
 name:            test_add_v32i8
 # ALL-LABEL: name:  test_add_v32i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # AVX2:            registers:
@@ -66,7 +66,7 @@ body:             |
 ---
 name:            test_add_v16i16
 # ALL-LABEL: name:  test_add_v16i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # AVX2:            registers:
@@ -106,7 +106,7 @@ body:             |
 ---
 name:            test_add_v8i32
 # ALL-LABEL: name:  test_add_v8i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # AVX2:            registers:
@@ -146,7 +146,7 @@ body:             |
 ---
 name:            test_add_v4i64
 # ALL-LABEL: name:  test_add_v4i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # AVX2:            registers:

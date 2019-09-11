@@ -51,7 +51,6 @@ static void eraseMetadataIfOutsideChunk(T &MDUser,
 
 /// Removes all the Named and Unnamed Metadata Nodes, as well as any debug
 /// functions that aren't inside the desired Chunks.
-/// @returns the Module stripped of out-of-chunk MDNodes
 static void extractMetadataFromModule(const std::vector<Chunk> &ChunksToKeep,
                                       Module *Program) {
   std::set<MDNode *> SeenNodes;

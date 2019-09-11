@@ -463,7 +463,7 @@
 ...
 ---
 name:            test_add_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -499,7 +499,7 @@ body:             |
 ...
 ---
 name:            test_add_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -535,7 +535,7 @@ body:             |
 ...
 ---
 name:            test_add_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -571,7 +571,7 @@ body:             |
 ...
 ---
 name:            test_add_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -607,7 +607,7 @@ body:             |
 ...
 ---
 name:            test_mul_gpr
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -656,7 +656,7 @@ body:             |
 ...
 ---
 name:            test_add_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -704,7 +704,7 @@ body:             |
 ...
 ---
 name:            test_add_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -752,7 +752,7 @@ body:             |
 ...
 ---
 name:            test_fsub_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -795,7 +795,7 @@ body:             |
 ...
 ---
 name:            test_fmul_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -838,7 +838,7 @@ body:             |
 ...
 ---
 name:            test_fdiv_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -881,7 +881,7 @@ body:             |
 ...
 ---
 name:            test_add_v4i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -917,7 +917,7 @@ body:             |
 ...
 ---
 name:            test_add_v4f32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -953,7 +953,7 @@ body:             |
 ...
 ---
 name:            test_load_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -982,7 +982,7 @@ body:             |
 ...
 ---
 name:            test_load_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1011,7 +1011,7 @@ body:             |
 ...
 ---
 name:            test_load_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1040,7 +1040,7 @@ body:             |
 ...
 ---
 name:            test_load_i64
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       true
 regBankSelected: false
@@ -1070,7 +1070,7 @@ body:             |
 ...
 ---
 name:            test_load_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1104,7 +1104,7 @@ body:             |
 ...
 ---
 name:            test_load_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1138,7 +1138,7 @@ body:             |
 ...
 ---
 name:            test_load_v4i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1167,7 +1167,7 @@ body:             |
 ...
 ---
 name:            test_store_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1199,7 +1199,7 @@ body:             |
 ...
 ---
 name:            test_store_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1231,7 +1231,7 @@ body:             |
 ...
 ---
 name:            test_store_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1270,7 +1270,7 @@ body:             |
 ...
 ---
 name:            test_store_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -1309,7 +1309,7 @@ body:             |
 ...
 ---
 name:            constInt_check
-alignment:       4
+alignment:       16
 legalized:       true
 registers:
   - { id: 0, class: _ }
@@ -1339,7 +1339,7 @@ body:             |
 ...
 ---
 name:            trunc_check
-alignment:       4
+alignment:       16
 legalized:       true
 registers:
   - { id: 0, class: _ }
@@ -1402,7 +1402,7 @@ body:             |
 ...
 ---
 name:            test_icmp_eq_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1443,7 +1443,7 @@ body:             |
 ...
 ---
 name:            test_icmp_eq_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1484,7 +1484,7 @@ body:             |
 ...
 ---
 name:            test_icmp_eq_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1519,7 +1519,7 @@ body:             |
 ...
 ---
 name:            test_icmp_eq_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1554,7 +1554,7 @@ body:             |
 ...
 ---
 name:            test_xor_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1584,7 +1584,7 @@ body:             |
 ...
 ---
 name:            test_or_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1614,7 +1614,7 @@ body:             |
 ...
 ---
 name:            test_and_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1644,7 +1644,7 @@ body:             |
 ...
 ---
 name:            test_and_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1674,7 +1674,7 @@ body:             |
 ...
 ---
 name:            test_global_ptrv
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1696,7 +1696,7 @@ body:             |
 ...
 ---
 name:            test_undef
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1722,7 +1722,7 @@ body:             |
 ...
 ---
 name:            test_undef2
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1758,7 +1758,7 @@ body:             |
 ...
 ---
 name:            test_undef3
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1784,7 +1784,7 @@ body:             |
 ...
 ---
 name:            test_undef4
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -1830,7 +1830,7 @@ body:             |
 ...
 ---
 name:            test_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 tracksRegLiveness: true
@@ -1910,7 +1910,7 @@ body:             |
 ...
 ---
 name:            test_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 tracksRegLiveness: true
@@ -1986,7 +1986,7 @@ body:             |
 ...
 ---
 name:            test_fpext
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 registers:
@@ -2020,7 +2020,7 @@ body:             |
 ...
 ---
 name:            test_fptrunc
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2077,7 +2077,7 @@ body: |
 ...
 ---
 name:            int32_to_float
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2111,7 +2111,7 @@ body:             |
 ...
 ---
 name:            int64_to_float
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2145,7 +2145,7 @@ body:             |
 ...
 ---
 name:            int32_to_double
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2179,7 +2179,7 @@ body:             |
 ...
 ---
 name:            int64_to_double
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2213,7 +2213,7 @@ body:             |
 ...
 ---
 name:            float_to_int8
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2251,7 +2251,7 @@ body:             |
 ...
 ---
 name:            float_to_int16
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2289,7 +2289,7 @@ body:             |
 ...
 ---
 name:            float_to_int32
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2323,7 +2323,7 @@ body:             |
 ...
 ---
 name:            float_to_int64
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2357,7 +2357,7 @@ body:             |
 ...
 ---
 name:            double_to_int8
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2395,7 +2395,7 @@ body:             |
 ...
 ---
 name:            double_to_int16
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2433,7 +2433,7 @@ body:             |
 ...
 ---
 name:            double_to_int32
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2467,7 +2467,7 @@ body:             |
 ...
 ---
 name:            double_to_int64
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2501,7 +2501,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_oeq
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2548,7 +2548,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ogt
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2595,7 +2595,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_oge
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2642,7 +2642,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_olt
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2689,7 +2689,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ole
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2736,7 +2736,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_one
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2783,7 +2783,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ord
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2830,7 +2830,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_uno
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2877,7 +2877,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ueq
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2924,7 +2924,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ugt
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -2971,7 +2971,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_uge
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3018,7 +3018,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ult
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3065,7 +3065,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ule
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3112,7 +3112,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_une
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3159,7 +3159,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_oeq
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3206,7 +3206,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ogt
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3253,7 +3253,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_oge
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3300,7 +3300,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_olt
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3347,7 +3347,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ole
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3394,7 +3394,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_one
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3441,7 +3441,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ord
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3488,7 +3488,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_uno
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3535,7 +3535,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ueq
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3582,7 +3582,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ugt
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3629,7 +3629,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_uge
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3676,7 +3676,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ult
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3723,7 +3723,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ule
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -3770,7 +3770,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_une
-alignment:       4
+alignment:       16
 legalized:       true
 tracksRegLiveness: true
 registers:

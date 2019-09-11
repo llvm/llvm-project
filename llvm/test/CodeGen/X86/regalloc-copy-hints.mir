@@ -15,7 +15,7 @@
 # CHECK: hints: $ebx $edi
 # CHECK-NOT: hints: $ebx $edi $ebx $edi
 name:            fun
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:       
   - { id: 0, class: gr32 }

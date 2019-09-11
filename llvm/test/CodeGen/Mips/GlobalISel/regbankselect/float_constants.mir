@@ -10,7 +10,7 @@
 ...
 ---
 name:            e_single_precision
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -30,7 +30,7 @@ body:             |
 ...
 ---
 name:            e_double_precision
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

@@ -10,7 +10,7 @@
 ...
 ---
 name:            _0xABCD0000
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -27,7 +27,7 @@ body:             |
 ...
 ---
 name:            _0x00008000
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -44,7 +44,7 @@ body:             |
 ...
 ---
 name:            _0xFFFFFFF6
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -61,7 +61,7 @@ body:             |
 ...
 ---
 name:            _0x0A0B0C0D
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

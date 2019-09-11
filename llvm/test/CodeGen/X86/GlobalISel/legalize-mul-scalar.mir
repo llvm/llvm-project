@@ -22,7 +22,7 @@
 ...
 ---
 name:            test_mul_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -52,7 +52,7 @@ body:             |
 ...
 ---
 name:            test_mul_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -78,7 +78,7 @@ body:             |
 ...
 ---
 name:            test_mul_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -104,7 +104,7 @@ body:             |
 ...
 ---
 name:            test_mul_i64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

@@ -54,7 +54,7 @@
 ---
 # CHECK-LABEL: name: f1
 name:            f1
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true

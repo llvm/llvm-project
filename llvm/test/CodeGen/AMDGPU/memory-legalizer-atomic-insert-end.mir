@@ -52,7 +52,7 @@
 # CHECK-NEXT:  BUFFER_WBINVL1_VOL
 
 name:            atomic_max_i32_noret
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

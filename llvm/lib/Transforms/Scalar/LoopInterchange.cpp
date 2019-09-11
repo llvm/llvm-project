@@ -410,8 +410,6 @@ public:
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
-  void splitInnerLoopLatch(Instruction *);
-  void splitInnerLoopHeader();
   bool adjustLoopLinks();
   void adjustLoopPreheaders();
   bool adjustLoopBranches();
@@ -1226,7 +1224,7 @@ bool LoopInterchangeTransform::transform() {
 
   if (InnerLoop->getSubLoops().empty()) {
     BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-    LLVM_DEBUG(dbgs() << "Calling Split Inner Loop\n");
+    LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
     PHINode *InductionPHI = getInductionVariable(InnerLoop, SE);
     if (!InductionPHI) {
       LLVM_DEBUG(dbgs() << "Failed to find the point to split loop latch \n");
@@ -1242,11 +1240,55 @@ bool LoopInterchangeTransform::transform() {
     if (&InductionPHI->getParent()->front() != InductionPHI)
       InductionPHI->moveBefore(&InductionPHI->getParent()->front());
 
-    // Split at the place were the induction variable is
-    // incremented/decremented.
-    // TODO: This splitting logic may not work always. Fix this.
-    splitInnerLoopLatch(InnerIndexVar);
-    LLVM_DEBUG(dbgs() << "splitInnerLoopLatch done\n");
+    // Create a new latch block for the inner loop. We split at the
+    // current latch's terminator and then move the condition and all
+    // operands that are not either loop-invariant or the induction PHI into the
+    // new latch block.
+    BasicBlock *NewLatch =
+        SplitBlock(InnerLoop->getLoopLatch(),
+                   InnerLoop->getLoopLatch()->getTerminator(), DT, LI);
+
+    SmallSetVector<Instruction *, 4> WorkList;
+    unsigned i = 0;
+    auto MoveInstructions = [&i, &WorkList, this, InductionPHI, NewLatch]() {
+      for (; i < WorkList.size(); i++) {
+        // Duplicate instruction and move it the new latch. Update uses that
+        // have been moved.
+        Instruction *NewI = WorkList[i]->clone();
+        NewI->insertBefore(NewLatch->getFirstNonPHI());
+        assert(!NewI->mayHaveSideEffects() &&
+               "Moving instructions with side-effects may change behavior of "
+               "the loop nest!");
+        for (auto UI = WorkList[i]->use_begin(), UE = WorkList[i]->use_end();
+             UI != UE;) {
+          Use &U = *UI++;
+          Instruction *UserI = cast<Instruction>(U.getUser());
+          if (!InnerLoop->contains(UserI->getParent()) ||
+              UserI->getParent() == NewLatch || UserI == InductionPHI)
+            U.set(NewI);
+        }
+        // Add operands of moved instruction to the worklist, except if they are
+        // outside the inner loop or are the induction PHI.
+        for (Value *Op : WorkList[i]->operands()) {
+          Instruction *OpI = dyn_cast<Instruction>(Op);
+          if (!OpI ||
+              this->LI->getLoopFor(OpI->getParent()) != this->InnerLoop ||
+              OpI == InductionPHI)
+            continue;
+          WorkList.insert(OpI);
+        }
+      }
+    };
+
+    // FIXME: Should we interchange when we have a constant condition?
+    Instruction *CondI = dyn_cast<Instruction>(
+        cast<BranchInst>(InnerLoop->getLoopLatch()->getTerminator())
+            ->getCondition());
+    if (CondI)
+      WorkList.insert(CondI);
+    MoveInstructions();
+    WorkList.insert(cast<Instruction>(InnerIndexVar));
+    MoveInstructions();
 
     // Splits the inner loops phi nodes out into a separate basic block.
     BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
@@ -1261,10 +1303,6 @@ bool LoopInterchangeTransform::transform() {
   }
 
   return true;
-}
-
-void LoopInterchangeTransform::splitInnerLoopLatch(Instruction *Inc) {
-  SplitBlock(InnerLoop->getLoopLatch(), Inc, DT, LI);
 }
 
 /// \brief Move all instructions except the terminator from FromBB right before

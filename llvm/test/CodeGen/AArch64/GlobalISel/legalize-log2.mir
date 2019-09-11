@@ -4,7 +4,7 @@
 ...
 ---
 name:            test_v4f16.log2
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -57,7 +57,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.log2
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -91,7 +91,7 @@ body:             |
 ...
 ---
 name:            test_v2f32.log2
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -125,7 +125,7 @@ body:             |
 ...
 ---
 name:            test_v4f32.log2
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -170,7 +170,7 @@ body:             |
 ...
 ---
 name:            test_v2f64.log2
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -204,7 +204,7 @@ body:             |
 ...
 ---
 name:            test_log2_half
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

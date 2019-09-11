@@ -57,7 +57,7 @@
 ...
 ---
 name:            '$S4main1fyyF'
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

@@ -82,7 +82,7 @@
 ...
 ---
 name:            _ZN11xercesc_2_79HashXMLCh6equalsEPKvS2_
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

@@ -54,7 +54,7 @@
 ...
 ---
 name:            float_to_int8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -85,7 +85,7 @@ body:             |
 ...
 ---
 name:            float_to_int16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -116,7 +116,7 @@ body:             |
 ...
 ---
 name:            float_to_int32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -144,7 +144,7 @@ body:             |
 ...
 ---
 name:            float_to_int64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -172,7 +172,7 @@ body:             |
 ...
 ---
 name:            double_to_int8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -203,7 +203,7 @@ body:             |
 ...
 ---
 name:            double_to_int16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -234,7 +234,7 @@ body:             |
 ...
 ---
 name:            double_to_int32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -262,7 +262,7 @@ body:             |
 ...
 ---
 name:            double_to_int64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

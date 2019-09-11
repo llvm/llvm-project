@@ -32,7 +32,7 @@
 ...
 ---
 name:            test
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 frameInfo:
   stackSize:       40

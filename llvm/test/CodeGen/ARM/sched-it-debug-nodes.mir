@@ -88,7 +88,7 @@
 ...
 ---
 name:            f
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 tracksRegLiveness: true
 liveins:

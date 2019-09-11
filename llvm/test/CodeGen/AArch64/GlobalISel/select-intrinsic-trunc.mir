@@ -4,7 +4,7 @@
 ...
 ---
 name:            test_f64.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -27,7 +27,7 @@ body:             |
 ...
 ---
 name:            test_f32.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -50,7 +50,7 @@ body:             |
 ...
 ---
 name:            test_f16.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -75,7 +75,7 @@ body:             |
 ...
 ---
 name:            test_v4f16.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -100,7 +100,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -125,7 +125,7 @@ body:             |
 ...
 ---
 name:            test_v2f32.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -150,7 +150,7 @@ body:             |
 ...
 ---
 name:            test_v4f32.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -175,7 +175,7 @@ body:             |
 ...
 ---
 name:            test_v2f64.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

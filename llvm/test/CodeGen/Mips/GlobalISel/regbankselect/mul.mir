@@ -8,7 +8,7 @@
 ...
 ---
 name:            mul_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            umul_with_overflow
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

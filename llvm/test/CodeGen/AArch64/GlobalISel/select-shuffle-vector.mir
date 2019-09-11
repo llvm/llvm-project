@@ -30,7 +30,7 @@
 ...
 ---
 name:            shuffle_v2f32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            shuffle_v4i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -99,7 +99,7 @@ body:             |
 ...
 ---
 name:            shuffle_tbl_v4i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -130,7 +130,7 @@ body:             |
 ...
 ---
 name:            shuffle_v2i64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

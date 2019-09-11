@@ -11,7 +11,7 @@
 # PR33677
 ---
 name:            main
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 # CHECK: $r0l = COPY renamable $r1l
 # Although R0L partially redefines R0Q, it must not mark R0Q as kill

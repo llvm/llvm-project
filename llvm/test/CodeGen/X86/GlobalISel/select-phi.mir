@@ -102,7 +102,7 @@
 ...
 ---
 name:            test_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -161,7 +161,7 @@ body:             |
 ...
 ---
 name:            test_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -220,7 +220,7 @@ body:             |
 ...
 ---
 name:            test_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -283,7 +283,7 @@ body:             |
 ...
 ---
 name:            test_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -346,7 +346,7 @@ body:             |
 ...
 ---
 name:            test_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -411,7 +411,7 @@ body:             |
 ...
 ---
 name:            test_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

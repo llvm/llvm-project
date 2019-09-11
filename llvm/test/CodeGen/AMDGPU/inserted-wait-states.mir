@@ -514,7 +514,7 @@ body: |
 ...
 ---
 name:            mov_fed_hazard_crash_on_dbg_value
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

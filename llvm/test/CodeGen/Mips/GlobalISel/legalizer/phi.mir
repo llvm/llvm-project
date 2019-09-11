@@ -110,7 +110,7 @@
 ...
 ---
 name:            phi_i1
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_i1
@@ -163,7 +163,7 @@ body:             |
 ...
 ---
 name:            phi_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_i8
@@ -216,7 +216,7 @@ body:             |
 ...
 ---
 name:            phi_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_i16
@@ -269,7 +269,7 @@ body:             |
 ...
 ---
 name:            phi_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_i32
@@ -316,7 +316,7 @@ body:             |
 ...
 ---
 name:            phi_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 20, size: 4, alignment: 4, isImmutable: true }
@@ -382,7 +382,7 @@ body:             |
 ...
 ---
 name:            phi_float
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: phi_float
@@ -429,7 +429,7 @@ body:             |
 ...
 ---
 name:            phi_double
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, isImmutable: true }

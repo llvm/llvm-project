@@ -13,7 +13,7 @@
 ...
 ---
 name:            ld_zext_i24
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |

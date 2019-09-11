@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -verify-machineinstrs -O0 -run-pass=regbankselect %s -o - | FileCheck %s
 
 name:            v2s32_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -22,7 +22,7 @@ body:             |
 ...
 ---
 name:            v4s32_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -49,7 +49,7 @@ body:             |
 ...
 ---
 name:            v2s64_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 registers:
@@ -76,7 +76,7 @@ body:             |
 ...
 ---
 name:            v4s16_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 registers:

@@ -3,7 +3,7 @@
 ...
 ---
 name:            legal_v4s32_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -36,7 +36,7 @@ body:             |
 ...
 ---
 name:            legal_v8s16_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

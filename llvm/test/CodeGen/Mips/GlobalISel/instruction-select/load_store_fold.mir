@@ -14,7 +14,7 @@
 ...
 ---
 name:            _16_bit_positive_offset
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -38,7 +38,7 @@ body:             |
 ...
 ---
 name:            _16_bit_negative_offset
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -63,7 +63,7 @@ body:             |
 ...
 ---
 name:            _large_positive_offset
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -90,7 +90,7 @@ body:             |
 ...
 ---
 name:            _large_negative_offset
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -117,7 +117,7 @@ body:             |
 ...
 ---
 name:            fold_f32_load
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -141,7 +141,7 @@ body:             |
 ...
 ---
 name:            fold_f64_store
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -165,7 +165,7 @@ body:             |
 ...
 ---
 name:            fold_i16_load
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -189,7 +189,7 @@ body:             |
 ...
 ---
 name:            fold_i32_store
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -27,7 +27,7 @@
 ...
 ---
 name:            test_small_memcpy
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -59,7 +59,7 @@ body:             |
 ...
 ---
 name:            test_large_memcpy
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

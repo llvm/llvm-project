@@ -22,7 +22,7 @@
   define void @encode_one_macroblock() { ret void }
 ---
 name:            encode_one_macroblock
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:       
   - { id: 0, class: addr64bit }

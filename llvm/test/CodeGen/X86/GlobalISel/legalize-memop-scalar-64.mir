@@ -3,7 +3,7 @@
 
 ---
 name:            test_memop_s8tos32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 body:             |
@@ -38,7 +38,7 @@ body:             |
 ...
 ---
 name:            test_memop_s64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 liveins:

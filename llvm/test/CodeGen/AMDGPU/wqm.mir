@@ -7,7 +7,7 @@
 #CHECK: S_CMP_LT_I32
 #CHECK: S_CSELECT_B32
 name:            test_wwm_scc
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

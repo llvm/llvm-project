@@ -16,7 +16,7 @@
 ...
 ---
 name:            and_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -39,7 +39,7 @@ body:             |
 ...
 ---
 name:            or_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -62,7 +62,7 @@ body:             |
 ...
 ---
 name:            xor_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -85,7 +85,7 @@ body:             |
 ...
 ---
 name:            shl
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -108,7 +108,7 @@ body:             |
 ...
 ---
 name:            ashr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -131,7 +131,7 @@ body:             |
 ...
 ---
 name:            lshr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -154,7 +154,7 @@ body:             |
 ...
 ---
 name:            shlv
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -177,7 +177,7 @@ body:             |
 ...
 ---
 name:            ashrv
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -200,7 +200,7 @@ body:             |
 ...
 ---
 name:            lshrv
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

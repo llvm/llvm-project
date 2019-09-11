@@ -137,11 +137,11 @@ typedef SizeClassMap<3, 5, 8, 17, 8, 10> DefaultSizeClassMap;
 
 // TODO(kostyak): further tune class maps for Android & Fuchsia.
 #if SCUDO_WORDSIZE == 64U
-typedef SizeClassMap<3, 5, 8, 15, 8, 10> SvelteSizeClassMap;
+typedef SizeClassMap<4, 4, 8, 14, 4, 10> SvelteSizeClassMap;
 typedef SizeClassMap<3, 5, 8, 17, 14, 14> AndroidSizeClassMap;
 #else
-typedef SizeClassMap<3, 4, 7, 15, 8, 10> SvelteSizeClassMap;
-typedef SizeClassMap<3, 4, 7, 17, 14, 14> AndroidSizeClassMap;
+typedef SizeClassMap<4, 3, 7, 14, 5, 10> SvelteSizeClassMap;
+typedef SizeClassMap<3, 5, 8, 17, 14, 14> AndroidSizeClassMap;
 #endif
 
 } // namespace scudo

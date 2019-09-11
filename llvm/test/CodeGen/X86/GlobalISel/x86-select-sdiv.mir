@@ -24,7 +24,7 @@
 ...
 ---
 name:            test_sdiv_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -60,7 +60,7 @@ body:             |
 ...
 ---
 name:            test_sdiv_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -97,7 +97,7 @@ body:             |
 ...
 ---
 name:            test_sdiv_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

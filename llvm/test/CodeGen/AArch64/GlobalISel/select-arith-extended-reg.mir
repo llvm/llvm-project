@@ -3,7 +3,7 @@
 
 ---
 name:            add_sext_s32_to_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -27,7 +27,7 @@ body:             |
 ...
 ---
 name:            add_and_s32_to_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -54,7 +54,7 @@ body:             |
 ...
 ---
 name:            add_sext_s16_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            add_zext_s16_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -104,7 +104,7 @@ body:             |
 ...
 ---
 name:            add_anyext_s16_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -129,7 +129,7 @@ body:             |
 ...
 ---
 name:            add_and_s16_to_s32_uxtb
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -154,7 +154,7 @@ body:             |
 ...
 ---
 name:            add_and_s16_to_s32_uxth
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -179,7 +179,7 @@ body:             |
 ...
 ---
 name:            add_sext_s8_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -204,7 +204,7 @@ body:             |
 ...
 ---
 name:            add_zext_s8_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -229,7 +229,7 @@ body:             |
 ...
 ---
 name:            add_anyext_s8_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -254,7 +254,7 @@ body:             |
 ...
 ---
 name:            add_sext_with_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -281,7 +281,7 @@ body:             |
 ...
 ---
 name:            add_and_with_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -308,7 +308,7 @@ body:             |
 ...
 ---
 name:            dont_fold_invalid_mask
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -336,7 +336,7 @@ body:             |
 ...
 ---
 name:            dont_fold_invalid_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -364,7 +364,7 @@ body:             |
 ...
 ---
 name:            sub_sext_s32_to_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -388,7 +388,7 @@ body:             |
 ...
 ---
 name:            sub_sext_s16_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -413,7 +413,7 @@ body:             |
 ...
 ---
 name:            sub_zext_s16_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -438,7 +438,7 @@ body:             |
 ...
 ---
 name:            sub_anyext_s16_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -463,7 +463,7 @@ body:             |
 ...
 ---
 name:            sub_and_s16_to_s32_uxtb
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -488,7 +488,7 @@ body:             |
 ...
 ---
 name:            sub_and_s16_to_s32_uxth
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -512,7 +512,7 @@ body:             |
     RET_ReallyLR implicit $w3
 ---
 name:            sub_sext_s8_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -530,7 +530,7 @@ body:             |
 ...
 ---
 name:            sub_zext_s8_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -555,7 +555,7 @@ body:             |
 ...
 ---
 name:            sub_anyext_s8_to_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -581,7 +581,7 @@ body:             |
 ...
 ---
 name:            sub_sext_with_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -608,7 +608,7 @@ body:             |
 ...
 ---
 name:            sub_and_with_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
