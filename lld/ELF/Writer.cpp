@@ -2218,7 +2218,6 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       //
       // TODO Enable this technique on all targets.
       bool enable = config->emachine != EM_HEXAGON &&
-                    config->emachine != EM_MIPS &&
                     config->emachine != EM_X86_64;
 
       if (!enable ||

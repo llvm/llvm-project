@@ -1,4 +1,5 @@
 ; RUN: llc -o - %s | FileCheck %s
+; RUN: llc -global-isel -verify-machineinstrs -o - %s | FileCheck %s
 target triple="aarch64--"
 
 declare void @somefunc()

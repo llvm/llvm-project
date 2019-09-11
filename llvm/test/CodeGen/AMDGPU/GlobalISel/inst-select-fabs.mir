@@ -219,9 +219,13 @@ body: |
     liveins: $vgpr0_vgpr1
     ; GCN-LABEL: name: fabs_s64_vv
     ; GCN: liveins: $vgpr0_vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GCN: [[FABS:%[0-9]+]]:vreg_64(s64) = G_FABS [[COPY]]
-    ; GCN: $vgpr0_vgpr1 = COPY [[FABS]](s64)
+    ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2147483647, implicit $exec
+    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; GCN: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
+    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FABS %0
     $vgpr0_vgpr1 = COPY %1

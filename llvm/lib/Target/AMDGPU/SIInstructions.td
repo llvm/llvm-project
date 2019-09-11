@@ -1136,18 +1136,28 @@ def : GCNPat <
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
-} // End let AddedComplexity = 1
+// FIXME: The implicit-def of scc from S_[X]OR_B32 is mishandled
+ // def : GCNPat <
+//   (fneg (f64 SReg_64:$src)),
+//   (REG_SEQUENCE SReg_64,
+//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+//     sub0,
+//     (S_XOR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+//                (i32 (S_MOV_B32 (i32 0x80000000)))),
+//     sub1)
+// >;
 
-// FIXME: Should use S_OR_B32
-def : GCNPat <
-  (fneg (fabs f64:$src)),
-  (REG_SEQUENCE VReg_64,
-    (i32 (EXTRACT_SUBREG f64:$src, sub0)),
-    sub0,
-    (V_OR_B32_e32 (i32 (EXTRACT_SUBREG f64:$src, sub1)),
-                  (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
-    sub1)
->;
+// def : GCNPat <
+//   (fneg (fabs (f64 SReg_64:$src))),
+//   (REG_SEQUENCE SReg_64,
+//     (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+//     sub0,
+//     (S_OR_B32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub1)),
+//               (S_MOV_B32 (i32 0x80000000))), // Set sign bit.
+//     sub1)
+// >;
+
+} // End let AddedComplexity = 1
 
 def : GCNPat <
   (fabs (f32 VGPR_32:$src)),
@@ -1189,13 +1199,25 @@ def : GCNPat <
      sub1)
 >;
 
+// TODO: Use SGPR for constant
 def : GCNPat <
-  (fneg f64:$src),
+  (fneg (f64 VReg_64:$src)),
   (REG_SEQUENCE VReg_64,
-    (i32 (EXTRACT_SUBREG f64:$src, sub0)),
+    (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
     sub0,
-    (V_XOR_B32_e32 (i32 (EXTRACT_SUBREG f64:$src, sub1)),
+    (V_XOR_B32_e32 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
                    (i32 (V_MOV_B32_e32 (i32 0x80000000)))),
+    sub1)
+>;
+
+// TODO: Use SGPR for constant
+def : GCNPat <
+  (fneg (fabs (f64 VReg_64:$src))),
+  (REG_SEQUENCE VReg_64,
+    (i32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+    sub0,
+    (V_OR_B32_e32 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
+                  (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
     sub1)
 >;
 

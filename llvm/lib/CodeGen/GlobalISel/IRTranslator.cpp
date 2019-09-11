@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -1568,6 +1569,13 @@ bool IRTranslator::translateCallSite(const ImmutableCallSite &CS,
       CLI->lowerCall(MIRBuilder, CS, Res, Args, SwiftErrorVReg,
                      [&]() { return getOrCreateVReg(*CS.getCalledValue()); });
 
+  // Check if we just inserted a tail call.
+  if (Success) {
+    assert(!HasTailCall && "Can't tail call return twice from block?");
+    const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+    HasTailCall = TII->isTailCall(*std::prev(MIRBuilder.getInsertPt()));
+  }
+
   return Success;
 }
 
@@ -2276,8 +2284,15 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       // Set the insertion point of all the following translations to
       // the end of this basic block.
       CurBuilder->setMBB(MBB);
-
+      HasTailCall = false;
       for (const Instruction &Inst : *BB) {
+        // If we translated a tail call in the last step, then we know
+        // everything after the call is either a return, or something that is
+        // handled by the call itself. (E.g. a lifetime marker or assume
+        // intrinsic.) In this case, we should stop translating the block and
+        // move on.
+        if (HasTailCall)
+          break;
 #ifndef NDEBUG
         Verifier.setCurrentInst(&Inst);
 #endif // ifndef NDEBUG

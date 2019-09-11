@@ -250,26 +250,19 @@ static void FindInterveningFrames(Function &begin, Function &end,
            begin.GetDisplayName(), end.GetDisplayName(), return_pc);
 
   // Find a non-tail calling edge with the correct return PC.
-  auto first_level_edges = begin.GetCallEdges();
   if (log)
-    for (const CallEdge &edge : first_level_edges)
+    for (const CallEdge &edge : begin.GetCallEdges())
       LLDB_LOG(log, "FindInterveningFrames: found call with retn-PC = {0:x}",
                edge.GetReturnPCAddress(begin, target));
-  auto first_edge_it = std::lower_bound(
-      first_level_edges.begin(), first_level_edges.end(), return_pc,
-      [&](const CallEdge &edge, addr_t target_pc) {
-        return edge.GetReturnPCAddress(begin, target) < target_pc;
-      });
-  if (first_edge_it == first_level_edges.end() ||
-      first_edge_it->GetReturnPCAddress(begin, target) != return_pc) {
+  CallEdge *first_edge = begin.GetCallEdgeForReturnAddress(return_pc, target);
+  if (!first_edge) {
     LLDB_LOG(log, "No call edge outgoing from {0} with retn-PC == {1:x}",
              begin.GetDisplayName(), return_pc);
     return;
   }
-  CallEdge &first_edge = const_cast<CallEdge &>(*first_edge_it);
 
   // The first callee may not be resolved, or there may be nothing to fill in.
-  Function *first_callee = first_edge.GetCallee(images);
+  Function *first_callee = first_edge->GetCallee(images);
   if (!first_callee) {
     LLDB_LOG(log, "Could not resolve callee");
     return;

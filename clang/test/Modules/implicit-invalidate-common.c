@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/implicit-invalidate-common
 // RUN: cp -r %S/Inputs/implicit-invalidate-common %t/

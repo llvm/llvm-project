@@ -1,7 +1,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -E DIR/header_stat_before_open.m -iframework Inputs/frameworks",
-  "file": "DIR/header_stat_before_open.m"
+  "command": "clang -E DIR/header_stat_before_open_input.m -iframework Inputs/frameworks",
+  "file": "DIR/header_stat_before_open_input.m"
 }
 ]

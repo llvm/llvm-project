@@ -19,6 +19,7 @@ add_llvm_tool(llvm-reduce
   deltas/Delta.cpp
   deltas/ReduceFunctions.cpp
   deltas/ReduceGlobalVars.cpp
+  deltas/ReduceMetadata.cpp
 
   DEPENDS
   intrinsics_gen

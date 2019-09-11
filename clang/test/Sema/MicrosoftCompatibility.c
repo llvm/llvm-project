@@ -1,10 +1,18 @@
-// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-compatibility -triple i686-pc-win32
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-compatibility -DMSVCCOMPAT -triple i686-pc-win32
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-extensions -triple i686-pc-win32
 
+#ifdef MSVCCOMPAT
 enum ENUM1; // expected-warning {{forward references to 'enum' types are a Microsoft extension}}
 enum ENUM1 var1 = 3;
 enum ENUM1* var2 = 0;
+#else
+enum ENUM1; // expected-note {{forward declaration of}}
+enum ENUM1 var1 = 3; // expected-error {{variable has incomplete type 'enum ENUM1'}}
+enum ENUM1* var2 = 0;
+#endif
 
 
+// FIXME: The rest of this seems to be controlled by -fms-extensions. Move it.
 enum ENUM2 {
   ENUM2_a = (enum ENUM2) 4,
   ENUM2_b = 0x9FFFFFFF, // expected-warning {{enumerator value is not representable in the underlying type 'int'}}
@@ -22,4 +30,8 @@ struct __declspec(appdomain) S3 {}; /* expected-warning {{__declspec attribute '
 
 __declspec(__noreturn__) void f7(void); /* expected-warning {{__declspec attribute '__noreturn__' is not supported}} */
 
+#ifdef MSVCCOMPAT
 size_t x;
+#else
+size_t x; // expected-error {{unknown type name 'size_t'}}
+#endif
