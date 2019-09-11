@@ -25,15 +25,15 @@ public:
   DPURTE(const Driver &D, const llvm::Triple &Triple,
          const llvm::opt::ArgList &Args)
       : Generic_ELF(D, Triple, Args) {
-    PathToStdlibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/stdlib");
-    PathToSyslibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/syslib");
-    PathToLinkScript = GetUpmemSdkPath("/usr/share/upmem/include/link/dpu.lds");
-    PathToRtLibDirectory = GetUpmemSdkPath("/usr/share/upmem/include/built-in");
+    PathToStdlibIncludes = GetUpmemSdkPath("/share/upmem/include/stdlib");
+    PathToSyslibIncludes = GetUpmemSdkPath("/share/upmem/include/syslib");
+    PathToLinkScript = GetUpmemSdkPath("/share/upmem/include/link/dpu.lds");
+    PathToRtLibDirectory = GetUpmemSdkPath("/share/upmem/include/built-in");
     RtLibName = Args.hasArg(options::OPT_pg) ? "rt_p" : "rt";
     PathToRtLibBc =
         Args.hasArg(options::OPT_pg)
-            ? GetUpmemSdkPath("/usr/share/upmem/include/built-in/librtlto_p.a")
-            : GetUpmemSdkPath("/usr/share/upmem/include/built-in/librtlto.a");
+            ? GetUpmemSdkPath("/share/upmem/include/built-in/librtlto_p.a")
+            : GetUpmemSdkPath("/share/upmem/include/built-in/librtlto.a");
   }
 
   ~DPURTE() override {

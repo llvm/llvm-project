@@ -45,7 +45,7 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
   if (!SysRoot.empty()) {
     PathToSDK = strdup(SysRoot.c_str());
   } else if (getVFS().exists(UpmemDir)) {
-    PathToSDK = strdup((InstalledDir + "/../..").c_str());
+    PathToSDK = strdup((InstalledDir + "/..").c_str());
   } else {
     PathToSDK = strdup(Path);
   }
