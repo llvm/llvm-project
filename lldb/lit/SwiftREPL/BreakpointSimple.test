@@ -1,8 +1,5 @@
 // Test that we can set breakpoints in the REPL.
 
-// REQUIRES: rdar51709992
-// swift-lldb: DISABLED because this test failed on the package bot
-
 // RUN: %lldb --repl < %s | FileCheck %s
 
 func foo() -> Int {
