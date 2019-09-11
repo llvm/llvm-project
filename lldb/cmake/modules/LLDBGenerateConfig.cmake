@@ -21,7 +21,7 @@ check_cxx_symbol_exists(__NR_process_vm_readv "sys/syscall.h" HAVE_NR_PROCESS_VM
 
 check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
 
-check_library_exists(dpu-2019.4.0 dpu_get_runtime_context "${UPMEM_API_LIB}" HAVE_LIBDPU)
+check_library_exists(dpu dpu_get_runtime_context "${UPMEM_API_LIB}" HAVE_LIBDPU)
 
 # These checks exist in LLVM's configuration, so I want to match the LLVM names
 # so that the check isn't duplicated, but we translate them into the LLDB names

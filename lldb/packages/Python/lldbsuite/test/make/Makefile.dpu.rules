@@ -40,7 +40,7 @@ CFLAGS ?= -g -O0
 
 HOST_OBJECT =
 HOST_EXE =
-HOST_LDFLAGS = -L$(UPMEM_HOME)/usr/lib64 -L$(UPMEM_HOME)/usr/lib -ldpu
+HOST_LDFLAGS = -L$(UPMEM_HOME)/lib64 -L$(UPMEM_HOME)/lib -ldpu
 HOST_CFLAGS ?= -g -O2
 
 #----------------------------------------------------------------------
@@ -62,13 +62,13 @@ endif
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 $(EXE) : $(OBJECTS) $(HOST_EXE)
-	dpu-upmem-dpurte-clang $(OBJECTS) $(LDFLAGS) -o $@
+	${UPMEM_HOME}/bin/dpu-upmem-dpurte-clang $(OBJECTS) $(LDFLAGS) -o $@
 
 %.o: %.c
-	dpu-upmem-dpurte-clang $(CFLAGS) $< -c -o $@
+	${UPMEM_HOME}/bin/dpu-upmem-dpurte-clang $(CFLAGS) $< -c -o $@
 
 $(HOST_EXE) : $(HOST_OBJECTS)
 	gcc $^ $(HOST_LDFLAGS) -o $@
 
 %.o.host: %.c
-	gcc -DDPU_EXE="\"$(CURDIR)/$(EXE)\"" $(HOST_CFLAGS) -I$(UPMEM_HOME)/usr/share/upmem/include/host/ $^ -c -o $@
+	gcc -DDPU_EXE="\"$(CURDIR)/$(EXE)\"" $(HOST_CFLAGS) -I$(UPMEM_HOME)/include/dpu $^ -c -o $@
