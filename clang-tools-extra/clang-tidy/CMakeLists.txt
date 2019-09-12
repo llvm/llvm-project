@@ -16,6 +16,7 @@ add_clang_library(clangTidy
   ClangSACheckers
 
   LINK_LIBS
+  clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
