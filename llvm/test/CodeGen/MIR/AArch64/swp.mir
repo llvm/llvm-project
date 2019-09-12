@@ -11,7 +11,7 @@
 ...
 ---
 name:            swp
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common }

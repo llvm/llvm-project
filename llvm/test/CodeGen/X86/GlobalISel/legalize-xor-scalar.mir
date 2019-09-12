@@ -30,7 +30,7 @@
 ...
 ---
 name:            test_xor_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -55,7 +55,7 @@ body:             |
 ...
 ---
 name:            test_xor_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -80,7 +80,7 @@ body:             |
 ...
 ---
 name:            test_xor_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -105,7 +105,7 @@ body:             |
 ...
 ---
 name:            test_xor_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -130,7 +130,7 @@ body:             |
 ...
 ---
 name:            test_xor_i64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

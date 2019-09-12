@@ -116,7 +116,7 @@
 ...
 ---
 name:            compiler_pop_stack
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
@@ -174,7 +174,7 @@ body:             |
 ...
 ---
 name:            f
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }

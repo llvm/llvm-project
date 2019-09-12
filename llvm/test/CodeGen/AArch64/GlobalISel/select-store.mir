@@ -448,7 +448,7 @@ body:             |
 ...
 ---
 name:            store_4xi16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -474,7 +474,7 @@ body:             |
 ...
 ---
 name:            store_4xi32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -500,7 +500,7 @@ body:             |
 ...
 ---
 name:            store_8xi16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -526,7 +526,7 @@ body:             |
 ...
 ---
 name:            store_16xi8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

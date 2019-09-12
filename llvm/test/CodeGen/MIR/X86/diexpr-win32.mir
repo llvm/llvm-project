@@ -151,7 +151,7 @@
 ...
 ---
 name:            fun
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -209,7 +209,7 @@ body:             |
 ...
 ---
 name:            len
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

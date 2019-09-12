@@ -81,21 +81,20 @@ FunctionPass *llvm::createPPCBranchSelectionPass() {
 /// original Offset.
 unsigned PPCBSel::GetAlignmentAdjustment(MachineBasicBlock &MBB,
                                          unsigned Offset) {
-  unsigned LogAlign = MBB.getLogAlignment();
-  if (!LogAlign)
+  const llvm::Align Align = MBB.getAlignment();
+  if (Align == 1)
     return 0;
 
-  unsigned AlignAmt = 1 << LogAlign;
-  unsigned ParentLogAlign = MBB.getParent()->getLogAlignment();
+  const llvm::Align ParentAlign = MBB.getParent()->getAlignment();
 
-  if (LogAlign <= ParentLogAlign)
-    return OffsetToAlignment(Offset, AlignAmt);
+  if (Align <= ParentAlign)
+    return OffsetToAlignment(Offset, Align.value());
 
   // The alignment of this MBB is larger than the function's alignment, so we
   // can't tell whether or not it will insert nops. Assume that it will.
   if (FirstImpreciseBlock < 0)
     FirstImpreciseBlock = MBB.getNumber();
-  return AlignAmt + OffsetToAlignment(Offset, AlignAmt);
+  return Align.value() + OffsetToAlignment(Offset, Align.value());
 }
 
 /// We need to be careful about the offset of the first block in the function

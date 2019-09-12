@@ -10,7 +10,7 @@
 ...
 ---
 name:            main
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

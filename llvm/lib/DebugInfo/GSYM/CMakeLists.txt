@@ -2,6 +2,7 @@ add_llvm_library(LLVMDebugInfoGSYM
   FileWriter.cpp
   FunctionInfo.cpp
   InlineInfo.cpp
+  LineTable.cpp
   Range.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -63,7 +63,7 @@ void ARMBasicBlockUtils::computeBlockSize(MachineBasicBlock *MBB) {
   // tBR_JTr contains a .align 2 directive.
   if (!MBB->empty() && MBB->back().getOpcode() == ARM::tBR_JTr) {
     BBI.PostAlign = 2;
-    MBB->getParent()->ensureLogAlignment(2);
+    MBB->getParent()->ensureAlignment(llvm::Align(4));
   }
 }
 

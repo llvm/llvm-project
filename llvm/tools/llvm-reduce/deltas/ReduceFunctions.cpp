@@ -14,6 +14,7 @@
 
 #include "ReduceFunctions.h"
 #include "Delta.h"
+#include "llvm/ADT/SetVector.h"
 #include <set>
 
 using namespace llvm;
@@ -35,13 +36,13 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
 
   // Delete out-of-chunk functions, and replace their calls with undef
   std::vector<Function *> FuncsToRemove;
-  std::vector<CallInst *> CallsToRemove;
+  SetVector<CallInst *> CallsToRemove;
   for (auto &F : *Program)
     if (!FuncsToKeep.count(&F)) {
       for (auto U : F.users())
         if (auto *Call = dyn_cast<CallInst>(U)) {
           Call->replaceAllUsesWith(UndefValue::get(Call->getType()));
-          CallsToRemove.push_back(Call);
+          CallsToRemove.insert(Call);
         }
       F.replaceAllUsesWith(UndefValue::get(F.getType()));
       FuncsToRemove.push_back(&F);

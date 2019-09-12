@@ -89,7 +89,7 @@
 ...
 ---
 name:            f0
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
 liveins:

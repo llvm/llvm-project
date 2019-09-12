@@ -64,19 +64,18 @@ class BranchRelaxation : public MachineFunctionPass {
     /// Compute the offset immediately following this block. \p MBB is the next
     /// block.
     unsigned postOffset(const MachineBasicBlock &MBB) const {
-      unsigned PO = Offset + Size;
-      unsigned LogAlign = MBB.getLogAlignment();
-      if (LogAlign == 0)
+      const unsigned PO = Offset + Size;
+      const llvm::Align Align = MBB.getAlignment();
+      if (Align == 1)
         return PO;
 
-      unsigned AlignAmt = 1 << LogAlign;
-      unsigned ParentLogAlign = MBB.getParent()->getLogAlignment();
-      if (LogAlign <= ParentLogAlign)
-        return PO + OffsetToAlignment(PO, AlignAmt);
+      const llvm::Align ParentAlign = MBB.getParent()->getAlignment();
+      if (Align <= ParentAlign)
+        return PO + OffsetToAlignment(PO, Align.value());
 
       // The alignment of this MBB is larger than the function's alignment, so we
       // can't tell whether or not it will insert nops. Assume that it will.
-      return PO + AlignAmt + OffsetToAlignment(PO, AlignAmt);
+      return PO + Align.value() + OffsetToAlignment(PO, Align.value());
     }
   };
 

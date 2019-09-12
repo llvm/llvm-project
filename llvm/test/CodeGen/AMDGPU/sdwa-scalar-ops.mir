@@ -91,7 +91,7 @@
 ...
 ---
 name:            sdwa_imm_operand
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -252,7 +252,7 @@ body:             |
 ...
 ---
 name:            sdwa_sgpr_operand
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

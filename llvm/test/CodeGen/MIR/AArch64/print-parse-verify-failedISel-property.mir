@@ -35,7 +35,7 @@
 # FALLBACK-LABEL: name: test
 # FALLBACK-NOT: failedISel
 name:            test
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 failedISel:      true

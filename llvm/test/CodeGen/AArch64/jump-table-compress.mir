@@ -7,7 +7,7 @@
 ...
 ---
 name:            test_jumptable
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

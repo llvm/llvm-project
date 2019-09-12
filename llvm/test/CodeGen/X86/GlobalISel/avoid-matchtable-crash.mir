@@ -9,7 +9,7 @@
 ...
 ---
 name:            test_check_type
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

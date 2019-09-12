@@ -25,6 +25,7 @@ static_library("Analysis") {
     "ExprMutationAnalyzer.cpp",
     "LiveVariables.cpp",
     "ObjCNoReturn.cpp",
+    "PathDiagnostic.cpp",
     "PostOrderCFGView.cpp",
     "ProgramPoint.cpp",
     "ReachableCode.cpp",

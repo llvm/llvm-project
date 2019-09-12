@@ -52,50 +52,6 @@ define i32 @test_nonvoid_ret() {
   ret i32 %call
 }
 
-; Don't want to handle swifterror at all right now, since lowerCall will
-; insert a COPY after the call right now.
-; TODO: Support this.
-%swift_error = type {i64, i8}
-define float @swifterror(%swift_error** swifterror %ptr) {
-  ; COMMON-LABEL: name: swifterror
-  ; COMMON: bb.1 (%ir-block.0):
-  ; COMMON:   liveins: $x21
-  ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x21
-  ; COMMON:   [[COPY1:%[0-9]+]]:gpr64all = COPY [[COPY]](p0)
-  ; COMMON:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY1]]
-  ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   $x21 = COPY [[COPY2]](p0)
-  ; COMMON:   BL @swifterror, csr_aarch64_aapcs_swifterror, implicit-def $lr, implicit $sp, implicit $x21, implicit-def $s0, implicit-def $x21
-  ; COMMON:   [[COPY3:%[0-9]+]]:_(s32) = COPY $s0
-  ; COMMON:   [[COPY4:%[0-9]+]]:gpr64all = COPY $x21
-  ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   $s0 = COPY [[COPY3]](s32)
-  ; COMMON:   $x21 = COPY [[COPY4]]
-  ; COMMON:   RET_ReallyLR implicit $s0, implicit $x21
-  %call = tail call float @swifterror(%swift_error** swifterror %ptr)
-  ret float %call
-}
-
-define swiftcc float @swifterror_swiftcc(%swift_error** swifterror %ptr) {
-  ; COMMON-LABEL: name: swifterror_swiftcc
-  ; COMMON: bb.1 (%ir-block.0):
-  ; COMMON:   liveins: $x21
-  ; COMMON:   [[COPY:%[0-9]+]]:_(p0) = COPY $x21
-  ; COMMON:   [[COPY1:%[0-9]+]]:gpr64all = COPY [[COPY]](p0)
-  ; COMMON:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY1]]
-  ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   $x21 = COPY [[COPY2]](p0)
-  ; COMMON:   BL @swifterror_swiftcc, csr_aarch64_aapcs_swifterror, implicit-def $lr, implicit $sp, implicit $x21, implicit-def $s0, implicit-def $x21
-  ; COMMON:   [[COPY3:%[0-9]+]]:_(s32) = COPY $s0
-  ; COMMON:   [[COPY4:%[0-9]+]]:gpr64all = COPY $x21
-  ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   $s0 = COPY [[COPY3]](s32)
-  ; COMMON:   $x21 = COPY [[COPY4]]
-  ; COMMON:   RET_ReallyLR implicit $s0, implicit $x21
-  %call = tail call swiftcc float @swifterror_swiftcc(%swift_error** swifterror %ptr)
-  ret float %call
-}
-
 ; Right now, this should not be tail called.
 ; TODO: Support this.
 declare void @varargs(i32, double, i64, ...)

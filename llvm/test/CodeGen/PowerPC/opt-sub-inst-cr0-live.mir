@@ -30,7 +30,7 @@
 ...
 ---
 name:            fn1
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: true
 registers:

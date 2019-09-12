@@ -35,7 +35,7 @@ body:             |
 ...
 ---
 name:            test_v4f16.pow
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -95,7 +95,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.pow
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -191,7 +191,7 @@ body:             |
 ...
 ---
 name:            test_v2f32.pow
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -227,7 +227,7 @@ body:             |
 ...
 ---
 name:            test_v4f32.pow
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -275,7 +275,7 @@ body:             |
 ...
 ---
 name:            test_v2f64.pow
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0:

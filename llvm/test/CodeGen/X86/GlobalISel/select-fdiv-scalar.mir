@@ -18,7 +18,7 @@
 ...
 ---
 name:            test_fdiv_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 #
@@ -87,7 +87,7 @@ body:             |
 ...
 ---
 name:            test_fdiv_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 #

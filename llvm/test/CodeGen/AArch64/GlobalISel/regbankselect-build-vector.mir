@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple arm64-- -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            build_vec_f16
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

@@ -13,7 +13,7 @@
 ...
 ---
 name:            select_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -44,7 +44,7 @@ body:             |
 ...
 ---
 name:            select_ptr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -75,7 +75,7 @@ body:             |
 ...
 ---
 name:            select_i64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:
@@ -123,7 +123,7 @@ body:             |
 ...
 ---
 name:            select_ambiguous_i64_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -160,7 +160,7 @@ body:             |
 ...
 ---
 name:            select_float
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -191,7 +191,7 @@ body:             |
 ...
 ---
 name:            select_ambiguous_float_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -228,7 +228,7 @@ body:             |
 ...
 ---
 name:            select_double
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:

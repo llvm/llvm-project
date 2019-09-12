@@ -81,7 +81,7 @@
 ---
 
 name:            expand_BEQ64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -183,7 +183,7 @@ body:             |
 ---
 
 name:            expand_BNE64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -285,7 +285,7 @@ body:             |
 ---
 
 name:            expand_BGEZ64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -387,7 +387,7 @@ body:             |
 ---
 
 name:            expand_BGTZ64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -489,7 +489,7 @@ body:             |
 ---
 
 name:            expand_BLEZ64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -591,7 +591,7 @@ body:             |
 ---
 
 name:            expand_BLTZ64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

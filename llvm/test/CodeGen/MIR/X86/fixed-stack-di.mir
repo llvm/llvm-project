@@ -29,7 +29,7 @@
 ...
 ---
 name:            foo
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8

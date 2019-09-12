@@ -86,9 +86,8 @@ declare <2 x i64> @llvm.mips.fill.d(i64) nounwind
 ; MIPS-ANY: llvm_mips_fill_d_test:
 ; MIPS32-DAG: lw [[R1:\$[0-9]+]], 0(
 ; MIPS32-DAG: lw [[R2:\$[0-9]+]], 4(
-; MIPS64-DAG: ld [[R1:\$[0-9]+]], %got_disp(llvm_mips_fill_d_ARG1)
-; MIPS32-DAG: ldi.b [[R3:\$w[0-9]+]], 0
-; MIPS32-DAG: insert.w [[R3]][0], [[R1]]
+; MIPS64-DAG: ld [[R1]], %got_disp(llvm_mips_fill_d_ARG1)
+; MIPS32-DAG: insert.w [[R3:\$w[0-9]+]][0], [[R1]]
 ; MIPS32-DAG: insert.w [[R3]][1], [[R2]]
 ; MIPS32-DAG: insert.w [[R3]][2], [[R1]]
 ; MIPS32-DAG: insert.w [[R3]][3], [[R2]]

@@ -16,7 +16,7 @@
 # MIPS32: Try combining $v0 = COPY %2:_(s32)
 # MIPS32: Try combining RetRA implicit $v0
 name:            f
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

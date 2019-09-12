@@ -172,7 +172,7 @@
 # CHECK: DBG_VALUE %99, $noreg, !5, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !8
 
 name:            sched_dbg_value_crash
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

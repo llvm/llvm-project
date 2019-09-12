@@ -64,7 +64,7 @@
 ...
 ---
 name:            test_sext_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -94,7 +94,7 @@ body:             |
 ...
 ---
 name:            test_sext_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -117,7 +117,7 @@ body:             |
 ...
 ---
 name:            test_sext_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -140,7 +140,7 @@ body:             |
 ...
 ---
 name:            test_sext_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -163,7 +163,7 @@ body:             |
 ...
 ---
 name:            test_zext_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -190,7 +190,7 @@ body:             |
 ...
 ---
 name:            test_zext_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -213,7 +213,7 @@ body:             |
 ...
 ---
 name:            test_zext_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -236,7 +236,7 @@ body:             |
 ...
 ---
 name:            test_zext_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -259,7 +259,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -284,7 +284,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -307,7 +307,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -330,7 +330,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

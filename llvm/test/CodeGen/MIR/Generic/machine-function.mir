@@ -36,18 +36,18 @@ name:            bar
 ...
 ---
 # CHECK: name: func
-# CHECK-NEXT: alignment: 8
+# CHECK-NEXT: alignment: 256
 # CHECK-NEXT: exposesReturnsTwice: false
 # CHECK: ...
 name:            func
-alignment:       8
+alignment:       256
 ...
 ---
 # CHECK: name: func2
-# CHECK-NEXT: alignment: 16
+# CHECK-NEXT: alignment: 65536
 # CHECK-NEXT: exposesReturnsTwice: true
 # CHECK: ...
 name:            func2
-alignment:       16
+alignment:       65536
 exposesReturnsTwice: true
 ...

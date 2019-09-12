@@ -141,7 +141,7 @@
 ---
 
 name:            expand_BEQC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -228,7 +228,7 @@ body:             |
 ---
 
 name:            expand_BNEC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -315,7 +315,7 @@ body:             |
 ---
 
 name:            expand_BGEC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -402,7 +402,7 @@ body:             |
 ---
 
 name:            expand_BGEUC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -489,7 +489,7 @@ body:             |
 ---
 
 name:            expand_BGEZC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -576,7 +576,7 @@ body:             |
 ---
 
 name:            expand_BGTZC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -663,7 +663,7 @@ body:             |
 ---
 
 name:            expand_BLEZC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -750,7 +750,7 @@ body:             |
 ---
 
 name:            expand_BLTC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -837,7 +837,7 @@ body:             |
 ---
 
 name:            expand_BLTUC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -924,7 +924,7 @@ body:             |
 ---
 
 name:            expand_BLTZC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1011,7 +1011,7 @@ body:             |
 ---
 
 name:            expand_BEQZC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1098,7 +1098,7 @@ body:             |
 ---
 
 name:            expand_BNEZC
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

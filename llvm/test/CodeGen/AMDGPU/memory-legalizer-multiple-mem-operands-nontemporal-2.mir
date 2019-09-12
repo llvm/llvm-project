@@ -45,7 +45,7 @@
 # CHECK: BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, 0
 
 name:            multiple_mem_operands
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

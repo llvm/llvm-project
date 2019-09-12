@@ -72,7 +72,7 @@
 ...
 ---
 name:            test_ashr_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -108,7 +108,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i64_imm
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -139,7 +139,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i64_imm1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -170,7 +170,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -206,7 +206,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i32_imm
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -237,7 +237,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i32_imm1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -268,7 +268,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -307,7 +307,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i16_imm
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -341,7 +341,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i16_imm1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -375,7 +375,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -414,7 +414,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i8_imm
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -448,7 +448,7 @@ body:             |
 ...
 ---
 name:            test_ashr_i8_imm1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

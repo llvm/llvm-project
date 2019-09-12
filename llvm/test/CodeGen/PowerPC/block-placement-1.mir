@@ -113,7 +113,7 @@
 ...
 ---
 name:            _Z6calleev
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -159,7 +159,7 @@ body:             |
 ...
 ---
 name:            _Z14TestSinglePredv
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

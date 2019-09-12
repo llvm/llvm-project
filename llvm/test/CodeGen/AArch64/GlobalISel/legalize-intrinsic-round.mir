@@ -6,7 +6,7 @@
 ...
 ---
 name:            test_f16.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -35,7 +35,7 @@ body:             |
 ...
 ---
 name:            test_f32.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -62,7 +62,7 @@ body:             |
 ...
 ---
 name:            test_f64.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -89,7 +89,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -141,7 +141,7 @@ body:             |
 ...
 ---
 name:            test_v4f16.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -184,7 +184,7 @@ body:             |
 ...
 ---
 name:            test_v2f32.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -214,7 +214,7 @@ body:             |
 ...
 ---
 name:            test_v4f32.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -244,7 +244,7 @@ body:             |
 ...
 ---
 name:            test_v2f64.round
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

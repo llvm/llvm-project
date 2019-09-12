@@ -1,4 +1,9 @@
-# RUN: llc -debug-entry-values -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s| llvm-dwarfdump - | FileCheck %s
+# Test call site parameter encoding in DWARFv4.
+# When the debugger tuning is set to gdb, use GNU opcodes.
+# For lldb, use the standard DWARF5 opcodes.
+
+# RUN: llc -debug-entry-values -debugger-tune=gdb -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
+# RUN: llc -debug-entry-values -debugger-tune=lldb -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 #
 # extern void foo(int *a, int b, int c, int d, int e, int f);
 # extern int getVal();
@@ -8,36 +13,68 @@
 #   foo(&local1, arg2, 10, 15, arg3 + 3, arg1 + arg2);
 # }
 #
-# CHECK: DW_TAG_GNU_call_site
-# CHECK:   DW_AT_abstract_origin {{.*}} "getVal"
+# CHECK-GNU: DW_TAG_GNU_call_site
+# CHECK-GNU:   DW_AT_abstract_origin {{.*}} "getVal"
 #
-# CHECK:       DW_TAG_GNU_call_site
-# CHECK:         DW_AT_abstract_origin {{.*}} "foo"
-# CHECK:         DW_AT_low_pc {{.*}}
-# CHECK-EMPTY:
-# CHECK:         DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:      DW_AT_location      (DW_OP_reg2 RCX)
-# CHECK-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_lit15)
-# CHECK:         DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:      DW_AT_location      (DW_OP_reg1 RDX)
-# CHECK-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_lit10)
-# CHECK:         DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:      DW_AT_location      (DW_OP_reg4 RSI)
-# CHECK-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg3 RBX+0)
-# CHECK:         DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:      DW_AT_location      (DW_OP_reg5 RDI)
-# CHECK-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_fbreg +12)
-# CHECK:         DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:      DW_AT_location      (DW_OP_reg9 R9)
-# CHECK-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0, DW_OP_breg3 RBX+0, DW_OP_plus)
-# CHECK:         DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:      DW_AT_location      (DW_OP_reg8 R8)
-# CHECK-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+3)
+# CHECK-GNU:       DW_TAG_GNU_call_site
+# CHECK-GNU:         DW_AT_abstract_origin {{.*}} "foo"
+# CHECK-GNU:         DW_AT_low_pc {{.*}}
+# CHECK-GNU-EMPTY:
+# CHECK-GNU:         DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg2 RCX)
+# CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_lit15)
+# CHECK-GNU:         DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg1 RDX)
+# CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_lit10)
+# CHECK-GNU:         DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg4 RSI)
+# CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg3 RBX+0)
+# CHECK-GNU:         DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg5 RDI)
+# CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_fbreg +12)
+# CHECK-GNU:         DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg9 R9)
+# CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0, DW_OP_breg3 RBX+0, DW_OP_plus)
+# CHECK-GNU:         DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:      DW_AT_location      (DW_OP_reg8 R8)
+# CHECK-GNU-NEXT:      DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+3)
+
+# CHECK-DWARF5: [[getValue_SP:.*]]: DW_TAG_subprogram
+# CHECK-DWARF5-NEXT: DW_AT_name      ("getVal")
+
+# CHECK-DWARF5: [[foo_SP:.*]]: DW_TAG_subprogram
+# CHECK-DWARF5-NEXT: DW_AT_name      ("foo")
+
+# CHECK-DWARF5: DW_TAG_call_site
+# CHECK-DWARF5:   DW_AT_call_origin ([[getValue_SP]])
+#
+# CHECK-DWARF5: DW_TAG_call_site
+# CHECK-DWARF5:   DW_AT_call_origin ([[foo_SP]])
+# CHECK-DWARF5:   DW_AT_call_return_pc {{.*}}
+# CHECK-DWARF5-EMPTY:
+# CHECK-DWARF5:         DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg2 RCX)
+# CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_lit15)
+# CHECK-DWARF5:         DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg1 RDX)
+# CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_lit10)
+# CHECK-DWARF5:         DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg4 RSI)
+# CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_breg3 RBX+0)
+# CHECK-DWARF5:         DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg5 RDI)
+# CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_fbreg +12)
+# CHECK-DWARF5:         DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg9 R9)
+# CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_breg15 R15+0, DW_OP_breg3 RBX+0, DW_OP_plus)
+# CHECK-DWARF5:         DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:      DW_AT_location      (DW_OP_reg8 R8)
+# CHECK-DWARF5-NEXT:      DW_AT_call_value   (DW_OP_breg14 R14+3)
+
 --- |
   ; ModuleID = 'test.c'
   source_filename = "test.c"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-  target triple = "x86_64-unknown-linux-gnu"
   
   ; Function Attrs: nounwind uwtable
   define dso_local void @baa(i32 %arg1, i32 %arg2, i32 %arg3) local_unnamed_addr !dbg !10 {

@@ -8,7 +8,7 @@
 ...
 ---
 name:            skipCopiesOutgoing
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -41,7 +41,7 @@ body:             |
 ...
 ---
 name:            skipCopiesIncoming
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

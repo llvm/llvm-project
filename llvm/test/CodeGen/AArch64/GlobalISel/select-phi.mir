@@ -31,7 +31,7 @@
 ...
 ---
 name:            test_phi
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true
@@ -84,7 +84,7 @@ body:             |
 
 ---
 name:            test_phi_ptr
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true

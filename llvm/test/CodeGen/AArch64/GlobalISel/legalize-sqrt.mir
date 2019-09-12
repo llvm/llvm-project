@@ -12,7 +12,7 @@
 ...
 ---
 name:            test_v8f16.sqrt
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -55,7 +55,7 @@ body:             |
 ...
 ---
 name:            test_v4f16.sqrt
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

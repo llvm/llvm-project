@@ -7,6 +7,7 @@ static_library("GSYM") {
     "FileWriter.cpp",
     "FunctionInfo.cpp",
     "InlineInfo.cpp",
+    "LineTable.cpp",
     "Range.cpp",
   ]
 }

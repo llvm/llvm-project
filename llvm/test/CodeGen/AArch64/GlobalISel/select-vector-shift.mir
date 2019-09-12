@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            shl_v2i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            shl_v4i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -60,7 +60,7 @@ body:             |
 ...
 ---
 name:            ashr_v2i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -90,7 +90,7 @@ body:             |
 ...
 ---
 name:            ashr_v4i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

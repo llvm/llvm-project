@@ -184,7 +184,7 @@
 ...
 ---
 name:            f
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -306,7 +306,7 @@ body:             |
 # CHECK-NEXT:  DBG_VALUE $rbx, $noreg, ![[QVAR]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 
 name:            g
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -386,7 +386,7 @@ body:             |
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 
 name:            h
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -499,7 +499,7 @@ body:             |
 # CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 name:            i
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }

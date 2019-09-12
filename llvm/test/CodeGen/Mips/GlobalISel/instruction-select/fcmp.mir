@@ -40,7 +40,7 @@
 ...
 ---
 name:            false_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -66,7 +66,7 @@ body:             |
 ...
 ---
 name:            true_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -92,7 +92,7 @@ body:             |
 ...
 ---
 name:            uno_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -128,7 +128,7 @@ body:             |
 ...
 ---
 name:            ord_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -164,7 +164,7 @@ body:             |
 ...
 ---
 name:            oeq_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -200,7 +200,7 @@ body:             |
 ...
 ---
 name:            une_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -236,7 +236,7 @@ body:             |
 ...
 ---
 name:            ueq_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -272,7 +272,7 @@ body:             |
 ...
 ---
 name:            one_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -308,7 +308,7 @@ body:             |
 ...
 ---
 name:            olt_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -344,7 +344,7 @@ body:             |
 ...
 ---
 name:            uge_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -380,7 +380,7 @@ body:             |
 ...
 ---
 name:            ult_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -416,7 +416,7 @@ body:             |
 ...
 ---
 name:            oge_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -452,7 +452,7 @@ body:             |
 ...
 ---
 name:            ole_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -488,7 +488,7 @@ body:             |
 ...
 ---
 name:            ugt_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -524,7 +524,7 @@ body:             |
 ...
 ---
 name:            ule_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -560,7 +560,7 @@ body:             |
 ...
 ---
 name:            ogt_s
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -596,7 +596,7 @@ body:             |
 ...
 ---
 name:            false_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -622,7 +622,7 @@ body:             |
 ...
 ---
 name:            true_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -648,7 +648,7 @@ body:             |
 ...
 ---
 name:            uno_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -684,7 +684,7 @@ body:             |
 ...
 ---
 name:            ord_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -720,7 +720,7 @@ body:             |
 ...
 ---
 name:            oeq_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -756,7 +756,7 @@ body:             |
 ...
 ---
 name:            une_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -792,7 +792,7 @@ body:             |
 ...
 ---
 name:            ueq_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -828,7 +828,7 @@ body:             |
 ...
 ---
 name:            one_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -864,7 +864,7 @@ body:             |
 ...
 ---
 name:            olt_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -900,7 +900,7 @@ body:             |
 ...
 ---
 name:            uge_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -936,7 +936,7 @@ body:             |
 ...
 ---
 name:            ult_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -972,7 +972,7 @@ body:             |
 ...
 ---
 name:            oge_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1008,7 +1008,7 @@ body:             |
 ...
 ---
 name:            ole_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1044,7 +1044,7 @@ body:             |
 ...
 ---
 name:            ugt_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1080,7 +1080,7 @@ body:             |
 ...
 ---
 name:            ule_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1116,7 +1116,7 @@ body:             |
 ...
 ---
 name:            ogt_d
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

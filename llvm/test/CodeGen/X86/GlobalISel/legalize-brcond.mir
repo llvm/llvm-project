@@ -18,7 +18,7 @@
 ---
 name:            test
 # ALL-LABEL: name:  test
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

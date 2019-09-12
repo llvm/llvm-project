@@ -790,9 +790,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
             CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, IsTail, PCAddr,
                                          PCOffset, CallReg);
 
-      // For now only GDB supports call site parameter debug info.
+      // GDB and LLDB support call site parameter debug info.
       if (Asm->TM.Options.EnableDebugEntryValues &&
-          tuneForGDB()) {
+          (tuneForGDB() || tuneForLLDB())) {
         ParamSet Params;
         // Try to interpret values of call site parameters.
         collectCallSiteParameters(&MI, Params);

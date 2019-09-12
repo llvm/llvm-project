@@ -52,7 +52,7 @@
 ...
 ---
 name:            _Z3foov
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -124,7 +124,7 @@ body:             |
 ...
 ---
 name:            _Z3barPi
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

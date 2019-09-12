@@ -3,7 +3,7 @@
 # RUN: llc -verify-machineinstrs -mtriple aarch64-unknown-unknown -run-pass=legalizer -mattr=+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefix=FP16
 
 name:            test_f16.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -18,7 +18,7 @@ body:             |
 ...
 ---
 name:            test_f32.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -45,7 +45,7 @@ body:             |
 ...
 ---
 name:            test_f64.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -72,7 +72,7 @@ body:             |
 ...
 ---
 name:            test_v4f32.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -99,7 +99,7 @@ body:             |
 ...
 ---
 name:            test_v2f64.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -126,7 +126,7 @@ body:             |
 ...
 ---
 name:            test_v4f16.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -166,7 +166,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -218,7 +218,7 @@ body:             |
 ...
 ---
 name:            test_v2f32.rint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |

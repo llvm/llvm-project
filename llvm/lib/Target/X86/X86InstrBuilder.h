@@ -131,11 +131,11 @@ addDirectMem(const MachineInstrBuilder &MIB, unsigned Reg) {
 /// reference.
 static inline void setDirectAddressInInstr(MachineInstr *MI, unsigned Operand,
                                            unsigned Reg) {
-  // Direct memory address is in a form of: Reg, 1 (Scale), NoReg, 0, NoReg.
-  MI->getOperand(Operand).setReg(Reg);
+  // Direct memory address is in a form of: Reg/FI, 1 (Scale), NoReg, 0, NoReg.
+  MI->getOperand(Operand).ChangeToRegister(Reg, /*isDef=*/false);
   MI->getOperand(Operand + 1).setImm(1);
   MI->getOperand(Operand + 2).setReg(0);
-  MI->getOperand(Operand + 3).setImm(0);
+  MI->getOperand(Operand + 3).ChangeToImmediate(0);
   MI->getOperand(Operand + 4).setReg(0);
 }
 

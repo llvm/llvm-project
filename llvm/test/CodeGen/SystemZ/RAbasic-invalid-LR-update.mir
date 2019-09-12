@@ -23,7 +23,7 @@
 # CHECK: id: 114, class
 ---
 name:            autogen_SD21418
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:       
   - { id: 0, class: vr128bit }

@@ -41,8 +41,6 @@ public:
 
   static bool classof(const Binary *v) { return v->isTapiFile(); }
 
-  bool is64Bit() { return MachO::is64Bit(Arch); }
-
 private:
   struct Symbol {
     StringRef Prefix;
@@ -54,7 +52,6 @@ private:
   };
 
   std::vector<Symbol> Symbols;
-  MachO::Architecture Arch;
 };
 
 } // end namespace object.
