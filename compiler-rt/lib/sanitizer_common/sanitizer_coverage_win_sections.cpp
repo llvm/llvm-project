@@ -31,7 +31,7 @@ extern "C" {
 // Use uint64_t so the linker won't need to add any padding if it tries to word
 // align the start of the 8-bit counters array. The array will always start 8
 // bytes after __start_sancov_cntrs.
-#pragma section(".SCOV$CA", read, write)  // NOLINT
+#pragma section(".SCOV$CA", read, write)
 __declspec(allocate(".SCOV$CA")) uint64_t __start___sancov_cntrs = 0;
 
 // Even though we said not to align __stop__sancov_cntrs (using the "align"
@@ -41,13 +41,13 @@ __declspec(allocate(".SCOV$CA")) uint64_t __start___sancov_cntrs = 0;
 // padding would be added to align .SCOVP$Z, However, if .SCOV$CZ section is 1
 // byte, the linker won't try to align it on an 8-byte boundary, so use a
 // uint8_t for __stop_sancov_cntrs.
-#pragma section(".SCOV$CZ", read, write)  // NOLINT
+#pragma section(".SCOV$CZ", read, write)
 __declspec(allocate(".SCOV$CZ")) __declspec(align(1)) uint8_t
     __stop___sancov_cntrs = 0;
 
-#pragma section(".SCOV$GA", read, write)  // NOLINT
+#pragma section(".SCOV$GA", read, write)
 __declspec(allocate(".SCOV$GA")) uint64_t __start___sancov_guards = 0;
-#pragma section(".SCOV$GZ", read, write)  // NOLINT
+#pragma section(".SCOV$GZ", read, write)
 __declspec(allocate(".SCOV$GZ")) __declspec(align(1)) uint8_t
     __stop___sancov_guards = 0;
 
@@ -56,9 +56,9 @@ __declspec(allocate(".SCOV$GZ")) __declspec(align(1)) uint8_t
 // constant it should be merged with the .rdata section.
 #pragma comment(linker, "/MERGE:.SCOV=.data")
 
-#pragma section(".SCOVP$A", read)  // NOLINT
+#pragma section(".SCOVP$A", read)
 __declspec(allocate(".SCOVP$A")) uint64_t __start___sancov_pcs = 0;
-#pragma section(".SCOVP$Z", read)  // NOLINT
+#pragma section(".SCOVP$Z", read)
 __declspec(allocate(".SCOVP$Z")) __declspec(align(1)) uint8_t
     __stop___sancov_pcs = 0;
 

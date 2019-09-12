@@ -339,18 +339,18 @@ void ReportMmapWriteExec(int prot);
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)
 extern "C" {
-unsigned char _BitScanForward(unsigned long *index, unsigned long mask);  // NOLINT
-unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);  // NOLINT
+unsigned char _BitScanForward(unsigned long *index, unsigned long mask);
+unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 #if defined(_WIN64)
-unsigned char _BitScanForward64(unsigned long *index, unsigned __int64 mask);  // NOLINT
-unsigned char _BitScanReverse64(unsigned long *index, unsigned __int64 mask);  // NOLINT
+unsigned char _BitScanForward64(unsigned long *index, unsigned __int64 mask);
+unsigned char _BitScanReverse64(unsigned long *index, unsigned __int64 mask);
 #endif
 }
 #endif
 
 INLINE uptr MostSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
-  unsigned long up;  // NOLINT
+  unsigned long up;
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
 # ifdef _WIN64
   up = SANITIZER_WORDSIZE - 1 - __builtin_clzll(x);
@@ -367,7 +367,7 @@ INLINE uptr MostSignificantSetBitIndex(uptr x) {
 
 INLINE uptr LeastSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
-  unsigned long up;  // NOLINT
+  unsigned long up;
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
 # ifdef _WIN64
   up = __builtin_ctzll(x);
@@ -974,7 +974,7 @@ INLINE u32 GetNumberOfCPUsCached() {
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
-                          __sanitizer::LowLevelAllocator &alloc) {
+                          __sanitizer::LowLevelAllocator &alloc) {  // NOLINT
   return alloc.Allocate(size);
 }
 

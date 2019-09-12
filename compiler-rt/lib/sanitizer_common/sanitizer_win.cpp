@@ -676,7 +676,7 @@ static int RunAtexit() {
   return ret;
 }
 
-#pragma section(".CRT$XID", long, read)  // NOLINT
+#pragma section(".CRT$XID", long, read)
 __declspec(allocate(".CRT$XID")) int (*__run_atexit)() = RunAtexit;
 #endif
 

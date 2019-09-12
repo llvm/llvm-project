@@ -1,7 +1,7 @@
 #include "test.h"
 
 extern "C" {
-typedef unsigned long jptr;  // NOLINT
+typedef unsigned long jptr;
 void __tsan_java_preinit(const char *libjvm_path);
 void __tsan_java_init(jptr heap_begin, jptr heap_size);
 int  __tsan_java_fini();

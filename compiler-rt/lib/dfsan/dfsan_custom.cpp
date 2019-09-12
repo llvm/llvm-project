@@ -505,7 +505,7 @@ int __dfsw_getrusage(int who, struct rusage *usage, dfsan_label who_label,
 SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_strcpy(char *dest, const char *src, dfsan_label dst_label,
                     dfsan_label src_label, dfsan_label *ret_label) {
-  char *ret = strcpy(dest, src);
+  char *ret = strcpy(dest, src);  // NOLINT
   if (ret) {
     internal_memcpy(shadow_for(dest), shadow_for(src),
                     sizeof(dfsan_label) * (strlen(src) + 1));

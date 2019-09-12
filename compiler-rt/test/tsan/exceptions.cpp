@@ -11,7 +11,7 @@ __attribute__((noinline)) void throws_int() {
 __attribute__((noinline)) void callee_throws() {
   try {
     throws_int();
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "callee_throws caught exception\n");
   }
 }
@@ -19,7 +19,7 @@ __attribute__((noinline)) void callee_throws() {
 __attribute__((noinline)) void throws_catches_rethrows() {
   try {
     throws_int();
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "throws_catches_rethrows caught exception\n");
     throw;
   }
@@ -28,7 +28,7 @@ __attribute__((noinline)) void throws_catches_rethrows() {
 __attribute__((noinline)) void callee_rethrows() {
   try {
     throws_catches_rethrows();
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "callee_rethrows caught exception\n");
   }
 }
@@ -36,7 +36,7 @@ __attribute__((noinline)) void callee_rethrows() {
 __attribute__((noinline)) void throws_and_catches() {
   try {
     throws_int();
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "throws_and_catches caught exception\n");
   }
 }
@@ -45,10 +45,10 @@ __attribute__((noinline)) void nested_try() {
   try {
     try {
       throws_int();
-    } catch (double) {  // NOLINT
+    } catch (double) {
       fprintf(stderr, "nested_try inner block caught exception\n");
     }
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "nested_try outer block caught exception\n");
   }
 }
@@ -57,10 +57,10 @@ __attribute__((noinline)) void nested_try2() {
   try {
     try {
       throws_int();
-    } catch (int) {  // NOLINT
+    } catch (int) {
       fprintf(stderr, "nested_try inner block caught exception\n");
     }
-  } catch (double) {  // NOLINT
+  } catch (double) {
     fprintf(stderr, "nested_try outer block caught exception\n");
   }
 }
@@ -83,7 +83,7 @@ __attribute__((noinline)) void local_object_then_throw() {
 __attribute__((noinline)) void cpp_object_with_destructor() {
   try {
     local_object_then_throw();
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "cpp_object_with_destructor caught exception\n");
   }
 }
@@ -99,7 +99,7 @@ __attribute__((noinline)) void recursive_call(long n) {
 __attribute__((noinline)) void multiframe_unwind() {
   try {
     recursive_call(5);
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "multiframe_unwind caught exception\n");
   }
 }
@@ -114,7 +114,7 @@ __attribute__((noinline)) void longjmp_unwind() {
 
   try {
     longjmp(env, 42);
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "longjmp_unwind caught exception\n");
   }
 }
@@ -137,7 +137,7 @@ __attribute__((noinline)) void longjmp_unwind_multiple_frames() {
 
   try {
     recursive_call_longjmp(env, 5);
-  } catch (int) {  // NOLINT
+  } catch (int) {
     fprintf(stderr, "longjmp_unwind_multiple_frames caught exception\n");
   }
 }

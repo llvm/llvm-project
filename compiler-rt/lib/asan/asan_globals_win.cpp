@@ -15,8 +15,8 @@
 
 namespace __asan {
 
-#pragma section(".ASAN$GA", read, write)  // NOLINT
-#pragma section(".ASAN$GZ", read, write)  // NOLINT
+#pragma section(".ASAN$GA", read, write)
+#pragma section(".ASAN$GZ", read, write)
 extern "C" __declspec(allocate(".ASAN$GA"))
     ALIGNED(sizeof(__asan_global)) __asan_global __asan_globals_start = {};
 extern "C" __declspec(allocate(".ASAN$GZ"))
@@ -49,8 +49,8 @@ static void unregister_dso_globals() {
 }
 
 // Register globals
-#pragma section(".CRT$XCU", long, read)  // NOLINT
-#pragma section(".CRT$XTX", long, read)  // NOLINT
+#pragma section(".CRT$XCU", long, read)
+#pragma section(".CRT$XTX", long, read)
 extern "C" __declspec(allocate(".CRT$XCU"))
 void (*const __asan_dso_reg_hook)() = &register_dso_globals;
 extern "C" __declspec(allocate(".CRT$XTX"))

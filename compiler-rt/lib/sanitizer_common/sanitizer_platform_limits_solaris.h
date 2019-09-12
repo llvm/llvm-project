@@ -68,7 +68,7 @@ struct __sanitizer_ipc_perm {
 #if !defined(_LP64)
   int pad[4];
 #endif
-  };
+};
 
 struct __sanitizer_shmid_ds {
   __sanitizer_ipc_perm shm_perm;
@@ -237,9 +237,8 @@ typedef int __sanitizer_clockid_t;
 
 // This thing depends on the platform. We are only interested in the upper
 // limit. Verified with a compiler assert in .cpp.
-const int pthread_attr_t_max_sz = 128;
 union __sanitizer_pthread_attr_t {
-  char size[pthread_attr_t_max_sz]; // NOLINT
+  char size[128];
   void *align;
 };
 

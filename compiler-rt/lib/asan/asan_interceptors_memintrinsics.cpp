@@ -16,7 +16,7 @@
 #include "asan_stack.h"
 #include "asan_suppressions.h"
 
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {
   ASAN_MEMCPY_IMPL(nullptr, to, from, size);

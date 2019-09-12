@@ -4,7 +4,7 @@
 // FIXME: Doesn't work with DLLs
 // XFAIL: win32-dynamic-asan
 
-const char *kAsanDefaultOptions="verbosity=1 help=1";
+const char *kAsanDefaultOptions = "verbosity=1 help=1";
 
 extern "C"
 __attribute__((no_sanitize_address))

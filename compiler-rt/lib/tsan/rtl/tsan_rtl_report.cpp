@@ -27,7 +27,7 @@
 
 namespace __tsan {
 
-using namespace __sanitizer;  // NOLINT
+using namespace __sanitizer;
 
 static ReportStack *SymbolizeStack(StackTrace trace);
 
@@ -154,6 +154,7 @@ ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
 ScopedReportBase::~ScopedReportBase() {
   ctx->report_mtx.Unlock();
   DestroyAndFree(rep_);
+  rep_ = nullptr;
 }
 
 void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
@@ -700,7 +701,7 @@ void ReportRace(ThreadState *thr) {
   rep.AddLocation(addr_min, addr_max - addr_min);
 
 #if !SANITIZER_GO
-  {  // NOLINT
+  {
     Shadow s(thr->racy_state[1]);
     if (s.epoch() <= thr->last_sleep_clock.get(s.tid()))
       rep.AddSleep(thr->last_sleep_stack_id);

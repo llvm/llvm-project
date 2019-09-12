@@ -32,12 +32,12 @@
 #include "asan_interface.inc"
 
 // First, declare CRT sections we'll be using in this file
-#pragma section(".CRT$XIB", long, read)  // NOLINT
-#pragma section(".CRT$XID", long, read)  // NOLINT
-#pragma section(".CRT$XCAB", long, read)  // NOLINT
-#pragma section(".CRT$XTW", long, read)  // NOLINT
-#pragma section(".CRT$XTY", long, read)  // NOLINT
-#pragma section(".CRT$XLAB", long, read)  // NOLINT
+#pragma section(".CRT$XIB", long, read)
+#pragma section(".CRT$XID", long, read)
+#pragma section(".CRT$XCAB", long, read)
+#pragma section(".CRT$XTW", long, read)
+#pragma section(".CRT$XTY", long, read)
+#pragma section(".CRT$XLAB", long, read)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Define a copy of __asan_option_detect_stack_use_after_return that should be

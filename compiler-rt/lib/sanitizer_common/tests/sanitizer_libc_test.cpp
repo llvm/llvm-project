@@ -167,9 +167,7 @@ TEST(SanitizerCommon, FileOps) {
 class SanitizerCommonFileTest : public ::testing::TestWithParam<uptr> {
   void SetUp() override {
     data_.resize(GetParam());
-    std::generate(data_.begin(), data_.end(), [] {
-      return rand() % 256;  // NOLINT
-    });
+    std::generate(data_.begin(), data_.end(), [] { return rand() % 256; });
 
     temp_file_name(file_name_, sizeof(file_name_),
                    "sanitizer_common.ReadFile.tmp.");

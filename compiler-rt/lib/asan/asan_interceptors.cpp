@@ -79,7 +79,7 @@ int OnExit() {
 } // namespace __asan
 
 // ---------------------- Wrappers ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
@@ -373,26 +373,26 @@ DEFINE_REAL(char*, index, const char *string, int c)
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.
-INTERCEPTOR(char*, strcat, char *to, const char *from) {  // NOLINT
-  void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, strcat);  // NOLINT
-  ENSURE_ASAN_INITED();
-  if (flags()->replace_str) {
-    uptr from_length = REAL(strlen)(from);
-    ASAN_READ_RANGE(ctx, from, from_length + 1);
-    uptr to_length = REAL(strlen)(to);
-    ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
-    ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
-    // If the copying actually happens, the |from| string should not overlap
-    // with the resulting string starting at |to|, which has a length of
-    // to_length + from_length + 1.
-    if (from_length > 0) {
-      CHECK_RANGES_OVERLAP("strcat", to, from_length + to_length + 1,
-                           from, from_length + 1);
+  INTERCEPTOR(char *, strcat, char *to, const char *from) {
+    void *ctx;
+    ASAN_INTERCEPTOR_ENTER(ctx, strcat);
+    ENSURE_ASAN_INITED();
+    if (flags()->replace_str) {
+      uptr from_length = REAL(strlen)(from);
+      ASAN_READ_RANGE(ctx, from, from_length + 1);
+      uptr to_length = REAL(strlen)(to);
+      ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
+      ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
+      // If the copying actually happens, the |from| string should not overlap
+      // with the resulting string starting at |to|, which has a length of
+      // to_length + from_length + 1.
+      if (from_length > 0) {
+        CHECK_RANGES_OVERLAP("strcat", to, from_length + to_length + 1, from,
+                             from_length + 1);
+      }
     }
+    return REAL(strcat)(to, from);
   }
-  return REAL(strcat)(to, from);  // NOLINT
-}
 
 INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
   void *ctx;
@@ -413,16 +413,17 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
   return REAL(strncat)(to, from, size);
 }
 
-INTERCEPTOR(char*, strcpy, char *to, const char *from) {  // NOLINT
+INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, strcpy);  // NOLINT
+  ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
 #if SANITIZER_MAC
-  if (UNLIKELY(!asan_inited)) return REAL(strcpy)(to, from);  // NOLINT
+  if (UNLIKELY(!asan_inited))
+    return REAL(strcpy)(to, from);
 #endif
   // strcpy is called from malloc_default_purgeable_zone()
   // in __asan::ReplaceSystemAlloc() on Mac.
   if (asan_init_is_running) {
-    return REAL(strcpy)(to, from);  // NOLINT
+    return REAL(strcpy)(to, from);
   }
   ENSURE_ASAN_INITED();
   if (flags()->replace_str) {
@@ -431,7 +432,7 @@ INTERCEPTOR(char*, strcpy, char *to, const char *from) {  // NOLINT
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, from_size);
   }
-  return REAL(strcpy)(to, from);  // NOLINT
+  return REAL(strcpy)(to, from);
 }
 
 INTERCEPTOR(char*, strdup, const char *s) {
@@ -479,8 +480,7 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, uptr size) {
   return REAL(strncpy)(to, from, size);
 }
 
-INTERCEPTOR(long, strtol, const char *nptr,  // NOLINT
-            char **endptr, int base) {
+INTERCEPTOR(long, strtol, const char *nptr, char **endptr, int base) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strtol);
   ENSURE_ASAN_INITED();
@@ -488,7 +488,7 @@ INTERCEPTOR(long, strtol, const char *nptr,  // NOLINT
     return REAL(strtol)(nptr, endptr, base);
   }
   char *real_endptr;
-  long result = REAL(strtol)(nptr, &real_endptr, base);  // NOLINT
+  long result = REAL(strtol)(nptr, &real_endptr, base);
   StrtolFixAndCheck(ctx, nptr, endptr, real_endptr, base);
   return result;
 }
@@ -514,7 +514,7 @@ INTERCEPTOR(int, atoi, const char *nptr) {
   return result;
 }
 
-INTERCEPTOR(long, atol, const char *nptr) {  // NOLINT
+INTERCEPTOR(long, atol, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atol);
 #if SANITIZER_MAC
@@ -525,15 +525,14 @@ INTERCEPTOR(long, atol, const char *nptr) {  // NOLINT
     return REAL(atol)(nptr);
   }
   char *real_endptr;
-  long result = REAL(strtol)(nptr, &real_endptr, 10);  // NOLINT
+  long result = REAL(strtol)(nptr, &real_endptr, 10);
   FixRealStrtolEndptr(nptr, &real_endptr);
   ASAN_READ_STRING(ctx, nptr, (real_endptr - nptr) + 1);
   return result;
 }
 
 #if ASAN_INTERCEPT_ATOLL_AND_STRTOLL
-INTERCEPTOR(long long, strtoll, const char *nptr,  // NOLINT
-            char **endptr, int base) {
+INTERCEPTOR(long long, strtoll, const char *nptr, char **endptr, int base) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strtoll);
   ENSURE_ASAN_INITED();
@@ -541,12 +540,12 @@ INTERCEPTOR(long long, strtoll, const char *nptr,  // NOLINT
     return REAL(strtoll)(nptr, endptr, base);
   }
   char *real_endptr;
-  long long result = REAL(strtoll)(nptr, &real_endptr, base);  // NOLINT
+  long long result = REAL(strtoll)(nptr, &real_endptr, base);
   StrtolFixAndCheck(ctx, nptr, endptr, real_endptr, base);
   return result;
 }
 
-INTERCEPTOR(long long, atoll, const char *nptr) {  // NOLINT
+INTERCEPTOR(long long, atoll, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atoll);
   ENSURE_ASAN_INITED();
@@ -554,7 +553,7 @@ INTERCEPTOR(long long, atoll, const char *nptr) {  // NOLINT
     return REAL(atoll)(nptr);
   }
   char *real_endptr;
-  long long result = REAL(strtoll)(nptr, &real_endptr, 10);  // NOLINT
+  long long result = REAL(strtoll)(nptr, &real_endptr, 10);
   FixRealStrtolEndptr(nptr, &real_endptr);
   ASAN_READ_STRING(ctx, nptr, (real_endptr - nptr) + 1);
   return result;
@@ -594,8 +593,8 @@ void InitializeAsanInterceptors() {
   InitializeSignalInterceptors();
 
   // Intercept str* functions.
-  ASAN_INTERCEPT_FUNC(strcat);  // NOLINT
-  ASAN_INTERCEPT_FUNC(strcpy);  // NOLINT
+  ASAN_INTERCEPT_FUNC(strcat);
+  ASAN_INTERCEPT_FUNC(strcpy);
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
   ASAN_INTERCEPT_FUNC(strdup);
