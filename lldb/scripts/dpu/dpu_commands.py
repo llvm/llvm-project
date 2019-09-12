@@ -101,6 +101,111 @@ def get_dpu_status(rank, slice_id, dpu_id):
         return "IDLE   "
 
 
+def break_to_next_boot_and_get_dpus(debugger, target):
+    launch_rank_function = "dpu_launch_thread_on_rank"
+    launch_dpu_function = "dpu_launch_thread_on_dpu"
+    launch_rank_bkp = \
+        target.BreakpointCreateByName(launch_rank_function)
+    launch_dpu_bkp = target.BreakpointCreateByName(launch_dpu_function)
+
+    process = target.GetProcess()
+    process.Continue()
+
+    target.BreakpointDelete(launch_rank_bkp.GetID())
+    target.BreakpointDelete(launch_dpu_bkp.GetID())
+
+    dpu_list = []
+    thread = process.GetSelectedThread()
+    current_frame = 0
+    frame = thread.GetFrameAtIndex(current_frame)
+    function_name = frame.GetFunctionName()
+    if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
+        return dpu_list, frame
+
+    # Look for frame from which the host needs to step out to complete the boot
+    # of the dpu
+    nb_frames = thread.GetNumFrames()
+    while ((function_name != launch_rank_function)
+           and (function_name != launch_dpu_function)):
+        current_frame = current_frame + 1
+        if current_frame == nb_frames:
+            return dpu_list, frame
+        frame = thread.GetFrameAtIndex(current_frame)
+        function_name = frame.GetFunctionName()
+
+    thread.SetSelectedFrame(current_frame)
+    if function_name == launch_rank_function:
+        nb_ci = get_dpu_from_command(
+            "(int)(rank->description->topology.nr_of_control_interfaces)",
+            debugger, target)
+        nb_dpu_per_ci = get_dpu_from_command(
+            "(int)(rank->description->topology.nr_of_dpus_per_control_interface)",
+            debugger,target)
+        nb_dpu = int(nb_ci.GetValue(), 16) * int(nb_dpu_per_ci.GetValue(), 16)
+        for each_dpu in range(0, nb_dpu):
+            dpu_list.append(get_dpu_from_command("&rank->dpus["
+                                                 + str(each_dpu) + "]",
+                                                 debugger, target))
+    elif function_name == launch_dpu_function:
+        dpu_list.append(get_dpu_from_command("dpu", debugger, target))
+
+    return dpu_list, frame
+
+
+def dpu_attach_on_boot(debugger, command, result, internal_dict):
+    '''
+    usage: dpu_attach_on_boot [<struct dpu_t *>]
+    '''
+    target = debugger.GetSelectedTarget()
+
+    dpus_booting, host_frame = \
+        break_to_next_boot_and_get_dpus(debugger, target)
+    if len(dpus_booting) == 0:
+        print("Could not find any dpu booting")
+        sys.exit(1)
+
+    # If a dpu is specified in the command, wait for this specific dpu to boot
+    if command != "":
+        dpu_to_attach = get_dpu_from_command(command, debugger, target)
+        dpus_booting = filter(
+            lambda dpu: dpu.GetValue() == dpu_to_attach.GetValue(),
+            dpus_booting)
+        while len(dpus_booting) == 0:
+            dpus_booting, host_frame =\
+                break_to_next_boot_and_get_dpus(debugger, target)
+            if len(dpus_booting) == 0:
+                print("Could not find the dpu booting")
+                sys.exit(1)
+            dpus_booting = filter(
+                lambda dpu: dpu.GetValue() == dpu_to_attach.GetValue(),
+                dpus_booting)
+
+    dpu_addr = dpus_booting[0].GetValue()
+    print("Setting up dpu '" + str(dpu_addr) + "' for attach on boot...")
+    target_dpu = dpu_attach(debugger, dpu_addr, None, None)
+
+    error = lldb.SBError()
+    process_dpu = target_dpu.GetProcess()
+    dpu_first_instruction_addr = 0x80000000
+    dpu_first_instruction = process_dpu.ReadMemory(dpu_first_instruction_addr,
+                                                   8, error)
+    process_dpu.WriteMemory(dpu_first_instruction_addr,
+                            bytearray([0x00, 0x00, 0x00, 0x20,
+                                       0x63, 0x7e, 0x00, 0x00]), error)
+    process_dpu.Detach()
+    debugger.DeleteTarget(target_dpu)
+    debugger.SetSelectedTarget(target)
+
+    target.GetProcess().GetSelectedThread().StepOutOfFrame(host_frame, error)
+    print("dpu '" + str(dpu_addr) + "' has booted")
+
+    target_dpu = dpu_attach(debugger, dpu_addr, None, None)
+    target_dpu.GetProcess().WriteMemory(dpu_first_instruction_addr,
+                                        dpu_first_instruction, error)
+
+    return target_dpu
+
+
 def dpu_attach(debugger, command, result, internal_dict):
     '''
     usage: dpu_attach <struct dpu_t *>
@@ -169,6 +274,7 @@ def dpu_attach(debugger, command, result, internal_dict):
     assert set_debug_mode(debugger, rank, 0)
 
     debugger.SetSelectedTarget(target_dpu)
+    return target_dpu
 
 
 def dpu_get(rank_addr, slice_id, dpu_id, debugger, target):
@@ -242,3 +348,15 @@ def dpu_list(debugger, command, result, internal_dict):
 
         print_list(result_list, result)
         return result_list
+
+
+def dpu_detach(debugger, command, result, internal_dict):
+    '''
+    usage: dpu_detach
+    '''
+    target = debugger.GetSelectedTarget()
+    if target.GetTriple() != "dpu-upmem-dpurte":
+        print("Current target is not a DPU target")
+        sys.exit(1)
+    target.GetProcess().Detach()
+    debugger.DeleteTarget(target)
