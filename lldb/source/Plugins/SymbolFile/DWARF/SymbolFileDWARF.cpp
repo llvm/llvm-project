@@ -8,6 +8,7 @@
 
 #include "SymbolFileDWARF.h"
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"
 
@@ -3859,9 +3860,57 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
   return vars_added;
 }
 
+/// Collect call site parameters in a DW_TAG_call_site DIE.
+static CallSiteParameterArray
+CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
+  CallSiteParameterArray parameters;
+  for (DWARFDIE child = call_site_die.GetFirstChild(); child.IsValid();
+       child = child.GetSibling()) {
+    if (child.Tag() != DW_TAG_call_site_parameter)
+      continue;
+
+    llvm::Optional<DWARFExpression> LocationInCallee = {};
+    llvm::Optional<DWARFExpression> LocationInCaller = {};
+
+    DWARFAttributes attributes;
+    const size_t num_attributes = child.GetAttributes(attributes);
+
+    // Parse the location at index \p attr_index within this call site parameter
+    // DIE, or return None on failure.
+    auto parse_simple_location =
+        [&](int attr_index) -> llvm::Optional<DWARFExpression> {
+      DWARFFormValue form_value;
+      if (!attributes.ExtractFormValueAtIndex(attr_index, form_value))
+        return {};
+      if (!DWARFFormValue::IsBlockForm(form_value.Form()))
+        return {};
+      auto data = child.GetData();
+      uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
+      uint32_t block_length = form_value.Unsigned();
+      return DWARFExpression(module,
+                             DataExtractor(data, block_offset, block_length),
+                             child.GetCU());
+    };
+
+    for (size_t i = 0; i < num_attributes; ++i) {
+      dw_attr_t attr = attributes.AttributeAtIndex(i);
+      if (attr == DW_AT_location)
+        LocationInCallee = parse_simple_location(i);
+      if (attr == DW_AT_call_value)
+        LocationInCaller = parse_simple_location(i);
+    }
+
+    if (LocationInCallee && LocationInCaller) {
+      CallSiteParameter param = {*LocationInCallee, *LocationInCaller};
+      parameters.push_back(param);
+    }
+  }
+  return parameters;
+}
+
 /// Collect call graph edges present in a function DIE.
 static std::vector<lldb_private::CallEdge>
-CollectCallEdges(DWARFDIE function_die) {
+CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
   uint64_t has_call_edges =
@@ -3898,9 +3947,28 @@ CollectCallEdges(DWARFDIE function_die) {
     addr_t return_pc = child.GetAttributeValueAsAddress(DW_AT_call_return_pc,
                                                         LLDB_INVALID_ADDRESS);
 
+    // Extract call site parameters.
+    CallSiteParameterArray parameters =
+        CollectCallSiteParameters(module, child);
+
     LLDB_LOG(log, "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x})",
              call_origin.GetPubname(), return_pc);
-    call_edges.emplace_back(call_origin.GetMangledName(), return_pc);
+    if (log && parameters.size()) {
+      for (const CallSiteParameter &param : parameters) {
+        StreamString callee_loc_desc, caller_loc_desc;
+        param.LocationInCallee.GetDescription(&callee_loc_desc,
+                                              eDescriptionLevelBrief,
+                                              LLDB_INVALID_ADDRESS, nullptr);
+        param.LocationInCaller.GetDescription(&caller_loc_desc,
+                                              eDescriptionLevelBrief,
+                                              LLDB_INVALID_ADDRESS, nullptr);
+        LLDB_LOG(log, "CollectCallEdges: \tparam: {0} => {1}",
+                 callee_loc_desc.GetString(), caller_loc_desc.GetString());
+      }
+    }
+
+    call_edges.emplace_back(call_origin.GetMangledName(), return_pc,
+                            std::move(parameters));
   }
   return call_edges;
 }
@@ -3909,7 +3977,7 @@ std::vector<lldb_private::CallEdge>
 SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   DWARFDIE func_die = GetDIE(func_id.GetID());
   if (func_die.IsValid())
-    return CollectCallEdges(func_die);
+    return CollectCallEdges(GetObjectFile()->GetModule(), func_die);
   return {};
 }
 

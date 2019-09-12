@@ -127,9 +127,14 @@ size_t InlineFunctionInfo::MemorySize() const {
 }
 
 //
-CallEdge::CallEdge(const char *symbol_name, lldb::addr_t return_pc)
-    : return_pc(return_pc), resolved(false) {
+CallEdge::CallEdge(const char *symbol_name, lldb::addr_t return_pc,
+                   CallSiteParameterArray parameters)
+    : return_pc(return_pc), parameters(std::move(parameters)), resolved(false) {
   lazy_callee.symbol_name = symbol_name;
+}
+
+llvm::ArrayRef<CallSiteParameter> CallEdge::GetCallSiteParameters() const {
+  return parameters;
 }
 
 void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {

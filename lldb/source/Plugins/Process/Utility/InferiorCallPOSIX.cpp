@@ -12,7 +12,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
@@ -79,17 +79,23 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
       AddressRange mmap_range;
       if (sc.GetAddressRange(range_scope, 0, use_inline_block_range,
                              mmap_range)) {
-        ClangASTContext *clang_ast_context =
-            process->GetTarget().GetScratchClangASTContext();
-        CompilerType clang_void_ptr_type =
-            clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        auto type_system_or_err =
+            process->GetTarget().GetScratchTypeSystemForLanguage(
+                eLanguageTypeC);
+        if (!type_system_or_err) {
+          llvm::consumeError(type_system_or_err.takeError());
+          return false;
+        }
+        CompilerType void_ptr_type =
+            type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid)
+                .GetPointerType();
         const ArchSpec arch = process->GetTarget().GetArchitecture();
         MmapArgList args =
             process->GetTarget().GetPlatform()->GetMmapArgumentList(
                 arch, addr, length, prot_arg, flags, fd, offset);
         lldb::ThreadPlanSP call_plan_sp(
             new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
-                                       clang_void_ptr_type, args, options));
+                                       void_ptr_type, args, options));
         if (call_plan_sp) {
           DiagnosticManager diagnostics;
 
@@ -200,12 +206,16 @@ bool lldb_private::InferiorCall(Process *process, const Address *address,
   options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetTrapExceptions(trap_exceptions);
 
-  ClangASTContext *clang_ast_context =
-      process->GetTarget().GetScratchClangASTContext();
-  CompilerType clang_void_ptr_type =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+  auto type_system_or_err =
+      process->GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return false;
+  }
+  CompilerType void_ptr_type =
+      type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
   lldb::ThreadPlanSP call_plan_sp(
-      new ThreadPlanCallFunction(*thread, *address, clang_void_ptr_type,
+      new ThreadPlanCallFunction(*thread, *address, void_ptr_type,
                                  llvm::ArrayRef<addr_t>(), options));
   if (call_plan_sp) {
     DiagnosticManager diagnostics;

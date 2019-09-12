@@ -219,7 +219,7 @@ private:
   /// The language type of the current expression.
   lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
   /// The include directories that should be used when parsing the expression.
-  std::vector<ConstString> m_include_directories;
+  std::vector<std::string> m_include_directories;
 
   /// The absolute character position in the transformed source code where the
   /// user code (as typed by the user) starts. If the variable is empty, then we
