@@ -178,6 +178,13 @@ llvm::cl::opt<bool> SkipExcludedPPRanges(
 
 } // end anonymous namespace
 
+/// \returns object-file path derived from source-file path.
+static std::string getObjFilePath(StringRef SrcFile) {
+  SmallString<128> ObjFileName(SrcFile);
+  llvm::sys::path::replace_extension(ObjFileName, "o");
+  return ObjFileName.str();
+}
+
 int main(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
   llvm::cl::HideUnrelatedOptions(DependencyScannerCategory);
@@ -206,10 +213,45 @@ int main(int argc, const char **argv) {
       llvm::make_unique<tooling::ArgumentsAdjustingCompilations>(
           std::move(Compilations));
   AdjustingCompilations->appendArgumentsAdjuster(
-      [](const tooling::CommandLineArguments &Args, StringRef /*unused*/) {
+      [](const tooling::CommandLineArguments &Args, StringRef FileName) {
+        std::string LastO = "";
+        bool HasMT = false;
+        bool HasMQ = false;
+        bool HasMD = false;
+        // We need to find the last -o value.
+        if (!Args.empty()) {
+          std::size_t Idx = Args.size() - 1;
+          for (auto It = Args.rbegin(); It != Args.rend(); ++It) {
+            if (It != Args.rbegin()) {
+              if (Args[Idx] == "-o")
+                LastO = Args[Idx + 1];
+              if (Args[Idx] == "-MT")
+                HasMT = true;
+              if (Args[Idx] == "-MQ")
+                HasMQ = true;
+              if (Args[Idx] == "-MD")
+                HasMD = true;
+            }
+            --Idx;
+          }
+        }
+        // If there's no -MT/-MQ Driver would add -MT with the value of the last
+        // -o option.
         tooling::CommandLineArguments AdjustedArgs = Args;
         AdjustedArgs.push_back("-o");
         AdjustedArgs.push_back("/dev/null");
+        if (!HasMT && !HasMQ) {
+          AdjustedArgs.push_back("-MT");
+          // We're interested in source dependencies of an object file.
+          if (!HasMD) {
+            // FIXME: We are missing the directory unless the -o value is an
+            // absolute path.
+            AdjustedArgs.push_back(!LastO.empty() ? LastO
+                                                  : getObjFilePath(FileName));
+          } else {
+            AdjustedArgs.push_back(FileName);
+          }
+        }
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-Eonly");
         AdjustedArgs.push_back("-Xclang");

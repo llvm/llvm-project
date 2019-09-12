@@ -36,6 +36,7 @@
 #include "header.h"
 
 // CHECK1: regular_cdb_input2.cpp
+// CHECK1-NEXT: regular_cdb_input2.cpp
 // CHECK1-NEXT: Inputs{{/|\\}}header.h
 // CHECK1-NEXT: Inputs{{/|\\}}header2.h
 
