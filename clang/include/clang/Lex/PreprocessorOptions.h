@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LEX_PREPROCESSOROPTIONS_H_
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include <memory>
@@ -171,6 +172,14 @@ public:
   /// other instances will see that the module has failed and won't try to
   /// build it again.
   std::shared_ptr<FailedModulesSet> FailedModules;
+
+  /// Contains the currently active skipped range mappings for skipping excluded
+  /// conditional directives.
+  ///
+  /// The pointer is passed to the Preprocessor when it's constructed. The
+  /// pointer is unowned, the client is responsible for its lifetime.
+  ExcludedPreprocessorDirectiveSkipMapping
+      *ExcludedConditionalDirectiveSkipMappings = nullptr;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}

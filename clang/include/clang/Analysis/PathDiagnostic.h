@@ -52,11 +52,6 @@ class SourceManager;
 
 namespace ento {
 
-class ExplodedNode;
-class SymExpr;
-
-using SymbolRef = const SymExpr *;
-
 //===----------------------------------------------------------------------===//
 // High-level interface for handlers of path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
@@ -276,17 +271,20 @@ public:
   static PathDiagnosticLocation createDeclEnd(const LocationContext *LC,
                                                    const SourceManager &SM);
 
-  /// Create a location corresponding to the given valid ExplodedNode.
+  /// Create a location corresponding to the given valid ProgramPoint.
   static PathDiagnosticLocation create(const ProgramPoint &P,
                                        const SourceManager &SMng);
-
-  /// Create a location corresponding to the next valid ExplodedNode as end
-  /// of path location.
-  static PathDiagnosticLocation createEndOfPath(const ExplodedNode* N);
 
   /// Convert the given location into a single kind location.
   static PathDiagnosticLocation createSingleLocation(
                                              const PathDiagnosticLocation &PDL);
+
+  /// Construct a source location that corresponds to either the beginning
+  /// or the end of the given statement, or a nearby valid source location
+  /// if the statement does not have a valid source location of its own.
+  static SourceLocation
+  getValidSourceLocation(const Stmt *S, LocationOrAnalysisDeclContext LAC,
+                         bool UseEndOfStatement = false);
 
   bool operator==(const PathDiagnosticLocation &X) const {
     return K == X.K && Loc == X.Loc && Range == X.Range;
@@ -332,13 +330,6 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const;
 
   void dump() const;
-
-  /// Given an exploded node, retrieve the statement that should be used
-  /// for the diagnostic location.
-  static const Stmt *getStmt(const ExplodedNode *N);
-
-  /// Retrieve the statement corresponding to the successor node.
-  static const Stmt *getNextStmt(const ExplodedNode *N);
 };
 
 class PathDiagnosticLocationPair {
@@ -502,65 +493,13 @@ public:
   }
 };
 
-/// Interface for classes constructing Stack hints.
-///
-/// If a PathDiagnosticEvent occurs in a different frame than the final
-/// diagnostic the hints can be used to summarize the effect of the call.
-class StackHintGenerator {
-public:
-  virtual ~StackHintGenerator() = 0;
-
-  /// Construct the Diagnostic message for the given ExplodedNode.
-  virtual std::string getMessage(const ExplodedNode *N) = 0;
-};
-
-/// Constructs a Stack hint for the given symbol.
-///
-/// The class knows how to construct the stack hint message based on
-/// traversing the CallExpr associated with the call and checking if the given
-/// symbol is returned or is one of the arguments.
-/// The hint can be customized by redefining 'getMessageForX()' methods.
-class StackHintGeneratorForSymbol : public StackHintGenerator {
-private:
-  SymbolRef Sym;
-  std::string Msg;
-
-public:
-  StackHintGeneratorForSymbol(SymbolRef S, StringRef M) : Sym(S), Msg(M) {}
-  ~StackHintGeneratorForSymbol() override = default;
-
-  /// Search the call expression for the symbol Sym and dispatch the
-  /// 'getMessageForX()' methods to construct a specific message.
-  std::string getMessage(const ExplodedNode *N) override;
-
-  /// Produces the message of the following form:
-  ///   'Msg via Nth parameter'
-  virtual std::string getMessageForArg(const Expr *ArgE, unsigned ArgIndex);
-
-  virtual std::string getMessageForReturn(const CallExpr *CallExpr) {
-    return Msg;
-  }
-
-  virtual std::string getMessageForSymbolNotFound() {
-    return Msg;
-  }
-};
-
 class PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
   Optional<bool> IsPrunable;
 
-  /// If the event occurs in a different frame than the final diagnostic,
-  /// supply a message that will be used to construct an extra hint on the
-  /// returns from all the calls on the stack from this event to the final
-  /// diagnostic.
-  std::unique_ptr<StackHintGenerator> CallStackHint;
-
 public:
   PathDiagnosticEventPiece(const PathDiagnosticLocation &pos,
-                           StringRef s, bool addPosRange = true,
-                           StackHintGenerator *stackHint = nullptr)
-      : PathDiagnosticSpotPiece(pos, s, Event, addPosRange),
-        CallStackHint(stackHint) {}
+                           StringRef s, bool addPosRange = true)
+      : PathDiagnosticSpotPiece(pos, s, Event, addPosRange) {}
   ~PathDiagnosticEventPiece() override;
 
   /// Mark the diagnostic piece as being potentially prunable.  This
@@ -575,16 +514,6 @@ public:
   /// Return true if the diagnostic piece is prunable.
   bool isPrunable() const {
     return IsPrunable.hasValue() ? IsPrunable.getValue() : false;
-  }
-
-  bool hasCallStackHint() { return (bool)CallStackHint; }
-
-  /// Produce the hint for the given node. The node contains
-  /// information about the call for which the diagnostic can be generated.
-  std::string getCallStackMessage(const ExplodedNode *N) {
-    if (CallStackHint)
-      return CallStackHint->getMessage(N);
-    return {};
   }
 
   void dump() const override;
@@ -863,11 +792,6 @@ public:
     VerboseDesc += S;
   }
 
-  /// If the last piece of the report point to the header file, resets
-  /// the location of the report to be the last location in the main source
-  /// file.
-  void resetDiagnosticLocationToMainFile();
-
   StringRef getVerboseDescription() const { return VerboseDesc; }
 
   StringRef getShortDescription() const {
@@ -877,11 +801,6 @@ public:
   StringRef getCheckName() const { return CheckName; }
   StringRef getBugType() const { return BugType; }
   StringRef getCategory() const { return Category; }
-
-  /// Return the semantic context where an issue occurred.  If the
-  /// issue occurs along a path, this represents the "central" area
-  /// where the bug manifests.
-  const Decl *getDeclWithIssue() const { return DeclWithIssue; }
 
   using meta_iterator = std::deque<std::string>::const_iterator;
 
@@ -897,8 +816,21 @@ public:
     return *ExecutedLines;
   }
 
+  /// Return the semantic context where an issue occurred.  If the
+  /// issue occurs along a path, this represents the "central" area
+  /// where the bug manifests.
+  const Decl *getDeclWithIssue() const { return DeclWithIssue; }
+
+  void setDeclWithIssue(const Decl *D) {
+    DeclWithIssue = D;
+  }
+
   PathDiagnosticLocation getLocation() const {
     return Loc;
+  }
+
+  void setLocation(PathDiagnosticLocation NewLoc) {
+    Loc = NewLoc;
   }
 
   /// Get the location on which the report should be uniqued.

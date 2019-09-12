@@ -865,6 +865,54 @@ bool Minimizer::minimize() {
   return Error;
 }
 
+bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
+    ArrayRef<Token> Input, llvm::SmallVectorImpl<SkippedRange> &Range) {
+  struct Directive {
+    enum DirectiveKind {
+      If,  // if/ifdef/ifndef
+      Else // elif,else
+    };
+    int Offset;
+    DirectiveKind Kind;
+  };
+  llvm::SmallVector<Directive, 32> Offsets;
+  for (const Token &T : Input) {
+    switch (T.K) {
+    case pp_if:
+    case pp_ifdef:
+    case pp_ifndef:
+      Offsets.push_back({T.Offset, Directive::If});
+      break;
+
+    case pp_elif:
+    case pp_else: {
+      if (Offsets.empty())
+        return true;
+      int PreviousOffset = Offsets.back().Offset;
+      Range.push_back({PreviousOffset, T.Offset - PreviousOffset});
+      Offsets.push_back({T.Offset, Directive::Else});
+      break;
+    }
+
+    case pp_endif: {
+      if (Offsets.empty())
+        return true;
+      int PreviousOffset = Offsets.back().Offset;
+      Range.push_back({PreviousOffset, T.Offset - PreviousOffset});
+      do {
+        Directive::DirectiveKind Kind = Offsets.pop_back_val().Kind;
+        if (Kind == Directive::If)
+          break;
+      } while (!Offsets.empty());
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
 bool clang::minimizeSourceToDependencyDirectives(
     StringRef Input, SmallVectorImpl<char> &Output,
     SmallVectorImpl<Token> &Tokens, DiagnosticsEngine *Diags,

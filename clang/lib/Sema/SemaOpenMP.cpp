@@ -5416,12 +5416,14 @@ static const ValueDecl *getInitLCDecl(const Expr *E) {
 bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
   // Check test-expr for canonical form, save upper-bound UB, flags for
   // less/greater and for strict/non-strict comparison.
-  // OpenMP [2.6] Canonical loop form. Test-expr may be one of the following:
+  // OpenMP [2.9] Canonical loop form. Test-expr may be one of the following:
   //   var relational-op b
   //   b relational-op var
   //
+  bool IneqCondIsCanonical = SemaRef.getLangOpts().OpenMP >= 50;
   if (!S) {
-    SemaRef.Diag(DefaultLoc, diag::err_omp_loop_not_canonical_cond) << LCDecl;
+    SemaRef.Diag(DefaultLoc, diag::err_omp_loop_not_canonical_cond)
+        << (IneqCondIsCanonical ? 1 : 0) << LCDecl;
     return true;
   }
   Condition = S;
@@ -5439,12 +5441,11 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
                      (BO->getOpcode() == BO_GT || BO->getOpcode() == BO_GE),
                      (BO->getOpcode() == BO_LT || BO->getOpcode() == BO_GT),
                      BO->getSourceRange(), BO->getOperatorLoc());
-    } else if (BO->getOpcode() == BO_NE)
-        return setUB(getInitLCDecl(BO->getLHS()) == LCDecl ?
-                       BO->getRHS() : BO->getLHS(),
-                     /*LessOp=*/llvm::None,
-                     /*StrictOp=*/true,
-                     BO->getSourceRange(), BO->getOperatorLoc());
+    } else if (IneqCondIsCanonical && BO->getOpcode() == BO_NE)
+      return setUB(
+          getInitLCDecl(BO->getLHS()) == LCDecl ? BO->getRHS() : BO->getLHS(),
+          /*LessOp=*/llvm::None,
+          /*StrictOp=*/true, BO->getSourceRange(), BO->getOperatorLoc());
   } else if (auto *CE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (CE->getNumArgs() == 2) {
       auto Op = CE->getOperator();
@@ -5463,12 +5464,12 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
                        CE->getOperatorLoc());
         break;
       case OO_ExclaimEqual:
-        return setUB(getInitLCDecl(CE->getArg(0)) == LCDecl ?
-                     CE->getArg(1) : CE->getArg(0),
-                     /*LessOp=*/llvm::None,
-                     /*StrictOp=*/true,
-                     CE->getSourceRange(),
-                     CE->getOperatorLoc());
+        if (IneqCondIsCanonical)
+          return setUB(getInitLCDecl(CE->getArg(0)) == LCDecl ? CE->getArg(1)
+                                                              : CE->getArg(0),
+                       /*LessOp=*/llvm::None,
+                       /*StrictOp=*/true, CE->getSourceRange(),
+                       CE->getOperatorLoc());
         break;
       default:
         break;
@@ -5478,7 +5479,7 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
   if (dependent() || SemaRef.CurContext->isDependentContext())
     return false;
   SemaRef.Diag(CondLoc, diag::err_omp_loop_not_canonical_cond)
-      << S->getSourceRange() << LCDecl;
+      << (IneqCondIsCanonical ? 1 : 0) << S->getSourceRange() << LCDecl;
   return true;
 }
 

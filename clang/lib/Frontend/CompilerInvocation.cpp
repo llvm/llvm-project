@@ -2712,9 +2712,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.FixedPoint;
 
   // Handle exception personalities
-  Arg *A = Args.getLastArg(options::OPT_fsjlj_exceptions,
-                           options::OPT_fseh_exceptions,
-                           options::OPT_fdwarf_exceptions);
+  Arg *A = Args.getLastArg(
+      options::OPT_fsjlj_exceptions, options::OPT_fseh_exceptions,
+      options::OPT_fdwarf_exceptions, options::OPT_fwasm_exceptions);
   if (A) {
     const Option &Opt = A->getOption();
     llvm::Triple T(TargetOpts.Triple);
@@ -2725,6 +2725,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     Opts.SjLjExceptions = Opt.matches(options::OPT_fsjlj_exceptions);
     Opts.SEHExceptions = Opt.matches(options::OPT_fseh_exceptions);
     Opts.DWARFExceptions = Opt.matches(options::OPT_fdwarf_exceptions);
+    Opts.WasmExceptions = Opt.matches(options::OPT_fwasm_exceptions);
   }
 
   Opts.ExternCNoUnwind = Args.hasArg(OPT_fexternc_nounwind);
@@ -3483,6 +3484,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       Res.getDiagnosticOpts().Warnings.push_back("no-stdlibcxx-not-found");
     }
   }
+
+  if (Diags.isIgnored(diag::warn_profile_data_misexpect, SourceLocation()))
+    Res.FrontendOpts.LLVMArgs.push_back("-pgo-warn-misexpect");
 
   LangOpts.FunctionAlignment =
       getLastArgIntValue(Args, OPT_function_alignment, 0, Diags);
