@@ -1,5 +1,4 @@
-// RUN: %clang --analyze %s \
-// RUN:   -Xclang -triple -Xclang x86_64-pc-linux-gnu \
+// RUN: %clang --analyze %s --target=x86_64-pc-linux-gnu \
 // RUN:   -Xclang -analyzer-list-enabled-checkers \
 // RUN:   -Xclang -analyzer-display-progress \
 // RUN:   2>&1 | FileCheck %s --implicit-check-not=ANALYZE \
