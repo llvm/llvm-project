@@ -20,6 +20,7 @@
 #include "CXTranslationUnit.h"
 #include "CXType.h"
 #include "CursorVisitor.h"
+#include "clang-c/FatalErrorHandler.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
@@ -3243,18 +3244,10 @@ RefNamePieces buildPieces(unsigned NameFlags, bool IsMemberRefExpr,
 // Misc. API hooks.
 //===----------------------------------------------------------------------===//               
 
-static void fatal_error_handler(void *user_data, const std::string& reason,
-                                bool gen_crash_diag) {
-  // Write the result out to stderr avoiding errs() because raw_ostreams can
-  // call report_fatal_error.
-  fprintf(stderr, "LIBCLANG FATAL ERROR: %s\n", reason.c_str());
-  ::abort();
-}
-
 namespace {
 struct RegisterFatalErrorHandler {
   RegisterFatalErrorHandler() {
-    llvm::install_fatal_error_handler(fatal_error_handler, nullptr);
+    clang_install_aborting_llvm_fatal_error_handler();
   }
 };
 }

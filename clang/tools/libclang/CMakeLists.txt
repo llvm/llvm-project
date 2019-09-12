@@ -20,6 +20,7 @@ set(SOURCES
   CXString.cpp
   CXType.cpp
   Indexing.cpp
+  FatalErrorHandler.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
@@ -47,6 +48,7 @@ set(LIBS
   clangSerialization
   clangTooling
   clangToolingRefactor
+  LLVMSupport
 )
 
 if (CLANG_ENABLE_ARCMT)
