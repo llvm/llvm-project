@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple=i386-pc-win32 -fms-compatibility %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple=x86_64-windows-msvc %s -o - | FileCheck %s
 
 struct S {
   static const int NoInit_Ref;

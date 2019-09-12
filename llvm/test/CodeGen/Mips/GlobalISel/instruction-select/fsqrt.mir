@@ -9,7 +9,7 @@
 ...
 ---
 name:            sqrt_f32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -37,7 +37,7 @@ body:             |
 ...
 ---
 name:            sqrt_f64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

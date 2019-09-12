@@ -205,7 +205,7 @@ void asan_dispatch_call_block_and_release(void *block) {
 
 }  // namespace __asan
 
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 // Wrap |ctxt| and |func| into an asan_block_context_t.
 // The caller retains control of the allocated context.

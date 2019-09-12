@@ -18,7 +18,7 @@ namespace __sanitizer {
 
 static bool MyMatch(const char *templ, const char *func) {
   char tmp[1024];
-  strcpy(tmp, templ);  // NOLINT
+  snprintf(tmp, sizeof(tmp), "%s", templ);
   return TemplateMatch(tmp, func);
 }
 
@@ -80,43 +80,41 @@ class SuppressionContextTest : public ::testing::Test {
 };
 
 TEST_F(SuppressionContextTest, Parse) {
-  ctx_.Parse("race:foo\n"
-             " 	race:bar\n"  // NOLINT
-             "race:baz	 \n" // NOLINT
-             "# a comment\n"
-             "race:quz\n"); // NOLINT
+  ctx_.Parse(
+      "race:foo\n"
+      " \trace:bar\n"
+      "race:baz\t \n"
+      "# a comment\n"
+      "race:quz\n");
   CheckSuppressions(4, {"race", "race", "race", "race"},
                     {"foo", "bar", "baz", "quz"});
 }
 
 TEST_F(SuppressionContextTest, Parse2) {
   ctx_.Parse(
-    "  	# first line comment\n"  // NOLINT
-    " 	race:bar 	\n"  // NOLINT
-    "race:baz* *baz\n"
-    "# a comment\n"
-    "# last line comment\n"
-  );  // NOLINT
+      "  \t# first line comment\n"
+      " \trace:bar \t\n"
+      "race:baz* *baz\n"
+      "# a comment\n"
+      "# last line comment\n");
   CheckSuppressions(2, {"race", "race"}, {"bar", "baz* *baz"});
 }
 
 TEST_F(SuppressionContextTest, Parse3) {
   ctx_.Parse(
-    "# last suppression w/o line-feed\n"
-    "race:foo\n"
-    "race:bar\r\n"
-    "race:baz"
-  );  // NOLINT
+      "# last suppression w/o line-feed\n"
+      "race:foo\n"
+      "race:bar\r\n"
+      "race:baz");
   CheckSuppressions(3, {"race", "race", "race"}, {"foo", "bar", "baz"});
 }
 
 TEST_F(SuppressionContextTest, ParseType) {
   ctx_.Parse(
-    "race:foo\n"
-    "thread:bar\n"
-    "mutex:baz\n"
-    "signal:quz\n"
-  );  // NOLINT
+      "race:foo\n"
+      "thread:bar\n"
+      "mutex:baz\n"
+      "signal:quz\n");
   CheckSuppressions(4, {"race", "thread", "mutex", "signal"},
                     {"foo", "bar", "baz", "quz"});
 }

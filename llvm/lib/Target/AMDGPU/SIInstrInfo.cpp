@@ -6415,11 +6415,13 @@ MachineInstr *SIInstrInfo::createPHIDestinationCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator LastPHIIt,
     const DebugLoc &DL, Register Src, Register Dst) const {
   auto Cur = MBB.begin();
-  do {
+  while (Cur != MBB.end()) {
     if (!Cur->isPHI() && Cur->readsRegister(Dst))
       return BuildMI(MBB, Cur, DL, get(TargetOpcode::COPY), Dst).addReg(Src);
     ++Cur;
-  } while (Cur != MBB.end() && Cur != LastPHIIt);
+    if (Cur == LastPHIIt)
+      break;
+  }
 
   return TargetInstrInfo::createPHIDestinationCopy(MBB, LastPHIIt, DL, Src,
                                                    Dst);

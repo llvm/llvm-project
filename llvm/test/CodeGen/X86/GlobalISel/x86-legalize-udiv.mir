@@ -24,7 +24,7 @@
 ...
 ---
 name:            test_udiv_i8
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -83,7 +83,7 @@ body:             |
 ...
 ---
 name:            test_udiv_i16
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -142,7 +142,7 @@ body:             |
 ...
 ---
 name:            test_udiv_i32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

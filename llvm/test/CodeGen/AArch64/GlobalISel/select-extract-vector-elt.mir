@@ -3,7 +3,7 @@
 ...
 ---
 name:            v2s32_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -34,7 +34,7 @@ body:             |
 ...
 ---
 name:            v2s32_fpr_idx0
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -57,7 +57,7 @@ body:             |
 ...
 ---
 name:            v2s64_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -86,7 +86,7 @@ body:             |
 ...
 ---
 name:            v4s16_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -117,7 +117,7 @@ body:             |
 ...
 ---
 name:            v8s16_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -140,7 +140,7 @@ body:             |
 ...
 ---
 name:            v8s16_fpr_zext
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -164,7 +164,7 @@ body:             |
 ...
 ---
 name:            v8s16_fpr_sext
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -188,7 +188,7 @@ body:             |
 ...
 ---
 name:            v8s16_fpr_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -25,7 +25,7 @@
 ...
 ---
 name:            scc_def_and_use_no_dependency
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -72,7 +72,7 @@ body:             |
 # CHECK: S_ADDC_U32
 ---
 name:            scc_def_and_use_dependency
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

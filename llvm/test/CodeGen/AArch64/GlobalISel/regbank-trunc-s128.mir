@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -verify-machineinstrs -O0 -run-pass=regbankselect %s -o - | FileCheck %s
 ---
 name:            trunc_s64_s128
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

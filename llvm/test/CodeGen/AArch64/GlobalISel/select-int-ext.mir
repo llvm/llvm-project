@@ -75,7 +75,7 @@ body:             |
 
 ---
 name:            anyext_v8s16_from_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -101,7 +101,7 @@ body:             |
 
 ---
 name:            anyext_v4s32_from_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -127,7 +127,7 @@ body:             |
 
 ---
 name:            anyext_v2s64_from_v2s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 legalized:       true
 regBankSelected: true
@@ -248,7 +248,7 @@ body:             |
 
 ---
 name:            zext_v8s16_from_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -275,7 +275,7 @@ body:             |
 
 ---
 name:            zext_v4s32_from_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -301,7 +301,7 @@ body:             |
 
 ---
 name:            zext_v2s64_from_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -422,7 +422,7 @@ body:             |
 
 ---
 name:            sext_v8s16_from_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -449,7 +449,7 @@ body:             |
 
 ---
 name:            sext_v4s32_from_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -475,7 +475,7 @@ body:             |
 
 ---
 name:            sext_v2s64_from_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

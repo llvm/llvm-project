@@ -10,9 +10,7 @@ define i1 @t0(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i64 [[ADJUSTED]], [[BASE]]
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
   %offset = ptrtoint i64* %offsetptr to i64
 
@@ -28,9 +26,7 @@ define i1 @t1(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i64 [[ADJUSTED]], [[BASE]]
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
   %offset = ptrtoint i64* %offsetptr to i64
 
@@ -46,9 +42,7 @@ define i1 @t2_commutative(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i64 [[BASE]], [[ADJUSTED]]
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
   %offset = ptrtoint i64* %offsetptr to i64
 
@@ -64,9 +58,7 @@ define i1 @t3_commutative(i64 %base, i64* nonnull %offsetptr) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = ptrtoint i64* [[OFFSETPTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i64 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i64 [[BASE]], [[ADJUSTED]]
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i64 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
 ;
   %offset = ptrtoint i64* %offsetptr to i64
 

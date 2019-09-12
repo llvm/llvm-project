@@ -5,7 +5,7 @@
 ...
 ---
 name:            test_v4f16.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -45,7 +45,7 @@ body:             |
 ...
 ---
 name:            test_v8f16.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -97,7 +97,7 @@ body:             |
 ...
 ---
 name:            test_v2f32.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -124,7 +124,7 @@ body:             |
 ...
 ---
 name:            test_v2f64.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -151,7 +151,7 @@ body:             |
 ...
 ---
 name:            test_f32.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -178,7 +178,7 @@ body:             |
 ...
 ---
 name:            test_f64.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -205,7 +205,7 @@ body:             |
 ...
 ---
 name:            test_f16.nearbyint
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |

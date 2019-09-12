@@ -85,7 +85,7 @@
 ...
 ---
 name:            bar
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }

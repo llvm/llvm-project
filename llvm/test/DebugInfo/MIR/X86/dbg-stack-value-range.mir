@@ -126,7 +126,7 @@
 ...
 ---
 name:            foo
-alignment:       4
+alignment:       16
 frameInfo:       
   stackSize:       24
   offsetAdjustment: -24

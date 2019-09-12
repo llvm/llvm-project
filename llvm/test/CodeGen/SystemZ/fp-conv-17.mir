@@ -81,7 +81,7 @@
 
 ---
 name:            f0
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 registers:       
   - { id: 0, class: addr64bit }

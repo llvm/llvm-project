@@ -25,7 +25,7 @@
 ...
 ---
 name:            test_zext_i1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -51,7 +51,7 @@ body:             |
 ...
 ---
 name:            test_sext_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -74,7 +74,7 @@ body:             |
 ...
 ---
 name:            test_sext_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -97,7 +97,7 @@ body:             |
 ...
 ---
 name:            anyext_s64_from_s1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -122,7 +122,7 @@ body:             |
 ...
 ---
 name:            anyext_s64_from_s8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -148,7 +148,7 @@ body:             |
 ...
 ---
 name:            anyext_s64_from_s16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -174,7 +174,7 @@ body:             |
 ...
 ---
 name:            anyext_s64_from_s32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

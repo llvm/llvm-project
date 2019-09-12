@@ -19,7 +19,7 @@
 ...
 ---
 name:            store_v2p0
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -41,7 +41,7 @@ body:             |
 ...
 ---
 name:            load_v2p0
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
@@ -63,7 +63,7 @@ body:             |
 ...
 ---
 name:            load_v2p1
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |

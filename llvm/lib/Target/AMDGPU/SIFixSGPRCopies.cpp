@@ -466,6 +466,7 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // executioon.
 static bool hoistAndMergeSGPRInits(unsigned Reg,
                                    const MachineRegisterInfo &MRI,
+                                   const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
                                    const TargetInstrInfo *TII) {
   // List of inits by immediate value.
@@ -480,7 +481,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
   for (auto &MI : MRI.def_instructions(Reg)) {
     MachineOperand *Imm = nullptr;
-    for (auto &MO: MI.operands()) {
+    for (auto &MO : MI.operands()) {
       if ((MO.isReg() && ((MO.isDef() && MO.getReg() != Reg) || !MO.isDef())) ||
           (!MO.isImm() && !MO.isReg()) || (MO.isImm() && Imm)) {
         Imm = nullptr;
@@ -585,8 +586,41 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
     }
   }
 
-  for (auto MI : MergedInstrs)
-    MI->removeFromParent();
+  // Remove initializations that were merged into another.
+  for (auto &Init : Inits) {
+    auto &Defs = Init.second;
+    for (auto I = Defs.begin(); I != Defs.end(); ++I)
+      if (MergedInstrs.count(*I)) {
+        (*I)->eraseFromParent();
+        I = Defs.erase(I);
+      }
+  }
+
+  // Try to schedule SGPR initializations as early as possible in the MBB.
+  for (auto &Init : Inits) {
+    auto &Defs = Init.second;
+    for (auto MI : Defs) {
+      auto MBB = MI->getParent();
+      MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB, TII);
+      MachineBasicBlock::reverse_iterator B(BoundaryMI);
+      // Check if B should actually be a bondary. If not set the previous
+      // instruction as the boundary instead.
+      if (!TII->isBasicBlockPrologue(*B))
+        B++;
+
+      auto R = std::next(MI->getReverseIterator());
+      const unsigned Threshold = 50;
+      // Search until B or Threashold for a place to insert the initialization.
+      for (unsigned I = 0; R != B && I < Threshold; ++R, ++I)
+        if (R->readsRegister(Reg, TRI) || R->definesRegister(Reg, TRI) ||
+            TII->isSchedulingBoundary(*R, MBB, *MBB->getParent()))
+          break;
+
+      // Move to directly after R.
+      if (&*--R != MI)
+        MBB->splice(*R, MBB, MI);
+    }
+  }
 
   if (Changed)
     MRI.clearKillFlags(Reg);
@@ -755,7 +789,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (MF.getTarget().getOptLevel() > CodeGenOpt::None && EnableM0Merge)
-    hoistAndMergeSGPRInits(AMDGPU::M0, MRI, *MDT, TII);
+    hoistAndMergeSGPRInits(AMDGPU::M0, MRI, TRI, *MDT, TII);
 
   return true;
 }

@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -126,7 +127,7 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
   const MCSection &NextSec = *Layout.getSectionOrder()[Next];
   if (NextSec.isVirtualSection())
     return 0;
-  return OffsetToAlignment(EndAddr, NextSec.getAlignment());
+  return offsetToAlignment(EndAddr, llvm::Align(NextSec.getAlignment()));
 }
 
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
@@ -444,7 +445,8 @@ void MachObjectWriter::writeLinkerOptionsLoadCommand(
   }
 
   // Pad to a multiple of the pointer size.
-  W.OS.write_zeros(OffsetToAlignment(BytesWritten, is64Bit() ? 8 : 4));
+  W.OS.write_zeros(offsetToAlignment(BytesWritten, is64Bit() ? llvm::Align(8)
+                                                             : llvm::Align(4)));
 
   assert(W.OS.tell() - Start == Size);
 }
@@ -832,7 +834,8 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   // The section data is padded to 4 bytes.
   //
   // FIXME: Is this machine dependent?
-  unsigned SectionDataPadding = OffsetToAlignment(SectionDataFileSize, 4);
+  unsigned SectionDataPadding =
+      offsetToAlignment(SectionDataFileSize, llvm::Align(4));
   SectionDataFileSize += SectionDataPadding;
 
   // Write the prolog, starting with the header and load command...
@@ -997,7 +1000,8 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
 #endif
     Asm.getLOHContainer().emit(*this, Layout);
     // Pad to a multiple of the pointer size.
-    W.OS.write_zeros(OffsetToAlignment(LOHRawSize, is64Bit() ? 8 : 4));
+    W.OS.write_zeros(offsetToAlignment(LOHRawSize, is64Bit() ? llvm::Align(8)
+                                                             : llvm::Align(4)));
     assert(W.OS.tell() - Start == LOHSize);
   }
 

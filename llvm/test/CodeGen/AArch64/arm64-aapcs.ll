@@ -25,7 +25,7 @@ define [2 x i64] @test_i64x2_align(i32, [2 x i64] %arg, i32 %after) {
 @var64 = global i64 0, align 8
 
 ; Check stack slots are 64-bit at all times.
-define void @test_stack_slots([8 x i32], i1 %bool, i8 %char, i16 %short,
+define void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %short,
                                 i32 %int, i64 %long) {
 ; CHECK-LABEL: test_stack_slots:
 ; CHECK-DAG: ldr w[[ext1:[0-9]+]], [sp, #24]

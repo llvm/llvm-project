@@ -149,6 +149,7 @@ static bool isAmbiguous(unsigned Opc) {
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_PHI:
   case TargetOpcode::G_SELECT:
+  case TargetOpcode::G_IMPLICIT_DEF:
     return true;
   default:
     return false;
@@ -230,6 +231,9 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::AmbiguousRegDefUseContainer(
     addUseDef(MI->getOperand(2).getReg(), MRI);
     addUseDef(MI->getOperand(3).getReg(), MRI);
   }
+
+  if (MI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+    addDefUses(MI->getOperand(0).getReg(), MRI);
 }
 
 bool MipsRegisterBankInfo::TypeInfoForMF::visit(
@@ -398,6 +402,7 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_UDIV:
   case G_SREM:
   case G_UREM:
+  case G_BRINDIRECT:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     break;
   case G_LOAD: {
@@ -490,6 +495,24 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                      : &Mips::ValueMappings[Mips::DPRIdx];
       OperandsMapping = getOperandsMapping(
           {Bank, &Mips::ValueMappings[Mips::GPRIdx], Bank, Bank});
+      if (Size == 64)
+        MappingID = CustomMappingID;
+    }
+    break;
+  }
+  case G_IMPLICIT_DEF: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    InstType InstTy = InstType::Integer;
+    if (!MRI.getType(MI.getOperand(0).getReg()).isPointer()) {
+      InstTy = TI.determineInstType(&MI);
+    }
+
+    if (InstTy == InstType::FloatingPoint) { // fprb
+      OperandsMapping = Size == 32 ? &Mips::ValueMappings[Mips::SPRIdx]
+                                   : &Mips::ValueMappings[Mips::DPRIdx];
+    } else { // gprb
+      OperandsMapping = Size == 32 ? &Mips::ValueMappings[Mips::GPRIdx]
+                                   : &Mips::ValueMappings[Mips::DPRIdx];
       if (Size == 64)
         MappingID = CustomMappingID;
     }
@@ -638,7 +661,8 @@ void MipsRegisterBankInfo::applyMappingImpl(
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_PHI:
-  case TargetOpcode::G_SELECT: {
+  case TargetOpcode::G_SELECT:
+  case TargetOpcode::G_IMPLICIT_DEF: {
     Helper.narrowScalar(MI, 0, LLT::scalar(32));
     // Handle new instructions.
     while (!NewInstrs.empty()) {

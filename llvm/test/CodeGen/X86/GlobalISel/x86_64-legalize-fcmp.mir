@@ -146,7 +146,7 @@
 ...
 ---
 name:            fcmp_float_oeq
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -181,7 +181,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ogt
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -216,7 +216,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_oge
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -251,7 +251,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_olt
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -286,7 +286,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ole
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -321,7 +321,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_one
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -356,7 +356,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ord
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -391,7 +391,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_uno
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -426,7 +426,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ueq
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -461,7 +461,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ugt
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -496,7 +496,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_uge
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -531,7 +531,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ult
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -566,7 +566,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_ule
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -601,7 +601,7 @@ body:             |
 ...
 ---
 name:            fcmp_float_une
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -636,7 +636,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_oeq
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -671,7 +671,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ogt
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -706,7 +706,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_oge
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -741,7 +741,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_olt
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -776,7 +776,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ole
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -811,7 +811,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_one
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -846,7 +846,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ord
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -881,7 +881,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_uno
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -916,7 +916,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ueq
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -951,7 +951,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ugt
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -986,7 +986,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_uge
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -1021,7 +1021,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ult
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -1056,7 +1056,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_ule
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -1091,7 +1091,7 @@ body:             |
 ...
 ---
 name:            fcmp_double_une
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

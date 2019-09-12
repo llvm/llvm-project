@@ -8,7 +8,7 @@
 
 void foo(int index, int len) {
   for (int i = 1; i < len; ++i) {
-    char array[len]; // NOLINT
+    char array[len];
     assert(!(reinterpret_cast<uintptr_t>(array) & 31L));
     array[index + i] = 0;
 // CHECK: ERROR: AddressSanitizer: dynamic-stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]

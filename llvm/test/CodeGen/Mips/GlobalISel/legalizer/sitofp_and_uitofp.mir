@@ -23,7 +23,7 @@
 ...
 ---
 name:            i64tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -63,7 +63,7 @@ body:             |
 ...
 ---
 name:            i32tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -89,7 +89,7 @@ body:             |
 ...
 ---
 name:            i16tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -124,7 +124,7 @@ body:             |
 ...
 ---
 name:            i8tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -159,7 +159,7 @@ body:             |
 ...
 ---
 name:            i64tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -199,7 +199,7 @@ body:             |
 ...
 ---
 name:            i32tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -225,7 +225,7 @@ body:             |
 ...
 ---
 name:            i16tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -260,7 +260,7 @@ body:             |
 ...
 ---
 name:            i8tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -295,7 +295,7 @@ body:             |
 ...
 ---
 name:            u64tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -335,7 +335,7 @@ body:             |
 ...
 ---
 name:            u32tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -371,7 +371,7 @@ body:             |
 ...
 ---
 name:            u16tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -412,7 +412,7 @@ body:             |
 ...
 ---
 name:            u8tof32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -453,7 +453,7 @@ body:             |
 ...
 ---
 name:            u64tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -493,7 +493,7 @@ body:             |
 ...
 ---
 name:            u32tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -527,7 +527,7 @@ body:             |
 ...
 ---
 name:            u16tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -566,7 +566,7 @@ body:             |
 ...
 ---
 name:            u8tof64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

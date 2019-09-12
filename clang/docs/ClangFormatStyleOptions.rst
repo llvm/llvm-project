@@ -1527,6 +1527,23 @@ the configuration (without a prefix: ``Auto``).
        plop();                                  plop();
      }                                      }
 
+**IndentGotoLabels** (``bool``)
+  Indent goto labels.
+
+  When ``false``, goto labels are flushed left.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     int f() {                      vs.     int f() {
+       if (foo()) {                           if (foo()) {
+       label1:                              label1:
+         bar();                                 bar();
+       }                                      }
+     label2:                                label2:
+       return 1;                              return 1;
+     }                                      }
+
 **IndentPPDirectives** (``PPDirectiveIndentStyle``)
   The preprocessor directive indenting style to use.
 

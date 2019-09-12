@@ -749,11 +749,15 @@ public:
   // to the user defined handler.
   Error handleResponse(ChannelT &C) override {
     Error Result = Error::success();
-    if (auto Err =
-            SerializationTraits<ChannelT, Error, Error>::deserialize(C, Result))
+    if (auto Err = SerializationTraits<ChannelT, Error, Error>::deserialize(
+            C, Result)) {
+      consumeError(std::move(Result));
       return Err;
-    if (auto Err = C.endReceiveMessage())
+    }
+    if (auto Err = C.endReceiveMessage()) {
+      consumeError(std::move(Result));
       return Err;
+    }
     return Handler(std::move(Result));
   }
 

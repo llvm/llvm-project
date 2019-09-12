@@ -30,7 +30,7 @@
 #include <xpc/xpc.h>
 #endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
-typedef long long_t;  // NOLINT
+typedef long long_t;
 
 extern "C" {
 int getcontext(ucontext_t *ucp) __attribute__((returns_twice));

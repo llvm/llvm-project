@@ -12,7 +12,7 @@
 ...
 ---
 name:            inttoptr_p0_s64
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

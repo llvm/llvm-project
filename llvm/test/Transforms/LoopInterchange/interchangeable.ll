@@ -18,26 +18,28 @@ define void @interchange_01(i64 %k, i64 %N) {
 ; CHECK:       for1.header.preheader:
 ; CHECK-NEXT:    br label [[FOR1_HEADER:%.*]]
 ; CHECK:       for1.header:
-; CHECK-NEXT:    [[INDVARS_IV23:%.*]] = phi i64 [ [[INDVARS_IV_NEXT24:%.*]], [[FOR1_INC10:%.*]] ], [ 0, [[FOR1_HEADER_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], [[FOR1_INC10:%.*]] ], [ 0, [[FOR1_HEADER_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR2_SPLIT1:%.*]]
 ; CHECK:       for2.preheader:
 ; CHECK-NEXT:    br label [[FOR2:%.*]]
 ; CHECK:       for2:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR2_SPLIT:%.*]] ], [ 0, [[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], [[FOR2_SPLIT:%.*]] ], [ 0, [[FOR2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
 ; CHECK:       for2.split1:
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV23]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[J]], i64 [[J23]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i64, i64* [[ARRAYIDX5]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[LV]], [[K:%.*]]
 ; CHECK-NEXT:    store i64 [[ADD]], i64* [[ARRAYIDX5]]
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
 ; CHECK-NEXT:    br label [[FOR1_INC10]]
 ; CHECK:       for2.split:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 99
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END12:%.*]], label [[FOR2]]
+; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_END12:%.*]], label [[FOR2]]
 ; CHECK:       for1.inc10:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT24]] = add nuw nsw i64 [[INDVARS_IV23]], 1
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INDVARS_IV23]], 99
+; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[J23]], 99
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR2_SPLIT]], label [[FOR1_HEADER]]
 ; CHECK:       for.end12:
 ; CHECK-NEXT:    ret void
@@ -79,26 +81,28 @@ define void @interchange_02(i64 %k) {
 ; CHECK:       for1.header.preheader:
 ; CHECK-NEXT:    br label [[FOR1_HEADER:%.*]]
 ; CHECK:       for1.header:
-; CHECK-NEXT:    [[INDVARS_IV19:%.*]] = phi i64 [ [[INDVARS_IV_NEXT20:%.*]], [[FOR1_INC10:%.*]] ], [ 0, [[FOR1_HEADER_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[J19:%.*]] = phi i64 [ [[J_NEXT20:%.*]], [[FOR1_INC10:%.*]] ], [ 0, [[FOR1_HEADER_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR3_SPLIT1:%.*]]
 ; CHECK:       for3.preheader:
 ; CHECK-NEXT:    br label [[FOR3:%.*]]
 ; CHECK:       for3:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR3_SPLIT:%.*]] ], [ 100, [[FOR3_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], [[FOR3_SPLIT:%.*]] ], [ 100, [[FOR3_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
 ; CHECK:       for3.split1:
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV19]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[J]], i64 [[J19]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX5]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP0]], [[K:%.*]]
 ; CHECK-NEXT:    store i64 [[ADD]], i64* [[ARRAYIDX5]]
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[J]], 0
 ; CHECK-NEXT:    br label [[FOR1_INC10]]
 ; CHECK:       for3.split:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR3]], label [[FOR_END11:%.*]]
+; CHECK-NEXT:    [[TMP1]] = add nsw i64 [[J]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[J]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR3]], label [[FOR_END11:%.*]]
 ; CHECK:       for1.inc10:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT20]] = add nuw nsw i64 [[INDVARS_IV19]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT20]], 100
+; CHECK-NEXT:    [[J_NEXT20]] = add nuw nsw i64 [[J19]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J_NEXT20]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR3_SPLIT]], label [[FOR1_HEADER]]
 ; CHECK:       for.end11:
 ; CHECK-NEXT:    ret void
@@ -139,6 +143,28 @@ for.end11:
 ;; FIXME: DA misses this case after D35430
 
 define void @interchange_10() {
+; CHECK-LABEL: @interchange_10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR1_HEADER:%.*]]
+; CHECK:       for1.header:
+; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[J_NEXT24:%.*]], [[FOR1_INC10:%.*]] ]
+; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
+; CHECK-NEXT:    br label [[FOR2:%.*]]
+; CHECK:       for2:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[FOR2]] ], [ 1, [[FOR1_HEADER]] ]
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[J]], i64 [[J23]]
+; CHECK-NEXT:    store i64 [[J]], i64* [[ARRAYIDX5]]
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 [[J]], i64 [[J_NEXT24]]
+; CHECK-NEXT:    store i64 [[J23]], i64* [[ARRAYIDX10]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR1_INC10]], label [[FOR2]]
+; CHECK:       for1.inc10:
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[J23]], 98
+; CHECK-NEXT:    br i1 [[EXITCOND26]], label [[FOR_END12:%.*]], label [[FOR1_HEADER]]
+; CHECK:       for.end12:
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for1.header
 

@@ -2,11 +2,11 @@
 {
   "directory": "DIR",
   "command": "clang -E DIR/subframework_header_dir_symlink_input.m -D EMPTY -iframework Inputs/frameworks",
-  "file": "DIR/subframework_header_dir_symlink.m"
+  "file": "DIR/subframework_header_dir_symlink_input.m"
 },
 {
   "directory": "DIR",
   "command": "clang -E DIR/subframework_header_dir_symlink_input2.m -FInputs/frameworks -iframework Inputs/frameworks_symlink",
-  "file": "DIR/subframework_header_dir_symlink2.m"
+  "file": "DIR/subframework_header_dir_symlink_input2.m"
 }
 ]

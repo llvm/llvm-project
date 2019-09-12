@@ -868,10 +868,10 @@ TEST(Allocator, ScopedBuffer) {
   const int kSize = 512;
   {
     InternalMmapVector<int> int_buf(kSize);
-    EXPECT_EQ((uptr)kSize, int_buf.size()); // NOLINT
+    EXPECT_EQ((uptr)kSize, int_buf.size());
   }
   InternalMmapVector<char> char_buf(kSize);
-  EXPECT_EQ((uptr)kSize, char_buf.size()); // NOLINT
+  EXPECT_EQ((uptr)kSize, char_buf.size());
   internal_memset(char_buf.data(), 'c', kSize);
   for (int i = 0; i < kSize; i++) {
     EXPECT_EQ('c', char_buf[i]);

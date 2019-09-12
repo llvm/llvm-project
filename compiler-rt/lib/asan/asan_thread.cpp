@@ -367,8 +367,9 @@ uptr AsanThread::GetStackVariableShadowStart(uptr addr) {
   } else if (has_fake_stack()) {
     bottom = fake_stack()->AddrIsInFakeStack(addr);
     CHECK(bottom);
-  } else
+  } else {
     return 0;
+  }
 
   uptr aligned_addr = RoundDownTo(addr, SANITIZER_WORDSIZE / 8);  // align addr.
   u8 *shadow_ptr = (u8*)MemToShadow(aligned_addr);
@@ -505,7 +506,7 @@ void EnsureMainThreadIDIsCorrect() {
 } // namespace __lsan
 
 // ---------------------- Interface ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE

@@ -1,7 +1,10 @@
 # RUN: llc -march=amdgcn -amdgpu-enable-merge-m0 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
 
+# GCN-LABEL: name: merge-m0-many-init
 # GCN:    bb.0.entry:
 # GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
 # GCN-NEXT: DS_WRITE_B32
 # GCN-NEXT: DS_WRITE_B32
 # GCN-NEXT: SI_INIT_M0 65536
@@ -45,9 +48,8 @@
 # GCN-NEXT: DS_WRITE_B32
 # GCN-NEXT: SI_INIT_M0 -1
 # GCN-NEXT: DS_WRITE_B32
-
 ---
-name:            merge-m0-many-init
+name: merge-m0-many-init
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -124,22 +126,24 @@ body:             |
 
 ...
 
+# GCN-LABEL: name: merge-m0-dont-hoist-past-init-with-different-initializer
 # GCN:    bb.0.entry:
 # GCN:      SI_INIT_M0 65536
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
 # GCN-NEXT: DS_WRITE_B32
 
-#GCN:     bb.1:
-#GCN-NOT:   SI_INIT_M0 65536
-#GCN-NOT:   SI_INIT_M0 -1
+# GCN:    bb.1:
+# GCN-NOT:  SI_INIT_M0 65536
+# GCN-NOT:  SI_INIT_M0 -1
 
-#GCN:     bb.2:
-#GCN:       SI_INIT_M0 -1
+# GCN:    bb.2:
+# GCN:      SI_INIT_M0 -1
 
-#GCN:     bb.3:
-#GCN:       SI_INIT_M0 -1
-
+# GCN:    bb.3:
+# GCN:      SI_INIT_M0 -1
 ---
-name:            merge-m0-dont-hoist-past-init-with-different-initializer
+name: merge-m0-dont-hoist-past-init-with-different-initializer
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -179,19 +183,19 @@ body:             |
     S_ENDPGM 0
 ...
 
+# GCN-LABEL: name: merge-m0-after-prologue
 # GCN:    bb.0.entry:
 # GCN-NOT:  SI_INIT_M0
 # GCN:      S_OR_B64
 # GCN-NEXT: SI_INIT_M0
 
-#GCN:     bb.1:
-#GCN-NOT:   SI_INIT_M0 -1
+# GCN:     bb.1:
+# GCN-NOT:   SI_INIT_M0 -1
 
-#GCN:     bb.2:
-#GCN-NOT:   SI_INIT_MO -1
-
+# GCN:     bb.2:
+# GCN-NOT:   SI_INIT_MO -1
 ---
-name:            merge-m0-after-prologue
+name: merge-m0-after-prologue
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -222,4 +226,72 @@ body:             |
 
   bb.3:
     S_ENDPGM 0
+...
+
+# GCN-LABEL: name: move-m0-avoid-hazard
+# GCN: $m0 = S_MOV_B32 -1
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+---
+name: move-m0-avoid-hazard
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $m0 = S_MOV_B32 -1
+    DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+...
+
+# GCN-LABEL: name: move-m0-with-prologue
+# GCN $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+# GCN: $m0 = S_MOV_B32 -1
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+---
+name: move-m0-with-prologue
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $m0 = S_MOV_B32 -1
+    DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+...
+
+# GCN-LABEL: name: move-m0-different-initializer
+# GCN: SI_INIT_M0 -1
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN: SI_INIT_M0 65536
+# GCN-NEXT: S_NOP
+---
+name: move-m0-different-initializer
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_NOP 0
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+...
+
+# GCN-LABEL: name: move-m0-schedule-boundary
+# GCN: S_SETREG
+# GCN-NEXT: SI_INIT_M0 -1
+---
+name: move-m0-schedule-boundary
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    S_SETREG_IMM32_B32 0, 1
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
 ...

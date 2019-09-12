@@ -25,7 +25,7 @@
 ...
 ---
 name:            test_vminnmq_m_f32_v2
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

@@ -57,7 +57,7 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
   }
 
  private:
-  virtual bool StartSymbolizerSubprocess() override {
+  bool StartSymbolizerSubprocess() override {
     // Configure sandbox before starting atos process.
     return SymbolizerProcess::StartSymbolizerSubprocess();
   }

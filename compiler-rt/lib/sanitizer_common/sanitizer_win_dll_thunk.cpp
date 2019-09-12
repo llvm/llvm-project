@@ -54,8 +54,8 @@ int dllThunkInterceptWhenPossible(const char* main_function,
 #define INTERFACE_WEAK_FUNCTION(Name) INTERCEPT_SANITIZER_WEAK_FUNCTION(Name)
 #include "sanitizer_common_interface.inc"
 
-#pragma section(".DLLTH$A", read)  // NOLINT
-#pragma section(".DLLTH$Z", read)  // NOLINT
+#pragma section(".DLLTH$A", read)
+#pragma section(".DLLTH$Z", read)
 
 typedef void (*DllThunkCB)();
 extern "C" {
@@ -85,7 +85,7 @@ extern "C" int __dll_thunk_init() {
 
 // We want to call dll_thunk_init before C/C++ initializers / constructors are
 // executed, otherwise functions like memset might be invoked.
-#pragma section(".CRT$XIB", long, read)  // NOLINT
+#pragma section(".CRT$XIB", long, read)
 __declspec(allocate(".CRT$XIB")) int (*__dll_thunk_preinit)() =
     __dll_thunk_init;
 
@@ -94,7 +94,7 @@ static void WINAPI dll_thunk_thread_init(void *mod, unsigned long reason,
   if (reason == /*DLL_PROCESS_ATTACH=*/1) __dll_thunk_init();
 }
 
-#pragma section(".CRT$XLAB", long, read)  // NOLINT
+#pragma section(".CRT$XLAB", long, read)
 __declspec(allocate(".CRT$XLAB")) void (WINAPI *__dll_thunk_tls_init)(void *,
     unsigned long, void *) = dll_thunk_thread_init;
 

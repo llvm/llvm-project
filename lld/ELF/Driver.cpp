@@ -386,8 +386,8 @@ static bool isKnownZFlag(StringRef s) {
          s == "noexecstack" || s == "nokeep-text-section-prefix" ||
          s == "norelro" || s == "noseparate-code" || s == "notext" ||
          s == "now" || s == "origin" || s == "relro" || s == "retpolineplt" ||
-         s == "rodynamic" || s == "text" || s == "wxneeded" ||
-         s.startswith("common-page-size") || s.startswith("max-page-size=") ||
+         s == "rodynamic" || s == "text" || s == "undefs" || s == "wxneeded" ||
+         s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
          s.startswith("stack-size=");
 }
 
@@ -517,6 +517,8 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
     case OPT_z:
       if (StringRef(arg->getValue()) == "defs")
         return errorOrWarn;
+      if (StringRef(arg->getValue()) == "undefs")
+        return UnresolvedPolicy::Ignore;
       continue;
     }
   }

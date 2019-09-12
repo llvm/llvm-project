@@ -66,6 +66,24 @@ struct Token {
   Token(TokenKind K, int Offset) : K(K), Offset(Offset) {}
 };
 
+/// Simplified token range to track the range of a potentially skippable PP
+/// directive.
+struct SkippedRange {
+  /// Offset into the output byte stream of where the skipped directive begins.
+  int Offset;
+
+  /// The number of bytes that can be skipped before the preprocessing must
+  /// resume.
+  int Length;
+};
+
+/// Computes the potential source ranges that can be skipped by the preprocessor
+/// when skipping a directive like #if, #ifdef or #elsif.
+///
+/// \returns false on success, true on error.
+bool computeSkippedRanges(ArrayRef<Token> Input,
+                          llvm::SmallVectorImpl<SkippedRange> &Range);
+
 } // end namespace minimize_source_to_dependency_directives
 
 /// Minimize the input down to the preprocessor directives that might have

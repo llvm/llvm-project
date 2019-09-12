@@ -75,7 +75,7 @@
 ---
 
 name:            expand_BEQ
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -174,7 +174,7 @@ body:             |
 ---
 
 name:            expand_BGEZ
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -273,7 +273,7 @@ body:             |
 ---
 
 name:            expand_BGTZ
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -372,7 +372,7 @@ body:             |
 ---
 
 name:            expand_BLEZ
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -471,7 +471,7 @@ body:             |
 ---
 
 name:            expand_BLTZ
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -570,7 +570,7 @@ body:             |
 ---
 
 name:            expand_BNE
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

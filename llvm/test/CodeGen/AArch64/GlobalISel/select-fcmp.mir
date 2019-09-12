@@ -6,7 +6,7 @@
 ...
 ---
 name:            zero
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            notzero
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -15,7 +15,7 @@
 ...
 ---
 name:            test_fmul_float
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -54,7 +54,7 @@ body:             |
 ...
 ---
 name:            test_fmul_double
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

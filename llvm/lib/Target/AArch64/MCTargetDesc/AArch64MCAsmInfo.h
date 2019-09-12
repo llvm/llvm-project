@@ -23,7 +23,7 @@ class Target;
 class Triple;
 
 struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
-  explicit AArch64MCAsmInfoDarwin();
+  explicit AArch64MCAsmInfoDarwin(bool IsILP32);
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                               MCStreamer &Streamer) const override;

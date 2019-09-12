@@ -9,7 +9,7 @@
 
 ---
 name:            _amdgpu_cs_main
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

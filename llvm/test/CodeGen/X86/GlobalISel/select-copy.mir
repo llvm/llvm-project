@@ -31,7 +31,7 @@
 ---
 name:            test_copy
 # ALL-LABEL: name:  test_copy
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -57,7 +57,7 @@ body:             |
 ---
 name:            test_copy2
 # ALL-LABEL: name:  test_copy2
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -83,7 +83,7 @@ body:             |
 ---
 name:            test_copy3
 # ALL-LABEL: name:  test_copy3
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -113,7 +113,7 @@ body:             |
 ---
 name:            test_copy4
 # ALL-LABEL: name:  test_copy4
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -143,7 +143,7 @@ body:             |
 ---
 name:            test_copy5
 # ALL-LABEL: name:  test_copy5
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -173,7 +173,7 @@ body:             |
 ---
 name:            test_copy6
 # ALL-LABEL: name:  test_copy6
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:

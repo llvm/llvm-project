@@ -101,16 +101,17 @@ echo "@@@@@@"
 echo "@@@ Configuring CMake @@@"
 mkdir -p "${LLVM_BUILD_DIR}"
 (cd "${LLVM_BUILD_DIR}" &&
-  xcrun cmake "${MONOREPO_ROOT}/llvm" -GNinja \
+  xcrun cmake \
+    -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+    -GNinja \
     -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
     -DLIBCXX_ENABLE_EXCEPTIONS="${LIBCXX_EXCEPTIONS}" \
-    -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=ON \
-    -DLIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS=ON \
     ${ADDITIONAL_CMAKE_ARGS} \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-    -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
+    -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" \
+    "${MONOREPO_ROOT}/llvm"
 )
 echo "@@@@@@"
 

@@ -48,7 +48,7 @@ COMMENT_EXPORT("??_V@YAXPAX@Z")                   // operator delete[]
 #define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE
 #endif
 
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 // FreeBSD prior v9.2 have wrong definition of 'size_t'.
 // http://svnweb.freebsd.org/base?view=revision&revision=232261

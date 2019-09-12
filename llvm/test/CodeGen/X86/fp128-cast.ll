@@ -505,15 +505,11 @@ entry:
 define void @TestFPTruncF128_F80() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F80:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    subq $24, %rsp
+; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __trunctfxf2
-; X64-SSE-NEXT:    fstpt (%rsp)
-; X64-SSE-NEXT:    movq (%rsp), %rax
-; X64-SSE-NEXT:    movq %rax, {{.*}}(%rip)
-; X64-SSE-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; X64-SSE-NEXT:    movw %ax, vf80+{{.*}}(%rip)
-; X64-SSE-NEXT:    addq $24, %rsp
+; X64-SSE-NEXT:    fstpt {{.*}}(%rip)
+; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
 ; X32-LABEL: TestFPTruncF128_F80:
@@ -531,15 +527,11 @@ define void @TestFPTruncF128_F80() nounwind {
 ;
 ; X64-AVX-LABEL: TestFPTruncF128_F80:
 ; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    subq $24, %rsp
+; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __trunctfxf2
-; X64-AVX-NEXT:    fstpt (%rsp)
-; X64-AVX-NEXT:    movq (%rsp), %rax
-; X64-AVX-NEXT:    movq %rax, {{.*}}(%rip)
-; X64-AVX-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; X64-AVX-NEXT:    movw %ax, vf80+{{.*}}(%rip)
-; X64-AVX-NEXT:    addq $24, %rsp
+; X64-AVX-NEXT:    fstpt {{.*}}(%rip)
+; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
   %0 = load fp128, fp128* @vf128, align 16

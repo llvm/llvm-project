@@ -40,7 +40,7 @@ body:             |
 ...
 ---
 name:            test_s128
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_s128

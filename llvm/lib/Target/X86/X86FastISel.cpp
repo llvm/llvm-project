@@ -3387,6 +3387,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     case CCValAssign::SExtUpper:
     case CCValAssign::ZExtUpper:
     case CCValAssign::FPExt:
+    case CCValAssign::Trunc:
       llvm_unreachable("Unexpected loc info!");
     case CCValAssign::Indirect:
       // FIXME: Indirect doesn't need extending, but fast-isel doesn't fully

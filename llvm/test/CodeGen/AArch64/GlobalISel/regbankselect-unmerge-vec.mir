@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple arm64-- -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s
 ---
 name:            unmerge
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 frameInfo:
@@ -26,7 +26,7 @@ body:             |
 ...
 ---
 name:            unmerge_s128
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 frameInfo:

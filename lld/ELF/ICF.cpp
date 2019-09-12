@@ -446,10 +446,11 @@ static void print(const Twine &s) {
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
   // Collect sections to merge.
-  for (InputSectionBase *sec : inputSections)
-    if (auto *s = dyn_cast<InputSection>(sec))
-      if (isEligible(s))
-        sections.push_back(s);
+  for (InputSectionBase *sec : inputSections) {
+    auto *s = cast<InputSection>(sec);
+    if (isEligible(s))
+      sections.push_back(s);
+  }
 
   // Initially, we use hash values to partition sections.
   parallelForEach(sections, [&](InputSection *s) {

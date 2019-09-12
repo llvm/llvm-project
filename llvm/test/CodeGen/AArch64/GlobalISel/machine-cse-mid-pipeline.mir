@@ -81,7 +81,7 @@ body:             |
 ...
 ---
 name:            int_extensions
-alignment:       2
+alignment:       4
 legalized:       false
 regBankSelected: false
 selected:        false

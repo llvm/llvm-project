@@ -167,6 +167,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
         setLibcallName(RTLIB::BZERO, "__bzero");
       break;
     case Triple::aarch64:
+    case Triple::aarch64_32:
       setLibcallName(RTLIB::BZERO, "bzero");
       break;
     default:

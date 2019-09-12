@@ -10,7 +10,7 @@
 ...
 ---
 name:            store_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            store_i64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -58,7 +58,7 @@ body:             |
 ...
 ---
 name:            store_float
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            store_double
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

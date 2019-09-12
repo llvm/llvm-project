@@ -57,7 +57,7 @@
 ...
 ---
 name:            const_to_sgpr
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -146,7 +146,7 @@ body:             |
 ...
 ---
 name:            const_to_sgpr_multiple_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -252,7 +252,7 @@ body:             |
 ...
 ---
 name:            const_to_sgpr_subreg
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

@@ -78,7 +78,7 @@
 ...
 ---
 name:            test2add_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -113,7 +113,7 @@ body:             |
 ...
 ---
 name:            test2add_ebp_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -148,7 +148,7 @@ body:             |
 ...
 ---
 name:            test1add_ebp_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -182,7 +182,7 @@ body:             |
 ...
 ---
 name:            testleaadd_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -218,7 +218,7 @@ body:             |
 ...
 ---
 name:            testleaadd_ebp_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -254,7 +254,7 @@ body:             |
 ...
 ---
 name:            test1lea_ebp_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -289,7 +289,7 @@ body:             |
 ...
 ---
 name:            test2addi32_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -324,7 +324,7 @@ body:             |
 ...
 ---
 name:            test1mov1add_ebp_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -360,7 +360,7 @@ body:             |
 ...
 ---
 name:            testleaadd_ebp_index_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -395,7 +395,7 @@ body:             |
 ...
 ---
 name:            testleaadd_ebp_index2_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -430,7 +430,7 @@ body:             |
 ...
 ---
 name:            test_skip_opt_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -464,7 +464,7 @@ body:             |
 ...
 ---
 name:            test_skip_eflags_32
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

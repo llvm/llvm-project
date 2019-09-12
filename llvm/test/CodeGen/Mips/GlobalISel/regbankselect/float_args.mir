@@ -16,7 +16,7 @@
 ...
 ---
 name:            float_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -40,7 +40,7 @@ body:             |
 ...
 ---
 name:            double_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -64,7 +64,7 @@ body:             |
 ...
 ---
 name:            float_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -88,7 +88,7 @@ body:             |
 ...
 ---
 name:            double_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -112,7 +112,7 @@ body:             |
 ...
 ---
 name:            call_float_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -157,7 +157,7 @@ body:             |
 ...
 ---
 name:            call_double_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -202,7 +202,7 @@ body:             |
 ...
 ---
 name:            call_float_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -247,7 +247,7 @@ body:             |
 ...
 ---
 name:            call_double_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

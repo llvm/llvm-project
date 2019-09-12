@@ -1,4 +1,5 @@
 ; RUN: llc -o - %s -mtriple=arm64-apple-ios -O2 | FileCheck %s
+; RUN: llc -o - %s -mtriple=arm64_32-apple-ios -O2 | FileCheck %s
 ; Test case for <rdar://problem/15942912>.
 ; AdrpAddStr cannot be used when the store uses same
 ; register as address and value. Indeed, the related

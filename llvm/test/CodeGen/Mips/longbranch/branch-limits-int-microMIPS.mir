@@ -97,7 +97,7 @@
 ---
 
 name:            expand_BEQ_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -188,7 +188,7 @@ body:             |
 ---
 
 name:            expand_BGEZ_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -283,7 +283,7 @@ body:             |
 ---
 
 name:            expand_BGTZ_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -378,7 +378,7 @@ body:             |
 ---
 
 name:            expand_BLEZ_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -473,7 +473,7 @@ body:             |
 ---
 
 name:            expand_BLTZ_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -568,7 +568,7 @@ body:             |
 ---
 
 name:            expand_BNE_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -659,7 +659,7 @@ body:             |
 ---
 
 name:            expand_BEQZ16_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -754,7 +754,7 @@ body:             |
 ---
 
 name:            expand_BNEZ16_MM
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

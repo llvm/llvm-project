@@ -83,7 +83,7 @@
 # CHECK: bb.12.for.body.10
 
 name:            _Z3fn1v
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 constants:       
 body:             |

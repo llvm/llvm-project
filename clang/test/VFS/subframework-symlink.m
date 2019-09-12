@@ -1,4 +1,5 @@
-// REQUIRES: shell
+// FIXME: PR43272
+// XFAIL: system-windows
 
 // Test that when a subframework is a symlink to another framework, we don't
 // add it as a submodule to the enclosing framework. We also need to make clang
@@ -17,7 +18,7 @@
 
 // Adding VFS overlay shouldn't change this behavior.
 //
-// RUN: sed -e "s:INPUT_DIR:/InvalidPath:g" -e "s:OUT_DIR:/InvalidPath:g" %S/Inputs/vfsoverlay.yaml > %t/overlay.yaml
+// RUN: sed -e "s@INPUT_DIR@/InvalidPath@g" -e "s@OUT_DIR@/InvalidPath@g" %S/Inputs/vfsoverlay.yaml > %t/overlay.yaml
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache2 -F %t -fsyntax-only %s -ivfsoverlay %t/overlay.yaml
 
 #import <WithSubframework/WithSubframework.h>

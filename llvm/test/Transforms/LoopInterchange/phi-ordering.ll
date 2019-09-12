@@ -27,7 +27,7 @@ define void @test(i32 %T, [90 x i32]* noalias nocapture %C, i16* noalias nocaptu
 ; CHECK:       for3.preheader:
 ; CHECK-NEXT:    br label [[FOR3:%.*]]
 ; CHECK:       for3:
-; CHECK-NEXT:    [[K:%.*]] = phi i32 [ [[INC:%.*]], [[FOR3_SPLIT:%.*]] ], [ 1, [[FOR3_PREHEADER]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR3_SPLIT:%.*]] ], [ 1, [[FOR3_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
 ; CHECK:       for3.split1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[K]], [[MUL]]
@@ -35,11 +35,13 @@ define void @test(i32 %T, [90 x i32]* noalias nocapture %C, i16* noalias nocaptu
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD15:%.*]] = add nsw i16 [[TMP0]], 1
 ; CHECK-NEXT:    store i16 [[ADD15]], i16* [[ARRAYIDX]]
+; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[K]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 90
 ; CHECK-NEXT:    br label [[FOR2_INC16]]
 ; CHECK:       for3.split:
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 90
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR1_LOOPEXIT:%.*]], label [[FOR3]]
+; CHECK-NEXT:    [[TMP1]] = add nuw nsw i32 [[K]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 90
+; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR1_LOOPEXIT:%.*]], label [[FOR3]]
 ; CHECK:       for2.inc16:
 ; CHECK-NEXT:    [[INC17]] = add nuw nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[EXITCOND47:%.*]] = icmp eq i32 [[INC17]], 90

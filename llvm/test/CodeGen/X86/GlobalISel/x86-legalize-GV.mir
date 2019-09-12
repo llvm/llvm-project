@@ -11,7 +11,7 @@
 ---
 name:            test_global_ptrv
 # ALL-LABEL: name:  test_global_ptrv
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 # ALL:      registers:

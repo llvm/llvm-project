@@ -26,12 +26,12 @@ define void @func_mov_fi_i32() #0 {
 
 ; CI: s_sub_u32 [[SUB0:s[0-9]+|vcc_lo|vcc_hi]], s32, s33
 ; CI-NEXT: s_sub_u32 [[SUB1:s[0-9]+|vcc_lo|vcc_hi]], s32, s33
-; CI-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[SUB1]], 6
-; CI-NEXT: v_lshr_b32_e64 v0, [[SUB0]], 6
-; CI-NEXT: v_add_i32_e64 v1, s{{\[[0-9]+:[0-9]+\]}}, 4, [[SCALED]]
+; CI-DAG: v_lshr_b32_e64 v0, [[SUB0]], 6
+; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[SUB1]], 6
 ; CI-NOT: v_mov
 ; CI: ds_write_b32 v0, v0
-; CI-NEXT: ds_write_b32 v0, v1
+; CI-NEXT: v_add_i32_e64 v0, s{{\[[0-9]+:[0-9]+\]}}, 4, [[SCALED]]
+; CI-NEXT: ds_write_b32 v0, v0
 
 ; GFX9: s_sub_u32 [[SUB0:s[0-9]+|vcc_lo|vcc_hi]], s32, s33
 ; GFX9-NEXT: s_sub_u32 [[SUB1:s[0-9]+|vcc_lo|vcc_hi]], s32, s33

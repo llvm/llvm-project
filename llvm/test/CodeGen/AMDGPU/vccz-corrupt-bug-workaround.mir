@@ -52,7 +52,7 @@
 # CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
 name:            vccz_corrupt_workaround
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -114,7 +114,7 @@ body:             |
 # CHECK-NEXT: $vgpr0 = V_MOV_B32_e32
 
 name:            vccz_corrupt_undef_vcc
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

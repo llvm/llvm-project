@@ -5,7 +5,7 @@
 # GCN: %10:vgpr_32 = V_MOV_B32_e32 1543, implicit $exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
 name:            s_fold_and_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -78,7 +78,7 @@ body:             |
 # GCN: FLAT_STORE_DWORD %19, %13,
 
 name:            v_fold_and_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -168,7 +168,7 @@ body:             |
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %13,
 
 name:            s_fold_shl_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -257,7 +257,7 @@ body:             |
 # GCN: FLAT_STORE_DWORD %20, %28,
 
 name:            v_fold_shl_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -370,7 +370,7 @@ body:             |
 # GCN: %11:vgpr_32 = V_MOV_B32_e32 243, implicit $exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %11, killed %8,
 name:            s_fold_ashr_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -456,7 +456,7 @@ body:             |
 # GCN: FLAT_STORE_DWORD %20, %28,
 
 name:            v_fold_ashr_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -578,7 +578,7 @@ body:             |
 # GCN: %11:vgpr_32 = V_MOV_B32_e32 1048332, implicit $exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %11, killed %8,
 name:            s_fold_lshr_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -665,7 +665,7 @@ body:             |
 # GCN: FLAT_STORE_DWORD %20, %28,
 
 name:            v_fold_lshr_imm_regimm_32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -837,7 +837,7 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0, implicit %2
 
 name: constant_fold_lshl_or_reg0_immreg_reg
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -862,7 +862,7 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0, implicit %2
 
 name: constant_fold_lshl_or_reg0_immreg_imm
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -886,7 +886,7 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0, implicit %3
 
 name: constant_fold_lshl_or_reg0_immreg_immreg
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

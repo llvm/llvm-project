@@ -24,7 +24,7 @@
 ...
 ---
 name:            test_add_v16i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -50,7 +50,7 @@ body:             |
 ...
 ---
 name:            test_add_v8i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -76,7 +76,7 @@ body:             |
 ...
 ---
 name:            test_add_v4i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -102,7 +102,7 @@ body:             |
 ...
 ---
 name:            test_add_v2i64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

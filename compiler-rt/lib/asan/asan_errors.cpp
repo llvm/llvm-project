@@ -244,7 +244,7 @@ void ErrorInvalidPosixMemalignAlignment::Print() {
       "ERROR: AddressSanitizer: invalid alignment requested in posix_memalign: "
       "%zd, alignment must be a power of two and a multiple of sizeof(void*) "
       "== %zd (thread %s)\n",
-      alignment, sizeof(void*), AsanThreadIdAndName(tid).c_str());  // NOLINT
+      alignment, sizeof(void *), AsanThreadIdAndName(tid).c_str());
   Printf("%s", d.Default());
   stack->Print();
   PrintHintAllocatorCannotReturnNull();

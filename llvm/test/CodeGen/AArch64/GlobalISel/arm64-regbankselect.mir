@@ -793,7 +793,7 @@ body:             |
 # Make sure we map FPEXT on FPR register bank.
 # CHECK-LABEL: name: fp16Ext32
 name:            fp16Ext32
-alignment:       2
+alignment:       4
 legalized:       true
 # CHECK: registers:
 # CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
@@ -828,7 +828,7 @@ body:             |
 # Make sure we map FPEXT on FPR register bank.
 # CHECK-LABEL: name: fp16Ext64
 name:            fp16Ext64
-alignment:       2
+alignment:       4
 legalized:       true
 # CHECK: registers:
 # CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
@@ -863,7 +863,7 @@ body:             |
 # Make sure we map FPEXT on FPR register bank.
 # CHECK-LABEL: name: fp32Ext64
 name:            fp32Ext64
-alignment:       2
+alignment:       4
 legalized:       true
 # CHECK: registers:
 # CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
@@ -897,7 +897,7 @@ body:             |
 # CHECK:  %0:fpr(s16) = COPY $h0
 # CHECK-NEXT: $h0 = COPY %0(s16)
 name:            passFp16
-alignment:       2
+alignment:       4
 legalized:       true
 registers:
   - { id: 0, class: _ }
@@ -931,7 +931,7 @@ body:             |
 # CHECK-NEXT: %2:fpr(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
 # CHECK-NEXT: $h0 = COPY %2(s16)
 name:            passFp16ViaAllocas
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 registers:

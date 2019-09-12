@@ -17,8 +17,8 @@
 #include "Framework/Framework.h"
 #endif
 
-// CHECK: clang-scan-deps dependency
+// CHECK: subframework_header_dir_symlink_input.o
 // CHECK-NEXT: subframework_header_dir_symlink_input.m
-// CHECK: clang-scan-deps dependency
+// CHECK: subframework_header_dir_symlink_input2.o
 // CHECK-NEXT: subframework_header_dir_symlink_input2.m
 // CHECK-NEXT: Inputs{{/|\\}}frameworks_symlink{{/|\\}}Framework.framework{{/|\\}}Headers{{/|\\}}Framework.h

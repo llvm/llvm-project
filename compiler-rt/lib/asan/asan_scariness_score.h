@@ -43,7 +43,7 @@ struct ScarinessScoreBase {
       internal_strlcat(descr, "-", sizeof(descr));
     internal_strlcat(descr, reason, sizeof(descr));
     score += add_to_score;
-  };
+  }
   int GetScore() const { return score; }
   const char *GetDescription() const { return descr; }
   void Print() const {

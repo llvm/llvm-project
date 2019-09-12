@@ -477,23 +477,26 @@ fp16_fml_fallthrough:
       Features.push_back("-crc");
   }
 
-  // For Arch >= ARMv8.0:  crypto = sha2 + aes
+  // For Arch >= ARMv8.0 && A profile:  crypto = sha2 + aes
   // FIXME: this needs reimplementation after the TargetParser rewrite
-  if (ArchName.find_lower("armv8a") != StringRef::npos ||
-      ArchName.find_lower("armv8.1a") != StringRef::npos ||
-      ArchName.find_lower("armv8.2a") != StringRef::npos ||
-      ArchName.find_lower("armv8.3a") != StringRef::npos ||
-      ArchName.find_lower("armv8.4a") != StringRef::npos) {
-    if (ArchName.find_lower("+crypto") != StringRef::npos) {
-      if (ArchName.find_lower("+nosha2") == StringRef::npos)
+  auto CryptoIt =
+    llvm::find_if(llvm::reverse(Features),
+                  [](const StringRef F) { return F.contains("crypto"); });
+  if (CryptoIt != Features.rend() && CryptoIt->take_front() == "+") {
+    StringRef ArchSuffix = arm::getLLVMArchSuffixForARM(
+        arm::getARMTargetCPU(CPUName, ArchName, Triple), ArchName, Triple);
+    if (llvm::ARM::parseArchVersion(ArchSuffix) >= 8 &&
+        llvm::ARM::parseArchProfile(ArchSuffix) == llvm::ARM::ProfileKind::A) {
+      if (ArchName.find_lower("+nosha2") == StringRef::npos &&
+          CPUName.find_lower("+nosha2") == StringRef::npos)
         Features.push_back("+sha2");
-      if (ArchName.find_lower("+noaes") == StringRef::npos)
+      if (ArchName.find_lower("+noaes") == StringRef::npos &&
+          CPUName.find_lower("+noaes") == StringRef::npos)
         Features.push_back("+aes");
-    } else if (ArchName.find_lower("-crypto") != StringRef::npos) {
-      if (ArchName.find_lower("+sha2") == StringRef::npos)
-        Features.push_back("-sha2");
-      if (ArchName.find_lower("+aes") == StringRef::npos)
-        Features.push_back("-aes");
+    } else {
+      D.Diag(clang::diag::warn_target_unsupported_extension)
+        << "crypto" << llvm::ARM::getArchName(llvm::ARM::parseArch(ArchSuffix));
+      Features.push_back("-crypto");
     }
   }
 
@@ -655,7 +658,7 @@ std::string arm::getARMTargetCPU(StringRef CPU, StringRef Arch,
 llvm::ARM::ArchKind arm::getLLVMArchKindForARM(StringRef CPU, StringRef Arch,
                                                const llvm::Triple &Triple) {
   llvm::ARM::ArchKind ArchKind;
-  if (CPU == "generic") {
+  if (CPU == "generic" || CPU.empty()) {
     std::string ARMArch = tools::arm::getARMArch(Arch, Triple);
     ArchKind = llvm::ARM::parseArch(ARMArch);
     if (ArchKind == llvm::ARM::ArchKind::INVALID)

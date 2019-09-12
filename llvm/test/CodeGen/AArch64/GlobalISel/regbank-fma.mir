@@ -5,7 +5,7 @@
 ---
 
 name:            fma_f32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 machineFunctionInfo: {}
@@ -31,7 +31,7 @@ body:             |
 ...
 ---
 name:            fma_f64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 machineFunctionInfo: {}
