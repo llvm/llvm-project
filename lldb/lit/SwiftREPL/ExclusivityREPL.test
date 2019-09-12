@@ -1,8 +1,5 @@
 // Runtime checks for exclusive access should be enabled in the REPL.
 
-// REQUIRES: rdar53117564
-// swift-lldb: DISABLED because it fails sporadically due to a race condition.
-
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
 // CHECK: modification requires exclusive access
 // CHECK: Execution interrupted
