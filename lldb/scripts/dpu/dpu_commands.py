@@ -111,9 +111,6 @@ def dpu_attach(debugger, command, result, internal_dict):
     print("Attaching to dpu '" + dpu.GetValue() + "'")
 
     program_path = get_dpu_program_path(dpu)
-    if program_path is None:
-        print("Could not find program loaded in dpu")
-        sys.exit(1)
 
     rank = dpu.GetChildMemberWithName("rank")
     assert rank.IsValid()
@@ -125,9 +122,6 @@ def dpu_attach(debugger, command, result, internal_dict):
 
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
-    if get_dpu_status(rank, slice_id, dpu_id) != "RUNNING":
-        print("Dpu is not running! Impossible to attach")
-        sys.exit(1)
 
     slice_info = rank.GetChildMemberWithName("runtime") \
         .GetChildMemberWithName("control_interface") \
