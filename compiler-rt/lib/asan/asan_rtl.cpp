@@ -542,7 +542,7 @@ void AsanInitFromRtl() {
 // (and thus normal initializers from .preinit_array or modules haven't run).
 
 class AsanInitializer {
-public:  // NOLINT
+ public:
   AsanInitializer() {
     AsanInitFromRtl();
   }
@@ -554,7 +554,7 @@ static AsanInitializer asan_initializer;
 } // namespace __asan
 
 // ---------------------- Interface ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 void NOINLINE __asan_handle_no_return() {
   if (asan_init_is_running)

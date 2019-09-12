@@ -92,11 +92,11 @@ class FlagHandlerInclude : public FlagHandlerBase {
 };
 
 void RegisterIncludeFlags(FlagParser *parser, CommonFlags *cf) {
-  FlagHandlerInclude *fh_include = new (FlagParser::Alloc) // NOLINT
+  FlagHandlerInclude *fh_include = new (FlagParser::Alloc)
       FlagHandlerInclude(parser, /*ignore_missing*/ false);
   parser->RegisterHandler("include", fh_include,
                           "read more options from the given file");
-  FlagHandlerInclude *fh_include_if_exists = new (FlagParser::Alloc) // NOLINT
+  FlagHandlerInclude *fh_include_if_exists = new (FlagParser::Alloc)
       FlagHandlerInclude(parser, /*ignore_missing*/ true);
   parser->RegisterHandler(
       "include_if_exists", fh_include_if_exists,

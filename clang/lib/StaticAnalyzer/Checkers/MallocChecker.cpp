@@ -532,8 +532,7 @@ private:
       if (!IsLeak)
         return nullptr;
 
-      PathDiagnosticLocation L =
-          PathDiagnosticLocation::createEndOfPath(EndPathNode);
+      PathDiagnosticLocation L = BR.getLocation();
       // Do not add the statement itself as a range in case of leak.
       return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
@@ -2332,7 +2331,7 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
   const MemRegion *Region = nullptr;
   std::tie(AllocNode, Region) = getAllocationSite(N, Sym, C);
 
-  const Stmt *AllocationStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  const Stmt *AllocationStmt = AllocNode->getStmtForDiagnostics();
   if (AllocationStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
                                               C.getSourceManager(),
@@ -2920,7 +2919,7 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
   const RefState *RS = state->get<RegionState>(Sym);
   const RefState *RSPrev = statePrev->get<RegionState>(Sym);
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   // When dealing with containers, we sometimes want to give a note
   // even if the statement is missing.
   if (!S && (!RS || RS->getAllocationFamily() != AF_InnerBuffer))
@@ -2953,15 +2952,15 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
 
   // Find out if this is an interesting point and what is the kind.
   StringRef Msg;
-  StackHintGeneratorForSymbol *StackHint = nullptr;
+  std::unique_ptr<StackHintGeneratorForSymbol> StackHint = nullptr;
   SmallString<256> Buf;
   llvm::raw_svector_ostream OS(Buf);
 
   if (Mode == Normal) {
     if (isAllocated(RS, RSPrev, S)) {
       Msg = "Memory is allocated";
-      StackHint = new StackHintGeneratorForSymbol(Sym,
-                                                  "Returned allocated memory");
+      StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+          Sym, "Returned allocated memory");
     } else if (isReleased(RS, RSPrev, S)) {
       const auto Family = RS->getAllocationFamily();
       switch (Family) {
@@ -2971,8 +2970,8 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
         case AF_CXXNewArray:
         case AF_IfNameIndex:
           Msg = "Memory is released";
-          StackHint = new StackHintGeneratorForSymbol(Sym,
-                                              "Returning; memory was released");
+          StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+              Sym, "Returning; memory was released");
           break;
         case AF_InnerBuffer: {
           const MemRegion *ObjRegion =
@@ -2983,8 +2982,8 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
 
           if (N->getLocation().getKind() == ProgramPoint::PostImplicitCallKind) {
             OS << "deallocated by call to destructor";
-            StackHint = new StackHintGeneratorForSymbol(Sym,
-                                      "Returning; inner buffer was deallocated");
+            StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+                Sym, "Returning; inner buffer was deallocated");
           } else {
             OS << "reallocated by call to '";
             const Stmt *S = RS->getStmt();
@@ -2999,8 +2998,8 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
               OS << (D ? D->getNameAsString() : "unknown");
             }
             OS << "'";
-            StackHint = new StackHintGeneratorForSymbol(Sym,
-                                      "Returning; inner buffer was reallocated");
+            StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+                Sym, "Returning; inner buffer was reallocated");
           }
           Msg = OS.str();
           break;
@@ -3040,12 +3039,12 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
       }
     } else if (isRelinquished(RS, RSPrev, S)) {
       Msg = "Memory ownership is transferred";
-      StackHint = new StackHintGeneratorForSymbol(Sym, "");
+      StackHint = std::make_unique<StackHintGeneratorForSymbol>(Sym, "");
     } else if (isReallocFailedCheck(RS, RSPrev, S)) {
       Mode = ReallocationFailed;
       Msg = "Reallocation failed";
-      StackHint = new StackHintGeneratorForReallocationFailed(Sym,
-                                                       "Reallocation failed");
+      StackHint = std::make_unique<StackHintGeneratorForReallocationFailed>(
+          Sym, "Reallocation failed");
 
       if (SymbolRef sym = findFailedReallocSymbol(state, statePrev)) {
         // Is it possible to fail two reallocs WITHOUT testing in between?
@@ -3064,16 +3063,15 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
     if (!statePrev->get<RegionState>(FailedReallocSymbol)) {
       // We're at the reallocation point.
       Msg = "Attempt to reallocate memory";
-      StackHint = new StackHintGeneratorForSymbol(Sym,
-                                                 "Returned reallocated memory");
+      StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+          Sym, "Returned reallocated memory");
       FailedReallocSymbol = nullptr;
       Mode = Normal;
     }
   }
 
   if (Msg.empty()) {
-    // Silence a memory leak warning by MallocChecker in MallocChecker.cpp :)
-    assert(!StackHint && "Memory leak!");
+    assert(!StackHint);
     return nullptr;
   }
 
@@ -3093,7 +3091,9 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
                                  N->getLocationContext());
   }
 
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true, StackHint);
+  auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
+  BR.addCallStackHint(P, std::move(StackHint));
+  return P;
 }
 
 void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,

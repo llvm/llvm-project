@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -verify -Wsizeof-array-div -fsyntax-only
+// RUN: %clang_cc1 %s -verify -Wsizeof-array-div -fsyntax-only -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 %s -verify -fsyntax-only -triple=x86_64-linux-gnu
 
 template <typename Ty, int N>
 int f(Ty (&Array)[N]) {

@@ -145,13 +145,13 @@ define float @no_estimate_refinement_f32(float %a, float %b) #0 {
 define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK: @rsqrt_fmul_fmf
 ; CHECK-DAG: frsqrtes
-; CHECK-DAG: fres
-; CHECK-DAG: fnmsubs
-; CHECK-DAG: fmuls
-; CHECK-DAG: fmadds
-; CHECK-DAG: fmadds
 ; CHECK: fmuls
+; CHECK-NEXT: fmadds
 ; CHECK-NEXT: fmuls
+; CHECK-DAG: fres
+; CHECK-COUNT-3: fmuls
+; CHECK-NEXT: fmsubs
+; CHECK-NEXT: fmadds
 ; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
   %x = call fast float @llvm.sqrt.f32(float %a)
@@ -196,9 +196,9 @@ define double @foo2_fmf(double %a, double %b) nounwind {
 ; CHECK-DAG: fre
 ; CHECK-DAG: fnmsub
 ; CHECK: fmadd
+; CHECK-NEXT: fmul
 ; CHECK-NEXT: fnmsub
 ; CHECK-NEXT: fmadd
-; CHECK-NEXT: fmul
 ; CHECK-NEXT: blr
   %r = fdiv fast double %a, %b
   ret double %r
@@ -215,9 +215,9 @@ define double @foo2_safe(double %a, double %b) nounwind {
 define float @goo2_fmf(float %a, float %b) nounwind {
 ; CHECK: @goo2_fmf
 ; CHECK-DAG: fres
+; CHECK-NEXT: fmuls
 ; CHECK-DAG: fnmsubs
 ; CHECK: fmadds
-; CHECK-NEXT: fmuls
 ; CHECK-NEXT: blr
   %r = fdiv fast float %a, %b
   ret float %r

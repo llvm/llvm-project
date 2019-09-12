@@ -1404,7 +1404,7 @@ static void ioctl_table_fill() {
   _(SNDCTL_DSP_SKIP, NONE, 0);
   _(SNDCTL_DSP_SILENCE, NONE, 0);
 #undef _
-}
+}  // NOLINT
 
 static bool ioctl_initialized = false;
 

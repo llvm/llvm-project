@@ -31,11 +31,11 @@ typedef void (^dispatch_block_t)(void);
 typedef void (^dispatch_io_handler_t)(bool done, dispatch_data_t data,
                                       int error);
 
-typedef long dispatch_once_t; // NOLINT
+typedef long dispatch_once_t;
 typedef __sanitizer::u64 dispatch_time_t;
-typedef int dispatch_fd_t; // NOLINT
-typedef unsigned long dispatch_io_type_t; // NOLINT
-typedef unsigned long dispatch_io_close_flags_t; // NOLINT
+typedef int dispatch_fd_t;
+typedef unsigned long dispatch_io_type_t;
+typedef unsigned long dispatch_io_close_flags_t;
 
 extern "C" {
 void *dispatch_get_context(dispatch_object_t object);
@@ -57,10 +57,10 @@ extern const dispatch_block_t _dispatch_data_destructor_munmap;
 #endif
 
 // Data types used in dispatch APIs
-typedef unsigned long size_t; // NOLINT
-typedef unsigned long uintptr_t; // NOLINT
+typedef unsigned long size_t;
+typedef unsigned long uintptr_t;
 typedef __sanitizer::s64 off_t;
 typedef __sanitizer::u16 mode_t;
-typedef long long_t; // NOLINT
+typedef long long_t;
 
 #endif  // TSAN_DISPATCH_DEFS_H

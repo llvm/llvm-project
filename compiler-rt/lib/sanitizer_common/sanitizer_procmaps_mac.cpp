@@ -181,13 +181,14 @@ const mach_header *get_dyld_hdr() {
 // Note that the segment addresses are not necessarily sorted.
 template <u32 kLCSegment, typename SegmentCommand>
 static bool NextSegmentLoad(MemoryMappedSegment *segment,
-MemoryMappedSegmentData *seg_data, MemoryMappingLayoutData &layout_data) {
-  const char *lc = layout_data.current_load_cmd_addr;
-  layout_data.current_load_cmd_addr += ((const load_command *)lc)->cmdsize;
+                            MemoryMappedSegmentData *seg_data,
+                            MemoryMappingLayoutData *layout_data) {
+  const char *lc = layout_data->current_load_cmd_addr;
+  layout_data->current_load_cmd_addr += ((const load_command *)lc)->cmdsize;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
     uptr base_virt_addr, addr_mask;
-    if (layout_data.current_image == kDyldImageIdx) {
+    if (layout_data->current_image == kDyldImageIdx) {
       base_virt_addr = (uptr)get_dyld_hdr();
       // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
       // it contains an absolute address rather than an offset for dyld.
@@ -198,7 +199,7 @@ MemoryMappedSegmentData *seg_data, MemoryMappingLayoutData &layout_data) {
       addr_mask = 0xfffff;
     } else {
       base_virt_addr =
-          (uptr)_dyld_get_image_vmaddr_slide(layout_data.current_image);
+          (uptr)_dyld_get_image_vmaddr_slide(layout_data->current_image);
       addr_mask = ~0;
     }
 
@@ -219,18 +220,18 @@ MemoryMappedSegmentData *seg_data, MemoryMappingLayoutData &layout_data) {
 
     // Return the initial protection.
     segment->protection = sc->initprot;
-    segment->offset = (layout_data.current_filetype ==
+    segment->offset = (layout_data->current_filetype ==
                        /*MH_EXECUTE*/ 0x2)
                           ? sc->vmaddr
                           : sc->fileoff;
     if (segment->filename) {
-      const char *src = (layout_data.current_image == kDyldImageIdx)
+      const char *src = (layout_data->current_image == kDyldImageIdx)
                             ? kDyldPath
-                            : _dyld_get_image_name(layout_data.current_image);
+                            : _dyld_get_image_name(layout_data->current_image);
       internal_strncpy(segment->filename, src, segment->filename_size);
     }
-    segment->arch = layout_data.current_arch;
-    internal_memcpy(segment->uuid, layout_data.current_uuid, kModuleUUIDSize);
+    segment->arch = layout_data->current_arch;
+    internal_memcpy(segment->uuid, layout_data->current_uuid, kModuleUUIDSize);
     return true;
   }
   return false;
@@ -331,14 +332,14 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
           if (NextSegmentLoad<LC_SEGMENT_64, struct segment_command_64>(
-          segment, segment->data_, data_))
+                  segment, segment->data_, &data_))
             return true;
           break;
         }
 #endif
         case MH_MAGIC: {
           if (NextSegmentLoad<LC_SEGMENT, struct segment_command>(
-          segment, segment->data_, data_))
+                  segment, segment->data_, &data_))
             return true;
           break;
         }

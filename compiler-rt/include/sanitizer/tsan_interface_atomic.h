@@ -17,10 +17,10 @@
 extern "C" {
 #endif
 
-typedef char     __tsan_atomic8;
-typedef short    __tsan_atomic16;  // NOLINT
-typedef int      __tsan_atomic32;
-typedef long     __tsan_atomic64;  // NOLINT
+typedef char __tsan_atomic8;
+typedef short __tsan_atomic16;
+typedef int __tsan_atomic32;
+typedef long __tsan_atomic64;
 #if defined(__SIZEOF_INT128__) \
     || (__clang_major__ * 100 + __clang_minor__ >= 302)
 __extension__ typedef __int128 __tsan_atomic128;

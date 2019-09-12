@@ -1351,7 +1351,7 @@ void UnwrappedLineParser::parseStructuralElement() {
           (TokenCount == 2 && Line->Tokens.front().Tok->is(tok::comment))) {
         if (FormatTok->Tok.is(tok::colon) && !Line->MustBeDeclaration) {
           Line->Tokens.begin()->Tok->MustBreakBefore = true;
-          parseLabel();
+          parseLabel(!Style.IndentGotoLabels);
           return;
         }
         // Recognize function-like macro usages without trailing semicolon as
@@ -1970,11 +1970,13 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel() {
+void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
   nextToken();
   unsigned OldLineLevel = Line->Level;
   if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
     --Line->Level;
+  if (LeftAlignLabel)
+    Line->Level = 0;
   if (CommentsBeforeNextToken.empty() && FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Line->Level,
                                        Style.BraceWrapping.AfterCaseLabel,

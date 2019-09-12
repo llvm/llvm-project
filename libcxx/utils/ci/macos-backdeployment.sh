@@ -103,10 +103,13 @@ echo "@@@@@@"
 echo "@@@ Configuring CMake @@@"
 mkdir -p "${LLVM_BUILD_DIR}"
 (cd "${LLVM_BUILD_DIR}" &&
-  xcrun cmake "${MONOREPO_ROOT}/llvm" -GNinja \
+  xcrun cmake \
+    -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+    -GNinja \
     -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
     -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-    -DCMAKE_OSX_ARCHITECTURES="${CMAKE_ARCH_STRING}"
+    -DCMAKE_OSX_ARCHITECTURES="${CMAKE_ARCH_STRING}" \
+    "${MONOREPO_ROOT}/llvm"
 )
 echo "@@@@@@"
 

@@ -192,6 +192,11 @@ struct APFloatBase {
   /// IEEE-754R 7: Default exception handling.
   ///
   /// opUnderflow or opOverflow are always returned or-ed with opInexact.
+  ///
+  /// APFloat models this behavior specified by IEEE-754:
+  ///   "For operations producing results in floating-point format, the default
+  ///    result of an operation that signals the invalid operation exception
+  ///    shall be a quiet NaN."
   enum opStatus {
     opOK = 0x00,
     opInvalidOp = 0x01,

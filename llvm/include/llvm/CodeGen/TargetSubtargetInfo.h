@@ -274,6 +274,12 @@ public:
   /// scheduling, DAGCombine, etc.).
   virtual bool useAA() const;
 
+  /// \brief Sink addresses into blocks using GEP instructions rather than
+  /// pointer casts and arithmetic.
+  virtual bool addrSinkUsingGEPs() const {
+    return useAA();
+  }
+
   /// Enable the use of the early if conversion pass.
   virtual bool enableEarlyIfConversion() const { return false; }
 

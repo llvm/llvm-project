@@ -106,8 +106,9 @@ void ReportMmapWriteExec(int prot) {
   if (StackTrace::WillUseFastUnwind(fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);
     stack->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, true);
-  } else
+  } else {
     stack->Unwind(kStackTraceMax, pc, 0, nullptr, 0, 0, false);
+  }
 
   Printf("%s", d.Warning());
   Report("WARNING: %s: writable-executable page usage\n", SanitizerToolName);

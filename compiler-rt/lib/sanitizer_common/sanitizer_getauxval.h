@@ -38,8 +38,7 @@
 // The weak getauxval definition allows to check for the function at runtime.
 // This is useful for Android, when compiled at a lower API level yet running
 // on a more recent platform that offers the function.
-extern "C" SANITIZER_WEAK_ATTRIBUTE
-unsigned long getauxval(unsigned long type);  // NOLINT
+extern "C" SANITIZER_WEAK_ATTRIBUTE unsigned long getauxval(unsigned long type);
 # endif
 
 #endif // SANITIZER_LINUX || SANITIZER_FUCHSIA

@@ -203,7 +203,7 @@ class AddressDescription {
   AddressDescription() = default;
   // shouldLockThreadRegistry allows us to skip locking if we're sure we already
   // have done it.
-  AddressDescription(uptr addr, bool shouldLockThreadRegistry = true)
+  explicit AddressDescription(uptr addr, bool shouldLockThreadRegistry = true)
       : AddressDescription(addr, 1, shouldLockThreadRegistry) {}
   AddressDescription(uptr addr, uptr access_size,
                      bool shouldLockThreadRegistry = true);

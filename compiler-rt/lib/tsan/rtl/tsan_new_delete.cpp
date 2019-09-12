@@ -17,7 +17,7 @@
 #include "tsan_interceptors.h"
 #include "tsan_rtl.h"
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 namespace std {
 struct nothrow_t {};

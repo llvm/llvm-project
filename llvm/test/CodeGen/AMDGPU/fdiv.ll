@@ -114,7 +114,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}fdiv_f32_fast_math:
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[2].Z,
 
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
@@ -129,7 +129,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}fdiv_ulp25_f32_fast_math:
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[2].Z,
 
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
@@ -144,7 +144,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}fdiv_f32_arcp_math:
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[2].Z,
 
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
@@ -188,8 +188,8 @@ entry:
 ; FUNC-LABEL: {{^}}fdiv_v2f32_fast_math:
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Z
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Y
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[3].X,
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[2].W,
 
 ; GCN: v_rcp_f32
 ; GCN: v_rcp_f32
@@ -203,8 +203,8 @@ entry:
 ; FUNC-LABEL: {{^}}fdiv_v2f32_arcp_math:
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Z
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Y
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[3].X,
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[2].W,
 
 ; GCN: v_rcp_f32
 ; GCN: v_rcp_f32
@@ -243,10 +243,10 @@ define amdgpu_kernel void @fdiv_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
 
 ; GCN: v_rcp_f32
 ; GCN: v_rcp_f32
@@ -266,10 +266,10 @@ define amdgpu_kernel void @fdiv_v4f32_fast_math(<4 x float> addrspace(1)* %out, 
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}, PS
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW], PS, T[0-9]+\.[XYZW]}},
 
 ; GCN: v_rcp_f32
 ; GCN: v_rcp_f32

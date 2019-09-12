@@ -601,6 +601,7 @@ def ProcessorFeatures {
 
   // Skylake-AVX512
   list<SubtargetFeature> SKXAdditionalFeatures = [FeatureAVX512,
+                                                  FeaturePrefer256Bit,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,
@@ -634,6 +635,7 @@ def ProcessorFeatures {
 
   // Cannonlake
   list<SubtargetFeature> CNLAdditionalFeatures = [FeatureAVX512,
+                                                  FeaturePrefer256Bit,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,

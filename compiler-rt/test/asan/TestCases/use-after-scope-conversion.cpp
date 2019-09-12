@@ -15,12 +15,12 @@ struct B {
 struct C {
   const char *p;
   explicit C(const char *c) : p(c) {}
-  C(const B &b) : p(&b.p) {} // NOLINT
+  explicit C(const B &b) : p(&b.p) {}
 };
 
 struct A {
   char p;
-  explicit A() : p('C') {}
+  A() : p('C') {}
   const operator C() const { return C(&p); }
 };
 

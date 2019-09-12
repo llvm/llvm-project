@@ -1,6 +1,6 @@
-; RUN: llc < %s -verify-coalescing
+; RUN: llc -mtriple=arm64-apple-macosx10.8.0 < %s -verify-coalescing
+; RUN: llc -mtriple=arm64_32-apple-ios9.0 < %s -verify-coalescing
 ; <rdar://problem/11522048>
-target triple = "arm64-apple-macosx10.8.0"
 
 ; Verify that we can handle spilling the stack pointer without attempting
 ; spilling it directly.

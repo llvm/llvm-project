@@ -20,12 +20,9 @@ namespace __sanitizer {
 
 TEST(Printf, Basic) {
   char buf[1024];
-  uptr len = internal_snprintf(buf, sizeof(buf),
-      "a%db%zdc%ue%zuf%xh%zxq%pe%sr",
-      (int)-1, (uptr)-2, // NOLINT
-      (unsigned)-4, (uptr)5, // NOLINT
-      (unsigned)10, (uptr)11, // NOLINT
-      (void*)0x123, "_string_");
+  uptr len = internal_snprintf(
+      buf, sizeof(buf), "a%db%zdc%ue%zuf%xh%zxq%pe%sr", (int)-1, (uptr)-2,
+      (unsigned)-4, (uptr)5, (unsigned)10, (uptr)11, (void *)0x123, "_string_");
   EXPECT_EQ(len, strlen(buf));
 
   std::string expectedString = "a-1b-2c4294967292e5fahbq0x";
@@ -115,14 +112,14 @@ static void TestAgainstLibc(const char *fmt, T arg1, T arg2) {
 }
 
 TEST(Printf, MinMax) {
-  TestAgainstLibc<int>("%d-%d", INT_MIN, INT_MAX);  // NOLINT
-  TestAgainstLibc<unsigned>("%u-%u", 0, UINT_MAX);  // NOLINT
-  TestAgainstLibc<unsigned>("%x-%x", 0, UINT_MAX);  // NOLINT
+  TestAgainstLibc<int>("%d-%d", INT_MIN, INT_MAX);
+  TestAgainstLibc<unsigned>("%u-%u", 0, UINT_MAX);
+  TestAgainstLibc<unsigned>("%x-%x", 0, UINT_MAX);
 #if !defined(_WIN32)
   // %z* format doesn't seem to be supported by MSVS.
-  TestAgainstLibc<long>("%zd-%zd", LONG_MIN, LONG_MAX);  // NOLINT
-  TestAgainstLibc<unsigned long>("%zu-%zu", 0, ULONG_MAX);  // NOLINT
-  TestAgainstLibc<unsigned long>("%zx-%zx", 0, ULONG_MAX);  // NOLINT
+  TestAgainstLibc<long>("%zd-%zd", LONG_MIN, LONG_MAX);
+  TestAgainstLibc<unsigned long>("%zu-%zu", 0, ULONG_MAX);
+  TestAgainstLibc<unsigned long>("%zx-%zx", 0, ULONG_MAX);
 #endif
 }
 
@@ -152,7 +149,7 @@ TEST(Printf, Precision) {
   EXPECT_STREQ("12345 ", buf);
   // Check that width does not overflow the smaller buffer, although
   // 10 chars is requested, it stops at the buffer size, 8.
-  len = internal_snprintf(buf, 8, "%-10s", "12345");
+  len = internal_snprintf(buf, 8, "%-10s", "12345");  // NOLINT
   EXPECT_EQ(10U, len);  // The required size reported.
   EXPECT_STREQ("12345  ", buf);
 }

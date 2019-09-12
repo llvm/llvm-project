@@ -139,10 +139,10 @@ ASAN_FLAG(
     "If >= 2, detect operations like <, <=, >, >= and - on invalid pointer "
     "pairs (e.g. when pointers belong to different objects); "
     "If == 1, detect invalid operations only when both pointers are non-null.")
-ASAN_FLAG(
-    bool, detect_container_overflow, true,
-    "If true, honor the container overflow annotations. See "
-    "https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow")
+ASAN_FLAG(bool, detect_container_overflow, true,
+          "If true, honor the container overflow annotations. See "
+          "https://github.com/google/sanitizers/wiki/"
+          "AddressSanitizerContainerOverflow")
 ASAN_FLAG(int, detect_odr_violation, 2,
           "If >=2, detect violation of One-Definition-Rule (ODR); "
           "If ==1, detect ODR-violation only if the two variables "
@@ -158,5 +158,6 @@ ASAN_FLAG(bool, allocator_frees_and_returns_null_on_realloc_zero, true,
 ASAN_FLAG(bool, verify_asan_link_order, true,
           "Check position of ASan runtime in library list (needs to be disabled"
           " when other library has to be preloaded system-wide)")
-ASAN_FLAG(bool, windows_hook_rtl_allocators, false,
-          "(Windows only) enable hooking of Rtl(Allocate|Free|Size|ReAllocate)Heap.")
+ASAN_FLAG(
+    bool, windows_hook_rtl_allocators, false,
+    "(Windows only) enable hooking of Rtl(Allocate|Free|Size|ReAllocate)Heap.")

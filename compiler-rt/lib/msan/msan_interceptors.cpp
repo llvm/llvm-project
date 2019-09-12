@@ -282,35 +282,35 @@ INTERCEPTOR(void, malloc_stats, void) {
 #define MSAN_MAYBE_INTERCEPT_MALLOC_STATS
 #endif
 
-INTERCEPTOR(char *, strcpy, char *dest, const char *src) {  // NOLINT
+INTERCEPTOR(char *, strcpy, char *dest, const char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   SIZE_T n = REAL(strlen)(src);
   CHECK_UNPOISONED_STRING(src + n, 0);
-  char *res = REAL(strcpy)(dest, src);  // NOLINT
+  char *res = REAL(strcpy)(dest, src);
   CopyShadowAndOrigin(dest, src, n + 1, &stack);
   return res;
 }
 
-INTERCEPTOR(char *, strncpy, char *dest, const char *src, SIZE_T n) {  // NOLINT
+INTERCEPTOR(char *, strncpy, char *dest, const char *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   SIZE_T copy_size = REAL(strnlen)(src, n);
   if (copy_size < n)
     copy_size++;  // trailing \0
-  char *res = REAL(strncpy)(dest, src, n);  // NOLINT
+  char *res = REAL(strncpy)(dest, src, n);
   CopyShadowAndOrigin(dest, src, copy_size, &stack);
   __msan_unpoison(dest + copy_size, n - copy_size);
   return res;
 }
 
 #if !SANITIZER_NETBSD
-INTERCEPTOR(char *, stpcpy, char *dest, const char *src) {  // NOLINT
+INTERCEPTOR(char *, stpcpy, char *dest, const char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   SIZE_T n = REAL(strlen)(src);
   CHECK_UNPOISONED_STRING(src + n, 0);
-  char *res = REAL(stpcpy)(dest, src);  // NOLINT
+  char *res = REAL(stpcpy)(dest, src);
   CopyShadowAndOrigin(dest, src, n + 1, &stack);
   return res;
 }
@@ -359,25 +359,25 @@ INTERCEPTOR(char *, gcvt, double number, SIZE_T ndigit, char *buf) {
 #define MSAN_MAYBE_INTERCEPT_GCVT
 #endif
 
-INTERCEPTOR(char *, strcat, char *dest, const char *src) {  // NOLINT
+INTERCEPTOR(char *, strcat, char *dest, const char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   SIZE_T src_size = REAL(strlen)(src);
   SIZE_T dest_size = REAL(strlen)(dest);
   CHECK_UNPOISONED_STRING(src + src_size, 0);
   CHECK_UNPOISONED_STRING(dest + dest_size, 0);
-  char *res = REAL(strcat)(dest, src);  // NOLINT
+  char *res = REAL(strcat)(dest, src);
   CopyShadowAndOrigin(dest + dest_size, src, src_size + 1, &stack);
   return res;
 }
 
-INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {  // NOLINT
+INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   SIZE_T dest_size = REAL(strlen)(dest);
   SIZE_T copy_size = REAL(strnlen)(src, n);
   CHECK_UNPOISONED_STRING(dest + dest_size, 0);
-  char *res = REAL(strncat)(dest, src, n);  // NOLINT
+  char *res = REAL(strncat)(dest, src, n);
   CopyShadowAndOrigin(dest + dest_size, src, copy_size, &stack);
   __msan_unpoison(dest + dest_size + copy_size, 1); // \0
   return res;
@@ -437,22 +437,22 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {  // NOLINT
   INTERCEPTOR_STRTO_BASE_LOC(ret_type, __##func##_internal, char_type)
 #endif
 
-INTERCEPTORS_STRTO(double, strtod, char)                     // NOLINT
-INTERCEPTORS_STRTO(float, strtof, char)                      // NOLINT
-INTERCEPTORS_STRTO(long double, strtold, char)               // NOLINT
-INTERCEPTORS_STRTO_BASE(long, strtol, char)                  // NOLINT
-INTERCEPTORS_STRTO_BASE(long long, strtoll, char)            // NOLINT
-INTERCEPTORS_STRTO_BASE(unsigned long, strtoul, char)        // NOLINT
-INTERCEPTORS_STRTO_BASE(unsigned long long, strtoull, char)  // NOLINT
-INTERCEPTORS_STRTO_BASE(u64, strtouq, char)                  // NOLINT
+INTERCEPTORS_STRTO(double, strtod, char)
+INTERCEPTORS_STRTO(float, strtof, char)
+INTERCEPTORS_STRTO(long double, strtold, char)
+INTERCEPTORS_STRTO_BASE(long, strtol, char)
+INTERCEPTORS_STRTO_BASE(long long, strtoll, char)
+INTERCEPTORS_STRTO_BASE(unsigned long, strtoul, char)
+INTERCEPTORS_STRTO_BASE(unsigned long long, strtoull, char)
+INTERCEPTORS_STRTO_BASE(u64, strtouq, char)
 
-INTERCEPTORS_STRTO(double, wcstod, wchar_t)                     // NOLINT
-INTERCEPTORS_STRTO(float, wcstof, wchar_t)                      // NOLINT
-INTERCEPTORS_STRTO(long double, wcstold, wchar_t)               // NOLINT
-INTERCEPTORS_STRTO_BASE(long, wcstol, wchar_t)                  // NOLINT
-INTERCEPTORS_STRTO_BASE(long long, wcstoll, wchar_t)            // NOLINT
-INTERCEPTORS_STRTO_BASE(unsigned long, wcstoul, wchar_t)        // NOLINT
-INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)  // NOLINT
+INTERCEPTORS_STRTO(double, wcstod, wchar_t)
+INTERCEPTORS_STRTO(float, wcstof, wchar_t)
+INTERCEPTORS_STRTO(long double, wcstold, wchar_t)
+INTERCEPTORS_STRTO_BASE(long, wcstol, wchar_t)
+INTERCEPTORS_STRTO_BASE(long long, wcstoll, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long, wcstoul, wchar_t)
+INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)
 
 #if SANITIZER_NETBSD
 #define INTERCEPT_STRTO(func) \
@@ -1514,13 +1514,12 @@ INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dest, const wchar_t *src) {
   return res;
 }
 
-INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *dest, const wchar_t *src,
-            SIZE_T n) {  // NOLINT
+INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *dest, const wchar_t *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   SIZE_T copy_size = REAL(wcsnlen)(src, n);
   if (copy_size < n) copy_size++;           // trailing \0
-  wchar_t *res = REAL(wcsncpy)(dest, src, n);  // NOLINT
+  wchar_t *res = REAL(wcsncpy)(dest, src, n);
   CopyShadowAndOrigin(dest, src, copy_size * sizeof(wchar_t), &stack);
   __msan_unpoison(dest + copy_size, (n - copy_size) * sizeof(wchar_t));
   return res;
@@ -1620,14 +1619,14 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(wmemcpy);
   MSAN_MAYBE_INTERCEPT_WMEMPCPY;
   INTERCEPT_FUNCTION(wmemmove);
-  INTERCEPT_FUNCTION(strcpy);  // NOLINT
-  MSAN_MAYBE_INTERCEPT_STPCPY;  // NOLINT
+  INTERCEPT_FUNCTION(strcpy);
+  MSAN_MAYBE_INTERCEPT_STPCPY;
   INTERCEPT_FUNCTION(strdup);
   MSAN_MAYBE_INTERCEPT___STRDUP;
-  INTERCEPT_FUNCTION(strncpy);  // NOLINT
+  INTERCEPT_FUNCTION(strncpy);
   MSAN_MAYBE_INTERCEPT_GCVT;
-  INTERCEPT_FUNCTION(strcat);  // NOLINT
-  INTERCEPT_FUNCTION(strncat);  // NOLINT
+  INTERCEPT_FUNCTION(strcat);
+  INTERCEPT_FUNCTION(strncat);
   INTERCEPT_STRTO(strtod);
   INTERCEPT_STRTO(strtof);
   INTERCEPT_STRTO(strtold);

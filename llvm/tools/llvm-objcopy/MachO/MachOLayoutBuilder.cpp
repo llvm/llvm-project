@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MachOLayoutBuilder.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -145,7 +146,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           Sec.Offset = 0;
         } else {
           uint64_t PaddingSize =
-              OffsetToAlignment(SegFileSize, 1ull << Sec.Align);
+              offsetToAlignment(SegFileSize, llvm::Align(1ull << Sec.Align));
           Sec.Offset = SegOffset + SegFileSize + PaddingSize;
           Sec.Size = Sec.Content.size();
           SegFileSize += PaddingSize + Sec.Size;

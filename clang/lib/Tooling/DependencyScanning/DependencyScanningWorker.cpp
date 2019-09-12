@@ -12,6 +12,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/Tooling.h"
 
@@ -66,9 +67,10 @@ class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS)
+      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
+      ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)) {}
+        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -101,6 +103,12 @@ public:
       // filesystem.
       FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
           CI, Compiler.getDiagnostics(), DepFS));
+
+      // Pass the skip mappings which should speed up excluded conditional block
+      // skipping in the preprocessor.
+      if (PPSkipMappings)
+        Compiler.getPreprocessorOpts()
+            .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
     }
 
     FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
@@ -134,6 +142,7 @@ private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
 };
 
 } // end anonymous namespace
@@ -143,9 +152,12 @@ DependencyScanningWorker::DependencyScanningWorker(
   DiagOpts = new DiagnosticOptions();
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   RealFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
+  if (Service.canSkipExcludedPPRanges())
+    PPSkipMappings =
+        std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
   if (Service.getMode() == ScanningMode::MinimizedSourcePreprocessing)
-    DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
-                                                   RealFS);
+    DepFS = new DependencyScanningWorkerFilesystem(
+        Service.getSharedCache(), RealFS, PPSkipMappings.get());
   if (Service.canReuseFileManager())
     Files = new FileManager(FileSystemOptions(), RealFS);
 }
@@ -178,7 +190,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
     Tool.setRestoreWorkingDir(false);
     Tool.setPrintErrorMessage(false);
     Tool.setDiagnosticConsumer(&DC);
-    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS);
+    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
+                                    PPSkipMappings.get());
     return !Tool.run(&Action);
   });
 }

@@ -2,10 +2,10 @@
 #include "test.h"
 
 namespace XXX {
-  struct YYY {
-    static int ZZZ[10];
-  };
-  int YYY::ZZZ[10];
+struct YYY {
+  static int ZZZ[10];
+};
+int YYY::ZZZ[10];
 }
 
 void *Thread(void *a) {

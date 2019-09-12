@@ -82,7 +82,8 @@ static void *local_thread(void *p) {
   pthread_t th[kThreads];
   for (int i = 0; i < kThreads; i++)
     EXPECT_EQ(__interceptor_pthread_create(&th[i], 0, local_thread,
-              (void*)((long)p - 1)), 0);  // NOLINT
+                                           (void *)((long)p - 1)),
+              0);
   for (int i = 0; i < kThreads; i++)
     EXPECT_EQ(__interceptor_pthread_join(th[i], 0), 0);
   return 0;
