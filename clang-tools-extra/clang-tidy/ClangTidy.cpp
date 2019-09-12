@@ -72,7 +72,7 @@ public:
                             FilesMade *filesMade) override {
     for (const ento::PathDiagnostic *PD : Diags) {
       SmallString<64> CheckName(AnalyzerCheckNamePrefix);
-      CheckName += PD->getCheckName();
+      CheckName += PD->getCheckerName();
       Context.diag(CheckName, PD->getLocation().asLocation(),
                    PD->getShortDescription())
           << PD->path.back()->getRanges();
