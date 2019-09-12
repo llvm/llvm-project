@@ -469,7 +469,7 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
     (ResultReg ? MRI.getRegClass(ResultReg) :
      (RC ? RC :
       (VT == MVT::f64 ? (HasSPE ? &PPC::SPERCRegClass : &PPC::F8RCRegClass) :
-       (VT == MVT::f32 ? (HasSPE ? &PPC::SPE4RCRegClass : &PPC::F4RCRegClass) :
+       (VT == MVT::f32 ? (HasSPE ? &PPC::GPRCRegClass : &PPC::F4RCRegClass) :
         (VT == MVT::i64 ? &PPC::G8RC_and_G8RC_NOX0RegClass :
          &PPC::GPRC_and_GPRC_NOR0RegClass)))));
 
@@ -989,7 +989,7 @@ bool PPCFastISel::SelectFPTrunc(const Instruction *I) {
   unsigned DestReg;
   auto RC = MRI.getRegClass(SrcReg);
   if (PPCSubTarget->hasSPE()) {
-    DestReg = createResultReg(&PPC::SPE4RCRegClass);
+    DestReg = createResultReg(&PPC::GPRCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
       TII.get(PPC::EFSCFD), DestReg)
       .addReg(SrcReg);
@@ -1229,9 +1229,9 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
   if (PPCSubTarget->hasSPE()) {
     DestReg = createResultReg(&PPC::GPRCRegClass);
     if (IsSigned)
-      Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
+      Opc = InRC == &PPC::GPRCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
     else
-      Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
+      Opc = InRC == &PPC::GPRCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
   } else if (isVSFRCRegClass(RC)) {
     DestReg = createResultReg(&PPC::VSFRCRegClass);
     if (DstVT == MVT::i32) 
@@ -2002,7 +2002,7 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
   const bool HasSPE = PPCSubTarget->hasSPE();
   const TargetRegisterClass *RC;
   if (HasSPE)
-    RC = ((VT == MVT::f32) ? &PPC::SPE4RCRegClass : &PPC::SPERCRegClass);
+    RC = ((VT == MVT::f32) ? &PPC::GPRCRegClass : &PPC::SPERCRegClass);
   else
     RC = ((VT == MVT::f32) ? &PPC::F4RCRegClass : &PPC::F8RCRegClass);
 

@@ -211,10 +211,12 @@ protected:
                          SmallVectorImpl<ArgInfo> &Args,
                          ValueHandler &Handler) const;
 
-  /// Analyze the return values of a call, incorporating info about the passed
-  /// values into \p CCState.
-  bool analyzeCallResult(CCState &CCState, SmallVectorImpl<ArgInfo> &Args,
-                         CCAssignFn &Fn) const;
+  /// Analyze passed or returned values from a call, supplied in \p ArgInfo,
+  /// incorporating info about the passed values into \p CCState.
+  ///
+  /// Used to check if arguments are suitable for tail call lowering.
+  bool analyzeArgInfo(CCState &CCState, SmallVectorImpl<ArgInfo> &Args,
+                      CCAssignFn &Fn) const;
 
   /// \returns True if the calling convention for a callee and its caller pass
   /// results in the same way. Typically used for tail call eligibility checks.

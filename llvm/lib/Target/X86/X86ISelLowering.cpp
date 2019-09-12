@@ -4915,11 +4915,12 @@ bool X86TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool X86TargetLowering::reduceSelectOfFPConstantLoads(bool IsFPSetCC) const {
+bool X86TargetLowering::reduceSelectOfFPConstantLoads(EVT CmpOpVT) const {
   // If we are using XMM registers in the ABI and the condition of the select is
   // a floating-point compare and we have blendv or conditional move, then it is
   // cheaper to select instead of doing a cross-register move and creating a
   // load that depends on the compare result.
+  bool IsFPSetCC = CmpOpVT.isFloatingPoint() && CmpOpVT != MVT::f128;
   return !IsFPSetCC || !Subtarget.isTarget64BitLP64() || !Subtarget.hasAVX();
 }
 
@@ -41818,6 +41819,38 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N) {
   return SDValue();
 }
 
+static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
+  if (NegMul) {
+    switch (Opcode) {
+    default: llvm_unreachable("Unexpected opcode");
+    case ISD::FMA:             Opcode = X86ISD::FNMADD;       break;
+    case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMADD_RND;   break;
+    case X86ISD::FMSUB:        Opcode = X86ISD::FNMSUB;       break;
+    case X86ISD::FMSUB_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
+    case X86ISD::FNMADD:       Opcode = ISD::FMA;             break;
+    case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMADD_RND;    break;
+    case X86ISD::FNMSUB:       Opcode = X86ISD::FMSUB;        break;
+    case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMSUB_RND;    break;
+    }
+  }
+
+  if (NegAcc) {
+    switch (Opcode) {
+    default: llvm_unreachable("Unexpected opcode");
+    case ISD::FMA:             Opcode = X86ISD::FMSUB;        break;
+    case X86ISD::FMADD_RND:    Opcode = X86ISD::FMSUB_RND;    break;
+    case X86ISD::FMSUB:        Opcode = ISD::FMA;             break;
+    case X86ISD::FMSUB_RND:    Opcode = X86ISD::FMADD_RND;    break;
+    case X86ISD::FNMADD:       Opcode = X86ISD::FNMSUB;       break;
+    case X86ISD::FNMADD_RND:   Opcode = X86ISD::FNMSUB_RND;   break;
+    case X86ISD::FNMSUB:       Opcode = X86ISD::FNMADD;       break;
+    case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FNMADD_RND;   break;
+    }
+  }
+
+  return Opcode;
+}
+
 /// Do target-specific dag combines on floating point negations.
 static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
@@ -42796,38 +42829,6 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
     return NewAdd;
 
   return SDValue();
-}
-
-static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
-  if (NegMul) {
-    switch (Opcode) {
-    default: llvm_unreachable("Unexpected opcode");
-    case ISD::FMA:             Opcode = X86ISD::FNMADD;       break;
-    case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMADD_RND;   break;
-    case X86ISD::FMSUB:        Opcode = X86ISD::FNMSUB;       break;
-    case X86ISD::FMSUB_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
-    case X86ISD::FNMADD:       Opcode = ISD::FMA;             break;
-    case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMADD_RND;    break;
-    case X86ISD::FNMSUB:       Opcode = X86ISD::FMSUB;        break;
-    case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMSUB_RND;    break;
-    }
-  }
-
-  if (NegAcc) {
-    switch (Opcode) {
-    default: llvm_unreachable("Unexpected opcode");
-    case ISD::FMA:             Opcode = X86ISD::FMSUB;        break;
-    case X86ISD::FMADD_RND:    Opcode = X86ISD::FMSUB_RND;    break;
-    case X86ISD::FMSUB:        Opcode = ISD::FMA;             break;
-    case X86ISD::FMSUB_RND:    Opcode = X86ISD::FMADD_RND;    break;
-    case X86ISD::FNMADD:       Opcode = X86ISD::FNMSUB;       break;
-    case X86ISD::FNMADD_RND:   Opcode = X86ISD::FNMSUB_RND;   break;
-    case X86ISD::FNMSUB:       Opcode = X86ISD::FNMADD;       break;
-    case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FNMADD_RND;   break;
-    }
-  }
-
-  return Opcode;
 }
 
 static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,

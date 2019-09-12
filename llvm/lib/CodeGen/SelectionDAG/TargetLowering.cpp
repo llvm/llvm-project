@@ -3224,7 +3224,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       LoadSDNode *Lod = cast<LoadSDNode>(N0.getOperand(0));
       APInt bestMask;
       unsigned bestWidth = 0, bestOffset = 0;
-      if (!Lod->isVolatile() && Lod->isUnindexed()) {
+      if (Lod->isSimple() && Lod->isUnindexed()) {
         unsigned origWidth = N0.getValueSizeInBits();
         unsigned maskWidth = origWidth;
         // We can narrow (e.g.) 16-bit extending loads on 32-bit target to
