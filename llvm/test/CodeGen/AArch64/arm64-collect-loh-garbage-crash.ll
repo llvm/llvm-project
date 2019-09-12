@@ -1,4 +1,5 @@
 ; RUN: llc -o - %s -mtriple=arm64-apple-ios -O3 -aarch64-enable-collect-loh | FileCheck %s
+; RUN: llc -o - %s -mtriple=arm64_32-apple-watchos -O3 -aarch64-enable-collect-loh | FileCheck %s
 ; Check that the LOH analysis does not crash when the analysed chained
 ; contains instructions that are filtered out.
 ;

@@ -43,6 +43,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
                                  {p0, p0, 32, 8}})
       .minScalar(0, s32);
 
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+      .legalFor({s32, s64});
+
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
      .legalFor({{s32, s64}});
 
@@ -73,6 +76,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_BRJT)
       .legalFor({{p0, s32}});
+
+  getActionDefinitionsBuilder(G_BRINDIRECT)
+      .legalFor({p0});
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s32, s64})
@@ -112,6 +118,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE})
       .legalFor({p0});
+
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC)
+      .lowerFor({{p0, s32}});
 
   // FP instructions
   getActionDefinitionsBuilder(G_FCONSTANT)

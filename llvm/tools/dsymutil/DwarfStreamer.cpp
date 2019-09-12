@@ -339,7 +339,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
         sizeof(int8_t);   // Segment Size (in bytes)
 
     unsigned TupleSize = AddressSize * 2;
-    unsigned Padding = OffsetToAlignment(HeaderSize, TupleSize);
+    unsigned Padding = offsetToAlignment(HeaderSize, llvm::Align(TupleSize));
 
     Asm->EmitLabelDifference(EndLabel, BeginLabel, 4); // Arange length
     Asm->OutStreamer->EmitLabel(BeginLabel);

@@ -2243,13 +2243,9 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
           APFloat V = Op1->getValueAPF();
-          APFloat::opStatus s = V.fusedMultiplyAdd(Op2->getValueAPF(),
-                                                   Op3->getValueAPF(),
-                                                   APFloat::rmNearestTiesToEven);
-          if (s != APFloat::opInvalidOp)
-            return ConstantFP::get(Ty->getContext(), V);
-
-          return nullptr;
+          V.fusedMultiplyAdd(Op2->getValueAPF(), Op3->getValueAPF(),
+                             APFloat::rmNearestTiesToEven);
+          return ConstantFP::get(Ty->getContext(), V);
         }
         }
       }

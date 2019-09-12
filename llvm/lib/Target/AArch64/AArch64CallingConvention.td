@@ -17,6 +17,10 @@ class CCIfAlign<string Align, CCAction A> :
 class CCIfBigEndian<CCAction A> :
   CCIf<"State.getMachineFunction().getDataLayout().isBigEndian()", A>;
 
+class CCIfILP32<CCAction A> :
+  CCIf<"State.getMachineFunction().getDataLayout().getPointerSize() == 4", A>;
+
+
 //===----------------------------------------------------------------------===//
 // ARM AAPCS64 Calling Convention
 //===----------------------------------------------------------------------===//
@@ -123,6 +127,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
 
+  CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X21], [W21]>>>,
 
   // Big endian vectors must be passed as if they were 1-element vectors so that
@@ -221,6 +226,12 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   CCIf<"ValVT == MVT::i1 || ValVT == MVT::i8", CCAssignToStack<1, 1>>,
   CCIf<"ValVT == MVT::i16 || ValVT == MVT::f16", CCAssignToStack<2, 2>>,
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
+
+  // Re-demote pointers to 32-bits so we don't end up storing 64-bit
+  // values and clobbering neighbouring stack locations. Not very pretty.
+  CCIfPtr<CCIfILP32<CCTruncToType<i32>>>,
+  CCIfPtr<CCIfILP32<CCAssignToStack<4, 4>>>,
+
   CCIfType<[i64, f64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16],
            CCAssignToStack<8, 8>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
@@ -247,6 +258,29 @@ def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
            CCAssignToStack<16, 16>>
 ]>;
+
+// In the ILP32 world, the minimum stack slot size is 4 bytes. Otherwise the
+// same as the normal Darwin VarArgs handling.
+let Entry = 1 in
+def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
+  CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
+  CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
+
+  // Handle all scalar types as either i32 or f32.
+  CCIfType<[i8, i16], CCPromoteToType<i32>>,
+  CCIfType<[f16],     CCPromoteToType<f32>>,
+
+  // Everything is on the stack.
+  // i128 is split to two i64s, and its stack alignment is 16 bytes.
+  CCIfPtr<CCIfILP32<CCTruncToType<i32>>>,
+  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
+  CCIfType<[i64], CCIfSplit<CCAssignToStack<8, 16>>>,
+  CCIfType<[i64, f64, v1i64, v2i32, v4i16, v8i8, v1f64, v2f32, v4f16],
+           CCAssignToStack<8, 8>>,
+  CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16],
+           CCAssignToStack<16, 16>>
+]>;
+
 
 // The WebKit_JS calling convention only passes the first argument (the callee)
 // in register and the remaining arguments on stack. We allow 32bit stack slots,

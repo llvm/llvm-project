@@ -420,7 +420,8 @@ enum OperatorChain {
 /// cost of creating an entirely new loop.
 static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
                                    OperatorChain &ParentChain,
-                                   DenseMap<Value *, Value *> &Cache) {
+                                   DenseMap<Value *, Value *> &Cache,
+                                   MemorySSAUpdater *MSSAU) {
   auto CacheIt = Cache.find(Cond);
   if (CacheIt != Cache.end())
     return CacheIt->second;
@@ -438,7 +439,7 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
   // TODO: Handle: br (VARIANT|INVARIANT).
 
   // Hoist simple values out.
-  if (L->makeLoopInvariant(Cond, Changed)) {
+  if (L->makeLoopInvariant(Cond, Changed, nullptr, MSSAU)) {
     Cache[Cond] = Cond;
     return Cond;
   }
@@ -478,7 +479,7 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
         // which will cause the branch to go away in one loop and the condition to
         // simplify in the other one.
         if (Value *LHS = FindLIVLoopCondition(BO->getOperand(0), L, Changed,
-                                              ParentChain, Cache)) {
+                                              ParentChain, Cache, MSSAU)) {
           Cache[Cond] = LHS;
           return LHS;
         }
@@ -486,7 +487,7 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
         // operand(1).
         ParentChain = NewChain;
         if (Value *RHS = FindLIVLoopCondition(BO->getOperand(1), L, Changed,
-                                              ParentChain, Cache)) {
+                                              ParentChain, Cache, MSSAU)) {
           Cache[Cond] = RHS;
           return RHS;
         }
@@ -500,12 +501,12 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
 /// Cond is a condition that occurs in L. If it is invariant in the loop, or has
 /// an invariant piece, return the invariant along with the operator chain type.
 /// Otherwise, return null.
-static std::pair<Value *, OperatorChain> FindLIVLoopCondition(Value *Cond,
-                                                              Loop *L,
-                                                              bool &Changed) {
+static std::pair<Value *, OperatorChain>
+FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
+                     MemorySSAUpdater *MSSAU) {
   DenseMap<Value *, Value *> Cache;
   OperatorChain OpChain = OC_OpChainNone;
-  Value *FCond = FindLIVLoopCondition(Cond, L, Changed, OpChain, Cache);
+  Value *FCond = FindLIVLoopCondition(Cond, L, Changed, OpChain, Cache, MSSAU);
 
   // In case we do find a LIV, it can not be obtained by walking up a mixed
   // operator chain.
@@ -694,8 +695,9 @@ bool LoopUnswitch::processCurrentLoop() {
   }
 
   for (IntrinsicInst *Guard : Guards) {
-    Value *LoopCond =
-        FindLIVLoopCondition(Guard->getOperand(0), currentLoop, Changed).first;
+    Value *LoopCond = FindLIVLoopCondition(Guard->getOperand(0), currentLoop,
+                                           Changed, MSSAU.get())
+                          .first;
     if (LoopCond &&
         UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context))) {
       // NB! Unswitching (if successful) could have erased some of the
@@ -735,8 +737,9 @@ bool LoopUnswitch::processCurrentLoop() {
       if (BI->isConditional()) {
         // See if this, or some part of it, is loop invariant.  If so, we can
         // unswitch on it if we desire.
-        Value *LoopCond = FindLIVLoopCondition(BI->getCondition(),
-                                               currentLoop, Changed).first;
+        Value *LoopCond = FindLIVLoopCondition(BI->getCondition(), currentLoop,
+                                               Changed, MSSAU.get())
+                              .first;
         if (LoopCond && !EqualityPropUnSafe(*LoopCond) &&
             UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context), TI)) {
           ++NumBranches;
@@ -748,7 +751,7 @@ bool LoopUnswitch::processCurrentLoop() {
       Value *LoopCond;
       OperatorChain OpChain;
       std::tie(LoopCond, OpChain) =
-        FindLIVLoopCondition(SC, currentLoop, Changed);
+          FindLIVLoopCondition(SC, currentLoop, Changed, MSSAU.get());
 
       unsigned NumCases = SI->getNumCases();
       if (LoopCond && NumCases) {
@@ -808,8 +811,9 @@ bool LoopUnswitch::processCurrentLoop() {
     for (BasicBlock::iterator BBI = (*I)->begin(), E = (*I)->end();
          BBI != E; ++BBI)
       if (SelectInst *SI = dyn_cast<SelectInst>(BBI)) {
-        Value *LoopCond = FindLIVLoopCondition(SI->getCondition(),
-                                               currentLoop, Changed).first;
+        Value *LoopCond = FindLIVLoopCondition(SI->getCondition(), currentLoop,
+                                               Changed, MSSAU.get())
+                              .first;
         if (LoopCond && UnswitchIfProfitable(LoopCond,
                                              ConstantInt::getTrue(Context))) {
           ++NumSelects;
@@ -1123,8 +1127,9 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
     if (!BI->isConditional())
       return false;
 
-    Value *LoopCond = FindLIVLoopCondition(BI->getCondition(),
-                                           currentLoop, Changed).first;
+    Value *LoopCond = FindLIVLoopCondition(BI->getCondition(), currentLoop,
+                                           Changed, MSSAU.get())
+                          .first;
 
     // Unswitch only if the trivial condition itself is an LIV (not
     // partial LIV which could occur in and/or)
@@ -1157,8 +1162,9 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
     return true;
   } else if (SwitchInst *SI = dyn_cast<SwitchInst>(CurrentTerm)) {
     // If this isn't switching on an invariant condition, we can't unswitch it.
-    Value *LoopCond = FindLIVLoopCondition(SI->getCondition(),
-                                           currentLoop, Changed).first;
+    Value *LoopCond = FindLIVLoopCondition(SI->getCondition(), currentLoop,
+                                           Changed, MSSAU.get())
+                          .first;
 
     // Unswitch only if the trivial condition itself is an LIV (not
     // partial LIV which could occur in and/or)
@@ -1239,6 +1245,9 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
   LoopBlocks.clear();
   NewBlocks.clear();
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
 
   // First step, split the preheader and exit blocks, and add these blocks to
   // the LoopBlocks list.

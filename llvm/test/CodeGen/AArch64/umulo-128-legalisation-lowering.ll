@@ -27,8 +27,8 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; AARCH-NEXT:    orr w10, w10, w11
 ; AARCH-NEXT:    orr w9, w10, w9
 ; AARCH-NEXT:    mul x0, x0, x2
-; AARCH-NEXT:    mov x1, x8
-; AARCH-NEXT:    mov w2, w9
+; AARCH-DAG:    mov x1, x8
+; AARCH-DAG:    mov w2, w9
 ; AARCH-NEXT:    ret
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2
