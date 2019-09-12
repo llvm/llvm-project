@@ -24,6 +24,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -31,7 +32,6 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
@@ -239,6 +239,8 @@ public:
   generate(const PathDiagnosticConsumer *PDC) const;
 
 private:
+  void updateStackPiecesWithMessage(PathDiagnosticPieceRef P,
+                                    const CallWithEntryStack &CallStack) const;
   void generatePathDiagnosticsForNode(PathDiagnosticConstruct &C,
                                       PathDiagnosticLocation &PrevLoc) const;
 
@@ -270,23 +272,66 @@ private:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Helper routines for walking the ExplodedGraph and fetching statements.
+// Base implementation of stack hint generators.
 //===----------------------------------------------------------------------===//
 
-static const Stmt *GetPreviousStmt(const ExplodedNode *N) {
-  for (N = N->getFirstPred(); N; N = N->getFirstPred())
-    if (const Stmt *S = PathDiagnosticLocation::getStmt(N))
-      return S;
+StackHintGenerator::~StackHintGenerator() = default;
 
-  return nullptr;
+std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
+  if (!N)
+    return getMessageForSymbolNotFound();
+
+  ProgramPoint P = N->getLocation();
+  CallExitEnd CExit = P.castAs<CallExitEnd>();
+
+  // FIXME: Use CallEvent to abstract this over all calls.
+  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
+  const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
+  if (!CE)
+    return {};
+
+  // Check if one of the parameters are set to the interesting symbol.
+  unsigned ArgIndex = 0;
+  for (CallExpr::const_arg_iterator I = CE->arg_begin(),
+                                    E = CE->arg_end(); I != E; ++I, ++ArgIndex){
+    SVal SV = N->getSVal(*I);
+
+    // Check if the variable corresponding to the symbol is passed by value.
+    SymbolRef AS = SV.getAsLocSymbol();
+    if (AS == Sym) {
+      return getMessageForArg(*I, ArgIndex);
+    }
+
+    // Check if the parameter is a pointer to the symbol.
+    if (Optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
+      // Do not attempt to dereference void*.
+      if ((*I)->getType()->isVoidPointerType())
+        continue;
+      SVal PSV = N->getState()->getSVal(Reg->getRegion());
+      SymbolRef AS = PSV.getAsLocSymbol();
+      if (AS == Sym) {
+        return getMessageForArg(*I, ArgIndex);
+      }
+    }
+  }
+
+  // Check if we are returning the interesting symbol.
+  SVal SV = N->getSVal(CE);
+  SymbolRef RetSym = SV.getAsLocSymbol();
+  if (RetSym == Sym) {
+    return getMessageForReturn(CE);
+  }
+
+  return getMessageForSymbolNotFound();
 }
 
-static inline const Stmt*
-GetCurrentOrPreviousStmt(const ExplodedNode *N) {
-  if (const Stmt *S = PathDiagnosticLocation::getStmt(N))
-    return S;
+std::string StackHintGeneratorForSymbol::getMessageForArg(const Expr *ArgE,
+                                                          unsigned ArgIndex) {
+  // Printed parameters start at 1, not 0.
+  ++ArgIndex;
 
-  return GetPreviousStmt(N);
+  return (llvm::Twine(Msg) + " via " + std::to_string(ArgIndex) +
+          llvm::getOrdinalSuffix(ArgIndex) + " parameter").str();
 }
 
 //===----------------------------------------------------------------------===//
@@ -528,7 +573,7 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     const PathDiagnosticConstruct &C) const {
-  if (const Stmt *S = PathDiagnosticLocation::getNextStmt(C.getCurrentNode()))
+  if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
     return PathDiagnosticLocation(S, getSourceManager(),
                                   C.getCurrLocationContext());
 
@@ -661,7 +706,7 @@ getEnclosingStmtLocation(const Stmt *S, const LocationContext *LC,
 //===----------------------------------------------------------------------===//
 
 /// If the piece contains a special message, add it to all the call pieces on
-/// the active stack. For exampler, my_malloc allocated memory, so MallocChecker
+/// the active stack. For example, my_malloc allocated memory, so MallocChecker
 /// will construct an event at the call to malloc(), and add a stack hint that
 /// an allocated memory was returned. We'll use this hint to construct a message
 /// when returning from the call to my_malloc
@@ -670,22 +715,20 @@ getEnclosingStmtLocation(const Stmt *S, const LocationContext *LC,
 ///   void fishy() {
 ///     void *ptr = my_malloc(); // returned allocated memory
 ///   } // leak
-static void updateStackPiecesWithMessage(PathDiagnosticPiece &P,
-                                         const CallWithEntryStack &CallStack) {
-  if (auto *ep = dyn_cast<PathDiagnosticEventPiece>(&P)) {
-    if (ep->hasCallStackHint())
-      for (const auto &I : CallStack) {
-        PathDiagnosticCallPiece *CP = I.first;
-        const ExplodedNode *N = I.second;
-        std::string stackMsg = ep->getCallStackMessage(N);
+void PathDiagnosticBuilder::updateStackPiecesWithMessage(
+    PathDiagnosticPieceRef P, const CallWithEntryStack &CallStack) const {
+  if (R->hasCallStackHint(P))
+    for (const auto &I : CallStack) {
+      PathDiagnosticCallPiece *CP = I.first;
+      const ExplodedNode *N = I.second;
+      std::string stackMsg = R->getCallStackMessage(P, N);
 
-        // The last message on the path to final bug is the most important
-        // one. Since we traverse the path backwards, do not add the message
-        // if one has been previously added.
-        if  (!CP->hasCallStackMessage())
-          CP->setCallStackMessage(stackMsg);
-      }
-  }
+      // The last message on the path to final bug is the most important
+      // one. Since we traverse the path backwards, do not add the message
+      // if one has been previously added.
+      if (!CP->hasCallStackMessage())
+        CP->setCallStackMessage(stackMsg);
+    }
 }
 
 static void CompactMacroExpandedPieces(PathPieces &path,
@@ -825,7 +868,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
   case Stmt::GotoStmtClass:
   case Stmt::IndirectGotoStmtClass: {
-    if (const Stmt *S = PathDiagnosticLocation::getNextStmt(C.getCurrentNode()))
+    if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
       C.getActivePath().push_front(generateDiagForGotoOP(C, S, Start));
     break;
   }
@@ -1990,7 +2033,7 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
       if (PDC->shouldAddPathEdges())
         addEdgeToPath(Construct.getActivePath(), PrevLoc, Note->getLocation());
-      updateStackPiecesWithMessage(*Note, Construct.CallStack);
+      updateStackPiecesWithMessage(Note, Construct.CallStack);
       Construct.getActivePath().push_front(Note);
     }
   }
@@ -2114,8 +2157,11 @@ void PathSensitiveBugReport::Profile(llvm::FoldingSetNodeID &hash) const {
   if (UL.isValid()) {
     UL.Profile(hash);
   } else {
-    assert(ErrorNode);
-    hash.AddPointer(GetCurrentOrPreviousStmt(ErrorNode));
+    // TODO: The statement may be null if the report was emitted before any
+    // statements were executed. In particular, some checkers by design
+    // occasionally emit their reports in empty functions (that have no
+    // statements in their body). Do we profile correctly in this case?
+    hash.AddPointer(ErrorNode->getCurrentOrPreviousStmtForDiagnostics());
   }
 
   for (SourceRange range : Ranges) {
@@ -2270,10 +2316,10 @@ const Stmt *PathSensitiveBugReport::getStmt() const {
   if (Optional<BlockEntrance> BE = ProgP.getAs<BlockEntrance>()) {
     CFGBlock &Exit = ProgP.getLocationContext()->getCFG()->getExit();
     if (BE->getBlock() == &Exit)
-      S = GetPreviousStmt(ErrorNode);
+      S = ErrorNode->getPreviousStmtForDiagnostics();
   }
   if (!S)
-    S = PathDiagnosticLocation::getStmt(ErrorNode);
+    S = ErrorNode->getStmtForDiagnostics();
 
   return S;
 }
@@ -2290,7 +2336,45 @@ PathSensitiveBugReport::getRanges() const {
 
 PathDiagnosticLocation
 PathSensitiveBugReport::getLocation() const {
-  return PathDiagnosticLocation::createEndOfPath(ErrorNode);
+  assert(ErrorNode && "Cannot create a location with a null node.");
+  const Stmt *S = ErrorNode->getStmtForDiagnostics();
+    ProgramPoint P = ErrorNode->getLocation();
+  const LocationContext *LC = P.getLocationContext();
+  SourceManager &SM =
+      ErrorNode->getState()->getStateManager().getContext().getSourceManager();
+
+  if (!S) {
+    // If this is an implicit call, return the implicit call point location.
+    if (Optional<PreImplicitCall> PIE = P.getAs<PreImplicitCall>())
+      return PathDiagnosticLocation(PIE->getLocation(), SM);
+    if (auto FE = P.getAs<FunctionExitPoint>()) {
+      if (const ReturnStmt *RS = FE->getStmt())
+        return PathDiagnosticLocation::createBegin(RS, SM, LC);
+    }
+    S = ErrorNode->getNextStmtForDiagnostics();
+  }
+
+  if (S) {
+    // For member expressions, return the location of the '.' or '->'.
+    if (const auto *ME = dyn_cast<MemberExpr>(S))
+      return PathDiagnosticLocation::createMemberLoc(ME, SM);
+
+    // For binary operators, return the location of the operator.
+    if (const auto *B = dyn_cast<BinaryOperator>(S))
+      return PathDiagnosticLocation::createOperatorLoc(B, SM);
+
+    if (P.getAs<PostStmtPurgeDeadSymbols>())
+      return PathDiagnosticLocation::createEnd(S, SM, LC);
+
+    if (S->getBeginLoc().isValid())
+      return PathDiagnosticLocation(S, SM, LC);
+
+    return PathDiagnosticLocation(
+        PathDiagnosticLocation::getValidSourceLocation(S, LC), SM);
+  }
+
+  return PathDiagnosticLocation::createDeclEnd(ErrorNode->getLocationContext(),
+                                               SM);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3007,7 +3091,7 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
       // Inlined function: show signature.
       const Decl* D = CE->getCalleeContext()->getDecl();
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
-    } else if (const Stmt *S = PathDiagnosticLocation::getStmt(N)) {
+    } else if (const Stmt *S = N->getStmtForDiagnostics()) {
       populateExecutedLinesWithStmt(S, SM, *ExecutedLines);
 
       // Show extra context for some parent kinds.
@@ -3040,6 +3124,71 @@ BugReporter::generateDiagnosticForConsumerMap(
     (*Out)[Consumer] = generateDiagnosticForBasicReport(basicReport);
   return Out;
 }
+
+static PathDiagnosticCallPiece *
+getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
+                                const SourceManager &SMgr) {
+  SourceLocation CallLoc = CP->callEnter.asLocation();
+
+  // If the call is within a macro, don't do anything (for now).
+  if (CallLoc.isMacroID())
+    return nullptr;
+
+  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
+         "The call piece should not be in a header file.");
+
+  // Check if CP represents a path through a function outside of the main file.
+  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
+    return CP;
+
+  const PathPieces &Path = CP->path;
+  if (Path.empty())
+    return nullptr;
+
+  // Check if the last piece in the callee path is a call to a function outside
+  // of the main file.
+  if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
+    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
+
+  // Otherwise, the last piece is in the main file.
+  return nullptr;
+}
+
+static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
+  if (PD.path.empty())
+    return;
+
+  PathDiagnosticPiece *LastP = PD.path.back().get();
+  assert(LastP);
+  const SourceManager &SMgr = LastP->getLocation().getManager();
+
+  // We only need to check if the report ends inside headers, if the last piece
+  // is a call piece.
+  if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
+    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
+    if (CP) {
+      // Mark the piece.
+       CP->setAsLastInMainSourceFile();
+
+      // Update the path diagnostic message.
+      const auto *ND = dyn_cast<NamedDecl>(CP->getCallee());
+      if (ND) {
+        SmallString<200> buf;
+        llvm::raw_svector_ostream os(buf);
+        os << " (within a call to '" << ND->getDeclName() << "')";
+        PD.appendToDesc(os.str());
+      }
+
+      // Reset the report containing declaration and location.
+      PD.setDeclWithIssue(CP->getCaller());
+      PD.setLocation(CP->getLocation());
+
+      return;
+    }
+  }
+}
+
+
 
 std::unique_ptr<DiagnosticForConsumerMapTy>
 PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
@@ -3075,7 +3224,7 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
   const AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
     if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
-      P.second->resetDiagnosticLocationToMainFile();
+      resetDiagnosticLocationToMainFile(*P.second);
 
   return Out;
 }

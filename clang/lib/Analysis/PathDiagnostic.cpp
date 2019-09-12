@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -29,9 +29,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
@@ -131,69 +128,6 @@ PathDiagnostic::PathDiagnostic(
       Category(StripTrailingDots(category)), UniqueingLoc(LocationToUnique),
       UniqueingDecl(DeclToUnique), ExecutedLines(std::move(ExecutedLines)),
       path(pathImpl) {}
-
-static PathDiagnosticCallPiece *
-getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
-                                const SourceManager &SMgr) {
-  SourceLocation CallLoc = CP->callEnter.asLocation();
-
-  // If the call is within a macro, don't do anything (for now).
-  if (CallLoc.isMacroID())
-    return nullptr;
-
-  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
-         "The call piece should not be in a header file.");
-
-  // Check if CP represents a path through a function outside of the main file.
-  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
-    return CP;
-
-  const PathPieces &Path = CP->path;
-  if (Path.empty())
-    return nullptr;
-
-  // Check if the last piece in the callee path is a call to a function outside
-  // of the main file.
-  if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
-    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
-
-  // Otherwise, the last piece is in the main file.
-  return nullptr;
-}
-
-void PathDiagnostic::resetDiagnosticLocationToMainFile() {
-  if (path.empty())
-    return;
-
-  PathDiagnosticPiece *LastP = path.back().get();
-  assert(LastP);
-  const SourceManager &SMgr = LastP->getLocation().getManager();
-
-  // We only need to check if the report ends inside headers, if the last piece
-  // is a call piece.
-  if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
-    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
-    if (CP) {
-      // Mark the piece.
-       CP->setAsLastInMainSourceFile();
-
-      // Update the path diagnostic message.
-      const auto *ND = dyn_cast<NamedDecl>(CP->getCallee());
-      if (ND) {
-        SmallString<200> buf;
-        llvm::raw_svector_ostream os(buf);
-        os << " (within a call to '" << ND->getDeclName() << "')";
-        appendToDesc(os.str());
-      }
-
-      // Reset the report containing declaration and location.
-      DeclWithIssue = CP->getCaller();
-      Loc = CP->getLocation();
-
-      return;
-    }
-  }
-}
 
 void PathDiagnosticConsumer::anchor() {}
 
@@ -525,12 +459,12 @@ PathDiagnosticConsumer::FilesMade::getFiles(const PathDiagnostic &PD) {
 // PathDiagnosticLocation methods.
 //===----------------------------------------------------------------------===//
 
-static SourceLocation getValidSourceLocation(const Stmt* S,
-                                             LocationOrAnalysisDeclContext LAC,
-                                             bool UseEnd = false) {
-  SourceLocation L = UseEnd ? S->getEndLoc() : S->getBeginLoc();
-  assert(!LAC.isNull() && "A valid LocationContext or AnalysisDeclContext should "
-                          "be passed to PathDiagnosticLocation upon creation.");
+SourceLocation PathDiagnosticLocation::getValidSourceLocation(
+    const Stmt *S, LocationOrAnalysisDeclContext LAC, bool UseEndOfStatement) {
+  SourceLocation L = UseEndOfStatement ? S->getEndLoc() : S->getBeginLoc();
+  assert(!LAC.isNull() &&
+         "A valid LocationContext or AnalysisDeclContext should be passed to "
+         "PathDiagnosticLocation upon creation.");
 
   // S might be a temporary statement that does not have a location in the
   // source code, so find an enclosing statement and use its location.
@@ -560,7 +494,7 @@ static SourceLocation getValidSourceLocation(const Stmt* S,
         break;
       }
 
-      L = UseEnd ? Parent->getEndLoc() : Parent->getBeginLoc();
+      L = UseEndOfStatement ? Parent->getEndLoc() : Parent->getBeginLoc();
     } while (!L.isValid());
   }
 
@@ -777,117 +711,6 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
   }
 
   return PathDiagnosticLocation(S, SMng, P.getLocationContext());
-}
-
-static const LocationContext *
-findTopAutosynthesizedParentContext(const LocationContext *LC) {
-  assert(LC->getAnalysisDeclContext()->isBodyAutosynthesized());
-  const LocationContext *ParentLC = LC->getParent();
-  assert(ParentLC && "We don't start analysis from autosynthesized code");
-  while (ParentLC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    LC = ParentLC;
-    ParentLC = LC->getParent();
-    assert(ParentLC && "We don't start analysis from autosynthesized code");
-  }
-  return LC;
-}
-
-const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
-  // We cannot place diagnostics on autosynthesized code.
-  // Put them onto the call site through which we jumped into autosynthesized
-  // code for the first time.
-  const LocationContext *LC = N->getLocationContext();
-  if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
-        ->getCallSite();
-  }
-  // Otherwise, see if the node's program point directly points to a statement.
-  ProgramPoint P = N->getLocation();
-  if (auto SP = P.getAs<StmtPoint>())
-    return SP->getStmt();
-  if (auto BE = P.getAs<BlockEdge>())
-    return BE->getSrc()->getTerminatorStmt();
-  if (auto CE = P.getAs<CallEnter>())
-    return CE->getCallExpr();
-  if (auto CEE = P.getAs<CallExitEnd>())
-    return CEE->getCalleeContext()->getCallSite();
-  if (auto PIPP = P.getAs<PostInitializer>())
-    return PIPP->getInitializer()->getInit();
-  if (auto CEB = P.getAs<CallExitBegin>())
-    return CEB->getReturnStmt();
-  if (auto FEP = P.getAs<FunctionExitPoint>())
-    return FEP->getStmt();
-
-  return nullptr;
-}
-
-const Stmt *PathDiagnosticLocation::getNextStmt(const ExplodedNode *N) {
-  for (N = N->getFirstSucc(); N; N = N->getFirstSucc()) {
-    if (const Stmt *S = getStmt(N)) {
-      // Check if the statement is '?' or '&&'/'||'.  These are "merges",
-      // not actual statement points.
-      switch (S->getStmtClass()) {
-        case Stmt::ChooseExprClass:
-        case Stmt::BinaryConditionalOperatorClass:
-        case Stmt::ConditionalOperatorClass:
-          continue;
-        case Stmt::BinaryOperatorClass: {
-          BinaryOperatorKind Op = cast<BinaryOperator>(S)->getOpcode();
-          if (Op == BO_LAnd || Op == BO_LOr)
-            continue;
-          break;
-        }
-        default:
-          break;
-      }
-      // We found the statement, so return it.
-      return S;
-    }
-  }
-
-  return nullptr;
-}
-
-PathDiagnosticLocation
-PathDiagnosticLocation::createEndOfPath(const ExplodedNode *N) {
-  assert(N && "Cannot create a location with a null node.");
-  const Stmt *S = getStmt(N);
-  const LocationContext *LC = N->getLocationContext();
-  SourceManager &SM =
-      N->getState()->getStateManager().getContext().getSourceManager();
-
-  if (!S) {
-    // If this is an implicit call, return the implicit call point location.
-    if (Optional<PreImplicitCall> PIE = N->getLocationAs<PreImplicitCall>())
-      return PathDiagnosticLocation(PIE->getLocation(), SM);
-    if (auto FE = N->getLocationAs<FunctionExitPoint>()) {
-      if (const ReturnStmt *RS = FE->getStmt())
-        return PathDiagnosticLocation::createBegin(RS, SM, LC);
-    }
-    S = getNextStmt(N);
-  }
-
-  if (S) {
-    ProgramPoint P = N->getLocation();
-
-    // For member expressions, return the location of the '.' or '->'.
-    if (const auto *ME = dyn_cast<MemberExpr>(S))
-      return PathDiagnosticLocation::createMemberLoc(ME, SM);
-
-    // For binary operators, return the location of the operator.
-    if (const auto *B = dyn_cast<BinaryOperator>(S))
-      return PathDiagnosticLocation::createOperatorLoc(B, SM);
-
-    if (P.getAs<PostStmtPurgeDeadSymbols>())
-      return PathDiagnosticLocation::createEnd(S, SM, LC);
-
-    if (S->getBeginLoc().isValid())
-      return PathDiagnosticLocation(S, SM, LC);
-    return PathDiagnosticLocation(getValidSourceLocation(S, LC), SM);
-  }
-
-  return createDeclEnd(N->getLocationContext(), SM);
 }
 
 PathDiagnosticLocation PathDiagnosticLocation::createSingleLocation(
@@ -1301,70 +1124,6 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
     ID.Add(*I);
   for (meta_iterator I = meta_begin(), E = meta_end(); I != E; ++I)
     ID.AddString(*I);
-}
-
-StackHintGenerator::~StackHintGenerator() = default;
-
-std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
-  if (!N)
-    return getMessageForSymbolNotFound();
-
-  ProgramPoint P = N->getLocation();
-  CallExitEnd CExit = P.castAs<CallExitEnd>();
-
-  // FIXME: Use CallEvent to abstract this over all calls.
-  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
-  const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
-  if (!CE)
-    return {};
-
-  // Check if one of the parameters are set to the interesting symbol.
-  unsigned ArgIndex = 0;
-  for (CallExpr::const_arg_iterator I = CE->arg_begin(),
-                                    E = CE->arg_end(); I != E; ++I, ++ArgIndex){
-    SVal SV = N->getSVal(*I);
-
-    // Check if the variable corresponding to the symbol is passed by value.
-    SymbolRef AS = SV.getAsLocSymbol();
-    if (AS == Sym) {
-      return getMessageForArg(*I, ArgIndex);
-    }
-
-    // Check if the parameter is a pointer to the symbol.
-    if (Optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
-      // Do not attempt to dereference void*.
-      if ((*I)->getType()->isVoidPointerType())
-        continue;
-      SVal PSV = N->getState()->getSVal(Reg->getRegion());
-      SymbolRef AS = PSV.getAsLocSymbol();
-      if (AS == Sym) {
-        return getMessageForArg(*I, ArgIndex);
-      }
-    }
-  }
-
-  // Check if we are returning the interesting symbol.
-  SVal SV = N->getSVal(CE);
-  SymbolRef RetSym = SV.getAsLocSymbol();
-  if (RetSym == Sym) {
-    return getMessageForReturn(CE);
-  }
-
-  return getMessageForSymbolNotFound();
-}
-
-std::string StackHintGeneratorForSymbol::getMessageForArg(const Expr *ArgE,
-                                                          unsigned ArgIndex) {
-  // Printed parameters start at 1, not 0.
-  ++ArgIndex;
-
-  SmallString<200> buf;
-  llvm::raw_svector_ostream os(buf);
-
-  os << Msg << " via " << ArgIndex << llvm::getOrdinalSuffix(ArgIndex)
-     << " parameter";
-
-  return os.str();
 }
 
 LLVM_DUMP_METHOD void PathPieces::dump() const {

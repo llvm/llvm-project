@@ -165,7 +165,9 @@ static bool isPossiblyEscaped(const VarDecl *VD, ExplodedNode *N) {
     return true;
 
   while (!N->pred_empty()) {
-    const Stmt *S = PathDiagnosticLocation::getStmt(N);
+    // FIXME: getStmtForDiagnostics() does nasty things in order to provide
+    // a valid statement for body farms, do we need this behavior here?
+    const Stmt *S = N->getStmtForDiagnostics();
     if (!S) {
       N = N->getFirstPred();
       continue;

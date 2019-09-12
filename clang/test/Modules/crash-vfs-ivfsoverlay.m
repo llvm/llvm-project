@@ -1,9 +1,9 @@
-// REQUIRES: crash-recovery, shell, system-darwin
+// REQUIRES: crash-recovery, system-darwin
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/m
 // RUN: cp %S/../VFS/Inputs/actual_module2.map %t/actual_module2.map
-// RUN: sed -e "s:INPUT_DIR:%t:g" -e "s:OUT_DIR:%t/example:g" \
+// RUN: sed -e "s@INPUT_DIR@%/t@g" -e "s@OUT_DIR@%/t/example@g" \
 // RUN:   %S/../VFS/Inputs/vfsoverlay2.yaml > %t/srcvfs.yaml
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
