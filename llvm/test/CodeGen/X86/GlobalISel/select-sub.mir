@@ -70,7 +70,7 @@ body:             |
 ...
 ---
 name:            test_sub_v4i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -100,7 +100,7 @@ body:             |
 ...
 ---
 name:            test_sub_v4f32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false

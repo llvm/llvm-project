@@ -96,6 +96,10 @@ Changes to the X86 Target
   be passed in ZMM registers for calls and returns. Previously they were passed
   in two YMM registers. Old behavior can be enabled by passing
   -x86-enable-old-knl-abi
+* -mprefer-vector-width=256 is now the default behavior skylake-avx512 and later
+  Intel CPUs. This tries to limit the use of 512-bit registers which can cause a
+  decrease in CPU frequency on these CPUs. This can be re-enabled by passing
+  -mprefer-vector-width=512 to clang or passing -mattr=-prefer-256-bit to llc.
 
 Changes to the AMDGPU Target
 -----------------------------

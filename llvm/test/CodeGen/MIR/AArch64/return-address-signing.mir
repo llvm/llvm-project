@@ -16,7 +16,7 @@
 ---
 #CHECK: foo
 name:            foo
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
@@ -32,7 +32,7 @@ body:             |
 ---
 #CHECK: bar
 name:            bar
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0

@@ -74,7 +74,7 @@
 ...
 ---
 name:            int8_to_float
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -108,7 +108,7 @@ body:             |
 ...
 ---
 name:            int16_to_float
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -142,7 +142,7 @@ body:             |
 ...
 ---
 name:            int32_to_float
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -168,7 +168,7 @@ body:             |
 ...
 ---
 name:            int64_to_float
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -194,7 +194,7 @@ body:             |
 ...
 ---
 name:            int8_to_double
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -228,7 +228,7 @@ body:             |
 ...
 ---
 name:            int16_to_double
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -262,7 +262,7 @@ body:             |
 ...
 ---
 name:            int32_to_double
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
@@ -288,7 +288,7 @@ body:             |
 ...
 ---
 name:            int64_to_double
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }

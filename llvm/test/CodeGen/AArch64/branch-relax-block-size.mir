@@ -35,7 +35,7 @@
 ...
 ---
 name:            test
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }

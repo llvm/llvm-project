@@ -16,7 +16,7 @@
 ...
 ---
 name:            float_add
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -46,7 +46,7 @@ body:             |
 ...
 ---
 name:            float_sub
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -76,7 +76,7 @@ body:             |
 ...
 ---
 name:            float_mul
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -106,7 +106,7 @@ body:             |
 ...
 ---
 name:            float_div
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -136,7 +136,7 @@ body:             |
 ...
 ---
 name:            double_add
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -166,7 +166,7 @@ body:             |
 ...
 ---
 name:            double_sub
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -196,7 +196,7 @@ body:             |
 ...
 ---
 name:            double_mul
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -226,7 +226,7 @@ body:             |
 ...
 ---
 name:            double_div
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

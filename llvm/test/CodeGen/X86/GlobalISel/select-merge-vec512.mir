@@ -12,7 +12,7 @@
 ...
 ---
 name:            test_merge_v128
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -37,7 +37,7 @@ body:             |
 ...
 ---
 name:            test_merge_v256
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

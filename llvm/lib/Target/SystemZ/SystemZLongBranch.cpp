@@ -276,7 +276,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
   Terminators.clear();
   Terminators.reserve(NumBlocks);
 
-  BlockPosition Position(MF->getLogAlignment());
+  BlockPosition Position(Log2(MF->getAlignment()));
   for (unsigned I = 0; I < NumBlocks; ++I) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(I);
     MBBInfo &Block = MBBs[I];
@@ -340,7 +340,7 @@ bool SystemZLongBranch::mustRelaxABranch() {
 // must be long.
 void SystemZLongBranch::setWorstCaseAddresses() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
-  BlockPosition Position(MF->getLogAlignment());
+  BlockPosition Position(Log2(MF->getAlignment()));
   for (auto &Block : MBBs) {
     skipNonTerminators(Position, Block);
     for (unsigned BTI = 0, BTE = Block.NumTerminators; BTI != BTE; ++BTI) {
@@ -441,7 +441,7 @@ void SystemZLongBranch::relaxBranch(TerminatorInfo &Terminator) {
 // Run a shortening pass and relax any branches that need to be relaxed.
 void SystemZLongBranch::relaxBranches() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
-  BlockPosition Position(MF->getLogAlignment());
+  BlockPosition Position(Log2(MF->getAlignment()));
   for (auto &Block : MBBs) {
     skipNonTerminators(Position, Block);
     for (unsigned BTI = 0, BTE = Block.NumTerminators; BTI != BTE; ++BTI) {

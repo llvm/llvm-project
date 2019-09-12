@@ -21,7 +21,7 @@
 ---
 name:            test_global_ptrv
 # CHECK-LABEL: name:  test_global_ptrv
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # X64ALL:              registers:
@@ -54,7 +54,7 @@ body:             |
 ---
 name:            test_global_valv
 # CHECK-LABEL: name:  test_global_valv
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # X64ALL:              registers:

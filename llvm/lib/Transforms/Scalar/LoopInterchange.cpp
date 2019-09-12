@@ -410,7 +410,6 @@ public:
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
-  void splitInnerLoopHeader();
   bool adjustLoopLinks();
   void adjustLoopPreheaders();
   bool adjustLoopBranches();

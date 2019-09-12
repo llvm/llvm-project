@@ -241,7 +241,7 @@
 ...
 ---
 name:            long_chain_ambiguous_i64_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:
@@ -433,7 +433,7 @@ body:             |
 ...
 ---
 name:            long_chain_i64_in_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:
@@ -661,7 +661,7 @@ body:             |
 ...
 ---
 name:            long_chain_ambiguous_double_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:
@@ -853,7 +853,7 @@ body:             |
 ...
 ---
 name:            long_chain_double_in_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:

@@ -529,7 +529,7 @@ namespace {
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
     SDValue BuildLogBase2(SDValue V, const SDLoc &DL);
-    SDValue BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags);
+    SDValue BuildDivEstimate(SDValue N, SDValue Op, SDNodeFlags Flags);
     SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags);
     SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags Flags);
     SDValue buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags, bool Recip);
@@ -12682,10 +12682,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     }
 
     // Fold into a reciprocal estimate and multiply instead of a real divide.
-    if (SDValue RV = BuildReciprocalEstimate(N1, Flags)) {
-      AddToWorklist(RV.getNode());
-      return DAG.getNode(ISD::FMUL, DL, VT, N0, RV, Flags);
-    }
+    if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
+      return RV;
   }
 
   // (fdiv (fneg X), (fneg Y)) -> (fdiv X, Y)
@@ -20329,7 +20327,10 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
 ///     =>
 ///   X_{i+1} = X_i (2 - A X_i) = X_i + X_i (1 - A X_i) [this second form
 ///     does not require additional intermediate precision]
-SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags) {
+/// For the last iteration, put numerator N into it to gain more precision:
+///   Result = N X_i + X_i (N - N A X_i)
+SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
+                                      SDNodeFlags Flags) {
   if (Level >= AfterLegalizeDAG)
     return SDValue();
 
@@ -20350,18 +20351,39 @@ SDValue DAGCombiner::BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags) {
   if (SDValue Est = TLI.getRecipEstimate(Op, DAG, Enabled, Iterations)) {
     AddToWorklist(Est.getNode());
 
+    SDLoc DL(Op);
     if (Iterations) {
-      SDLoc DL(Op);
       SDValue FPOne = DAG.getConstantFP(1.0, DL, VT);
 
-      // Newton iterations: Est = Est + Est (1 - Arg * Est)
+      // Newton iterations: Est = Est + Est (N - Arg * Est)
+      // If this is the last iteration, also multiply by the numerator.
       for (int i = 0; i < Iterations; ++i) {
-        SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Op, Est, Flags);
-        NewEst = DAG.getNode(ISD::FSUB, DL, VT, FPOne, NewEst, Flags);
+        SDValue MulEst = Est;
+
+        if (i == Iterations - 1) {
+          MulEst = DAG.getNode(ISD::FMUL, DL, VT, N, Est, Flags);
+          AddToWorklist(MulEst.getNode());
+        }
+
+        SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Op, MulEst, Flags);
+        AddToWorklist(NewEst.getNode());
+
+        NewEst = DAG.getNode(ISD::FSUB, DL, VT,
+                             (i == Iterations - 1 ? N : FPOne), NewEst, Flags);
+        AddToWorklist(NewEst.getNode());
+
         NewEst = DAG.getNode(ISD::FMUL, DL, VT, Est, NewEst, Flags);
-        Est = DAG.getNode(ISD::FADD, DL, VT, Est, NewEst, Flags);
+        AddToWorklist(NewEst.getNode());
+
+        Est = DAG.getNode(ISD::FADD, DL, VT, MulEst, NewEst, Flags);
+        AddToWorklist(Est.getNode());
       }
+    } else {
+      // If no iterations are available, multiply with N.
+      Est = DAG.getNode(ISD::FMUL, DL, VT, Est, N, Flags);
+      AddToWorklist(Est.getNode());
     }
+
     return Est;
   }
 

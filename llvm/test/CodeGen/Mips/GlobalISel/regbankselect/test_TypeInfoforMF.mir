@@ -14,7 +14,7 @@
 ...
 ---
 name:            outgoing_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -35,7 +35,7 @@ body:             |
 ...
 ---
 name:            outgoing_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -56,7 +56,7 @@ body:             |
 ...
 ---
 name:            outgoing_gpr_instr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -83,7 +83,7 @@ body:             |
 ...
 ---
 name:            outgoing_fpr_instr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -110,7 +110,7 @@ body:             |
 ...
 ---
 name:            incoming_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -143,7 +143,7 @@ body:             |
 ...
 ---
 name:            incoming_fpr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -176,7 +176,7 @@ body:             |
 ...
 ---
 name:            incoming_i32_instr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -213,7 +213,7 @@ body:             |
 ...
 ---
 name:            incoming_float_instr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

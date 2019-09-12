@@ -10,7 +10,7 @@
 ...
 ---
 name:            main
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

@@ -15,7 +15,7 @@
 ...
 ---
 name:            sub_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -37,7 +37,7 @@ body:             |
 ...
 ---
 name:            sub_i8_sext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            sub_i8_zext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -98,7 +98,7 @@ body:             |
 ...
 ---
 name:            sub_i8_aext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -126,7 +126,7 @@ body:             |
 ...
 ---
 name:            sub_i16_sext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -157,7 +157,7 @@ body:             |
 ...
 ---
 name:            sub_i16_zext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -187,7 +187,7 @@ body:             |
 ...
 ---
 name:            sub_i16_aext
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -215,7 +215,7 @@ body:             |
 ...
 ---
 name:            sub_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -252,7 +252,7 @@ body:             |
 ...
 ---
 name:            sub_i128
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 28, size: 4, alignment: 4, stack-id: default, isImmutable: true }

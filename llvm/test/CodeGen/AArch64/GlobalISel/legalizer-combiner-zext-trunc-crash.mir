@@ -4,7 +4,7 @@
 # This test checks we don't crash when doing zext(trunc) legalizer combines.
 ---
 name:            zext_trunc_dead_inst_crash
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: zext_trunc_dead_inst_crash

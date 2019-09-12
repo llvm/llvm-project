@@ -29,7 +29,7 @@
 
 ---
 name:            ldrxrox_breg_oreg
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -55,7 +55,7 @@ body:             |
 
 ---
 name:            ldrdrox_breg_oreg
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            more_than_one_use
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -111,7 +111,7 @@ body:             |
 ...
 ---
 name:            ldrxrox_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -138,7 +138,7 @@ body:             |
 ...
 ---
 name:            ldrdrox_shl
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -165,7 +165,7 @@ body:             |
 ...
 ---
 name:            ldrxrox_mul_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -192,7 +192,7 @@ body:             |
 ...
 ---
 name:            ldrdrox_mul_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -219,7 +219,7 @@ body:             |
 ...
 ---
 name:            ldrxrox_mul_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -246,7 +246,7 @@ body:             |
 ...
 ---
 name:            ldrdrox_mul_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -273,7 +273,7 @@ body:             |
 ...
 ---
 name:            mul_not_pow_2
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -305,7 +305,7 @@ body:             |
 ...
 ---
 name:            mul_wrong_pow_2
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -337,7 +337,7 @@ body:             |
 ...
 ---
 name:            more_than_one_use_shl_1
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -371,7 +371,7 @@ body:             |
 ...
 ---
 name:            more_than_one_use_shl_2
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -410,7 +410,7 @@ body:             |
 ...
 ---
 name:            more_than_one_use_shl_lsl_fast
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -443,7 +443,7 @@ body:             |
 ...
 ---
 name:            more_than_one_use_shl_lsl_slow
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -478,7 +478,7 @@ body:             |
 ...
 ---
 name:            more_than_one_use_shl_minsize
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -515,7 +515,7 @@ body:             |
 ...
 ---
 name:            ldrwrox
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -539,7 +539,7 @@ body:             |
 ...
 ---
 name:            ldrsrox
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -563,7 +563,7 @@ body:             |
 ...
 ---
 name:            ldrhrox
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -587,7 +587,7 @@ body:             |
 ...
 ---
 name:            ldbbrox
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -611,7 +611,7 @@ body:             |
 ...
 ---
 name:            ldrqrox
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

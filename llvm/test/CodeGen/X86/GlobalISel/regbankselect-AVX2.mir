@@ -26,7 +26,7 @@
 
 ---
 name:            test_mul_vec256
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -49,7 +49,7 @@ body:             |
 ...
 ---
 name:            test_add_vec256
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -72,7 +72,7 @@ body:             |
 ...
 ---
 name:            test_sub_vec256
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
@@ -96,7 +96,7 @@ body:             |
 ---
 name:            test_load_v8i32_noalign
 # CHECK-LABEL: name:  test_load_v8i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 # CHECK:       registers:
@@ -118,7 +118,7 @@ body:             |
 ---
 name:            test_store_v8i32_noalign
 # CHECK-LABEL: name:  test_store_v8i32_noalign
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 # CHECK:       registers:

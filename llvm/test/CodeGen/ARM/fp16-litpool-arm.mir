@@ -33,7 +33,7 @@
 ...
 ---
 name:            ARM
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }

@@ -6,7 +6,7 @@
 
 ---
 name:            main
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

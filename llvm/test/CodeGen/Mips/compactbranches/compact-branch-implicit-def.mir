@@ -55,7 +55,7 @@
 # CHECK-NEXT: nop
 # CHECK: blezc
 name:            f
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

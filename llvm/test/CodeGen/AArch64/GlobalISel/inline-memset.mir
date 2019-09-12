@@ -41,7 +41,7 @@
 ...
 ---
 name:            test_ms1
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -67,7 +67,7 @@ body:             |
 ...
 ---
 name:            test_ms2_const
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -96,7 +96,7 @@ body:             |
 ...
 ---
 name:            test_ms3_const_both
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -120,7 +120,7 @@ body:             |
 ...
 ---
 name:            test_ms4_const_both_unaligned
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

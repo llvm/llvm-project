@@ -9,7 +9,7 @@
 ...
 ---
 name:            i32tof32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -37,7 +37,7 @@ body:             |
 ...
 ---
 name:            i32tof64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

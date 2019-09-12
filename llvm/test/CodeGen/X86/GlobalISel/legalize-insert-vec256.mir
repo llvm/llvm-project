@@ -8,7 +8,7 @@
 ---
 name:            test_insert_128
 # ALL-LABEL: name:  test_insert_128
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

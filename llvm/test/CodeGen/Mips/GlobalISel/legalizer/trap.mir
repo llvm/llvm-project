@@ -8,7 +8,7 @@
 ...
 ---
 name:            f
-alignment:       2
+alignment:       4
 body:             |
   bb.1 (%ir-block.0):
     ; MIPS32-LABEL: name: f

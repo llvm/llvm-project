@@ -10,7 +10,7 @@
 ...
 ---
 name:            sdiv_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            srem_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -56,7 +56,7 @@ body:             |
 ...
 ---
 name:            udiv_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            urem_i32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

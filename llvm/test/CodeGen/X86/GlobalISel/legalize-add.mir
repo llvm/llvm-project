@@ -15,7 +15,7 @@
 ---
 name:            test_add_i1
 # CHECK-LABEL: name:  test_add_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -55,7 +55,7 @@ body:             |
 ...
 ---
 name:            test_add_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -85,7 +85,7 @@ body:             |
 ...
 ---
 name:            test_add_i64
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

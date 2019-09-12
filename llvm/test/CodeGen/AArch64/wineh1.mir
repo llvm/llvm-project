@@ -50,7 +50,7 @@
 ...
 ---
 name:            test
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 hasWinCFI: true
 liveins:

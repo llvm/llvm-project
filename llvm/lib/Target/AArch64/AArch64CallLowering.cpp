@@ -493,11 +493,15 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // caller has an argument with "inreg" attribute.
   //
   // FIXME: Check whether the callee also has an "inreg" argument.
+  //
+  // When the caller has a swifterror argument, we don't want to tail call
+  // because would have to move into the swifterror register before the
+  // tail call.
   if (any_of(CallerF.args(), [](const Argument &A) {
-        return A.hasByValAttr() || A.hasInRegAttr();
+        return A.hasByValAttr() || A.hasInRegAttr() || A.hasSwiftErrorAttr();
       })) {
-    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with byval or "
-                         "inreg arguments.\n");
+    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with byval, "
+                         "inreg, or swifterror arguments\n");
     return false;
   }
 

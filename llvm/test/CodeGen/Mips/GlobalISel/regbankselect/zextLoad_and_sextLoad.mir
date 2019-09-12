@@ -12,7 +12,7 @@
 ...
 ---
 name:            load1_s8_to_zextLoad1_s32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            load2_s16_to_zextLoad2_s32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -54,7 +54,7 @@ body:             |
 ...
 ---
 name:            load4_s32_to_zextLoad4_s64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -81,7 +81,7 @@ body:             |
 ...
 ---
 name:            load1_s8_to_sextLoad1_s32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -102,7 +102,7 @@ body:             |
 ...
 ---
 name:            load2_s16_to_sextLoad2_s32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -123,7 +123,7 @@ body:             |
 ...
 ---
 name:            load4_s32_to_sextLoad4_s64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

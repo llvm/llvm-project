@@ -5,6 +5,7 @@ declare noalias i8* @malloc(i64)
 declare noalias i8* @calloc(i64, i64)
 declare noalias i8* @realloc(i8* nocapture, i64)
 declare noalias nonnull i8* @_Znam(i64) ; throwing version of 'new'
+declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
 
 define noalias i8* @malloc_nonconstant_size(i64 %n) {
 ; CHECK-LABEL: @malloc_nonconstant_size(
@@ -181,10 +182,19 @@ define noalias i8* @op_new_nonconstant_size(i64 %n) {
 
 define noalias i8* @op_new_constant_size() {
 ; CHECK-LABEL: @op_new_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(40) i8* @_Znam(i64 40)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable(40) i8* @_Znam(i64 40)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @_Znam(i64 40)
+  ret i8* %call
+}
+
+define noalias i8* @op_new_constant_size2() {
+; CHECK-LABEL: @op_new_constant_size2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable(40) i8* @_Znwm(i64 40)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call i8* @_Znwm(i64 40)
   ret i8* %call
 }
 

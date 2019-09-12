@@ -141,7 +141,7 @@
 ---
 
 name:            expand_BEQC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -228,7 +228,7 @@ body:             |
 ---
 
 name:            expand_BNEC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -315,7 +315,7 @@ body:             |
 ---
 
 name:            expand_BGEC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -402,7 +402,7 @@ body:             |
 ---
 
 name:            expand_BGEUC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -489,7 +489,7 @@ body:             |
 ---
 
 name:            expand_BGEZC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -576,7 +576,7 @@ body:             |
 ---
 
 name:            expand_BGTZC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -663,7 +663,7 @@ body:             |
 ---
 
 name:            expand_BLEZC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -750,7 +750,7 @@ body:             |
 ---
 
 name:            expand_BLTC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -837,7 +837,7 @@ body:             |
 ---
 
 name:            expand_BLTUC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -924,7 +924,7 @@ body:             |
 ---
 
 name:            expand_BLTZC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1011,7 +1011,7 @@ body:             |
 ---
 
 name:            expand_BEQZC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1098,7 +1098,7 @@ body:             |
 ---
 
 name:            expand_BNEZC_MMR6
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

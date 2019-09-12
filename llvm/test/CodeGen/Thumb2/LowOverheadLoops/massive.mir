@@ -66,7 +66,7 @@
 ...
 ---
 name:            massive
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

@@ -25,7 +25,7 @@
 # CHECK: $vgpr2 = V_MOV_B32
 # CHECK: $vgpr3 = V_MOV_B32
 name:            exp_done_waitcnt
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

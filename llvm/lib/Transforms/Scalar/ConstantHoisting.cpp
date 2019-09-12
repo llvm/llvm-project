@@ -204,7 +204,7 @@ Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
 /// set found in \p BBs.
 static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
                                  BasicBlock *Entry,
-                                 SmallPtrSet<BasicBlock *, 8> &BBs) {
+                                 SetVector<BasicBlock *> &BBs) {
   assert(!BBs.count(Entry) && "Assume Entry is not in BBs");
   // Nodes on the current path to the root.
   SmallPtrSet<BasicBlock *, 8> Path;
@@ -257,7 +257,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
 
   // Visit Orders in bottom-up order.
   using InsertPtsCostPair =
-      std::pair<SmallPtrSet<BasicBlock *, 16>, BlockFrequency>;
+      std::pair<SetVector<BasicBlock *>, BlockFrequency>;
 
   // InsertPtsMap is a map from a BB to the best insertion points for the
   // subtree of BB (subtree not including the BB itself).
@@ -266,7 +266,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   for (auto RIt = Orders.rbegin(); RIt != Orders.rend(); RIt++) {
     BasicBlock *Node = *RIt;
     bool NodeInBBs = BBs.count(Node);
-    SmallPtrSet<BasicBlock *, 16> &InsertPts = InsertPtsMap[Node].first;
+    auto &InsertPts = InsertPtsMap[Node].first;
     BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
 
     // Return the optimal insert points in BBs.
@@ -283,7 +283,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    SmallPtrSet<BasicBlock *, 16> &ParentInsertPts = InsertPtsMap[Parent].first;
+    auto &ParentInsertPts = InsertPtsMap[Parent].first;
     BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
@@ -305,12 +305,12 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
 }
 
 /// Find an insertion point that dominates all uses.
-SmallPtrSet<Instruction *, 8> ConstantHoistingPass::findConstantInsertionPoint(
+SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
     const ConstantInfo &ConstInfo) const {
   assert(!ConstInfo.RebasedConstants.empty() && "Invalid constant info entry.");
   // Collect all basic blocks.
-  SmallPtrSet<BasicBlock *, 8> BBs;
-  SmallPtrSet<Instruction *, 8> InsertPts;
+  SetVector<BasicBlock *> BBs;
+  SetVector<Instruction *> InsertPts;
   for (auto const &RCI : ConstInfo.RebasedConstants)
     for (auto const &U : RCI.Uses)
       BBs.insert(findMatInsertPt(U.Inst, U.OpndIdx)->getParent());
@@ -333,15 +333,13 @@ SmallPtrSet<Instruction *, 8> ConstantHoistingPass::findConstantInsertionPoint(
 
   while (BBs.size() >= 2) {
     BasicBlock *BB, *BB1, *BB2;
-    BB1 = *BBs.begin();
-    BB2 = *std::next(BBs.begin());
+    BB1 = BBs.pop_back_val();
+    BB2 = BBs.pop_back_val();
     BB = DT->findNearestCommonDominator(BB1, BB2);
     if (BB == Entry) {
       InsertPts.insert(&Entry->front());
       return InsertPts;
     }
-    BBs.erase(BB1);
-    BBs.erase(BB2);
     BBs.insert(BB);
   }
   assert((BBs.size() == 1) && "Expected only one element.");
@@ -830,7 +828,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
   SmallVectorImpl<consthoist::ConstantInfo> &ConstInfoVec =
       BaseGV ? ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
   for (auto const &ConstInfo : ConstInfoVec) {
-    SmallPtrSet<Instruction *, 8> IPSet = findConstantInsertionPoint(ConstInfo);
+    SetVector<Instruction *> IPSet = findConstantInsertionPoint(ConstInfo);
     // We can have an empty set if the function contains unreachable blocks.
     if (IPSet.empty())
       continue;

@@ -127,7 +127,7 @@ body:             |
 ...
 ---
 name:            const_i64_u32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -164,7 +164,7 @@ body:             |
 ...
 ---
 name:            main
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

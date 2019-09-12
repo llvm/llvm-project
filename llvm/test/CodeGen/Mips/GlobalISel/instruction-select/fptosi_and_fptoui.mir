@@ -9,7 +9,7 @@
 ...
 ---
 name:            f32toi32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -39,7 +39,7 @@ body:             |
 ...
 ---
 name:            f64toi32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

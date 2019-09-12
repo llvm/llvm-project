@@ -27,7 +27,7 @@
 ...
 ---
 name:            test_sub_v64i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -53,7 +53,7 @@ body:             |
 ...
 ---
 name:            test_sub_v32i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -79,7 +79,7 @@ body:             |
 ...
 ---
 name:            test_sub_v16i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -105,7 +105,7 @@ body:             |
 ...
 ---
 name:            test_sub_v8i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

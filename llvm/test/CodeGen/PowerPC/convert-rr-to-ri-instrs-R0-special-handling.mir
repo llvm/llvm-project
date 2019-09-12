@@ -80,7 +80,7 @@
 ...
 ---
 name:            unsafeAddR0R3
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -134,7 +134,7 @@ body:             |
 ...
 ---
 name:            unsafeAddR3R0
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -188,7 +188,7 @@ body:             |
 ...
 ---
 name:            safeAddR0R3
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -241,7 +241,7 @@ body:             |
 ...
 ---
 name:            safeAddR3R0
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -294,7 +294,7 @@ body:             |
 ...
 ---
 name:            unsafeLDXR3R0
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -342,7 +342,7 @@ body:             |
 ...
 ---
 name:            safeLDXZeroR3
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -389,7 +389,7 @@ body:             |
 ...
 ---
 name:            safeLDXR3R0
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

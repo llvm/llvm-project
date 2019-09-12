@@ -123,8 +123,7 @@ public:
     TypeLegal,           // The target natively supports this type.
     TypePromoteInteger,  // Replace this integer with a larger one.
     TypeExpandInteger,   // Split this integer into two of half the size.
-    TypeSoftenFloat,     // Convert this float to a same size integer type,
-                         // if an operation is not supported in target HW.
+    TypeSoftenFloat,     // Convert this float to a same size integer type.
     TypeExpandFloat,     // Split this float into two of half the size.
     TypeScalarizeVector, // Replace this one-element vector with its element.
     TypeSplitVector,     // Split this vector into two of half the size.
@@ -1583,14 +1582,10 @@ public:
   }
 
   /// Return the minimum function alignment.
-  unsigned getMinFunctionLogAlignment() const {
-    return Log2(MinFunctionAlignment);
-  }
+  llvm::Align getMinFunctionAlignment() const { return MinFunctionAlignment; }
 
   /// Return the preferred function alignment.
-  unsigned getPrefFunctionLogAlignment() const {
-    return Log2(PrefFunctionAlignment);
-  }
+  llvm::Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
   /// Return the preferred loop alignment.
   virtual llvm::Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
@@ -2772,7 +2767,6 @@ private:
   /// up the MVT::LAST_VALUETYPE value to the next multiple of 8.
   uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::LAST_VALUETYPE + 7) / 8];
 
-protected:
   ValueTypeActionImpl ValueTypeActions;
 
 private:

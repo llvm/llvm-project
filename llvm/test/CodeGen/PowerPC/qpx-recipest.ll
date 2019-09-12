@@ -229,11 +229,11 @@ define <4 x double> @foo2_fmf(<4 x double> %a, <4 x double> %b) nounwind {
 ; CHECK-NEXT:    qvfre 3, 2
 ; CHECK-NEXT:    addi 3, 3, .LCPI8_0@toc@l
 ; CHECK-NEXT:    qvlfdx 0, 0, 3
-; CHECK-NEXT:    qvfnmsub 4, 2, 3, 0
-; CHECK-NEXT:    qvfmadd 3, 3, 4, 3
 ; CHECK-NEXT:    qvfnmsub 0, 2, 3, 0
 ; CHECK-NEXT:    qvfmadd 0, 3, 0, 3
-; CHECK-NEXT:    qvfmul 1, 1, 0
+; CHECK-NEXT:    qvfmul 3, 1, 0
+; CHECK-NEXT:    qvfnmsub 1, 2, 3, 1
+; CHECK-NEXT:    qvfmadd 1, 0, 1, 3
 ; CHECK-NEXT:    blr
 entry:
   %r = fdiv fast <4 x double> %a, %b
@@ -266,13 +266,10 @@ define <4 x double> @foo2_safe(<4 x double> %a, <4 x double> %b) nounwind {
 define <4 x float> @goo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-LABEL: goo2_fmf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; CHECK-NEXT:    qvfres 3, 2
-; CHECK-NEXT:    addi 3, 3, .LCPI10_0@toc@l
-; CHECK-NEXT:    qvlfsx 0, 0, 3
-; CHECK-NEXT:    qvfnmsubs 0, 2, 3, 0
-; CHECK-NEXT:    qvfmadds 0, 3, 0, 3
-; CHECK-NEXT:    qvfmuls 1, 1, 0
+; CHECK-NEXT:    qvfres 0, 2
+; CHECK-NEXT:    qvfmuls 3, 1, 0
+; CHECK-NEXT:    qvfnmsubs 1, 2, 3, 1
+; CHECK-NEXT:    qvfmadds 1, 0, 1, 3
 ; CHECK-NEXT:    blr
 entry:
   %r = fdiv fast <4 x float> %a, %b

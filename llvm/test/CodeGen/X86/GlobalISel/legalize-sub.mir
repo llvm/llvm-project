@@ -13,7 +13,7 @@
 ...
 ---
 name:            test_sub_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -43,7 +43,7 @@ body:             |
 ...
 ---
 name:            test_sub_i32
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 tracksRegLiveness: true

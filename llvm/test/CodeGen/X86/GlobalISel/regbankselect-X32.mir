@@ -10,7 +10,7 @@
 ---
 name:            test_uadde_i32
 # CHECK-LABEL: name:  test_uadde_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: false
 # CHECK:      registers:

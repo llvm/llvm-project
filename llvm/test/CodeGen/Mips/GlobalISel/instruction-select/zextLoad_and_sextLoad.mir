@@ -10,7 +10,7 @@
 ...
 ---
 name:            load1_s8_to_zextLoad1_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -32,7 +32,7 @@ body:             |
 ...
 ---
 name:            load2_s16_to_zextLoad2_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -54,7 +54,7 @@ body:             |
 ...
 ---
 name:            load1_s8_to_sextLoad1_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -76,7 +76,7 @@ body:             |
 ...
 ---
 name:            load2_s16_to_sextLoad2_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -9,7 +9,7 @@
 ...
 ---
 name:            ptr_arg_in_regs
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -30,7 +30,7 @@ body:             |
 ...
 ---
 name:            ptr_arg_on_stack
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 fixedStack:
@@ -63,7 +63,7 @@ body:             |
 ...
 ---
 name:            ret_ptr
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

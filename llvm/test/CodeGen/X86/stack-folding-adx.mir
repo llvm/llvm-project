@@ -61,7 +61,7 @@
 ...
 ---
 name:            stack_fold_adcx32
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -113,7 +113,7 @@ body:             |
 ...
 ---
 name:            stack_fold_adcx64
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -165,7 +165,7 @@ body:             |
 ...
 ---
 name:            stack_fold_adox32
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -217,7 +217,7 @@ body:             |
 ...
 ---
 name:            stack_fold_adox64
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }

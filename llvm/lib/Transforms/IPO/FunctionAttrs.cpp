@@ -664,6 +664,25 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
   return Changed;
 }
 
+static bool addReadAttr(Argument *A, Attribute::AttrKind R) {
+  assert((R == Attribute::ReadOnly || R == Attribute::ReadNone)
+         && "Must be a Read attribute.");
+  assert(A && "Argument must not be null.");
+
+  // If the argument already has the attribute, nothing needs to be done.
+  if (A->hasAttribute(R))
+      return false;
+
+  // Otherwise, remove potentially conflicting attribute, add the new one,
+  // and update statistics.
+  A->removeAttr(Attribute::WriteOnly);
+  A->removeAttr(Attribute::ReadOnly);
+  A->removeAttr(Attribute::ReadNone);
+  A->addAttr(R);
+  R == Attribute::ReadOnly ? ++NumReadOnlyArg : ++NumReadNoneArg;
+  return true;
+}
+
 /// Deduce nocapture attributes for the SCC.
 static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
   bool Changed = false;
@@ -732,11 +751,8 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
         SmallPtrSet<Argument *, 8> Self;
         Self.insert(&*A);
         Attribute::AttrKind R = determinePointerReadAttrs(&*A, Self);
-        if (R != Attribute::None) {
-          A->addAttr(R);
-          Changed = true;
-          R == Attribute::ReadOnly ? ++NumReadOnlyArg : ++NumReadNoneArg;
-        }
+        if (R != Attribute::None)
+          Changed = addReadAttr(A, R);
       }
     }
   }
@@ -833,12 +849,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
     if (ReadAttr != Attribute::None) {
       for (unsigned i = 0, e = ArgumentSCC.size(); i != e; ++i) {
         Argument *A = ArgumentSCC[i]->Definition;
-        // Clear out existing readonly/readnone attributes
-        A->removeAttr(Attribute::ReadOnly);
-        A->removeAttr(Attribute::ReadNone);
-        A->addAttr(ReadAttr);
-        ReadAttr == Attribute::ReadOnly ? ++NumReadOnlyArg : ++NumReadNoneArg;
-        Changed = true;
+        Changed = addReadAttr(A, ReadAttr);
       }
     }
   }

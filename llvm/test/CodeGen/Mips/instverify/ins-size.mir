@@ -6,7 +6,7 @@
 # Check that the machine verifier checks the size operand is in the range 1..32
 ---
 name:            f
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
