@@ -152,6 +152,12 @@ class CCBitConvertToType<ValueType destTy> : CCAction {
   ValueType DestTy = destTy;
 }
 
+/// CCTruncToType - If applied, this truncates the specified current value to
+/// the specified type.
+class CCTruncToType<ValueType destTy> : CCAction {
+  ValueType DestTy = destTy;
+}
+
 /// CCPassIndirect - If applied, this stores the value to stack and passes the pointer
 /// as normal argument.
 class CCPassIndirect<ValueType destTy> : CCAction {

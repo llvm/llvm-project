@@ -129,8 +129,7 @@ define double @test_Inf_4()  {
 
 define double @inf_product_opposite_inf_addend_1()  {
 ; CHECK-LABEL: @inf_product_opposite_inf_addend_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 7.000000e+00, double 0xFFF0000000000000, double 0x7FF0000000000000)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 7.0, double 0xFFF0000000000000, double 0x7FF0000000000000)
   ret double %1
@@ -140,8 +139,7 @@ define double @inf_product_opposite_inf_addend_1()  {
 
 define double @inf_product_opposite_inf_addend_2()  {
 ; CHECK-LABEL: @inf_product_opposite_inf_addend_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 7.000000e+00, double 0x7FF0000000000000, double 0xFFF0000000000000)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 7.0, double 0x7FF0000000000000, double 0xFFF0000000000000)
   ret double %1
@@ -151,8 +149,7 @@ define double @inf_product_opposite_inf_addend_2()  {
 
 define double @inf_product_opposite_inf_addend_3()  {
 ; CHECK-LABEL: @inf_product_opposite_inf_addend_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0xFFF0000000000000, double 4.200000e+01, double 0x7FF0000000000000)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0xFFF0000000000000, double 42.0, double 0x7FF0000000000000)
   ret double %1
@@ -162,8 +159,7 @@ define double @inf_product_opposite_inf_addend_3()  {
 
 define double @inf_product_opposite_inf_addend_4()  {
 ; CHECK-LABEL: @inf_product_opposite_inf_addend_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0x7FF0000000000000, double 4.200000e+01, double 0xFFF0000000000000)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0x7FF0000000000000, double 42.0, double 0xFFF0000000000000)
   ret double %1
@@ -173,8 +169,7 @@ define double @inf_product_opposite_inf_addend_4()  {
 
 define double @inf_times_zero_1()  {
 ; CHECK-LABEL: @inf_times_zero_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0.000000e+00, double 0xFFF0000000000000, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0.0, double 0xFFF0000000000000, double 42.0)
   ret double %1
@@ -184,8 +179,7 @@ define double @inf_times_zero_1()  {
 
 define double @inf_times_zero_2()  {
 ; CHECK-LABEL: @inf_times_zero_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0.000000e+00, double 0x7FF0000000000000, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0.0, double 0x7FF0000000000000, double 42.0)
   ret double %1
@@ -195,8 +189,7 @@ define double @inf_times_zero_2()  {
 
 define double @inf_times_zero_3()  {
 ; CHECK-LABEL: @inf_times_zero_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0xFFF0000000000000, double 0.000000e+00, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0xFFF0000000000000, double 0.0, double 42.0)
   ret double %1
@@ -206,8 +199,7 @@ define double @inf_times_zero_3()  {
 
 define double @inf_times_zero_4()  {
 ; CHECK-LABEL: @inf_times_zero_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0x7FF0000000000000, double 0.000000e+00, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0x7FF0000000000000, double 0.0, double 42.0)
   ret double %1
@@ -217,8 +209,7 @@ define double @inf_times_zero_4()  {
 
 define double @inf_times_zero_5()  {
 ; CHECK-LABEL: @inf_times_zero_5(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double -0.000000e+00, double 0xFFF0000000000000, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double -0.0, double 0xFFF0000000000000, double 42.0)
   ret double %1
@@ -228,8 +219,7 @@ define double @inf_times_zero_5()  {
 
 define double @inf_times_zero_6()  {
 ; CHECK-LABEL: @inf_times_zero_6(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double -0.000000e+00, double 0x7FF0000000000000, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double -0.0, double 0x7FF0000000000000, double 42.0)
   ret double %1
@@ -239,8 +229,7 @@ define double @inf_times_zero_6()  {
 
 define double @inf_times_zero_7()  {
 ; CHECK-LABEL: @inf_times_zero_7(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0xFFF0000000000000, double -0.000000e+00, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0xFFF0000000000000, double -0.0, double 42.0)
   ret double %1
@@ -250,10 +239,8 @@ define double @inf_times_zero_7()  {
 
 define double @inf_times_zero_8()  {
 ; CHECK-LABEL: @inf_times_zero_8(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fma.f64(double 0x7FF0000000000000, double -0.000000e+00, double 4.200000e+01)
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %1 = call double @llvm.fma.f64(double 0x7FF0000000000000, double -0.0, double 42.0)
   ret double %1
 }
-

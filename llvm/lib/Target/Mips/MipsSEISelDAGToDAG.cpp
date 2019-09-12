@@ -247,7 +247,8 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
         Base = Addr.getOperand(0);
         // If base is a FI, additional offset calculation is done in
         // eliminateFrameIndex, otherwise we need to check the alignment
-        if (OffsetToAlignment(CN->getZExtValue(), 1ull << ShiftAmount) != 0)
+        const llvm::Align Align(1ULL << ShiftAmount);
+        if (!isAligned(Align, CN->getZExtValue()))
           return false;
       }
 
