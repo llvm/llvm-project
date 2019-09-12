@@ -366,3 +366,21 @@ struct S {
 int S::fn() { return 0; } // expected-warning {{is missing exception specification}}
 }
 
+namespace PR43265 {
+template <int N> // expected-note {{template parameter is declared here}}
+struct Foo {
+  static const int N = 42; // expected-warning {{declaration of 'N' shadows template parameter}}
+};
+}
+
+namespace Inner_Outer_same_template_param_name {
+template <typename T> // expected-note {{template parameter is declared here}}
+struct Outmost {
+  template <typename T> // expected-warning {{declaration of 'T' shadows template parameter}}
+  struct Inner {
+    void f() {
+      T *var;
+    }
+  };
+};
+}

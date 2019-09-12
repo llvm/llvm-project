@@ -651,7 +651,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 
   if (isBisonFile(C)) {
     reportAnalyzerProgress("Skipping bison-generated file\n");
-  } else if (Opts->DisableAllChecks) {
+  } else if (Opts->DisableAllCheckers) {
 
     // Don't analyze if the user explicitly asked for no checks to be performed
     // on this file.

@@ -48,10 +48,10 @@ public:
     DefaultBool CheckCStringBufferOverlap;
     DefaultBool CheckCStringNotNullTerm;
 
-    CheckName CheckNameCStringNullArg;
-    CheckName CheckNameCStringOutOfBounds;
-    CheckName CheckNameCStringBufferOverlap;
-    CheckName CheckNameCStringNotNullTerm;
+    CheckerNameRef CheckNameCStringNullArg;
+    CheckerNameRef CheckNameCStringOutOfBounds;
+    CheckerNameRef CheckNameCStringBufferOverlap;
+    CheckerNameRef CheckNameCStringNotNullTerm;
   };
 
   CStringChecksFilter Filter;
@@ -2409,14 +2409,12 @@ bool ento::shouldRegisterCStringModeling(const LangOptions &LO) {
   void ento::register##name(CheckerManager &mgr) {                             \
     CStringChecker *checker = mgr.getChecker<CStringChecker>();                \
     checker->Filter.Check##name = true;                                        \
-    checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+    checker->Filter.CheckName##name = mgr.getCurrentCheckerName();             \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
-  REGISTER_CHECKER(CStringNullArg)
-  REGISTER_CHECKER(CStringOutOfBounds)
-  REGISTER_CHECKER(CStringBufferOverlap)
+REGISTER_CHECKER(CStringNullArg)
+REGISTER_CHECKER(CStringOutOfBounds)
+REGISTER_CHECKER(CStringBufferOverlap)
 REGISTER_CHECKER(CStringNotNullTerm)
