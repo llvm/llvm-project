@@ -2658,6 +2658,15 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
         --E;
         continue;
       }
+    } else if (isa<SelectAnyAttr>(NewAttribute) &&
+               cast<VarDecl>(New)->isInline() &&
+               !cast<VarDecl>(New)->isInlineSpecified()) {
+      // Don't warn about applying selectany to implicitly inline variables.
+      // Older compilers and language modes would require the use of selectany
+      // to make such variables inline, and it would have no effect if we
+      // honored it.
+      ++I;
+      continue;
     }
 
     S.Diag(NewAttribute->getLocation(),

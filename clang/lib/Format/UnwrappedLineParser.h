@@ -106,7 +106,7 @@ private:
   void parseTryCatch();
   void parseForOrWhileLoop();
   void parseDoWhile();
-  void parseLabel();
+  void parseLabel(bool LeftAlignLabel = false);
   void parseCaseLabel();
   void parseSwitch();
   void parseNamespace();

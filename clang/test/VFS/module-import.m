@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -Werror -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ivfsoverlay %t.yaml -I %t -fsyntax-only %s
 
 // FIXME: PR43272
-// XFAIL: windows
+// XFAIL: system-windows
 
 @import not_real;
 

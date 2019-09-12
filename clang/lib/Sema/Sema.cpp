@@ -1313,7 +1313,7 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
                        PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
       }
 
-      Diags.setLastDiagnosticIgnored();
+      Diags.setLastDiagnosticIgnored(true);
       Diags.Clear();
       return;
 
@@ -1338,7 +1338,7 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
                        PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
       }
 
-      Diags.setLastDiagnosticIgnored();
+      Diags.setLastDiagnosticIgnored(true);
       Diags.Clear();
 
       // Now the diagnostic state is clear, produce a C++98 compatibility
@@ -1347,7 +1347,7 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
 
       // The last diagnostic which Sema produced was ignored. Suppress any
       // notes attached to it.
-      Diags.setLastDiagnosticIgnored();
+      Diags.setLastDiagnosticIgnored(true);
       return;
     }
 
@@ -1361,7 +1361,7 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
       }
 
       // Suppress this diagnostic.
-      Diags.setLastDiagnosticIgnored();
+      Diags.setLastDiagnosticIgnored(true);
       Diags.Clear();
       return;
     }

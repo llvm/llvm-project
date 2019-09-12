@@ -1,5 +1,5 @@
 // FIXME: PR43272
-// XFAIL: windows
+// XFAIL: system-windows
 
 // Test that when a subframework is a symlink to another framework, we don't
 // add it as a submodule to the enclosing framework. We also need to make clang

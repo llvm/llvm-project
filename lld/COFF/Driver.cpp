@@ -50,7 +50,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
-using llvm::sys::Process;
+using namespace llvm::sys;
 
 namespace lld {
 namespace coff {
@@ -1138,17 +1138,15 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   config->mingw = args.hasArg(OPT_lldmingw);
 
   if (auto *arg = args.getLastArg(OPT_linkrepro)) {
-    SmallString<64> path = StringRef(arg->getValue());
-    sys::path::append(path, "repro.tar");
+    const char *path = arg->getValue();
 
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
-        TarWriter::create(path, "repro");
-
+        TarWriter::create(path, path::stem(path));
     if (errOrWriter) {
       tar = std::move(*errOrWriter);
+      tar->append("version.txt", getLLDVersion() + "\n");
     } else {
-      error("/linkrepro: failed to open " + path + ": " +
-            toString(errOrWriter.takeError()));
+      error("/linkrepro: " + toString(errOrWriter.takeError()));
     }
   }
 

@@ -2611,6 +2611,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Style.Language == FormatStyle::LK_JavaScript ||
            !Left.TokenText.endswith("=*/");
   if (Right.is(tok::l_paren)) {
+    // using (FileStream fs...
+    if (Style.isCSharp() && Left.is(tok::kw_using) &&
+        Style.SpaceBeforeParens != FormatStyle::SBPO_Never)
+      return true;
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
       return true;
