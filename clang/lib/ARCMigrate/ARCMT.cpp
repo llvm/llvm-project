@@ -139,7 +139,7 @@ public:
     }
 
     // Non-ARC warnings are ignored.
-    Diags.setLastDiagnosticIgnored();
+    Diags.setLastDiagnosticIgnored(true);
   }
 };
 

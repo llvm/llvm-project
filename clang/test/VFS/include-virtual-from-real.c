@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -Werror -ivfsoverlay %t.yaml -I %t -fsyntax-only %s
 
 // FIXME: PR43272
-// XFAIL: windows
+// XFAIL: system-windows
 
 #include "include_not_real.h"
 

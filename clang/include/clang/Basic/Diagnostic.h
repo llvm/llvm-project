@@ -632,24 +632,22 @@ public:
   /// Suppress all diagnostics, to silence the front end when we
   /// know that we don't want any more diagnostics to be passed along to the
   /// client
-  void setSuppressAllDiagnostics(bool Val = true) {
-    SuppressAllDiagnostics = Val;
-  }
+  void setSuppressAllDiagnostics(bool Val) { SuppressAllDiagnostics = Val; }
   bool getSuppressAllDiagnostics() const { return SuppressAllDiagnostics; }
 
   /// Set type eliding, to skip outputting same types occurring in
   /// template types.
-  void setElideType(bool Val = true) { ElideType = Val; }
+  void setElideType(bool Val) { ElideType = Val; }
   bool getElideType() { return ElideType; }
 
   /// Set tree printing, to outputting the template difference in a
   /// tree format.
-  void setPrintTemplateTree(bool Val = false) { PrintTemplateTree = Val; }
+  void setPrintTemplateTree(bool Val) { PrintTemplateTree = Val; }
   bool getPrintTemplateTree() { return PrintTemplateTree; }
 
   /// Set color printing, so the type diffing will inject color markers
   /// into the output.
-  void setShowColors(bool Val = false) { ShowColors = Val; }
+  void setShowColors(bool Val) { ShowColors = Val; }
   bool getShowColors() { return ShowColors; }
 
   /// Specify which overload candidates to show when overload resolution
@@ -667,7 +665,7 @@ public:
   /// the middle of another diagnostic.
   ///
   /// This can be used by clients who suppress diagnostics themselves.
-  void setLastDiagnosticIgnored(bool Ignored = true) {
+  void setLastDiagnosticIgnored(bool Ignored) {
     if (LastDiagLevel == DiagnosticIDs::Fatal)
       FatalErrorOccurred = true;
     LastDiagLevel = Ignored ? DiagnosticIDs::Ignored : DiagnosticIDs::Warning;
@@ -1125,11 +1123,6 @@ public:
   /// Emits the diagnostic.
   ~DiagnosticBuilder() {
     Emit();
-  }
-
-  /// Retrieve an empty diagnostic builder.
-  static DiagnosticBuilder getEmpty() {
-    return {};
   }
 
   /// Forces the diagnostic to be emitted.

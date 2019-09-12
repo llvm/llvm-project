@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -Werror -ivfsoverlay %t.yaml -I %t -include "not_real.h" -fsyntax-only %s
 
 // FIXME: PR43272
-// XFAIL: windows
+// XFAIL: system-windows
 
 void foo() {
   bar();

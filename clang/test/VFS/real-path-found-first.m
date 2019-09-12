@@ -5,7 +5,7 @@
 // the dependency files by real path.
 
 // FIXME: PR43272
-// XFAIL: windows
+// XFAIL: system-windows
 
 // RUN: rm -rf %t %t-cache %t.pch
 // RUN: mkdir -p %t/SomeFramework.framework/Modules

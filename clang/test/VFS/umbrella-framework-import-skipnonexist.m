@@ -1,7 +1,7 @@
 // REQUIRES: crash-recovery
 
 // FIXME: PR43272
-// XFAIL: windows
+// XFAIL: system-windows
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/vdir %t/outdir %t/cache
