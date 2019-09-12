@@ -176,13 +176,13 @@ ret:
 ; Added offset can't be used with VOP3 add
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32:
 ; GCN: s_sub_u32 [[SUB:s[0-9]+|vcc_lo|vcc_hi]], s32, s33
-; GCN-DAG: s_movk_i32 [[K:s[0-9]+|vcc_lo|vcc_hi]], 0x200
+; CI-DAG: s_movk_i32 [[K:s[0-9]+|vcc_lo|vcc_hi]], 0x200
 
 ; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[SUB]], 6
 ; CI: v_add_i32_e32 [[VZ:v[0-9]+]], vcc, [[K]], [[SCALED]]
 
 ; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, [[SUB]]
-; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], [[K]], [[SCALED]]
+; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
 
 ; GCN: v_mul_u32_u24_e32 [[VZ]], 9, [[VZ]]
 ; GCN: ds_write_b32 v0, [[VZ]]
@@ -200,13 +200,13 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32_vcc_live:
 ; GCN: s_sub_u32 [[DIFF:s[0-9]+]], s32, s33
-; GCN-DAG: s_movk_i32 [[OFFSET:s[0-9]+]], 0x200
+; CI-DAG: s_movk_i32 [[OFFSET:s[0-9]+]], 0x200
 
 ; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[DIFF]], 6
 ; CI: v_add_i32_e64 [[VZ:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, [[OFFSET]], [[SCALED]]
 
 ; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, [[DIFF]]
-; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], [[OFFSET]], [[SCALED]]
+; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
 
 ; GCN: v_mul_u32_u24_e32 [[VZ]], 9, [[VZ]]
 ; GCN: ds_write_b32 v0, [[VZ]]

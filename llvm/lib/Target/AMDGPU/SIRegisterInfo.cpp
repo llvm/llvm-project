@@ -1285,12 +1285,15 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               .addImm(ST.getWavefrontSizeLog2())
               .addReg(DiffReg, RegState::Kill);
 
+            const bool IsVOP2 = MIB->getOpcode() == AMDGPU::V_ADD_U32_e32;
+
             // TODO: Fold if use instruction is another add of a constant.
-            if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm())) {
+            if (IsVOP2 || AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm())) {
               // FIXME: This can fail
               MIB.addImm(Offset);
               MIB.addReg(ScaledReg, RegState::Kill);
-              MIB.addImm(0); // clamp bit
+              if (!IsVOP2)
+                MIB.addImm(0); // clamp bit
             } else {
               Register ConstOffsetReg =
                 RS->scavengeRegister(&AMDGPU::SReg_32_XM0RegClass, MIB, 0, false);
