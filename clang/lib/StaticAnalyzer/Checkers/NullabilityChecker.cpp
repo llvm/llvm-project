@@ -112,11 +112,11 @@ public:
     DefaultBool CheckNullablePassedToNonnull;
     DefaultBool CheckNullableReturnedFromNonnull;
 
-    CheckName CheckNameNullPassedToNonnull;
-    CheckName CheckNameNullReturnedFromNonnull;
-    CheckName CheckNameNullableDereferenced;
-    CheckName CheckNameNullablePassedToNonnull;
-    CheckName CheckNameNullableReturnedFromNonnull;
+    CheckerNameRef CheckNameNullPassedToNonnull;
+    CheckerNameRef CheckNameNullReturnedFromNonnull;
+    CheckerNameRef CheckNameNullableDereferenced;
+    CheckerNameRef CheckNameNullablePassedToNonnull;
+    CheckerNameRef CheckNameNullableReturnedFromNonnull;
   };
 
   NullabilityChecksFilter Filter;
@@ -1201,12 +1201,12 @@ bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
     NullabilityChecker *checker = mgr.getChecker<NullabilityChecker>();        \
     checker->Filter.Check##name = true;                                        \
-    checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+    checker->Filter.CheckName##name = mgr.getCurrentCheckerName();             \
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
         mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-                      checker, "NoDiagnoseCallsToSystemHeaders", true);        \
+            checker, "NoDiagnoseCallsToSystemHeaders", true);                  \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \

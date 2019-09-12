@@ -163,41 +163,15 @@ class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
 
+  /// Retrieves the list of checkers generated from Checkers.td. This doesn't
+  /// contain statically linked but non-generated checkers and plugin checkers!
   static std::vector<StringRef>
-  getRegisteredCheckers(bool IncludeExperimental = false) {
-    static const StringRef StaticAnalyzerChecks[] = {
-#define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN) FULLNAME,
-#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
-#undef CHECKER
-#undef GET_CHECKERS
-    };
-    std::vector<StringRef> Checkers;
-    for (StringRef CheckerName : StaticAnalyzerChecks) {
-      if (!CheckerName.startswith("debug.") &&
-          (IncludeExperimental || !CheckerName.startswith("alpha.")))
-        Checkers.push_back(CheckerName);
-    }
-    return Checkers;
-  }
+  getRegisteredCheckers(bool IncludeExperimental = false);
 
+  /// Retrieves the list of packages generated from Checkers.td. This doesn't
+  /// contain statically linked but non-generated packages and plugin packages!
   static std::vector<StringRef>
-  getRegisteredPackages(bool IncludeExperimental = false) {
-    static const StringRef StaticAnalyzerPackages[] = {
-#define GET_PACKAGES
-#define PACKAGE(FULLNAME) FULLNAME,
-#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
-#undef PACKAGE
-#undef GET_PACKAGES
-    };
-    std::vector<StringRef> Packages;
-    for (StringRef PackageName : StaticAnalyzerPackages) {
-      if (PackageName != "debug" &&
-          (IncludeExperimental || PackageName != "alpha"))
-        Packages.push_back(PackageName);
-    }
-    return Packages;
-  }
+  getRegisteredPackages(bool IncludeExperimental = false);
 
   /// Convenience function for printing options or checkers and their
   /// description in a formatted manner. If \p MinLineWidth is set to 0, no line
@@ -247,12 +221,12 @@ public:
   /// The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;
 
-  /// Disable all analyzer checks.
+  /// Disable all analyzer checkers.
   ///
-  /// This flag allows one to disable analyzer checks on the code processed by
+  /// This flag allows one to disable analyzer checkers on the code processed by
   /// the given analysis consumer. Note, the code will get parsed and the
   /// command-line options will get checked.
-  unsigned DisableAllChecks : 1;
+  unsigned DisableAllCheckers : 1;
 
   unsigned ShowCheckerHelp : 1;
   unsigned ShowCheckerHelpAlpha : 1;
@@ -327,7 +301,7 @@ public:
   }
 
   AnalyzerOptions()
-      : DisableAllChecks(false), ShowCheckerHelp(false),
+      : DisableAllCheckers(false), ShowCheckerHelp(false),
         ShowCheckerHelpAlpha(false), ShowCheckerHelpDeveloper(false),
         ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
@@ -345,7 +319,7 @@ public:
   /// If an option value is not provided, returns the given \p DefaultVal.
   /// @param [in] CheckerName The *full name* of the checker. One may retrieve
   /// this from the checker object's field \c Name, or through \c
-  /// CheckerManager::getCurrentCheckName within the checker's registry
+  /// CheckerManager::getCurrentCheckerName within the checker's registry
   /// function.
   /// Checker options are retrieved in the following format:
   /// `-analyzer-config CheckerName:OptionName=Value.
@@ -365,7 +339,7 @@ public:
   /// If an option value is not provided, returns the given \p DefaultVal.
   /// @param [in] CheckerName The *full name* of the checker. One may retrieve
   /// this from the checker object's field \c Name, or through \c
-  /// CheckerManager::getCurrentCheckName within the checker's registry
+  /// CheckerManager::getCurrentCheckerName within the checker's registry
   /// function.
   /// Checker options are retrieved in the following format:
   /// `-analyzer-config CheckerName:OptionName=Value.
@@ -385,7 +359,7 @@ public:
   /// If an option value is not provided, returns the given \p DefaultVal.
   /// @param [in] CheckerName The *full name* of the checker. One may retrieve
   /// this from the checker object's field \c Name, or through \c
-  /// CheckerManager::getCurrentCheckName within the checker's registry
+  /// CheckerManager::getCurrentCheckerName within the checker's registry
   /// function.
   /// Checker options are retrieved in the following format:
   /// `-analyzer-config CheckerName:OptionName=Value.
@@ -437,6 +411,42 @@ inline UserModeKind AnalyzerOptions::getUserMode() const {
     .Default(None);
   assert(K.hasValue() && "User mode is invalid.");
   return K.getValue();
+}
+
+inline std::vector<StringRef>
+AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
+  static const StringRef StaticAnalyzerCheckerNames[] = {
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN) FULLNAME,
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+  };
+  std::vector<StringRef> Checkers;
+  for (StringRef CheckerName : StaticAnalyzerCheckerNames) {
+    if (!CheckerName.startswith("debug.") &&
+        (IncludeExperimental || !CheckerName.startswith("alpha.")))
+      Checkers.push_back(CheckerName);
+  }
+  return Checkers;
+}
+
+inline std::vector<StringRef>
+AnalyzerOptions::getRegisteredPackages(bool IncludeExperimental) {
+  static const StringRef StaticAnalyzerPackageNames[] = {
+#define GET_PACKAGES
+#define PACKAGE(FULLNAME) FULLNAME,
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef PACKAGE
+#undef GET_PACKAGES
+  };
+  std::vector<StringRef> Packages;
+  for (StringRef PackageName : StaticAnalyzerPackageNames) {
+    if (PackageName != "debug" &&
+        (IncludeExperimental || PackageName != "alpha"))
+      Packages.push_back(PackageName);
+  }
+  return Packages;
 }
 
 } // namespace clang

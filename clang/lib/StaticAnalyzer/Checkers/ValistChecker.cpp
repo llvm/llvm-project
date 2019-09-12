@@ -46,7 +46,7 @@ public:
   };
 
   DefaultBool ChecksEnabled[CK_NumCheckKinds];
-  CheckName CheckNames[CK_NumCheckKinds];
+  CheckerNameRef CheckNames[CK_NumCheckKinds];
 
   void checkPreStmt(const VAArgExpr *VAA, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -412,7 +412,8 @@ bool ento::shouldRegisterValistBase(const LangOptions &LO) {
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
     ValistChecker *checker = mgr.getChecker<ValistChecker>();                  \
     checker->ChecksEnabled[ValistChecker::CK_##name] = true;                   \
-    checker->CheckNames[ValistChecker::CK_##name] = mgr.getCurrentCheckName(); \
+    checker->CheckNames[ValistChecker::CK_##name] =                            \
+        mgr.getCurrentCheckerName();                                           \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \

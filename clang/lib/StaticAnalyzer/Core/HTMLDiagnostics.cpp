@@ -555,8 +555,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
     os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << GetIssueHash(SMgr, L, D.getCheckName(), D.getBugType(), DeclWithIssue,
-                       PP.getLangOpts()) << " -->\n";
+       << GetIssueHash(SMgr, L, D.getCheckerName(), D.getBugType(),
+                       DeclWithIssue, PP.getLangOpts())
+       << " -->\n";
 
     os << "\n<!-- BUGLINE "
        << LineNumber

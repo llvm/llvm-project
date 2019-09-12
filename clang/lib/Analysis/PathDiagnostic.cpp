@@ -117,11 +117,11 @@ void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
 PathDiagnostic::~PathDiagnostic() = default;
 
 PathDiagnostic::PathDiagnostic(
-    StringRef CheckName, const Decl *declWithIssue, StringRef bugtype,
+    StringRef CheckerName, const Decl *declWithIssue, StringRef bugtype,
     StringRef verboseDesc, StringRef shortDesc, StringRef category,
     PathDiagnosticLocation LocationToUnique, const Decl *DeclToUnique,
     std::unique_ptr<FilesToLineNumsMap> ExecutedLines)
-    : CheckName(CheckName), DeclWithIssue(declWithIssue),
+    : CheckerName(CheckerName), DeclWithIssue(declWithIssue),
       BugType(StripTrailingDots(bugtype)),
       VerboseDesc(StripTrailingDots(verboseDesc)),
       ShortDesc(StripTrailingDots(shortDesc)),

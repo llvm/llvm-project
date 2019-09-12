@@ -748,7 +748,7 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
       continue;
 
     Indent(Out, Space, IsDot)
-        << "{ \"checker\": \"" << CT.second->getCheckName().getName()
+        << "{ \"checker\": \"" << CT.second->getCheckerName().getName()
         << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;

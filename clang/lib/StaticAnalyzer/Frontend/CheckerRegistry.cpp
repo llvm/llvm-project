@@ -437,7 +437,7 @@ void CheckerRegistry::initializeManager(CheckerManager &CheckerMgr) const {
 
   // Initialize the CheckerManager with all enabled checkers.
   for (const auto *Checker : enabledCheckers) {
-    CheckerMgr.setCurrentCheckName(CheckName(Checker->FullName));
+    CheckerMgr.setCurrentCheckerName(CheckerNameRef(Checker->FullName));
     Checker->Initialize(CheckerMgr);
   }
 }
