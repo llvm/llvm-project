@@ -84,7 +84,7 @@ static const char kStdSuppressions[] =
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
-  suppression_ctx = new (suppression_placeholder) // NOLINT
+  suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
   if (&__lsan_default_suppressions)
@@ -104,7 +104,7 @@ InternalMmapVector<RootRegion> const *GetRootRegions() { return root_regions; }
 void InitializeRootRegions() {
   CHECK(!root_regions);
   ALIGNED(64) static char placeholder[sizeof(InternalMmapVector<RootRegion>)];
-  root_regions = new (placeholder) InternalMmapVector<RootRegion>();  // NOLINT
+  root_regions = new (placeholder) InternalMmapVector<RootRegion>();
 }
 
 const char *MaybeCallLsanDefaultOptions() {
@@ -162,7 +162,7 @@ void ScanRangeForPointers(uptr begin, uptr end,
   uptr pp = begin;
   if (pp % alignment)
     pp = pp + alignment - pp % alignment;
-  for (; pp + sizeof(void *) <= end; pp += alignment) {  // NOLINT
+  for (; pp + sizeof(void *) <= end; pp += alignment) {
     void *p = *reinterpret_cast<void **>(pp);
     if (!CanBeAHeapPointer(reinterpret_cast<uptr>(p))) continue;
     uptr chunk = PointsIntoChunk(p);
@@ -535,7 +535,7 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
     if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
       Report("Running thread %d was not suspended. False leaks are possible.\n",
              tctx->os_id);
-  };
+  }
 }
 
 static void ReportUnsuspendedThreads(
@@ -794,7 +794,7 @@ void EnableInThisThread() { }
 }
 #endif // CAN_SANITIZE_LEAKS
 
-using namespace __lsan;  // NOLINT
+using namespace __lsan;
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE

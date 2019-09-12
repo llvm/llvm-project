@@ -125,7 +125,7 @@ bool InitShadow(bool init_origins) {
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i) {
     uptr start = kMemoryLayout[i].start;
     uptr end = kMemoryLayout[i].end;
-    uptr size= end - start;
+    uptr size = end - start;
     MappingDesc::Type type = kMemoryLayout[i].type;
 
     // Check if the segment should be mapped based on platform constraints.

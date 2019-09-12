@@ -20,7 +20,7 @@
 
 #include <stddef.h>
 
-using namespace __msan;  // NOLINT
+using namespace __msan;
 
 // Fake std::nothrow_t and std::align_val_t to avoid including <new>.
 namespace std {

@@ -272,9 +272,9 @@ const interpose_substitution substitution_##func_name[] \
 // INTERCEPT_FUNCTION macro, only its name.
 namespace __interception {
 #if defined(_WIN64)
-typedef unsigned long long uptr;  // NOLINT
+typedef unsigned long long uptr;
 #else
-typedef unsigned long uptr;  // NOLINT
+typedef unsigned long uptr;
 #endif  // _WIN64
 }  // namespace __interception
 

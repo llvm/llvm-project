@@ -181,11 +181,11 @@ static void ThreadStartHook(void *hook, uptr os_id) {
       asanThreadRegistry().GetThreadLocked(thread->tid())->status;
   DCHECK(status == ThreadStatusCreated || status == ThreadStatusRunning);
   // Determine whether we are starting or restarting the thread.
-  if (status == ThreadStatusCreated)
+  if (status == ThreadStatusCreated) {
     // In lieu of AsanThread::ThreadStart.
     asanThreadRegistry().StartThread(thread->tid(), os_id, ThreadType::Regular,
                                      nullptr);
-  else {
+  } else {
     // In a thread restart, a thread may resume execution at an
     // arbitrary function entry point, with its stack and TLS state
     // reset.  We unpoison the stack in that case.

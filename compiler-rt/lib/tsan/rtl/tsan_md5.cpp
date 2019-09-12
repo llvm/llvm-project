@@ -29,7 +29,7 @@ namespace __tsan {
   SET(n)
 
 typedef unsigned int MD5_u32plus;
-typedef unsigned long ulong_t;  // NOLINT
+typedef unsigned long ulong_t;
 
 typedef struct {
   MD5_u32plus lo, hi;

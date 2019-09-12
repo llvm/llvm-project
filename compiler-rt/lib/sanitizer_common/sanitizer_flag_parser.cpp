@@ -83,8 +83,9 @@ void FlagParser::parse_flag(const char *env_option_name) {
       Printf("%s: ERROR: expected '=' in %s\n", SanitizerToolName,
              env_option_name);
       Die();
-    } else
+    } else {
       fatal_error("expected '='");
+    }
   }
   char *name = ll_strndup(buf_ + name_start, pos_ - name_start);
 

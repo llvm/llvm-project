@@ -106,10 +106,11 @@ void NORETURN ReportInvalidPosixMemalignAlignment(uptr alignment,
   {
     ScopedAllocatorErrorReport report("invalid-posix-memalign-alignment",
                                       stack);
-    Report("ERROR: %s: invalid alignment requested in "
-           "posix_memalign: %zd, alignment must be a power of two and a "
-           "multiple of sizeof(void*) == %zd\n", SanitizerToolName, alignment,
-           sizeof(void*));  // NOLINT
+    Report(
+        "ERROR: %s: invalid alignment requested in "
+        "posix_memalign: %zd, alignment must be a power of two and a "
+        "multiple of sizeof(void*) == %zd\n",
+        SanitizerToolName, alignment, sizeof(void *));
   }
   Die();
 }

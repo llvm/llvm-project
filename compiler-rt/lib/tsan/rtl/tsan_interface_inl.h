@@ -15,7 +15,7 @@
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 void __tsan_read1(void *addr) {
   MemoryRead(cur_thread(), CALLERPC, (uptr)addr, kSizeLog1);

@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-typedef unsigned long jptr;  // NOLINT
+typedef unsigned long jptr;
 
 // Must be called before any other callback from Java.
 void __tsan_java_init(jptr heap_begin, jptr heap_size) INTERFACE_ATTRIBUTE;

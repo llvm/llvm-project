@@ -1075,7 +1075,7 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
 }  // namespace __lsan
 
 // ---------------------- Interface ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 // ASan allocator doesn't reserve extra bytes, so normally we would
 // just return "size". We don't want to expose our redzone sizes, etc here.
