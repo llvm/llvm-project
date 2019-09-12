@@ -81,14 +81,13 @@ int main(int argc, char **argv) {
       parseInputFile(InputFilename, Context);
 
   // Initialize test environment
-  TestRunner Tester(TestFilename, TestArguments, InputFilename);
+  TestRunner Tester(TestFilename, TestArguments);
   Tester.setProgram(std::move(OriginalProgram));
 
   // Try to reduce code
   runDeltaPasses(Tester);
-  StringRef ReducedFilename = sys::path::filename(Tester.getReducedFilepath());
 
-  if (ReducedFilename == sys::path::filename(InputFilename)) {
+  if (!Tester.getProgram()) {
     errs() << "\nCouldnt reduce input :/\n";
   } else {
     // Print reduced file to STDOUT
@@ -100,7 +99,13 @@ int main(int argc, char **argv) {
       else if (OutputFilename.empty())
         OutputFilename = "reduced.ll";
 
-      sys::fs::copy_file(Tester.getReducedFilepath(), OutputFilename);
+      std::error_code EC;
+      raw_fd_ostream Out(OutputFilename, EC);
+      if (EC) {
+        errs() << "Error opening output file: " << EC.message() << "!\n";
+        exit(1);
+      }
+      Tester.getProgram()->print(Out, /*AnnotationWriter=*/nullptr);
       errs() << "\nDone reducing! Reduced testcase: " << OutputFilename << "\n";
     }
   }

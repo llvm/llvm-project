@@ -183,7 +183,7 @@ public:
              SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
              ModuleMap::KnownHeader *SuggestedModule,
              bool &InUserSpecifiedSystemFramework, bool &IsFrameworkFound,
-             bool &HasBeenMapped, SmallVectorImpl<char> &MappedName) const;
+             bool &IsInHeaderMap, SmallVectorImpl<char> &MappedName) const;
 
 private:
   Optional<FileEntryRef> DoFrameworkLookup(

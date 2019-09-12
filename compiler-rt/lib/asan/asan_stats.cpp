@@ -133,7 +133,7 @@ static void PrintAccumulatedStats() {
 }  // namespace __asan
 
 // ---------------------- Interface ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 uptr __sanitizer_get_current_allocated_bytes() {
   AsanStats stats;

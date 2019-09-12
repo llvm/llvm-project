@@ -1381,6 +1381,26 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
     return nullptr;
 
   ICmpInst::Predicate UnsignedPred;
+
+  // Y = (A - B);  Y >= A && Y != 0  --> Y >= A  iff B != 0
+  // Y = (A - B);  Y <  A || Y == 0  --> Y <  A  iff B != 0
+  Value *A, *B;
+  if (match(Y, m_Sub(m_Value(A), m_Value(B))) &&
+      match(UnsignedICmp,
+            m_c_ICmp(UnsignedPred, m_Specific(Y), m_Specific(A)))) {
+    if (UnsignedICmp->getOperand(0) != Y)
+      UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
+
+    if (UnsignedPred == ICmpInst::ICMP_UGE && IsAnd &&
+        EqPred == ICmpInst::ICMP_NE &&
+        isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+      return UnsignedICmp;
+    if (UnsignedPred == ICmpInst::ICMP_ULT && !IsAnd &&
+        EqPred == ICmpInst::ICMP_EQ &&
+        isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+      return UnsignedICmp;
+  }
+
   if (match(UnsignedICmp, m_ICmp(UnsignedPred, m_Value(X), m_Specific(Y))) &&
       ICmpInst::isUnsigned(UnsignedPred))
     ;

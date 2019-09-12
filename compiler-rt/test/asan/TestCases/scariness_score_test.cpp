@@ -155,9 +155,9 @@ int main(int argc, char **argv) {
     case 10: StackBufferOverflow<char>(0, Write); break;
     case 11: StackBufferOverflow<int64_t>(0, Read); break;
     case 12:
-      if (scale <= 3)
+      if (scale <= 3) {
         StackBufferOverflow<int>(16, Write);
-      else {
+      } else {
         // At large shadow granularity, there is not enough redzone
         // between stack elements to detect far-from-bounds.  Pretend
         // that this test passes.

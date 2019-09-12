@@ -71,11 +71,11 @@ class BranchRelaxation : public MachineFunctionPass {
 
       const llvm::Align ParentAlign = MBB.getParent()->getAlignment();
       if (Align <= ParentAlign)
-        return PO + OffsetToAlignment(PO, Align.value());
+        return PO + offsetToAlignment(PO, Align);
 
       // The alignment of this MBB is larger than the function's alignment, so we
       // can't tell whether or not it will insert nops. Assume that it will.
-      return PO + Align.value() + OffsetToAlignment(PO, Align.value());
+      return PO + Align.value() + offsetToAlignment(PO, Align);
     }
   };
 

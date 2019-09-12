@@ -487,6 +487,15 @@ entry:
   ret void
 }
 
+; CHECK: tailcall_from_swifterror2
+; CHECK-NOT: b _simple_fn
+; CHECK: bl _simple_fn
+declare void @simple_fn()
+define swiftcc void @tailcall_from_swifterror2(%swift_error** swifterror %error_ptr_ref) {
+  tail call void @simple_fn()
+  ret void
+}
+
 declare swiftcc void @foo2(%swift_error** swifterror)
 ; CHECK-LABEL: testAssign
 ; CHECK: mov      x21, xzr

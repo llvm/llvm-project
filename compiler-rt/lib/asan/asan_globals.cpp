@@ -227,8 +227,7 @@ static void RegisterGlobal(const Global *g) {
   list_of_all_globals = l;
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
-      dynamic_init_globals =
-          new (allocator_for_globals) VectorOfGlobals;  // NOLINT
+      dynamic_init_globals = new (allocator_for_globals) VectorOfGlobals;
       dynamic_init_globals->reserve(kDynamicInitGlobalsInitialCapacity);
     }
     DynInitGlobal dyn_global = { *g, false };
@@ -315,8 +314,7 @@ void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
 } // namespace __asan
 
 // ---------------------- Interface ---------------- {{{1
-using namespace __asan;  // NOLINT
-
+using namespace __asan;
 
 // Apply __asan_register_globals to all globals found in the same loaded
 // executable or shared library as `flag'. The flag tracks whether globals have
@@ -364,7 +362,7 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   BlockingMutexLock lock(&mu_for_globals);
   if (!global_registration_site_vector) {
     global_registration_site_vector =
-        new (allocator_for_globals) GlobalRegistrationSiteVector;  // NOLINT
+        new (allocator_for_globals) GlobalRegistrationSiteVector;
     global_registration_site_vector->reserve(128);
   }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};

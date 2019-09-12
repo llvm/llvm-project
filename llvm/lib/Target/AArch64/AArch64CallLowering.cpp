@@ -379,14 +379,16 @@ bool AArch64CallLowering::lowerFormalArguments(
     return false;
 
   if (F.isVarArg()) {
-    if (!MF.getSubtarget<AArch64Subtarget>().isTargetDarwin()) {
-      // FIXME: we need to reimplement saveVarArgsRegisters from
+    auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (!Subtarget.isTargetDarwin()) {
+        // FIXME: we need to reimplement saveVarArgsRegisters from
       // AArch64ISelLowering.
       return false;
     }
 
-    // We currently pass all varargs at 8-byte alignment.
-    uint64_t StackOffset = alignTo(Handler.StackUsed, 8);
+    // We currently pass all varargs at 8-byte alignment, or 4 in ILP32.
+    uint64_t StackOffset =
+        alignTo(Handler.StackUsed, Subtarget.isTargetILP32() ? 4 : 8);
 
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
     AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
@@ -493,11 +495,15 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // caller has an argument with "inreg" attribute.
   //
   // FIXME: Check whether the callee also has an "inreg" argument.
+  //
+  // When the caller has a swifterror argument, we don't want to tail call
+  // because would have to move into the swifterror register before the
+  // tail call.
   if (any_of(CallerF.args(), [](const Argument &A) {
-        return A.hasByValAttr() || A.hasInRegAttr();
+        return A.hasByValAttr() || A.hasInRegAttr() || A.hasSwiftErrorAttr();
       })) {
-    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with byval or "
-                         "inreg arguments.\n");
+    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with byval, "
+                         "inreg, or swifterror arguments\n");
     return false;
   }
 

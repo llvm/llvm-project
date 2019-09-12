@@ -54,7 +54,7 @@ INLINE bool CheckAlignedAllocAlignmentAndSize(uptr alignment, uptr size) {
 // and a multiple of sizeof(void *).
 INLINE bool CheckPosixMemalignAlignment(uptr alignment) {
   return alignment != 0 && IsPowerOfTwo(alignment) &&
-         (alignment % sizeof(void *)) == 0; // NOLINT
+         (alignment % sizeof(void *)) == 0;
 }
 
 // Returns true if calloc(size, n) call overflows on size*n calculation.

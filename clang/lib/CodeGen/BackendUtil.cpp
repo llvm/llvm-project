@@ -468,6 +468,8 @@ static void initTargetOptions(llvm::TargetOptions &Options,
     Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
   if (LangOpts.DWARFExceptions)
     Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
+  if (LangOpts.WasmExceptions)
+    Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
 
   Options.NoInfsFPMath = CodeGenOpts.NoInfsFPMath;
   Options.NoNaNsFPMath = CodeGenOpts.NoNaNsFPMath;

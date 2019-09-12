@@ -32,7 +32,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     const AArch64TargetLowering &TLI = *STI.getTargetLowering();
 
     EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
-    Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+    Type *IntPtrTy = Type::getInt8PtrTy(*DAG.getContext());
     TargetLowering::ArgListTy Args;
     TargetLowering::ArgListEntry Entry;
     Entry.Node = Dst;

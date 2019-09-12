@@ -17,6 +17,7 @@
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -41,7 +42,6 @@
 #include <memory>
 #include <string>
 #include <system_error>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -658,10 +658,8 @@ static bool BundleFiles() {
   }
 
   // Open input files.
-  std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers(
-      InputFileNames.size());
-
-  unsigned Idx = 0;
+  SmallVector<std::unique_ptr<MemoryBuffer>, 8u> InputBuffers;
+  InputBuffers.reserve(InputFileNames.size());
   for (auto &I : InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
         MemoryBuffer::getFileOrSTDIN(I);
@@ -669,7 +667,7 @@ static bool BundleFiles() {
       errs() << "error: Can't open file " << I << ": " << EC.message() << "\n";
       return true;
     }
-    InputBuffers[Idx++] = std::move(CodeOrErr.get());
+    InputBuffers.emplace_back(std::move(CodeOrErr.get()));
   }
 
   // Get the file handler. We use the host buffer as reference.

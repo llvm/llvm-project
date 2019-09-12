@@ -14,11 +14,11 @@
 // RUN: %env_asan_opts=check_initialization_order=true %run %t 2>&1
 
 class Integer {
-  private:
+private:
   int value;
 
-  public:
-  constexpr Integer(int x = 0) : value(x) {}
+public:
+  explicit constexpr Integer(int x = 0) : value(x) {}
   int getValue() {return value;}
 };
 Integer coolestInteger(42);

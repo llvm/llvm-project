@@ -883,8 +883,8 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
   // Check that the module header is full and present.
   RVAPtr<IMAGE_DOS_HEADER> dos_stub(module, 0);
   RVAPtr<IMAGE_NT_HEADERS> headers(module, dos_stub->e_lfanew);
-  if (!module || dos_stub->e_magic != IMAGE_DOS_SIGNATURE || // "MZ"
-      headers->Signature != IMAGE_NT_SIGNATURE ||           // "PE\0\0"
+  if (!module || dos_stub->e_magic != IMAGE_DOS_SIGNATURE ||  // "MZ"
+      headers->Signature != IMAGE_NT_SIGNATURE ||             // "PE\0\0"
       headers->FileHeader.SizeOfOptionalHeader <
           sizeof(IMAGE_OPTIONAL_HEADER)) {
     return 0;
@@ -963,8 +963,8 @@ bool OverrideImportedFunction(const char *module_to_patch,
   // Check that the module header is full and present.
   RVAPtr<IMAGE_DOS_HEADER> dos_stub(module, 0);
   RVAPtr<IMAGE_NT_HEADERS> headers(module, dos_stub->e_lfanew);
-  if (!module || dos_stub->e_magic != IMAGE_DOS_SIGNATURE || // "MZ"
-      headers->Signature != IMAGE_NT_SIGNATURE ||            // "PE\0\0"
+  if (!module || dos_stub->e_magic != IMAGE_DOS_SIGNATURE ||  // "MZ"
+      headers->Signature != IMAGE_NT_SIGNATURE ||             // "PE\0\0"
       headers->FileHeader.SizeOfOptionalHeader <
           sizeof(IMAGE_OPTIONAL_HEADER)) {
     return false;

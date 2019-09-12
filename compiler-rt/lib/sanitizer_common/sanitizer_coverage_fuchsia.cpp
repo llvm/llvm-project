@@ -36,7 +36,7 @@
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
 
-using namespace __sanitizer;  // NOLINT
+using namespace __sanitizer;
 
 namespace __sancov {
 namespace {
@@ -198,8 +198,8 @@ void InitializeCoverage(bool enabled, const char *dir) {
 }  // namespace __sanitizer
 
 extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(  // NOLINT
-    const uptr *pcs, uptr len) {
+SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(const uptr *pcs,
+                                                             uptr len) {
   UNIMPLEMENTED();
 }
 

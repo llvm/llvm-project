@@ -29,6 +29,9 @@ ELF Improvements
 COFF Improvements
 -----------------
 
+* /linkrepro: now takes the filename of the tar archive it writes, instead
+  of the name of a directory that a file called "repro.tar" is created in,
+  matching the behavior of ELF lld.
 * ...
 
 MinGW Improvements

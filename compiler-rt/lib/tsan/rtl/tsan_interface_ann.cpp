@@ -24,7 +24,7 @@
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 namespace __tsan {
 
@@ -220,7 +220,7 @@ static void ReportMissedExpectedRace(ExpectRace *race) {
 }
 }  // namespace __tsan
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 extern "C" {
 void INTERFACE_ATTRIBUTE AnnotateHappensBefore(char *f, int l, uptr addr) {

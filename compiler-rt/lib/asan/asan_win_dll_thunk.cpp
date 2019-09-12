@@ -67,10 +67,10 @@ INTERCEPT_LIBRARY_FUNCTION(memcmp);
 INTERCEPT_LIBRARY_FUNCTION(memcpy);
 INTERCEPT_LIBRARY_FUNCTION(memmove);
 INTERCEPT_LIBRARY_FUNCTION(memset);
-INTERCEPT_LIBRARY_FUNCTION(strcat);  // NOLINT
+INTERCEPT_LIBRARY_FUNCTION(strcat);
 INTERCEPT_LIBRARY_FUNCTION(strchr);
 INTERCEPT_LIBRARY_FUNCTION(strcmp);
-INTERCEPT_LIBRARY_FUNCTION(strcpy);  // NOLINT
+INTERCEPT_LIBRARY_FUNCTION(strcpy);
 INTERCEPT_LIBRARY_FUNCTION(strcspn);
 INTERCEPT_LIBRARY_FUNCTION(strdup);
 INTERCEPT_LIBRARY_FUNCTION(strlen);
@@ -135,7 +135,7 @@ static int asan_dll_thunk_init() {
   return 0;
 }
 
-#pragma section(".CRT$XIB", long, read)  // NOLINT
+#pragma section(".CRT$XIB", long, read)
 __declspec(allocate(".CRT$XIB")) int (*__asan_preinit)() = asan_dll_thunk_init;
 
 static void WINAPI asan_thread_init(void *mod, unsigned long reason,
@@ -143,7 +143,7 @@ static void WINAPI asan_thread_init(void *mod, unsigned long reason,
   if (reason == /*DLL_PROCESS_ATTACH=*/1) asan_dll_thunk_init();
 }
 
-#pragma section(".CRT$XLAB", long, read)  // NOLINT
+#pragma section(".CRT$XLAB", long, read)
 __declspec(allocate(".CRT$XLAB")) void (WINAPI *__asan_tls_init)(void *,
     unsigned long, void *) = asan_thread_init;
 

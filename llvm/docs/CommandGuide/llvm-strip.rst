@@ -101,7 +101,7 @@ multiple file formats.
 
 .. option:: --version, -V
 
-  Display the version of this program.
+ Display the version of this program.
 
 COFF-SPECIFIC OPTIONS
 ---------------------
@@ -148,7 +148,6 @@ them.
 .. option::  --preserve-dates, -p
 
  Preserve access and modification timestamps.
-
 
 EXIT STATUS
 -----------

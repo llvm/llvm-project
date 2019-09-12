@@ -90,7 +90,7 @@ extern "C" void lsan_dispatch_call_block_and_release(void *block) {
 
 }  // namespace __lsan
 
-using namespace __lsan;  // NOLINT
+using namespace __lsan;
 
 // Wrap |ctxt| and |func| into an lsan_block_context_t.
 // The caller retains control of the allocated context.

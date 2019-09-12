@@ -12,6 +12,6 @@
 
 #include "not_real.h"
 
-// CHECK: clang-scan-deps dependency
+// CHECK: vfsoverlay_input.o
 // CHECK-NEXT: vfsoverlay_input.cpp
 // CHECK-NEXT: Inputs{{/|\\}}header.h

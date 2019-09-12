@@ -44,6 +44,7 @@ public:
     AExtUpper, // The value is in the upper bits of the location and should be
                // extended with undefined upper bits when retrieved.
     BCvt,      // The value is bit-converted in the location.
+    Trunc,     // The value is truncated in the location.
     VExt,      // The value is vector-widened in the location.
                // FIXME: Not implemented yet. Code that uses AExt to mean
                // vector-widen should be fixed to use VExt instead.

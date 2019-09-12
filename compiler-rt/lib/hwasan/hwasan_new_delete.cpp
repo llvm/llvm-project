@@ -20,7 +20,7 @@
 
 #include <stddef.h>
 
-using namespace __hwasan;  // NOLINT
+using namespace __hwasan;
 
 // Fake std::nothrow_t to avoid including <new>.
 namespace std {

@@ -33,6 +33,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackID.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
@@ -91,9 +92,27 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
     return;
   const lldb::offset_t start_offset = offset;
   const lldb::offset_t end_offset = offset + length;
+
+  // An operation within a DWARF expression may contain a sub-expression. The
+  // motivating example for this is DW_OP_entry_value. Keep track of where each
+  // each sub-expression ends.
+  std::vector<lldb::offset_t> ends_of_subexprs;
+
+  // "Finish" (i.e. print the closing right-parens) for sub-expressions up to
+  // the specified \p op_offset.
+  auto finish_subexpressions_to = [&](const lldb::offset_t op_offset) {
+    while (!ends_of_subexprs.empty() && op_offset >= ends_of_subexprs.back()) {
+      ends_of_subexprs.pop_back();
+      s->Printf(")");
+      if (!ends_of_subexprs.empty())
+        s->Printf(" ");
+    }
+  };
+
   while (m_data.ValidOffset(offset) && offset < end_offset) {
     const lldb::offset_t op_offset = offset;
     const uint8_t op = m_data.GetU8(&offset);
+    finish_subexpressions_to(op_offset);
 
     switch (level) {
     default:
@@ -466,8 +485,16 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
     case DW_OP_APPLE_uninit:
       s->PutCString("DW_OP_APPLE_uninit"); // 0xF0
       break;
+    case DW_OP_entry_value: {
+      uint32_t subexpr_len = m_data.GetULEB128(&offset);
+      s->PutCString("DW_OP_entry_value(");
+      ends_of_subexprs.push_back(offset + subexpr_len);
+      break;
+    }
     }
   }
+
+  finish_subexpressions_to(end_offset);
 }
 
 void DWARFExpression::SetLocationListSlide(addr_t slide) {
@@ -580,6 +607,8 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
   return false;
 }
 
+/// Return the length in bytes of the set of operands for \p op. No guarantees
+/// are made on the state of \p data after this call.
 static offset_t GetOpcodeDataSize(const DataExtractor &data,
                                   const lldb::offset_t data_offset,
                                   const uint8_t op) {
@@ -774,6 +803,12 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     uint64_t block_len = data.Skip_LEB128(&offset);
     offset += block_len;
     return offset - data_offset;
+  }
+
+  case DW_OP_entry_value: // 0xa3 ULEB128 size + variable-length block
+  {
+    uint64_t subexpr_len = data.GetULEB128(&offset);
+    return (offset - data_offset) + subexpr_len;
   }
 
   default:
@@ -1069,6 +1104,216 @@ bool DWARFExpression::DumpLocationForAddress(Stream *s,
     }
   }
   return false;
+}
+
+static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
+                                       ExecutionContext *exe_ctx,
+                                       RegisterContext *reg_ctx,
+                                       const DataExtractor &opcodes,
+                                       lldb::offset_t &opcode_offset,
+                                       Status *error_ptr, Log *log) {
+  // DW_OP_entry_value(sub-expr) describes the location a variable had upon
+  // function entry: this variable location is presumed to be optimized out at
+  // the current PC value.  The caller of the function may have call site
+  // information that describes an alternate location for the variable (e.g. a
+  // constant literal, or a spilled stack value) in the parent frame.
+  //
+  // Example (this is pseudo-code & pseudo-DWARF, but hopefully illustrative):
+  //
+  //     void child(int &sink, int x) {
+  //       ...
+  //       /* "x" gets optimized out. */
+  //
+  //       /* The location of "x" here is: DW_OP_entry_value($reg2). */
+  //       ++sink;
+  //     }
+  //
+  //     void parent() {
+  //       int sink;
+  //
+  //       /*
+  //        * The callsite information emitted here is:
+  //        *
+  //        * DW_TAG_call_site
+  //        *   DW_AT_return_pc ... (for "child(sink, 123);")
+  //        *   DW_TAG_call_site_parameter (for "sink")
+  //        *     DW_AT_location   ($reg1)
+  //        *     DW_AT_call_value ($SP - 8)
+  //        *   DW_TAG_call_site_parameter (for "x")
+  //        *     DW_AT_location   ($reg2)
+  //        *     DW_AT_call_value ($literal 123)
+  //        *
+  //        * DW_TAG_call_site
+  //        *   DW_AT_return_pc ... (for "child(sink, 456);")
+  //        *   ...
+  //        */
+  //       child(sink, 123);
+  //       child(sink, 456);
+  //     }
+  //
+  // When the program stops at "++sink" within `child`, the debugger determines
+  // the call site by analyzing the return address. Once the call site is found,
+  // the debugger determines which parameter is referenced by DW_OP_entry_value
+  // and evaluates the corresponding location for that parameter in `parent`.
+
+  // 1. Find the function which pushed the current frame onto the stack.
+  if ((!exe_ctx || !exe_ctx->HasTargetScope()) || !reg_ctx) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no exe/reg context");
+    return false;
+  }
+
+  StackFrame *current_frame = exe_ctx->GetFramePtr();
+  Thread *thread = exe_ctx->GetThreadPtr();
+  if (!current_frame || !thread) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no current frame/thread");
+    return false;
+  }
+
+  Target &target = exe_ctx->GetTargetRef();
+  StackFrameSP parent_frame = nullptr;
+  addr_t return_pc = LLDB_INVALID_ADDRESS;
+  uint32_t current_frame_idx = current_frame->GetFrameIndex();
+  uint32_t num_frames = thread->GetStackFrameCount();
+  for (uint32_t parent_frame_idx = current_frame_idx + 1;
+       parent_frame_idx < num_frames; ++parent_frame_idx) {
+    parent_frame = thread->GetStackFrameAtIndex(parent_frame_idx);
+    // Require a valid sequence of frames.
+    if (!parent_frame)
+      break;
+
+    // Record the first valid return address, even if this is an inlined frame,
+    // in order to look up the associated call edge in the first non-inlined
+    // parent frame.
+    if (return_pc == LLDB_INVALID_ADDRESS) {
+      return_pc = parent_frame->GetFrameCodeAddress().GetLoadAddress(&target);
+      LLDB_LOG(log,
+               "Evaluate_DW_OP_entry_value: immediate ancestor with pc = {0:x}",
+               return_pc);
+    }
+
+    // If we've found an inlined frame, skip it (these have no call site
+    // parameters).
+    if (parent_frame->IsInlined())
+      continue;
+
+    // We've found the first non-inlined parent frame.
+    break;
+  }
+  if (!parent_frame || !parent_frame->GetRegisterContext()) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no parent frame with reg ctx");
+    return false;
+  }
+
+  Function *parent_func =
+      parent_frame->GetSymbolContext(eSymbolContextFunction).function;
+  if (!parent_func) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no parent function");
+    return false;
+  }
+
+  // 2. Find the call edge in the parent function responsible for creating the
+  //    current activation.
+  Function *current_func =
+      current_frame->GetSymbolContext(eSymbolContextFunction).function;
+  if (!current_func) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no current function");
+    return false;
+  }
+
+  CallEdge *call_edge = nullptr;
+  ModuleList &modlist = target.GetImages();
+  if (!parent_frame->IsArtificial()) {
+    // If the parent frame is not artificial, the current activation may be
+    // produced by an ambiguous tail call. In this case, refuse to proceed.
+    call_edge = parent_func->GetCallEdgeForReturnAddress(return_pc, target);
+    if (!call_edge) {
+      LLDB_LOG(log,
+               "Evaluate_DW_OP_entry_value: no call edge for retn-pc = {0:x} "
+               "in parent frame {1}",
+               return_pc, parent_func->GetName());
+      return false;
+    }
+    Function *callee_func = call_edge->GetCallee(modlist);
+    if (callee_func != current_func) {
+      LLDB_LOG(log, "Evaluate_DW_OP_entry_value: ambiguous call sequence, "
+                    "can't find real parent frame");
+      return false;
+    }
+  } else {
+    // The StackFrameList solver machinery has deduced that an unambiguous tail
+    // call sequence that produced the current activation.  The first edge in
+    // the parent that points to the current function must be valid.
+    for (CallEdge &edge : parent_func->GetTailCallingEdges()) {
+      if (edge.GetCallee(modlist) == current_func) {
+        call_edge = &edge;
+        break;
+      }
+    }
+  }
+  if (!call_edge) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no unambiguous edge from parent "
+                  "to current function");
+    return false;
+  }
+
+  // 3. Attempt to locate the DW_OP_entry_value expression in the set of
+  //    available call site parameters. If found, evaluate the corresponding
+  //    parameter in the context of the parent frame.
+  const uint32_t subexpr_len = opcodes.GetULEB128(&opcode_offset);
+  const void *subexpr_data = opcodes.GetData(&opcode_offset, subexpr_len);
+  if (!subexpr_data) {
+    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: subexpr could not be read");
+    return false;
+  }
+
+  const CallSiteParameter *matched_param = nullptr;
+  for (const CallSiteParameter &param : call_edge->GetCallSiteParameters()) {
+    DataExtractor param_subexpr_extractor;
+    if (!param.LocationInCallee.GetExpressionData(param_subexpr_extractor))
+      continue;
+    lldb::offset_t param_subexpr_offset = 0;
+    const void *param_subexpr_data =
+        param_subexpr_extractor.GetData(&param_subexpr_offset, subexpr_len);
+    if (!param_subexpr_data ||
+        param_subexpr_extractor.BytesLeft(param_subexpr_offset) != 0)
+      continue;
+
+    // At this point, the DW_OP_entry_value sub-expression and the callee-side
+    // expression in the call site parameter are known to have the same length.
+    // Check whether they are equal.
+    //
+    // Note that an equality check is sufficient: the contents of the
+    // DW_OP_entry_value subexpression are only used to identify the right call
+    // site parameter in the parent, and do not require any special handling.
+    if (memcmp(subexpr_data, param_subexpr_data, subexpr_len) == 0) {
+      matched_param = &param;
+      break;
+    }
+  }
+  if (!matched_param) {
+    LLDB_LOG(log,
+             "Evaluate_DW_OP_entry_value: no matching call site param found");
+    return false;
+  }
+
+  // TODO: Add support for DW_OP_push_object_address within a DW_OP_entry_value
+  // subexpresion whenever llvm does.
+  Value result;
+  ExecutionContext parent_exe_ctx = *exe_ctx;
+  parent_exe_ctx.SetFrameSP(parent_frame);
+  const DWARFExpression &param_expr = matched_param->LocationInCaller;
+  if (!param_expr.Evaluate(&parent_exe_ctx,
+                           parent_frame->GetRegisterContext().get(),
+                           /*loclist_base_addr=*/LLDB_INVALID_ADDRESS,
+                           /*initial_value_ptr=*/nullptr,
+                           /*object_address_ptr=*/nullptr, result, error_ptr)) {
+    LLDB_LOG(log,
+             "Evaluate_DW_OP_entry_value: call site param evaluation failed");
+    return false;
+  }
+
+  stack.push_back(result);
+  return true;
 }
 
 bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
@@ -2751,6 +2996,16 @@ bool DWARFExpression::Evaluate(
       stack.push_back(Scalar(value));
     } break;
 
+    case DW_OP_entry_value: {
+      if (!Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx, opcodes, offset,
+                                      error_ptr, log)) {
+        LLDB_ERRORF(error_ptr, "Could not evaluate %s.",
+                    DW_OP_value_to_name(op));
+        return false;
+      }
+      break;
+    }
+
     default:
       LLDB_LOGF(log, "Unhandled opcode %s in DWARFExpression.",
                 DW_OP_value_to_name(op));
@@ -2865,6 +3120,11 @@ static bool print_dwarf_exp_op(Stream &s, const DataExtractor &data,
     s.Printf("%" PRIu64 " %" PRIi64, uint, sint);
     return true;
   }
+  if (opcode_class == DRC_TWOOPERANDS && opcode == DW_OP_entry_value) {
+    uint = data.GetULEB128(offset_ptr);
+    s.Printf("%" PRIu64 " ", uint);
+    return true;
+  }
   if (opcode_class != DRC_ONEOPERAND) {
     s.Printf("UNKNOWN OP %u", opcode);
     return false;
@@ -2965,6 +3225,7 @@ static bool print_dwarf_exp_op(Stream &s, const DataExtractor &data,
   case DW_OP_regx:
   case DW_OP_GNU_addr_index:
   case DW_OP_GNU_const_index:
+  case DW_OP_entry_value:
     size = 128;
     break;
   default:

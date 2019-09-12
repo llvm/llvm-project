@@ -1203,4 +1203,6 @@ extern "C" void LLVMInitializeAArch64AsmPrinter() {
   RegisterAsmPrinter<AArch64AsmPrinter> X(getTheAArch64leTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Y(getTheAArch64beTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Z(getTheARM64Target());
+  RegisterAsmPrinter<AArch64AsmPrinter> W(getTheARM64_32Target());
+  RegisterAsmPrinter<AArch64AsmPrinter> V(getTheAArch64_32Target());
 }

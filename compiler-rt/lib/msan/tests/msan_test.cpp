@@ -130,14 +130,14 @@ static uintptr_t GetPageSize() {
 
 const size_t kMaxPathLength = 4096;
 
-typedef unsigned char      U1;
-typedef unsigned short     U2;  // NOLINT
-typedef unsigned int       U4;
-typedef unsigned long long U8;  // NOLINT
-typedef   signed char      S1;
-typedef   signed short     S2;  // NOLINT
-typedef   signed int       S4;
-typedef   signed long long S8;  // NOLINT
+typedef unsigned char U1;
+typedef unsigned short U2;
+typedef unsigned int U4;
+typedef unsigned long long U8;
+typedef signed char S1;
+typedef signed short S2;
+typedef signed int S4;
+typedef signed long long S8;
 #define NOINLINE      __attribute__((noinline))
 #define INLINE      __attribute__((always_inline))
 
@@ -1654,25 +1654,25 @@ TEST(MemorySanitizer, overlap_memmove) {
   TestOverlapMemmove<U8, 1000>();
 }
 
-TEST(MemorySanitizer, strcpy) {  // NOLINT
+TEST(MemorySanitizer, strcpy) {
   char* x = new char[3];
   char* y = new char[3];
   x[0] = 'a';
   x[1] = *GetPoisoned<char>(1, 1);
   x[2] = 0;
-  strcpy(y, x);  // NOLINT
+  strcpy(y, x);
   EXPECT_NOT_POISONED(y[0]);
   EXPECT_POISONED(y[1]);
   EXPECT_NOT_POISONED(y[2]);
 }
 
-TEST(MemorySanitizer, strncpy) {  // NOLINT
+TEST(MemorySanitizer, strncpy) {
   char* x = new char[3];
   char* y = new char[5];
   x[0] = 'a';
   x[1] = *GetPoisoned<char>(1, 1);
   x[2] = '\0';
-  strncpy(y, x, 4);  // NOLINT
+  strncpy(y, x, 4);
   EXPECT_NOT_POISONED(y[0]);
   EXPECT_POISONED(y[1]);
   EXPECT_NOT_POISONED(y[2]);
@@ -1680,20 +1680,20 @@ TEST(MemorySanitizer, strncpy) {  // NOLINT
   EXPECT_POISONED(y[4]);
 }
 
-TEST(MemorySanitizer, stpcpy) {  // NOLINT
+TEST(MemorySanitizer, stpcpy) {
   char* x = new char[3];
   char* y = new char[3];
   x[0] = 'a';
   x[1] = *GetPoisoned<char>(1, 1);
   x[2] = 0;
-  char *res = stpcpy(y, x);  // NOLINT
+  char *res = stpcpy(y, x);
   ASSERT_EQ(res, y + 2);
   EXPECT_NOT_POISONED(y[0]);
   EXPECT_POISONED(y[1]);
   EXPECT_NOT_POISONED(y[2]);
 }
 
-TEST(MemorySanitizer, strcat) {  // NOLINT
+TEST(MemorySanitizer, strcat) {
   char a[10];
   char b[] = "def";
   strcpy(a, "abc");
@@ -1706,7 +1706,7 @@ TEST(MemorySanitizer, strcat) {  // NOLINT
   EXPECT_POISONED(a[7]);
 }
 
-TEST(MemorySanitizer, strncat) {  // NOLINT
+TEST(MemorySanitizer, strncat) {
   char a[10];
   char b[] = "def";
   strcpy(a, "abc");
@@ -1719,7 +1719,7 @@ TEST(MemorySanitizer, strncat) {  // NOLINT
   EXPECT_POISONED(a[7]);
 }
 
-TEST(MemorySanitizer, strncat_overflow) {  // NOLINT
+TEST(MemorySanitizer, strncat_overflow) {
   char a[10];
   char b[] = "def";
   strcpy(a, "abc");
@@ -2005,11 +2005,11 @@ TEST(MemorySanitizer, lrand48_r) {
 }
 #endif
 
-TEST(MemorySanitizer, sprintf) {  // NOLINT
+TEST(MemorySanitizer, sprintf) {
   char buff[10];
   break_optimization(buff);
   EXPECT_POISONED(buff[0]);
-  int res = sprintf(buff, "%d", 1234567);  // NOLINT
+  int res = sprintf(buff, "%d", 1234567);
   ASSERT_EQ(res, 7);
   ASSERT_EQ(buff[0], '1');
   ASSERT_EQ(buff[1], '2');
@@ -2048,10 +2048,10 @@ TEST(MemorySanitizer, swprintf) {
   EXPECT_POISONED(buff[8]);
 }
 
-TEST(MemorySanitizer, asprintf) {  // NOLINT
+TEST(MemorySanitizer, asprintf) {
   char *pbuf;
   EXPECT_POISONED(pbuf);
-  int res = asprintf(&pbuf, "%d", 1234567);  // NOLINT
+  int res = asprintf(&pbuf, "%d", 1234567);
   ASSERT_EQ(res, 7);
   EXPECT_NOT_POISONED(pbuf);
   ASSERT_EQ(pbuf[0], '1');
@@ -4292,7 +4292,7 @@ TEST(MemorySanitizerOrigins, InitializedStoreDoesNotChangeOrigin) {
   if (!TrackingOrigins()) return;
 
   S s;
-  U4 origin = rand();  // NOLINT
+  U4 origin = rand();
   s.a = *GetPoisonedO<U2>(0, origin);
   EXPECT_ORIGIN(origin, __msan_get_origin(&s.a));
   EXPECT_ORIGIN(origin, __msan_get_origin(&s.b));

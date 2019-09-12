@@ -1,7 +1,9 @@
 // RUN: rm -rf %t
-// RUN: sed -e "s:INPUT_DIR:%S/Inputs:g" -e "s:OUT_DIR:%t:g" %S/Inputs/vfsoverlay.yaml > %t.yaml
+// RUN: sed -e "s@INPUT_DIR@%/S/Inputs@g" -e "s@OUT_DIR@%/t@g" %S/Inputs/vfsoverlay.yaml > %t.yaml
 // RUN: %clang_cc1 -Werror -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ivfsoverlay %t.yaml -I %t -fsyntax-only %s
-// REQUIRES: shell
+
+// FIXME: PR43272
+// XFAIL: system-windows
 
 @import not_real;
 
@@ -17,7 +19,7 @@ void foo() {
 #endif
 
 // Override the module map (vfsoverlay2 on top)
-// RUN: sed -e "s:INPUT_DIR:%S/Inputs:g" -e "s:OUT_DIR:%t:g" %S/Inputs/vfsoverlay2.yaml > %t2.yaml
+// RUN: sed -e "s@INPUT_DIR@%/S/Inputs@g" -e "s@OUT_DIR@%/t@g" %S/Inputs/vfsoverlay2.yaml > %t2.yaml
 // RUN: %clang_cc1 -Werror -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ivfsoverlay %t.yaml -ivfsoverlay %t2.yaml -I %t -fsyntax-only %s
 
 // vfsoverlay2 not present

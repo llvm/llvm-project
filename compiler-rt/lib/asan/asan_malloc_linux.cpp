@@ -27,7 +27,7 @@
 #include "asan_stack.h"
 
 // ---------------------- Replacement functions ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 static uptr allocated_for_dlsym;
 static uptr last_dlsym_alloc_size_in_words;
