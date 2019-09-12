@@ -43,6 +43,10 @@ class ItaniumCXXABI : public CodeGen::CGCXXABI {
   /// VTables - All the vtables which have been defined.
   llvm::DenseMap<const CXXRecordDecl *, llvm::GlobalVariable *> VTables;
 
+  /// All the thread wrapper functions that have been used.
+  llvm::SmallVector<std::pair<const VarDecl *, llvm::Function *>, 8>
+      ThreadWrappers;
+
 protected:
   bool UseARMMethodPtrABI;
   bool UseARMGuardVarABI;
@@ -322,7 +326,42 @@ public:
       ArrayRef<llvm::Function *> CXXThreadLocalInits,
       ArrayRef<const VarDecl *> CXXThreadLocalInitVars) override;
 
-  bool usesThreadWrapperFunction() const override { return true; }
+  /// Determine whether we will definitely emit this variable with a constant
+  /// initializer, either because the language semantics demand it or because
+  /// we know that the initializer is a constant.
+  bool isEmittedWithConstantInitializer(const VarDecl *VD) const {
+    VD = VD->getMostRecentDecl();
+    if (VD->hasAttr<ConstInitAttr>())
+      return true;
+
+    // All later checks examine the initializer specified on the variable. If
+    // the variable is weak, such examination would not be correct.
+    if (VD->isWeak() || VD->hasAttr<SelectAnyAttr>())
+      return false;
+
+    const VarDecl *InitDecl = VD->getInitializingDeclaration();
+    if (!InitDecl)
+      return false;
+
+    // If there's no initializer to run, this is constant initialization.
+    if (!InitDecl->hasInit())
+      return true;
+
+    // If we have the only definition, we don't need a thread wrapper if we
+    // will emit the value as a constant.
+    if (isUniqueGVALinkage(getContext().GetGVALinkageForVariable(VD)))
+      return !VD->getType().isDestructedType() && InitDecl->evaluateValue();
+
+    // Otherwise, we need a thread wrapper unless we know that every
+    // translation unit will emit the value as a constant. We rely on
+    // ICE-ness not varying between translation units, which isn't actually
+    // guaranteed by the standard but is necessary for sanity.
+    return InitDecl->isInitKnownICE() && InitDecl->isInitICE();
+  }
+
+  bool usesThreadWrapperFunction(const VarDecl *VD) const override {
+    return !isEmittedWithConstantInitializer(VD);
+  }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
                                       QualType LValType) override;
 
@@ -2456,9 +2495,6 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
 
   CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Wrapper);
 
-  if (VD->hasDefinition())
-    CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Wrapper);
-
   // Always resolve references to the wrapper at link time.
   if (!Wrapper->hasLocalLinkage())
     if (!isThreadWrapperReplaceable(VD, CGM) ||
@@ -2471,6 +2507,8 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
     Wrapper->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
     Wrapper->addFnAttr(llvm::Attribute::NoUnwind);
   }
+
+  ThreadWrappers.push_back({VD, Wrapper});
   return Wrapper;
 }
 
@@ -2519,19 +2557,39 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     }
   }
 
-  // Emit thread wrappers.
+  // Create declarations for thread wrappers for all thread-local variables
+  // with non-discardable definitions in this translation unit.
   for (const VarDecl *VD : CXXThreadLocals) {
+    if (VD->hasDefinition() &&
+        !isDiscardableGVALinkage(getContext().GetGVALinkageForVariable(VD))) {
+      llvm::GlobalValue *GV = CGM.GetGlobalValue(CGM.getMangledName(VD));
+      getOrCreateThreadLocalWrapper(VD, GV);
+    }
+  }
+
+  // Emit all referenced thread wrappers.
+  for (auto VDAndWrapper : ThreadWrappers) {
+    const VarDecl *VD = VDAndWrapper.first;
     llvm::GlobalVariable *Var =
         cast<llvm::GlobalVariable>(CGM.GetGlobalValue(CGM.getMangledName(VD)));
-    llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Var);
+    llvm::Function *Wrapper = VDAndWrapper.second;
 
     // Some targets require that all access to thread local variables go through
     // the thread wrapper.  This means that we cannot attempt to create a thread
     // wrapper or a thread helper.
-    if (isThreadWrapperReplaceable(VD, CGM) && !VD->hasDefinition()) {
-      Wrapper->setLinkage(llvm::Function::ExternalLinkage);
-      continue;
+    if (!VD->hasDefinition()) {
+      if (isThreadWrapperReplaceable(VD, CGM)) {
+        Wrapper->setLinkage(llvm::Function::ExternalLinkage);
+        continue;
+      }
+
+      // If this isn't a TU in which this variable is defined, the thread
+      // wrapper is discardable.
+      if (Wrapper->getLinkage() == llvm::Function::WeakODRLinkage)
+        Wrapper->setLinkage(llvm::Function::LinkOnceODRLinkage);
     }
+
+    CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Wrapper);
 
     // Mangle the name for the thread_local initialization function.
     SmallString<256> InitFnName;
@@ -2547,7 +2605,10 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     // produce a declaration of the initialization function.
     llvm::GlobalValue *Init = nullptr;
     bool InitIsInitFunc = false;
-    if (VD->hasDefinition()) {
+    bool HasConstantInitialization = false;
+    if (isEmittedWithConstantInitializer(VD)) {
+      HasConstantInitialization = true;
+    } else if (VD->hasDefinition()) {
       InitIsInitFunc = true;
       llvm::Function *InitFuncToUse = InitFunc;
       if (isTemplateInstantiation(VD->getTemplateSpecializationKind()))
@@ -2576,7 +2637,9 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     llvm::LLVMContext &Context = CGM.getModule().getContext();
     llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Wrapper);
     CGBuilderTy Builder(CGM, Entry);
-    if (InitIsInitFunc) {
+    if (HasConstantInitialization) {
+      // No dynamic initialization to invoke.
+    } else if (InitIsInitFunc) {
       if (Init) {
         llvm::CallInst *CallVal = Builder.CreateCall(InitFnTy, Init);
         if (isThreadWrapperReplaceable(VD, CGM)) {

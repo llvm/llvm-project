@@ -310,9 +310,10 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     auto mbOrErr = future->get();
     if (mbOrErr.second)
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
+    // Pass empty string as archive name so that the original filename is
+    // used as the buffer identifier.
     driver->addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
-                             toCOFFString(sym), parentName,
-                             /*OffsetInArchive=*/0);
+                             toCOFFString(sym), "", /*OffsetInArchive=*/0);
   });
 }
 

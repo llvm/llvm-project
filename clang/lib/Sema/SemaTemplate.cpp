@@ -849,15 +849,14 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
 void Sema::DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl) {
   assert(PrevDecl->isTemplateParameter() && "Not a template parameter");
 
-  // Microsoft Visual C++ permits template parameters to be shadowed.
-  if (getLangOpts().MicrosoftExt)
-    return;
-
   // C++ [temp.local]p4:
   //   A template-parameter shall not be redeclared within its
   //   scope (including nested scopes).
-  Diag(Loc, diag::err_template_param_shadow)
-    << cast<NamedDecl>(PrevDecl)->getDeclName();
+  //
+  // Make this a warning when MSVC compatibility is requested.
+  unsigned DiagId = getLangOpts().MSVCCompat ? diag::ext_template_param_shadow
+                                             : diag::err_template_param_shadow;
+  Diag(Loc, DiagId) << cast<NamedDecl>(PrevDecl)->getDeclName();
   Diag(PrevDecl->getLocation(), diag::note_template_param_here);
 }
 

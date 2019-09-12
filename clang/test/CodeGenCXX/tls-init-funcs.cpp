@@ -6,9 +6,9 @@
 // CHECK: @_tlv_atexit({{.*}}@_ZN1AD1Ev
 // CHECK: call cxx_fast_tlscc i32* @_ZTW3ext()
 // CHECK: declare cxx_fast_tlscc i32* @_ZTW3ext()
-// CHECK: define weak_odr hidden cxx_fast_tlscc i32* @_ZTW2vtIiE()
-// CHECK: define weak_odr hidden cxx_fast_tlscc i32* @_ZTW2vtIvE()
-// CHECK: define {{.*}} @_ZTW1a
+// CHECK-DAG: define weak_odr hidden cxx_fast_tlscc i32* @_ZTW2vtIiE()
+// CHECK-DAG: define weak_odr hidden cxx_fast_tlscc i32* @_ZTW2vtIvE()
+// CHECK-DAG: define {{.*}} @_ZTW1a
 
 struct A {
   ~A();

@@ -621,7 +621,7 @@ public:
                        ArrayRef<SourceRange> Ranges = None,
                        ArrayRef<FixItHint> Fixits = None);
 
-  void EmitBasicReport(const Decl *DeclWithIssue, CheckName CheckName,
+  void EmitBasicReport(const Decl *DeclWithIssue, CheckerNameRef CheckerName,
                        StringRef BugName, StringRef BugCategory,
                        StringRef BugStr, PathDiagnosticLocation Loc,
                        ArrayRef<SourceRange> Ranges = None,
@@ -632,7 +632,7 @@ private:
 
   /// Returns a BugType that is associated with the given name and
   /// category.
-  BugType *getBugTypeForName(CheckName CheckName, StringRef name,
+  BugType *getBugTypeForName(CheckerNameRef CheckerName, StringRef name,
                              StringRef category);
 
   virtual BugReport *
