@@ -31,6 +31,7 @@ TEST_F(LibclangParseTest, UninstallAbortingLLVMFatalErrorHandler) {
   std::string Main = "main.h";
   WriteFile(Main, "#pragma clang __debug llvm_fatal_error");
 
-  EXPECT_NO_FATAL_FAILURE(clang_parseTranslationUnit(
-      Index, Main.c_str(), nullptr, 0, nullptr, 0, TUFlags));
+  EXPECT_EXIT(clang_parseTranslationUnit(
+      Index, Main.c_str(), nullptr, 0, nullptr, 0, TUFlags),
+      ::testing::ExitedWithCode(1), "ERROR");
 }
