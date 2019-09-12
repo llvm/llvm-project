@@ -18,7 +18,6 @@ intermediate LLVM representation.
    HowToBuildWithPGO
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
-   CommandGuide/index
    GettingStarted
    GettingStartedVS
    FAQ
@@ -27,7 +26,6 @@ intermediate LLVM representation.
    yaml2obj
    MarkdownQuickstartTemplate
    Phabricator
-   TestingGuide
    tutorial/index
    ReleaseNotes
    Passes
@@ -73,10 +71,6 @@ intermediate LLVM representation.
    Tutorials about using LLVM. Includes a tutorial about making a custom
    language with LLVM.
 
-:doc:`LLVM Command Guide <CommandGuide/index>`
-   A reference manual for the LLVM command line utilities ("man" pages for LLVM
-   tools).
-
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.
 
@@ -85,9 +79,6 @@ intermediate LLVM representation.
 
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
-
-:doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
-   A reference manual for using the LLVM testing infrastructure.
 
 :doc:`TestSuiteGuide`
   Describes how to compile and run the test-suite benchmarks.

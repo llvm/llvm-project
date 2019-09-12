@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 | FileCheck %s
+; RUN: llc -global-isel < %s -mtriple=arm64-apple-ios7.0 | FileCheck %s
 
 @t = weak global i32 ()* null
 @x = external global i32, align 4
