@@ -30,7 +30,7 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
     cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
                clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
 
-AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin() {
+AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
   AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
@@ -39,7 +39,8 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin() {
   PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";
-  CodePointerSize = CalleeSaveStackSlotSize = 8;
+  CalleeSaveStackSlotSize = 8;
+  CodePointerSize = IsILP32 ? 4 : 8;
 
   AlignmentIsInBytes = false;
   UsesELFSectionDirectiveForBSS = true;

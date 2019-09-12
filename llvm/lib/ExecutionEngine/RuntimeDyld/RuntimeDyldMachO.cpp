@@ -357,6 +357,8 @@ RuntimeDyldMachO::create(Triple::ArchType Arch,
     return std::make_unique<RuntimeDyldMachOARM>(MemMgr, Resolver);
   case Triple::aarch64:
     return std::make_unique<RuntimeDyldMachOAArch64>(MemMgr, Resolver);
+  case Triple::aarch64_32:
+    return std::make_unique<RuntimeDyldMachOAArch64>(MemMgr, Resolver);
   case Triple::x86:
     return std::make_unique<RuntimeDyldMachOI386>(MemMgr, Resolver);
   case Triple::x86_64:

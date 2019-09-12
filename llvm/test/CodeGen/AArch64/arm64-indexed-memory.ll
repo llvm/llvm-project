@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-redzone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64_32-apple-ios -aarch64-redzone | FileCheck %s
 
 define i64* @store64(i64* %ptr, i64 %index, i64 %spacing) {
 ; CHECK-LABEL: store64:

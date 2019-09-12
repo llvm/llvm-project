@@ -19,7 +19,7 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 const jptr kHeapAlignment = 8;
 

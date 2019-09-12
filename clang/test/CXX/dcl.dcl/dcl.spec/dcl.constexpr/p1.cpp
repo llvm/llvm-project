@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++14 %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++1z %s
+
+// MSVC always adopted the C++17 rule that implies that constexpr variables are
+// implicitly inline, so do the test again.
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -DMS_ABI -fsyntax-only -verify -std=c++11 %s
 
 struct notlit { // expected-note {{not literal because}}
   notlit() {}
@@ -29,7 +33,7 @@ void f2(constexpr int i) {} // expected-error {{function parameter cannot be con
 struct s2 {
   constexpr int mi1; // expected-error {{non-static data member cannot be constexpr; did you intend to make it const?}}
   static constexpr int mi2;
-#if __cplusplus <= 201402L
+#if __cplusplus <= 201402L && !defined(MS_ABI)
   // expected-error@-2 {{requires an initializer}}
 #else
   // expected-error@-4 {{default initialization of an object of const}}

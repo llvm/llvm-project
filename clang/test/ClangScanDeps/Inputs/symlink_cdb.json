@@ -2,11 +2,11 @@
 {
   "directory": "DIR",
   "command": "clang -E DIR/symlink_input.cpp -IInputs",
-  "file": "DIR/symlink.cpp"
+  "file": "DIR/symlink_input.cpp"
 },
 {
   "directory": "DIR",
   "command": "clang -E DIR/symlink_input2.cpp -IInputs",
-  "file": "DIR/symlink2.cpp"
+  "file": "DIR/symlink_input2.cpp"
 }
 ]

@@ -92,7 +92,7 @@ void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {
 }  // namespace __asan
 
 // ---------------------- Interface ---------------- {{{1
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 // Current implementation of __asan_(un)poison_memory_region doesn't check
 // that user program (un)poisons the memory it owns. It poisons memory

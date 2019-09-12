@@ -69,6 +69,25 @@ CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
   // Now make the null terminator implicit again, so that Clang's lexer can find
   // it right where the buffer ends.
   Result.Contents.pop_back();
+
+  // Compute the skipped PP ranges that speedup skipping over inactive
+  // preprocessor blocks.
+  llvm::SmallVector<minimize_source_to_dependency_directives::SkippedRange, 32>
+      SkippedRanges;
+  minimize_source_to_dependency_directives::computeSkippedRanges(Tokens,
+                                                                 SkippedRanges);
+  PreprocessorSkippedRangeMapping Mapping;
+  for (const auto &Range : SkippedRanges) {
+    if (Range.Length < 16) {
+      // Ignore small ranges as non-profitable.
+      // FIXME: This is a heuristic, its worth investigating the tradeoffs
+      // when it should be applied.
+      continue;
+    }
+    Mapping[Range.Offset] = Range.Length;
+  }
+  Result.PPSkippedRangeMapping = std::move(Mapping);
+
   return Result;
 }
 
@@ -172,14 +191,20 @@ private:
 };
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-createFile(const CachedFileSystemEntry *Entry) {
+createFile(const CachedFileSystemEntry *Entry,
+           ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
   llvm::ErrorOr<StringRef> Contents = Entry->getContents();
   if (!Contents)
     return Contents.getError();
-  return std::make_unique<MinimizedVFSFile>(
+  auto Result = std::make_unique<MinimizedVFSFile>(
       llvm::MemoryBuffer::getMemBuffer(*Contents, Entry->getName(),
                                        /*RequiresNullTerminator=*/false),
       *Entry->getStatus());
+  if (!Entry->getPPSkippedRangeMapping().empty() && PPSkipMappings)
+    (*PPSkipMappings)[Result->getBufferPtr()] =
+        &Entry->getPPSkippedRangeMapping();
+  return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
+      std::unique_ptr<llvm::vfs::File>(std::move(Result)));
 }
 
 } // end anonymous namespace
@@ -191,7 +216,7 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
 
   // Check the local cache first.
   if (const CachedFileSystemEntry *Entry = getCachedEntry(Filename))
-    return createFile(Entry);
+    return createFile(Entry, PPSkipMappings);
 
   // FIXME: Handle PCM/PCH files.
   // FIXME: Handle module map files.
@@ -214,5 +239,5 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
 
   // Store the result in the local cache.
   setCachedEntry(Filename, Result);
-  return createFile(Result);
+  return createFile(Result, PPSkipMappings);
 }

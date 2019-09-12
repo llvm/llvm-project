@@ -1016,14 +1016,14 @@ bool ARMConstantIslands::isWaterInRange(unsigned UserOffset,
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   unsigned CPELogAlign = getCPELogAlign(U.CPEMI);
   unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset(CPELogAlign);
-  unsigned NextBlockOffset, NextBlockLogAlignment;
+  unsigned NextBlockOffset;
+  llvm::Align NextBlockAlignment;
   MachineFunction::const_iterator NextBlock = Water->getIterator();
   if (++NextBlock == MF->end()) {
     NextBlockOffset = BBInfo[Water->getNumber()].postOffset();
-    NextBlockLogAlignment = 0;
   } else {
     NextBlockOffset = BBInfo[NextBlock->getNumber()].Offset;
-    NextBlockLogAlignment = NextBlock->getLogAlignment();
+    NextBlockAlignment = NextBlock->getAlignment();
   }
   unsigned Size = U.CPEMI->getOperand(2).getImm();
   unsigned CPEEnd = CPEOffset + Size;
@@ -1035,7 +1035,7 @@ bool ARMConstantIslands::isWaterInRange(unsigned UserOffset,
     Growth = CPEEnd - NextBlockOffset;
     // Compute the padding that would go at the end of the CPE to align the next
     // block.
-    Growth += OffsetToAlignment(CPEEnd, 1ULL << NextBlockLogAlignment);
+    Growth += offsetToAlignment(CPEEnd, NextBlockAlignment);
 
     // If the CPE is to be inserted before the instruction, that will raise
     // the offset of the instruction. Also account for unknown alignment padding

@@ -13,7 +13,7 @@ int main() {
   time_t *tm = (time_t*)malloc(sizeof(time_t));
   free(tm);
   time_t t = time(tm);
-  printf("Time: %s\n", ctime(&t));  // NOLINT
+  printf("Time: %s\n", ctime(&t));
   // CHECK: use-after-free
   // Regression check for
   // https://code.google.com/p/address-sanitizer/issues/detail?id=321

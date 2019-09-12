@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 static __thread bool expect_report;
 static __thread bool expect_report_reported;
@@ -215,15 +215,14 @@ struct Event {
   bool expect_report;
   ReportType report_type;
 
-  Event(Type type, const void *ptr = 0, uptr arg = 0, uptr arg2 = 0)
-    : type(type)
-    , ptr(const_cast<void*>(ptr))
-    , arg(arg)
-    , arg2(arg2)
-    , res()
-    , expect_report()
-    , report_type() {
-  }
+  explicit Event(Type type, const void *ptr = 0, uptr arg = 0, uptr arg2 = 0)
+      : type(type),
+        ptr(const_cast<void *>(ptr)),
+        arg(arg),
+        arg2(arg2),
+        res(),
+        expect_report(),
+        report_type() {}
 
   void ExpectReport(ReportType type) {
     expect_report = true;

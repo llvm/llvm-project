@@ -790,9 +790,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
             CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, IsTail, PCAddr,
                                          PCOffset, CallReg);
 
-      // For now only GDB supports call site parameter debug info.
+      // GDB and LLDB support call site parameter debug info.
       if (Asm->TM.Options.EnableDebugEntryValues &&
-          tuneForGDB()) {
+          (tuneForGDB() || tuneForLLDB())) {
         ParamSet Params;
         // Try to interpret values of call site parameters.
         collectCallSiteParameters(&MI, Params);
@@ -2555,8 +2555,8 @@ void DwarfDebug::emitDebugARanges() {
     unsigned TupleSize = PtrSize * 2;
 
     // 7.20 in the Dwarf specs requires the table to be aligned to a tuple.
-    unsigned Padding =
-        OffsetToAlignment(sizeof(int32_t) + ContentSize, TupleSize);
+    unsigned Padding = offsetToAlignment(sizeof(int32_t) + ContentSize,
+                                         llvm::Align(TupleSize));
 
     ContentSize += Padding;
     ContentSize += (List.size() + 1) * TupleSize;

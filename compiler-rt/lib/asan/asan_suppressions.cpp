@@ -36,7 +36,7 @@ SANITIZER_INTERFACE_WEAK_DEF(const char *, __asan_default_suppressions, void) {
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
-  suppression_ctx = new (suppression_placeholder)  // NOLINT
+  suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
   if (&__asan_default_suppressions)

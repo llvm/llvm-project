@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 
 // This must be large enough that it doesn't fit into preallocated static TLS
 // space (see STATIC_TLS_SURPLUS in glibc).
-__thread void *huge_thread_local_array[(1 << 20) / sizeof(void *)]; // NOLINT
+__thread void *huge_thread_local_array[(1 << 20) / sizeof(void *)];
 
 extern "C" void **StoreToTLS(void *p) {
   huge_thread_local_array[0] = p;

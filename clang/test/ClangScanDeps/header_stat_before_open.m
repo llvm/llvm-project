@@ -12,7 +12,7 @@
 #include "Framework/Framework.h"
 #include "Framework/PrivateHeader.h"
 
-// CHECK: clang-scan-deps dependency
+// CHECK: header_stat_before_open_input.o
 // CHECK-NEXT: header_stat_before_open_input.m
 // CHECK-NEXT: Inputs{{/|\\}}frameworks{{/|\\}}Framework.framework{{/|\\}}Headers{{/|\\}}Framework.h
 // CHECK-NEXT: Inputs{{/|\\}}frameworks{{/|\\}}Framework.framework{{/|\\}}PrivateHeaders{{/|\\}}PrivateHeader.h

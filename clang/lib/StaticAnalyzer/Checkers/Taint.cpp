@@ -213,7 +213,7 @@ PathDiagnosticPieceRef TaintBugVisitor::VisitNode(const ExplodedNode *N,
       isTainted(N->getFirstPred()->getState(), V))
     return nullptr;
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 

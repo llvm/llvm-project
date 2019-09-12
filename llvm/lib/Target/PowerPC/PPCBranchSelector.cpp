@@ -88,13 +88,13 @@ unsigned PPCBSel::GetAlignmentAdjustment(MachineBasicBlock &MBB,
   const llvm::Align ParentAlign = MBB.getParent()->getAlignment();
 
   if (Align <= ParentAlign)
-    return OffsetToAlignment(Offset, Align.value());
+    return offsetToAlignment(Offset, Align);
 
   // The alignment of this MBB is larger than the function's alignment, so we
   // can't tell whether or not it will insert nops. Assume that it will.
   if (FirstImpreciseBlock < 0)
     FirstImpreciseBlock = MBB.getNumber();
-  return Align.value() + OffsetToAlignment(Offset, Align.value());
+  return Align.value() + offsetToAlignment(Offset, Align);
 }
 
 /// We need to be careful about the offset of the first block in the function

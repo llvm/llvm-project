@@ -1,6 +1,7 @@
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT --check-prefix=OPTAARCH64 %s
 ; RUN: llc -O0 -fast-isel -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT --check-prefix=OPTAARCH64 %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64_32-apple-ios -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT --check-prefix=OPTARM64_32 %s
 
 ; Parameter with swiftself should be allocated to x20.
 ; CHECK-LABEL: swiftself_param:
@@ -48,8 +49,9 @@ define void @swiftself_passthrough(i8* swiftself %addr0) {
 ; We can use a tail call if the callee swiftself is the same as the caller one.
 ; This should also work with fast-isel.
 ; CHECK-LABEL: swiftself_tail:
-; CHECK: b {{_?}}swiftself_param
-; CHECK-NOT: ret
+; OPTAARCH64: b {{_?}}swiftself_param
+; OPTAARCH64-NOT: ret
+; OPTARM64_32: bl {{_?}}swiftself_param
 define i8* @swiftself_tail(i8* swiftself %addr0) {
   call void asm sideeffect "", "~{x20}"()
   %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
@@ -71,12 +73,19 @@ define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind {
 ; we normally would. We marked the first parameter with swiftself which means it
 ; will no longer be passed in x0.
 declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
-; OPT-LABEL: swiftself_nothisreturn:
-; OPT-DAG: ldr  x20, [x20]
-; OPT-DAG: mov [[CSREG:x[1-9].*]], x8
-; OPT: bl {{_?}}thisreturn_attribute
-; OPT: str x0, {{\[}}[[CSREG]]
-; OPT: ret
+; OPTAARCH64-LABEL: swiftself_nothisreturn:
+; OPTAARCH64-DAG: ldr  x20, [x20]
+; OPTAARCH64-DAG: mov [[CSREG:x[1-9].*]], x8
+; OPTAARCH64: bl {{_?}}thisreturn_attribute
+; OPTAARCH64: str x0, {{\[}}[[CSREG]]
+; OPTAARCH64: ret
+
+; OPTARM64_32-LABEL: swiftself_nothisreturn:
+; OPTARM64_32-DAG: ldr  w20, [x20]
+; OPTARM64_32-DAG: mov [[CSREG:x[1-9].*]], x8
+; OPTARM64_32: bl {{_?}}thisreturn_attribute
+; OPTARM64_32: str w0, {{\[}}[[CSREG]]
+; OPTARM64_32: ret
 define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret, i8** noalias nocapture readonly swiftself) {
 entry:
   %2 = load i8*, i8** %1, align 8

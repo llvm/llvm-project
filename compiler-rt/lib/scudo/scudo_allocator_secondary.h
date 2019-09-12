@@ -49,20 +49,20 @@
 //   +--------------------+
 
 namespace LargeChunk {
-  struct Header {
-    ReservedAddressRange StoredRange;
-    uptr CommittedSize;
-    uptr Size;
-  };
-  constexpr uptr getHeaderSize() {
-    return RoundUpTo(sizeof(Header), MinAlignment);
-  }
-  static Header *getHeader(uptr Ptr) {
-    return reinterpret_cast<Header *>(Ptr - getHeaderSize());
-  }
-  static Header *getHeader(const void *Ptr) {
-    return getHeader(reinterpret_cast<uptr>(Ptr));
-  }
+struct Header {
+  ReservedAddressRange StoredRange;
+  uptr CommittedSize;
+  uptr Size;
+};
+constexpr uptr getHeaderSize() {
+  return RoundUpTo(sizeof(Header), MinAlignment);
+}
+static Header *getHeader(uptr Ptr) {
+  return reinterpret_cast<Header *>(Ptr - getHeaderSize());
+}
+static Header *getHeader(const void *Ptr) {
+  return getHeader(reinterpret_cast<uptr>(Ptr));
+}
 }  // namespace LargeChunk
 
 class LargeMmapAllocator {

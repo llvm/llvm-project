@@ -59,6 +59,8 @@ const char *DW_OP_value_to_name(uint32_t val) {
 }
 
 DRC_class DW_OP_value_to_class(uint32_t val) {
+  // FIXME: If we just used llvm's DWARFExpression printer, we could delete
+  // all this code (and more in lldb's DWARFExpression.cpp).
   switch (val) {
   case 0x03:
     return DRC_ONEOPERAND;
@@ -358,6 +360,8 @@ DRC_class DW_OP_value_to_class(uint32_t val) {
     return DRC_DWARFv3 | DRC_ONEOPERAND;
   case 0x9a:
     return DRC_DWARFv3 | DRC_ONEOPERAND;
+  case 0xa3: /* DW_OP_entry_value */
+    return DRC_TWOOPERANDS;
   case 0xf0:
     return DRC_ZEROOPERANDS; /* DW_OP_APPLE_uninit */
   case 0xe0:

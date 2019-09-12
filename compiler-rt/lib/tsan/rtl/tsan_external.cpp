@@ -25,7 +25,7 @@ static TagData registered_tags[kExternalTagMax] = {
   {},
   {"Swift variable", "Swift access race"},
 };
-static atomic_uint32_t used_tags{kExternalTagFirstUserAvailable};  // NOLINT.
+static atomic_uint32_t used_tags{kExternalTagFirstUserAvailable};
 static TagData *GetTagData(uptr tag) {
   // Invalid/corrupted tag?  Better return NULL and let the caller deal with it.
   if (tag >= atomic_load(&used_tags, memory_order_relaxed)) return nullptr;

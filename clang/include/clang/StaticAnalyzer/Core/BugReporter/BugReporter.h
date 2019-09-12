@@ -14,10 +14,10 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTER_H
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -69,6 +69,50 @@ class SValBuilder;
 /// consume.
 using DiagnosticForConsumerMapTy =
     llvm::DenseMap<PathDiagnosticConsumer *, std::unique_ptr<PathDiagnostic>>;
+
+/// Interface for classes constructing Stack hints.
+///
+/// If a PathDiagnosticEvent occurs in a different frame than the final
+/// diagnostic the hints can be used to summarize the effect of the call.
+class StackHintGenerator {
+public:
+  virtual ~StackHintGenerator() = 0;
+
+  /// Construct the Diagnostic message for the given ExplodedNode.
+  virtual std::string getMessage(const ExplodedNode *N) = 0;
+};
+
+/// Constructs a Stack hint for the given symbol.
+///
+/// The class knows how to construct the stack hint message based on
+/// traversing the CallExpr associated with the call and checking if the given
+/// symbol is returned or is one of the arguments.
+/// The hint can be customized by redefining 'getMessageForX()' methods.
+class StackHintGeneratorForSymbol : public StackHintGenerator {
+private:
+  SymbolRef Sym;
+  std::string Msg;
+
+public:
+  StackHintGeneratorForSymbol(SymbolRef S, StringRef M) : Sym(S), Msg(M) {}
+  ~StackHintGeneratorForSymbol() override = default;
+
+  /// Search the call expression for the symbol Sym and dispatch the
+  /// 'getMessageForX()' methods to construct a specific message.
+  std::string getMessage(const ExplodedNode *N) override;
+
+  /// Produces the message of the following form:
+  ///   'Msg via Nth parameter'
+  virtual std::string getMessageForArg(const Expr *ArgE, unsigned ArgIndex);
+
+  virtual std::string getMessageForReturn(const CallExpr *CallExpr) {
+    return Msg;
+  }
+
+  virtual std::string getMessageForSymbolNotFound() {
+    return Msg;
+  }
+};
 
 /// This class provides an interface through which checkers can create
 /// individual bug reports.
@@ -313,6 +357,14 @@ protected:
 
   const Stmt *getStmt() const;
 
+  /// If an event occurs in a different frame than the final diagnostic,
+  /// supply a message that will be used to construct an extra hint on the
+  /// returns from all the calls on the stack from this event to the final
+  /// diagnostic.
+  // FIXME: Allow shared_ptr keys in DenseMap?
+  std::map<PathDiagnosticPieceRef, std::unique_ptr<StackHintGenerator>>
+      StackHints;
+
 public:
   PathSensitiveBugReport(const BugType &bt, StringRef desc,
                          const ExplodedNode *errorNode)
@@ -454,6 +506,26 @@ public:
   /// \returns false if the condition is already being tracked.
   bool addTrackedCondition(const ExplodedNode *Cond) {
     return TrackedConditions.insert(Cond).second;
+  }
+
+  void addCallStackHint(PathDiagnosticPieceRef Piece,
+                        std::unique_ptr<StackHintGenerator> StackHint) {
+    StackHints[Piece] = std::move(StackHint);
+  }
+
+  bool hasCallStackHint(PathDiagnosticPieceRef Piece) const {
+    return StackHints.count(Piece) > 0;
+  }
+
+  /// Produce the hint for the given node. The node contains
+  /// information about the call for which the diagnostic can be generated.
+  std::string
+  getCallStackMessage(PathDiagnosticPieceRef Piece,
+                      const ExplodedNode *N) const {
+    auto I = StackHints.find(Piece);
+    if (I != StackHints.end())
+      return I->second->getMessage(N);
+    return "";
   }
 };
 

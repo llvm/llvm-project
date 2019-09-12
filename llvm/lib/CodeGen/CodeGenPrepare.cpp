@@ -4791,8 +4791,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
                       << " for " << *MemoryInst << "\n");
     if (SunkAddr->getType() != Addr->getType())
       SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
-  } else if (AddrSinkUsingGEPs ||
-             (!AddrSinkUsingGEPs.getNumOccurrences() && TM && TTI->useAA())) {
+  } else if (AddrSinkUsingGEPs || (!AddrSinkUsingGEPs.getNumOccurrences() &&
+                                   TM && SubtargetInfo->addrSinkUsingGEPs())) {
     // By default, we use the GEP-based method when AA is used later. This
     // prevents new inttoptr/ptrtoint pairs from degrading AA capabilities.
     LLVM_DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode
@@ -6191,35 +6191,49 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
 
   // OpsToSink can contain multiple uses in a use chain (e.g.
   // (%u1 with %u1 = shufflevector), (%u2 with %u2 = zext %u1)). The dominating
-  // uses must come first, which means they are sunk first, temporarily creating
-  // invalid IR. This will be fixed once their dominated users are sunk and
-  // updated.
+  // uses must come first, so we process the ops in reverse order so as to not
+  // create invalid IR.
   BasicBlock *TargetBB = I->getParent();
   bool Changed = false;
   SmallVector<Use *, 4> ToReplace;
-  for (Use *U : OpsToSink) {
+  for (Use *U : reverse(OpsToSink)) {
     auto *UI = cast<Instruction>(U->get());
     if (UI->getParent() == TargetBB || isa<PHINode>(UI))
       continue;
     ToReplace.push_back(U);
   }
 
-  SmallPtrSet<Instruction *, 4> MaybeDead;
+  SetVector<Instruction *> MaybeDead;
+  DenseMap<Instruction *, Instruction *> NewInstructions;
+  Instruction *InsertPoint = I;
   for (Use *U : ToReplace) {
     auto *UI = cast<Instruction>(U->get());
     Instruction *NI = UI->clone();
+    NewInstructions[UI] = NI;
     MaybeDead.insert(UI);
     LLVM_DEBUG(dbgs() << "Sinking " << *UI << " to user " << *I << "\n");
-    NI->insertBefore(I);
+    NI->insertBefore(InsertPoint);
+    InsertPoint = NI;
     InsertedInsts.insert(NI);
-    U->set(NI);
+
+    // Update the use for the new instruction, making sure that we update the
+    // sunk instruction uses, if it is part of a chain that has already been
+    // sunk.
+    Instruction *OldI = cast<Instruction>(U->getUser());
+    if (NewInstructions.count(OldI))
+      NewInstructions[OldI]->setOperand(U->getOperandNo(), NI);
+    else
+      U->set(NI);
     Changed = true;
   }
 
   // Remove instructions that are dead after sinking.
-  for (auto *I : MaybeDead)
-    if (!I->hasNUsesOrMore(1))
+  for (auto *I : MaybeDead) {
+    if (!I->hasNUsesOrMore(1)) {
+      LLVM_DEBUG(dbgs() << "Removing dead instruction: " << *I << "\n");
       I->eraseFromParent();
+    }
+  }
 
   return Changed;
 }

@@ -25,7 +25,7 @@ using namespace __asan;
 
 static void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
                                 char *name, uptr name_size,
-                                uptr &region_address, uptr &region_size) {
+                                uptr *region_address, uptr *region_size) {
   InternalMmapVector<StackVarDescr> vars;
   vars.reserve(16);
   if (!ParseFrameDescription(frame_descr, &vars)) {
@@ -39,8 +39,8 @@ static void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
       // the whole name and then terminate with '\0'.
       internal_strlcpy(name, vars[i].name_pos,
                        Min(name_size, vars[i].name_len + 1));
-      region_address = addr - (offset - vars[i].beg);
-      region_size = vars[i].size;
+      *region_address = addr - (offset - vars[i].beg);
+      *region_size = vars[i].size;
       return;
     }
   }
@@ -108,7 +108,7 @@ const char *__asan_locate_address(uptr addr, char *name, uptr name_size,
       // region_{address,size} are already 0
     } else {
       FindInfoForStackVar(addr, stack->frame_descr, stack->offset, name,
-                          name_size, region_address, region_size);
+                          name_size, &region_address, &region_size);
     }
   } else if (auto global = descr.AsGlobal()) {
     region_kind = "global";

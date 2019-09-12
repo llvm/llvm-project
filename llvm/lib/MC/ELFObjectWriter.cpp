@@ -36,6 +36,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
@@ -336,7 +337,7 @@ public:
 } // end anonymous namespace
 
 void ELFWriter::align(unsigned Alignment) {
-  uint64_t Padding = OffsetToAlignment(W.OS.tell(), Alignment);
+  uint64_t Padding = offsetToAlignment(W.OS.tell(), llvm::Align(Alignment));
   W.OS.write_zeros(Padding);
 }
 

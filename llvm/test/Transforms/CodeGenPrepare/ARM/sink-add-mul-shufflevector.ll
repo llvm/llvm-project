@@ -45,9 +45,12 @@ define void @sink_add_mul_multiple(i32* %s1, i32* %s2, i32 %x, i32* %d, i32* %d2
 ; CHECK-NOT:  [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
 ; CHECK-NOT:  [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
-; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
+; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 %x, i32 0
 ; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:      [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:      mul nsw <4 x i32> %wide.load, [[TMP3]]
+; CHECK:      [[TMP2b:%.*]] = insertelement <4 x i32> undef, i32 %x, i32 0
+; CHECK:      [[TMP3b:%.*]] = shufflevector <4 x i32> [[TMP2b]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:      mul nsw <4 x i32> %wide.load18, [[TMP3b]]
 ;
 entry:
   %cmp13 = icmp sgt i32 %n, 0

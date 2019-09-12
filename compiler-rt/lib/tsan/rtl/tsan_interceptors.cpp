@@ -31,8 +31,7 @@
 #include "tsan_mman.h"
 #include "tsan_fd.h"
 
-
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 #if SANITIZER_FREEBSD || SANITIZER_MAC
 #define stdout __stdoutp
@@ -41,9 +40,10 @@ using namespace __tsan;  // NOLINT
 
 #if SANITIZER_NETBSD
 #define dirfd(dirp) (*(int *)(dirp))
-#define fileno_unlocked(fp) \
-  (((__sanitizer_FILE*)fp)->_file == -1 ? -1 : \
-   (int)(unsigned short)(((__sanitizer_FILE*)fp)->_file))  // NOLINT
+#define fileno_unlocked(fp)              \
+  (((__sanitizer_FILE *)fp)->_file == -1 \
+       ? -1                              \
+       : (int)(unsigned short)(((__sanitizer_FILE *)fp)->_file))
 
 #define stdout ((__sanitizer_FILE*)&__sF[1])
 #define stderr ((__sanitizer_FILE*)&__sF[2])
@@ -133,7 +133,7 @@ const int PTHREAD_BARRIER_SERIAL_THREAD = 1234567;
 const int PTHREAD_BARRIER_SERIAL_THREAD = -1;
 #endif
 const int MAP_FIXED = 0x10;
-typedef long long_t;  // NOLINT
+typedef long long_t;
 
 // From /usr/include/unistd.h
 # define F_ULOCK 0      /* Unlock a previously locked region.  */
@@ -723,12 +723,12 @@ TSAN_INTERCEPTOR(uptr, malloc_usable_size, void *p) {
 }
 #endif
 
-TSAN_INTERCEPTOR(char*, strcpy, char *dst, const char *src) {  // NOLINT
-  SCOPED_TSAN_INTERCEPTOR(strcpy, dst, src);  // NOLINT
+TSAN_INTERCEPTOR(char *, strcpy, char *dst, const char *src) {
+  SCOPED_TSAN_INTERCEPTOR(strcpy, dst, src);
   uptr srclen = internal_strlen(src);
   MemoryAccessRange(thr, pc, (uptr)dst, srclen + 1, true);
   MemoryAccessRange(thr, pc, (uptr)src, srclen + 1, false);
-  return REAL(strcpy)(dst, src);  // NOLINT
+  return REAL(strcpy)(dst, src);
 }
 
 TSAN_INTERCEPTOR(char*, strncpy, char *dst, char *src, uptr n) {
@@ -2660,7 +2660,7 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_PVALLOC;
   TSAN_INTERCEPT(posix_memalign);
 
-  TSAN_INTERCEPT(strcpy);  // NOLINT
+  TSAN_INTERCEPT(strcpy);
   TSAN_INTERCEPT(strncpy);
   TSAN_INTERCEPT(strdup);
 
