@@ -198,7 +198,7 @@ static Directory layout(BlobAllocator &File, Stream &S) {
 namespace llvm {
 namespace yaml {
 
-int yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out) {
+bool yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out) {
   BlobAllocator File;
   File.allocateObject(Obj.Header);
 
@@ -211,7 +211,7 @@ int yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out) {
     StreamDirectory[Stream.index()] = layout(File, *Stream.value());
 
   File.writeTo(Out);
-  return 0;
+  return true;
 }
 
 } // namespace yaml

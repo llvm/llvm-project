@@ -10,6 +10,7 @@ static_library("AST") {
     "//clang/include/clang/AST:CommentHTMLTags",
     "//clang/include/clang/AST:CommentHTMLTagsProperties",
     "//clang/include/clang/AST:DeclNodes",
+    "//clang/lib/AST/Interp",
     "//clang/lib/Basic",
     "//clang/lib/Lex",
     "//llvm/lib/BinaryFormat",

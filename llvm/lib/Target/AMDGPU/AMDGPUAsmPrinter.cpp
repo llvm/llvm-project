@@ -229,7 +229,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
   // alignment.
   Streamer.EmitValueToAlignment(64, 0, 1, 0);
   if (ReadOnlySection.getAlignment() < 64)
-    ReadOnlySection.setAlignment(64);
+    ReadOnlySection.setAlignment(llvm::Align(64));
 
   const MCSubtargetInfo &STI = MF->getSubtarget();
 

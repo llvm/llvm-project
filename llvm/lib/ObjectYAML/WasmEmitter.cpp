@@ -26,7 +26,7 @@ namespace {
 class WasmWriter {
 public:
   WasmWriter(WasmYAML::Object &Obj) : Obj(Obj) {}
-  int writeWasm(raw_ostream &OS);
+  bool writeWasm(raw_ostream &OS);
 
 private:
   int writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
@@ -563,7 +563,7 @@ int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
   return 0;
 }
 
-int WasmWriter::writeWasm(raw_ostream &OS) {
+bool WasmWriter::writeWasm(raw_ostream &OS) {
   // Write headers
   OS.write(wasm::WasmMagic, sizeof(wasm::WasmMagic));
   writeUint32(OS, Obj.Header.Version);
@@ -576,7 +576,7 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
       SecName = S->Name;
     if (!Checker.isValidSectionOrder(Sec->Type, SecName)) {
       errs() << "Out of order section type: " << Sec->Type << "\n";
-      return 1;
+      return false;
     }
     encodeULEB128(Sec->Type, OS);
     std::string OutString;
@@ -625,7 +625,7 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
         return Err;
     } else {
       errs() << "Unknown section type: " << Sec->Type << "\n";
-      return 1;
+      return false;
     }
     StringStream.flush();
 
@@ -652,15 +652,14 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
     OS << OutString;
   }
 
-  return 0;
+  return true;
 }
 
 namespace llvm {
 namespace yaml {
 
-int yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out) {
+bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out) {
   WasmWriter Writer(Doc);
-
   return Writer.writeWasm(Out);
 }
 
