@@ -1447,6 +1447,495 @@ or by simply a pointer to the canonical declaration (if the declarations
 are not ``Redeclarable`` -- in that case, a ``Mergeable`` base class is used
 instead).
 
+The ASTImporter
+---------------
+
+The ``ASTImporter`` class imports nodes of an ``ASTContext`` into another
+``ASTContext``. Please refer to the document :doc:`ASTImporter: Merging Clang
+ASTs <LibASTImporter>` for an introduction. And please read through the
+high-level `description of the import algorithm
+<LibASTImporter.html#algorithm-of-the-import>`_, this is essential for
+understanding further implementation details of the importer.
+
+.. _templated:
+
+Abstract Syntax Graph
+^^^^^^^^^^^^^^^^^^^^^
+
+Despite the name, the Clang AST is not a tree. It is a directed graph with
+cycles. One example of a cycle is the connection between a
+``ClassTemplateDecl`` and its "templated" ``CXXRecordDecl``. The *templated*
+``CXXRecordDecl`` represents all the fields and methods inside the class
+template, while the ``ClassTemplateDecl`` holds the information which is
+related to being a template, i.e. template arguments, etc. We can get the
+*templated* class (the ``CXXRecordDecl``) of a ``ClassTemplateDecl`` with
+``ClassTemplateDecl::getTemplatedDecl()``. And we can get back a pointer of the
+"described" class template from the *templated* class:
+``CXXRecordDecl::getDescribedTemplate()``. So, this is a cycle between two
+nodes: between the *templated* and the *described* node. There may be various
+other kinds of cycles in the AST especially in case of declarations.
+
+.. _structural-eq:
+
+Structural Equivalency
+^^^^^^^^^^^^^^^^^^^^^^
+
+Importing one AST node copies that node into the destination ``ASTContext``. To
+copy one node means that we create a new node in the "to" context then we set
+its properties to be equal to the properties of the source node. Before the
+copy, we make sure that the source node is not *structurally equivalent* to any
+existing node in the destination context. If it happens to be equivalent then
+we skip the copy.
+
+The informal definition of structural equivalency is the following:
+Two nodes are **structurally equivalent** if they are
+
+- builtin types and refer to the same type, e.g. ``int`` and ``int`` are
+  structurally equivalent,
+- function types and all their parameters have structurally equivalent types,
+- record types and all their fields in order of their definition have the same
+  identifier names and structurally equivalent types,
+- variable or function declarations and they have the same identifier name and
+  their types are structurally equivalent.
+
+In C, two types are structurally equivalent if they are *compatible types*. For
+a formal definition of *compatible types*, please refer to 6.2.7/1 in the C11
+standard. However, there is no definition for *compatible types* in the C++
+standard. Still, we extend the definition of structural equivalency to
+templates and their instantiations similarly: besides checking the previously
+mentioned properties, we have to check for equivalent template
+parameters/arguments, etc.
+
+The structural equivalent check can be and is used independently from the
+ASTImporter, e.g. the ``clang::Sema`` class uses it also.
+
+The equivalence of nodes may depend on the equivalency of other pairs of nodes.
+Thus, the check is implemented as a parallel graph traversal. We traverse
+through the nodes of both graphs at the same time. The actual implementation is
+similar to breadth-first-search. Let's say we start the traverse with the <A,B>
+pair of nodes. Whenever the traversal reaches a pair <X,Y> then the following
+statements are true:
+
+- A and X are nodes from the same ASTContext.
+- B and Y are nodes from the same ASTContext.
+- A and B may or may not be from the same ASTContext.
+- if A == X (pointer equivalency) then (there is a cycle during the traverse)
+
+  - A and B are structurally equivalent if and only if
+
+    - B and Y are part of the same redeclaration chain,
+    - All dependent nodes on the path from <A,B> to <X,Y> are structurally
+      equivalent.
+
+When we compare two classes or enums and one of them is incomplete or has
+unloaded external lexical declarations then we cannot descend to compare their
+contained declarations. So in these cases they are considered equal if they
+have the same names. This is the way how we compare forward declarations with
+definitions.
+
+.. TODO Should we elaborate the actual implementation of the graph traversal,
+.. which is a very weird BFS traversal?
+
+Redeclaration Chains
+^^^^^^^^^^^^^^^^^^^^
+
+The early version of the ``ASTImporter``'s merge mechanism squashed the
+declarations, i.e. it aimed to have only one declaration instead of maintaining
+a whole redeclaration chain. This early approach simply skipped importing a
+function prototype, but it imported a definition. To demonstrate the problem
+with this approach let's consider an empty "to" context and the following
+``virtual`` function declarations of ``f`` in the "from" context:
+
+.. code-block:: c++
+
+  struct B { virtual void f(); };
+  void B::f() {} // <-- let's import this definition
+
+If we imported the definition with the "squashing" approach then we would
+end-up having one declaration which is indeed a definition, but ``isVirtual()``
+returns ``false`` for it. The reason is that the definition is indeed not
+virtual, it is the property of the prototype!
+
+Consequently, we must either set the virtual flag for the definition (but then
+we create a malformed AST which the parser would never create), or we import
+the whole redeclaration chain of the function. The most recent version of the
+``ASTImporter`` uses the latter mechanism. We do import all function
+declarations - regardless if they are definitions or prototypes - in the order
+as they appear in the "from" context.
+
+.. Structural eq requires proper redecl chains
+
+Another reason why we must maintain and import redeclaration chains properly is
+that the :ref:`Structural Equivalency <structural-eq>` check would report false
+positive in-equivalencies otherwise. We must not allow having two (or more)
+independent redeclaration chains of structurally equivalent declarations.
+Structural equivalency identifies the chains with the canonical declaration,
+that becomes different for independent chains.
+
+.. One definition
+
+If we have an existing definition in the "to" context, then we cannot import
+another definition, we will use the existing definition. However, we can import
+prototype(s): we chain the newly imported prototype(s) to the existing
+definition. Whenever we import a new prototype from a third context, that will
+be added to the end of the redeclaration chain. This may result in long
+redeclaration chains in certain cases, e.g. if we import from several
+translation units which include the same header with the prototype.
+
+.. Squashing prototypes
+
+To mitigate the problem of long redeclaration chains of free functions, we
+could compare prototypes to see if they have the same properties and if yes
+then we could merge these prototypes. The implementation of squashing of
+prototypes for free functions is future work.
+
+.. Exception: Cannot have more than 1 prototype in-class
+
+Chaining functions this way ensures that we do copy all information from the
+source AST. Nonetheless, there is a problem with member functions: While we can
+have many prototypes for free functions, we must have only one prototype for a
+member function.
+
+.. code-block:: c++
+
+  void f(); // OK
+  void f(); // OK
+
+  struct X {
+    void f(); // OK
+    void f(); // ERROR
+  };
+  void X::f() {} // OK
+
+Thus, prototypes of member functions must be squashed, we cannot just simply
+attach a new prototype to the existing in-class prototype. Consider the
+following contexts:
+
+.. code-block:: c++
+
+  // "to" context
+  struct X {
+    void f(); // D0
+  };
+
+.. code-block:: c++
+
+  // "from" context
+  struct X {
+    void f(); // D1
+  };
+  void X::f() {} // D2
+
+When we import the prototype and the definition of ``f`` from the "from"
+context, then the resulting redecl chain will look like this ``D0 -> D2'``,
+where ``D2'`` is the copy of ``D2`` in the "to" context.
+
+.. Redecl chains of other declarations
+
+Generally speaking, when we import declarations (like enums and classes) we do
+attach the newly imported declaration to the existing redeclaration chain (if
+there is structural equivalency). We do not import, however, the whole
+redeclaration chain as we do in case of functions. Up till now, we haven't
+found any essential property of forward declarations which is similar to the
+case of the virtual flag in a member function prototype. In the future, this
+may change, though.
+
+Traversal during the Import
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The node specific import mechanisms are implemented in
+``ASTNodeImporter::VisitNode()`` functions, e.g. ``VisitFunctionDecl()``.
+When we import a declaration then first we import everything which is needed to
+call the constructor of that declaration node. Everything which can be set
+later is set after the node is created. For example, in case of  a
+``FunctionDecl`` we first import the declaration context in which the function
+is declared, then we create the ``FunctionDecl`` and only then we import the
+body of the function. This means there are implicit dependencies between AST
+nodes. These dependencies determine the order in which we visit nodes in the
+"from" context. As with the regular graph traversal algorithms like DFS, we
+keep track which nodes we have already visited in
+``ASTImporter::ImportedDecls``. Whenever we create a node then we immediately
+add that to the ``ImportedDecls``. We must not start the import of any other
+declarations before we keep track of the newly created one. This is essential,
+otherwise, we would not be able to handle circular dependencies. To enforce
+this, we wrap all constructor calls of all AST nodes in
+``GetImportedOrCreateDecl()``. This wrapper ensures that all newly created
+declarations are immediately marked as imported; also, if a declaration is
+already marked as imported then we just return its counterpart in the "to"
+context. Consequently, calling a declaration's ``::Create()`` function directly
+would lead to errors, please don't do that!
+
+Even with the use of ``GetImportedOrCreateDecl()`` there is still a
+probability of having an infinite import recursion if things are imported from
+each other in wrong way. Imagine that during the import of ``A``, the import of
+``B`` is requested before we could create the node for ``A`` (the constructor
+needs a reference to ``B``). And the same could be true for the import of ``B``
+(``A`` is requested to be imported before we could create the node for ``B``).
+In case of the :ref:`templated-described swing <templated>` we take
+extra attention to break the cyclical dependency: we import and set the
+described template only after the ``CXXRecordDecl`` is created. As a best
+practice, before creating the node in the "to" context, avoid importing of
+other nodes which are not needed for the constructor of node ``A``.
+
+Error Handling
+^^^^^^^^^^^^^^
+
+Every import function returns with either an ``llvm::Error`` or an
+``llvm::Expected<T>`` object. This enforces to check the return value of the
+import functions. If there was an error during one import then we return with
+that error. (Exception: when we import the members of a class, we collect the
+individual errors with each member and we concatenate them in one Error
+object.) We cache these errors in cases of declarations. During the next import
+call if there is an existing error we just return with that. So, clients of the
+library receive an Error object, which they must check.
+
+During import of a specific declaration, it may happen that some AST nodes had
+already been created before we recognize an error. In this case, we signal back
+the error to the caller, but the "to" context remains polluted with those nodes
+which had been created. Ideally, those nodes should not had been created, but
+that time we did not know about the error, the error happened later. Since the
+AST is immutable (most of the cases we can't remove existing nodes) we choose
+to mark these nodes as erroneous.
+
+We cache the errors associated with declarations in the "from" context in
+``ASTImporter::ImportDeclErrors`` and the ones which are associated with the
+"to" context in ``ASTImporterSharedState::ImportErrors``. Note that, there may
+be several ASTImporter objects which import into the same "to" context but from
+different "from" contexts; in this case, they have to share the associated
+errors of the "to" context.
+
+When an error happens, that propagates through the call stack, through all the
+dependant nodes. However, in case of dependency cycles, this is not enough,
+because we strive to mark the erroneous nodes so clients can act upon. In those
+cases, we have to keep track of the errors for those nodes which are
+intermediate nodes of a cycle.
+
+An **import path** is the list of the AST nodes which we visit during an Import
+call. If node ``A`` depends on node ``B`` then the path contains an ``A->B``
+edge. From the call stack of the import functions, we can read the very same
+path.
+
+Now imagine the following AST, where the ``->`` represents dependency in terms
+of the import (all nodes are declarations).
+
+.. code-block:: text
+
+  A->B->C->D
+     `->E
+
+We would like to import A.
+The import behaves like a DFS, so we will visit the nodes in this order: ABCDE.
+During the visitation we will have the following import paths:
+
+.. code-block:: text
+
+  A
+  AB
+  ABC
+  ABCD
+  ABC
+  AB
+  ABE
+  AB
+  A
+
+If during the visit of E there is an error then we set an error for E, then as
+the call stack shrinks for B, then for A:
+
+.. code-block:: text
+
+  A
+  AB
+  ABC
+  ABCD
+  ABC
+  AB
+  ABE // Error! Set an error to E
+  AB  // Set an error to B
+  A   // Set an error to A
+
+However, during the import we could import C and D without any error and they
+are independent of A,B and E. We must not set up an error for C and D. So, at
+the end of the import we have an entry in ``ImportDeclErrors`` for A,B,E but
+not for C,D.
+
+Now, what happens if there is a cycle in the import path? Let's consider this
+AST:
+
+.. code-block:: text
+
+  A->B->C->A
+     `->E
+
+During the visitation, we will have the below import paths and if during the
+visit of E there is an error then we will set up an error for E,B,A. But what's
+up with C?
+
+.. code-block:: text
+
+  A
+  AB
+  ABC
+  ABCA
+  ABC
+  AB
+  ABE // Error! Set an error to E
+  AB  // Set an error to B
+  A   // Set an error to A
+
+This time we know that both B and C are dependent on A. This means we must set
+up an error for C too. As the call stack reverses back we get to A and we must
+set up an error to all nodes which depend on A (this includes C). But C is no
+longer on the import path, it just had been previously. Such a situation can
+happen only if during the visitation we had a cycle. If we didn't have any
+cycle, then the normal way of passing an Error object through the call stack
+could handle the situation. This is why we must track cycles during the import
+process for each visited declaration.
+
+Lookup Problems
+^^^^^^^^^^^^^^^
+
+When we import a declaration from the source context then we check whether we
+already have a structurally equivalent node with the same name in the "to"
+context. If the "from" node is a definition and the found one is also a
+definition, then we do not create a new node, instead, we mark the found node
+as the imported node. If the found definition and the one we want to import
+have the same name but they are structurally in-equivalent, then we have an ODR
+violation in case of C++. If the "from" node is not a definition then we add
+that to the redeclaration chain of the found node. This behaviour is essential
+when we merge ASTs from different translation units which include the same
+header file(s). For example, we want to have only one definition for the class
+template ``std::vector``, even if we included ``<vector>`` in several
+translation units.
+
+To find a structurally equivalent node we can use the regular C/C++ lookup
+functions: ``DeclContext::noload_lookup()`` and
+``DeclContext::localUncachedLookup()``. These functions do respect the C/C++
+name hiding rules, thus you cannot find certain declarations in a given
+declaration context. For instance, unnamed declarations (anonymous structs),
+non-first ``friend`` declarations and template specializations are hidden. This
+is a problem, because if we use the regular C/C++ lookup then we create
+redundant AST nodes during the merge! Also, having two instances of the same
+node could result in false :ref:`structural in-equivalencies <structural-eq>`
+of other nodes which depend on the duplicated node. Because of these reasons,
+we created a lookup class which has the sole purpose to register all
+declarations, so later they can be looked up by subsequent import requests.
+This is the ``ASTImporterLookupTable`` class. This lookup table should be
+shared amongst the different ``ASTImporter`` instances if they happen to import
+to the very same "to" context. This is why we can use the importer specific
+lookup only via the ``ASTImporterSharedState`` class.
+
+ExternalASTSource
+~~~~~~~~~~~~~~~~~
+
+The ``ExternalASTSource`` is an abstract interface associated with the
+``ASTContext`` class. It provides the ability to read the declarations stored
+within a declaration context either for iteration or for name lookup. A
+declaration context with an external AST source may load its declarations
+on-demand. This means that the list of declarations (represented as a linked
+list, the head is ``DeclContext::FirstDecl``) could be empty. However, member
+functions like ``DeclContext::lookup()`` may initiate a load.
+
+Usually, external sources are associated with precompiled headers. For example,
+when we load a class from a PCH then the members are loaded only if we do want
+to look up something in the class' context.
+
+In case of LLDB, an implementation of the ``ExternalASTSource`` interface is
+attached to the AST context which is related to the parsed expression. This
+implementation of the ``ExternalASTSource`` interface is realized with the help
+of the ``ASTImporter`` class. This way, LLDB can reuse Clang's parsing
+machinery while synthesizing the underlying AST from the debug data (e.g. from
+DWARF). From the view of the ``ASTImporter`` this means both the "to" and the
+"from" context may have declaration contexts with external lexical storage. If
+a ``DeclContext`` in the "to" AST context has external lexical storage then we
+must take extra attention to work only with the already loaded declarations!
+Otherwise, we would end up with an uncontrolled import process. For instance,
+if we used the regular ``DeclContext::lookup()`` to find the existing
+declarations in the "to" context then the ``lookup()`` call itself would
+initiate a new import while we are in the middle of importing a declaration!
+(By the time we initiate the lookup we haven't registered yet that we already
+started to import the node of the "from" context.) This is why we use
+``DeclContext::noload_lookup()`` instead.
+
+Class Template Instantiations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Different translation units may have class template instantiations with the
+same template arguments, but with a different set of instantiated
+``MethodDecls`` and ``FieldDecls``. Consider the following files:
+
+.. code-block:: c++
+
+  // x.h
+  template <typename T>
+  struct X {
+      int a{0}; // FieldDecl with InitListExpr
+      X(char) : a(3) {}     // (1)
+      X(int) {}             // (2)
+  };
+
+  // foo.cpp
+  void foo() {
+      // ClassTemplateSpec with ctor (1): FieldDecl without InitlistExpr
+      X<char> xc('c');
+  }
+
+  // bar.cpp
+  void bar() {
+      // ClassTemplateSpec with ctor (2): FieldDecl WITH InitlistExpr
+      X<char> xc(1);
+  }
+
+In ``foo.cpp`` we use the constructor with number ``(1)``, which explicitly
+initializes the member ``a`` to ``3``, thus the ``InitListExpr`` ``{0}`` is not
+used here and the AST node is not instantiated. However, in the case of
+``bar.cpp`` we use the constructor with number ``(2)``, which does not
+explicitly initialize the ``a`` member, so the default ``InitListExpr`` is
+needed and thus instantiated. When we merge the AST of ``foo.cpp`` and
+``bar.cpp`` we must create an AST node for the class template instantiation of
+``X<char>`` which has all the required nodes. Therefore, when we find an
+existing ``ClassTemplateSpecializationDecl`` then we merge the fields of the
+``ClassTemplateSpecializationDecl`` in the "from" context in a way that the
+``InitListExpr`` is copied if not existent yet. The same merge mechanism should
+be done in the cases of instantiated default arguments and exception
+specifications of functions.
+
+.. _visibility:
+
+Visibility of Declarations
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+During import of a global variable with external visibility, the lookup will
+find variables (with the same name) but with static visibility (linkage).
+Clearly, we cannot put them into the same redeclaration chain. The same is true
+the in case of functions. Also, we have to take care of other kinds of
+declarations like enums, classes, etc. if they are in anonymous namespaces.
+Therefore, we filter the lookup results and consider only those which have the
+same visibility as the declaration we currently import.
+
+We consider two declarations in two anonymous namsepaces to have the same
+visibility only if they are imported from the same AST context.
+
+Strategies to Handle Conflicting Names
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+During the import we lookup existing declarations with the same name. We filter
+the lookup results based on their :ref:`visibility <visibility>`. If any of the
+found declarations are not structurally equivalent then we bumped to a name
+conflict error (ODR violation in C++). In this case, we return with an
+``Error`` and we set up the ``Error`` object for the declaration. However, some
+clients of the ``ASTImporter`` may require a different, perhaps less
+conservative and more liberal error handling strategy.
+
+E.g. static analysis clients may benefit if the node is created even if there
+is a name conflict. During the CTU analysis of certain projects, we recognized
+that there are global declarations which collide with declarations from other
+translation units, but they are not referenced outside from their translation
+unit. These declarations should be in an unnamed namespace ideally. If we treat
+these collisions liberally then CTU analysis can find more results. Note, the
+feature be able to choose between name conflict handling strategies is still an
+ongoing work.
+
 .. _CFG:
 
 The ``CFG`` class

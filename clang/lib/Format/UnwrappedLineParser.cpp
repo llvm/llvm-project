@@ -1440,8 +1440,11 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::identifier:
     case tok::numeric_constant:
     case tok::coloncolon:
+    case tok::kw_class:
     case tok::kw_mutable:
     case tok::kw_noexcept:
+    case tok::kw_template:
+    case tok::kw_typename:
       nextToken();
       break;
     // Specialization of a template with an integer parameter can contain
@@ -1455,6 +1458,9 @@ bool UnwrappedLineParser::tryToParseLambda() {
     // followed by an `a->b` expression, such as:
     // ([obj func:arg] + a->b)
     // Otherwise the code below would parse as a lambda.
+    //
+    // FIXME: This heuristic is incorrect for C++20 generic lambdas with
+    // explicit template lists: []<bool b = true && false>(U &&u){}
     case tok::plus:
     case tok::minus:
     case tok::exclaim:

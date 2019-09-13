@@ -4515,7 +4515,14 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
   if (!A)
     return Record.push_back(0);
   Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
+
+  Record.AddIdentifierRef(A->getAttrName());
+  Record.AddIdentifierRef(A->getScopeName());
   Record.AddSourceRange(A->getRange());
+  Record.AddSourceLocation(A->getScopeLoc());
+  Record.push_back(A->getParsedKind());
+  Record.push_back(A->getSyntax());
+  Record.push_back(A->getAttributeSpellingListIndexRaw());
 
 #include "clang/Serialization/AttrPCHWrite.inc"
 }
