@@ -336,15 +336,8 @@ void Args::ReplaceArgumentAtIndex(size_t idx, llvm::StringRef arg_str,
   if (idx >= m_entries.size())
     return;
 
-  if (arg_str.size() > m_entries[idx].ref.size()) {
-    m_entries[idx] = ArgEntry(arg_str, quote_char);
-    m_argv[idx] = m_entries[idx].data();
-  } else {
-    const char *src_data = arg_str.data() ? arg_str.data() : "";
-    ::memcpy(m_entries[idx].data(), src_data, arg_str.size());
-    m_entries[idx].ptr[arg_str.size()] = 0;
-    m_entries[idx].ref = m_entries[idx].ref.take_front(arg_str.size());
-  }
+  m_entries[idx] = ArgEntry(arg_str, quote_char);
+  m_argv[idx] = m_entries[idx].data();
 }
 
 void Args::DeleteArgumentAtIndex(size_t idx) {
