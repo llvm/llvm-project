@@ -509,8 +509,8 @@ struct _Lazy : _Func<_Args...> {};
 
 // Member detector base
 
-template <template <class...> class _Templ, class ..._Args>
-true_type __sfinae_test_impl(_FirstType<int, _Templ<_Args...> >);
+template <template <class...> class _Templ, class ..._Args, class = _Templ<_Args...>>
+true_type __sfinae_test_impl(int);
 template <template <class...> class, class ...>
 false_type __sfinae_test_impl(...);
 
