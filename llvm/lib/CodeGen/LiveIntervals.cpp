@@ -196,11 +196,7 @@ void LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
   assert(LI.empty() && "Should only compute empty intervals.");
   LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
   LRCalc->calculate(LI, MRI->shouldTrackSubRegLiveness(LI.reg));
-
-  if (computeDeadValues(LI, nullptr)) {
-    SmallVector<LiveInterval *, 4> SplitIntervals;
-    splitSeparateComponents(LI, SplitIntervals);
-  }
+  computeDeadValues(LI, nullptr);
 }
 
 void LiveIntervals::computeVirtRegs() {
@@ -504,8 +500,6 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
 bool LiveIntervals::computeDeadValues(LiveInterval &LI,
                                       SmallVectorImpl<MachineInstr*> *dead) {
   bool MayHaveSplitComponents = false;
-  bool HaveDeadDef = false;
-
   for (VNInfo *VNI : LI.valnos) {
     if (VNI->isUnused())
       continue;
@@ -536,10 +530,6 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       MachineInstr *MI = getInstructionFromIndex(Def);
       assert(MI && "No instruction defining live value");
       MI->addRegisterDead(LI.reg, TRI);
-      if (HaveDeadDef)
-        MayHaveSplitComponents = true;
-      HaveDeadDef = true;
-
       if (dead && MI->allDefsAreDead()) {
         LLVM_DEBUG(dbgs() << "All defs dead: " << Def << '\t' << *MI);
         dead->push_back(MI);

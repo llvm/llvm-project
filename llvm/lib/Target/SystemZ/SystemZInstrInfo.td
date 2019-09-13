@@ -2082,7 +2082,7 @@ let Predicates = [FeatureProcessorAssist] in {
 // cleared.  We only use the first result here.
 let Defs = [CC] in
   def FLOGR : UnaryRRE<"flogr", 0xB983, null_frag, GR128, GR64>;
-def : Pat<(ctlz GR64:$src),
+def : Pat<(i64 (ctlz GR64:$src)),
           (EXTRACT_SUBREG (FLOGR GR64:$src), subreg_h64)>;
 
 // Population count.  Counts bits set per byte or doubleword.

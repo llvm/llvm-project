@@ -222,7 +222,8 @@ BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
 /// info is updated.
 BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                        DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr);
+                       MemorySSAUpdater *MSSAU = nullptr,
+                       const Twine &BBName = "");
 
 /// This method introduces at least one new basic block into the function and
 /// moves some of the predecessors of BB to be predecessors of the new block.

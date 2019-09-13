@@ -35,6 +35,7 @@ public:
   private:
     friend class Args;
     std::unique_ptr<char[]> ptr;
+    char quote;
 
     char *data() { return ptr.get(); }
 
@@ -43,11 +44,11 @@ public:
     ArgEntry(llvm::StringRef str, char quote);
 
     llvm::StringRef ref;
-    char quote;
     const char *c_str() const { return ptr.get(); }
 
     /// Returns true if this argument was quoted in any way.
     bool IsQuoted() const { return quote != '\0'; }
+    char GetQuoteChar() const { return quote; }
   };
 
   /// Construct with an option command string.

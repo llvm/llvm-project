@@ -394,7 +394,7 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
     // If we matched a unique single command, add a space... Only do this if
     // the completer told us this was a complete word, however...
     if (lldb_matches.GetSize() == 1) {
-      char quote_char = request.GetParsedArg().quote;
+      char quote_char = request.GetParsedArg().GetQuoteChar();
       common_prefix =
           Args::EscapeLLDBCommandArgument(common_prefix, quote_char);
       if (request.GetParsedArg().IsQuoted())
