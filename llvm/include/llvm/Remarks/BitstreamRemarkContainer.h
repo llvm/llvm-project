@@ -25,7 +25,7 @@ namespace remarks {
 /// Note: this is different from the version of the remark entry.
 constexpr uint64_t CurrentContainerVersion = 0;
 /// The magic number used for identifying remark blocks.
-constexpr StringRef ContainerMagic("RMRK", 4);
+constexpr StringLiteral ContainerMagic("RMRK");
 
 /// Type of the remark container.
 /// The remark container has two modes:
