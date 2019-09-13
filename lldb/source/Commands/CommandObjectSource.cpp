@@ -734,7 +734,7 @@ public:
     // the arguments directly.
     auto iter =
         llvm::find_if(current_command_args, [](const Args::ArgEntry &e) {
-          return e.ref == "-r" || e.ref == "--reverse";
+          return e.ref() == "-r" || e.ref() == "--reverse";
         });
     if (iter == current_command_args.end())
       return m_cmd_name.c_str();

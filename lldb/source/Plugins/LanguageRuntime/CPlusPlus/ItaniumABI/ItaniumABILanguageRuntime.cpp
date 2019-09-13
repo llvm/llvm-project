@@ -349,7 +349,7 @@ protected:
     bool demangled_any = false;
     bool error_any = false;
     for (auto &entry : command.entries()) {
-      if (entry.ref.empty())
+      if (entry.ref().empty())
         continue;
 
       // the actual Mangled class should be strict about this, but on the
@@ -357,7 +357,7 @@ protected:
       // they will come out with an extra underscore - be willing to strip this
       // on behalf of the user.   This is the moral equivalent of the -_/-n
       // options to c++filt
-      auto name = entry.ref;
+      auto name = entry.ref();
       if (name.startswith("__Z"))
         name = name.drop_front();
 
@@ -366,12 +366,12 @@ protected:
         ConstString demangled(
             mangled.GetDisplayDemangledName(lldb::eLanguageTypeC_plus_plus));
         demangled_any = true;
-        result.AppendMessageWithFormat("%s ---> %s\n", entry.ref.str().c_str(),
+        result.AppendMessageWithFormat("%s ---> %s\n", entry.c_str(),
                                        demangled.GetCString());
       } else {
         error_any = true;
         result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n",
-                                     entry.ref.str().c_str());
+                                     entry.ref().str().c_str());
       }
     }
 
