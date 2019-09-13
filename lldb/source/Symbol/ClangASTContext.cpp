@@ -495,7 +495,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     Opts.OpenCL = 1;
     Opts.AltiVec = 1;
     Opts.CXXOperatorNames = 1;
-    Opts.LaxVectorConversions = 1;
+    Opts.setLaxVectorConversions(LangOptions::LaxVectorConversionKind::All);
   }
 
   // OpenCL and C++ both have bool, true, false keywords.
