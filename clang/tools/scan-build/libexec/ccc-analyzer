@@ -499,7 +499,7 @@ my $HasSDK = 0;
 foreach (my $i = 0; $i < scalar(@ARGV); ++$i) {
   my $Arg = $ARGV[$i];
   my @ArgParts = split /=/,$Arg,2;
-  my $ArgKey = @ArgParts[0];
+  my $ArgKey = $ArgParts[0];
 
   # Be friendly to "" in the argument list.
   if (!defined($ArgKey)) {
