@@ -61,7 +61,7 @@ class DpuAttachTestCase(TestBase):
         process_dpu = self.dbg.GetSelectedTarget().GetProcess()
         process_dpu.GetThreadAtIndex(0).GetFrameAtIndex(0) \
             .FindVariable("wait").SetValueFromCString("0")
-        process_dpu.Detach()
+        dpu_commands.dpu_detach(self.dbg, None, None, None)
 
         process.Continue()
         self.assertTrue(process.GetState() == lldb.eStateExited)
