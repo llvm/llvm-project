@@ -308,10 +308,14 @@ def dpu_get(rank_addr, slice_id, dpu_id, debugger, target):
 def print_list(list, result):
     if result is None:
         return
-    result.PutCString("\nADDR \t\t\tID \t\tSTATUS \t\tPROGRAM\n")
-    for (dpu_addr, dpu_id, status, program) in list:
+    result.PutCString("ADDR \t\t\tID \t\tSTATUS \t\tPROGRAM")
+    for (dpu_addr, region_id, rank_id, slice_id, dpu_id, status, program) \
+        in list:
         result.PutCString(
-            dpu_addr + " \t" + dpu_id + " \t" + status + " \t" + program)
+            "'" + str(dpu_addr) + "' \t"
+            + str(region_id) + ":" + str(rank_id) + ":"
+            + str(slice_id) + ":" + str(dpu_id)
+            + " \t" + status + " \t'" + program + "'")
 
 
 def dpu_list(debugger, command, result, internal_dict):
@@ -356,13 +360,9 @@ def dpu_list(debugger, command, result, internal_dict):
 
                 dpu_status = get_dpu_status(rank, slice_id, dpu_id)
 
-                result_list.append(("'" + dpu.GetValue() + "'",
-                                    str(region_id)
-                                    + "/" + str(rank_id)
-                                    + "/" + str(slice_id)
-                                    + "/" + str(dpu_id),
-                                    dpu_status,
-                                    "'" + program_path + "'"))
+                result_list.append((dpu.GetValue(),
+                                    region_id, rank_id, slice_id, dpu_id,
+                                    dpu_status, program_path))
 
                 dpu_id = dpu_id + 1
                 dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)

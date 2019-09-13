@@ -59,8 +59,9 @@ class DpuListTestCase(TestBase):
         process.GetSelectedThread().SetSelectedFrame(1)
         dpu_list = dpu_commands.dpu_list(self.dbg, "", None, None)
 
-        for (dpu_addr, dpu_id, dpu_status, dpu_program) in dpu_list:
+        for (dpu_addr, rank_id, region_id, slice_id, dpu_id,
+             dpu_status, dpu_program) in dpu_list:
             if dpu_status == "RUNNING":
-                self.assertTrue(dpu_program == "'" + dpu_exe + "'")
+                self.assertTrue(dpu_program == dpu_exe)
                 return
         assert False
