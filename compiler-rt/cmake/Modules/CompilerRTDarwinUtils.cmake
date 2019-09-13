@@ -112,7 +112,7 @@ function(darwin_test_archs os valid_archs)
     endif()
   endforeach()
   set(${valid_archs} ${working_archs}
-    CACHE STRING "List of valid architectures for platform ${os}.")
+    CACHE STRING "List of valid architectures for platform ${os}." FORCE)
 endfunction()
 
 # This function checks the host cpusubtype to see if it is post-haswell. Haswell
