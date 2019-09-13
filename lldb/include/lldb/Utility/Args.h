@@ -43,7 +43,7 @@ public:
     ArgEntry() = default;
     ArgEntry(llvm::StringRef str, char quote);
 
-    llvm::StringRef ref;
+    llvm::StringRef ref() const { return c_str(); }
     const char *c_str() const { return ptr.get(); }
 
     /// Returns true if this argument was quoted in any way.

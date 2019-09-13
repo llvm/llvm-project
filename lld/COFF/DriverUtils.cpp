@@ -808,13 +808,17 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 
   // We need to get the quoting style for response files before parsing all
   // options so we parse here before and ignore all the options but
-  // --rsp-quoting.
+  // --rsp-quoting and /lldignoreenv.
+  // (This means --rsp-quoting can't be added through %LINK%.)
   opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
 
-  // Expand response files (arguments in the form of @<filename>)
-  // and then parse the argument again.
+
+  // Expand response files (arguments in the form of @<filename>) and insert
+  // flags from %LINK% and %_LINK_%, and then parse the argument again.
   SmallVector<const char *, 256> expandedArgv(argv.data(),
                                               argv.data() + argv.size());
+  if (!args.hasArg(OPT_lldignoreenv))
+    addLINK(expandedArgv);
   cl::ExpandResponseFiles(saver, getQuotingStyle(args), expandedArgv);
   args = table.ParseArgs(makeArrayRef(expandedArgv).drop_front(), missingIndex,
                          missingCount);
@@ -884,7 +888,7 @@ ArgParser::parseDirectives(StringRef s) {
 // link.exe has an interesting feature. If LINK or _LINK_ environment
 // variables exist, their contents are handled as command line strings.
 // So you can pass extra arguments using them.
-opt::InputArgList ArgParser::parseLINK(std::vector<const char *> argv) {
+void ArgParser::addLINK(SmallVector<const char *, 256> &argv) {
   // Concatenate LINK env and command line arguments, and then parse them.
   if (Optional<std::string> s = Process::GetEnv("LINK")) {
     std::vector<const char *> v = tokenize(*s);
@@ -894,7 +898,6 @@ opt::InputArgList ArgParser::parseLINK(std::vector<const char *> argv) {
     std::vector<const char *> v = tokenize(*s);
     argv.insert(std::next(argv.begin()), v.begin(), v.end());
   }
-  return parse(argv);
 }
 
 std::vector<const char *> ArgParser::tokenize(StringRef s) {

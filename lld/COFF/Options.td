@@ -43,6 +43,8 @@ def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
+def lldignoreenv : F<"lldignoreenv">,
+    HelpText<"Ignore environment variables like %LIB%">;
 def lldltocache : P<"lldltocache", "Path to ThinLTO cached object file directory">;
 def lldltocachepolicy : P<"lldltocachepolicy", "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
