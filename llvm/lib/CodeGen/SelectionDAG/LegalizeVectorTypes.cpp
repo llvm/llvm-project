@@ -4772,7 +4772,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
 
   int LdWidth = LdVT.getSizeInBits();
   int WidthDiff = WidenWidth - LdWidth;
-  unsigned LdAlign = LD->isVolatile() ? 0 : Align; // Allow wider loads.
+  unsigned LdAlign = (!LD->isSimple()) ? 0 : Align; // Allow wider loads.
 
   // Find the vector type that can load from.
   EVT NewVT = FindMemType(DAG, TLI, LdWidth, WidenVT, LdAlign, WidthDiff);

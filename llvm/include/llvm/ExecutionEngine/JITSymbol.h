@@ -23,6 +23,7 @@
 #include <string>
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -217,7 +218,7 @@ private:
 /// Represents a symbol in the JIT.
 class JITSymbol {
 public:
-  using GetAddressFtor = std::function<Expected<JITTargetAddress>()>;
+  using GetAddressFtor = unique_function<Expected<JITTargetAddress>()>;
 
   /// Create a 'null' symbol, used to represent a "symbol not found"
   ///        result from a successful (non-erroneous) lookup.
@@ -325,7 +326,7 @@ class JITSymbolResolver {
 public:
   using LookupSet = std::set<StringRef>;
   using LookupResult = std::map<StringRef, JITEvaluatedSymbol>;
-  using OnResolvedFunction = std::function<void(Expected<LookupResult>)>;
+  using OnResolvedFunction = unique_function<void(Expected<LookupResult>)>;
 
   virtual ~JITSymbolResolver() = default;
 

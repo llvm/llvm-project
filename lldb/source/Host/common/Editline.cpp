@@ -949,7 +949,7 @@ unsigned char Editline::TabCommand(int ch) {
       std::string to_add = completion.GetCompletion();
       to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
       if (request.GetParsedArg().IsQuoted())
-        to_add.push_back(request.GetParsedArg().quote);
+        to_add.push_back(request.GetParsedArg().GetQuoteChar());
       to_add.push_back(' ');
       el_insertstr(m_editline, to_add.c_str());
       break;

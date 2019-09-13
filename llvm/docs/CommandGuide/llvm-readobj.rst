@@ -214,6 +214,12 @@ The following options are implemented only for the ELF file format.
 
  Display the section to segment mapping.
 
+.. option:: --stack-sizes
+
+ Display the contents of the stack sizes section(s), i.e. pairs of function
+ names and the size of their stack frames. Currently only implemented for GNU
+ style output.
+
 .. option:: --version-info, -V
 
  Display version sections.

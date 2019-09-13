@@ -378,7 +378,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
   return true;
 }
 
-bool CallLowering::analyzeCallResult(CCState &CCState,
+bool CallLowering::analyzeArgInfo(CCState &CCState,
                                      SmallVectorImpl<ArgInfo> &Args,
                                      CCAssignFn &Fn) const {
   for (unsigned i = 0, e = Args.size(); i < e; ++i) {
@@ -407,12 +407,12 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
 
   SmallVector<CCValAssign, 16> ArgLocs1;
   CCState CCInfo1(CalleeCC, false, MF, ArgLocs1, F.getContext());
-  if (!analyzeCallResult(CCInfo1, InArgs, CalleeAssignFn))
+  if (!analyzeArgInfo(CCInfo1, InArgs, CalleeAssignFn))
     return false;
 
   SmallVector<CCValAssign, 16> ArgLocs2;
   CCState CCInfo2(CallerCC, false, MF, ArgLocs2, F.getContext());
-  if (!analyzeCallResult(CCInfo2, InArgs, CallerAssignFn))
+  if (!analyzeArgInfo(CCInfo2, InArgs, CallerAssignFn))
     return false;
 
   // We need the argument locations to match up exactly. If there's more in

@@ -121,6 +121,12 @@ public:
     x |= Data1.getInt();
     return (Kind) x;
   }
+
+  void dumpToStream(llvm::raw_ostream &OS) const;
+
+  void dump() const {
+    dumpToStream(llvm::errs());
+  }
 };
 
 class CFGStmt : public CFGElement {
@@ -650,8 +656,17 @@ class CFGBlock {
     }
 
     bool operator!=(ElementRefImpl Other) const { return !(*this == Other); }
-    CFGElement operator*() { return (*Parent)[Index]; }
-    CFGElementPtr operator->() { return &*(Parent->begin() + Index); }
+    CFGElement operator*() const { return (*Parent)[Index]; }
+    CFGElementPtr operator->() const { return &*(Parent->begin() + Index); }
+
+    void dumpToStream(llvm::raw_ostream &OS) const {
+      OS << getIndexInBlock() + 1 << ": ";
+      (*this)->dumpToStream(OS);
+    }
+
+    void dump() const {
+      dumpToStream(llvm::errs());
+    }
   };
 
   template <bool IsReverse, bool IsConst> class ElementRefIterator {

@@ -1102,9 +1102,8 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
   std::thread MaterializationThread;
   ES.setDispatchMaterialization(
       [&](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
-        auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
         MaterializationThread =
-            std::thread([SharedMU, &JD]() { SharedMU->doMaterialize(JD); });
+            std::thread([MU = std::move(MU), &JD] { MU->doMaterialize(JD); });
       });
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));

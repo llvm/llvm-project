@@ -150,13 +150,14 @@ static llvm::cl::opt<ScanningMode> ScanMode(
         clEnumValN(ScanningMode::CanonicalPreprocessing, "preprocess",
                    "The set of dependencies is computed by preprocessing the "
                    "unmodified source files")),
-    llvm::cl::init(ScanningMode::MinimizedSourcePreprocessing));
+    llvm::cl::init(ScanningMode::MinimizedSourcePreprocessing),
+    llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
                llvm::cl::desc("Number of worker threads to use (default: use "
                               "all concurrent threads)"),
-               llvm::cl::init(0));
+               llvm::cl::init(0), llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<std::string>
     CompilationDB("compilation-database",

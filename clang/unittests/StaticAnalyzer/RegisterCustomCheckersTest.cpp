@@ -30,7 +30,7 @@ class TestAction : public ASTFrontendAction {
     void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                               FilesMade *filesMade) override {
       for (const auto *PD : Diags)
-        Output << PD->getCheckName() << ":" << PD->getShortDescription();
+        Output << PD->getCheckerName() << ":" << PD->getShortDescription();
     }
 
     StringRef getName() const override { return "Test"; }

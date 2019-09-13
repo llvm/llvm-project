@@ -1103,7 +1103,7 @@ namespace llvm {
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                            Type *Ty) const override;
 
-    bool reduceSelectOfFPConstantLoads(bool IsFPSetCC) const override;
+    bool reduceSelectOfFPConstantLoads(EVT CmpOpVT) const override;
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 

@@ -1507,6 +1507,31 @@ struct __is_default_allocator : false_type {};
 template <class _Tp>
 struct __is_default_allocator<_VSTD::allocator<_Tp> > : true_type {};
 
+
+
+template <class _Alloc,
+    bool = __has_construct<_Alloc, typename _Alloc::value_type*,  typename _Alloc::value_type&&>::value && !__is_default_allocator<_Alloc>::value
+    >
+struct __is_cpp17_move_insertable;
+template <class _Alloc>
+struct __is_cpp17_move_insertable<_Alloc, true> : std::true_type {};
+template <class _Alloc>
+struct __is_cpp17_move_insertable<_Alloc, false> : std::is_move_constructible<typename _Alloc::value_type> {};
+
+template <class _Alloc,
+    bool = __has_construct<_Alloc, typename _Alloc::value_type*, const typename _Alloc::value_type&>::value && !__is_default_allocator<_Alloc>::value
+    >
+struct __is_cpp17_copy_insertable;
+template <class _Alloc>
+struct __is_cpp17_copy_insertable<_Alloc, true> : __is_cpp17_move_insertable<_Alloc> {};
+template <class _Alloc>
+struct __is_cpp17_copy_insertable<_Alloc, false> : integral_constant<bool,
+    std::is_copy_constructible<typename _Alloc::value_type>::value &&
+    __is_cpp17_move_insertable<_Alloc>::value>
+  {};
+
+
+
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits
 {
@@ -1609,10 +1634,18 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         _LIBCPP_INLINE_VISIBILITY
         static
         void
-        __construct_forward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2)
+        __construct_forward_with_exception_guarantees(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2)
         {
+            static_assert(__is_cpp17_move_insertable<allocator_type>::value,
+              "The specified type does not meet the requirements of Cpp17MoveInsertible");
             for (; __begin1 != __end1; ++__begin1, (void) ++__begin2)
-                construct(__a, _VSTD::__to_raw_pointer(__begin2), _VSTD::move_if_noexcept(*__begin1));
+              construct(__a, _VSTD::__to_raw_pointer(__begin2),
+#ifdef _LIBCPP_NO_EXCEPTIONS
+                        _VSTD::move(*__begin1)
+#else
+                        _VSTD::move_if_noexcept(*__begin1)
+#endif
+                        );
         }
 
     template <class _Tp>
@@ -1625,7 +1658,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
              is_trivially_move_constructible<_Tp>::value,
             void
         >::type
-        __construct_forward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+        __construct_forward_with_exception_guarantees(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
         {
             ptrdiff_t _Np = __end1 - __begin1;
             if (_Np > 0)
@@ -1672,12 +1705,20 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         _LIBCPP_INLINE_VISIBILITY
         static
         void
-        __construct_backward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
+        __construct_backward_with_exception_guarantees(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
         {
+            static_assert(__is_cpp17_move_insertable<allocator_type>::value,
+              "The specified type does not meet the requirements of Cpp17MoveInsertable");
             while (__end1 != __begin1)
             {
-                construct(__a, _VSTD::__to_raw_pointer(__end2-1), _VSTD::move_if_noexcept(*--__end1));
-                --__end2;
+              construct(__a, _VSTD::__to_raw_pointer(__end2 - 1),
+#ifdef _LIBCPP_NO_EXCEPTIONS
+                        _VSTD::move(*--__end1)
+#else
+                        _VSTD::move_if_noexcept(*--__end1)
+#endif
+                        );
+              --__end2;
             }
         }
 
@@ -1691,7 +1732,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
              is_trivially_move_constructible<_Tp>::value,
             void
         >::type
-        __construct_backward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
+        __construct_backward_with_exception_guarantees(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
         {
             ptrdiff_t _Np = __end1 - __begin1;
             __end2 -= _Np;

@@ -114,18 +114,18 @@ define void @test_03(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[BOUND:%.*]], -2147483647
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMIN]]
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[BOUND]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP3]], i32 [[BOUND]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[SMAX]], -1
-; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[TMP4]], i32 [[SMAX]], i32 -1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMIN1]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP3]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[SMIN]], -1
+; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[TMP4]], i32 [[SMIN]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[SMAX1]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP7]], i32 [[N]], i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[SMAX2]], 0
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP8]], i32 [[SMAX2]], i32 0
+; CHECK-NEXT:    [[SMIN2:%.*]] = select i1 [[TMP7]], i32 [[N]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[SMIN2]], 0
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP8]], i32 [[SMIN2]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[LOOP_PREHEADER4:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader4:
@@ -207,11 +207,11 @@ define void @test_04(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    br i1 [[FIRST_ITR_CHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[BOUND:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[BOUND]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[BOUND]], [[SMAX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMAX]], -1
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP2]], i32 [[SMAX]], i32 -1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMIN]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP0]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[BOUND]], [[SMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMIN]], -1
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP2]], i32 [[SMIN]], i32 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP5]], i32 [[N]], i32 [[TMP4]]
@@ -402,18 +402,18 @@ define void @test_07(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[BOUND:%.*]], -2147483647
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMIN]]
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BOUND]], [[SMAX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[BOUND]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP3]], i32 [[BOUND]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[SMAX]], -1
-; CHECK-NEXT:    [[SMIN1:%.*]] = select i1 [[TMP4]], i32 [[SMAX]], i32 -1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMIN1]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP3]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[SMIN]], -1
+; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[TMP4]], i32 [[SMIN]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[SMAX1]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[N]], [[TMP6]]
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP7]], i32 [[N]], i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[SMAX2]], 0
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP8]], i32 [[SMAX2]], i32 0
+; CHECK-NEXT:    [[SMIN2:%.*]] = select i1 [[TMP7]], i32 [[N]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[SMIN2]], 0
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP8]], i32 [[SMIN2]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[LOOP_PREHEADER4:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader4:
@@ -497,11 +497,11 @@ define void @test_08(i32 *%arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    br i1 [[FIRST_ITR_CHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[BOUND:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[BOUND]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[BOUND]], [[SMAX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMAX]], -1
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP2]], i32 [[SMAX]], i32 -1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMIN]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP0]], i32 [[BOUND]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[BOUND]], [[SMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMIN]], -1
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP2]], i32 [[SMIN]], i32 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP5]], i32 [[N]], i32 [[TMP4]]

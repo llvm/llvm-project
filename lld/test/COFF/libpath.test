@@ -24,3 +24,16 @@ CHECK2: a{{[/\\]}}std64.lib
 
 CHECK3:     Reading {{.*}}a/std64.lib
 CHECK3-NOT: Reading {{.*}}b/std64.lib
+
+# RUN: env LIB=%t/a lld-link /out:%t.exe /entry:main /verbose \
+# RUN:   std64.lib /subsystem:console %p/Inputs/hello64.obj \
+# RUN:   2> %t.log
+# RUN: FileCheck -check-prefix=CHECK4 %s < %t.log
+
+CHECK4: a{{[/\\]}}std64.lib
+
+# This should fail because /lldignoreenv should make lld-link
+# ignore the LIB env var.
+# RUN: env LIB=%t/a not lld-link /out:%t.exe /entry:main /verbose \
+# RUN:   std64.lib /subsystem:console %p/Inputs/hello64.obj \
+# RUN:   /lldignoreenv

@@ -1336,9 +1336,9 @@ protected:
           Stream &ostrm = result.GetOutputStream();
           for (auto &entry : args.entries()) {
             lldb::pid_t pid;
-            if (entry.ref.getAsInteger(0, pid)) {
+            if (entry.ref().getAsInteger(0, pid)) {
               result.AppendErrorWithFormat("invalid process ID argument '%s'",
-                                           entry.ref.str().c_str());
+                                           entry.ref().str().c_str());
               result.SetStatus(eReturnStatusFailed);
               break;
             } else {

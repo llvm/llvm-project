@@ -2027,6 +2027,10 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
       continue;
 
     Instruction *Leader = UnionFind.getLeaderValue(Inst);
+    // Since previous iterations might have merged sets, some items in
+    // SeenLeaders are not leaders anymore. However, The new leader of
+    // previously merged instructions must be one of the former leaders of
+    // these merged instructions.
     bool Inserted = SeenLeaders.insert(Leader);
     if (Inserted)
       continue;
@@ -2036,10 +2040,12 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
     // see the pattern "A B A". This function joins all statements until the
     // only seen occurrence of A.
     for (Instruction *Prev : reverse(SeenLeaders)) {
-      // Items added to 'SeenLeaders' are leaders, but may have lost their
-      // leadership status when merged into another statement.
-      Instruction *PrevLeader = UnionFind.getLeaderValue(SeenLeaders.back());
-      if (PrevLeader == Leader)
+      // We are backtracking from the last element until we see Inst's leader
+      // in SeenLeaders and merge all into one set. Although leaders of
+      // instructions change during the execution of this loop, it's irrelevant
+      // as we are just searching for the element that we already confirmed is
+      // in the list.
+      if (Prev == Leader)
         break;
       UnionFind.unionSets(Prev, Leader);
     }
