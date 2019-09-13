@@ -15,6 +15,7 @@
 
 #include "llvm-c/Types.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Use.h"
 #include "llvm/Support/Alignment.h"
@@ -43,11 +44,11 @@ class GlobalVariable;
 class InlineAsm;
 class Instruction;
 class LLVMContext;
+class MDNode;
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
 template<typename ValueTy> class StringMapEntry;
-class StringRef;
 class Twine;
 class Type;
 class User;
@@ -110,12 +111,13 @@ protected:
   ///
   /// Note, this should *NOT* be used directly by any class other than User.
   /// User uses this value to find the Use list.
-  enum : unsigned { NumUserOperandsBits = 28 };
+  enum : unsigned { NumUserOperandsBits = 27 };
   unsigned NumUserOperands : NumUserOperandsBits;
 
   // Use the same type as the bitfield above so that MSVC will pack them.
   unsigned IsUsedByMD : 1;
   unsigned HasName : 1;
+  unsigned HasMetadata : 1; // Has metadata attached to this?
   unsigned HasHungOffUses : 1;
   unsigned HasDescriptor : 1;
 
@@ -550,6 +552,68 @@ public:
   /// Return true if there is metadata referencing this value.
   bool isUsedByMetadata() const { return IsUsedByMD; }
 
+protected:
+  /// Get the current metadata attachments for the given kind, if any.
+  ///
+  /// These functions require that the value have at most a single attachment
+  /// of the given kind, and return \c nullptr if such an attachment is missing.
+  /// @{
+  MDNode *getMetadata(unsigned KindID) const;
+  MDNode *getMetadata(StringRef Kind) const;
+  /// @}
+
+  /// Appends all attachments with the given ID to \c MDs in insertion order.
+  /// If the Value has no attachments with the given ID, or if ID is invalid,
+  /// leaves MDs unchanged.
+  /// @{
+  void getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const;
+  void getMetadata(StringRef Kind, SmallVectorImpl<MDNode *> &MDs) const;
+  /// @}
+
+  /// Appends all metadata attached to this value to \c MDs, sorting by
+  /// KindID. The first element of each pair returned is the KindID, the second
+  /// element is the metadata value. Attachments with the same ID appear in
+  /// insertion order.
+  void
+  getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const;
+
+  /// Return true if this value has any metadata attached to it.
+  bool hasMetadata() const { return (bool)HasMetadata; }
+
+  /// Return true if this value has the given type of metadata attached.
+  /// @{
+  bool hasMetadata(unsigned KindID) const {
+    return getMetadata(KindID) != nullptr;
+  }
+  bool hasMetadata(StringRef Kind) const {
+    return getMetadata(Kind) != nullptr;
+  }
+  /// @}
+
+  /// Set a particular kind of metadata attachment.
+  ///
+  /// Sets the given attachment to \c MD, erasing it if \c MD is \c nullptr or
+  /// replacing it if it already exists.
+  /// @{
+  void setMetadata(unsigned KindID, MDNode *Node);
+  void setMetadata(StringRef Kind, MDNode *Node);
+  /// @}
+
+  /// Add a metadata attachment.
+  /// @{
+  void addMetadata(unsigned KindID, MDNode &MD);
+  void addMetadata(StringRef Kind, MDNode &MD);
+  /// @}
+
+  /// Erase all metadata attachments with the given kind.
+  ///
+  /// \returns true if any metadata was removed.
+  bool eraseMetadata(unsigned KindID);
+
+  /// Erase all metadata attached to this Value.
+  void clearMetadata();
+
+public:
   /// Return true if this value is a swifterror value.
   ///
   /// swifterror values can be either a function argument or an alloca with a
