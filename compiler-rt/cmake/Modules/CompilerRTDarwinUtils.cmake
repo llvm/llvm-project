@@ -94,7 +94,8 @@ function(darwin_test_archs os valid_archs)
    
     set(arch_linker_flags "-arch ${arch} ${os_linker_flags}")
     if(TEST_COMPILE_ONLY)
-      try_compile_only(CAN_TARGET_${os}_${arch} FLAGS -v -arch ${arch} ${DARWIN_${os}_CFLAGS})
+      # `-w` is used to surpress compiler warnings which `try_compile_only()` treats as an error.
+      try_compile_only(CAN_TARGET_${os}_${arch} FLAGS -v -arch ${arch} ${DARWIN_${os}_CFLAGS} -w)
     else()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${arch_linker_flags}")
@@ -282,7 +283,7 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingPlatformDarwin
                       ../profile/InstrProfilingWriter)
   foreach (os ${ARGN})
-    list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_ARCHS BUILTIN_SUPPORTED_ARCH)
+    list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
     foreach (arch ${DARWIN_BUILTIN_ARCHS})
       darwin_find_excluded_builtins_list(${arch}_${os}_EXCLUDED_BUILTINS
                               OS ${os}
