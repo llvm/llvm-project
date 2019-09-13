@@ -83,11 +83,14 @@ def get_dpu_program_path(dpu):
 def get_dpu_status(rank, slice_id, dpu_id):
     run_context = rank.GetChildMemberWithName("runtime") \
                       .GetChildMemberWithName("run_context")
-    assert run_context.IsValid()
+    if not(run_context.IsValid()):
+        return "UNKNOWN"
     dpus_running = run_context.GetChildMemberWithName("dpu_running")
-    assert dpus_running.IsValid()
+    if not(dpus_running.IsValid()):
+        return "UNKNOWN"
     dpus_in_fault = run_context.GetChildMemberWithName("dpu_in_fault")
-    assert dpus_in_fault.IsValid()
+    if not(dpus_in_fault.IsValid()):
+        return "UNKNOWN"
     dpu_running = int(dpus_running.GetChildAtIndex(slice_id)
                       .GetValue())
     dpu_in_fault = int(dpus_in_fault.GetChildAtIndex(slice_id)
@@ -212,13 +215,17 @@ def dpu_attach(debugger, command, result, internal_dict):
     '''
     target = debugger.GetSelectedTarget()
     dpu = get_dpu_from_command(command, debugger, target)
-    assert dpu.IsValid()
+    if not(dpu.IsValid()):
+        print("Could not find dpu")
+        sys.exit(1)
     print("Attaching to dpu '" + dpu.GetValue() + "'")
 
     program_path = get_dpu_program_path(dpu)
 
     rank = dpu.GetChildMemberWithName("rank")
-    assert rank.IsValid()
+    if not(rank.IsValid()):
+        print("Could not find dpu rank")
+        sys.exit(1)
 
     region_id, rank_id = get_region_id_and_rank_id(rank, target)
     if region_id == -1 or rank_id == -1:
@@ -231,9 +238,13 @@ def dpu_attach(debugger, command, result, internal_dict):
     slice_info = rank.GetChildMemberWithName("runtime") \
         .GetChildMemberWithName("control_interface") \
         .GetChildMemberWithName("slice_info").GetChildAtIndex(slice_id)
-    assert slice_info.IsValid()
+    if not(slice_info.IsValid()):
+        print("Could not find dpu slice_info")
+        sys.exit(1)
     slice_target = slice_info.GetChildMemberWithName("slice_target")
-    assert slice_target.IsValid()
+    if not(slice_target.IsValid()):
+        print("Could not find dpu slice_target")
+        sys.exit(1)
 
     structure_value = slice_info.GetChildMemberWithName("structure_value") \
         .GetValueAsUnsigned()
@@ -245,7 +256,9 @@ def dpu_attach(debugger, command, result, internal_dict):
 
     pid = compute_dpu_pid(region_id, rank_id, slice_id, dpu_id)
 
-    assert set_debug_mode(debugger, rank, 1)
+    if not(set_debug_mode(debugger, rank, 1)):
+        print("Could not set dpu in debug mode")
+        sys.exit(1)
 
     lldb_server_dpu_env = os.environ.copy()
     lldb_server_dpu_env["UPMEM_LLDB_STRUCTURE_VALUE"] = str(structure_value)
@@ -260,7 +273,9 @@ def dpu_attach(debugger, command, result, internal_dict):
     target_dpu = \
         debugger.CreateTargetWithFileAndTargetTriple(program_path,
                                                      "dpu-upmem-dpurte")
-    assert target_dpu.IsValid()
+    if not(target_dpu.IsValid()):
+        print("Could not create dpu target")
+        sys.exit(1)
 
     listener = debugger.GetListener()
     error = lldb.SBError()
@@ -268,10 +283,14 @@ def dpu_attach(debugger, command, result, internal_dict):
                                            "connect://localhost:2066",
                                            "gdb-remote",
                                            error)
-    assert process_dpu.IsValid()
+    if not(process_dpu.IsValid()):
+        print("Could not connect to dpu")
+        sys.exit(1)
 
     debugger.SetSelectedTarget(target)
-    assert set_debug_mode(debugger, rank, 0)
+    if not(set_debug_mode(debugger, rank, 0)):
+        print("Could not unset dpu from debug mode")
+        sys.exit(1)
 
     debugger.SetSelectedTarget(target_dpu)
     return target_dpu
@@ -302,7 +321,9 @@ def dpu_list(debugger, command, result, internal_dict):
     success, nb_allocated_rank = \
         get_value_from_command(
             debugger, "dpu_rank_handler_dpu_rank_list_size", 10)
-    assert success
+    if not(success):
+        print("dpu_list: internal error 1")
+        sys.exit(1)
 
     target = debugger.GetSelectedTarget()
     result_list = []
@@ -312,7 +333,9 @@ def dpu_list(debugger, command, result, internal_dict):
             "dpu_rank_handler_dpu_rank_list[" + str(each_rank) + "]",
             debugger,
             target)
-        assert rank.IsValid()
+        if not(rank.IsValid()):
+            print("dpu_list: internal error 2")
+            sys.exit(1)
         rank_addr = rank.GetValue()
         if int(rank_addr, 16) == 0:
             continue
@@ -322,7 +345,9 @@ def dpu_list(debugger, command, result, internal_dict):
         slice_id = 0
         dpu_id = 0
         dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
-        assert dpu.IsValid
+        if not(dpu.IsValid):
+            print("dpu_list: internal error 3")
+            sys.exit(1)
         while int(dpu.GetValue(), 16) != 0:
             while int(dpu.GetValue(), 16) != 0:
                 program_path = get_dpu_program_path(dpu)
