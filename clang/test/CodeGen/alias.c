@@ -99,3 +99,8 @@ static int test10_foo __attribute__((alias("test10")));
 // CHECKGLOBALS-NOT: @test11_foo = dso_local
 void test11(void) {}
 static void test11_foo(void) __attribute__((alias("test11")));
+
+// Test that gnu_inline+alias work.
+// CHECKGLOBALS: @test12_alias = alias void (), void ()* @test12
+void test12(void) {}
+inline void test12_alias(void) __attribute__((gnu_inline, alias("test12")));
