@@ -731,7 +731,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
-  unsigned IntrinsicID = I.getOperand(0).getIntrinsicID();
+  unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp: {
     int64_t Tgt = getConstant(MRI.getVRegDef(I.getOperand(1).getReg()));

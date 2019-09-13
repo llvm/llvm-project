@@ -516,9 +516,9 @@ let DecoderMethod = "DecodeLoadQFP" in
   defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
                Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeLoadCP" in 
-  defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>; 
-let DecoderMethod = "DecodeLoadCPPair" in 
+let DecoderMethod = "DecodeLoadCP" in
+  defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>;
+let DecoderMethod = "DecodeLoadCPPair" in
   defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
 
 let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
@@ -1508,7 +1508,7 @@ let rs1 = 0 in
   def POPCrr : F3_1<2, 0b101110,
                     (outs IntRegs:$rd), (ins IntRegs:$rs2),
                     "popc $rs2, $rd", []>, Requires<[HasV9]>;
-def : Pat<(ctpop i32:$src),
+def : Pat<(i32 (ctpop i32:$src)),
           (POPCrr (SRLri $src, 0))>;
 
 let Predicates = [HasV9], hasSideEffects = 1, rd = 0, rs1 = 0b01111 in

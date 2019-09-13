@@ -10640,13 +10640,13 @@ multiclass avx512_unary_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
   defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                     (ins _.RC:$src1), OpcodeStr,
                     "$src1", "$src1",
-                    (_.VT (OpNode _.RC:$src1))>, EVEX, AVX5128IBase,
+                    (_.VT (OpNode (_.VT _.RC:$src1)))>, EVEX, AVX5128IBase,
                     Sched<[sched]>;
 
   defm rm : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                   (ins _.MemOp:$src1), OpcodeStr,
                   "$src1", "$src1",
-                  (_.VT (OpNode (bitconvert (_.LdFrag addr:$src1))))>,
+                  (_.VT (OpNode (_.VT (bitconvert (_.LdFrag addr:$src1)))))>,
             EVEX, AVX5128IBase, EVEX_CD8<_.EltSize, CD8VF>,
             Sched<[sched.Folded]>;
   }
@@ -10659,8 +10659,8 @@ multiclass avx512_unary_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   (ins _.ScalarMemOp:$src1), OpcodeStr,
                   "${src1}"##_.BroadcastStr,
                   "${src1}"##_.BroadcastStr,
-                  (_.VT (OpNode (X86VBroadcast
-                                    (_.ScalarLdFrag addr:$src1))))>,
+                  (_.VT (OpNode (_.VT (X86VBroadcast
+                                       (_.ScalarLdFrag addr:$src1)))))>,
              EVEX, AVX5128IBase, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
              Sched<[sched.Folded]>;
 }
@@ -10744,7 +10744,7 @@ let Predicates = [HasAVX512, NoVLX] in {
 multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
                                  AVX512VLVectorVTInfo _, Predicate prd> {
   let Predicates = [prd, NoVLX] in {
-    def : Pat<(_.info256.VT(OpNode _.info256.RC:$src1)),
+    def : Pat<(_.info256.VT (OpNode (_.info256.VT _.info256.RC:$src1))),
               (EXTRACT_SUBREG
                 (!cast<Instruction>(InstrStr # "Zrr")
                   (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
@@ -10752,7 +10752,7 @@ multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
                                  _.info256.SubRegIdx)),
               _.info256.SubRegIdx)>;
 
-    def : Pat<(_.info128.VT(OpNode _.info128.RC:$src1)),
+    def : Pat<(_.info128.VT (OpNode (_.info128.VT _.info128.RC:$src1))),
               (EXTRACT_SUBREG
                 (!cast<Instruction>(InstrStr # "Zrr")
                   (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),

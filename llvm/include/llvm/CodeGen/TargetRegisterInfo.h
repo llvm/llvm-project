@@ -680,13 +680,9 @@ public:
 
   /// Find the largest common subclass of A and B.
   /// Return NULL if there is no common subclass.
-  /// The common subclass should contain
-  /// simple value type SVT if it is not the Any type.
   const TargetRegisterClass *
   getCommonSubClass(const TargetRegisterClass *A,
-                    const TargetRegisterClass *B,
-                    const MVT::SimpleValueType SVT =
-                    MVT::SimpleValueType::Any) const;
+                    const TargetRegisterClass *B) const;
 
   /// Returns a TargetRegisterClass used for pointer values.
   /// If a target supports multiple different pointer register classes,
