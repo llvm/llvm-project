@@ -442,6 +442,15 @@ let Command = "log" in {
     Desc<"Prepend the names of files and function that generate the logs.">;
 }
 
+let Command = "reproducer" in {
+  def reproducer_provider : Option<"provider", "p">, Group<1>,
+    EnumArg<"None", "ReproducerProviderType()">,
+    Required, Desc<"The reproducer provider to dump.">;
+  def reproducer_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Desc<"The reproducer path. If a reproducer is replayed and no path is "
+    "provided, that reproducer is dumped.">;
+}
+
 let Command = "memory read" in {
   def memory_read_num_per_line : Option<"num-per-line", "l">, Group<1>,
     Arg<"NumberPerLine">, Desc<"The number of items per line to display.">;

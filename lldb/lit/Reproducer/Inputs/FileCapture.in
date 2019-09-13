@@ -1,3 +1,4 @@
 run
 reproducer status
+reproducer dump -p files
 reproducer generate
