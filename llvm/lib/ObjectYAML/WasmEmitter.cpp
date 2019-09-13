@@ -25,39 +25,46 @@ namespace {
 /// See docs/yaml2obj for the yaml scheema.
 class WasmWriter {
 public:
-  WasmWriter(WasmYAML::Object &Obj) : Obj(Obj) {}
-  int writeWasm(raw_ostream &OS);
+  WasmWriter(WasmYAML::Object &Obj, yaml::ErrorHandler EH)
+      : Obj(Obj), ErrHandler(EH) {}
+  bool writeWasm(raw_ostream &OS);
 
 private:
-  int writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
-                        uint32_t SectionIndex);
+  void writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
+                         uint32_t SectionIndex);
 
-  int writeSectionContent(raw_ostream &OS, WasmYAML::CustomSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::TypeSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::ImportSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::FunctionSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::TableSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::MemorySection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::GlobalSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::EventSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::ExportSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::StartSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::ElemSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::CodeSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::DataSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::DataCountSection &Section);
+  void writeInitExpr(raw_ostream &OS, const wasm::WasmInitExpr &InitExpr);
+
+  void writeSectionContent(raw_ostream &OS, WasmYAML::CustomSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::TypeSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::ImportSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::FunctionSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::TableSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::MemorySection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::GlobalSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::EventSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::ExportSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::StartSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::ElemSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::CodeSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::DataSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::DataCountSection &Section);
 
   // Custom section types
-  int writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
-  int writeSectionContent(raw_ostream &OS, WasmYAML::ProducersSection &Section);
-  int writeSectionContent(raw_ostream &OS,
+  void writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
+  void writeSectionContent(raw_ostream &OS, WasmYAML::ProducersSection &Section);
+  void writeSectionContent(raw_ostream &OS,
                           WasmYAML::TargetFeaturesSection &Section);
   WasmYAML::Object &Obj;
   uint32_t NumImportedFunctions = 0;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedEvents = 0;
+
+  bool HasError = false;
+  yaml::ErrorHandler ErrHandler;
+  void reportError(const Twine &Msg);
 };
 
 class SubSectionWriter {
@@ -115,7 +122,13 @@ static int writeLimits(const WasmYAML::Limits &Lim, raw_ostream &OS) {
   return 0;
 }
 
-static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
+void WasmWriter::reportError(const Twine &Msg) {
+  ErrHandler(Msg);
+  HasError = true;
+}
+
+void WasmWriter::writeInitExpr(raw_ostream &OS,
+                               const wasm::WasmInitExpr &InitExpr) {
   writeUint8(OS, InitExpr.Opcode);
   switch (InitExpr.Opcode) {
   case wasm::WASM_OPCODE_I32_CONST:
@@ -134,29 +147,26 @@ static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
     encodeULEB128(InitExpr.Value.Global, OS);
     break;
   default:
-    errs() << "Unknown opcode in init_expr: " << InitExpr.Opcode << "\n";
-    return 1;
+    reportError("unknown opcode in init_expr: " + Twine(InitExpr.Opcode));
+    return;
   }
   writeUint8(OS, wasm::WASM_OPCODE_END);
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::DylinkSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::DylinkSection &Section) {
   writeStringRef(Section.Name, OS);
   encodeULEB128(Section.MemorySize, OS);
   encodeULEB128(Section.MemoryAlignment, OS);
   encodeULEB128(Section.TableSize, OS);
   encodeULEB128(Section.TableAlignment, OS);
   encodeULEB128(Section.Needed.size(), OS);
-  for (StringRef Needed : Section.Needed) {
+  for (StringRef Needed : Section.Needed)
     writeStringRef(Needed, OS);
-  }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::LinkingSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::LinkingSection &Section) {
   writeStringRef(Section.Name, OS);
   encodeULEB128(Section.Version, OS);
 
@@ -240,12 +250,10 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     }
     SubSection.done();
   }
-
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::NameSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::NameSection &Section) {
   writeStringRef(Section.Name, OS);
   if (Section.FunctionNames.size()) {
     writeUint8(OS, wasm::WASM_NAMES_FUNCTION);
@@ -260,16 +268,15 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 
     SubSection.done();
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::ProducersSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::ProducersSection &Section) {
   writeStringRef(Section.Name, OS);
   int Fields = int(!Section.Languages.empty()) + int(!Section.Tools.empty()) +
                int(!Section.SDKs.empty());
   if (Fields == 0)
-    return 0;
+    return;
   encodeULEB128(Fields, OS);
   for (auto &Field : {std::make_pair(StringRef("language"), &Section.Languages),
                       std::make_pair(StringRef("processed-by"), &Section.Tools),
@@ -283,52 +290,44 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       writeStringRef(Entry.Version, OS);
     }
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::TargetFeaturesSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::TargetFeaturesSection &Section) {
   writeStringRef(Section.Name, OS);
   encodeULEB128(Section.Features.size(), OS);
   for (auto &E : Section.Features) {
     writeUint8(OS, E.Prefix);
     writeStringRef(E.Name, OS);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::CustomSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::CustomSection &Section) {
   if (auto S = dyn_cast<WasmYAML::DylinkSection>(&Section)) {
-    if (auto Err = writeSectionContent(OS, *S))
-      return Err;
+    writeSectionContent(OS, *S);
   } else if (auto S = dyn_cast<WasmYAML::NameSection>(&Section)) {
-    if (auto Err = writeSectionContent(OS, *S))
-      return Err;
+    writeSectionContent(OS, *S);
   } else if (auto S = dyn_cast<WasmYAML::LinkingSection>(&Section)) {
-    if (auto Err = writeSectionContent(OS, *S))
-      return Err;
+    writeSectionContent(OS, *S);
   } else if (auto S = dyn_cast<WasmYAML::ProducersSection>(&Section)) {
-    if (auto Err = writeSectionContent(OS, *S))
-      return Err;
+    writeSectionContent(OS, *S);
   } else if (auto S = dyn_cast<WasmYAML::TargetFeaturesSection>(&Section)) {
-    if (auto Err = writeSectionContent(OS, *S))
-      return Err;
+    writeSectionContent(OS, *S);
   } else {
     writeStringRef(Section.Name, OS);
     Section.Payload.writeAsBinary(OS);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
+void WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::TypeSection &Section) {
   encodeULEB128(Section.Signatures.size(), OS);
   uint32_t ExpectedIndex = 0;
   for (const WasmYAML::Signature &Sig : Section.Signatures) {
     if (Sig.Index != ExpectedIndex) {
-      errs() << "Unexpected type index: " << Sig.Index << "\n";
-      return 1;
+      reportError("unexpected type index: " + Twine(Sig.Index));
+      return;
     }
     ++ExpectedIndex;
     writeUint8(OS, Sig.Form);
@@ -342,10 +341,9 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       writeUint8(OS, Sig.ReturnType);
     }
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
+void WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::ImportSection &Section) {
   encodeULEB128(Section.Imports.size(), OS);
   for (const WasmYAML::Import &Import : Section.Imports) {
@@ -375,23 +373,20 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       writeLimits(Import.TableImport.TableLimits, OS);
       break;
     default:
-      errs() << "Unknown import type: " << Import.Kind << "\n";
-      return 1;
+      reportError("unknown import type: " +Twine(Import.Kind));
+      return;
     }
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::FunctionSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::FunctionSection &Section) {
   encodeULEB128(Section.FunctionTypes.size(), OS);
-  for (uint32_t FuncType : Section.FunctionTypes) {
+  for (uint32_t FuncType : Section.FunctionTypes)
     encodeULEB128(FuncType, OS);
-  }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
+void WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::ExportSection &Section) {
   encodeULEB128(Section.Exports.size(), OS);
   for (const WasmYAML::Export &Export : Section.Exports) {
@@ -399,83 +394,74 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     writeUint8(OS, Export.Kind);
     encodeULEB128(Export.Index, OS);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::StartSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::StartSection &Section) {
   encodeULEB128(Section.StartFunction, OS);
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::TableSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::TableSection &Section) {
   encodeULEB128(Section.Tables.size(), OS);
   for (auto &Table : Section.Tables) {
     writeUint8(OS, Table.ElemType);
     writeLimits(Table.TableLimits, OS);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::MemorySection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::MemorySection &Section) {
   encodeULEB128(Section.Memories.size(), OS);
-  for (const WasmYAML::Limits &Mem : Section.Memories) {
+  for (const WasmYAML::Limits &Mem : Section.Memories)
     writeLimits(Mem, OS);
-  }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::GlobalSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::GlobalSection &Section) {
   encodeULEB128(Section.Globals.size(), OS);
   uint32_t ExpectedIndex = NumImportedGlobals;
   for (auto &Global : Section.Globals) {
     if (Global.Index != ExpectedIndex) {
-      errs() << "Unexpected global index: " << Global.Index << "\n";
-      return 1;
+      reportError("unexpected global index: " + Twine(Global.Index));
+      return;
     }
     ++ExpectedIndex;
     writeUint8(OS, Global.Type);
     writeUint8(OS, Global.Mutable);
-    writeInitExpr(Global.InitExpr, OS);
+    writeInitExpr(OS, Global.InitExpr);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
+void WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::EventSection &Section) {
   encodeULEB128(Section.Events.size(), OS);
   uint32_t ExpectedIndex = NumImportedEvents;
   for (auto &Event : Section.Events) {
     if (Event.Index != ExpectedIndex) {
-      errs() << "Unexpected event index: " << Event.Index << "\n";
-      return 1;
+      reportError("unexpected event index: " + Twine(Event.Index));
+      return;
     }
     ++ExpectedIndex;
     encodeULEB128(Event.Attribute, OS);
     encodeULEB128(Event.SigIndex, OS);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::ElemSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::ElemSection &Section) {
   encodeULEB128(Section.Segments.size(), OS);
   for (auto &Segment : Section.Segments) {
     encodeULEB128(Segment.TableIndex, OS);
-    writeInitExpr(Segment.Offset, OS);
+    writeInitExpr(OS, Segment.Offset);
 
     encodeULEB128(Segment.Functions.size(), OS);
-    for (auto &Function : Segment.Functions) {
+    for (auto &Function : Segment.Functions)
       encodeULEB128(Function, OS);
-    }
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
+void WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CodeSection &Section) {
   encodeULEB128(Section.Functions.size(), OS);
   uint32_t ExpectedIndex = NumImportedFunctions;
@@ -483,8 +469,8 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     std::string OutString;
     raw_string_ostream StringStream(OutString);
     if (Func.Index != ExpectedIndex) {
-      errs() << "Unexpected function index: " << Func.Index << "\n";
-      return 1;
+      reportError("unexpected function index: " + Twine(Func.Index));
+      return;
     }
     ++ExpectedIndex;
 
@@ -501,31 +487,28 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::DataSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::DataSection &Section) {
   encodeULEB128(Section.Segments.size(), OS);
   for (auto &Segment : Section.Segments) {
     encodeULEB128(Segment.InitFlags, OS);
     if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
       encodeULEB128(Segment.MemoryIndex, OS);
     if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0)
-      writeInitExpr(Segment.Offset, OS);
+      writeInitExpr(OS, Segment.Offset);
     encodeULEB128(Segment.Content.binary_size(), OS);
     Segment.Content.writeAsBinary(OS);
   }
-  return 0;
 }
 
-int WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::DataCountSection &Section) {
+void WasmWriter::writeSectionContent(raw_ostream &OS,
+                                     WasmYAML::DataCountSection &Section) {
   encodeULEB128(Section.Count, OS);
-  return 0;
 }
 
-int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
+void WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
                                   uint32_t SectionIndex) {
   switch (Sec.Type) {
   case wasm::WASM_SEC_CODE:
@@ -541,7 +524,6 @@ int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
   }
   default:
     llvm_unreachable("not yet implemented");
-    return 1;
   }
 
   encodeULEB128(SectionIndex, OS);
@@ -560,10 +542,9 @@ int WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
       encodeULEB128(Reloc.Addend, OS);
     }
   }
-  return 0;
 }
 
-int WasmWriter::writeWasm(raw_ostream &OS) {
+bool WasmWriter::writeWasm(raw_ostream &OS) {
   // Write headers
   OS.write(wasm::WasmMagic, sizeof(wasm::WasmMagic));
   writeUint32(OS, Obj.Header.Version);
@@ -575,58 +556,46 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
     if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get()))
       SecName = S->Name;
     if (!Checker.isValidSectionOrder(Sec->Type, SecName)) {
-      errs() << "Out of order section type: " << Sec->Type << "\n";
-      return 1;
+      reportError("out of order section type: " + Twine(Sec->Type));
+      return false;
     }
     encodeULEB128(Sec->Type, OS);
     std::string OutString;
     raw_string_ostream StringStream(OutString);
-    if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::TypeSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::ImportSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::FunctionSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::TableSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::MemorySection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::GlobalSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::EventSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::ExportSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::StartSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::ElemSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::CodeSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::DataSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else if (auto S = dyn_cast<WasmYAML::DataCountSection>(Sec.get())) {
-      if (auto Err = writeSectionContent(StringStream, *S))
-        return Err;
-    } else {
-      errs() << "Unknown section type: " << Sec->Type << "\n";
-      return 1;
-    }
+    if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::TypeSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::ImportSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::FunctionSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::TableSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::MemorySection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::GlobalSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::EventSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::ExportSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::StartSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::ElemSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::CodeSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::DataSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else if (auto S = dyn_cast<WasmYAML::DataCountSection>(Sec.get()))
+      writeSectionContent(StringStream, *S);
+    else
+      reportError("unknown section type: " + Twine(Sec->Type));
+
+    if (HasError)
+      return false;
+
     StringStream.flush();
 
     // Write the section size followed by the content
@@ -652,15 +621,14 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
     OS << OutString;
   }
 
-  return 0;
+  return true;
 }
 
 namespace llvm {
 namespace yaml {
 
-int yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out) {
-  WasmWriter Writer(Doc);
-
+bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH) {
+  WasmWriter Writer(Doc, EH);
   return Writer.writeWasm(Out);
 }
 

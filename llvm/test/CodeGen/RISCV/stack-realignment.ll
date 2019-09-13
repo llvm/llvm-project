@@ -348,38 +348,38 @@ define void @caller1024() nounwind {
 ; RV64I-LABEL: caller1024:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1024
+; RV64I-NEXT:    addiw a0, a0, -1024
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1032
+; RV64I-NEXT:    addiw a0, a0, -1032
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    sd ra, 0(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1040
+; RV64I-NEXT:    addiw a0, a0, -1040
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    sd s0, 0(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1024
+; RV64I-NEXT:    addiw a0, a0, -1024
 ; RV64I-NEXT:    add s0, sp, a0
 ; RV64I-NEXT:    andi sp, sp, -1024
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addiw a0, a0, -2048
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1024
+; RV64I-NEXT:    addiw a0, a0, -1024
 ; RV64I-NEXT:    sub sp, s0, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1040
+; RV64I-NEXT:    addiw a0, a0, -1040
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    ld s0, 0(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1032
+; RV64I-NEXT:    addiw a0, a0, -1032
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    ld ra, 0(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1024
+; RV64I-NEXT:    addiw a0, a0, -1024
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 1024
@@ -431,7 +431,6 @@ define void @caller2048() nounwind {
 ; RV32I-NEXT:    add s0, sp, a0
 ; RV32I-NEXT:    andi sp, sp, -2048
 ; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    add a0, sp, a0
 ; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    call callee
@@ -454,38 +453,37 @@ define void @caller2048() nounwind {
 ; RV64I-LABEL: caller2048:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addiw a0, a0, -2048
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, 2040
+; RV64I-NEXT:    addiw a0, a0, 2040
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    sd ra, 0(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, 2032
+; RV64I-NEXT:    addiw a0, a0, 2032
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    sd s0, 0(a0)
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addiw a0, a0, -2048
 ; RV64I-NEXT:    add s0, sp, a0
 ; RV64I-NEXT:    andi sp, sp, -2048
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addiw a0, a0, -2048
 ; RV64I-NEXT:    sub sp, s0, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, 2032
+; RV64I-NEXT:    addiw a0, a0, 2032
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    ld s0, 0(a0)
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, 2040
+; RV64I-NEXT:    addiw a0, a0, 2040
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    ld ra, 0(a0)
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addi a0, a0, -2048
+; RV64I-NEXT:    addiw a0, a0, -2048
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 2048
@@ -522,7 +520,6 @@ define void @caller4096() nounwind {
 ; RV32I-LABEL: caller4096:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 3
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    lui a0, 3
 ; RV32I-NEXT:    addi a0, a0, -4
@@ -533,17 +530,14 @@ define void @caller4096() nounwind {
 ; RV32I-NEXT:    add a0, sp, a0
 ; RV32I-NEXT:    sw s0, 0(a0)
 ; RV32I-NEXT:    lui a0, 3
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    add s0, sp, a0
 ; RV32I-NEXT:    srli a0, sp, 12
 ; RV32I-NEXT:    slli sp, a0, 12
 ; RV32I-NEXT:    lui a0, 2
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    add a0, sp, a0
 ; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    lui a0, 3
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    sub sp, s0, a0
 ; RV32I-NEXT:    lui a0, 3
 ; RV32I-NEXT:    addi a0, a0, -8
@@ -554,46 +548,40 @@ define void @caller4096() nounwind {
 ; RV32I-NEXT:    add a0, sp, a0
 ; RV32I-NEXT:    lw ra, 0(a0)
 ; RV32I-NEXT:    lui a0, 3
-; RV32I-NEXT:    mv a0, a0
 ; RV32I-NEXT:    add sp, sp, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: caller4096:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    addi a0, a0, -8
+; RV64I-NEXT:    addiw a0, a0, -8
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    sd ra, 0(a0)
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    addi a0, a0, -16
+; RV64I-NEXT:    addiw a0, a0, -16
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    sd s0, 0(a0)
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    add s0, sp, a0
 ; RV64I-NEXT:    srli a0, sp, 12
 ; RV64I-NEXT:    slli sp, a0, 12
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    sub sp, s0, a0
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    addi a0, a0, -16
+; RV64I-NEXT:    addiw a0, a0, -16
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    ld s0, 0(a0)
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    addi a0, a0, -8
+; RV64I-NEXT:    addiw a0, a0, -8
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    ld ra, 0(a0)
 ; RV64I-NEXT:    lui a0, 3
-; RV64I-NEXT:    mv a0, a0
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    ret
   %1 = alloca i8, align 4096

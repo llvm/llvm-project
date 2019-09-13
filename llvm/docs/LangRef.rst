@@ -3521,7 +3521,7 @@ resulting assembly string is parsed by LLVM's integrated assembler unless it is
 disabled -- even when emitting a ``.s`` file -- and thus must contain assembly
 syntax known to LLVM.
 
-LLVM also supports a few more substitions useful for writing inline assembly:
+LLVM also supports a few more substitutions useful for writing inline assembly:
 
 - ``${:uid}``: Expands to a decimal integer unique to this inline assembly blob.
   This substitution is useful when declaring a local label. Many standard
@@ -6518,7 +6518,7 @@ Where each VFuncId has the format:
     vFuncId: (TypeIdRef, offset: 16)
 
 Where each ``TypeIdRef`` refers to a :ref:`type id<typeid_summary>`
-by summary id or ``GUID`` preceeded by a ``guid:`` tag.
+by summary id or ``GUID`` preceded by a ``guid:`` tag.
 
 TypeCheckedLoadVCalls
 """""""""""""""""""""
@@ -11364,7 +11364,7 @@ privileges.
 The default behavior is to emit a call to ``__clear_cache`` from the run
 time library.
 
-This instrinsic does *not* empty the instruction pipeline. Modifications
+This intrinsic does *not* empty the instruction pipeline. Modifications
 of the current function are outside the scope of the intrinsic.
 
 '``llvm.instrprof.increment``' Intrinsic
@@ -11439,7 +11439,7 @@ The last argument specifies the value of the increment of the counter variable.
 
 Semantics:
 """"""""""
-See description of '``llvm.instrprof.increment``' instrinsic.
+See description of '``llvm.instrprof.increment``' intrinsic.
 
 
 '``llvm.instrprof.value.profile``' Intrinsic

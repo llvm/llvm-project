@@ -269,6 +269,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
 
     // Vector reductions
     setOperationAction(ISD::VECREDUCE_ADD, VT, Legal);
+    setOperationAction(ISD::VECREDUCE_SMAX, VT, Legal);
+    setOperationAction(ISD::VECREDUCE_UMAX, VT, Legal);
+    setOperationAction(ISD::VECREDUCE_SMIN, VT, Legal);
+    setOperationAction(ISD::VECREDUCE_UMIN, VT, Legal);
 
     if (!HasMVEFP) {
       setOperationAction(ISD::SINT_TO_FP, VT, Expand);

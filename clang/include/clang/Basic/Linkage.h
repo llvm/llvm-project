@@ -82,6 +82,12 @@ inline bool isDiscardableGVALinkage(GVALinkage L) {
   return L <= GVA_DiscardableODR;
 }
 
+/// Do we know that this will be the only definition of this symbol (excluding
+/// inlining-only definitions)?
+inline bool isUniqueGVALinkage(GVALinkage L) {
+  return L == GVA_Internal || L == GVA_StrongExternal;
+}
+
 inline bool isExternallyVisible(Linkage L) {
   return L >= VisibleNoLinkage;
 }

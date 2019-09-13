@@ -44,7 +44,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   const size_t argc = args.GetArgumentCount();
 
   if (argc == 1) {
-    auto search_word = args[0].ref;
+    auto search_word = args[0].ref();
     if (!search_word.empty()) {
       // The bulk of the work must be done inside the Command Interpreter,
       // since the command dictionary is private.
@@ -79,7 +79,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         const bool dump_qualified_name = true;
         result.AppendMessageWithFormatv(
             "\nThe following settings variables may relate to '{0}': \n\n",
-            args[0].ref);
+            args[0].ref());
         for (size_t i = 0; i < num_properties; ++i)
           properties[i]->DumpDescription(
               m_interpreter, result.GetOutputStream(), 0, dump_qualified_name);

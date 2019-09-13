@@ -160,14 +160,11 @@ define fp128 @TestI128_1(fp128 %x) #0 {
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0
 ; AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm1
 ; AVX-NEXT:    callq __lttf2
+; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testl %eax, %eax
-; AVX-NEXT:    js .LBB2_1
-; AVX-NEXT:  # %bb.2: # %entry
-; AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    retq
-; AVX-NEXT:  .LBB2_1:
-; AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; AVX-NEXT:    sets %cl
+; AVX-NEXT:    shlq $4, %rcx
+; AVX-NEXT:    vmovaps {{\.LCPI.*}}(%rcx), %xmm0
 ; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    retq
 entry:

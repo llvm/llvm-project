@@ -12923,6 +12923,10 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  return 1; //\n"
                "};");
 
+  // Lambdas with explicit template argument lists.
+  verifyFormat(
+      "auto L = []<template <typename> class T, class U>(T<U> &&a) {};\n");
+
   // Multiple lambdas in the same parentheses change indentation rules. These
   // lambdas are forced to start on new lines.
   verifyFormat("SomeFunction(\n"
@@ -12940,8 +12944,8 @@ TEST_F(FormatTest, FormatsLambdas) {
                "    },\n"
                "    1);\n");
 
-  // A multi-line lambda passed as arg1 forces arg0 to be pushed out, just like the arg0
-  // case above.
+  // A multi-line lambda passed as arg1 forces arg0 to be pushed out, just like
+  // the arg0 case above.
   auto Style = getGoogleStyle();
   Style.BinPackArguments = false;
   verifyFormat("SomeFunction(\n"

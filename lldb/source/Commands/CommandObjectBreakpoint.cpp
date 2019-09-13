@@ -1707,7 +1707,7 @@ protected:
     // Make a pass through first to see that all the names are legal.
     for (auto &entry : command.entries()) {
       Status error;
-      if (!BreakpointID::StringIsBreakpointName(entry.ref, error))
+      if (!BreakpointID::StringIsBreakpointName(entry.ref(), error))
       {
         result.AppendErrorWithFormat("Invalid breakpoint name: %s - %s",
                                      entry.c_str(), error.AsCString());

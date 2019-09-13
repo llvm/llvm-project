@@ -156,12 +156,11 @@ body: |
     ; WAVE64: S_ENDPGM 0, implicit [[XOR]](s16)
     ; WAVE32-LABEL: name: xor_s16_vgpr_vgpr_vgpr
     ; WAVE32: liveins: $vgpr0, $vgpr1
-    ; WAVE32: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; WAVE32: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; WAVE32: [[TRUNC1:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; WAVE32: [[XOR:%[0-9]+]]:vgpr(s16) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; WAVE32: S_ENDPGM 0, implicit [[XOR]](s16)
+    ; WAVE32: $vcc_hi = IMPLICIT_DEF
+    ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; WAVE32: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; WAVE32: S_ENDPGM 0, implicit [[V_XOR_B32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0

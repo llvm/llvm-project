@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple s390x-linux-gnu -fzvector -target-cpu z14 \
-// RUN:  -fno-lax-vector-conversions -W -Wall -Wconversion \
+// RUN:  -flax-vector-conversions=none -W -Wall -Wconversion \
 // RUN:  -Werror -fsyntax-only -verify %s
 
 vector signed char sc, sc2;

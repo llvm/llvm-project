@@ -634,6 +634,11 @@ def lshl_rev : PatFrag <
   (shl $src0, $src1)
 >;
 
+def add_ctpop : PatFrag <
+  (ops node:$src0, node:$src1),
+  (add (ctpop $src0), $src1)
+>;
+
 multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
                             SDTypeProfile tc = SDTAtomic2,
                             bit IsInt = 1> {

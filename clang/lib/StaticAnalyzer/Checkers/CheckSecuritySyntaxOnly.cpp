@@ -50,19 +50,19 @@ struct ChecksFilter {
   DefaultBool check_FloatLoopCounter;
   DefaultBool check_UncheckedReturn;
 
-  CheckName checkName_bcmp;
-  CheckName checkName_bcopy;
-  CheckName checkName_bzero;
-  CheckName checkName_gets;
-  CheckName checkName_getpw;
-  CheckName checkName_mktemp;
-  CheckName checkName_mkstemp;
-  CheckName checkName_strcpy;
-  CheckName checkName_DeprecatedOrUnsafeBufferHandling;
-  CheckName checkName_rand;
-  CheckName checkName_vfork;
-  CheckName checkName_FloatLoopCounter;
-  CheckName checkName_UncheckedReturn;
+  CheckerNameRef checkName_bcmp;
+  CheckerNameRef checkName_bcopy;
+  CheckerNameRef checkName_bzero;
+  CheckerNameRef checkName_gets;
+  CheckerNameRef checkName_getpw;
+  CheckerNameRef checkName_mktemp;
+  CheckerNameRef checkName_mkstemp;
+  CheckerNameRef checkName_strcpy;
+  CheckerNameRef checkName_DeprecatedOrUnsafeBufferHandling;
+  CheckerNameRef checkName_rand;
+  CheckerNameRef checkName_vfork;
+  CheckerNameRef checkName_FloatLoopCounter;
+  CheckerNameRef checkName_UncheckedReturn;
 };
 
 class WalkAST : public StmtVisitor<WalkAST> {
@@ -1015,14 +1015,12 @@ bool ento::shouldRegisterSecuritySyntaxChecker(const LangOptions &LO) {
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    SecuritySyntaxChecker *checker =  mgr.getChecker<SecuritySyntaxChecker>(); \
+    SecuritySyntaxChecker *checker = mgr.getChecker<SecuritySyntaxChecker>();  \
     checker->filter.check_##name = true;                                       \
-    checker->filter.checkName_##name = mgr.getCurrentCheckName();              \
+    checker->filter.checkName_##name = mgr.getCurrentCheckerName();            \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
 REGISTER_CHECKER(bcmp)
 REGISTER_CHECKER(bcopy)

@@ -25,10 +25,10 @@ let Predicates = [FeatureNoVectorEnhancements1] in
 let Predicates = [FeatureVectorEnhancements1] in
   def SelectVR128 : SelectWrapper<f128, VR128>;
 
-defm CondStoreF32 : CondStores<FP32, nonvolatile_store,
-                               nonvolatile_load, bdxaddr20only>;
-defm CondStoreF64 : CondStores<FP64, nonvolatile_store,
-                               nonvolatile_load, bdxaddr20only>;
+defm CondStoreF32 : CondStores<FP32, simple_store,
+                               simple_load, bdxaddr20only>;
+defm CondStoreF64 : CondStores<FP64, simple_store,
+                               simple_load, bdxaddr20only>;
 
 //===----------------------------------------------------------------------===//
 // Move instructions

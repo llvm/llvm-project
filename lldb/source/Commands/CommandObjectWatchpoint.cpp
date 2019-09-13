@@ -89,12 +89,12 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
   // Go through the arguments and make a canonical form of arg list containing
   // only numbers with possible "-" in between.
   for (auto &entry : args.entries()) {
-    if ((idx = WithRSAIndex(entry.ref)) == -1) {
-      StrRefArgs.push_back(entry.ref);
+    if ((idx = WithRSAIndex(entry.ref())) == -1) {
+      StrRefArgs.push_back(entry.ref());
       continue;
     }
     // The Arg contains the range specifier, split it, then.
-    std::tie(first, second) = entry.ref.split(RSA[idx]);
+    std::tie(first, second) = entry.ref().split(RSA[idx]);
     if (!first.empty())
       StrRefArgs.push_back(first);
     StrRefArgs.push_back(Minus);

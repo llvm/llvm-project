@@ -57,7 +57,7 @@ protected:
 
     Status error;
 
-    FileSpec dylib_fspec(command[0].ref);
+    FileSpec dylib_fspec(command[0].ref());
     FileSystem::Instance().Resolve(dylib_fspec);
 
     if (GetDebugger().LoadPlugin(dylib_fspec, error))

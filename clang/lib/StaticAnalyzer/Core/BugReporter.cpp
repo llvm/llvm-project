@@ -1312,7 +1312,7 @@ static std::unique_ptr<PathDiagnostic>
 generateDiagnosticForBasicReport(const BasicBugReport *R) {
   const BugType &BT = R->getBugType();
   return std::make_unique<PathDiagnostic>(
-      BT.getCheckName(), R->getDeclWithIssue(), BT.getName(),
+      BT.getCheckerName(), R->getDeclWithIssue(), BT.getDescription(),
       R->getDescription(), R->getShortDescription(/*UseFallback=*/false),
       BT.getCategory(), R->getUniqueingLocation(), R->getUniqueingDecl(),
       std::make_unique<FilesToLineNumsMap>());
@@ -1323,7 +1323,7 @@ generateEmptyDiagnosticForReport(const PathSensitiveBugReport *R,
                                  const SourceManager &SM) {
   const BugType &BT = R->getBugType();
   return std::make_unique<PathDiagnostic>(
-      BT.getCheckName(), R->getDeclWithIssue(), BT.getName(),
+      BT.getCheckerName(), R->getDeclWithIssue(), BT.getDescription(),
       R->getDescription(), R->getShortDescription(/*UseFallback=*/false),
       BT.getCategory(), R->getUniqueingLocation(), R->getUniqueingDecl(),
       findExecutedLines(SM, R->getErrorNode()));
@@ -3235,12 +3235,12 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
                                   PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
-  EmitBasicReport(DeclWithIssue, Checker->getCheckName(), Name, Category, Str,
+  EmitBasicReport(DeclWithIssue, Checker->getCheckerName(), Name, Category, Str,
                   Loc, Ranges, Fixits);
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
-                                  CheckName CheckName,
+                                  CheckerNameRef CheckName,
                                   StringRef name, StringRef category,
                                   StringRef str, PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
@@ -3256,8 +3256,8 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
   emitReport(std::move(R));
 }
 
-BugType *BugReporter::getBugTypeForName(CheckName CheckName, StringRef name,
-                                        StringRef category) {
+BugType *BugReporter::getBugTypeForName(CheckerNameRef CheckName,
+                                        StringRef name, StringRef category) {
   SmallString<136> fullDesc;
   llvm::raw_svector_ostream(fullDesc) << CheckName.getName() << ":" << name
                                       << ":" << category;

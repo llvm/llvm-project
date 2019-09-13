@@ -111,18 +111,18 @@ Status OptionValueDictionary::SetArgs(const Args &args,
       return error;
     }
     for (const auto &entry : args) {
-      if (entry.ref.empty()) {
+      if (entry.ref().empty()) {
         error.SetErrorString("empty argument");
         return error;
       }
-      if (!entry.ref.contains('=')) {
+      if (!entry.ref().contains('=')) {
         error.SetErrorString(
             "assign operation takes one or more key=value arguments");
         return error;
       }
 
       llvm::StringRef key, value;
-      std::tie(key, value) = entry.ref.split('=');
+      std::tie(key, value) = entry.ref().split('=');
       bool key_valid = false;
       if (key.empty()) {
         error.SetErrorString("empty dictionary key");

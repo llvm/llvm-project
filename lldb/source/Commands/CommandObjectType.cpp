@@ -80,9 +80,9 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
     return false;
 
   for (auto entry : llvm::enumerate(command.entries().drop_back())) {
-    if (entry.value().ref != "unsigned")
+    if (entry.value().ref() != "unsigned")
       continue;
-    auto next = command.entries()[entry.index() + 1].ref;
+    auto next = command.entries()[entry.index() + 1].ref();
     if (next == "int" || next == "short" || next == "char" || next == "long") {
       result.AppendWarningWithFormat(
           "unsigned %s being treated as two types. if you meant the combined "
@@ -679,15 +679,15 @@ protected:
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
     for (auto &arg_entry : command.entries()) {
-      if (arg_entry.ref.empty()) {
+      if (arg_entry.ref().empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
-      ConstString typeCS(arg_entry.ref);
+      ConstString typeCS(arg_entry.ref());
       if (m_command_options.m_regex) {
-        RegularExpression typeRX(arg_entry.ref);
+        RegularExpression typeRX(arg_entry.ref());
         if (!typeRX.IsValid()) {
           result.AppendError(
               "regex format error (maybe this is not really a regex?)");
@@ -1328,13 +1328,13 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
                              m_options.m_name, m_options.m_category);
 
     for (auto &entry : command.entries()) {
-      if (entry.ref.empty()) {
+      if (entry.ref().empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
-      options->m_target_types << entry.ref;
+      options->m_target_types << entry.ref();
     }
 
     m_interpreter.GetPythonCommandsFromIOHandler(
@@ -1355,7 +1355,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
 
   for (auto &entry : command.entries()) {
     CommandObjectTypeSummaryAdd::AddSummary(
-        ConstString(entry.ref), script_format,
+        ConstString(entry.ref()), script_format,
         (m_options.m_regex ? eRegexSummary : eRegularSummary),
         m_options.m_category, &error);
     if (error.Fail()) {
@@ -1428,12 +1428,12 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
   // now I have a valid format, let's add it to every type
   Status error;
   for (auto &arg_entry : command.entries()) {
-    if (arg_entry.ref.empty()) {
+    if (arg_entry.ref().empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
-    ConstString typeCS(arg_entry.ref);
+    ConstString typeCS(arg_entry.ref());
 
     AddSummary(typeCS, entry,
                (m_options.m_regex ? eRegexSummary : eRegularSummary),
@@ -1786,7 +1786,7 @@ protected:
 
     for (auto &entry : command.entries()) {
       TypeCategoryImplSP category_sp;
-      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref),
+      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref()),
                                                      category_sp) &&
           category_sp) {
         category_sp->AddLanguage(m_options.m_cate_language.GetCurrentValue());
@@ -2228,13 +2228,13 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
       m_options.m_cascade, m_options.m_regex, m_options.m_category);
 
   for (auto &entry : command.entries()) {
-    if (entry.ref.empty()) {
+    if (entry.ref().empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    options->m_target_types << entry.ref;
+    options->m_target_types << entry.ref();
   }
 
   m_interpreter.GetPythonCommandsFromIOHandler(
@@ -2293,13 +2293,13 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   Status error;
 
   for (auto &arg_entry : command.entries()) {
-    if (arg_entry.ref.empty()) {
+    if (arg_entry.ref().empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    ConstString typeCS(arg_entry.ref);
+    ConstString typeCS(arg_entry.ref());
     if (!AddSynth(typeCS, entry,
                   m_options.m_regex ? eRegexSynth : eRegularSynth,
                   m_options.m_category, &error)) {
@@ -2594,13 +2594,13 @@ protected:
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
     for (auto &arg_entry : command.entries()) {
-      if (arg_entry.ref.empty()) {
+      if (arg_entry.ref().empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
-      ConstString typeCS(arg_entry.ref);
+      ConstString typeCS(arg_entry.ref());
       if (!AddFilter(typeCS, entry,
                      m_options.m_regex ? eRegexFilter : eRegularFilter,
                      m_options.m_category, &error)) {

@@ -840,7 +840,7 @@ public:
         std::vector<Thread *> resume_threads;
         for (auto &entry : command.entries()) {
           uint32_t thread_idx;
-          if (entry.ref.getAsInteger(0, thread_idx)) {
+          if (entry.ref().getAsInteger(0, thread_idx)) {
             result.AppendErrorWithFormat(
                 "invalid thread index argument: \"%s\".\n", entry.c_str());
             result.SetStatus(eReturnStatusFailed);

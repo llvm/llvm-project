@@ -50,8 +50,8 @@ BUILTIN(__builtin_altivec_vavguw, "V4UiV4UiV4Ui", "")
 
 BUILTIN(__builtin_altivec_vrfip, "V4fV4f", "")
 
-BUILTIN(__builtin_altivec_vcfsx, "V4fV4iIi", "")
-BUILTIN(__builtin_altivec_vcfux, "V4fV4iIi", "")
+BUILTIN(__builtin_altivec_vcfsx, "V4fV4SiIi", "")
+BUILTIN(__builtin_altivec_vcfux, "V4fV4UiIi", "")
 BUILTIN(__builtin_altivec_vctsxs, "V4SiV4fIi", "")
 BUILTIN(__builtin_altivec_vctuxs, "V4UiV4fIi", "")
 

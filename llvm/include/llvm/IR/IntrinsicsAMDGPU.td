@@ -186,7 +186,7 @@ def int_amdgcn_init_exec : Intrinsic<[],
 def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [llvm_i32_ty,       // 32-bit SGPR input
    llvm_i32_ty],      // bit offset of the thread count
-  [IntrConvergent]>;
+  [IntrConvergent, ImmArg<1>]>;
 
 def int_amdgcn_wavefrontsize :
   GCCBuiltin<"__builtin_amdgcn_wavefrontsize">,

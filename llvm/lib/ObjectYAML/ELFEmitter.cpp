@@ -115,12 +115,13 @@ template <class ELFT> class ELFState {
   ELFYAML::Object &Doc;
 
   bool HasError = false;
+  yaml::ErrorHandler ErrHandler;
+  void reportError(const Twine &Msg);
 
   std::vector<Elf_Sym> toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
                                     const StringTableBuilder &Strtab);
   unsigned toSectionIndex(StringRef S, StringRef LocSec, StringRef LocSym = "");
   unsigned toSymbolIndex(StringRef S, StringRef LocSec, bool IsDynamic);
-  void reportError(const Twine &Msg);
 
   void buildSectionIndex();
   void buildSymbolIndexes();
@@ -166,9 +167,11 @@ template <class ELFT> class ELFState {
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::DynamicSection &Section,
                            ContiguousBlobAccumulator &CBA);
-  ELFState(ELFYAML::Object &D);
+  ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH);
+
 public:
-  static int writeELF(raw_ostream &OS, ELFYAML::Object &Doc);
+  static bool writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
+                       yaml::ErrorHandler EH);
 };
 } // end anonymous namespace
 
@@ -182,7 +185,9 @@ template <class T> static void writeArrayData(raw_ostream &OS, ArrayRef<T> A) {
 
 template <class T> static void zero(T &Obj) { memset(&Obj, 0, sizeof(Obj)); }
 
-template <class ELFT> ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
+template <class ELFT>
+ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
+    : Doc(D), ErrHandler(EH) {
   StringSet<> DocSections;
   for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections)
     if (!D->Name.empty())
@@ -592,7 +597,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 }
 
 template <class ELFT> void ELFState<ELFT>::reportError(const Twine &Msg) {
-  WithColor::error() << Msg << "\n";
+  ErrHandler(Msg);
   HasError = true;
 }
 
@@ -983,8 +988,9 @@ template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
 }
 
 template <class ELFT>
-int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
-  ELFState<ELFT> State(Doc);
+bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
+                              yaml::ErrorHandler EH) {
+  ELFState<ELFT> State(Doc, EH);
 
   // Finalize .strtab and .dynstr sections. We do that early because want to
   // finalize the string table builders before writing the content of the
@@ -1010,29 +1016,29 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
   if (State.HasError)
-    return 1;
+    return false;
 
   State.writeELFHeader(CBA, OS);
   writeArrayData(OS, makeArrayRef(PHeaders));
   CBA.writeBlobToStream(OS);
   writeArrayData(OS, makeArrayRef(SHeaders));
-  return 0;
+  return true;
 }
 
 namespace llvm {
 namespace yaml {
 
-int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
+bool yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH) {
   bool IsLE = Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
   bool Is64Bit = Doc.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
   if (Is64Bit) {
     if (IsLE)
-      return ELFState<object::ELF64LE>::writeELF(Out, Doc);
-    return ELFState<object::ELF64BE>::writeELF(Out, Doc);
+      return ELFState<object::ELF64LE>::writeELF(Out, Doc, EH);
+    return ELFState<object::ELF64BE>::writeELF(Out, Doc, EH);
   }
   if (IsLE)
-    return ELFState<object::ELF32LE>::writeELF(Out, Doc);
-  return ELFState<object::ELF32BE>::writeELF(Out, Doc);
+    return ELFState<object::ELF32LE>::writeELF(Out, Doc, EH);
+  return ELFState<object::ELF32BE>::writeELF(Out, Doc, EH);
 }
 
 } // namespace yaml

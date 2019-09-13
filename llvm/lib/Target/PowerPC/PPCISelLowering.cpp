@@ -145,7 +145,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   addRegisterClass(MVT::i32, &PPC::GPRCRegClass);
   if (!useSoftFloat()) {
     if (hasSPE()) {
-      addRegisterClass(MVT::f32, &PPC::SPE4RCRegClass);
+      addRegisterClass(MVT::f32, &PPC::GPRCRegClass);
       addRegisterClass(MVT::f64, &PPC::SPERCRegClass);
     } else {
       addRegisterClass(MVT::f32, &PPC::F4RCRegClass);
@@ -3482,7 +3482,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
           if (Subtarget.hasP8Vector())
             RC = &PPC::VSSRCRegClass;
           else if (Subtarget.hasSPE())
-            RC = &PPC::SPE4RCRegClass;
+            RC = &PPC::GPRCRegClass;
           else
             RC = &PPC::F4RCRegClass;
           break;
@@ -14166,7 +14166,7 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'f':
       if (Subtarget.hasSPE()) {
         if (VT == MVT::f32 || VT == MVT::i32)
-          return std::make_pair(0U, &PPC::SPE4RCRegClass);
+          return std::make_pair(0U, &PPC::GPRCRegClass);
         if (VT == MVT::f64 || VT == MVT::i64)
           return std::make_pair(0U, &PPC::SPERCRegClass);
       } else {

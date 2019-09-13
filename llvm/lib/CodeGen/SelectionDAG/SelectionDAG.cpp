@@ -8973,7 +8973,7 @@ bool SDValue::reachesChainWithoutSideEffects(SDValue Dest,
 
   // Loads don't have side effects, look through them.
   if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(*this)) {
-    if (!Ld->isVolatile())
+    if (Ld->isUnordered())
       return Ld->getChain().reachesChainWithoutSideEffects(Dest, Depth-1);
   }
   return false;
@@ -9210,6 +9210,9 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
                                                   unsigned Bytes,
                                                   int Dist) const {
   if (LD->isVolatile() || Base->isVolatile())
+    return false;
+  // TODO: probably too restrictive for atomics, revisit
+  if (!LD->isSimple())
     return false;
   if (LD->isIndexed() || Base->isIndexed())
     return false;

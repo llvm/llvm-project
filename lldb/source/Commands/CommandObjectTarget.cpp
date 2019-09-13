@@ -625,7 +625,7 @@ protected:
 
       for (auto &entry : args.entries()) {
         uint32_t target_idx;
-        if (entry.ref.getAsInteger(0, target_idx)) {
+        if (entry.ref().getAsInteger(0, target_idx)) {
           result.AppendErrorWithFormat("invalid target index '%s'\n",
                                        entry.c_str());
           result.SetStatus(eReturnStatusFailed);
@@ -2550,10 +2550,10 @@ protected:
       }
     } else {
       for (auto &entry : args.entries()) {
-        if (entry.ref.empty())
+        if (entry.ref().empty())
           continue;
 
-        FileSpec file_spec(entry.ref);
+        FileSpec file_spec(entry.ref());
         if (FileSystem::Instance().Exists(file_spec)) {
           ModuleSpec module_spec(file_spec);
           if (m_uuid_option_group.GetOptionValue().OptionWasSet())
@@ -2583,10 +2583,10 @@ protected:
         } else {
           std::string resolved_path = file_spec.GetPath();
           result.SetStatus(eReturnStatusFailed);
-          if (resolved_path != entry.ref) {
+          if (resolved_path != entry.ref()) {
             result.AppendErrorWithFormat(
                 "invalid module path '%s' with resolved path '%s'\n",
-                entry.ref.str().c_str(), resolved_path.c_str());
+                entry.ref().str().c_str(), resolved_path.c_str());
             break;
           }
           result.AppendErrorWithFormat("invalid module path '%s'\n",
@@ -4303,9 +4303,9 @@ protected:
         PlatformSP platform_sp(target->GetPlatform());
 
         for (auto &entry : args.entries()) {
-          if (!entry.ref.empty()) {
+          if (!entry.ref().empty()) {
             auto &symbol_file_spec = module_spec.GetSymbolFileSpec();
-            symbol_file_spec.SetFile(entry.ref, FileSpec::Style::native);
+            symbol_file_spec.SetFile(entry.ref(), FileSpec::Style::native);
             FileSystem::Instance().Resolve(symbol_file_spec);
             if (file_option_set) {
               module_spec.GetFileSpec() =
@@ -4329,7 +4329,7 @@ protected:
             } else {
               std::string resolved_symfile_path =
                   module_spec.GetSymbolFileSpec().GetPath();
-              if (resolved_symfile_path != entry.ref) {
+              if (resolved_symfile_path != entry.ref()) {
                 result.AppendErrorWithFormat(
                     "invalid module path '%s' with resolved path '%s'\n",
                     entry.c_str(), resolved_symfile_path.c_str());

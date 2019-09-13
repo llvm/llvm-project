@@ -65,7 +65,7 @@ cl::opt<bool>
 cl::opt<bool>
     ELFCommons("common",
                cl::desc("Print common symbols in the ELF file.  When using "
-                        "Berkely format, this is added to bss."),
+                        "Berkeley format, this is added to bss."),
                cl::init(false), cl::cat(SizeCat));
 
 static cl::list<std::string>
@@ -844,7 +844,7 @@ static void printFileSectionSizes(StringRef file) {
     outs() << "\n";
 }
 
-static void printBerkelyTotals() {
+static void printBerkeleyTotals() {
   std::string fmtbuf;
   raw_string_ostream fmt(fmtbuf);
   const char *radix_fmt = getRadixFmt();
@@ -889,7 +889,7 @@ int main(int argc, char **argv) {
   MoreThanOneFile = InputFilenames.size() > 1;
   llvm::for_each(InputFilenames, printFileSectionSizes);
   if (OutputFormat == berkeley && TotalSizes)
-    printBerkelyTotals();
+    printBerkeleyTotals();
 
   if (HadError)
     return 1;

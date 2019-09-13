@@ -1,7 +1,16 @@
+import("//clang/utils/TableGen/clang_tablegen.gni")
+
+clang_tablegen("Opcodes") {
+  visibility = [ ":AST" ]
+  args = [ "-gen-clang-opcodes" ]
+  td_file = "Interp/Opcodes.td"
+}
+
 static_library("AST") {
   output_name = "clangAST"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opcodes",
     "//clang/include/clang/AST:AttrImpl",
     "//clang/include/clang/AST:AttrNodeTraverse",
     "//clang/include/clang/AST:AttrTextNodeDump",
@@ -64,6 +73,27 @@ static_library("AST") {
     "ExternalASTSource.cpp",
     "FormatString.cpp",
     "InheritViz.cpp",
+    "Interp/Block.cpp",
+    "Interp/ByteCodeEmitter.cpp",
+    "Interp/ByteCodeExprGen.cpp",
+    "Interp/ByteCodeGenError.cpp",
+    "Interp/ByteCodeStmtGen.cpp",
+    "Interp/Context.cpp",
+    "Interp/Descriptor.cpp",
+    "Interp/Disasm.cpp",
+    "Interp/EvalEmitter.cpp",
+    "Interp/Frame.cpp",
+    "Interp/Function.cpp",
+    "Interp/Interp.cpp",
+    "Interp/InterpFrame.cpp",
+    "Interp/InterpStack.cpp",
+    "Interp/InterpState.cpp",
+    "Interp/Pointer.cpp",
+    "Interp/PrimType.cpp",
+    "Interp/Program.cpp",
+    "Interp/Record.cpp",
+    "Interp/Source.cpp",
+    "Interp/State.cpp",
     "ItaniumCXXABI.cpp",
     "ItaniumMangle.cpp",
     "JSONNodeDumper.cpp",
