@@ -13,7 +13,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 
-#include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -59,6 +58,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanBase.h"
+#include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
@@ -5593,7 +5593,7 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
   if (iter != m_resolved_indirect_addresses.end()) {
     function_addr = (*iter).second;
   } else {
-    if (!InferiorCall(this, address, function_addr)) {
+    if (!CallVoidArgVoidPtrReturn(address, function_addr)) {
       Symbol *symbol = address->CalculateSymbolContextSymbol();
       error.SetErrorStringWithFormat(
           "Unable to call resolver for indirect function %s",
@@ -5968,4 +5968,59 @@ UtilityFunction *Process::GetLoadImageUtilityFunction(
   llvm::call_once(m_dlopen_utility_func_flag_once,
                   [&] { m_dlopen_utility_func_up = factory(); });
   return m_dlopen_utility_func_up.get();
+}
+
+bool Process::CallVoidArgVoidPtrReturn(const Address *address,
+                                       addr_t &returned_func,
+                                       bool trap_exceptions) {
+  Thread *thread = GetThreadList().GetExpressionExecutionThread().get();
+  if (thread == nullptr || address == nullptr)
+    return false;
+
+  EvaluateExpressionOptions options;
+  options.SetStopOthers(true);
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetTryAllThreads(true);
+  options.SetDebug(false);
+  options.SetTimeout(GetUtilityExpressionTimeout());
+  options.SetTrapExceptions(trap_exceptions);
+
+  auto type_system_or_err =
+      GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return false;
+  }
+  CompilerType void_ptr_type =
+      type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
+  lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(
+      *thread, *address, void_ptr_type, llvm::ArrayRef<addr_t>(), options));
+  if (call_plan_sp) {
+    DiagnosticManager diagnostics;
+
+    StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
+    if (frame) {
+      ExecutionContext exe_ctx;
+      frame->CalculateExecutionContext(exe_ctx);
+      ExpressionResults result =
+          RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
+      if (result == eExpressionCompleted) {
+        returned_func =
+            call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
+                LLDB_INVALID_ADDRESS);
+
+        if (GetAddressByteSize() == 4) {
+          if (returned_func == UINT32_MAX)
+            return false;
+        } else if (GetAddressByteSize() == 8) {
+          if (returned_func == UINT64_MAX)
+            return false;
+        }
+        return true;
+      }
+    }
+  }
+
+  return false;
 }

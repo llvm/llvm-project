@@ -71,6 +71,9 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
 :doc:`SubsystemDocumentation`
   For API clients and LLVM developers.
 
+:doc:`ReferenceDocumentation`
+  LLVM and API reference documentation.
+
 Community
 =========
 

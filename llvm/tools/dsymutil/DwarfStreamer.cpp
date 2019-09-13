@@ -260,7 +260,7 @@ void DwarfStreamer::emitAppleTypes(
 /// Emit the swift_ast section stored in \p Buffers.
 void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
-  SwiftASTSection->setAlignment(1 << 5);
+  SwiftASTSection->setAlignment(llvm::Align(32));
   MS->SwitchSection(SwiftASTSection);
   MS->EmitBytes(Buffer);
 }

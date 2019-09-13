@@ -4898,8 +4898,8 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
     return true;
   }
 
-  // Do not change the width of a volatile load.
-  if (LoadN->isVolatile())
+  // Do not change the width of a volatile or atomic loads.
+  if (!LoadN->isSimple())
     return false;
 
   // Do not generate loads of non-round integer types since these can
@@ -4931,8 +4931,8 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
   if (!MemVT.isRound())
     return false;
 
-  // Don't change the width of a volatile load.
-  if (LDST->isVolatile())
+  // Don't change the width of a volatile or atomic loads.
+  if (!LDST->isSimple())
     return false;
 
   // Verify that we are actually reducing a load width here.
@@ -5519,7 +5519,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     unsigned MemBitSize = MemVT.getScalarSizeInBits();
     APInt ExtBits = APInt::getHighBitsSet(ExtBitSize, ExtBitSize - MemBitSize);
     if (DAG.MaskedValueIsZero(N1, ExtBits) &&
-        ((!LegalOperations && !LN0->isVolatile()) ||
+        ((!LegalOperations && LN0->isSimple()) ||
          TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT))) {
       SDValue ExtLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT, LN0->getChain(),
@@ -6613,7 +6613,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                                  Depth + 1);
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
-    if (L->isVolatile() || L->isIndexed())
+    if (!L->isSimple() || L->isIndexed())
       return None;
 
     unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
@@ -6702,8 +6702,9 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
   SDValue Chain;
   SmallVector<StoreSDNode *, 8> Stores;
   for (StoreSDNode *Store = N; Store; Store = dyn_cast<StoreSDNode>(Chain)) {
+    // TODO: Allow unordered atomics when wider type is legal (see D66309)
     if (Store->getMemoryVT() != MVT::i8 ||
-        Store->isVolatile() || Store->isIndexed())
+        !Store->isSimple() || Store->isIndexed())
       return SDValue();
     Stores.push_back(Store);
     Chain = Store->getChain();
@@ -6914,7 +6915,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       return SDValue();
 
     LoadSDNode *L = P->Load;
-    assert(L->hasNUsesOfValue(1, 0) && !L->isVolatile() && !L->isIndexed() &&
+    assert(L->hasNUsesOfValue(1, 0) && L->isSimple() &&
+           !L->isIndexed() &&
            "Must be enforced by calculateByteProvider");
     assert(L->getOffset().isUndef() && "Unindexed load must have undef offset");
 
@@ -9244,8 +9246,9 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
 
   if (!ISD::isNON_EXTLoad(LN0) || !ISD::isUNINDEXEDLoad(LN0) ||
-      !N0.hasOneUse() || LN0->isVolatile() || !DstVT.isVector() ||
-      !DstVT.isPow2VectorType() || !TLI.isVectorLoadExtDesirable(SDValue(N, 0)))
+      !N0.hasOneUse() || !LN0->isSimple() ||
+      !DstVT.isVector() || !DstVT.isPow2VectorType() ||
+      !TLI.isVectorLoadExtDesirable(SDValue(N, 0)))
     return SDValue();
 
   SmallVector<SDNode *, 4> SetCCs;
@@ -9446,7 +9449,8 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
 
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
   EVT MemVT = LN0->getMemoryVT();
-  if ((LegalOperations || LN0->isVolatile() || VT.isVector()) &&
+  if ((LegalOperations || !LN0->isSimple() ||
+       VT.isVector()) &&
       !TLI.isLoadExtLegal(ExtLoadType, VT, MemVT))
     return SDValue();
 
@@ -9471,7 +9475,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   if (!ISD::isNON_EXTLoad(N0.getNode()) ||
       !ISD::isUNINDEXEDLoad(N0.getNode()) ||
       ((LegalOperations || VT.isVector() ||
-        cast<LoadSDNode>(N0)->isVolatile()) &&
+        !cast<LoadSDNode>(N0)->isSimple()) &&
        !TLI.isLoadExtLegal(ExtLoadType, VT, N0.getValueType())))
     return {};
 
@@ -10547,7 +10551,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   if (ISD::isEXTLoad(N0.getNode()) &&
       ISD::isUNINDEXEDLoad(N0.getNode()) &&
       EVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
-      ((!LegalOperations && !cast<LoadSDNode>(N0)->isVolatile() &&
+      ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple() &&
         N0.hasOneUse()) ||
        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, EVT))) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
@@ -10564,7 +10568,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   if (ISD::isZEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
       N0.hasOneUse() &&
       EVT == cast<LoadSDNode>(N0)->getMemoryVT() &&
-      ((!LegalOperations && !cast<LoadSDNode>(N0)->isVolatile()) ||
+      ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple()) &&
        TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, EVT))) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
     SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, SDLoc(N), VT,
@@ -10791,7 +10795,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     // after truncation.
     if (N0.hasOneUse() && ISD::isUNINDEXEDLoad(N0.getNode())) {
       LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      if (!LN0->isVolatile() &&
+      if (LN0->isSimple() &&
           LN0->getMemoryVT().getStoreSizeInBits() < VT.getSizeInBits()) {
         SDValue NewLoad = DAG.getExtLoad(LN0->getExtensionType(), SDLoc(LN0),
                                          VT, LN0->getChain(), LN0->getBasePtr(),
@@ -11085,7 +11089,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       // memory accesses. We don't care if the original type was legal or not
       // as we assume software couldn't rely on the number of accesses of an
       // illegal type.
-      ((!LegalOperations && !cast<LoadSDNode>(N0)->isVolatile()) ||
+      ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple()) ||
        TLI.isOperationLegal(ISD::LOAD, VT))) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
 
@@ -14013,11 +14017,12 @@ bool DAGCombiner::extendLoadedValueToExtension(LoadSDNode *LD, SDValue &Val) {
 }
 
 SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
-  if (OptLevel == CodeGenOpt::None || LD->isVolatile())
+  if (OptLevel == CodeGenOpt::None || !LD->isSimple())
     return SDValue();
   SDValue Chain = LD->getOperand(0);
   StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain.getNode());
-  if (!ST || ST->isVolatile())
+  // TODO: Relax this restriction for unordered atomics (see D66309)
+  if (!ST || !ST->isSimple())
     return SDValue();
 
   EVT LDType = LD->getValueType(0);
@@ -14116,7 +14121,8 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
   // If load is not volatile and there are no uses of the loaded value (and
   // the updated indexed value in case of indexed loads), change uses of the
   // chain value into uses of the chain input (i.e. delete the dead load).
-  if (!LD->isVolatile()) {
+  // TODO: Allow this for unordered atomics (see D66309)
+  if (LD->isSimple()) {
     if (N->getValueType(1) == MVT::Other) {
       // Unindexed loads.
       if (!N->hasAnyUseOfValue(0)) {
@@ -14687,7 +14693,7 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
     return false;
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
-  if (LD->isVolatile() || !ISD::isNormalLoad(LD) ||
+  if (!LD->isSimple() || !ISD::isNormalLoad(LD) ||
       !LD->getValueType(0).isInteger())
     return false;
 
@@ -14918,7 +14924,7 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
 /// or code size.
 SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
   StoreSDNode *ST  = cast<StoreSDNode>(N);
-  if (ST->isVolatile())
+  if (!ST->isSimple())
     return SDValue();
 
   SDValue Chain = ST->getChain();
@@ -15374,14 +15380,16 @@ void DAGCombiner::getStoreMergeCandidates(
     // Loads must only have one use.
     if (!Ld->hasNUsesOfValue(1, 0))
       return;
-    // The memory operands must not be volatile/indexed.
-    if (Ld->isVolatile() || Ld->isIndexed())
+    // The memory operands must not be volatile/indexed/atomic.
+    // TODO: May be able to relax for unordered atomics (see D66309)
+    if (!Ld->isSimple() || Ld->isIndexed())
       return;
   }
   auto CandidateMatch = [&](StoreSDNode *Other, BaseIndexOffset &Ptr,
                             int64_t &Offset) -> bool {
-    // The memory operands must not be volatile/indexed.
-    if (Other->isVolatile() || Other->isIndexed())
+    // The memory operands must not be volatile/indexed/atomic.
+    // TODO: May be able to relax for unordered atomics (see D66309)
+    if (!Other->isSimple() ||  Other->isIndexed())
       return false;
     // Don't mix temporal stores with non-temporal stores.
     if (St->isNonTemporal() != Other->isNonTemporal())
@@ -15401,8 +15409,10 @@ void DAGCombiner::getStoreMergeCandidates(
         // Loads must only have one use.
         if (!OtherLd->hasNUsesOfValue(1, 0))
           return false;
-        // The memory operands must not be volatile/indexed.
-        if (OtherLd->isVolatile() || OtherLd->isIndexed())
+        // The memory operands must not be volatile/indexed/atomic.
+        // TODO: May be able to relax for unordered atomics (see D66309)
+        if (!OtherLd->isSimple() ||
+            OtherLd->isIndexed())
           return false;
         // Don't mix temporal loads with non-temporal loads.
         if (cast<LoadSDNode>(Val)->isNonTemporal() != OtherLd->isNonTemporal())
@@ -16145,7 +16155,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   case MVT::ppcf128:
     return SDValue();
   case MVT::f32:
-    if ((isTypeLegal(MVT::i32) && !LegalOperations && !ST->isVolatile()) ||
+    if ((isTypeLegal(MVT::i32) && !LegalOperations && ST->isSimple()) ||
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i32)) {
       ;
       Tmp = DAG.getConstant((uint32_t)CFP->getValueAPF().
@@ -16157,7 +16167,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
     return SDValue();
   case MVT::f64:
     if ((TLI.isTypeLegal(MVT::i64) && !LegalOperations &&
-         !ST->isVolatile()) ||
+         ST->isSimple()) ||
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i64)) {
       ;
       Tmp = DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().
@@ -16166,7 +16176,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
                           Ptr, ST->getMemOperand());
     }
 
-    if (!ST->isVolatile() &&
+    if (ST->isSimple() &&
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i32)) {
       // Many FP stores are not made apparent until after legalize, e.g. for
       // argument passing.  Since this is so common, custom legalize the
@@ -16213,7 +16223,8 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     // memory accesses. We don't care if the original type was legal or not
     // as we assume software couldn't rely on the number of accesses of an
     // illegal type.
-    if (((!LegalOperations && !ST->isVolatile()) ||
+    // TODO: May be able to relax for unordered atomics (see D66309)
+    if (((!LegalOperations && ST->isSimple()) ||
          TLI.isOperationLegal(ISD::STORE, SVT)) &&
         TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT,
                                      DAG, *ST->getMemOperand())) {
@@ -16294,9 +16305,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   // If this is a load followed by a store to the same location, then the store
   // is dead/noop.
+  // TODO: Can relax for unordered atomics (see D66309)
   if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(Value)) {
     if (Ld->getBasePtr() == Ptr && ST->getMemoryVT() == Ld->getMemoryVT() &&
-        ST->isUnindexed() && !ST->isVolatile() &&
+        ST->isUnindexed() && ST->isSimple() &&
         // There can't be any side effects between the load and store, such as
         // a call or store.
         Chain.reachesChainWithoutSideEffects(SDValue(Ld, 1))) {
@@ -16305,9 +16317,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     }
   }
 
+  // TODO: Can relax for unordered atomics (see D66309)
   if (StoreSDNode *ST1 = dyn_cast<StoreSDNode>(Chain)) {
-    if (ST->isUnindexed() && !ST->isVolatile() && ST1->isUnindexed() &&
-        !ST1->isVolatile()) {
+    if (ST->isUnindexed() && ST->isSimple() &&
+        ST1->isUnindexed() && ST1->isSimple()) {
       if (ST1->getBasePtr() == Ptr && ST1->getValue() == Value &&
           ST->getMemoryVT() == ST1->getMemoryVT()) {
         // If this is a store followed by a store with the same value to the
@@ -16436,7 +16449,8 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
       break;
     case ISD::STORE: {
       StoreSDNode *ST = dyn_cast<StoreSDNode>(Chain);
-      if (ST->isVolatile() || ST->isIndexed())
+      // TODO: Can relax for unordered atomics (see D66309)
+      if (!ST->isSimple() || ST->isIndexed())
         continue;
       const BaseIndexOffset StoreBase = BaseIndexOffset::match(ST, DAG);
       // If we store purely within object bounds just before its lifetime ends,
@@ -16745,7 +16759,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
                                                   SDValue EltNo,
                                                   LoadSDNode *OriginalLoad) {
-  assert(!OriginalLoad->isVolatile());
+  assert(OriginalLoad->isSimple());
 
   EVT ResultVT = EVE->getValueType(0);
   EVT VecEltVT = InVecVT.getVectorElementType();
@@ -17053,7 +17067,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
       ISD::isNormalLoad(VecOp.getNode()) &&
       !Index->hasPredecessor(VecOp.getNode())) {
     auto *VecLoad = dyn_cast<LoadSDNode>(VecOp);
-    if (VecLoad && !VecLoad->isVolatile())
+    if (VecLoad && VecLoad->isSimple())
       return scalarizeExtractedVectorLoad(N, VecVT, Index, VecLoad);
   }
 
@@ -17112,7 +17126,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
 
   // Make sure we found a non-volatile load and the extractelement is
   // the only use.
-  if (!LN0 || !LN0->hasNUsesOfValue(1,0) || LN0->isVolatile())
+  if (!LN0 || !LN0->hasNUsesOfValue(1,0) || !LN0->isSimple())
     return SDValue();
 
   // If Idx was -1 above, Elt is going to be -1, so just return undef.
@@ -18258,7 +18272,8 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
 
   auto *Ld = dyn_cast<LoadSDNode>(Extract->getOperand(0));
   auto *ExtIdx = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
-  if (!Ld || Ld->getExtensionType() || Ld->isVolatile() || !ExtIdx)
+  if (!Ld || Ld->getExtensionType() || !Ld->isSimple() ||
+      !ExtIdx)
     return SDValue();
 
   // Allow targets to opt-out.
@@ -19831,7 +19846,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     // Token chains must be identical.
     if (LHS.getOperand(0) != RHS.getOperand(0) ||
         // Do not let this transformation reduce the number of volatile loads.
-        LLD->isVolatile() || RLD->isVolatile() ||
+        // Be conservative for atomics for the moment
+        // TODO: This does appear to be legal for unordered atomics (see D66309)
+        !LLD->isSimple() || !RLD->isSimple() ||
         // FIXME: If either is a pre/post inc/dec load,
         // we'd need to split out the address adjustment.
         LLD->isIndexed() || RLD->isIndexed() ||
@@ -20036,7 +20053,7 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
 SDValue DAGCombiner::convertSelectOfFPConstantsToLoadOffset(
     const SDLoc &DL, SDValue N0, SDValue N1, SDValue N2, SDValue N3,
     ISD::CondCode CC) {
-  if (!TLI.reduceSelectOfFPConstantLoads(N0.getValueType().isFloatingPoint()))
+  if (!TLI.reduceSelectOfFPConstantLoads(N0.getValueType()))
     return SDValue();
 
   // If we are before legalize types, we want the other legalization to happen
@@ -20533,6 +20550,7 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
 
   struct MemUseCharacteristics {
     bool IsVolatile;
+    bool IsAtomic;
     SDValue BasePtr;
     int64_t Offset;
     Optional<int64_t> NumBytes;
@@ -20548,18 +20566,20 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
                      : (LSN->getAddressingMode() == ISD::PRE_DEC)
                            ? -1 * C->getSExtValue()
                            : 0;
-      return {LSN->isVolatile(), LSN->getBasePtr(), Offset /*base offset*/,
+      return {LSN->isVolatile(), LSN->isAtomic(), LSN->getBasePtr(),
+              Offset /*base offset*/,
               Optional<int64_t>(LSN->getMemoryVT().getStoreSize()),
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))
-      return {false /*isVolatile*/, LN->getOperand(1),
+      return {false /*isVolatile*/, /*isAtomic*/ false, LN->getOperand(1),
               (LN->hasOffset()) ? LN->getOffset() : 0,
               (LN->hasOffset()) ? Optional<int64_t>(LN->getSize())
                                 : Optional<int64_t>(),
               (MachineMemOperand *)nullptr};
     // Default.
-    return {false /*isvolatile*/, SDValue(), (int64_t)0 /*offset*/,
+    return {false /*isvolatile*/, /*isAtomic*/ false, SDValue(),
+            (int64_t)0 /*offset*/,
             Optional<int64_t>() /*size*/, (MachineMemOperand *)nullptr};
   };
 
@@ -20573,6 +20593,11 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
 
   // If they are both volatile then they cannot be reordered.
   if (MUC0.IsVolatile && MUC1.IsVolatile)
+    return true;
+
+  // Be conservative about atomics for the moment
+  // TODO: This is way overconservative for unordered atomics (see D66309)
+  if (MUC0.IsAtomic && MUC1.IsAtomic)
     return true;
 
   if (MUC0.MMO && MUC1.MMO) {
@@ -20656,7 +20681,8 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
   SmallPtrSet<SDNode *, 16> Visited;  // Visited node set.
 
   // Get alias information for node.
-  const bool IsLoad = isa<LoadSDNode>(N) && !cast<LoadSDNode>(N)->isVolatile();
+  // TODO: relax aliasing for unordered atomics (see D66309)
+  const bool IsLoad = isa<LoadSDNode>(N) && cast<LoadSDNode>(N)->isSimple();
 
   // Starting off.
   Chains.push_back(OriginalChain);
@@ -20672,8 +20698,9 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
     case ISD::LOAD:
     case ISD::STORE: {
       // Get alias information for C.
+      // TODO: Relax aliasing for unordered atomics (see D66309)
       bool IsOpLoad = isa<LoadSDNode>(C.getNode()) &&
-                      !cast<LSBaseSDNode>(C.getNode())->isVolatile();
+                      cast<LSBaseSDNode>(C.getNode())->isSimple();
       if ((IsLoad && IsOpLoad) || !isAlias(N, C.getNode())) {
         // Look further up the chain.
         C = C.getOperand(0);
@@ -20828,7 +20855,8 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
     // If the chain has more than one use, then we can't reorder the mem ops.
     if (!SDValue(Chain, 0)->hasOneUse())
       break;
-    if (Chain->isVolatile() || Chain->isIndexed())
+    // TODO: Relax for unordered atomics (see D66309)
+    if (!Chain->isSimple() || Chain->isIndexed())
       break;
 
     // Find the base pointer and offset for this memory node.

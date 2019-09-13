@@ -242,7 +242,7 @@ static json::Object createResult(const PathDiagnostic &Diag,
   const PathPieces &Path = Diag.path.flatten(false);
   const SourceManager &SMgr = Path.front()->getLocation().getManager();
 
-  auto Iter = RuleMapping.find(Diag.getCheckName());
+  auto Iter = RuleMapping.find(Diag.getCheckerName());
   assert(Iter != RuleMapping.end() && "Rule ID is not in the array index map?");
 
   return json::Object{
@@ -254,7 +254,7 @@ static json::Object createResult(const PathDiagnostic &Diag,
            *Diag.getLocation().asLocation().getExpansionLoc().getFileEntry(),
            SMgr, Artifacts))}},
       {"ruleIndex", Iter->getValue()},
-      {"ruleId", Diag.getCheckName()}};
+      {"ruleId", Diag.getCheckerName()}};
 }
 
 static StringRef getRuleDescription(StringRef CheckName) {
@@ -280,7 +280,7 @@ static StringRef getRuleHelpURIStr(StringRef CheckName) {
 }
 
 static json::Object createRule(const PathDiagnostic &Diag) {
-  StringRef CheckName = Diag.getCheckName();
+  StringRef CheckName = Diag.getCheckerName();
   json::Object Ret{
       {"fullDescription", createMessage(getRuleDescription(CheckName))},
       {"name", CheckName},
@@ -299,7 +299,7 @@ static json::Array createRules(std::vector<const PathDiagnostic *> &Diags,
   llvm::StringSet<> Seen;
 
   llvm::for_each(Diags, [&](const PathDiagnostic *D) {
-    StringRef RuleID = D->getCheckName();
+    StringRef RuleID = D->getCheckerName();
     std::pair<llvm::StringSet<>::iterator, bool> P = Seen.insert(RuleID);
     if (P.second) {
       RuleMapping[RuleID] = Rules.size(); // Maps RuleID to an Array Index.

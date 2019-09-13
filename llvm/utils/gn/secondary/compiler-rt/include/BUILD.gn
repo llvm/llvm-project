@@ -16,6 +16,7 @@ copy("include") {
     "sanitizer/scudo_interface.h",
     "sanitizer/tsan_interface.h",
     "sanitizer/tsan_interface_atomic.h",
+    "sanitizer/ubsan_interface.h",
     "xray/xray_interface.h",
     "xray/xray_log_interface.h",
     "xray/xray_records.h",

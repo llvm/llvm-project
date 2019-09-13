@@ -228,6 +228,8 @@ def note_constexpr_bit_cast_invalid_subtype : Note<
 def note_constexpr_bit_cast_indet_dest : Note<
   "indeterminate value can only initialize an object of type 'unsigned char'"
   "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;
+def err_experimental_clang_interp_failed : Error<
+  "the experimental clang interpreter failed to evaluate an expression">;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,

@@ -579,7 +579,7 @@ def sperc : RegisterOperand<SPERC> {
 def PPCRegSPE4RCAsmOperand : AsmOperandClass {
   let Name = "RegSPE4RC"; let PredicateMethod = "isRegNumber";
 }
-def spe4rc : RegisterOperand<SPE4RC> {
+def spe4rc : RegisterOperand<GPRC> {
   let ParserMatchClass = PPCRegSPE4RCAsmOperand;
 }
 
@@ -3188,21 +3188,21 @@ def : Pat<(srl i32:$rS, i32:$rB),
 def : Pat<(shl i32:$rS, i32:$rB),
           (SLW $rS, $rB)>;
 
-def : Pat<(zextloadi1 iaddr:$src),
+def : Pat<(i32 (zextloadi1 iaddr:$src)),
           (LBZ iaddr:$src)>;
-def : Pat<(zextloadi1 xaddr:$src),
+def : Pat<(i32 (zextloadi1 xaddr:$src)),
           (LBZX xaddr:$src)>;
-def : Pat<(extloadi1 iaddr:$src),
+def : Pat<(i32 (extloadi1 iaddr:$src)),
           (LBZ iaddr:$src)>;
-def : Pat<(extloadi1 xaddr:$src),
+def : Pat<(i32 (extloadi1 xaddr:$src)),
           (LBZX xaddr:$src)>;
-def : Pat<(extloadi8 iaddr:$src),
+def : Pat<(i32 (extloadi8 iaddr:$src)),
           (LBZ iaddr:$src)>;
-def : Pat<(extloadi8 xaddr:$src),
+def : Pat<(i32 (extloadi8 xaddr:$src)),
           (LBZX xaddr:$src)>;
-def : Pat<(extloadi16 iaddr:$src),
+def : Pat<(i32 (extloadi16 iaddr:$src)),
           (LHZ iaddr:$src)>;
-def : Pat<(extloadi16 xaddr:$src),
+def : Pat<(i32 (extloadi16 xaddr:$src)),
           (LHZX xaddr:$src)>;
 let Predicates = [HasFPU] in {
 def : Pat<(f64 (extloadf32 iaddr:$src)),

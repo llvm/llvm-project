@@ -14,6 +14,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
+#include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -156,24 +157,43 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DL, get(Opcode), DstReg).addFrameIndex(FI).addImm(0);
 }
 
-void RISCVInstrInfo::movImm32(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI,
-                              const DebugLoc &DL, Register DstReg, uint64_t Val,
-                              MachineInstr::MIFlag Flag) const {
-  assert(isInt<32>(Val) && "Can only materialize 32-bit constants");
+void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL, Register DstReg, uint64_t Val,
+                            MachineInstr::MIFlag Flag) const {
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  bool IsRV64 = MF->getSubtarget<RISCVSubtarget>().is64Bit();
+  Register SrcReg = RISCV::X0;
+  Register Result = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  unsigned Num = 0;
 
-  // TODO: If the value can be materialized using only one instruction, only
-  // insert a single instruction.
+  if (!IsRV64 && !isInt<32>(Val))
+    report_fatal_error("Should only materialize 32-bit constants for RV32");
 
-  uint64_t Hi20 = ((Val + 0x800) >> 12) & 0xfffff;
-  uint64_t Lo12 = SignExtend64<12>(Val);
-  BuildMI(MBB, MBBI, DL, get(RISCV::LUI), DstReg)
-      .addImm(Hi20)
-      .setMIFlag(Flag);
-  BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-      .addReg(DstReg, RegState::Kill)
-      .addImm(Lo12)
-      .setMIFlag(Flag);
+  RISCVMatInt::InstSeq Seq;
+  RISCVMatInt::generateInstSeq(Val, IsRV64, Seq);
+  assert(Seq.size() > 0);
+
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    // Write the final result to DstReg if it's the last instruction in the Seq.
+    // Otherwise, write the result to the temp register.
+    if (++Num == Seq.size())
+      Result = DstReg;
+
+    if (Inst.Opc == RISCV::LUI) {
+      BuildMI(MBB, MBBI, DL, get(RISCV::LUI), Result)
+          .addImm(Inst.Imm)
+          .setMIFlag(Flag);
+    } else {
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), Result)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(Inst.Imm)
+          .setMIFlag(Flag);
+    }
+    // Only the first instruction has X0 as its source.
+    SrcReg = Result;
+  }
 }
 
 // The contents of values added to Cond are not examined outside of

@@ -748,7 +748,7 @@ public:
 
   ~DenseMap() {
     this->destroyAll();
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
   }
 
   void swap(DenseMap& RHS) {
@@ -768,7 +768,7 @@ public:
 
   DenseMap& operator=(DenseMap &&other) {
     this->destroyAll();
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
     init(0);
     swap(other);
     return *this;
@@ -776,7 +776,7 @@ public:
 
   void copyFrom(const DenseMap& other) {
     this->destroyAll();
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
     if (allocateBuckets(other.NumBuckets)) {
       this->BaseT::copyFrom(other);
     } else {
@@ -809,10 +809,12 @@ public:
     this->moveFromOldBuckets(OldBuckets, OldBuckets+OldNumBuckets);
 
     // Free the old table.
-    operator delete(OldBuckets);
+    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
+                      alignof(BucketT));
   }
 
   void shrink_and_clear() {
+    unsigned OldNumBuckets = NumBuckets;
     unsigned OldNumEntries = NumEntries;
     this->destroyAll();
 
@@ -825,7 +827,8 @@ public:
       return;
     }
 
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * OldNumBuckets,
+                      alignof(BucketT));
     init(NewNumBuckets);
   }
 
@@ -861,7 +864,8 @@ private:
       return false;
     }
 
-    Buckets = static_cast<BucketT*>(operator new(sizeof(BucketT) * NumBuckets));
+    Buckets = static_cast<BucketT *>(
+        allocate_buffer(sizeof(BucketT) * NumBuckets, alignof(BucketT)));
     return true;
   }
 };
@@ -1076,7 +1080,8 @@ public:
     this->moveFromOldBuckets(OldRep.Buckets, OldRep.Buckets+OldRep.NumBuckets);
 
     // Free the old table.
-    operator delete(OldRep.Buckets);
+    deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
+                      alignof(BucketT));
   }
 
   void shrink_and_clear() {
@@ -1160,15 +1165,17 @@ private:
     if (Small)
       return;
 
-    operator delete(getLargeRep()->Buckets);
+    deallocate_buffer(getLargeRep()->Buckets,
+                      sizeof(BucketT) * getLargeRep()->NumBuckets,
+                      alignof(BucketT));
     getLargeRep()->~LargeRep();
   }
 
   LargeRep allocateBuckets(unsigned Num) {
     assert(Num > InlineBuckets && "Must allocate more buckets than are inline");
-    LargeRep Rep = {
-      static_cast<BucketT*>(operator new(sizeof(BucketT) * Num)), Num
-    };
+    LargeRep Rep = {static_cast<BucketT *>(allocate_buffer(
+                        sizeof(BucketT) * Num, alignof(BucketT))),
+                    Num};
     return Rep;
   }
 };

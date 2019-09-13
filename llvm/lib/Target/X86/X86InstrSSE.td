@@ -676,7 +676,7 @@ let Predicates = [UseSSE1] in {
   // This pattern helps select MOVLPS on SSE1 only targets. With SSE2 we'll
   // end up with a movsd or blend instead of shufp.
   // No need for aligned load, we're only loading 64-bits.
-  def : Pat<(X86Shufp (v4f32 (nonvolatile_load addr:$src2)), VR128:$src1,
+  def : Pat<(X86Shufp (v4f32 (simple_load addr:$src2)), VR128:$src1,
                       (i8 -28)),
             (MOVLPSrm VR128:$src1, addr:$src2)>;
   def : Pat<(X86Shufp (v4f32 (X86vzload64 addr:$src2)), VR128:$src1, (i8 -28)),
@@ -742,7 +742,7 @@ let Predicates = [UseSSE1] in {
   // This pattern helps select MOVHPS on SSE1 only targets. With SSE2 we'll
   // end up with a movsd or blend instead of shufp.
   // No need for aligned load, we're only loading 64-bits.
-  def : Pat<(X86Movlhps VR128:$src1, (v4f32 (nonvolatile_load addr:$src2))),
+  def : Pat<(X86Movlhps VR128:$src1, (v4f32 (simple_load addr:$src2))),
             (MOVHPSrm VR128:$src1, addr:$src2)>;
   def : Pat<(X86Movlhps VR128:$src1, (v4f32 (X86vzload64 addr:$src2))),
             (MOVHPSrm VR128:$src1, addr:$src2)>;
@@ -776,7 +776,7 @@ let Predicates = [UseSSE2] in {
 let Predicates = [UseSSE2, NoSSE41_Or_OptForSize] in {
   // Use MOVLPD to load into the low bits from a full vector unless we can use
   // BLENDPD.
-  def : Pat<(X86Movsd VR128:$src1, (v2f64 (nonvolatile_load addr:$src2))),
+  def : Pat<(X86Movsd VR128:$src1, (v2f64 (simple_load addr:$src2))),
             (MOVLPDrm VR128:$src1, addr:$src2)>;
 }
 
@@ -2112,7 +2112,7 @@ let Predicates = [HasAVX1Only] in {
 let Predicates = [UseSSE2] in {
   // Use MOVHPD if the load isn't aligned enough for UNPCKLPD.
   def : Pat<(v2f64 (X86Unpckl VR128:$src1,
-                              (v2f64 (nonvolatile_load addr:$src2)))),
+                              (v2f64 (simple_load addr:$src2)))),
             (MOVHPDrm VR128:$src1, addr:$src2)>;
 }
 
@@ -4395,7 +4395,7 @@ defm MOVDDUP : sse3_replicate_dfp<"movddup", SchedWriteFShuffle>;
 
 
 let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(X86Movddup (v2f64 (nonvolatile_load addr:$src))),
+  def : Pat<(X86Movddup (v2f64 (simple_load addr:$src))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
   def : Pat<(X86Movddup (v2f64 (X86vzload64 addr:$src))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
@@ -4403,7 +4403,7 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let Predicates = [UseSSE3] in {
   // No need for aligned memory as this only loads 64-bits.
-  def : Pat<(X86Movddup (v2f64 (nonvolatile_load addr:$src))),
+  def : Pat<(X86Movddup (v2f64 (simple_load addr:$src))),
             (MOVDDUPrm addr:$src)>;
   def : Pat<(X86Movddup (v2f64 (X86vzload64 addr:$src))),
             (MOVDDUPrm addr:$src)>;
@@ -7537,7 +7537,7 @@ let Predicates = [HasAVX, NoVLX] in {
 
   def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
             (VMOVDDUPrr VR128:$src)>;
-  def : Pat<(v2f64 (X86VBroadcast (v2f64 (nonvolatile_load addr:$src)))),
+  def : Pat<(v2f64 (X86VBroadcast (v2f64 (simple_load addr:$src)))),
             (VMOVDDUPrm addr:$src)>;
   def : Pat<(v2f64 (X86VBroadcast (v2f64 (X86vzload64 addr:$src)))),
             (VMOVDDUPrm addr:$src)>;

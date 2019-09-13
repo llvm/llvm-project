@@ -596,13 +596,13 @@ void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 namespace llvm {
 namespace yaml {
 
-int yaml2macho(YamlObjectFile &Doc, raw_ostream &Out) {
+bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out) {
   UniversalWriter Writer(Doc);
   if (auto Err = Writer.writeMachO(Out)) {
     errs() << toString(std::move(Err));
-    return 1;
+    return false;
   }
-  return 0;
+  return true;
 }
 
 } // namespace yaml

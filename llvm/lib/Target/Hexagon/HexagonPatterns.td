@@ -1677,19 +1677,19 @@ def: Pat<(v8i8 (mul V8I8:$Rs, V8I8:$Rt)),
 //
 
 // Count leading zeros.
-def: Pat<(ctlz I32:$Rs),                      (S2_cl0 I32:$Rs)>;
+def: Pat<(i32 (ctlz I32:$Rs)),                (S2_cl0 I32:$Rs)>;
 def: Pat<(i32 (trunc (ctlz I64:$Rss))),       (S2_cl0p I64:$Rss)>;
 
 // Count trailing zeros.
-def: Pat<(cttz I32:$Rs),                      (S2_ct0 I32:$Rs)>;
+def: Pat<(i32 (cttz I32:$Rs)),                (S2_ct0 I32:$Rs)>;
 def: Pat<(i32 (trunc (cttz I64:$Rss))),       (S2_ct0p I64:$Rss)>;
 
 // Count leading ones.
-def: Pat<(ctlz (not I32:$Rs)),                (S2_cl1 I32:$Rs)>;
+def: Pat<(i32 (ctlz (not I32:$Rs))),          (S2_cl1 I32:$Rs)>;
 def: Pat<(i32 (trunc (ctlz (not I64:$Rss)))), (S2_cl1p I64:$Rss)>;
 
 // Count trailing ones.
-def: Pat<(cttz (not I32:$Rs)),                (S2_ct1 I32:$Rs)>;
+def: Pat<(i32 (cttz (not I32:$Rs))),           (S2_ct1 I32:$Rs)>;
 def: Pat<(i32 (trunc (cttz (not I64:$Rss)))), (S2_ct1p I64:$Rss)>;
 
 // Define leading/trailing patterns that require zero-extensions to 64 bits.

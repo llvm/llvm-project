@@ -93,7 +93,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  auto sub_command = args[0].ref;
+  auto sub_command = args[0].ref();
   if (sub_command.empty())
     return result.Succeeded();
 
@@ -180,7 +180,7 @@ void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
 }
 
 void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
-  auto arg0 = request.GetParsedLine()[0].ref;
+  auto arg0 = request.GetParsedLine()[0].ref();
   if (request.GetCursorIndex() == 0) {
     StringList new_matches, descriptions;
     AddNamesMatchingPartialString(m_subcommand_dict, arg0, new_matches,
@@ -225,7 +225,7 @@ const char *CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
   if (current_command_args.GetArgumentCount() <= index)
     return nullptr;
   CommandObject *sub_command_object =
-      GetSubcommandObject(current_command_args[index].ref);
+      GetSubcommandObject(current_command_args[index].ref());
   if (sub_command_object == nullptr)
     return nullptr;
   return sub_command_object->GetRepeatCommand(current_command_args, index);

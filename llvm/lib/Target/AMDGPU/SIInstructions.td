@@ -811,8 +811,14 @@ def : GCNPat <
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
 }
+
 def : GCNPat <
-  (i16 (add (i16 (trunc (getDivergentFrag<ctpop>.ret i32:$popcnt))), i16:$val)),
+  (i32 (ctpop i32:$popcnt)),
+  (V_BCNT_U32_B32_e64 VSrc_b32:$popcnt, (i32 0))
+>;
+
+def : GCNPat <
+  (i16 (add (i16 (trunc (i32 (getDivergentFrag<ctpop>.ret i32:$popcnt)))), i16:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
 

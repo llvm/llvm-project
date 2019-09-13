@@ -9,10 +9,10 @@
 # CHECK-NEXT:  architecture: x86_64
 # CHECK-NEXT:  start address: 0x0000000000000000
 # CHECK-EMPTY:
-# CHECK-NEXT:  Sections:
-# CHECK: SYMBOL TABLE:
-# CHECK: Program Header:
+# CHECK-NEXT: Program Header:
 # CHECK: Dynamic Section:
+# CHECK: Sections:
+# CHECK: SYMBOL TABLE:
 
 ## Check how we dump the archives.
 ## Check we dump the appropriate headers for each file in the archive.
@@ -26,18 +26,18 @@
 # ARCHIVE: architecture: x86_64
 # ARCHIVE: start address: 0x0000000000000000
 # ARCHIVE: rw-r--r--
-# ARCHIVE: Sections:
-# ARCHIVE: SYMBOL TABLE:
 # ARCHIVE: Program Header:
 # ARCHIVE: Dynamic Section:
+# ARCHIVE: Sections:
+# ARCHIVE: SYMBOL TABLE:
 # ARCHIVE: {{.*}}.a({{.*}}2):   file format ELF64-x86-64
 # ARCHIVE: architecture: x86_64
 # ARCHIVE: start address: 0x0000000000000000
 # ARCHIVE: rw-r--r--
-# ARCHIVE: Sections:
-# ARCHIVE: SYMBOL TABLE:
 # ARCHIVE: Program Header:
 # ARCHIVE: Dynamic Section:
+# ARCHIVE: Sections:
+# ARCHIVE: SYMBOL TABLE:
 
 !ELF
 FileHeader:
