@@ -2481,6 +2481,11 @@ public:
     return Status("Not implemented");
   }
 
+  // This calls a function of the form "void * (*)(void)".
+  bool CallVoidArgVoidPtrReturn(const Address *address,
+                                lldb::addr_t &returned_func,
+                                bool trap_exceptions = false);
+
 protected:
   void SetState(lldb::EventSP &event_sp);
 
