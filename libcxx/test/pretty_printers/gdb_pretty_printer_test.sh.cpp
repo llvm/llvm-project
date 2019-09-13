@@ -27,6 +27,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "test_macros.h"
+
 // To write a pretty-printer test:
 //
 // 1. Declare a variable of the type you want to test
@@ -54,11 +56,20 @@
 // ComparePrettyPrintTo*.  Also, make sure neither it, nor the
 // variables we need present in the Compare functions are optimized
 // away.
-void StopForDebugger(void *value, void *check) __attribute__((optnone)) { }
+#ifdef TEST_COMPILER_GCC
+#define OPT_NONE __attribute__((noinline))
+#else
+#define OPT_NONE __attribute__((optnone))
+#endif
+void StopForDebugger(void *value, void *check) OPT_NONE;
+void StopForDebugger(void *value, void *check)  {}
+
 
 // Prevents the compiler optimizing away the parameter in the caller function.
 template <typename Type>
-void MarkAsLive(Type &&t) __attribute__((optnone)) { }
+void MarkAsLive(Type &&t) OPT_NONE;
+template <typename Type>
+void MarkAsLive(Type &&t) {}
 
 // In all of the Compare(Expression)PrettyPrintTo(Regex/Chars) functions below,
 // the python script sets a breakpoint just before the call to StopForDebugger,
@@ -425,7 +436,7 @@ void set_iterator_test() {
   MarkAsLive(not_found);
   // Because the end_node is not easily detected, just be sure it doesn't crash.
   CompareExpressionPrettyPrintToRegex("not_found",
-      R"(std::__tree_const_iterator  = {\[0x[a-f0-9]+\] = .*})");
+      R"(std::__tree_const_iterator ( = {\[0x[a-f0-9]+\] = .*}|<error reading variable:.*>))");
 }
 
 void map_iterator_test() {
