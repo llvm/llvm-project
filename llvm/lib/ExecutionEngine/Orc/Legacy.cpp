@@ -23,7 +23,8 @@ void JITSymbolResolverAdapter::lookup(const LookupSet &Symbols,
   for (auto &S : Symbols)
     InternedSymbols.insert(ES.intern(S));
 
-  auto OnResolvedWithUnwrap = [OnResolved](Expected<SymbolMap> InternedResult) {
+  auto OnResolvedWithUnwrap = [OnResolved = std::move(OnResolved)](
+                                  Expected<SymbolMap> InternedResult) mutable {
     if (!InternedResult) {
       OnResolved(InternedResult.takeError());
       return;
@@ -36,7 +37,7 @@ void JITSymbolResolverAdapter::lookup(const LookupSet &Symbols,
   };
 
   auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      InternedSymbols, SymbolState::Resolved, OnResolvedWithUnwrap);
+      InternedSymbols, SymbolState::Resolved, std::move(OnResolvedWithUnwrap));
 
   auto Unresolved = R.lookup(Q, InternedSymbols);
   if (Unresolved.empty()) {

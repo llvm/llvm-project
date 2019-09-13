@@ -327,6 +327,35 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   llvm_unreachable("Unknown libcall function");
 }
 
+/// True if an instruction is in tail position in its caller. Intended for
+/// legalizing libcalls as tail calls when possible.
+static bool isLibCallInTailPosition(MachineInstr &MI) {
+  const Function &F = MI.getParent()->getParent()->getFunction();
+
+  // Conservatively require the attributes of the call to match those of
+  // the return. Ignore NoAlias and NonNull because they don't affect the
+  // call sequence.
+  AttributeList CallerAttrs = F.getAttributes();
+  if (AttrBuilder(CallerAttrs, AttributeList::ReturnIndex)
+          .removeAttribute(Attribute::NoAlias)
+          .removeAttribute(Attribute::NonNull)
+          .hasAttributes())
+    return false;
+
+  // It's not safe to eliminate the sign / zero extension of the return value.
+  if (CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt) ||
+      CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
+    return false;
+
+  // Only tail call if the following instruction is a standard return.
+  auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+  MachineInstr *Next = MI.getNextNode();
+  if (!Next || TII.isTailCall(*Next) || !Next->isReturn())
+    return false;
+
+  return true;
+}
+
 LegalizerHelper::LegalizeResult
 llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
                     const CallLowering::ArgInfo &Result,
@@ -407,9 +436,23 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx));
+  Info.IsTailCall = isLibCallInTailPosition(MI);
+
   std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
   if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
+
+  if (Info.LoweredTailCall) {
+    assert(Info.IsTailCall && "Lowered tail call when it wasn't a tail call?");
+    // We must have a return following the call to get past
+    // isLibCallInTailPosition.
+    assert(MI.getNextNode() && MI.getNextNode()->isReturn() &&
+           "Expected instr following MI to be a return?");
+
+    // We lowered a tail call, so the call is now the return from the block.
+    // Delete the old return.
+    MI.getNextNode()->eraseFromParent();
+  }
 
   return LegalizerHelper::Legalized;
 }

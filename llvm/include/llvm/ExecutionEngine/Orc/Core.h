@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_CORE_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/OrcV1Deprecation.h"
@@ -107,7 +108,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
 raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
 
 /// Callback to notify client that symbols have been resolved.
-using SymbolsResolvedCallback = std::function<void(Expected<SymbolMap>)>;
+using SymbolsResolvedCallback = unique_function<void(Expected<SymbolMap>)>;
 
 /// Callback to register the dependencies for a given query.
 using RegisterDependenciesFunction =

@@ -84,6 +84,7 @@ target(libclang_target_type, "libclang") {
     "CXTranslationUnit.h",
     "CXType.cpp",
     "CXType.h",
+    "FatalErrorHandler.cpp",
     "Index_Internal.h",
     "Indexing.cpp",
   ]

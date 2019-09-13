@@ -31,7 +31,10 @@ group("unittests") {
     # to failures, mostly in libclang.VirtualFileOverlay_*.
     # FIXME: Also, the executable can't find libclang.dll since that's
     # in a different directory.
-    deps += [ "libclang:libclangTests" ]
+    deps += [
+      "libclang:libclangTests",
+      "libclang/CrashTests:libclangCrashTests",
+    ]
   }
   testonly = true
 }
