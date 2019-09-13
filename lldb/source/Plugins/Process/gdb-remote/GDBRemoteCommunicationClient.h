@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/StreamGDBRemote.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/StructuredData.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
