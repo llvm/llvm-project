@@ -43,6 +43,12 @@ struct GetTypedefNamePattern {
   using DeclTy = TypedefNameDecl;
   BindableMatcher<Decl> operator()() { return typedefNameDecl(hasName("T")); }
 };
+struct GetFunTemplPattern {
+  using DeclTy = FunctionTemplateDecl;
+  BindableMatcher<Decl> operator()() {
+    return functionTemplateDecl(hasName("f"));
+  }
+};
 
 // Values for the value-parameterized test fixtures.
 // FunctionDecl:
@@ -64,6 +70,10 @@ const auto *ExternTypedef = "typedef int T;";
 const auto *AnonTypedef = "namespace { typedef int T; }";
 const auto *ExternUsing = "using T = int;";
 const auto *AnonUsing = "namespace { using T = int; }";
+// FunctionTemplateDecl:
+const auto *ExternFT = "template <class> void f();";
+const auto *StaticFT = "template <class> static void f();";
+const auto *AnonFT = "namespace { template <class> void f(); }";
 
 // First value in tuple: Compile options.
 // Second value in tuple: Source code to be used in the test.
@@ -108,6 +118,9 @@ protected:
 using ImportFunctionsVisibilityChain = ImportVisibilityChain<GetFunPattern>;
 using ImportVariablesVisibilityChain = ImportVisibilityChain<GetVarPattern>;
 using ImportClassesVisibilityChain = ImportVisibilityChain<GetClassPattern>;
+using ImportFunctionTemplatesVisibilityChain =
+    ImportVisibilityChain<GetFunTemplPattern>;
+
 // Value-parameterized test for functions.
 TEST_P(ImportFunctionsVisibilityChain, ImportChain) {
   TypedTest_ImportChain();
@@ -118,6 +131,10 @@ TEST_P(ImportVariablesVisibilityChain, ImportChain) {
 }
 // Value-parameterized test for classes.
 TEST_P(ImportClassesVisibilityChain, ImportChain) {
+  TypedTest_ImportChain();
+}
+// Value-parameterized test for function templates.
+TEST_P(ImportFunctionTemplatesVisibilityChain, ImportChain) {
   TypedTest_ImportChain();
 }
 
@@ -143,6 +160,11 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
         ::testing::Values(ExternC, AnonC)), );
+INSTANTIATE_TEST_CASE_P(ParameterizedTests,
+                        ImportFunctionTemplatesVisibilityChain,
+                        ::testing::Combine(DefaultTestValuesForRunOptions,
+                                           ::testing::Values(ExternFT, StaticFT,
+                                                             AnonFT)), );
 
 // First value in tuple: Compile options.
 // Second value in tuple: Tuple with informations for the test.
@@ -253,6 +275,7 @@ using ImportVariablesVisibility = ImportVisibility<GetVarPattern>;
 using ImportClassesVisibility = ImportVisibility<GetClassPattern>;
 using ImportEnumsVisibility = ImportVisibility<GetEnumPattern>;
 using ImportTypedefNameVisibility = ImportVisibility<GetTypedefNamePattern>;
+using ImportFunctionTemplatesVisibility = ImportVisibility<GetFunTemplPattern>;
 
 // FunctionDecl.
 TEST_P(ImportFunctionsVisibility, ImportAfter) {
@@ -288,6 +311,13 @@ TEST_P(ImportTypedefNameVisibility, ImportAfter) {
 }
 TEST_P(ImportTypedefNameVisibility, ImportAfterImport) {
   TypedTest_ImportAfterImportWithMerge();
+}
+// FunctionTemplateDecl.
+TEST_P(ImportFunctionTemplatesVisibility, ImportAfter) {
+  TypedTest_ImportAfter();
+}
+TEST_P(ImportFunctionTemplatesVisibility, ImportAfterImport) {
+  TypedTest_ImportAfterImport();
 }
 
 const bool ExpectLinkedDeclChain = true;
@@ -367,6 +397,20 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(AnonTypedef, ExternUsing, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonTypedef, AnonUsing,
                             ExpectUnlinkedDeclChain))), );
+INSTANTIATE_TEST_CASE_P(
+    ParameterizedTests, ImportFunctionTemplatesVisibility,
+    ::testing::Combine(
+        DefaultTestValuesForRunOptions,
+        ::testing::Values(
+            std::make_tuple(ExternFT, ExternFT, ExpectLinkedDeclChain),
+            std::make_tuple(ExternFT, StaticFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(ExternFT, AnonFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(StaticFT, ExternFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(StaticFT, StaticFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(StaticFT, AnonFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(AnonFT, ExternFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(AnonFT, StaticFT, ExpectUnlinkedDeclChain),
+            std::make_tuple(AnonFT, AnonFT, ExpectUnlinkedDeclChain))), );
 
 } // end namespace ast_matchers
 } // end namespace clang

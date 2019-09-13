@@ -328,9 +328,4 @@ def err_unknown_analyzer_checker_or_package : Error<
     "no analyzer checkers or packages are associated with '%0'">;
 def note_suggest_disabling_all_checkers : Note<
     "use -analyzer-disable-all-checks to disable all static analyzer checkers">;
-
-// Poison system directories.
-def warn_poison_system_directories : Warning <
-  "include location '%0' is unsafe for cross-compilation">,
-  InGroup<DiagGroup<"poison-system-directories">>, DefaultIgnore;
 }
