@@ -457,7 +457,6 @@ void LinkerScript::discard(ArrayRef<InputSection *> v) {
     if (s == mainPart->hashTab)
       mainPart->hashTab = nullptr;
 
-    s->assigned = false;
     s->markDead();
     discard(s->dependentSections);
   }

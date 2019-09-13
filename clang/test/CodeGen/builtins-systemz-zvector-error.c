@@ -1,6 +1,6 @@
 // REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
-// RUN: -fzvector -fno-lax-vector-conversions \
+// RUN: -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -fsyntax-only -verify %s
 
 #include <vecintrin.h>
