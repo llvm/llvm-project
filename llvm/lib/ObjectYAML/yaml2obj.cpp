@@ -17,9 +17,8 @@ namespace llvm {
 namespace yaml {
 
 Error convertYAML(yaml::Input &YIn, raw_ostream &Out, unsigned DocNum) {
-  // TODO: make yaml2* functions return Error instead of int.
-  auto IntToErr = [](int Ret) -> Error {
-    if (Ret)
+  auto BoolToErr = [](bool Ret) -> Error {
+    if (!Ret)
       return createStringError(errc::invalid_argument, "yaml2obj failed");
     return Error::success();
   };
@@ -32,15 +31,15 @@ Error convertYAML(yaml::Input &YIn, raw_ostream &Out, unsigned DocNum) {
       if (std::error_code EC = YIn.error())
         return createStringError(EC, "Failed to parse YAML input!");
       if (Doc.Elf)
-        return IntToErr(yaml2elf(*Doc.Elf, Out));
+        return BoolToErr(yaml2elf(*Doc.Elf, Out));
       if (Doc.Coff)
-        return IntToErr(yaml2coff(*Doc.Coff, Out));
+        return BoolToErr(yaml2coff(*Doc.Coff, Out));
       if (Doc.MachO || Doc.FatMachO)
-        return IntToErr(yaml2macho(Doc, Out));
+        return BoolToErr(yaml2macho(Doc, Out));
       if (Doc.Minidump)
-        return IntToErr(yaml2minidump(*Doc.Minidump, Out));
+        return BoolToErr(yaml2minidump(*Doc.Minidump, Out));
       if (Doc.Wasm)
-        return IntToErr(yaml2wasm(*Doc.Wasm, Out));
+        return BoolToErr(yaml2wasm(*Doc.Wasm, Out));
       return createStringError(errc::invalid_argument,
                                "Unknown document type!");
     }

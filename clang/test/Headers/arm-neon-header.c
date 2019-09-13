@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple thumbv7-apple-darwin10 -target-cpu cortex-a8 -fsyntax-only -Wvector-conversions -ffreestanding %s
-// RUN: %clang_cc1 -triple thumbv7-apple-darwin10 -target-cpu cortex-a8 -fsyntax-only -fno-lax-vector-conversions -ffreestanding %s
+// RUN: %clang_cc1 -triple thumbv7-apple-darwin10 -target-cpu cortex-a8 -fsyntax-only -flax-vector-conversions=none -ffreestanding %s
 // RUN: %clang_cc1 -x c++ -triple thumbv7-apple-darwin10 -target-cpu cortex-a8 -fsyntax-only -Wvector-conversions -ffreestanding %s
 
 // RUN: %clang -fsyntax-only               -ffreestanding --target=aarch64-none-eabi -march=armv8.2-a+fp16 -std=c89 -xc %s

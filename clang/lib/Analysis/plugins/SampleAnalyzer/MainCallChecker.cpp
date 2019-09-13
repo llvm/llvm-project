@@ -37,7 +37,7 @@ void MainCallChecker::checkPreStmt(const CallExpr *CE,
       BT.reset(new BugType(this, "call to main", "example analyzer plugin"));
 
     auto report =
-        std::make_unique<PathSensitiveBugReport>(*BT, BT->getName(), N);
+        std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
     report->addRange(Callee->getSourceRange());
     C.emitReport(std::move(report));
   }

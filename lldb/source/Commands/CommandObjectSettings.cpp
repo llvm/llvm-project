@@ -281,7 +281,7 @@ protected:
     if (!args.empty()) {
       for (const auto &arg : args) {
         Status error(GetDebugger().DumpPropertyValue(
-            &m_exe_ctx, result.GetOutputStream(), arg.ref,
+            &m_exe_ctx, result.GetOutputStream(), arg.ref(),
             OptionValue::eDumpGroupValue));
         if (error.Success()) {
           result.GetOutputStream().EOL();
@@ -403,7 +403,7 @@ protected:
 
     for (const auto &arg : args) {
       Status error(GetDebugger().DumpPropertyValue(
-          &clean_ctx, out_file, arg.ref, OptionValue::eDumpGroupExport));
+          &clean_ctx, out_file, arg.ref(), OptionValue::eDumpGroupExport));
       if (!error.Success()) {
         result.AppendError(error.AsCString());
         result.SetStatus(eReturnStatusFailed);

@@ -44,11 +44,11 @@ namespace yaml {
 class Input;
 struct YamlObjectFile;
 
-int yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out);
-int yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out);
-int yaml2macho(YamlObjectFile &Doc, raw_ostream &Out);
-int yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out);
-int yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out);
+bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out);
+bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out);
+bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out);
+bool yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out);
+bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out);
 
 Error convertYAML(Input &YIn, raw_ostream &Out, unsigned DocNum = 1);
 

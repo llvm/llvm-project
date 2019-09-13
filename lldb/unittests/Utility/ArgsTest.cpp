@@ -152,9 +152,9 @@ TEST(ArgsTest, StringListConstructor) {
        << "baz";
   Args args(list);
   ASSERT_EQ(3u, args.GetArgumentCount());
-  EXPECT_EQ("foo", args[0].ref);
-  EXPECT_EQ("bar", args[1].ref);
-  EXPECT_EQ("baz", args[2].ref);
+  EXPECT_EQ("foo", args[0].ref());
+  EXPECT_EQ("bar", args[1].ref());
+  EXPECT_EQ("baz", args[2].ref());
 }
 
 TEST(ArgsTest, GetQuotedCommandString) {

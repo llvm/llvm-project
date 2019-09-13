@@ -4493,6 +4493,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter))
+    CmdArgs.push_back("-fexperimental-new-constant-interpreter");
+
+  if (Args.hasArg(options::OPT_fforce_experimental_new_constant_interpreter))
+    CmdArgs.push_back("-fforce-experimental-new-constant-interpreter");
+
   if (Arg *A = Args.getLastArg(options::OPT_fbracket_depth_EQ)) {
     CmdArgs.push_back("-fbracket-depth");
     CmdArgs.push_back(A->getValue());
@@ -4678,15 +4684,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (TC.SupportsProfiling())
     Args.AddLastArg(CmdArgs, options::OPT_mfentry);
 
-  // -flax-vector-conversions is default.
-  if (!Args.hasFlag(options::OPT_flax_vector_conversions,
-                    options::OPT_fno_lax_vector_conversions))
-    CmdArgs.push_back("-fno-lax-vector-conversions");
-
   if (Args.getLastArg(options::OPT_fapple_kext) ||
       (Args.hasArg(options::OPT_mkernel) && types::isCXX(InputType)))
     CmdArgs.push_back("-fapple-kext");
 
+  Args.AddLastArg(CmdArgs, options::OPT_flax_vector_conversions_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fobjc_sender_dependent_dispatch);
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_print_source_range_info);
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_parseable_fixits);
@@ -6069,15 +6071,14 @@ const char *Clang::getBaseInputStem(const ArgList &Args,
 const char *Clang::getDependencyFileName(const ArgList &Args,
                                          const InputInfoList &Inputs) {
   // FIXME: Think about this more.
-  std::string Res;
 
   if (Arg *OutputOpt = Args.getLastArg(options::OPT_o)) {
-    std::string Str(OutputOpt->getValue());
-    Res = Str.substr(0, Str.rfind('.'));
-  } else {
-    Res = getBaseInputStem(Args, Inputs);
+    SmallString<128> OutputFilename(OutputOpt->getValue());
+    llvm::sys::path::replace_extension(OutputFilename, llvm::Twine('d'));
+    return Args.MakeArgString(OutputFilename);
   }
-  return Args.MakeArgString(Res + ".d");
+
+  return Args.MakeArgString(std::string(getBaseInputStem(Args, Inputs)) + ".d");
 }
 
 // Begin ClangAs

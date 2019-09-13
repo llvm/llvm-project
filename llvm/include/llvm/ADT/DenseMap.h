@@ -38,33 +38,7 @@ namespace detail {
 // implementation without requiring two members.
 template <typename KeyT, typename ValueT>
 struct DenseMapPair : public std::pair<KeyT, ValueT> {
-
-  // FIXME: Switch to inheriting constructors when we drop support for older
-  //        clang versions.
-  // NOTE: This default constructor is declared with '{}' rather than
-  //       '= default' to work around a separate bug in clang-3.8. This can
-  //       also go when we switch to inheriting constructors.
-  DenseMapPair() {}
-
-  DenseMapPair(const KeyT &Key, const ValueT &Value)
-      : std::pair<KeyT, ValueT>(Key, Value) {}
-
-  DenseMapPair(KeyT &&Key, ValueT &&Value)
-      : std::pair<KeyT, ValueT>(std::move(Key), std::move(Value)) {}
-
-  template <typename AltKeyT, typename AltValueT>
-  DenseMapPair(AltKeyT &&AltKey, AltValueT &&AltValue,
-               typename std::enable_if<
-                   std::is_convertible<AltKeyT, KeyT>::value &&
-                   std::is_convertible<AltValueT, ValueT>::value>::type * = 0)
-      : std::pair<KeyT, ValueT>(std::forward<AltKeyT>(AltKey),
-                                std::forward<AltValueT>(AltValue)) {}
-
-  template <typename AltPairT>
-  DenseMapPair(AltPairT &&AltPair,
-               typename std::enable_if<std::is_convertible<
-                   AltPairT, std::pair<KeyT, ValueT>>::value>::type * = nullptr)
-      : std::pair<KeyT, ValueT>(std::forward<AltPairT>(AltPair)) {}
+  using std::pair<KeyT, ValueT>::pair;
 
   KeyT &getFirst() { return std::pair<KeyT, ValueT>::first; }
   const KeyT &getFirst() const { return std::pair<KeyT, ValueT>::first; }
@@ -748,7 +722,7 @@ public:
 
   ~DenseMap() {
     this->destroyAll();
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
   }
 
   void swap(DenseMap& RHS) {
@@ -768,7 +742,7 @@ public:
 
   DenseMap& operator=(DenseMap &&other) {
     this->destroyAll();
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
     init(0);
     swap(other);
     return *this;
@@ -776,7 +750,7 @@ public:
 
   void copyFrom(const DenseMap& other) {
     this->destroyAll();
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
     if (allocateBuckets(other.NumBuckets)) {
       this->BaseT::copyFrom(other);
     } else {
@@ -809,10 +783,12 @@ public:
     this->moveFromOldBuckets(OldBuckets, OldBuckets+OldNumBuckets);
 
     // Free the old table.
-    operator delete(OldBuckets);
+    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
+                      alignof(BucketT));
   }
 
   void shrink_and_clear() {
+    unsigned OldNumBuckets = NumBuckets;
     unsigned OldNumEntries = NumEntries;
     this->destroyAll();
 
@@ -825,7 +801,8 @@ public:
       return;
     }
 
-    operator delete(Buckets);
+    deallocate_buffer(Buckets, sizeof(BucketT) * OldNumBuckets,
+                      alignof(BucketT));
     init(NewNumBuckets);
   }
 
@@ -861,7 +838,8 @@ private:
       return false;
     }
 
-    Buckets = static_cast<BucketT*>(operator new(sizeof(BucketT) * NumBuckets));
+    Buckets = static_cast<BucketT *>(
+        allocate_buffer(sizeof(BucketT) * NumBuckets, alignof(BucketT)));
     return true;
   }
 };
@@ -1076,7 +1054,8 @@ public:
     this->moveFromOldBuckets(OldRep.Buckets, OldRep.Buckets+OldRep.NumBuckets);
 
     // Free the old table.
-    operator delete(OldRep.Buckets);
+    deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
+                      alignof(BucketT));
   }
 
   void shrink_and_clear() {
@@ -1160,15 +1139,17 @@ private:
     if (Small)
       return;
 
-    operator delete(getLargeRep()->Buckets);
+    deallocate_buffer(getLargeRep()->Buckets,
+                      sizeof(BucketT) * getLargeRep()->NumBuckets,
+                      alignof(BucketT));
     getLargeRep()->~LargeRep();
   }
 
   LargeRep allocateBuckets(unsigned Num) {
     assert(Num > InlineBuckets && "Must allocate more buckets than are inline");
-    LargeRep Rep = {
-      static_cast<BucketT*>(operator new(sizeof(BucketT) * Num)), Num
-    };
+    LargeRep Rep = {static_cast<BucketT *>(allocate_buffer(
+                        sizeof(BucketT) * Num, alignof(BucketT))),
+                    Num};
     return Rep;
   }
 };

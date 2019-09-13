@@ -589,11 +589,14 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   // Remove initializations that were merged into another.
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
-    for (auto I = Defs.begin(); I != Defs.end(); ++I)
+    auto I = Defs.begin();
+    while (I != Defs.end()) {
       if (MergedInstrs.count(*I)) {
         (*I)->eraseFromParent();
         I = Defs.erase(I);
-      }
+      } else
+        ++I;
+    }
   }
 
   // Try to schedule SGPR initializations as early as possible in the MBB.

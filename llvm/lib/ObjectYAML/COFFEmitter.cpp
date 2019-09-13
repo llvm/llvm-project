@@ -592,27 +592,27 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
 namespace llvm {
 namespace yaml {
 
-int yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out) {
+bool yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out) {
   COFFParser CP(Doc);
   if (!CP.parse()) {
     errs() << "yaml2obj: Failed to parse YAML file!\n";
-    return 1;
+    return false;
   }
 
   if (!layoutOptionalHeader(CP)) {
     errs() << "yaml2obj: Failed to layout optional header for COFF file!\n";
-    return 1;
+    return false;
   }
 
   if (!layoutCOFF(CP)) {
     errs() << "yaml2obj: Failed to layout COFF file!\n";
-    return 1;
+    return false;
   }
   if (!writeCOFF(CP, Out)) {
     errs() << "yaml2obj: Failed to write COFF file!\n";
-    return 1;
+    return false;
   }
-  return 0;
+  return true;
 }
 
 } // namespace yaml

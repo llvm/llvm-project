@@ -303,7 +303,7 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
         .Case("true", true)
         .Case("false", false)
         .Default(false);
-  Opts.DisableAllChecks = Args.hasArg(OPT_analyzer_disable_all_checks);
+  Opts.DisableAllCheckers = Args.hasArg(OPT_analyzer_disable_all_checks);
 
   Opts.visualizeExplodedGraphWithGraphViz =
     Args.hasArg(OPT_analyzer_viz_egraph_graphviz);
@@ -2265,7 +2265,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   if (Opts.OpenCL) {
     Opts.AltiVec = 0;
     Opts.ZVector = 0;
-    Opts.LaxVectorConversions = 0;
+    Opts.setLaxVectorConversions(LangOptions::LaxVectorConversionKind::None);
     Opts.setDefaultFPContractMode(LangOptions::FPC_On);
     Opts.NativeHalfType = 1;
     Opts.NativeHalfArgsAndReturns = 1;
@@ -2664,8 +2664,18 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.WritableStrings = Args.hasArg(OPT_fwritable_strings);
   Opts.ConstStrings = Args.hasFlag(OPT_fconst_strings, OPT_fno_const_strings,
                                    Opts.ConstStrings);
-  if (Args.hasArg(OPT_fno_lax_vector_conversions))
-    Opts.LaxVectorConversions = 0;
+  if (Arg *A = Args.getLastArg(OPT_flax_vector_conversions_EQ)) {
+    using LaxKind = LangOptions::LaxVectorConversionKind;
+    if (auto Kind = llvm::StringSwitch<Optional<LaxKind>>(A->getValue())
+                        .Case("none", LaxKind::None)
+                        .Case("integer", LaxKind::Integer)
+                        .Case("all", LaxKind::All)
+                        .Default(llvm::None))
+      Opts.setLaxVectorConversions(*Kind);
+    else
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+  }
   if (Args.hasArg(OPT_fno_threadsafe_statics))
     Opts.ThreadsafeStatics = 0;
   Opts.Exceptions = Args.hasArg(OPT_fexceptions);
@@ -2781,6 +2791,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fconstexpr_depth, 512, Diags);
   Opts.ConstexprStepLimit =
       getLastArgIntValue(Args, OPT_fconstexpr_steps, 1048576, Diags);
+  Opts.EnableNewConstInterp =
+      Args.hasArg(OPT_fexperimental_new_constant_interpreter);
+  Opts.ForceNewConstInterp =
+      Args.hasArg(OPT_fforce_experimental_new_constant_interpreter);
   Opts.BracketDepth = getLastArgIntValue(Args, OPT_fbracket_depth, 256, Diags);
   Opts.DelayedTemplateParsing = Args.hasArg(OPT_fdelayed_template_parsing);
   Opts.NumLargeByValueCopy =

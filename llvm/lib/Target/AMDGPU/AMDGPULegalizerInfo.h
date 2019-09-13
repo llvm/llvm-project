@@ -64,6 +64,9 @@ public:
                     MachineIRBuilder &B,
                     GISelChangeObserver &Observer) const;
 
+  bool legalizeFMad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
+
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
 

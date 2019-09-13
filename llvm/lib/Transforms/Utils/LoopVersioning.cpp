@@ -92,8 +92,8 @@ void LoopVersioning::versionLoop(
   // Create empty preheader for the loop (and after cloning for the
   // non-versioned loop).
   BasicBlock *PH =
-      SplitBlock(RuntimeCheckBB, RuntimeCheckBB->getTerminator(), DT, LI);
-  PH->setName(VersionedLoop->getHeader()->getName() + ".ph");
+      SplitBlock(RuntimeCheckBB, RuntimeCheckBB->getTerminator(), DT, LI,
+                 nullptr, VersionedLoop->getHeader()->getName() + ".ph");
 
   // Clone the loop including the preheader.
   //

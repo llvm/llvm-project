@@ -577,7 +577,7 @@ public:
 
   // Determine if references to thread_local global variables can be made
   // directly or require access through a thread wrapper function.
-  virtual bool usesThreadWrapperFunction() const = 0;
+  virtual bool usesThreadWrapperFunction(const VarDecl *VD) const = 0;
 
   /// Emit a reference to a non-local thread_local variable (including
   /// triggering the initialization of all thread_local variables in its

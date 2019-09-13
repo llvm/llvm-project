@@ -1,10 +1,10 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -emit-llvm %s \
-// RUN:            -o - | FileCheck %s
+// RUN:            -flax-vector-conversions=none -o - | FileCheck %s
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown -emit-llvm %s \
-// RUN:            -o - | FileCheck %s
+// RUN:            -flax-vector-conversions=none -o - | FileCheck %s
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
-// RUN:            -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN:            -flax-vector-conversions=none -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -ferror-limit 0 -DNO_ALTIVEC -o - 2>&1 \
 // RUN:            | FileCheck %s -check-prefix=CHECK-NOALTIVEC
@@ -2419,7 +2419,7 @@ void test6() {
 // CHECK-LE: or <16 x i8>
 // CHECK-LE: xor <16 x i8>
 
-  res_vuc = vec_nor(vbc, vbc);
+  res_vbc = vec_nor(vbc, vbc);
 // CHECK: or <16 x i8>
 // CHECK: xor <16 x i8>
 // CHECK-LE: or <16 x i8>
@@ -2437,7 +2437,7 @@ void test6() {
 // CHECK-LE: or <8 x i16>
 // CHECK-LE: xor <8 x i16>
 
-  res_vus = vec_nor(vbs, vbs);
+  res_vbs = vec_nor(vbs, vbs);
 // CHECK: or <8 x i16>
 // CHECK: xor <8 x i16>
 // CHECK-LE: or <8 x i16>
@@ -2455,7 +2455,7 @@ void test6() {
 // CHECK-LE: or <4 x i32>
 // CHECK-LE: xor <4 x i32>
 
-  res_vui = vec_nor(vbi, vbi);
+  res_vbi = vec_nor(vbi, vbi);
 // CHECK: or <4 x i32>
 // CHECK: xor <4 x i32>
 // CHECK-LE: or <4 x i32>
@@ -2479,7 +2479,7 @@ void test6() {
 // CHECK-LE: or <16 x i8>
 // CHECK-LE: xor <16 x i8>
 
-  res_vuc = vec_vnor(vbc, vbc);
+  res_vbc = vec_vnor(vbc, vbc);
 // CHECK: or <16 x i8>
 // CHECK: xor <16 x i8>
 // CHECK-LE: or <16 x i8>
@@ -2497,7 +2497,7 @@ void test6() {
 // CHECK-LE: or <8 x i16>
 // CHECK-LE: xor <8 x i16>
 
-  res_vus = vec_vnor(vbs, vbs);
+  res_vbs = vec_vnor(vbs, vbs);
 // CHECK: or <8 x i16>
 // CHECK: xor <8 x i16>
 // CHECK-LE: or <8 x i16>
@@ -2515,7 +2515,7 @@ void test6() {
 // CHECK-LE: or <4 x i32>
 // CHECK-LE: xor <4 x i32>
 
-  res_vui = vec_vnor(vbi, vbi);
+  res_vbi = vec_vnor(vbi, vbi);
 // CHECK: or <4 x i32>
 // CHECK: xor <4 x i32>
 // CHECK-LE: or <4 x i32>
@@ -5385,11 +5385,11 @@ void test6() {
 // CHECK: sub <8 x i16>
 // CHECK-LE: sub <8 x i16>
 
-  res_vs  = vec_vsubuhm(vbs, vus);
+  res_vs  = vec_vsubuhm(vbs, vs);
 // CHECK: sub <8 x i16>
 // CHECK-LE: sub <8 x i16>
 
-  res_vs  = vec_vsubuhm(vus, vbs);
+  res_vs  = vec_vsubuhm(vs, vbs);
 // CHECK: sub <8 x i16>
 // CHECK-LE: sub <8 x i16>
 
@@ -9251,11 +9251,11 @@ void test8() {
   // CHECK: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   // CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 
-  res_vbs = vec_reve(vs);
+  res_vs = vec_reve(vs);
   // CHECK: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   // CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 
-  res_vbs = vec_reve(vus);
+  res_vus = vec_reve(vus);
   // CHECK: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   // CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 

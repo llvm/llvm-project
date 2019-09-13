@@ -1491,17 +1491,21 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case 'l':
     return Name == "log" || Name == "logf" ||
            Name == "log10" || Name == "log10f";
+  case 'n':
+    return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
     return Name == "pow" || Name == "powf";
   case 'r':
-    return Name == "round" || Name == "roundf";
+    return Name == "rint" || Name == "rintf" ||
+           Name == "round" || Name == "roundf";
   case 's':
     return Name == "sin" || Name == "sinf" ||
            Name == "sinh" || Name == "sinhf" ||
            Name == "sqrt" || Name == "sqrtf";
   case 't':
     return Name == "tan" || Name == "tanf" ||
-           Name == "tanh" || Name == "tanhf";
+           Name == "tanh" || Name == "tanhf" ||
+           Name == "trunc" || Name == "truncf";
   case '_':
     // Check for various function names that get used for the math functions
     // when the header files are preprocessed with the macro
@@ -1863,7 +1867,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case LibFunc_log:
     case LibFunc_logf:
-
     case LibFunc_log_finite:
     case LibFunc_logf_finite:
       if (V > 0.0 && TLI->has(Func))
@@ -1876,6 +1879,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (V > 0.0 && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, V, Ty);
+      break;
+    case LibFunc_nearbyint:
+    case LibFunc_nearbyintf:
+    case LibFunc_rint:
+    case LibFunc_rintf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmNearestTiesToEven);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
       break;
     case LibFunc_round:
     case LibFunc_roundf:
@@ -1910,6 +1922,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_tanhf:
       if (TLI->has(Func))
         return ConstantFoldFP(tanh, V, Ty);
+      break;
+    case LibFunc_trunc:
+    case LibFunc_truncf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmTowardZero);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
       break;
     }
     return nullptr;

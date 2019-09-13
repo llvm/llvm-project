@@ -6110,7 +6110,7 @@ MachineInstrBuilder SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
                                                Register DestReg,
                                                RegScavenger &RS) const {
   if (ST.hasAddNoCarry())
-    return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_U32_e64), DestReg);
+    return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_U32_e32), DestReg);
 
   Register UnusedCarry = RS.scavengeRegister(RI.getBoolRC(), I, 0, false);
   // TODO: Users need to deal with this.

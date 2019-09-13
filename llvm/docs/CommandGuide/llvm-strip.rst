@@ -97,7 +97,8 @@ multiple file formats.
 
 .. option:: --strip-unneeded
 
- Remove all local or undefined symbols that are not required by relocations.
+ Remove from the output all local or undefined symbols that are not required by
+ relocations. Also remove all debug sections.
 
 .. option:: --version, -V
 

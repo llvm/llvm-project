@@ -49,28 +49,24 @@ private:
       switch (EmitState) {
       case NotEmitted:
         if (auto GV = searchGVs(Name, ExportedSymbolsOnly)) {
-          // Create a std::string version of Name to capture here - the argument
-          // (a StringRef) may go away before the lambda is executed.
-          // FIXME: Use capture-init when we move to C++14.
-          std::string PName = Name;
           JITSymbolFlags Flags = JITSymbolFlags::fromGlobalValue(*GV);
-          auto GetAddress =
-            [this, ExportedSymbolsOnly, PName, &B]() -> Expected<JITTargetAddress> {
-              if (this->EmitState == Emitting)
-                return 0;
-              else if (this->EmitState == NotEmitted) {
-                this->EmitState = Emitting;
-                if (auto Err = this->emitToBaseLayer(B))
-                  return std::move(Err);
-                this->EmitState = Emitted;
-              }
-              if (auto Sym = B.findSymbolIn(K, PName, ExportedSymbolsOnly))
-                return Sym.getAddress();
-              else if (auto Err = Sym.takeError())
+          auto GetAddress = [this, ExportedSymbolsOnly, Name = Name.str(),
+                             &B]() -> Expected<JITTargetAddress> {
+            if (this->EmitState == Emitting)
+              return 0;
+            else if (this->EmitState == NotEmitted) {
+              this->EmitState = Emitting;
+              if (auto Err = this->emitToBaseLayer(B))
                 return std::move(Err);
-              else
-                llvm_unreachable("Successful symbol lookup should return "
-                                 "definition address here");
+              this->EmitState = Emitted;
+            }
+            if (auto Sym = B.findSymbolIn(K, Name, ExportedSymbolsOnly))
+              return Sym.getAddress();
+            else if (auto Err = Sym.takeError())
+              return std::move(Err);
+            else
+              llvm_unreachable("Successful symbol lookup should return "
+                               "definition address here");
           };
           return JITSymbol(std::move(GetAddress), Flags);
         } else

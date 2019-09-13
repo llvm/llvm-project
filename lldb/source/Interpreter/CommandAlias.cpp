@@ -64,8 +64,8 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
       option_arg_vector->emplace_back("<argument>", -1, options_string);
     else {
       for (auto &entry : args.entries()) {
-        if (!entry.ref.empty())
-          option_arg_vector->emplace_back("<argument>", -1, entry.ref);
+        if (!entry.ref().empty())
+          option_arg_vector->emplace_back("<argument>", -1, entry.ref());
       }
     }
   }

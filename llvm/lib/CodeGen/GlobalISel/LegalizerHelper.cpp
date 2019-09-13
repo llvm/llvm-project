@@ -1949,6 +1949,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FMAD:
+    return lowerFMad(MI);
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
     Register OldValRes = MI.getOperand(0).getReg();
     Register SuccessRes = MI.getOperand(1).getReg();
@@ -3910,6 +3912,19 @@ LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
   // If there are no nans, it's safe to simply replace this with the non-IEEE
   // version.
   MIRBuilder.buildInstr(NewOp, {Dst}, {Src0, Src1}, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMad(MachineInstr &MI) {
+  // Expand G_FMAD a, b, c -> G_FADD (G_FMUL a, b), c
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  unsigned Flags = MI.getFlags();
+
+  auto Mul = MIRBuilder.buildFMul(Ty, MI.getOperand(1), MI.getOperand(2),
+                                  Flags);
+  MIRBuilder.buildFAdd(DstReg, Mul, MI.getOperand(3), Flags);
   MI.eraseFromParent();
   return Legalized;
 }

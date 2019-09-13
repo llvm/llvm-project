@@ -1180,17 +1180,15 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 }
 
 void RuntimeDyldImpl::finalizeAsync(
-    std::unique_ptr<RuntimeDyldImpl> This, std::function<void(Error)> OnEmitted,
+    std::unique_ptr<RuntimeDyldImpl> This,
+    unique_function<void(Error)> OnEmitted,
     std::unique_ptr<MemoryBuffer> UnderlyingBuffer) {
 
-  // FIXME: Move-capture OnRelocsApplied and UnderlyingBuffer once we have
-  // c++14.
-  auto SharedUnderlyingBuffer =
-      std::shared_ptr<MemoryBuffer>(std::move(UnderlyingBuffer));
   auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
   auto PostResolveContinuation =
-      [SharedThis, OnEmitted, SharedUnderlyingBuffer](
-          Expected<JITSymbolResolver::LookupResult> Result) {
+      [SharedThis, OnEmitted = std::move(OnEmitted),
+       UnderlyingBuffer = std::move(UnderlyingBuffer)](
+          Expected<JITSymbolResolver::LookupResult> Result) mutable {
         if (!Result) {
           OnEmitted(Result.takeError());
           return;
@@ -1224,7 +1222,7 @@ void RuntimeDyldImpl::finalizeAsync(
   }
 
   if (!Symbols.empty()) {
-    SharedThis->Resolver.lookup(Symbols, PostResolveContinuation);
+    SharedThis->Resolver.lookup(Symbols, std::move(PostResolveContinuation));
   } else
     PostResolveContinuation(std::map<StringRef, JITEvaluatedSymbol>());
 }
@@ -1400,11 +1398,11 @@ void jitLinkForORC(object::ObjectFile &Obj,
                    std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
                    RuntimeDyld::MemoryManager &MemMgr,
                    JITSymbolResolver &Resolver, bool ProcessAllSections,
-                   std::function<Error(
+                   unique_function<Error(
                        std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
                        std::map<StringRef, JITEvaluatedSymbol>)>
                        OnLoaded,
-                   std::function<void(Error)> OnEmitted) {
+                   unique_function<void(Error)> OnEmitted) {
 
   RuntimeDyld RTDyld(MemMgr, Resolver);
   RTDyld.setProcessAllSections(ProcessAllSections);

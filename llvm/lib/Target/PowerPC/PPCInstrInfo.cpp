@@ -90,7 +90,6 @@ enum SpillOpcodeKey {
   SOK_QuadBitSpill,
   SOK_SpillToVSR,
   SOK_SPESpill,
-  SOK_SPE4Spill,
   SOK_LastOpcodeSpill  // This must be last on the enum.
 };
 
@@ -967,11 +966,11 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     getKillRegState(KillSrc);
     return;
   } else if (PPC::SPERCRegClass.contains(SrcReg) &&
-             PPC::SPE4RCRegClass.contains(DestReg)) {
+             PPC::GPRCRegClass.contains(DestReg)) {
     BuildMI(MBB, I, DL, get(PPC::EFSCFD), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
     return;
-  } else if (PPC::SPE4RCRegClass.contains(SrcReg) &&
+  } else if (PPC::GPRCRegClass.contains(SrcReg) &&
              PPC::SPERCRegClass.contains(DestReg)) {
     BuildMI(MBB, I, DL, get(PPC::EFDCFS), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
@@ -1010,8 +1009,6 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = PPC::QVFMRb;
   else if (PPC::CRBITRCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::CROR;
-  else if (PPC::SPE4RCRegClass.contains(DestReg, SrcReg))
-    Opc = PPC::OR;
   else if (PPC::SPERCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::EVOR;
   else
@@ -1044,8 +1041,6 @@ unsigned PPCInstrInfo::getStoreOpcodeForSpill(unsigned Reg,
       OpcodeIndex = SOK_Float4Spill;
     } else if (PPC::SPERCRegClass.hasSubClassEq(RC)) {
       OpcodeIndex = SOK_SPESpill;
-    } else if (PPC::SPE4RCRegClass.hasSubClassEq(RC)) {
-      OpcodeIndex = SOK_SPE4Spill;
     } else if (PPC::CRRCRegClass.hasSubClassEq(RC)) {
       OpcodeIndex = SOK_CRSpill;
     } else if (PPC::CRBITRCRegClass.hasSubClassEq(RC)) {
@@ -1084,8 +1079,6 @@ unsigned PPCInstrInfo::getStoreOpcodeForSpill(unsigned Reg,
       OpcodeIndex = SOK_Float4Spill;
     } else if (PPC::SPERCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_SPESpill;
-    } else if (PPC::SPE4RCRegClass.contains(Reg)) {
-      OpcodeIndex = SOK_SPE4Spill;
     } else if (PPC::CRRCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_CRSpill;
     } else if (PPC::CRBITRCRegClass.contains(Reg)) {
@@ -1134,8 +1127,6 @@ PPCInstrInfo::getLoadOpcodeForSpill(unsigned Reg,
       OpcodeIndex = SOK_Float4Spill;
     } else if (PPC::SPERCRegClass.hasSubClassEq(RC)) {
       OpcodeIndex = SOK_SPESpill;
-    } else if (PPC::SPE4RCRegClass.hasSubClassEq(RC)) {
-      OpcodeIndex = SOK_SPE4Spill;
     } else if (PPC::CRRCRegClass.hasSubClassEq(RC)) {
       OpcodeIndex = SOK_CRSpill;
     } else if (PPC::CRBITRCRegClass.hasSubClassEq(RC)) {
@@ -1174,8 +1165,6 @@ PPCInstrInfo::getLoadOpcodeForSpill(unsigned Reg,
       OpcodeIndex = SOK_Float4Spill;
     } else if (PPC::SPERCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_SPESpill;
-    } else if (PPC::SPE4RCRegClass.contains(Reg)) {
-      OpcodeIndex = SOK_SPE4Spill;
     } else if (PPC::CRRCRegClass.contains(Reg)) {
       OpcodeIndex = SOK_CRSpill;
     } else if (PPC::CRBITRCRegClass.contains(Reg)) {
@@ -2433,7 +2422,7 @@ const unsigned *PPCInstrInfo::getStoreOpcodesForSpillArray() const {
       {PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR,
        PPC::SPILL_CRBIT, PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX,
        PPC::SPILL_VRSAVE, PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb,
-       PPC::SPILLTOVSR_ST, PPC::EVSTDD, PPC::SPESTW},
+       PPC::SPILLTOVSR_ST, PPC::EVSTDD},
       // Power 9
       {PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR,
        PPC::SPILL_CRBIT, PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,
@@ -2449,7 +2438,7 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
       {PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,
        PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,
        PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs, PPC::QVLFDXb,
-       PPC::SPILLTOVSR_LD, PPC::EVLDD, PPC::SPELWZ},
+       PPC::SPILLTOVSR_LD, PPC::EVLDD},
       // Power 9
       {PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,
        PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64, PPC::DFLOADf32,
