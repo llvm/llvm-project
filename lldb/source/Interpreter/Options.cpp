@@ -937,7 +937,7 @@ static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
   for (const char *arg : parsed) {
     auto pos = FindOriginalIter(arg, original);
     assert(pos != original.end());
-    result.AppendArgument(pos->ref, pos->quote);
+    result.AppendArgument(pos->ref, pos->GetQuoteChar());
   }
   return result;
 }
