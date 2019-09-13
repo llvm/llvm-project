@@ -168,7 +168,7 @@ template <class ELFT> class ELFState {
                            ContiguousBlobAccumulator &CBA);
   ELFState(ELFYAML::Object &D);
 public:
-  static int writeELF(raw_ostream &OS, ELFYAML::Object &Doc);
+  static bool writeELF(raw_ostream &OS, ELFYAML::Object &Doc);
 };
 } // end anonymous namespace
 
@@ -983,7 +983,7 @@ template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
 }
 
 template <class ELFT>
-int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
+bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   ELFState<ELFT> State(Doc);
 
   // Finalize .strtab and .dynstr sections. We do that early because want to
@@ -1010,19 +1010,19 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
   if (State.HasError)
-    return 1;
+    return false;
 
   State.writeELFHeader(CBA, OS);
   writeArrayData(OS, makeArrayRef(PHeaders));
   CBA.writeBlobToStream(OS);
   writeArrayData(OS, makeArrayRef(SHeaders));
-  return 0;
+  return true;
 }
 
 namespace llvm {
 namespace yaml {
 
-int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
+bool yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
   bool IsLE = Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
   bool Is64Bit = Doc.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64);
   if (Is64Bit) {

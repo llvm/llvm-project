@@ -139,7 +139,7 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
                                            MCSection *Section) {
   if (Section && Assembler.isBundlingEnabled() && Section->hasInstructions() &&
       Section->getAlignment() < Assembler.getBundleAlignSize())
-    Section->setAlignment(Assembler.getBundleAlignSize());
+    Section->setAlignment(llvm::Align(Assembler.getBundleAlignSize()));
 }
 
 void MCELFStreamer::ChangeSection(MCSection *Section,
@@ -306,7 +306,7 @@ void MCELFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
 
     // Update the maximum alignment of the section if necessary.
     if (ByteAlignment > Section.getAlignment())
-      Section.setAlignment(ByteAlignment);
+      Section.setAlignment(llvm::Align(ByteAlignment));
 
     SwitchSection(P.first, P.second);
   } else {

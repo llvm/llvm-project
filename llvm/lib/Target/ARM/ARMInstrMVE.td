@@ -669,6 +669,35 @@ multiclass MVE_VMINMAXV_ty<string iname, bit bit_7, list<dag> pattern=[]> {
 defm MVE_VMINV : MVE_VMINMAXV_ty<"vminv", 0b1>;
 defm MVE_VMAXV : MVE_VMINMAXV_ty<"vmaxv", 0b0>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(i32 (vecreduce_smax (v16i8 MQPR:$src))),
+            (i32 (MVE_VMAXVs8 (t2MVNi (i32 127)), $src))>;
+  def : Pat<(i32 (vecreduce_smax (v8i16 MQPR:$src))),
+            (i32 (MVE_VMAXVs16 (t2MOVi32imm (i32 -32768)), $src))>;
+  def : Pat<(i32 (vecreduce_smax (v4i32 MQPR:$src))),
+            (i32 (MVE_VMAXVs32 (t2MOVi (i32 -2147483648)), $src))>;
+  def : Pat<(i32 (vecreduce_umax (v16i8 MQPR:$src))),
+            (i32 (MVE_VMAXVu8 (t2MOVi (i32 0)), $src))>;
+  def : Pat<(i32 (vecreduce_umax (v8i16 MQPR:$src))),
+            (i32 (MVE_VMAXVu16 (t2MOVi (i32 0)), $src))>;
+  def : Pat<(i32 (vecreduce_umax (v4i32 MQPR:$src))),
+            (i32 (MVE_VMAXVu32 (t2MOVi (i32 0)), $src))>;
+
+  def : Pat<(i32 (vecreduce_smin (v16i8 MQPR:$src))),
+            (i32 (MVE_VMINVs8 (t2MOVi (i32 127)), $src))>;
+  def : Pat<(i32 (vecreduce_smin (v8i16 MQPR:$src))),
+            (i32 (MVE_VMINVs16 (t2MOVi16 (i32 32767)), $src))>;
+  def : Pat<(i32 (vecreduce_smin (v4i32 MQPR:$src))),
+            (i32 (MVE_VMINVs32 (t2MVNi (i32 -2147483648)), $src))>;
+  def : Pat<(i32 (vecreduce_umin (v16i8 MQPR:$src))),
+            (i32 (MVE_VMINVu8 (t2MOVi (i32 255)), $src))>;
+  def : Pat<(i32 (vecreduce_umin (v8i16 MQPR:$src))),
+            (i32 (MVE_VMINVu16 (t2MOVi16 (i32 65535)), $src))>;
+  def : Pat<(i32 (vecreduce_umin (v4i32 MQPR:$src))),
+            (i32 (MVE_VMINVu32 (t2MOVi (i32 4294967295)), $src))>;
+
+}
+
 multiclass MVE_VMINMAXAV_ty<string iname, bit bit_7, list<dag> pattern=[]> {
   def s8  : MVE_VMINMAXV<iname, "s8",  0b0, 0b00, 0b0, bit_7>;
   def s16 : MVE_VMINMAXV<iname, "s16", 0b0, 0b01, 0b0, bit_7>;

@@ -1,0 +1,39 @@
+import("//clang/utils/TableGen/clang_tablegen.gni")
+
+clang_tablegen("Opcodes") {
+  args = [ "-gen-clang-opcodes" ]
+  td_file = "Opcodes.td"
+}
+
+static_library("Interp") {
+  output_name = "clangInterp"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST/Interp:Opcodes",
+    "//clang/lib/Basic",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "Block.cpp",
+    "ByteCodeEmitter.cpp",
+    "ByteCodeExprGen.cpp",
+    "ByteCodeGenError.cpp",
+    "ByteCodeStmtGen.cpp",
+    "Context.cpp",
+    "Descriptor.cpp",
+    "Disasm.cpp",
+    "EvalEmitter.cpp",
+    "Frame.cpp",
+    "Function.cpp",
+    "Interp.cpp",
+    "InterpFrame.cpp",
+    "InterpStack.cpp",
+    "InterpState.cpp",
+    "Pointer.cpp",
+    "Program.cpp",
+    "Record.cpp",
+    "Source.cpp",
+    "State.cpp",
+    "Type.cpp",
+  ]
+}

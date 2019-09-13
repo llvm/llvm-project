@@ -910,9 +910,10 @@ getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
   auto Nvec = RegisterBitwidth / ElementSize;
   if (Nvec == 0)
     Nvec = 2;
-  int Nr =
-      ceil(sqrt(Nvec * LatencyVectorFma * ThroughputVectorFma) / Nvec) * Nvec;
-  int Mr = ceil(Nvec * LatencyVectorFma * ThroughputVectorFma / Nr);
+  int Nr = ceil(sqrt((double)(Nvec * LatencyVectorFma * ThroughputVectorFma)) /
+                Nvec) *
+           Nvec;
+  int Mr = ceil((double)(Nvec * LatencyVectorFma * ThroughputVectorFma / Nr));
   return {Mr, Nr};
 }
 

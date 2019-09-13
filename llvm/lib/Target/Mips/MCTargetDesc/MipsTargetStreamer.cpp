@@ -901,9 +901,12 @@ void MipsTargetELFStreamer::finish() {
   MCSection &BSSSection = *OFI.getBSSSection();
   MCA.registerSection(BSSSection);
 
-  TextSection.setAlignment(std::max(16u, TextSection.getAlignment()));
-  DataSection.setAlignment(std::max(16u, DataSection.getAlignment()));
-  BSSSection.setAlignment(std::max(16u, BSSSection.getAlignment()));
+  TextSection.setAlignment(
+      llvm::Align(std::max(16u, TextSection.getAlignment())));
+  DataSection.setAlignment(
+      llvm::Align(std::max(16u, DataSection.getAlignment())));
+  BSSSection.setAlignment(
+      llvm::Align(std::max(16u, BSSSection.getAlignment())));
 
   if (RoundSectionSizes) {
     // Make sections sizes a multiple of the alignment. This is useful for
@@ -1026,7 +1029,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
       MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Context);
 
   MCA.registerSection(*Sec);
-  Sec->setAlignment(4);
+  Sec->setAlignment(llvm::Align(4));
 
   OS.PushSection();
 
@@ -1316,7 +1319,7 @@ void MipsTargetELFStreamer::emitMipsAbiFlags() {
   MCSectionELF *Sec = Context.getELFSection(
       ".MIPS.abiflags", ELF::SHT_MIPS_ABIFLAGS, ELF::SHF_ALLOC, 24, "");
   MCA.registerSection(*Sec);
-  Sec->setAlignment(8);
+  Sec->setAlignment(llvm::Align(8));
   OS.SwitchSection(Sec);
 
   OS << ABIFlagsSection;
