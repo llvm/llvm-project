@@ -1413,14 +1413,12 @@ public:
     using ErrorReturn = typename RTraits::ErrorReturnType;
     using ErrorReturnPromise = typename RTraits::ReturnPromiseType;
 
-    // FIXME: Stack allocate and move this into the handler once LLVM builds
-    //        with C++14.
-    auto Promise = std::make_shared<ErrorReturnPromise>();
-    auto FutureResult = Promise->get_future();
+    ErrorReturnPromise Promise;
+    auto FutureResult = Promise.get_future();
 
     if (auto Err = this->template appendCallAsync<Func>(
-            [Promise](ErrorReturn RetOrErr) {
-              Promise->set_value(std::move(RetOrErr));
+            [Promise = std::move(Promise)](ErrorReturn RetOrErr) {
+              Promise.set_value(std::move(RetOrErr));
               return Error::success();
             },
             Args...)) {
@@ -1598,8 +1596,7 @@ public:
     // outstanding calls count, then poke the condition variable.
     using ArgType = typename detail::ResponseHandlerArg<
         typename detail::HandlerTraits<HandlerT>::Type>::ArgType;
-    // FIXME: Move handler into wrapped handler once we have C++14.
-    auto WrappedHandler = [this, Handler](ArgType Arg) {
+    auto WrappedHandler = [this, Handler = std::move(Handler)](ArgType Arg) {
       auto Err = Handler(std::move(Arg));
       std::unique_lock<std::mutex> Lock(M);
       --NumOutstandingCalls;

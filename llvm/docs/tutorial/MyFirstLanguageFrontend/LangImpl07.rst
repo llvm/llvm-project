@@ -520,7 +520,7 @@ Here is the code after the mem2reg pass runs:
 
 This is a trivial case for mem2reg, since there are no redefinitions of
 the variable. The point of showing this is to calm your tension about
-inserting such blatent inefficiencies :).
+inserting such blatant inefficiencies :).
 
 After the rest of the optimizers run, we get:
 

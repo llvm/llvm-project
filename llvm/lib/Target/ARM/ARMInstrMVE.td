@@ -2725,10 +2725,10 @@ let Predicates = [HasMVEFloat] in {
             (v8f16 (MVE_VSUBf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
 }
 
-class MVE_VCADD<string suffix, bit size, list<dag> pattern=[]>
+class MVE_VCADD<string suffix, bit size, string cstr="", list<dag> pattern=[]>
   : MVEFloatArithNeon<"vcadd", suffix, size, (outs MQPR:$Qd),
                          (ins MQPR:$Qn, MQPR:$Qm, complexrotateopodd:$rot),
-                         "$Qd, $Qn, $Qm, $rot", vpred_r, "", pattern> {
+                         "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, pattern> {
   bits<4> Qd;
   bits<4> Qn;
   bit rot;
@@ -2747,7 +2747,7 @@ class MVE_VCADD<string suffix, bit size, list<dag> pattern=[]>
 }
 
 def MVE_VCADDf16 : MVE_VCADD<"f16", 0b0>;
-def MVE_VCADDf32 : MVE_VCADD<"f32", 0b1>;
+def MVE_VCADDf32 : MVE_VCADD<"f32", 0b1, "@earlyclobber $Qd">;
 
 class MVE_VABD_fp<string suffix, bit size>
   : MVE_float<"vabd", suffix, (outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm),
@@ -3300,10 +3300,10 @@ class MVE_qDest_qSrc<string iname, string suffix, dag oops, dag iops,
 }
 
 class MVE_VQxDMLxDH<string iname, bit exch, bit round, bit subtract,
-                    string suffix, bits<2> size, list<dag> pattern=[]>
+                    string suffix, bits<2> size, string cstr="", list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
-                   vpred_n, "$Qd = $Qd_src", pattern> {
+                   vpred_n, "$Qd = $Qd_src"#cstr, pattern> {
   bits<4> Qn;
 
   let Inst{28} = subtract;
@@ -3320,7 +3320,7 @@ multiclass MVE_VQxDMLxDH_multi<string iname, bit exch,
                                bit round, bit subtract> {
   def s8  : MVE_VQxDMLxDH<iname, exch, round, subtract, "s8",  0b00>;
   def s16 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s16", 0b01>;
-  def s32 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s32", 0b10>;
+  def s32 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s32", 0b10, ",@earlyclobber $Qd">;
 }
 
 defm MVE_VQDMLADH   : MVE_VQxDMLxDH_multi<"vqdmladh",   0b0, 0b0, 0b0>;
@@ -3332,10 +3332,10 @@ defm MVE_VQDMLSDHX  : MVE_VQxDMLxDH_multi<"vqdmlsdhx",  0b1, 0b0, 0b1>;
 defm MVE_VQRDMLSDH  : MVE_VQxDMLxDH_multi<"vqrdmlsdh",  0b0, 0b1, 0b1>;
 defm MVE_VQRDMLSDHX : MVE_VQxDMLxDH_multi<"vqrdmlsdhx", 0b1, 0b1, 0b1>;
 
-class MVE_VCMUL<string iname, string suffix, bit size, list<dag> pattern=[]>
+class MVE_VCMUL<string iname, string suffix, bit size, string cstr="", list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
-                   "$Qd, $Qn, $Qm, $rot", vpred_r, "", pattern> {
+                   "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, pattern> {
   bits<4> Qn;
   bits<2> rot;
 
@@ -3352,13 +3352,13 @@ class MVE_VCMUL<string iname, string suffix, bit size, list<dag> pattern=[]>
 }
 
 def MVE_VCMULf16 : MVE_VCMUL<"vcmul", "f16", 0b0>;
-def MVE_VCMULf32 : MVE_VCMUL<"vcmul", "f32", 0b1>;
+def MVE_VCMULf32 : MVE_VCMUL<"vcmul", "f32", 0b1, "@earlyclobber $Qd">;
 
 class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
-                bit T, list<dag> pattern=[]>
+                bit T, string cstr, list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
-                   vpred_r, "", pattern> {
+                   vpred_r, cstr, pattern> {
   bits<4> Qd;
   bits<4> Qn;
   bits<4> Qm;
@@ -3374,9 +3374,9 @@ class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
 }
 
 multiclass MVE_VMULL_multi<string iname, string suffix,
-                           bit bit_28, bits<2> bits_21_20> {
-  def bh : MVE_VMULL<iname # "b", suffix, bit_28, bits_21_20, 0b0>;
-  def th : MVE_VMULL<iname # "t", suffix, bit_28, bits_21_20, 0b1>;
+                           bit bit_28, bits<2> bits_21_20, string cstr=""> {
+  def bh : MVE_VMULL<iname # "b", suffix, bit_28, bits_21_20, 0b0, cstr>;
+  def th : MVE_VMULL<iname # "t", suffix, bit_28, bits_21_20, 0b1, cstr>;
 }
 
 // For integer multiplies, bits 21:20 encode size, and bit 28 signedness.
@@ -3385,10 +3385,10 @@ multiclass MVE_VMULL_multi<string iname, string suffix,
 
 defm MVE_VMULLs8  : MVE_VMULL_multi<"vmull", "s8",  0b0, 0b00>;
 defm MVE_VMULLs16 : MVE_VMULL_multi<"vmull", "s16", 0b0, 0b01>;
-defm MVE_VMULLs32 : MVE_VMULL_multi<"vmull", "s32", 0b0, 0b10>;
+defm MVE_VMULLs32 : MVE_VMULL_multi<"vmull", "s32", 0b0, 0b10, "@earlyclobber $Qd">;
 defm MVE_VMULLu8  : MVE_VMULL_multi<"vmull", "u8",  0b1, 0b00>;
 defm MVE_VMULLu16 : MVE_VMULL_multi<"vmull", "u16", 0b1, 0b01>;
-defm MVE_VMULLu32 : MVE_VMULL_multi<"vmull", "u32", 0b1, 0b10>;
+defm MVE_VMULLu32 : MVE_VMULL_multi<"vmull", "u32", 0b1, 0b10, "@earlyclobber $Qd">;
 defm MVE_VMULLp8  : MVE_VMULL_multi<"vmull", "p8",  0b0, 0b11>;
 defm MVE_VMULLp16 : MVE_VMULL_multi<"vmull", "p16", 0b1, 0b11>;
 
@@ -3477,11 +3477,10 @@ defm MVE_VCVTf16f32 : MVE_VCVT_ff_halves<"f16.f32", 0b0>;
 defm MVE_VCVTf32f16 : MVE_VCVT_ff_halves<"f32.f16", 0b1>;
 
 class MVE_VxCADD<string iname, string suffix, bits<2> size, bit halve,
-                 list<dag> pattern=[]>
+                 string cstr="", list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm, complexrotateopodd:$rot),
-                   "$Qd, $Qn, $Qm, $rot", vpred_r, "",
-          pattern> {
+                   "$Qd, $Qn, $Qm, $rot", vpred_r, cstr, pattern> {
   bits<4> Qn;
   bit rot;
 
@@ -3497,11 +3496,11 @@ class MVE_VxCADD<string iname, string suffix, bits<2> size, bit halve,
 
 def MVE_VCADDi8   : MVE_VxCADD<"vcadd", "i8", 0b00, 0b1>;
 def MVE_VCADDi16  : MVE_VxCADD<"vcadd", "i16", 0b01, 0b1>;
-def MVE_VCADDi32  : MVE_VxCADD<"vcadd", "i32", 0b10, 0b1>;
+def MVE_VCADDi32  : MVE_VxCADD<"vcadd", "i32", 0b10, 0b1, "@earlyclobber $Qd">;
 
 def MVE_VHCADDs8  : MVE_VxCADD<"vhcadd", "s8", 0b00, 0b0>;
 def MVE_VHCADDs16 : MVE_VxCADD<"vhcadd", "s16", 0b01, 0b0>;
-def MVE_VHCADDs32 : MVE_VxCADD<"vhcadd", "s32", 0b10, 0b0>;
+def MVE_VHCADDs32 : MVE_VxCADD<"vhcadd", "s32", 0b10, 0b0, "@earlyclobber $Qd">;
 
 class MVE_VADCSBC<string iname, bit I, bit subtract,
                   dag carryin, list<dag> pattern=[]>
@@ -3531,10 +3530,10 @@ def MVE_VSBC  : MVE_VADCSBC<"vsbc",  0b0, 0b1, (ins cl_FPSCR_NZCV:$carryin)>;
 def MVE_VSBCI : MVE_VADCSBC<"vsbci", 0b1, 0b1, (ins)>;
 
 class MVE_VQDMULL<string iname, string suffix, bit size, bit T,
-                  list<dag> pattern=[]>
+                  string cstr="", list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
-                   vpred_r, "", pattern> {
+                   vpred_r, cstr, pattern> {
   bits<4> Qn;
 
   let Inst{28} = size;
@@ -3547,13 +3546,13 @@ class MVE_VQDMULL<string iname, string suffix, bit size, bit T,
   let Inst{0} = 0b1;
 }
 
-multiclass MVE_VQDMULL_halves<string suffix, bit size> {
-  def bh : MVE_VQDMULL<"vqdmullb", suffix, size, 0b0>;
-  def th : MVE_VQDMULL<"vqdmullt", suffix, size, 0b1>;
+multiclass MVE_VQDMULL_halves<string suffix, bit size, string cstr=""> {
+  def bh : MVE_VQDMULL<"vqdmullb", suffix, size, 0b0, cstr>;
+  def th : MVE_VQDMULL<"vqdmullt", suffix, size, 0b1, cstr>;
 }
 
 defm MVE_VQDMULLs16 : MVE_VQDMULL_halves<"s16", 0b0>;
-defm MVE_VQDMULLs32 : MVE_VQDMULL_halves<"s32", 0b1>;
+defm MVE_VQDMULLs32 : MVE_VQDMULL_halves<"s32", 0b1, "@earlyclobber $Qd">;
 
 // end of mve_qDest_qSrc
 
@@ -3578,9 +3577,9 @@ class MVE_qr_base<dag oops, dag iops, InstrItinClass itin, string iname,
   let Inst{3-0} = Rm{3-0};
 }
 
-class MVE_qDest_rSrc<string iname, string suffix, list<dag> pattern=[]>
+class MVE_qDest_rSrc<string iname, string suffix, string cstr="", list<dag> pattern=[]>
   : MVE_qr_base<(outs MQPR:$Qd), (ins MQPR:$Qn, rGPR:$Rm),
-          NoItinerary, iname, suffix, "$Qd, $Qn, $Rm", vpred_r, "",
+          NoItinerary, iname, suffix, "$Qd, $Qn, $Rm", vpred_r, cstr,
            pattern>;
 
 class MVE_qDestSrc_rSrc<string iname, string suffix, list<dag> pattern=[]>
@@ -3602,7 +3601,7 @@ class MVE_qDest_single_rSrc<string iname, string suffix, list<dag> pattern=[]>
 class MVE_VADDSUB_qr<string iname, string suffix, bits<2> size,
                      bit bit_5, bit bit_12, bit bit_16,
                      bit bit_28, list<dag> pattern=[]>
-  : MVE_qDest_rSrc<iname, suffix, pattern> {
+  : MVE_qDest_rSrc<iname, suffix, "", pattern> {
 
   let Inst{28} = bit_28;
   let Inst{21-20} = size;
@@ -3650,8 +3649,8 @@ let Predicates = [HasMVEInt] in {
 }
 
 class MVE_VQDMULL_qr<string iname, string suffix, bit size,
-                     bit T, list<dag> pattern=[]>
-  : MVE_qDest_rSrc<iname, suffix, pattern> {
+                     bit T, string cstr="", list<dag> pattern=[]>
+  : MVE_qDest_rSrc<iname, suffix, cstr, pattern> {
 
   let Inst{28} = size;
   let Inst{21-20} = 0b11;
@@ -3661,18 +3660,18 @@ class MVE_VQDMULL_qr<string iname, string suffix, bit size,
   let Inst{5} = 0b1;
 }
 
-multiclass MVE_VQDMULL_qr_halves<string suffix, bit size> {
-  def bh : MVE_VQDMULL_qr<"vqdmullb", suffix, size, 0b0>;
-  def th : MVE_VQDMULL_qr<"vqdmullt", suffix, size, 0b1>;
+multiclass MVE_VQDMULL_qr_halves<string suffix, bit size, string cstr=""> {
+  def bh : MVE_VQDMULL_qr<"vqdmullb", suffix, size, 0b0, cstr>;
+  def th : MVE_VQDMULL_qr<"vqdmullt", suffix, size, 0b1, cstr>;
 }
 
 defm MVE_VQDMULL_qr_s16 : MVE_VQDMULL_qr_halves<"s16", 0b0>;
-defm MVE_VQDMULL_qr_s32 : MVE_VQDMULL_qr_halves<"s32", 0b1>;
+defm MVE_VQDMULL_qr_s32 : MVE_VQDMULL_qr_halves<"s32", 0b1, "@earlyclobber $Qd">;
 
 class MVE_VxADDSUB_qr<string iname, string suffix,
                       bit bit_28, bits<2> bits_21_20, bit subtract,
                       list<dag> pattern=[]>
-  : MVE_qDest_rSrc<iname, suffix, pattern> {
+  : MVE_qDest_rSrc<iname, suffix, "", pattern> {
 
   let Inst{28} = bit_28;
   let Inst{21-20} = bits_21_20;
@@ -3750,7 +3749,7 @@ let Predicates = [HasMVEInt] in {
 }
 
 class MVE_VBRSR<string iname, string suffix, bits<2> size, list<dag> pattern=[]>
-  : MVE_qDest_rSrc<iname, suffix, pattern> {
+  : MVE_qDest_rSrc<iname, suffix, "", pattern> {
 
   let Inst{28} = 0b1;
   let Inst{21-20} = size;
@@ -3766,7 +3765,7 @@ def MVE_VBRSR32 : MVE_VBRSR<"vbrsr", "32", 0b10>;
 
 class MVE_VMUL_qr_int<string iname, string suffix,
                       bits<2> size, list<dag> pattern=[]>
-  : MVE_qDest_rSrc<iname, suffix, pattern> {
+  : MVE_qDest_rSrc<iname, suffix, "", pattern> {
 
   let Inst{28} = 0b0;
   let Inst{21-20} = size;
@@ -3791,7 +3790,7 @@ let Predicates = [HasMVEInt] in {
 
 class MVE_VxxMUL_qr<string iname, string suffix,
                     bit bit_28, bits<2> bits_21_20, list<dag> pattern=[]>
-  : MVE_qDest_rSrc<iname, suffix, pattern> {
+  : MVE_qDest_rSrc<iname, suffix, "", pattern> {
 
   let Inst{28} = bit_28;
   let Inst{21-20} = bits_21_20;

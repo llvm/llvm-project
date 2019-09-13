@@ -549,7 +549,7 @@ public:
   void resolveLocalRelocations();
 
   static void finalizeAsync(std::unique_ptr<RuntimeDyldImpl> This,
-                            std::function<void(Error)> OnEmitted,
+                            unique_function<void(Error)> OnEmitted,
                             std::unique_ptr<MemoryBuffer> UnderlyingBuffer);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);

@@ -20,8 +20,9 @@ toBinary(SmallVectorImpl<char> &Storage, StringRef Yaml) {
   Storage.clear();
   raw_svector_ostream OS(Storage);
   yaml::Input YIn(Yaml);
-  if (Error E = yaml::convertYAML(YIn, OS))
-    return std::move(E);
+  if (!yaml::convertYAML(YIn, OS, [](const Twine &Msg) {}))
+    return createStringError(std::errc::invalid_argument,
+                             "unable to convert YAML");
 
   return object::MinidumpFile::create(MemoryBufferRef(OS.str(), "Binary"));
 }

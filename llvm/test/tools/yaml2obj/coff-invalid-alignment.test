@@ -1,6 +1,6 @@
 # RUN: not yaml2obj %s 2>&1 | FileCheck %s
 
-## CHECK: Section alignment is too large
+## CHECK: error: section alignment is too large
 
 --- !COFF
 header:

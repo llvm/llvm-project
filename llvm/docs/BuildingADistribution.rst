@@ -132,10 +132,10 @@ the performance of the generated binaries.
 In addition to PGO profiling we also have limited support in-tree for generating
 linker order files. These files provide the linker with a suggested ordering for
 functions in the final binary layout. This can measurably speed up clang by
-physically grouping functions that are called temporally close to eachother. The
-current tooling is only available on Darwin systems with ``dtrace(1)``. It is
-worth noting that dtrace is non-deterministic, and so the order file generation
-using dtrace is also non-deterministic.
+physically grouping functions that are called temporally close to each other.
+The current tooling is only available on Darwin systems with ``dtrace(1)``. It
+is worth noting that dtrace is non-deterministic, and so the order file
+generation using dtrace is also non-deterministic.
 
 Options for Reducing Size
 =========================

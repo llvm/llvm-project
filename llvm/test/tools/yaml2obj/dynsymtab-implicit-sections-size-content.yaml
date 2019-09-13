@@ -31,8 +31,7 @@ DynamicSymbols:
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE2
 
-# CASE2: error: cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'
-# CASE2: error: yaml2obj failed
+# CASE2: yaml2obj: error: cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'
 
 --- !ELF
 FileHeader:
@@ -55,8 +54,7 @@ DynamicSymbols:
 
 # RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE3
 
-# CASE3: error: cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'
-# CASE3: error: yaml2obj failed
+# CASE3: yaml2obj: error: cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'
 
 --- !ELF
 FileHeader:

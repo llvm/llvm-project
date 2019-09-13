@@ -511,7 +511,7 @@ Once we have the predicate accumulated into a special value for correct vs.
 misspeculated, we need to apply this to loads in a way that ensures they do not
 leak secret data. There are two primary techniques for this: we can either
 harden the loaded value to prevent observation, or we can harden the address
-itself to prevent the load from occuring. These have significantly different
+itself to prevent the load from occurring. These have significantly different
 performance tradeoffs.
 
 
@@ -942,7 +942,7 @@ We can use this broader barrier to speculative loads executing between
 functions. We emit it in the entry block to handle calls, and prior to each
 return. This approach also has the advantage of providing the strongest degree
 of mitigation when mixed with unmitigated code by halting all misspeculation
-entering a function which is mitigated, regardless of what occured in the
+entering a function which is mitigated, regardless of what occurred in the
 caller. However, such a mixture is inherently more risky. Whether this kind of
 mixture is a sufficient mitigation requires careful analysis.
 

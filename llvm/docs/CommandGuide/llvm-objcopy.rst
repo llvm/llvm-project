@@ -123,7 +123,7 @@ multiple file formats.
 .. option:: --strip-unneeded
 
  Remove from the output all local or undefined symbols that are not required by
- relocations.
+ relocations. Also remove all debug sections.
 
 .. option:: --version, -V
 

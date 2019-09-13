@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOutliner.h"
@@ -1637,28 +1636,6 @@ public:
   /// to prevent register allocator to insert spills before such instructions.
   virtual bool isBasicBlockPrologue(const MachineInstr &MI) const {
     return false;
-  }
-
-  /// During PHI eleimination lets target to make necessary checks and
-  /// insert the copy to the PHI destination register in a target specific
-  /// manner.
-  virtual MachineInstr *createPHIDestinationCopy(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
-      const DebugLoc &DL, Register Src, Register Dst) const {
-    return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
-        .addReg(Src);
-  }
-
-  /// During PHI eleimination lets target to make necessary checks and
-  /// insert the copy to the PHI destination register in a target specific
-  /// manner.
-  virtual MachineInstr *createPHISourceCopy(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator InsPt,
-                                            const DebugLoc &DL, Register Src,
-                                            Register SrcSubReg,
-                                            Register Dst) const {
-    return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
-        .addReg(Src, 0, SrcSubReg);
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
