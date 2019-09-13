@@ -128,6 +128,13 @@ static StringRef CopyString(ASTContext &ctx, StringRef string) {
   return StringRef(static_cast<char *>(mem), string.size());
 }
 
+static AttributeCommonInfo getDummyAttrInfo() {
+  return AttributeCommonInfo(SourceRange(),
+                             AttributeCommonInfo::UnknownAttribute,
+                             AttributeCommonInfo::AS_GNU,
+                             /*Spelling*/0);
+}
+
 namespace {
   template <typename A>
   struct AttrKindFor {};
@@ -209,7 +216,7 @@ static void handleAPINotedRetainCountAttribute(Sema &S, Decl *D,
   // The template argument has a default to make the "removal" case more
   // concise; it doesn't matter /which/ attribute is being removed.
   handleAPINotedAttribute<A>(S, D, shouldAddAttribute, metadata, [&] {
-    return new (S.Context) A(SourceRange(), S.Context, /*SpellingIndex*/0);
+    return new (S.Context) A(S.Context, getDummyAttrInfo());
   }, [](const Decl *D) -> Decl::attr_iterator {
     return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
       return isa<CFReturnsRetainedAttr>(next) ||
@@ -262,16 +269,15 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   if (info.Unavailable) {
     handleAPINotedAttribute<UnavailableAttr>(S, D, true, metadata,
       [&] {
-        return new (S.Context) UnavailableAttr(SourceRange(), S.Context,
+        return new (S.Context) UnavailableAttr(S.Context, getDummyAttrInfo(),
                                                CopyString(S.Context,
-                                                          info.UnavailableMsg),
-                                               /*SpellingIndex*/0);
+                                                          info.UnavailableMsg));
     });
   }
 
   if (info.UnavailableInSwift) {
     handleAPINotedAttribute<AvailabilityAttr>(S, D, true, metadata, [&] {
-      return new (S.Context) AvailabilityAttr(SourceRange(), S.Context,
+      return new (S.Context) AvailabilityAttr(S.Context, getDummyAttrInfo(),
                                               &S.Context.Idents.get("swift"),
                                               VersionTuple(), VersionTuple(),
                                               VersionTuple(),
@@ -280,8 +286,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                                          info.UnavailableMsg),
                                               /*Strict=*/false,
                                               /*Replacement=*/StringRef(),
-                                              /*Priority=*/Sema::AP_Explicit,
-                                              /*SpellingIndex*/0);
+                                              /*Priority=*/Sema::AP_Explicit);
     },
     [](const Decl *decl) {
       return llvm::find_if(decl->attrs(), [](const Attr *next) -> bool {
@@ -300,8 +305,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   if (auto swiftPrivate = info.isSwiftPrivate()) {
     handleAPINotedAttribute<SwiftPrivateAttr>(S, D, *swiftPrivate, metadata,
                                               [&] {
-      return new (S.Context) SwiftPrivateAttr(SourceRange(), S.Context,
-                                              /*SpellingIndex*/0);
+      return new (S.Context) SwiftPrivateAttr(S.Context, getDummyAttrInfo());
     });
   }
 
@@ -316,10 +320,9 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         return nullptr;
       }
 
-      return new (S.Context) SwiftNameAttr(SourceRange(), S.Context,
+      return new (S.Context) SwiftNameAttr(S.Context, getDummyAttrInfo(),
                                            CopyString(S.Context,
-                                                      info.SwiftName),
-                                           /*SpellingIndex*/0);
+                                                      info.SwiftName));
     });
   }
 }
@@ -331,10 +334,9 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   if (auto swiftBridge = info.getSwiftBridge()) {
     handleAPINotedAttribute<SwiftBridgeAttr>(S, D, !swiftBridge->empty(),
                                              metadata, [&] {
-      return new (S.Context) SwiftBridgeAttr(SourceRange(), S.Context,
+      return new (S.Context) SwiftBridgeAttr(S.Context, getDummyAttrInfo(),
                                              CopyString(S.Context,
-                                                        *swiftBridge),
-                                             /*SpellingIndex*/0);
+                                                        *swiftBridge));
     });
   }
 
@@ -343,8 +345,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
     handleAPINotedAttribute<NSErrorDomainAttr>(S, D, !nsErrorDomain->empty(),
                                                metadata, [&] {
       return new (S.Context) NSErrorDomainAttr(
-          SourceRange(), S.Context, &S.Context.Idents.get(*nsErrorDomain),
-          /*SpellingIndex*/0);
+          S.Context, getDummyAttrInfo(), &S.Context.Idents.get(*nsErrorDomain));
     });
   }
 
@@ -426,8 +427,7 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
   // noescape
   if (auto noescape = info.isNoEscape()) {
     handleAPINotedAttribute<NoEscapeAttr>(S, D, *noescape, metadata, [&] {
-      return new (S.Context) NoEscapeAttr(SourceRange(), S.Context,
-                                          /*SpellingIndex*/0);
+      return new (S.Context) NoEscapeAttr(S.Context, getDummyAttrInfo());
     });
   }
 
@@ -461,7 +461,7 @@ static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
                                                                 *asAccessors,
                                                                 metadata, [&] {
       return new (S.Context) SwiftImportPropertyAsAccessorsAttr(
-          SourceRange(), S.Context, /*SpellingIndex*/0);
+          S.Context, getDummyAttrInfo());
     });
   }
 }
@@ -607,9 +607,8 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
       if (ObjCInterfaceDecl *IFace = D->getClassInterface()) {
         IFace->setHasDesignatedInitializers();
       }
-      return new (S.Context) ObjCDesignatedInitializerAttr(SourceRange(),
-                                                           S.Context,
-                                                           /*SpellingIndex*/0);
+      return new (S.Context) ObjCDesignatedInitializerAttr(S.Context,
+                                                           getDummyAttrInfo());
     });
   }
 
@@ -638,16 +637,16 @@ static void ProcessAPINotes(Sema &S, TagDecl *D,
         kind = EnumExtensibilityAttr::Closed;
         break;
       }
-      return new (S.Context) EnumExtensibilityAttr(SourceRange(), S.Context,
-                                                   kind, /*SpellingIndex*/0);
+      return new (S.Context) EnumExtensibilityAttr(S.Context,
+                                                   getDummyAttrInfo(),
+                                                   kind);
     });
   }
 
   if (auto flagEnum = info.isFlagEnum()) {
     handleAPINotedAttribute<FlagEnumAttr>(S, D, flagEnum.getValue(), metadata,
                                           [&] {
-      return new (S.Context) FlagEnumAttr(SourceRange(), S.Context,
-                                          /*SpellingIndex*/0);
+      return new (S.Context) FlagEnumAttr(S.Context, getDummyAttrInfo());
     });
   }
 
@@ -680,9 +679,11 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
           kind = SwiftNewtypeAttr::NK_Enum;
           break;
         }
-        return new (S.Context) SwiftNewtypeAttr(
-            SourceRange(), S.Context, kind,
-            SwiftNewtypeAttr::GNU_swift_wrapper);
+        AttributeCommonInfo syntaxInfo{SourceRange(),
+                                       AttributeCommonInfo::AT_SwiftNewtype,
+                                       AttributeCommonInfo::AS_GNU,
+                                       SwiftNewtypeAttr::GNU_swift_wrapper};
+        return new (S.Context) SwiftNewtypeAttr(S.Context, syntaxInfo, kind);
     });
   }
 
@@ -708,17 +709,16 @@ static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
   if (auto asNonGeneric = info.getSwiftImportAsNonGeneric()) {
     handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(S, D, *asNonGeneric,
                                                          metadata, [&] {
-      return new (S.Context) SwiftImportAsNonGenericAttr(SourceRange(),
-                                                         S.Context,
-                                                         /*SpellingIndex*/0);
+      return new (S.Context) SwiftImportAsNonGenericAttr(S.Context,
+                                                         getDummyAttrInfo());
     });
   }
 
     if (auto objcMembers = info.getSwiftObjCMembers()) {
     handleAPINotedAttribute<SwiftObjCMembersAttr>(S, D, *objcMembers,
                                                          metadata, [&] {
-      return new (S.Context) SwiftObjCMembersAttr(SourceRange(), S.Context,
-                                                  /*SpellingIndex*/0);
+      return new (S.Context) SwiftObjCMembersAttr(S.Context,
+                                                  getDummyAttrInfo());
     });
   }
 

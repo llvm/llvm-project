@@ -40,6 +40,21 @@ static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
   return Tok.Tok.getIdentifierInfo() != nullptr;
 }
 
+/// With `Left` being '(', check if we're at either `[...](` or
+/// `[...]<...>(`, where the [ opens a lambda capture list.
+static bool isLambdaParameterList(const FormatToken *Left) {
+  // Skip <...> if present.
+  if (Left->Previous && Left->Previous->is(tok::greater) &&
+      Left->Previous->MatchingParen &&
+      Left->Previous->MatchingParen->is(TT_TemplateOpener))
+    Left = Left->Previous->MatchingParen;
+
+  // Check for `[...]`.
+  return Left->Previous && Left->Previous->is(tok::r_square) &&
+         Left->Previous->MatchingParen &&
+         Left->Previous->MatchingParen->is(TT_LambdaLSquare);
+}
+
 /// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
@@ -191,9 +206,7 @@ private:
                Left->Previous->is(TT_JsTypeColon)) {
       // let x: (SomeType);
       Contexts.back().IsExpression = false;
-    } else if (Left->Previous && Left->Previous->is(tok::r_square) &&
-               Left->Previous->MatchingParen &&
-               Left->Previous->MatchingParen->is(TT_LambdaLSquare)) {
+    } else if (isLambdaParameterList(Left)) {
       // This is a parameter list of a lambda expression.
       Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&

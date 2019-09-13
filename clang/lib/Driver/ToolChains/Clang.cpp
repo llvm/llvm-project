@@ -6100,15 +6100,14 @@ const char *Clang::getBaseInputStem(const ArgList &Args,
 const char *Clang::getDependencyFileName(const ArgList &Args,
                                          const InputInfoList &Inputs) {
   // FIXME: Think about this more.
-  std::string Res;
 
   if (Arg *OutputOpt = Args.getLastArg(options::OPT_o)) {
-    std::string Str(OutputOpt->getValue());
-    Res = Str.substr(0, Str.rfind('.'));
-  } else {
-    Res = getBaseInputStem(Args, Inputs);
+    SmallString<128> OutputFilename(OutputOpt->getValue());
+    llvm::sys::path::replace_extension(OutputFilename, llvm::Twine('d'));
+    return Args.MakeArgString(OutputFilename);
   }
-  return Args.MakeArgString(Res + ".d");
+
+  return Args.MakeArgString(std::string(getBaseInputStem(Args, Inputs)) + ".d");
 }
 
 // Begin ClangAs

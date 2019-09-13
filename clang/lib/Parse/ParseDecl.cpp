@@ -380,7 +380,7 @@ unsigned Parser::ParseAttributeArgsCommon(
     bool IsIdentifierArg = attributeHasIdentifierArg(*AttrName) ||
                            attributeHasVariadicIdentifierArg(*AttrName);
     ParsedAttr::Kind AttrKind =
-        ParsedAttr::getKind(AttrName, ScopeName, Syntax);
+        ParsedAttr::getParsedKind(AttrName, ScopeName, Syntax);
 
     // If we don't know how to parse this attribute, but this is the only
     // token in this argument, assume it's meant to be an identifier.
@@ -471,7 +471,7 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
   assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
 
   ParsedAttr::Kind AttrKind =
-      ParsedAttr::getKind(AttrName, ScopeName, Syntax);
+      ParsedAttr::getParsedKind(AttrName, ScopeName, Syntax);
 
   if (AttrKind == ParsedAttr::AT_Availability) {
     ParseAvailabilityAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
@@ -525,7 +525,7 @@ unsigned Parser::ParseClangAttributeArgs(
   assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
 
   ParsedAttr::Kind AttrKind =
-      ParsedAttr::getKind(AttrName, ScopeName, Syntax);
+      ParsedAttr::getParsedKind(AttrName, ScopeName, Syntax);
 
   switch (AttrKind) {
   default:
@@ -1726,9 +1726,9 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
     if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute)
-      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored) << AL.getName();
+      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored) << AL;
     else {
-      Diag(AL.getLoc(), DiagID) << AL.getName();
+      Diag(AL.getLoc(), DiagID) << AL;
       AL.setInvalid();
     }
   }

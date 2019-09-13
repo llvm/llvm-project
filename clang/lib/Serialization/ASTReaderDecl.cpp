@@ -2750,6 +2750,10 @@ public:
     return Reader->ReadSourceRange(*F, Record, Idx);
   }
 
+  SourceLocation readSourceLocation() {
+    return Reader->ReadSourceLocation(*F, Record, Idx);
+  }
+
   Expr *readExpr() { return Reader->ReadExpr(*F); }
 
   Attr *readAttr() { return Reader->ReadAttr(*F, Record, Idx); }
@@ -2787,8 +2791,19 @@ Attr *ASTReader::ReadAttr(ModuleFile &M, const RecordData &Rec,
   // Kind is stored as a 1-based integer because 0 is used to indicate a null
   // Attr pointer.
   auto Kind = static_cast<attr::Kind>(V - 1);
-  SourceRange Range = Record.readSourceRange();
   ASTContext &Context = getContext();
+
+  IdentifierInfo *AttrName = Record.getIdentifierInfo();
+  IdentifierInfo *ScopeName = Record.getIdentifierInfo();
+  SourceRange AttrRange = Record.readSourceRange();
+  SourceLocation ScopeLoc = Record.readSourceLocation();
+  unsigned ParsedKind = Record.readInt();
+  unsigned Syntax = Record.readInt();
+  unsigned SpellingIndex = Record.readInt();
+
+  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
+                           AttributeCommonInfo::Kind(ParsedKind),
+                           AttributeCommonInfo::Syntax(Syntax), SpellingIndex);
 
 #include "clang/Serialization/AttrPCHRead.inc"
 
@@ -4555,8 +4570,9 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       break;
 
     case UPD_DECL_MARKED_OPENMP_THREADPRIVATE:
-      D->addAttr(OMPThreadPrivateDeclAttr::CreateImplicit(Reader.getContext(),
-                                                          ReadSourceRange()));
+      D->addAttr(OMPThreadPrivateDeclAttr::CreateImplicit(
+          Reader.getContext(), ReadSourceRange(),
+          AttributeCommonInfo::AS_Pragma));
       break;
 
     case UPD_DECL_MARKED_OPENMP_ALLOCATE: {
@@ -4565,7 +4581,8 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       Expr *Allocator = Record.readExpr();
       SourceRange SR = ReadSourceRange();
       D->addAttr(OMPAllocateDeclAttr::CreateImplicit(
-          Reader.getContext(), AllocatorKind, Allocator, SR));
+          Reader.getContext(), AllocatorKind, Allocator, SR,
+          AttributeCommonInfo::AS_Pragma));
       break;
     }
 
@@ -4584,7 +4601,8 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       OMPDeclareTargetDeclAttr::DevTypeTy DevType =
           static_cast<OMPDeclareTargetDeclAttr::DevTypeTy>(Record.readInt());
       D->addAttr(OMPDeclareTargetDeclAttr::CreateImplicit(
-          Reader.getContext(), MapType, DevType, ReadSourceRange()));
+          Reader.getContext(), MapType, DevType, ReadSourceRange(),
+          AttributeCommonInfo::AS_Pragma));
       break;
     }
 
