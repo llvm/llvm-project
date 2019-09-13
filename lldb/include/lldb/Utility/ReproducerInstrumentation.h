@@ -40,7 +40,7 @@ inline void stringify_append(llvm::raw_string_ostream &ss, const T *t) {
 template <>
 inline void stringify_append<char>(llvm::raw_string_ostream &ss,
                                    const char *t) {
-  ss << t;
+  ss << '\"' << t << '\"';
 }
 
 template <typename Head>
@@ -105,8 +105,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   }
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(__VA_ARGS__));      \
+  lldb_private::repro::Recorder sb_recorder(                                   \
+      LLVM_PRETTY_FUNCTION, stringify_args(*this, __VA_ARGS__));               \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     sb_recorder.Record(                                                        \
@@ -117,8 +117,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   }
 
 #define LLDB_RECORD_METHOD_CONST(Result, Class, Method, Signature, ...)        \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
-                                            stringify_args(__VA_ARGS__));      \
+  lldb_private::repro::Recorder sb_recorder(                                   \
+      LLVM_PRETTY_FUNCTION, stringify_args(*this, __VA_ARGS__));               \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     sb_recorder.Record(                                                        \
@@ -129,7 +129,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   }
 
 #define LLDB_RECORD_METHOD_NO_ARGS(Result, Class, Method)                      \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION);             \
+  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
+                                            stringify_args(*this));            \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
@@ -139,7 +140,8 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   }
 
 #define LLDB_RECORD_METHOD_CONST_NO_ARGS(Result, Class, Method)                \
-  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION);             \
+  lldb_private::repro::Recorder sb_recorder(LLVM_PRETTY_FUNCTION,              \
+                                            stringify_args(*this));            \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     sb_recorder.Record(                                                        \
@@ -542,9 +544,7 @@ public:
     SerializeAll(tail...);
   }
 
-  void SerializeAll() {
-    m_stream.flush();
-  }
+  void SerializeAll() { m_stream.flush(); }
 
 private:
   /// Serialize pointers. We need to differentiate between pointers to
