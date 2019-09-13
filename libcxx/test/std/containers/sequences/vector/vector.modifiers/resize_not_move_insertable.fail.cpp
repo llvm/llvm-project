@@ -31,6 +31,7 @@ public:
 
 int main() {
   // expected-error@memory:* 2 {{"The specified type does not meet the requirements of Cpp17MoveInsertable"}}
+  // expected-error@memory:* 0-2 {{call to deleted constructor}}
   {
 
     std::vector<BadUserNoCookie<1> > x;
