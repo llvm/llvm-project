@@ -39,8 +39,9 @@ llvm::Expected<TestFile> TestFile::fromYaml(llvm::StringRef Yaml) {
   {
     llvm::raw_fd_ostream OS(FD, /*shouldClose*/ true);
     llvm::yaml::Input YIn(Yaml);
-    if (llvm::Error E = llvm::yaml::convertYAML(YIn, OS))
-      return std::move(E);
+    if (!llvm::yaml::convertYAML(YIn, OS, [](const llvm::Twine &Msg) {}))
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "convertYAML() failed");
   }
   return TestFile(Name, std::move(Remover));
 }
