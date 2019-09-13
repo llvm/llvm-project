@@ -1094,7 +1094,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Parse command line options.
   ArgParser parser;
-  opt::InputArgList args = parser.parseLINK(argsArr);
+  opt::InputArgList args = parser.parse(argsArr);
 
   // Parse and evaluate -mllvm options.
   std::vector<const char *> v;
@@ -1162,7 +1162,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   searchPaths.push_back("");
   for (auto *arg : args.filtered(OPT_libpath))
     searchPaths.push_back(arg->getValue());
-  addLibSearchPaths();
+  if (!args.hasArg(OPT_lldignoreenv))
+    addLibSearchPaths();
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
