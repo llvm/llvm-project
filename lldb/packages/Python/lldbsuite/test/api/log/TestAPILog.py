@@ -44,5 +44,5 @@ class APILogTestCase(TestBase):
         create_target = 'lldb::SBTarget lldb::SBDebugger::CreateTarget(const char *) (0x{}, "")'.format(
             debugger_addr)
 
-        self.assertTrue(get_scripting_language in log)
-        self.assertTrue(create_target in log)
+        self.assertTrue(get_scripting_language in log, log)
+        self.assertTrue(create_target in log, log)
