@@ -4412,7 +4412,7 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
       if (alias_decl->hasInterfaceType()) {
         swift::Type swift_type = swift::TypeAliasType::get(
             alias_decl, swift::Type(), swift::SubstitutionMap(),
-            alias_decl->getUnderlyingTypeLoc().getType());
+            alias_decl->getUnderlyingType());
         return {swift_type.getPointer()};
       }
       break;
@@ -4474,7 +4474,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
       if (alias_decl->hasInterfaceType()) {
         swift::Type swift_type = swift::TypeAliasType::get(
             alias_decl, swift::Type(), swift::SubstitutionMap(),
-            alias_decl->getUnderlyingTypeLoc().getType());
+            alias_decl->getUnderlyingType());
         return CompilerType(swift_type.getPointer());
       }
     } break;
