@@ -3,4 +3,4 @@
 ; RUN: echo end >> %t.mri
 
 ; RUN: not llvm-ar -M  < %t.mri 2>&1 | FileCheck %s
-; CHECK: File already saved.
+; CHECK: error: file already saved

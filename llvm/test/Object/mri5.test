@@ -1,2 +1,2 @@
 ; RUN: not llvm-ar -M t < %s 2>&1 | FileCheck %s
-; CHECK: Cannot mix -M and other options.
+; CHECK: error: cannot mix -M and other options

@@ -827,6 +827,17 @@ define i32 @exact(i32* %a) {
   ret i32 %add3
 }
 
+@G = external global i8
+define i32* @ret_const() #0 {
+  %bc = bitcast i8* @G to i32*
+  ret i32* %bc
+}
+define i32* @use_const() #0 {
+  %c = call i32* @ret_const()
+  ; CHECK: ret i32* bitcast (i8* @G to i32*)
+  ret i32* %c
+}
+
 attributes #0 = { noinline nounwind uwtable }
 
 ; BOTH-NOT: attributes #

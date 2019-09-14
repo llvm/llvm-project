@@ -62,7 +62,7 @@ protected:
   static lldb::thread_result_t AsyncThread(void *arg);
 
   /// Replay history with the oldest packet at the end.
-  std::vector<GDBRemoteCommunicationHistory::Entry> m_packet_history;
+  std::vector<GDBRemotePacket> m_packet_history;
 
   /// Server thread.
   Broadcaster m_async_broadcaster;
