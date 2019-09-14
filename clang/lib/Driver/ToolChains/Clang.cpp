@@ -6078,7 +6078,7 @@ const char *Clang::getDependencyFileName(const ArgList &Args,
     return Args.MakeArgString(OutputFilename);
   }
 
-  return Args.MakeArgString(std::string(getBaseInputStem(Args, Inputs)) + ".d");
+  return Args.MakeArgString(Twine(getBaseInputStem(Args, Inputs)) + ".d");
 }
 
 // Begin ClangAs

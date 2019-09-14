@@ -985,7 +985,7 @@ void ScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
          "ShouldTrackLaneMasks requires ShouldTrackPressure");
 }
 
-// Setup the register pressure trackers for the top scheduled top and bottom
+// Setup the register pressure trackers for the top scheduled and bottom
 // scheduled regions.
 void ScheduleDAGMILive::initRegPressure() {
   VRegUses.clear();

@@ -76,7 +76,7 @@ THIN-PATH-NEXT: /41             0           0     0     644     4         `
 THIN-PATH-NEXT: /65             0           0     0     644     4         `
 
 RUN: not llvm-ar --format=bsd rcT bad.a 0123456789abcde 0123456789abcdef 2>&1 | FileCheck --check-prefix=BSD-THIN %s
-BSD-THIN: Only the gnu format has a thin mode.
+BSD-THIN: error: only the gnu format has a thin mode
 
 If an archive has an object with no symbols, the linker and some other
 tools on some versions of Solaris will abort operations if there is no

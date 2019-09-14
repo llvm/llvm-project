@@ -31,9 +31,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Pass.h"
@@ -254,12 +252,11 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   // Insert a register to register copy at the top of the current block (but
   // after any remaining phi nodes) which copies the new incoming register
   // into the phi node destination.
-  MachineInstr *PHICopy = nullptr;
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   if (allPhiOperandsUndefined(*MPhi, *MRI))
     // If all sources of a PHI node are implicit_def or undef uses, just emit an
     // implicit_def instead of a copy.
-    PHICopy = BuildMI(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
+    BuildMI(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
             TII->get(TargetOpcode::IMPLICIT_DEF), DestReg);
   else {
     // Can we reuse an earlier PHI node? This only happens for critical edges,
@@ -276,13 +273,15 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(DestReg);
       entry = IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
     }
-    // Give the target possiblity to handle special cases fallthrough otherwise
-    PHICopy = TII->createPHIDestinationCopy(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
-                                  IncomingReg, DestReg);
+    BuildMI(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
+            TII->get(TargetOpcode::COPY), DestReg)
+      .addReg(IncomingReg);
   }
 
   // Update live variable information if there is any.
   if (LV) {
+    MachineInstr &PHICopy = *std::prev(AfterPHIsIt);
+
     if (IncomingReg) {
       LiveVariables::VarInfo &VI = LV->getVarInfo(IncomingReg);
 
@@ -303,7 +302,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       // killed.  Note that because the value is defined in several places (once
       // each for each incoming block), the "def" block and instruction fields
       // for the VarInfo is not filled in.
-      LV->addVirtualRegisterKilled(IncomingReg, *PHICopy);
+      LV->addVirtualRegisterKilled(IncomingReg, PHICopy);
     }
 
     // Since we are going to be deleting the PHI node, if it is the last use of
@@ -313,14 +312,15 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
 
     // If the result is dead, update LV.
     if (isDead) {
-      LV->addVirtualRegisterDead(DestReg, *PHICopy);
+      LV->addVirtualRegisterDead(DestReg, PHICopy);
       LV->removeVirtualRegisterDead(DestReg, *MPhi);
     }
   }
 
   // Update LiveIntervals for the new copy or implicit def.
   if (LIS) {
-    SlotIndex DestCopyIndex = LIS->InsertMachineInstrInMaps(*PHICopy);
+    SlotIndex DestCopyIndex =
+        LIS->InsertMachineInstrInMaps(*std::prev(AfterPHIsIt));
 
     SlotIndex MBBStartIndex = LIS->getMBBStartIdx(&MBB);
     if (IncomingReg) {
@@ -406,9 +406,9 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           if (DefMI->isImplicitDef())
             ImpDefs.insert(DefMI);
       } else {
-        NewSrcInstr =
-            TII->createPHISourceCopy(opBlock, InsertPos, MPhi->getDebugLoc(),
-                                     SrcReg, SrcSubReg, IncomingReg);
+        NewSrcInstr = BuildMI(opBlock, InsertPos, MPhi->getDebugLoc(),
+                            TII->get(TargetOpcode::COPY), IncomingReg)
+                        .addReg(SrcReg, 0, SrcSubReg);
       }
     }
 
@@ -457,7 +457,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           }
         } else {
           // We just inserted this copy.
-          KillInst = NewSrcInstr;
+          KillInst = std::prev(InsertPos);
         }
       }
       assert(KillInst->readsRegister(SrcReg) && "Cannot find kill instruction");

@@ -514,8 +514,20 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
   for (unsigned i = 0; i < OutLocs.size(); ++i) {
     auto &ArgLoc = OutLocs[i];
     // If it's not a register, it's fine.
-    if (!ArgLoc.isRegLoc())
+    if (!ArgLoc.isRegLoc()) {
+      if (Info.IsVarArg) {
+        // Be conservative and disallow variadic memory operands to match SDAG's
+        // behaviour.
+        // FIXME: If the caller's calling convention is C, then we can
+        // potentially use its argument area. However, for cases like fastcc,
+        // we can't do anything.
+        LLVM_DEBUG(
+            dbgs()
+            << "... Cannot tail call vararg function with stack arguments\n");
+        return false;
+      }
       continue;
+    }
 
     Register Reg = ArgLoc.getLocReg();
 
@@ -583,11 +595,6 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
-  if (Info.IsVarArg) {
-    LLVM_DEBUG(dbgs() << "... Tail calling varargs not supported yet.\n");
-    return false;
-  }
-
   // Byval parameters hand the function a pointer directly into the stack area
   // we want to reuse during a tail call. Working around this *is* possible (see
   // X86).
@@ -640,6 +647,12 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // about this assert.
   assert((!Info.IsVarArg || CalleeCC == CallingConv::C) &&
          "Unexpected variadic calling convention");
+
+  // Before we can musttail varargs, we need to forward parameters like in
+  // r345641. Make sure that we don't enable musttail with varargs without
+  // addressing that!
+  assert(!(Info.IsVarArg && Info.IsMustTailCall) &&
+         "musttail support for varargs not implemented yet!");
 
   // Verify that the incoming and outgoing arguments from the callee are
   // safe to tail call.
@@ -775,8 +788,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // If we're tail calling, then we're the return from the block. So, we don't
   // want to copy anything.
-  if (IsSibCall)
+  if (IsSibCall) {
+    Info.LoweredTailCall = true;
     return true;
+  }
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an

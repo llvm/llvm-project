@@ -77,14 +77,14 @@
 # RUN: not llvm-ar m 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=NO-ARCHIVE
 
-# NO-ARCHIVE: error: An archive name must be specified.
+# NO-ARCHIVE: error: an archive name must be specified
 
 ## Member does not exist:
 # RUN: llvm-ar rc %t/missing.a %t/1.o %t/2.o %t/3.o
 # RUN: not llvm-ar m %t/missing.a %t/missing.txt 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
 
-# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory.
+# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
 
 --- !ELF
 FileHeader:

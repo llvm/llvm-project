@@ -10,7 +10,6 @@
 #define LLDB_UTILITY_REPRODUCER_H
 
 #include "lldb/Utility/FileSpec.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileCollector.h"

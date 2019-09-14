@@ -550,6 +550,48 @@ extern void
 lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
                                       lto_bool_t ShouldEmbedUselists);
 
+/** Opaque reference to an LTO input file */
+typedef struct LLVMOpaqueLTOInput *lto_input_t;
+
+/**
+  * Creates an LTO input file from a buffer. The path
+  * argument is used for diagnotics as this function
+  * otherwise does not know which file the given buffer
+  * is associated with.
+  *
+  * \since LTO_API_VERSION=24
+  */
+extern lto_input_t lto_input_create(const void *buffer,
+                                    size_t buffer_size,
+                                    const char *path);
+
+/**
+  * Frees all memory internally allocated by the LTO input file.
+  * Upon return the lto_module_t is no longer valid.
+  *
+  * \since LTO_API_VERSION=24
+  */
+extern void lto_input_dispose(lto_input_t input);
+
+/**
+  * Returns the number of dependent library specifiers
+  * for the given LTO input file.
+  *
+  * \since LTO_API_VERSION=24
+  */
+extern unsigned lto_input_get_num_dependent_libraries(lto_input_t input);
+
+/**
+  * Returns the ith dependent library specifier
+  * for the given LTO input file. The returned
+  * string is not null-terminated.
+  *
+  * \since LTO_API_VERSION=24
+  */
+extern const char * lto_input_get_dependent_library(lto_input_t input,
+                                                    size_t index,
+                                                    size_t *size);
+
 /**
  * @} // endgoup LLVMCLTO
  * @defgroup LLVMCTLTO ThinLTO
@@ -845,48 +887,6 @@ thinlto_codegen_set_cache_size_megabytes(thinlto_code_gen_t cg,
  */
 extern void thinlto_codegen_set_cache_size_files(thinlto_code_gen_t cg,
                                                  unsigned max_size_files);
-
-/** Opaque reference to an LTO input file */
-typedef struct LLVMOpaqueLTOInput *lto_input_t;
-
-/**
-  * Creates an LTO input file from a buffer. The path
-  * argument is used for diagnotics as this function
-  * otherwise does not know which file the given buffer
-  * is associated with.
-  *
-  * \since LTO_API_VERSION=24
-  */
-extern lto_input_t lto_input_create(const void *buffer,
-                                    size_t buffer_size,
-                                    const char *path);
-
-/**
-  * Frees all memory internally allocated by the LTO input file.
-  * Upon return the lto_module_t is no longer valid.
-  *
-  * \since LTO_API_VERSION=24
-  */
-extern void lto_input_dispose(lto_input_t input);
-
-/**
-  * Returns the number of dependent library specifiers
-  * for the given LTO input file.
-  *
-  * \since LTO_API_VERSION=24
-  */
-extern unsigned lto_input_get_num_dependent_libraries(lto_input_t input);
-
-/**
-  * Returns the ith dependent library specifier
-  * for the given LTO input file. The returned
-  * string is not null-terminated.
-  *
-  * \since LTO_API_VERSION=24
-  */
-extern const char * lto_input_get_dependent_library(lto_input_t input,
-                                                    size_t index,
-                                                    size_t *size);
 
 /**
  * @} // endgroup LLVMCTLTO_CACHING

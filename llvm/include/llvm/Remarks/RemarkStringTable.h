@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Remarks/RemarkParser.h"
+#include "llvm/Remarks/Remark.h"
 #include <vector>
 
 namespace llvm {
@@ -26,6 +26,8 @@ namespace llvm {
 class raw_ostream;
 
 namespace remarks {
+
+struct ParsedStringTable;
 
 /// The string table used for serializing remarks.
 /// This table can be for example serialized in a section to be consumed after

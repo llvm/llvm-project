@@ -3521,7 +3521,7 @@ resulting assembly string is parsed by LLVM's integrated assembler unless it is
 disabled -- even when emitting a ``.s`` file -- and thus must contain assembly
 syntax known to LLVM.
 
-LLVM also supports a few more substitions useful for writing inline assembly:
+LLVM also supports a few more substitutions useful for writing inline assembly:
 
 - ``${:uid}``: Expands to a decimal integer unique to this inline assembly blob.
   This substitution is useful when declaring a local label. Many standard
@@ -6518,7 +6518,7 @@ Where each VFuncId has the format:
     vFuncId: (TypeIdRef, offset: 16)
 
 Where each ``TypeIdRef`` refers to a :ref:`type id<typeid_summary>`
-by summary id or ``GUID`` preceeded by a ``guid:`` tag.
+by summary id or ``GUID`` preceded by a ``guid:`` tag.
 
 TypeCheckedLoadVCalls
 """""""""""""""""""""
@@ -11364,7 +11364,7 @@ privileges.
 The default behavior is to emit a call to ``__clear_cache`` from the run
 time library.
 
-This instrinsic does *not* empty the instruction pipeline. Modifications
+This intrinsic does *not* empty the instruction pipeline. Modifications
 of the current function are outside the scope of the intrinsic.
 
 '``llvm.instrprof.increment``' Intrinsic
@@ -11439,7 +11439,7 @@ The last argument specifies the value of the increment of the counter variable.
 
 Semantics:
 """"""""""
-See description of '``llvm.instrprof.increment``' instrinsic.
+See description of '``llvm.instrprof.increment``' intrinsic.
 
 
 '``llvm.instrprof.value.profile``' Intrinsic
@@ -15064,12 +15064,21 @@ Constrained FP intrinsics are used to support non-default rounding modes and
 accurately preserve exception behavior without compromising LLVM's ability to
 optimize FP code when the default behavior is used.
 
-Each of these intrinsics corresponds to a normal floating-point operation.  The
-first two arguments and the return value are the same as the corresponding FP
+If any FP operation in a function is constrained then they all must be
+constrained. This is required for correct LLVM IR. Optimizations that
+move code around can create miscompiles if mixing of constrained and normal
+operations is done. The correct way to mix constrained and less constrained
+operations is to use the rounding mode and exception handling metadata to
+mark constrained intrinsics as having LLVM's default behavior.
+
+Each of these intrinsics corresponds to a normal floating-point operation. The
+data arguments and the return value are the same as the corresponding FP
 operation.
 
-The third argument is a metadata argument specifying the rounding mode to be
-assumed. This argument must be one of the following strings:
+The rounding mode argument is a metadata string specifying what 
+assumptions, if any, the optimizer can make when transforming constant 
+values. Some constrained FP intrinsics omit this argument. If required 
+by the intrinsic, this argument must be one of the following strings:
 
 ::
 
@@ -15099,9 +15108,9 @@ the specified rounding mode, but this is not guaranteed.  Using a specific
 non-dynamic rounding mode which does not match the actual rounding mode at
 runtime results in undefined behavior.
 
-The fourth argument to the constrained floating-point intrinsics specifies the
-required exception behavior.  This argument must be one of the following
-strings:
+The exception behavior argument is a metadata string describing the floating
+point exception semantics that required for the intrinsic. This argument
+must be one of the following strings:
 
 ::
 

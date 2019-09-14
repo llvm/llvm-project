@@ -1722,7 +1722,7 @@ struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
       PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
 
     // The start location of the active audit.
-    SourceLocation BeginLoc = PP.getPragmaARCCFCodeAuditedLoc();
+    SourceLocation BeginLoc = PP.getPragmaARCCFCodeAuditedInfo().second;
 
     // The start location we want after processing this.
     SourceLocation NewLoc;
@@ -1743,7 +1743,7 @@ struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
       NewLoc = SourceLocation();
     }
 
-    PP.setPragmaARCCFCodeAuditedLoc(NewLoc);
+    PP.setPragmaARCCFCodeAuditedInfo(NameTok.getIdentifierInfo(), NewLoc);
   }
 };
 

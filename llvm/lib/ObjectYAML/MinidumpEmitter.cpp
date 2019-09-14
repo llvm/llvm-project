@@ -198,7 +198,8 @@ static Directory layout(BlobAllocator &File, Stream &S) {
 namespace llvm {
 namespace yaml {
 
-bool yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out) {
+bool yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out,
+                   ErrorHandler /*EH*/) {
   BlobAllocator File;
   File.allocateObject(Obj.Header);
 

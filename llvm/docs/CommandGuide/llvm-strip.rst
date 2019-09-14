@@ -104,6 +104,10 @@ multiple file formats.
 
  Display the version of this program.
 
+.. option:: @<FILE>
+
+  Read command-line options and commands from response file `<FILE>`.
+
 COFF-SPECIFIC OPTIONS
 ---------------------
 
