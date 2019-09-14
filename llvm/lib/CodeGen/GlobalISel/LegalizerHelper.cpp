@@ -931,7 +931,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       for (unsigned j = 1; j < MI.getNumOperands(); j += 2)
         MIB.addUse(SrcRegs[j / 2][i]).add(MI.getOperand(j + 1));
     }
-    MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
+    MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
     MIRBuilder.buildMerge(MI.getOperand(0).getReg(), DstRegs);
     Observer.changedInstr(MI);
     MI.eraseFromParent();
@@ -1765,7 +1765,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     }
 
     MachineBasicBlock &MBB = *MI.getParent();
-    MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
+    MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
     return Legalized;
@@ -3156,7 +3156,7 @@ LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
   }
 
   MachineBasicBlock &MBB = *MI.getParent();
-  MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
+  MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
   moreElementsVectorDst(MI, MoreTy, 0);
   Observer.changedInstr(MI);
   return Legalized;

@@ -119,13 +119,16 @@ static Status save_socket_id_to_file(const std::string &socket_id,
                          case atomic_write_error::failed_to_create_uniq_file:
                            status = Status("Failed to create temp file: %s",
                                            ErrorMsgBuffer.c_str());
+                           break;
                          case atomic_write_error::output_stream_error:
                            status = Status("Failed to write to port file.");
+                           break;
                          case atomic_write_error::failed_to_rename_temp_file:
                            status = Status("Failed to rename file %s to %s: %s",
                                            ErrorMsgBuffer.c_str(),
                                            file_spec.GetPath().c_str(),
                                            ErrorMsgBuffer.c_str());
+                           break;
                          }
                        })) {
     return Status("Failed to atomically write file %s",

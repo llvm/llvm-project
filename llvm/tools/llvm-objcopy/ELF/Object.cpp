@@ -1112,7 +1112,7 @@ void BasicELFBuilder::initFileHeader() {
   Obj->OSABI = ELFOSABI_NONE;
   Obj->ABIVersion = 0;
   Obj->Entry = 0x0;
-  Obj->Machine = EMachine;
+  Obj->Machine = EM_NONE;
   Obj->Version = 1;
 }
 
@@ -1606,7 +1606,7 @@ Writer::~Writer() {}
 Reader::~Reader() {}
 
 std::unique_ptr<Object> BinaryReader::create() const {
-  return BinaryELFBuilder(MInfo.EMachine, MemBuf, NewSymbolVisibility).build();
+  return BinaryELFBuilder(MemBuf, NewSymbolVisibility).build();
 }
 
 Expected<std::vector<IHexRecord>> IHexReader::parse() const {

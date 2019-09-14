@@ -1082,20 +1082,19 @@ StringRef RedirectingFileSystem::getExternalContentsPrefixDir() const {
   return ExternalContentsPrefixDir;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void RedirectingFileSystem::dump() const {
+void RedirectingFileSystem::dump(raw_ostream &OS) const {
   for (const auto &Root : Roots)
-    dumpEntry(Root.get());
+    dumpEntry(OS, Root.get());
 }
 
-LLVM_DUMP_METHOD void
-RedirectingFileSystem::dumpEntry(RedirectingFileSystem::Entry *E,
-                                 int NumSpaces) const {
+void RedirectingFileSystem::dumpEntry(raw_ostream &OS,
+                                      RedirectingFileSystem::Entry *E,
+                                      int NumSpaces) const {
   StringRef Name = E->getName();
   for (int i = 0, e = NumSpaces; i < e; ++i)
-    dbgs() << " ";
-  dbgs() << "'" << Name.str().c_str() << "'"
-         << "\n";
+    OS << " ";
+  OS << "'" << Name.str().c_str() << "'"
+     << "\n";
 
   if (E->getKind() == RedirectingFileSystem::EK_Directory) {
     auto *DE = dyn_cast<RedirectingFileSystem::RedirectingDirectoryEntry>(E);
@@ -1103,9 +1102,12 @@ RedirectingFileSystem::dumpEntry(RedirectingFileSystem::Entry *E,
 
     for (std::unique_ptr<Entry> &SubEntry :
          llvm::make_range(DE->contents_begin(), DE->contents_end()))
-      dumpEntry(SubEntry.get(), NumSpaces + 2);
+      dumpEntry(OS, SubEntry.get(), NumSpaces + 2);
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void RedirectingFileSystem::dump() const { dump(dbgs()); }
 #endif
 
 /// A helper class to hold the common YAML parsing state.

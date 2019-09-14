@@ -39,10 +39,10 @@ class APILogTestCase(TestBase):
             r"lldb::SBDebugger::GetScriptingLanguage\(const char \*\) \(0x([0-9a-fA-F]+),",
             log)[0]
 
-        get_scripting_language = 'lldb::ScriptLanguage lldb::SBDebugger::GetScriptingLanguage(const char *) (0x{}, "")'.format(
+        get_scripting_language = 'lldb::SBDebugger::GetScriptingLanguage(const char *) (0x{}, "")'.format(
             debugger_addr)
-        create_target = 'lldb::SBTarget lldb::SBDebugger::CreateTarget(const char *) (0x{}, "")'.format(
+        create_target = 'lldb::SBDebugger::CreateTarget(const char *) (0x{}, "")'.format(
             debugger_addr)
 
-        self.assertTrue(get_scripting_language in log)
-        self.assertTrue(create_target in log)
+        self.assertTrue(get_scripting_language in log, log)
+        self.assertTrue(create_target in log, log)

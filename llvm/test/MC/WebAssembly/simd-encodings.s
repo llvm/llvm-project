@@ -463,4 +463,40 @@ main:
     # CHECK: f64x2.convert_i64x2_u # encoding: [0xfd,0xb2,0x01]
     f64x2.convert_i64x2_u
 
+    # CHECK: i8x16.narrow_i16x8_s # encoding: [0xfd,0xc6,0x01]
+    i8x16.narrow_i16x8_s
+
+    # CHECK: i8x16.narrow_i16x8_u # encoding: [0xfd,0xc7,0x01]
+    i8x16.narrow_i16x8_u
+
+    # CHECK: i16x8.narrow_i32x4_s # encoding: [0xfd,0xc8,0x01]
+    i16x8.narrow_i32x4_s
+
+    # CHECK: i16x8.narrow_i32x4_u # encoding: [0xfd,0xc9,0x01]
+    i16x8.narrow_i32x4_u
+
+    # CHECK: i16x8.widen_low_i8x16_s # encoding: [0xfd,0xca,0x01]
+    i16x8.widen_low_i8x16_s
+
+    # CHECK: i16x8.widen_high_i8x16_s # encoding: [0xfd,0xcb,0x01]
+    i16x8.widen_high_i8x16_s
+
+    # CHECK: i16x8.widen_low_i8x16_u # encoding: [0xfd,0xcc,0x01]
+    i16x8.widen_low_i8x16_u
+
+    # CHECK: i16x8.widen_high_i8x16_u # encoding: [0xfd,0xcd,0x01]
+    i16x8.widen_high_i8x16_u
+
+    # CHECK: i32x4.widen_low_i16x8_s # encoding: [0xfd,0xce,0x01]
+    i32x4.widen_low_i16x8_s
+
+    # CHECK: i32x4.widen_high_i16x8_s # encoding: [0xfd,0xcf,0x01]
+    i32x4.widen_high_i16x8_s
+
+    # CHECK: i32x4.widen_low_i16x8_u # encoding: [0xfd,0xd0,0x01]
+    i32x4.widen_low_i16x8_u
+
+    # CHECK: i32x4.widen_high_i16x8_u # encoding: [0xfd,0xd1,0x01]
+    i32x4.widen_high_i16x8_u
+
     end_function
