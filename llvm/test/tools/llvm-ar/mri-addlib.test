@@ -22,7 +22,7 @@
 # RUN: not llvm-ar -M < %t/badlib.mri 2>&1 | FileCheck --check-prefix=PARSE %s
 # RUN: not ls %t/badlib.a
 
-# PARSE: Could not parse library
+# PARSE: error: could not parse library
 
 ## No create command.
 # RUN: echo "ADDLIB %t/f.a"  > %t/nocreate.mri

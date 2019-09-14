@@ -737,7 +737,7 @@ Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
   IHexReader Reader(&In);
   std::unique_ptr<Object> Obj = Reader.create();
   const ElfType OutputElfType =
-      getOutputElfType(Config.OutputArch.getValueOr(Config.BinaryArch));
+    getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
     return E;
   return writeOutput(Config, *Obj, Out, OutputElfType);
@@ -747,13 +747,13 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
                                 Buffer &Out) {
   uint8_t NewSymbolVisibility =
       Config.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT);
-  BinaryReader Reader(Config.BinaryArch, &In, NewSymbolVisibility);
+  BinaryReader Reader(&In, NewSymbolVisibility);
   std::unique_ptr<Object> Obj = Reader.create();
 
   // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
   // (-B<arch>).
   const ElfType OutputElfType =
-      getOutputElfType(Config.OutputArch.getValueOr(Config.BinaryArch));
+      getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
     return E;
   return writeOutput(Config, *Obj, Out, OutputElfType);

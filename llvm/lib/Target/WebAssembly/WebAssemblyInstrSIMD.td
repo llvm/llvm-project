@@ -712,6 +712,42 @@ defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_f32x4_u", 172>;
 defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_sat_f64x2_s", 173>;
 defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_sat_f64x2_u", 174>;
 
+// Widening operations
+multiclass SIMDWiden<ValueType vec_t, string vec, ValueType arg_t, string arg,
+                     bits<32> baseInst> {
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_signed,
+                        vec#".widen_low_"#arg#"_s", baseInst>;
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_signed,
+                        vec#".widen_high_"#arg#"_s", !add(baseInst, 1)>;
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_unsigned,
+                        vec#".widen_low_"#arg#"_u", !add(baseInst, 2)>;
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_unsigned,
+                        vec#".widen_high_"#arg#"_u", !add(baseInst, 3)>;
+}
+
+defm "" : SIMDWiden<v8i16, "i16x8", v16i8, "i8x16", 202>;
+defm "" : SIMDWiden<v4i32, "i32x4", v8i16, "i16x8", 206>;
+
+// Narrowing operations
+multiclass SIMDNarrow<ValueType vec_t, string vec, ValueType arg_t, string arg,
+                      bits<32> baseInst> {
+  defm NARROW_S_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$low, V128:$high), (outs), (ins),
+           [(set (vec_t V128:$dst), (vec_t (int_wasm_narrow_signed
+             (arg_t V128:$low), (arg_t V128:$high))))],
+           vec#".narrow_"#arg#"_s\t$dst, $low, $high", vec#".narrow_"#arg#"_s",
+           baseInst>;
+  defm NARROW_U_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$low, V128:$high), (outs), (ins),
+           [(set (vec_t V128:$dst), (vec_t (int_wasm_narrow_unsigned
+             (arg_t V128:$low), (arg_t V128:$high))))],
+           vec#".narrow_"#arg#"_u\t$dst, $low, $high", vec#".narrow_"#arg#"_u",
+           !add(baseInst, 1)>;
+}
+
+defm "" : SIMDNarrow<v16i8, "i8x16", v8i16, "i16x8", 198>;
+defm "" : SIMDNarrow<v8i16, "i16x8", v4i32, "i32x4", 200>;
+
 // Lower llvm.wasm.trunc.saturate.* to saturating instructions
 def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
           (fp_to_sint_v4i32_v4f32 (v4f32 V128:$src))>;
