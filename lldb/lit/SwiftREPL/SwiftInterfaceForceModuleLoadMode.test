@@ -1,6 +1,6 @@
 // This test checks that the value of the symbols.swift-module-loading-mode
 // setting is respected when loading Swift modules.
-// Note: It intentionally does not check the only-parseable or prefer-parseable
+// Note: It intentionally does not check the only-interface or prefer-interface
 // modes as this also causes the Swift stdlib to be loaded via its module
 // interface file, which slows down this test considerably.
 
