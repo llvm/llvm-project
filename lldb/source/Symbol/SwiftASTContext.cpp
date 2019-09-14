@@ -1555,7 +1555,7 @@ void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
   Args args(props.GetSwiftExtraClangFlags());
   std::vector<std::string> user_clang_flags;
   for (const auto &arg : args.entries())
-    user_clang_flags.push_back(arg.ref);
+    user_clang_flags.push_back(arg.ref());
   AddExtraClangArgs(user_clang_flags);
 }
 
