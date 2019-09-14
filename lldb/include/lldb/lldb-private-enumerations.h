@@ -215,11 +215,11 @@ typedef enum LanguageRuntimeDescriptionDisplayVerbosity {
 typedef enum SwiftModuleLoadingMode {
   eSwiftModuleLoadingModePreferSerialized, // Prefer loading via .swiftmodule,
                                            // falling back to .swiftinterface
-  eSwiftModuleLoadingModePreferParseable,  // Prefer Loading via
+  eSwiftModuleLoadingModePreferInterface,  // Prefer Loading via
                                            // .swiftinterface, falling back to
                                            // .swiftmodule
   eSwiftModuleLoadingModeOnlySerialized,   // Load via .swiftmodule only
-  eSwiftModuleLoadingModeOnlyParseable,    // Load via .swiftinterface only
+  eSwiftModuleLoadingModeOnlyInterface,    // Load via .swiftinterface only
 } SwiftModuleLoadingMode;
 
 //----------------------------------------------------------------------

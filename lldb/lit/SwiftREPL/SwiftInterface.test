@@ -6,7 +6,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/A.swift %t/AA.swift
-// RUN: %target-swiftc -module-name AA -emit-parseable-module-interface-path %t/AA.swiftinterface -emit-library -o %t/libAA%target-shared-library-suffix %t/AA.swift
+// RUN: %target-swiftc -module-name AA -emit-module-interface-path %t/AA.swiftinterface -emit-library -o %t/libAA%target-shared-library-suffix %t/AA.swift
 // RUN: rm %t/AA.swift
 // RUN: %lldb --repl="-I%t -L%t -lAA" < %s | FileCheck %s
 
