@@ -9210,6 +9210,8 @@ static void DiagnoseDivisionSizeofPointerOrArray(Sema &S, Expr *LHS, Expr *RHS,
         S.Diag(LHSArgDecl->getLocation(), diag::note_array_declared_here)
             << LHSArgDecl;
     }
+
+    S.Diag(Loc, diag::note_precedence_silence) << RHS;
   }
 }
 
