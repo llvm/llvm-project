@@ -114,10 +114,9 @@ public:
   void ForEach(ForEachCallback callback) {
     if (callback) {
       std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-      MapIterator pos, end = m_map.end();
-      for (pos = m_map.begin(); pos != end; pos++) {
-        const KeyType &type = pos->first;
-        if (!callback(type, pos->second))
+      for (const auto &pos : m_map) {
+        const KeyType &type = pos.first;
+        if (!callback(type, pos.second))
           break;
       }
     }
@@ -295,11 +294,10 @@ protected:
                 RegularExpression *dummy) {
     llvm::StringRef key_str = key.GetStringRef();
     std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    MapIterator pos, end = m_format_map.map().end();
-    for (pos = m_format_map.map().begin(); pos != end; pos++) {
-      const RegularExpression &regex = pos->first;
+    for (const auto &pos : m_format_map.map()) {
+      const RegularExpression &regex = pos.first;
       if (regex.Execute(key_str)) {
-        value = pos->second;
+        value = pos.second;
         return true;
       }
     }
@@ -309,11 +307,10 @@ protected:
   bool GetExact_Impl(ConstString key, MapValueType &value,
                      RegularExpression *dummy) {
     std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    MapIterator pos, end = m_format_map.map().end();
-    for (pos = m_format_map.map().begin(); pos != end; pos++) {
-      const RegularExpression &regex = pos->first;
+    for (const auto &pos : m_format_map.map()) {
+      const RegularExpression &regex = pos.first;
       if (regex.GetText() == key.GetStringRef()) {
-        value = pos->second;
+        value = pos.second;
         return true;
       }
     }
