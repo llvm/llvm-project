@@ -95,6 +95,10 @@ public:
     /// optimization.
     bool IsTailCall = false;
 
+    /// True if the call was lowered as a tail call. This is consumed by the
+    /// legalizer. This allows the legalizer to lower libcalls as tail calls.
+    bool LoweredTailCall = false;
+
     /// True if the call is to a vararg function.
     bool IsVarArg = false;
   };

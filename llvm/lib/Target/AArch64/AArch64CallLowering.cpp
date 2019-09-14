@@ -788,8 +788,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // If we're tail calling, then we're the return from the block. So, we don't
   // want to copy anything.
-  if (IsSibCall)
+  if (IsSibCall) {
+    Info.LoweredTailCall = true;
     return true;
+  }
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an

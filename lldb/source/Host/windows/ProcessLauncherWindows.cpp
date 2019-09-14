@@ -46,7 +46,7 @@ bool GetFlattenedWindowsCommandString(Args args, std::string &command) {
 
   std::vector<llvm::StringRef> args_ref;
   for (auto &entry : args.entries())
-    args_ref.push_back(entry.ref);
+    args_ref.push_back(entry.ref());
 
   command = llvm::sys::flattenWindowsCommandLine(args_ref);
   return true;

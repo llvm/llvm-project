@@ -400,17 +400,13 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
 
 void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  unsigned CFMask = MI.getOperand(0).getReg();
-  MachineInstr *Def = MRI.getUniqueVRegDef(CFMask);
   const DebugLoc &DL = MI.getDebugLoc();
 
-  MachineBasicBlock::iterator InsPt =
-      Def && Def->getParent() == &MBB ? std::next(MachineBasicBlock::iterator(Def))
-                               : MBB.begin();
-  MachineInstr *NewMI = BuildMI(MBB, InsPt, DL, TII->get(OrOpc), Exec)
-                            .addReg(Exec)
-                            .add(MI.getOperand(0));
+  MachineBasicBlock::iterator InsPt = MBB.begin();
+  MachineInstr *NewMI =
+      BuildMI(MBB, InsPt, DL, TII->get(OrOpc), Exec)
+          .addReg(Exec)
+          .add(MI.getOperand(0));
 
   if (LIS)
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);

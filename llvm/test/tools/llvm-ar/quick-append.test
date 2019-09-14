@@ -54,13 +54,13 @@
 # RUN: not llvm-ar qc 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=NO-ARCHIVE
 
-# NO-ARCHIVE: error: An archive name must be specified.
+# NO-ARCHIVE: error: an archive name must be specified
 
 ## Member does not exist:
 # RUN: not llvm-ar qc %t/missing.a %t/missing.txt 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
 
-# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory.
+# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
 
 --- !ELF
 FileHeader:

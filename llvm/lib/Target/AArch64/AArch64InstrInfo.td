@@ -6973,5 +6973,15 @@ def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
 def MOVMCSym : Pseudo<(outs GPR64:$dst), (ins i64imm:$sym), []>, Sched<[]>;
 def : Pat<(i64 (AArch64LocalRecover mcsym:$sym)), (MOVMCSym mcsym:$sym)>;
 
+// Extracting lane zero is a special case where we can just use a plain
+// EXTRACT_SUBREG instruction, which will become FMOV. This is easier for the
+// rest of the compiler, especially the register allocator and copy propagation,
+// to reason about, so is preferred when it's possible to use it.
+let AddedComplexity = 10 in {
+  def : Pat<(i64 (extractelt (v2i64 V128:$V), (i64 0))), (EXTRACT_SUBREG V128:$V, dsub)>;
+  def : Pat<(i32 (extractelt (v4i32 V128:$V), (i64 0))), (EXTRACT_SUBREG V128:$V, ssub)>;
+  def : Pat<(i32 (extractelt (v2i32 V64:$V), (i64 0))), (EXTRACT_SUBREG V64:$V, ssub)>;
+}
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
