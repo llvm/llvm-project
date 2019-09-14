@@ -242,6 +242,7 @@ int main(int argc, const char **argv) {
         AdjustedArgs.push_back("-o");
         AdjustedArgs.push_back("/dev/null");
         if (!HasMT && !HasMQ) {
+          AdjustedArgs.push_back("-M");
           AdjustedArgs.push_back("-MT");
           // We're interested in source dependencies of an object file.
           if (!HasMD) {

@@ -3452,8 +3452,10 @@ Action *Driver::ConstructPhaseAction(
     llvm_unreachable("link action invalid here.");
   case phases::Preprocess: {
     types::ID OutputTy;
-    // -{M, MM} alter the output type.
-    if (Args.hasArg(options::OPT_M, options::OPT_MM)) {
+    // -M and -MM specify the dependency file name by altering the output type,
+    // -if -MD and -MMD are not specified.
+    if (Args.hasArg(options::OPT_M, options::OPT_MM) &&
+        !Args.hasArg(options::OPT_MD, options::OPT_MMD)) {
       OutputTy = types::TY_Dependencies;
     } else {
       OutputTy = Input->getType();
