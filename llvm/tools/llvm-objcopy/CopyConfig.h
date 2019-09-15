@@ -128,8 +128,6 @@ struct CopyConfig {
   StringRef OutputFilename;
   FileFormat OutputFormat;
 
-  // Only applicable for --input-format=binary
-  MachineInfo BinaryArch;
   // Only applicable when --output-format!=binary (e.g. elf64-x86-64).
   Optional<MachineInfo> OutputArch;
 

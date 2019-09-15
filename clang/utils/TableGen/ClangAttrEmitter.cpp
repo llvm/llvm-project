@@ -1347,7 +1347,7 @@ static void writeGetSpellingFunction(Record &R, raw_ostream &OS) {
     return;
   }
 
-  OS << "  switch (SpellingListIndex) {\n"
+  OS << "  switch (getAttributeSpellingListIndex()) {\n"
         "  default:\n"
         "    llvm_unreachable(\"Unknown attribute spelling!\");\n"
         "    return \"(No spelling)\";\n";
@@ -1375,11 +1375,10 @@ writePrettyPrintFunction(Record &R,
     return;
   }
 
-  OS <<
-    "  switch (SpellingListIndex) {\n"
-    "  default:\n"
-    "    llvm_unreachable(\"Unknown attribute spelling!\");\n"
-    "    break;\n";
+  OS << "  switch (getAttributeSpellingListIndex()) {\n"
+        "  default:\n"
+        "    llvm_unreachable(\"Unknown attribute spelling!\");\n"
+        "    break;\n";
 
   for (unsigned I = 0; I < Spellings.size(); ++ I) {
     llvm::SmallString<16> Prefix;
@@ -1560,11 +1559,12 @@ static void writeAttrAccessorDefinition(const Record &R, raw_ostream &OS) {
     const StringRef Name = Accessor->getValueAsString("Name");
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Accessor);
 
-    OS << "  bool " << Name << "() const { return SpellingListIndex == ";
+    OS << "  bool " << Name
+       << "() const { return getAttributeSpellingListIndex() == ";
     for (unsigned Index = 0; Index < Spellings.size(); ++Index) {
       OS << getSpellingListIndex(SpellingList, Spellings[Index]);
       if (Index != Spellings.size() - 1)
-        OS << " ||\n    SpellingListIndex == ";
+        OS << " ||\n    getAttributeSpellingListIndex() == ";
       else
         OS << "; }\n";
     }
@@ -2221,6 +2221,7 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n\n";
 
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
+  ParsedAttrMap AttrMap = getParsedAttrList(Records);
 
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
@@ -2289,38 +2290,97 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     if (!ElideSpelling)
       OS << CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
 
+    const auto &ParsedAttrSpellingItr = llvm::find_if(
+        AttrMap, [R](const std::pair<std::string, const Record *> &P) {
+          return &R == P.second;
+        });
+
     // Emit CreateImplicit factory methods.
-    auto emitCreateImplicit = [&](bool emitFake) {
-      OS << "  static " << R.getName() << "Attr *CreateImplicit(";
+    auto emitCreate = [&](bool Implicit, bool emitFake) {
+      OS << "  static " << R.getName() << "Attr *Create";
+        if (Implicit)
+          OS << "Implicit";
+      OS << "(";
       OS << "ASTContext &Ctx";
-      if (!ElideSpelling)
-        OS << ", Spelling S";
       for (auto const &ai : Args) {
         if (ai->isFake() && !emitFake) continue;
         OS << ", ";
         ai->writeCtorParameters(OS);
       }
-      OS << ", SourceRange Loc = SourceRange()";
-      OS << ") {\n";
+      OS << ", const AttributeCommonInfo &CommonInfo = {SourceRange{}}) {\n";
       OS << "    auto *A = new (Ctx) " << R.getName();
-      OS << "Attr(Loc, Ctx, ";
+      OS << "Attr(Ctx, CommonInfo";
       for (auto const &ai : Args) {
         if (ai->isFake() && !emitFake) continue;
-        ai->writeImplicitCtorArgs(OS);
         OS << ", ";
+        ai->writeImplicitCtorArgs(OS);
       }
-      OS << (ElideSpelling ? "0" : "S") << ");\n";
-      OS << "    A->setImplicit(true);\n";
+      OS << ");\n";
+      if (Implicit) {
+        OS << "    A->setImplicit(true);\n";
+      }
+      if (Implicit || ElideSpelling) {
+        OS << "    if (!A->isAttributeSpellingListCalculated() && "
+              "!A->getAttrName())\n";
+        OS << "      A->setAttributeSpellingListIndex(0);\n";
+      }
       OS << "    return A;\n  }\n\n";
     };
 
+    auto emitCreateNoCI = [&](bool Implicit, bool emitFake) {
+      OS <<"  static " << R.getName() << "Attr *Create";
+      if (Implicit)
+        OS << "Implicit";
+      OS << "(";
+      OS << "ASTContext &Ctx";
+      for (auto const &ai : Args) {
+        if (ai->isFake() && !emitFake) continue;
+        OS << ", ";
+        ai->writeCtorParameters(OS);
+      }
+      OS << ", SourceRange Range, AttributeCommonInfo::Syntax Syntax";
+      if (!ElideSpelling)
+        OS << ", " << R.getName()
+           << "Attr::Spelling S = "
+              "static_cast<Spelling>(SpellingNotCalculated)";
+      OS << ") {\n";
+      OS << "    AttributeCommonInfo I(Range, ";
+
+      if (ParsedAttrSpellingItr != std::end(AttrMap))
+        OS << "AT_" << ParsedAttrSpellingItr->first;
+      else
+        OS << "NoSemaHandlerAttribute";
+
+      OS << ", Syntax";
+      if (!ElideSpelling)
+        OS << ", S";
+      OS << ");\n";
+      OS << "    return Create";
+      if (Implicit)
+        OS << "Implicit";
+      OS << "(Ctx";
+      for (auto const &ai : Args) {
+        if (ai->isFake() && !emitFake) continue;
+        OS << ", ";
+        ai->writeImplicitCtorArgs(OS);
+      }
+      OS << ", I);\n";
+      OS << "  }\n";
+    };
+
+    auto emitCreates = [&](bool emitFake) {
+      emitCreate(true, emitFake);
+      emitCreate(false, emitFake);
+      emitCreateNoCI(true, emitFake);
+      emitCreateNoCI(false, emitFake);
+    };
+
     // Emit a CreateImplicit that takes all the arguments.
-    emitCreateImplicit(true);
+    emitCreates(true);
 
     // Emit a CreateImplicit that takes all the non-fake arguments.
-    if (HasFakeArg) {
-      emitCreateImplicit(false);
-    }
+    if (HasFakeArg)
+      emitCreates(false);
 
     // Emit constructors.
     auto emitCtor = [&](bool emitOpt, bool emitFake) {
@@ -2329,8 +2389,9 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
         if (arg->isOptional()) return emitOpt;
         return true;
       };
-
-      OS << "  " << R.getName() << "Attr(SourceRange R, ASTContext &Ctx\n";
+      OS << "  " << R.getName()
+         << "Attr(ASTContext &Ctx, const AttributeCommonInfo &CommonInfo";
+      OS << '\n';
       for (auto const &ai : Args) {
         if (!shouldEmitArg(ai)) continue;
         OS << "              , ";
@@ -2338,12 +2399,10 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
         OS << "\n";
       }
 
-      OS << "              , ";
-      OS << "unsigned SI\n";
-
       OS << "             )\n";
-      OS << "    : " << SuperName << "(attr::" << R.getName() << ", R, SI, "
-         << ( R.getValueAsBit("LateParsed") ? "true" : "false" );
+      OS << "    : " << SuperName << "(Ctx, CommonInfo, ";
+      OS << "attr::" << R.getName() << ", "
+         << (R.getValueAsBit("LateParsed") ? "true" : "false");
       if (Inheritable) {
         OS << ", "
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
@@ -2375,14 +2434,12 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     emitCtor(true, true);
 
     // Emit a constructor that takes all the non-fake arguments.
-    if (HasFakeArg) {
+    if (HasFakeArg)
       emitCtor(true, false);
-    }
  
     // Emit a constructor that takes all the non-fake, non-optional arguments.
-    if (HasOptArg) {
+    if (HasOptArg)
       emitCtor(false, false);
-    }
 
     OS << "  " << R.getName() << "Attr *clone(ASTContext &C) const;\n";
     OS << "  void printPretty(raw_ostream &OS,\n"
@@ -2392,8 +2449,8 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     if (!ElideSpelling) {
       assert(!SemanticToSyntacticMap.empty() && "Empty semantic mapping list");
       OS << "  Spelling getSemanticSpelling() const {\n";
-      WriteSemanticSpellingSwitch("SpellingListIndex", SemanticToSyntacticMap,
-                                  OS);
+      WriteSemanticSpellingSwitch("getAttributeSpellingListIndex()",
+                                  SemanticToSyntacticMap, OS);
       OS << "  }\n";
     }
 
@@ -2447,15 +2504,15 @@ void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
     OS << R.getName() << "Attr *" << R.getName()
        << "Attr::clone(ASTContext &C) const {\n";
-    OS << "  auto *A = new (C) " << R.getName() << "Attr(getLocation(), C";
+    OS << "  auto *A = new (C) " << R.getName() << "Attr(C, *this";
     for (auto const &ai : Args) {
       OS << ", ";
       ai->writeCloneArgs(OS);
     }
-    OS << ", getSpellingListIndex());\n";
+    OS << ");\n";
     OS << "  A->Inherited = Inherited;\n";
     OS << "  A->IsPackExpansion = IsPackExpansion;\n";
-    OS << "  A->Implicit = Implicit;\n";
+    OS << "  A->setImplicit(Implicit);\n";
     OS << "  return A;\n}\n\n";
 
     writePrettyPrintFunction(R, Args, OS);
@@ -2755,24 +2812,23 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
       continue;
-    
+
     OS << "  case attr::" << R.getName() << ": {\n";
     if (R.isSubClassOf(InhClass))
       OS << "    bool isInherited = Record.readInt();\n";
     OS << "    bool isImplicit = Record.readInt();\n";
-    OS << "    unsigned Spelling = Record.readInt();\n";
     ArgRecords = R.getValueAsListOfDefs("Args");
     Args.clear();
     for (const auto *Arg : ArgRecords) {
       Args.emplace_back(createArgument(*Arg, R.getName()));
       Args.back()->writePCHReadDecls(OS);
     }
-    OS << "    New = new (Context) " << R.getName() << "Attr(Range, Context";
+    OS << "    New = new (Context) " << R.getName() << "Attr(Context, Info";
     for (auto const &ri : Args) {
       OS << ", ";
       ri->writePCHReadArgs(OS);
     }
-    OS << ", Spelling);\n";
+    OS << ");\n";
     if (R.isSubClassOf(InhClass))
       OS << "    cast<InheritableAttr>(New)->setInherited(isInherited);\n";
     OS << "    New->setImplicit(isImplicit);\n";
@@ -2802,7 +2858,6 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
     if (R.isSubClassOf(InhClass))
       OS << "    Record.push_back(SA->isInherited());\n";
     OS << "    Record.push_back(A->isImplicit());\n";
-    OS << "    Record.push_back(A->getSpellingListIndex());\n";
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
@@ -3019,7 +3074,11 @@ void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Code to translate different attribute spellings "
                        "into internal identifiers", OS);
 
-  OS << "  switch (AttrKind) {\n";
+  OS << "  switch (getParsedKind()) {\n";
+  OS << "    case IgnoredAttribute:\n";
+  OS << "    case UnknownAttribute:\n";
+  OS << "    case NoSemaHandlerAttribute:\n";
+  OS << "      llvm_unreachable(\"Ignored/unknown shouldn't get here\");\n";
 
   ParsedAttrMap Attrs = getParsedAttrList(Records);
   for (const auto &I : Attrs) {
@@ -3028,16 +3087,7 @@ void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
     OS << "  case AT_" << I.first << ": {\n";
     for (unsigned I = 0; I < Spellings.size(); ++ I) {
       OS << "    if (Name == \"" << Spellings[I].name() << "\" && "
-         << "SyntaxUsed == "
-         << StringSwitch<unsigned>(Spellings[I].variety())
-                .Case("GNU", 0)
-                .Case("CXX11", 1)
-                .Case("C2x", 2)
-                .Case("Declspec", 3)
-                .Case("Microsoft", 4)
-                .Case("Keyword", 5)
-                .Case("Pragma", 6)
-                .Default(0)
+         << "getSyntax() == AttributeCommonInfo::AS_" << Spellings[I].variety()
          << " && Scope == \"" << Spellings[I].nameSpace() << "\")\n"
          << "        return " << I << ";\n";
     }
@@ -3158,12 +3208,12 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
     for (auto const &ai : Args)
       ai->writeTemplateInstantiation(OS);
 
-    OS << "      return new (C) " << R.getName() << "Attr(A->getLocation(), C";
+    OS << "        return new (C) " << R.getName() << "Attr(C, *A";
     for (auto const &ai : Args) {
       OS << ", ";
       ai->writeTemplateInstantiationArgs(OS);
     }
-    OS << ", A->getSpellingListIndex());\n    }\n";
+    OS << ");\n    }\n";
   }
   OS << "  } // end switch\n"
      << "  llvm_unreachable(\"Unknown attribute!\");\n"
@@ -3481,7 +3531,7 @@ static std::string GenerateLangOptRequirements(const Record &R,
   OS << "  if (" << GenerateTestExpression(LangOpts) << ")\n";
   OS << "    return true;\n\n";
   OS << "  S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) ";
-  OS << "<< Attr.getName();\n";
+  OS << "<< Attr;\n";
   OS << "  return false;\n";
   OS << "}\n\n";
 

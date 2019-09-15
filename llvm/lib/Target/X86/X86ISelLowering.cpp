@@ -20514,7 +20514,7 @@ static SDValue LowerVSETCCWithSUBUS(SDValue Op0, SDValue Op1, MVT VT,
     // Only do this pre-AVX since vpcmp* is no longer destructive.
     if (Subtarget.hasAVX())
       return SDValue();
-    SDValue ULEOp1 = incDecVectorConstant(Op1, DAG, false);
+    SDValue ULEOp1 = incDecVectorConstant(Op1, DAG, /*IsInc*/false);
     if (!ULEOp1)
       return SDValue();
     Op1 = ULEOp1;
@@ -20525,7 +20525,7 @@ static SDValue LowerVSETCCWithSUBUS(SDValue Op0, SDValue Op1, MVT VT,
     // This is beneficial because materializing a constant 0 for the PCMPEQ is
     // probably cheaper than XOR+PCMPGT using 2 different vector constants:
     // cmpgt (xor X, SignMaskC) CmpC --> cmpeq (usubsat (CmpC+1), X), 0
-    SDValue UGEOp1 = incDecVectorConstant(Op1, DAG, true);
+    SDValue UGEOp1 = incDecVectorConstant(Op1, DAG, /*IsInc*/true);
     if (!UGEOp1)
       return SDValue();
     Op1 = Op0;
@@ -20732,21 +20732,19 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       TLI.isOperationLegal(ISD::UMIN, VT)) {
     // If we have a constant operand, increment/decrement it and change the
     // condition to avoid an invert.
-    if (Cond == ISD::SETUGT &&
-        ISD::matchUnaryPredicate(Op1, [](ConstantSDNode *C) {
-          return !C->getAPIntValue().isMaxValue();
-        })) {
+    if (Cond == ISD::SETUGT) {
       // X > C --> X >= (C+1) --> X == umax(X, C+1)
-      Op1 = DAG.getNode(ISD::ADD, dl, VT, Op1, DAG.getConstant(1, dl, VT));
-      Cond = ISD::SETUGE;
+      if (SDValue UGTOp1 = incDecVectorConstant(Op1, DAG, /*IsInc*/true)) {
+        Op1 = UGTOp1;
+        Cond = ISD::SETUGE;
+      }
     }
-    if (Cond == ISD::SETULT &&
-        ISD::matchUnaryPredicate(Op1, [](ConstantSDNode *C) {
-          return !C->getAPIntValue().isNullValue();
-        })) {
+    if (Cond == ISD::SETULT) {
       // X < C --> X <= (C-1) --> X == umin(X, C-1)
-      Op1 = DAG.getNode(ISD::SUB, dl, VT, Op1, DAG.getConstant(1, dl, VT));
-      Cond = ISD::SETULE;
+      if (SDValue ULTOp1 = incDecVectorConstant(Op1, DAG, /*IsInc*/false)) {
+        Op1 = ULTOp1;
+        Cond = ISD::SETULE;
+      }
     }
     bool Invert = false;
     unsigned Opc;

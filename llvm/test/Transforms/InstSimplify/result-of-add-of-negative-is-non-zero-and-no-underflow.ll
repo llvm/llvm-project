@@ -99,3 +99,27 @@ define i1 @t4_commutative(i8 %base, i8 %offset) {
   %r = and i1 %not_null, %no_underflow
   ret i1 %r
 }
+
+; We only need to know that any of the 'add' operands is non-zero,
+; not necessarily the one used in the comparison.
+define i1 @t5(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t5(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp slt i8 %offset, 0
+  call void @llvm.assume(i1 %cmp)
+
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ult i8 %adjusted, %base
+  %r = or i1 %not_null, %no_underflow
+  ret i1 %r
+}

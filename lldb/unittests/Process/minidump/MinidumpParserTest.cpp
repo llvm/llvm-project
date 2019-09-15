@@ -56,8 +56,9 @@ public:
     std::string data;
     llvm::raw_string_ostream os(data);
     llvm::yaml::Input YIn(yaml);
-    if (llvm::Error E = llvm::yaml::convertYAML(YIn, os))
-      return E;
+    if (!llvm::yaml::convertYAML(YIn, os, [](const llvm::Twine &Msg) {}))
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "convertYAML() failed");
 
     os.flush();
     auto data_buffer_sp =
@@ -83,7 +84,8 @@ Streams:
   - Type:            LinuxAuxv
     Content:         DEADBEEFBAADF00D
   )");
-  ASSERT_THAT_ERROR(llvm::yaml::convertYAML(YIn, os), llvm::Succeeded());
+
+  ASSERT_TRUE(llvm::yaml::convertYAML(YIn, os, [](const llvm::Twine &Msg){}));
   os.flush();
   auto data_buffer_sp = std::make_shared<DataBufferHeap>(
       duplicate_streams.data(), duplicate_streams.size());

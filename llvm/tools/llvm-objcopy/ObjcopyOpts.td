@@ -1,8 +1,7 @@
 include "CommonOpts.td"
 
 defm binary_architecture
-    : Eq<"binary-architecture", "Used when transforming an architecture-less "
-                                "format (such as binary) to another format">;
+    : Eq<"binary-architecture", "Ignored for compatibility">;
 def B : JoinedOrSeparate<["-"], "B">,
         Alias<binary_architecture>,
         HelpText<"Alias for --binary-architecture">;

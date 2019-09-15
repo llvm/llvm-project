@@ -97,11 +97,16 @@ multiple file formats.
 
 .. option:: --strip-unneeded
 
- Remove all local or undefined symbols that are not required by relocations.
+ Remove from the output all local or undefined symbols that are not required by
+ relocations. Also remove all debug sections.
 
 .. option:: --version, -V
 
  Display the version of this program.
+
+.. option:: @<FILE>
+
+  Read command-line options and commands from response file `<FILE>`.
 
 COFF-SPECIFIC OPTIONS
 ---------------------

@@ -874,12 +874,17 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
     if (Function *F = dyn_cast<Function>(&AnchorValue)) {
       for (const Use &U : F->uses())
         if (CallBase *CB = dyn_cast<CallBase>(U.getUser()))
-          if (CB->isCallee(&U))
-            Changed = ReplaceCallSiteUsersWith(*CB, *RVC) | Changed;
+          if (CB->isCallee(&U)) {
+            Constant *RVCCast =
+                ConstantExpr::getTruncOrBitCast(RVC, CB->getType());
+            Changed = ReplaceCallSiteUsersWith(*CB, *RVCCast) | Changed;
+          }
     } else {
       assert(isa<CallBase>(AnchorValue) &&
              "Expcected a function or call base anchor!");
-      Changed = ReplaceCallSiteUsersWith(cast<CallBase>(AnchorValue), *RVC);
+      Constant *RVCCast =
+          ConstantExpr::getTruncOrBitCast(RVC, AnchorValue.getType());
+      Changed = ReplaceCallSiteUsersWith(cast<CallBase>(AnchorValue), *RVCCast);
     }
     if (Changed == ChangeStatus::CHANGED)
       STATS_DECLTRACK(UniqueConstantReturnValue, FunctionReturn,

@@ -43,6 +43,10 @@ multiple file formats.
  starts with ".note". Otherwise, it will have type `SHT_PROGBITS`. Can be
  specified multiple times to add multiple sections.
 
+.. option:: --binary-architecture <arch>, -B
+
+ Ignored for compatibility.
+
 .. option:: --disable-deterministic-archives, -U
 
  Use real values for UIDs, GIDs and timestamps when updating archive member
@@ -123,11 +127,15 @@ multiple file formats.
 .. option:: --strip-unneeded
 
  Remove from the output all local or undefined symbols that are not required by
- relocations.
+ relocations. Also remove all debug sections.
 
 .. option:: --version, -V
 
   Display the version of this program.
+
+.. option:: @<FILE>
+
+  Read command-line options and commands from response file `<FILE>`.
 
 COFF-SPECIFIC OPTIONS
 ---------------------
@@ -176,23 +184,6 @@ them.
 
  Allow llvm-objcopy to remove sections even if it would leave invalid section
  references. Any invalid sh_link fields will be set to zero.
-
-.. option:: --binary-architecture <arch>, -B
-
- Specify the architecture to use, when transforming an architecture-less format
- (e.g. binary) to another format. Valid options are:
-
- - `aarch64`
- - `arm`
- - `i386`
- - `i386:x86-64`
- - `mips`
- - `powerpc:common64`
- - `riscv:rv32`
- - `riscv:rv64`
- - `sparc`
- - `sparcel`
- - `x86-64`
 
 .. option:: --build-id-link-dir <dir>
 

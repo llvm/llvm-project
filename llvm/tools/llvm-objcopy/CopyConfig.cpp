@@ -258,29 +258,6 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
   return SI;
 }
 
-static const StringMap<MachineInfo> ArchMap{
-    // Name, {EMachine, 64bit, LittleEndian}
-    {"aarch64", {ELF::EM_AARCH64, true, true}},
-    {"arm", {ELF::EM_ARM, false, true}},
-    {"i386", {ELF::EM_386, false, true}},
-    {"i386:x86-64", {ELF::EM_X86_64, true, true}},
-    {"mips", {ELF::EM_MIPS, false, false}},
-    {"powerpc:common64", {ELF::EM_PPC64, true, true}},
-    {"riscv:rv32", {ELF::EM_RISCV, false, true}},
-    {"riscv:rv64", {ELF::EM_RISCV, true, true}},
-    {"sparc", {ELF::EM_SPARC, false, false}},
-    {"sparcel", {ELF::EM_SPARC, false, true}},
-    {"x86-64", {ELF::EM_X86_64, true, true}},
-};
-
-static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
-  auto Iter = ArchMap.find(Arch);
-  if (Iter == std::end(ArchMap))
-    return createStringError(errc::invalid_argument,
-                             "invalid architecture: '%s'", Arch.str().c_str());
-  return Iter->getValue();
-}
-
 struct TargetInfo {
   FileFormat Format;
   MachineInfo Machine;
@@ -410,6 +387,16 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
   return Result;
 }
 
+static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
+                      StringRef ToolName) {
+  OptTable.PrintHelp(OS, (ToolName + " input [output]").str().c_str(),
+                     (ToolName + " tool").str().c_str());
+  // TODO: Replace this with libOption call once it adds extrahelp support.
+  // The CommandLine library has a cl::extrahelp class to support this,
+  // but libOption does not have that yet.
+  OS << "\nPass @FILE as argument to read options from FILE.\n";
+}
+
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -421,12 +408,12 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-objcopy input [output]", "objcopy tool");
+    printHelp(T, errs(), "llvm-objcopy");
     exit(1);
   }
 
   if (InputArgs.hasArg(OBJCOPY_help)) {
-    T.PrintHelp(outs(), "llvm-objcopy input [output]", "objcopy tool");
+    printHelp(T, outs(), "llvm-objcopy");
     exit(0);
   }
 
@@ -479,17 +466,6 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
                            .Case("binary", FileFormat::Binary)
                            .Case("ihex", FileFormat::IHex)
                            .Default(FileFormat::Unspecified);
-  if (Config.InputFormat == FileFormat::Binary) {
-    auto BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
-    if (BinaryArch.empty())
-      return createStringError(
-          errc::invalid_argument,
-          "specified binary input without specifiying an architecture");
-    Expected<const MachineInfo &> MI = getMachineInfo(BinaryArch);
-    if (!MI)
-      return MI.takeError();
-    Config.BinaryArch = *MI;
-  }
 
   if (opt::Arg *A = InputArgs.getLastArg(OBJCOPY_new_symbol_visibility)) {
     const uint8_t Invalid = 0xff;
@@ -510,12 +486,17 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
                             .Default(FileFormat::Unspecified);
-  if (Config.OutputFormat == FileFormat::Unspecified && !OutputFormat.empty()) {
-    Expected<TargetInfo> Target = getOutputTargetInfoByTargetName(OutputFormat);
-    if (!Target)
-      return Target.takeError();
-    Config.OutputFormat = Target->Format;
-    Config.OutputArch = Target->Machine;
+  if (Config.OutputFormat == FileFormat::Unspecified) {
+    if (OutputFormat.empty()) {
+      Config.OutputFormat = Config.InputFormat;
+    } else {
+      Expected<TargetInfo> Target =
+          getOutputTargetInfoByTargetName(OutputFormat);
+      if (!Target)
+        return Target.takeError();
+      Config.OutputFormat = Target->Format;
+      Config.OutputArch = Target->Machine;
+    }
   }
 
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_compress_debug_sections,
@@ -790,12 +771,12 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-strip [options] file...", "strip tool");
+    printHelp(T, errs(), "llvm-strip");
     exit(1);
   }
 
   if (InputArgs.hasArg(STRIP_help)) {
-    T.PrintHelp(outs(), "llvm-strip [options] file...", "strip tool");
+    printHelp(T, outs(), "llvm-strip");
     exit(0);
   }
 

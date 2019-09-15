@@ -24,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -2500,7 +2501,7 @@ Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
     Diag(AL.getLoc(), AL.getKind() == ParsedAttr::UnknownAttribute
                           ? (unsigned)diag::warn_unknown_attribute_ignored
                           : (unsigned)diag::err_base_specifier_attribute)
-        << AL.getName();
+        << AL;
   }
 
   TypeSourceInfo *TInfo = nullptr;
@@ -3344,10 +3345,12 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   }
 
   if (VS.isOverrideSpecified())
-    Member->addAttr(new (Context) OverrideAttr(VS.getOverrideLoc(), Context, 0));
+    Member->addAttr(OverrideAttr::Create(Context, VS.getOverrideLoc(),
+                                         AttributeCommonInfo::AS_Keyword));
   if (VS.isFinalSpecified())
-    Member->addAttr(new (Context) FinalAttr(VS.getFinalLoc(), Context,
-                                            VS.isFinalSpelledSealed()));
+    Member->addAttr(FinalAttr::Create(
+        Context, VS.getFinalLoc(), AttributeCommonInfo::AS_Keyword,
+        static_cast<FinalAttr::Spelling>(VS.isFinalSpelledSealed())));
 
   if (VS.getLastLocation().isValid()) {
     // Update the end location of a method that has a virt-specifiers.
@@ -5920,14 +5923,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
-            DLLExportStaticLocalAttr(ClassAttr->getRange(),
-                                     getASTContext(),
-                                     ClassAttr->getSpellingListIndex());
+              DLLExportStaticLocalAttr(getASTContext(), *ClassAttr);
         } else {
           NewAttr = ::new (getASTContext())
-            DLLImportStaticLocalAttr(ClassAttr->getRange(),
-                                     getASTContext(),
-                                     ClassAttr->getSpellingListIndex());
+              DLLImportStaticLocalAttr(getASTContext(), *ClassAttr);
         }
       } else {
         NewAttr = cast<InheritableAttr>(ClassAttr->clone(getASTContext()));
@@ -8101,8 +8100,7 @@ void Sema::ActOnFinishCXXMemberSpecification(
     if (AL.getKind() != ParsedAttr::AT_Visibility)
       continue;
     AL.setInvalid();
-    Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored)
-        << AL.getName();
+    Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored) << AL;
   }
 
   ActOnFields(S, RLoc, TagDecl, llvm::makeArrayRef(

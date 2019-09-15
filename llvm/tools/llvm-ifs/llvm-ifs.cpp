@@ -376,12 +376,10 @@ int writeElfStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
   });
 
   yaml::Input YIn(YamlStr);
-  if (Error E = convertYAML(YIn, Out)) {
-    logAllUnhandledErrors(std::move(E), WithColor::error(errs(), "llvm-ifs"));
-    return 1;
-  }
-
-  return 0;
+  auto ErrHandler = [](const Twine &Msg) {
+    WithColor::error(errs(), "llvm-ifs") << Msg << "\n";
+  };
+  return convertYAML(YIn, Out, ErrHandler) ? 0 : 1;
 }
 
 int writeIfso(const IFSStub &Stub, bool IsWriteIfs, raw_ostream &Out) {

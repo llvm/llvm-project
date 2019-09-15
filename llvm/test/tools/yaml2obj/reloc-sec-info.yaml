@@ -30,7 +30,6 @@ Sections:
 
 # ERR: error: unknown section referenced: '.unknown1' by YAML section '.foo'
 # ERR: error: unknown section referenced: '.unknown2' by YAML section '.bar'
-# ERR: error: yaml2obj failed
 
 --- !ELF
 FileHeader:
