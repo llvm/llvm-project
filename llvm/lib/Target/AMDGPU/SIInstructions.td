@@ -646,22 +646,22 @@ def : Pat <
 
 def : Pat <
   (int_amdgcn_kill i1:$src),
-  (SI_KILL_I1_PSEUDO $src, 0)
+  (SI_KILL_I1_PSEUDO SCSrc_i1:$src, 0)
 >;
 
 def : Pat <
   (int_amdgcn_kill (i1 (not i1:$src))),
-  (SI_KILL_I1_PSEUDO $src, -1)
+  (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
 def : Pat <
   (AMDGPUkill i32:$src),
-  (SI_KILL_F32_COND_IMM_PSEUDO $src, 0, 3) // 3 means SETOGE
+  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, 0, 3) // 3 means SETOGE
 >;
 
 def : Pat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
-  (SI_KILL_F32_COND_IMM_PSEUDO $src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
   // TODO: we could add more variants for other types of conditionals
