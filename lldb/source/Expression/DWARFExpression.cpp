@@ -830,6 +830,8 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
 
   CallEdge *call_edge = nullptr;
   ModuleList &modlist = target.GetImages();
+  ExecutionContext parent_exe_ctx = *exe_ctx;
+  parent_exe_ctx.SetFrameSP(parent_frame);
   if (!parent_frame->IsArtificial()) {
     // If the parent frame is not artificial, the current activation may be
     // produced by an ambiguous tail call. In this case, refuse to proceed.
@@ -841,7 +843,7 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
                return_pc, parent_func->GetName());
       return false;
     }
-    Function *callee_func = call_edge->GetCallee(modlist);
+    Function *callee_func = call_edge->GetCallee(modlist, parent_exe_ctx);
     if (callee_func != current_func) {
       LLDB_LOG(log, "Evaluate_DW_OP_entry_value: ambiguous call sequence, "
                     "can't find real parent frame");
@@ -851,9 +853,9 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     // The StackFrameList solver machinery has deduced that an unambiguous tail
     // call sequence that produced the current activation.  The first edge in
     // the parent that points to the current function must be valid.
-    for (CallEdge &edge : parent_func->GetTailCallingEdges()) {
-      if (edge.GetCallee(modlist) == current_func) {
-        call_edge = &edge;
+    for (auto &edge : parent_func->GetTailCallingEdges()) {
+      if (edge->GetCallee(modlist, parent_exe_ctx) == current_func) {
+        call_edge = edge.get();
         break;
       }
     }
@@ -907,8 +909,6 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   // TODO: Add support for DW_OP_push_object_address within a DW_OP_entry_value
   // subexpresion whenever llvm does.
   Value result;
-  ExecutionContext parent_exe_ctx = *exe_ctx;
-  parent_exe_ctx.SetFrameSP(parent_frame);
   const DWARFExpression &param_expr = matched_param->LocationInCaller;
   if (!param_expr.Evaluate(&parent_exe_ctx,
                            parent_frame->GetRegisterContext().get(),
