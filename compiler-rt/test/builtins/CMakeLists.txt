@@ -25,9 +25,12 @@ if (MSVC AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 endif()
 pythonize_bool(BUILTINS_IS_MSVC)
 
-#TODO: Add support for Apple.
-if (NOT APPLE)
-foreach(arch ${BUILTIN_SUPPORTED_ARCH})
+set(BUILTIN_TEST_ARCH ${BUILTIN_SUPPORTED_ARCH})
+if(APPLE)
+  darwin_filter_host_archs(BUILTIN_SUPPORTED_ARCH BUILTIN_TEST_ARCH)
+endif()
+
+foreach(arch ${BUILTIN_TEST_ARCH})
   set(BUILTINS_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" BUILTINS_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} BUILTINS_TEST_TARGET_CC BUILTINS_TEST_TARGET_CFLAGS)
@@ -49,7 +52,8 @@ foreach(arch ${BUILTIN_SUPPORTED_ARCH})
     )
   list(APPEND BUILTINS_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
 endforeach()
-endif()
+
+# TODO: Add support for running tests on iOS and iOS simulator.
 
 add_lit_testsuite(check-builtins "Running the Builtins tests"
   ${BUILTINS_TESTSUITES}
