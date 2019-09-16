@@ -793,6 +793,32 @@ let Predicates = [HasPA] in {
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
+  // AUT pseudo.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUT : Pseudo<(outs), (ins i32imm:$Key, GPR64all:$Rn), []>,
+            Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16,X17];
+  }
+
+  // AUT and re-PAC a value, using different keys/data.
+  // This directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTPAC : Pseudo<(outs), (ins i32imm:$AUTKey, GPR64:$AUTRn,
+                                   i32imm:$PACKey, GPR64:$PACRn), []>,
+               Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Defs = [X16,X17,NZCV];
+    let Uses = [X16,X17];
+  }
 }
 
 // v8.3a floating point conversion for javascript

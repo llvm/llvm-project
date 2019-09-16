@@ -62,6 +62,16 @@
 
 using namespace llvm;
 
+enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
+static cl::opt<PtrauthCheckMode>
+PtrauthAuthChecks("aarch64-ptrauth-auth-checks", cl::Hidden,
+                  cl::values(
+                    clEnumValN(Unchecked, "none", "don't test for failure"),
+                    clEnumValN(Poison, "poison", "poison on failure"),
+                    clEnumValN(Trap, "trap", "trap on failure")),
+                  cl::desc("Check pointer authentication auth/resign failures"),
+                  cl::init(Default));
+
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -985,6 +995,168 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       OutStreamer->EmitCFIBKeyFrame();
       return;
     }
+  }
+
+  case AArch64::AUT:
+  case AArch64::AUTPAC: {
+    const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
+
+    // We can expand AUT/AUTPAC into 3 possible sequences:
+    // - unchecked:
+    //      autia x16, x0
+    //      pacib x16, x1 ; if AUTPAC
+    //
+    // - checked and clearing:
+    //      mov x17, x16
+    //      autia x16, x0
+    //      xpaci x17
+    //      cmp x16, x17
+    //      pacib x16, x1
+    //      csel x16, x16, x17, eq
+    //   Where we only emit the AUT if we started with an AUT.
+    //
+    // - checked and trapping:
+    //      mov x17, x16
+    //      autia x16, x0
+    //      xpaci x17
+    //      cmp x16, x17
+    //      b.eq Lsuccess
+    //      brk #<0xc470 + aut key>
+    //     Lsuccess:
+    //      pacib x16, x1 ; if AUTPAC
+    //   Where the b.eq skips over the trap if the PAC is valid.
+    //
+    // This sequence is expensive, but we need more information to be able to
+    // do better.
+    //
+    // We can't TBZ the poison bit because EnhancedPAC2 XORs the PAC bits
+    // on failure.
+    // We can't TST the PAC bits because we don't always know how the address
+    // space is setup for the target environment (and the bottom PAC bit is
+    // based on that).
+    // Either way, we also don't always know whether TBI is enabled or not for
+    // the specific target environment.
+    //
+    // FIXME: we could re-use AUTReg as a temporary register, but that would
+    // require splitting the XZR cases into separate opcodes.
+
+    // By default, auth/resign sequences check for auth failures.
+    bool ShouldCheck = true;
+    // In the checked sequence, we only trap if explicitly requested.
+    bool ShouldTrap = MF->getFunction().hasFnAttribute("ptrauth-auth-traps");
+
+    // However, command-line flags can override this, for experimentation.
+    switch (PtrauthAuthChecks) {
+    case PtrauthCheckMode::Default: break;
+    case PtrauthCheckMode::Unchecked:
+      ShouldCheck = ShouldTrap = false;
+      break;
+    case PtrauthCheckMode::Poison:
+      ShouldCheck = true;
+      ShouldTrap = false;
+      break;
+    case PtrauthCheckMode::Trap:
+      ShouldCheck = ShouldTrap = true;
+      break;
+    }
+
+    const auto AUTKey = (AArch64PACKey::ID)MI->getOperand(0).getImm();
+    const unsigned AUTReg = MI->getOperand(1).getReg();
+
+    const unsigned XPACOpc = getXPACOpcodeForKey(AUTKey);
+    const bool AUTZero = AUTReg == AArch64::XZR;
+    const unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
+
+    // Checked AUTPACs and trapping AUTs need a temporary copy of the input: x17
+    if ((IsAUTPAC && ShouldCheck) || ShouldTrap) {
+      //  mov x17, x16
+      EmitToStreamer(*OutStreamer,
+        MCInstBuilder(AArch64::ORRXrs)
+          .addReg(AArch64::X17)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X16)
+          .addImm(0));
+    }
+
+    //  autia x16, x0
+    MCInst AUTInst;
+    AUTInst.setOpcode(AUTOpc);
+    AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
+    AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
+    if (!AUTZero)
+      AUTInst.addOperand(MCOperand::createReg(AUTReg));
+    EmitToStreamer(*OutStreamer, AUTInst);
+
+    // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
+    if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap))
+      return;
+
+    // Checked sequences do an additional strip-and-compare.
+    if (ShouldCheck) {
+      //  xpaci x17
+      EmitToStreamer(*OutStreamer,
+        MCInstBuilder(XPACOpc)
+          .addReg(AArch64::X17)
+          .addReg(AArch64::X17));
+
+      //  cmp x16, x17
+      EmitToStreamer(*OutStreamer,
+        MCInstBuilder(AArch64::SUBSXrs)
+          .addReg(AArch64::XZR)
+          .addReg(AArch64::X16)
+          .addReg(AArch64::X17)
+          .addImm(0));
+
+      // Trapping sequences do a 'brk'.
+      if (ShouldTrap) {
+        //  b.eq Lsuccess
+        //   where Lsuccess is encoded as 2 (the offset from this instruction to
+        //   what's after the brk, divided by 4)
+        EmitToStreamer(*OutStreamer,
+          MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::EQ)
+            .addImm(2));
+
+        //  brk #<0xc470 + aut key>
+        EmitToStreamer(*OutStreamer,
+          MCInstBuilder(AArch64::BRK)
+            .addImm(0xc470 | AUTKey));
+      }
+    }
+
+    // We already emitted unchecked and checked-but-non-trapping AUTs.
+    // That left us with trapping AUTs, and AUTPACs.
+    // Trapping AUTs don't need PAC: we're done.
+    if (!IsAUTPAC)
+      return;
+
+    const auto PACKey = (AArch64PACKey::ID)MI->getOperand(2).getImm();
+    const unsigned PACReg = MI->getOperand(3).getReg();
+    const bool PACZero = PACReg == AArch64::XZR;
+    const unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
+
+    //  pacib x16, x9
+    MCInst PACInst;
+    PACInst.setOpcode(PACOpc);
+    PACInst.addOperand(MCOperand::createReg(AArch64::X16));
+    PACInst.addOperand(MCOperand::createReg(AArch64::X16));
+    if (!PACZero)
+      PACInst.addOperand(MCOperand::createReg(PACReg));
+    EmitToStreamer(*OutStreamer, PACInst);
+
+    // Non-trapping AUTPAC selects the result based on the xpac check.
+    // Trapping AUTPAC already trapped; unchecked AUTPAC didn't even check.
+    if (ShouldTrap || !ShouldCheck)
+      return;
+
+    //  csel x16, x16, x17, eq
+    EmitToStreamer(*OutStreamer,
+      MCInstBuilder(AArch64::CSELXr)
+        .addReg(AArch64::X16)
+        .addReg(AArch64::X16)
+        .addReg(AArch64::X17)
+        .addImm(0));
+    return;
   }
 
   // Tail calls use pseudo instructions so they have the proper code-gen

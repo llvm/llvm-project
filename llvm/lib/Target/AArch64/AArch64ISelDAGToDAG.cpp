@@ -3354,6 +3354,67 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
+
+    case Intrinsic::ptrauth_resign: {
+      SDLoc DL(Node);
+      // IntrinsicID is operand #0
+      SDValue Val = Node->getOperand(1);
+      SDValue AUTKey = Node->getOperand(2);
+      SDValue AUTDisc = Node->getOperand(3);
+      SDValue PACKey = Node->getOperand(4);
+      SDValue PACDisc = Node->getOperand(5);
+
+      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+      unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+      PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+      SDValue ImpDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
+      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                             AArch64::X16, Val, SDValue());
+      SDValue X17Copy =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
+                             ImpDef, X16Copy.getValue(1));
+
+      SDValue Ops[] = {AUTKey, AUTDisc, PACKey, PACDisc, X17Copy.getValue(1)};
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      SDNode *N = CurDAG->getMachineNode(AArch64::AUTPAC, DL, VTs, Ops);
+      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
+                                 SDValue(N, 1)).getNode();
+      ReplaceNode(Node, N);
+      return;
+    }
+
+    case Intrinsic::ptrauth_auth: {
+      SDLoc DL(Node);
+      // IntrinsicID is operand #0
+      SDValue Val = Node->getOperand(1);
+      SDValue AUTKey = Node->getOperand(2);
+      SDValue AUTDisc = Node->getOperand(3);
+
+      unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+      AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+
+      SDValue ImpDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i64), 0);
+      SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                             AArch64::X16, Val, SDValue());
+      SDValue X17Copy =
+        CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X17,
+                             ImpDef, X16Copy.getValue(1));
+
+      SDValue Ops[] = {AUTKey, AUTDisc, X17Copy.getValue(1)};
+
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      SDNode *N = CurDAG->getMachineNode(AArch64::AUT, DL, VTs, Ops);
+      N = CurDAG->getCopyFromReg(SDValue(N, 0), DL, AArch64::X16, MVT::i64,
+                                 SDValue(N, 1)).getNode();
+      ReplaceNode(Node, N);
+      return;
+    }
+
     }
     break;
   }
