@@ -1671,7 +1671,8 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
   assert(Reg != AMDGPU::NoRegister);
 
   MachineFunction &MF = CCInfo.getMachineFunction();
-  MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+  Register LiveInVReg = MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+  MF.getRegInfo().setType(LiveInVReg, LLT::scalar(32));
   return ArgDescriptor::createRegister(Reg, Mask);
 }
 

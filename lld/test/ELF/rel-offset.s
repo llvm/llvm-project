@@ -10,6 +10,6 @@
         .quad   foo
 
 // CHECK:      Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:   0x2000 R_X86_64_64 foo 0x0
-// CHECK-NEXT:   0x2008 R_X86_64_64 foo 0x0
+// CHECK-NEXT:   0x3340 R_X86_64_64 foo 0x0
+// CHECK-NEXT:   0x3348 R_X86_64_64 foo 0x0
 // CHECK-NEXT: }

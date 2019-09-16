@@ -17,7 +17,8 @@
 
 # CHECK: ProgramHeader {
 # CHECK:   Type: PT_LOAD
-# CHECK:   Offset: 0x1000
+# PAD:     Offset: 0x1000
+# NOPAD:   Offset: 0x120
 # CHECK-NEXT:   VirtualAddress:
 # CHECK-NEXT:   PhysicalAddress:
 # PAD-NEXT:     FileSize: 4096

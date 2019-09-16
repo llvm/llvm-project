@@ -88,5 +88,32 @@ bb2:
   ret void
 }
 
+; ALL-LABEL: {{^}}test_workitem_id_x_func:
+; ALL: v_lshrrev_b32_e32 v2, 0, v2
+; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
+define void @test_workitem_id_x_func(i32 addrspace(1)* %out) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  store i32 %id, i32 addrspace(1)* %out
+  ret void
+}
+
+; ALL-LABEL: {{^}}test_workitem_id_y_func:
+; ALL: v_lshrrev_b32_e32 v2, 10, v2
+; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
+define void @test_workitem_id_y_func(i32 addrspace(1)* %out) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.y()
+  store i32 %id, i32 addrspace(1)* %out
+  ret void
+}
+
+; ALL-LABEL: {{^}}test_workitem_id_z_func:
+; ALL: v_lshrrev_b32_e32 v2, 20, v2
+; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
+define void @test_workitem_id_z_func(i32 addrspace(1)* %out) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.z()
+  store i32 %id, i32 addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

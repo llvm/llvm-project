@@ -20,8 +20,8 @@
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: _start:
-// DISASM-NEXT:   201000: {{.*}} movq 2097440, %rax
-// DISASM-NEXT:   201008: {{.*}} movq 2097445, %rax
+// DISASM-NEXT:   201154: {{.*}} movq 2097440, %rax
+// DISASM-NEXT:   20115c: {{.*}} movq 2097445, %rax
 
 .section .eh_frame,"ax",@unwind
 

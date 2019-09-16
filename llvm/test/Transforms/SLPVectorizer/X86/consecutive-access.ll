@@ -549,14 +549,17 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+; Globals/constant expressions are not normal constants.
+; They should not be treated as the usual vectorization candidates.
+
 @g1 = external global i32, align 4
 @g2 = external global i32, align 4
 
 define void @PR33958(i32** nocapture %p) {
 ; CHECK-LABEL: @PR33958(
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32*, i32** [[P:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32** [[P]] to <2 x i32*>*
-; CHECK-NEXT:    store <2 x i32*> <i32* @g1, i32* @g2>, <2 x i32*>* [[TMP1]], align 8
+; CHECK-NEXT:    store i32* @g1, i32** [[P:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32*, i32** [[P]], i64 1
+; CHECK-NEXT:    store i32* @g2, i32** [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store i32* @g1, i32** %p, align 8
@@ -567,9 +570,9 @@ define void @PR33958(i32** nocapture %p) {
 
 define void @store_constant_expression(i64* %p) {
 ; CHECK-LABEL: @store_constant_expression(
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> <i64 ptrtoint (i32* @g1 to i64), i64 ptrtoint (i32* @g2 to i64)>, <2 x i64>* [[TMP1]], align 8
+; CHECK-NEXT:    store i64 ptrtoint (i32* @g1 to i64), i64* [[P:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 1
+; CHECK-NEXT:    store i64 ptrtoint (i32* @g2 to i64), i64* [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store i64 ptrtoint (i32* @g1 to i64), i64* %p, align 8

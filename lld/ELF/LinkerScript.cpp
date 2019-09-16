@@ -1006,17 +1006,13 @@ static uint64_t computeBase(uint64_t min, bool allocateHeaders) {
   return alignDown(min, config->maxPageSize);
 }
 
-// Try to find an address for the file and program headers output sections,
-// which were unconditionally added to the first PT_LOAD segment earlier.
+// When the SECTIONS command is used, try to find an address for the file and
+// program headers output sections, which can be added to the first PT_LOAD
+// segment when program headers are created.
 //
-// When using the default layout, we check if the headers fit below the first
-// allocated section. When using a linker script, we also check if the headers
-// are covered by the output section. This allows omitting the headers by not
-// leaving enough space for them in the linker script; this pattern is common
-// in embedded systems.
-//
-// If there isn't enough space for these sections, we'll remove them from the
-// PT_LOAD segment, and we'll also remove the PT_PHDR segment.
+// We check if the headers fit below the first allocated section. If there isn't
+// enough space for these sections, we'll remove them from the PT_LOAD segment,
+// and we'll also remove the PT_PHDR segment.
 void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &phdrs) {
   uint64_t min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *sec : outputSections)
@@ -1062,28 +1058,23 @@ LinkerScript::AddressState::AddressState() {
   }
 }
 
-static uint64_t getInitialDot() {
-  // By default linker scripts use an initial value of 0 for '.',
-  // but prefer -image-base if set.
-  if (script->hasSectionsCommand)
-    return config->imageBase ? *config->imageBase : 0;
-
-  uint64_t startAddr = UINT64_MAX;
-  // The sections with -T<section> have been sorted in order of ascending
-  // address. We must lower startAddr if the lowest -T<section address> as
-  // calls to setDot() must be monotonically increasing.
-  for (auto &kv : config->sectionStartMap)
-    startAddr = std::min(startAddr, kv.second);
-  return std::min(startAddr, target->getImageBase() + elf::getHeaderSize());
-}
-
 // Here we assign addresses as instructed by linker script SECTIONS
 // sub-commands. Doing that allows us to use final VA values, so here
 // we also handle rest commands like symbol assignments and ASSERTs.
 // Returns a symbol that has changed its section or value, or nullptr if no
 // symbol has changed.
 const Defined *LinkerScript::assignAddresses() {
-  dot = getInitialDot();
+  if (script->hasSectionsCommand) {
+    // With a linker script, assignment of addresses to headers is covered by
+    // allocateHeaders().
+    dot = config->imageBase.getValueOr(0);
+  } else {
+    // Assign addresses to headers right now.
+    dot = target->getImageBase();
+    Out::elfHeader->addr = dot;
+    Out::programHeaders->addr = dot + Out::elfHeader->size;
+    dot += getHeaderSize();
+  }
 
   auto deleter = std::make_unique<AddressState>();
   ctx = deleter.get();

@@ -14,7 +14,7 @@
 # CHECK:        Name: .got
 # CHECK:        Address: 0x[[GOT:.*]]
 # CHECK:        SectionData (
-# APPLY-NEXT:     0000: 00200000 00000000                |
+# APPLY-NEXT:     0000: 30220000 00000000                |
 # NOAPPLY-NEXT:   0000: 00000000 00000000                |
 # CHECK-NEXT:   )
 
@@ -25,7 +25,7 @@
 # CHECK-NEXT: ]
 
 # CHECK:      Type: PT_DYNAMIC
-# CHECK-NEXT: Offset: 0x[[ADDEND]]
+# CHECK-NEXT: Offset: 0x230
 # CHECK-NEXT: VirtualAddress: 0x[[ADDEND]]
 # CHECK-NEXT: PhysicalAddress: 0x[[ADDEND]]
 
