@@ -10,6 +10,7 @@
 
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Utility/Reproducer.h"
+#include "lldb/Utility/GDBRemote.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -310,9 +311,26 @@ protected:
       return true;
     }
     case eReproducerProviderGDB: {
-      // FIXME: Dumping the GDB remote packets means moving the
-      // (de)serialization code out of the GDB-remote plugin.
-      result.AppendMessage("Dumping GDB remote packets isn't implemented yet.");
+      FileSpec gdb_file = loader->GetFile<ProcessGDBRemoteProvider::Info>();
+      auto error_or_file = MemoryBuffer::getFile(gdb_file.GetPath());
+      if (auto err = error_or_file.getError()) {
+        SetError(result, errorCodeToError(err));
+        return false;
+      }
+
+      std::vector<GDBRemotePacket> packets;
+      yaml::Input yin((*error_or_file)->getBuffer());
+      yin >> packets;
+
+      if (auto err = yin.error()) {
+        SetError(result, errorCodeToError(err));
+        return false;
+      }
+
+      for (GDBRemotePacket& packet : packets) {
+        packet.Dump(result.GetOutputStream());
+      }
+
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
