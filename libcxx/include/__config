@@ -1447,6 +1447,17 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #define _LIBCPP_UNUSED_VAR(x) ((void)(x))
 
+// Configures the fopen close-on-exec mode character, if any. This string will
+// be appended to any mode string used by fstream for fopen/fdopen.
+//
+// Not all platforms support this, but it helps avoid fd-leaks on platforms that
+// do.
+#if defined(__BIONIC__)
+#  define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
+#else
+#  define _LIBCPP_FOPEN_CLOEXEC_MODE
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG
