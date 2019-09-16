@@ -223,8 +223,6 @@ void SystemZPassConfig::addPreSched2() {
   if (getOptLevel() == CodeGenOpt::None)
     addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
 
-  addPass(createSystemZExpandPseudoPass(getSystemZTargetMachine()));
-
   if (getOptLevel() != CodeGenOpt::None)
     addPass(&IfConverterID);
 }

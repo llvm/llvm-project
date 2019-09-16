@@ -16,18 +16,18 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-REL:      .rela.dyn {
-# GD-REL-NEXT:   0x20A0 R_X86_64_TLSDESC a 0x0
-# GD-REL-NEXT:   0x20B0 R_X86_64_TLSDESC b 0x0
+# GD-REL-NEXT:   0x2380 R_X86_64_TLSDESC a 0x0
+# GD-REL-NEXT:   0x2390 R_X86_64_TLSDESC b 0x0
 # GD-REL-NEXT: }
 
-# 0x20a0-0x1007 = 4249
-# GD:            leaq 4249(%rip), %rax
-# GD-NEXT: 1007: callq *(%rax)
+# 0x2380-0x12cf = 4273
+# GD:            leaq 4273(%rip), %rax
+# GD-NEXT: 12cf: callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
-# 0x20b0-0x1013 = 4253
-# GD-NEXT:       leaq 4253(%rip), %rax
-# GD-NEXT: 1013: callq *(%rax)
+# 0x2390-0x12db = 4277
+# GD-NEXT:       leaq 4277(%rip), %rax
+# GD-NEXT: 12db: callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
 # NOREL: no relocations
@@ -42,16 +42,16 @@
 # LE-NEXT: movl %fs:(%rax), %eax
 
 # IE-REL:      .rela.dyn {
-# IE-REL-NEXT:   0x2020C0 R_X86_64_TPOFF64 b 0x0
+# IE-REL-NEXT:   0x202360 R_X86_64_TPOFF64 b 0x0
 # IE-REL-NEXT: }
 
 ## a is relaxed to use LE.
 # IE:              movq $-4, %rax
 # IE-NEXT:         nop
 # IE-NEXT:         movl %fs:(%rax), %eax
-## 0x2020C0 - 0x201013 = 4269
-# IE-NEXT:         movq 4269(%rip), %rax
-# IE-NEXT: 201013: nop
+## 0x202360 - 0x20129b = 4293
+# IE-NEXT:         movq 4293(%rip), %rax
+# IE-NEXT: 20129b: nop
 # IE-NEXT:         movl %fs:(%rax), %eax
 
 leaq a@tlsdesc(%rip), %rax

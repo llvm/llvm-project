@@ -9,8 +9,8 @@
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
 // CHECK-NEXT: .plt:
-// CHECK-NEXT: 1010:       pushq   8178(%rip)
-// CHECK-NEXT:             movq    8179(%rip), %r11
+// CHECK-NEXT: 1300:       pushq   8498(%rip)
+// CHECK-NEXT:             movq    8499(%rip), %r11
 // CHECK-NEXT:             callq   14 <.plt+0x20>
 // CHECK-NEXT:             pause
 // CHECK-NEXT:             lfence
@@ -22,7 +22,7 @@
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
-// CHECK-NEXT: 1030:       movq    %r11, (%rsp)
+// CHECK-NEXT: 1320:       movq    %r11, (%rsp)
 // CHECK-NEXT:             retq
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
@@ -35,7 +35,7 @@
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
-// CHECK-NEXT: 1040:       movq    8145(%rip), %r11
+// CHECK-NEXT: 1330:       movq    8465(%rip), %r11
 // CHECK-NEXT:             callq   -28 <.plt+0x20>
 // CHECK-NEXT:             jmp     -47 <.plt+0x12>
 // CHECK-NEXT:             pushq   $0
@@ -45,7 +45,7 @@
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
 // CHECK-NEXT:             int3
-// CHECK-NEXT: 1060:       movq    8121(%rip), %r11
+// CHECK-NEXT: 1350:       movq    8441(%rip), %r11
 // CHECK-NEXT:             callq   -60 <.plt+0x20>
 // CHECK-NEXT:             jmp     -79 <.plt+0x12>
 // CHECK-NEXT:             pushq   $1
@@ -57,9 +57,9 @@
 // CHECK-NEXT:             int3
 
 // CHECK:      Contents of section .got.plt:
-// CHECK-NEXT: 3000 00200000 00000000 00000000 00000000
-// CHECK-NEXT: 3010 00000000 00000000 51100000 00000000
-// CHECK-NEXT: 3020 71100000 00000000
+// CHECK-NEXT: 3430 70230000 00000000 00000000 00000000
+// CHECK-NEXT: 3440 00000000 00000000 41130000 00000000
+// CHECK-NEXT: 3450 61130000 00000000
 
 .global _start
 _start:

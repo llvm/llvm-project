@@ -8,9 +8,9 @@
 
 ## Check that after ICF merges 'foo' and 'zed' we still
 ## place them before 'bar', in according to ordering file.
-# CHECK-DAG: 0000000000001000 T foo
-# CHECK-DAG: 0000000000001000 T zed
-# CHECK-DAG: 0000000000001004 T bar
+# CHECK-DAG: 0000000000001288 T foo
+# CHECK-DAG: 0000000000001288 T zed
+# CHECK-DAG: 000000000000128c T bar
 
 .section .text.foo,"ax",@progbits
 .align 4

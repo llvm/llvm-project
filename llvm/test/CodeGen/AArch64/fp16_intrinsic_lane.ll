@@ -175,8 +175,7 @@ entry:
 
 define dso_local half @t_vfmsh_lane_f16(half %a, half %b, <4 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_lane_f16:
-; CHECK:         fneg h1, h1
-; CHECK:         fmadd h0, h1, h2, h0
+; CHECK:         fmsub h0, h1, h2, h0
 ; CHECK-NEXT:    ret
 entry:
   %0 = fsub half 0xH8000, %b
@@ -187,9 +186,8 @@ entry:
 
 define dso_local half @t_vfmsh_laneq_f16(half %a, half %b, <8 x half> %c, i32 %lane) {
 ; CHECK-LABEL: t_vfmsh_laneq_f16:
-; CHECK:         fneg h1, h1
-; CHECK-NEXT:    fmadd h0, h1, h2, h0
-; CHECK-NEXT:    ret
+; CHECK:       fmsub h0, h1, h2, h0
+; CHECK-NEXT:  ret
 entry:
   %0 = fsub half 0xH8000, %b
   %extract = extractelement <8 x half> %c, i32 0

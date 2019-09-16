@@ -90,9 +90,9 @@ d:
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
 
-// 0x20200C = TBSS_ADDR + 4
+// 0x2021F4 = TBSS_ADDR + 4
 
-// CHECK-NEXT:     Address: 0x20200C
+// CHECK-NEXT:     Address: 0x2021F4
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Link:
