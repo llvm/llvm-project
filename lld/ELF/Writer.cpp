@@ -8,6 +8,7 @@
 
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
+#include "ARMErrataFix.h"
 #include "CallGraphSort.h"
 #include "Config.h"
 #include "LinkerScript.h"
@@ -1532,6 +1533,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator tc;
   AArch64Err843419Patcher a64p;
+  ARMErr657417Patcher a32p;
   script->assignAddresses();
 
   int assignPasses = 0;
@@ -1549,6 +1551,11 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       if (changed)
         script->assignAddresses();
       changed |= a64p.createFixes();
+    }
+    if (config->fixCortexA8) {
+      if (changed)
+        script->assignAddresses();
+      changed |= a32p.createFixes();
     }
 
     if (in.mipsGot)

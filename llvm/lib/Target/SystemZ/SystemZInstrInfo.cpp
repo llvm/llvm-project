@@ -46,20 +46,10 @@ using namespace llvm;
 #include "SystemZGenInstrInfo.inc"
 
 #define DEBUG_TYPE "systemz-II"
-STATISTIC(LOCRMuxJumps, "Number of LOCRMux jump-sequences (lower is better)");
 
 // Return a mask with Count low bits set.
 static uint64_t allOnes(unsigned int Count) {
   return Count == 0 ? 0 : (uint64_t(1) << (Count - 1) << 1) - 1;
-}
-
-// Reg should be a 32-bit GPR.  Return true if it is a high register rather
-// than a low register.
-static bool isHighReg(unsigned int Reg) {
-  if (SystemZ::GRH32BitRegClass.contains(Reg))
-    return true;
-  assert(SystemZ::GR32BitRegClass.contains(Reg) && "Invalid GRX32");
-  return false;
 }
 
 // Pin the vtable to this file.
@@ -148,7 +138,7 @@ void SystemZInstrInfo::expandRIPseudo(MachineInstr &MI, unsigned LowOpcode,
                                       unsigned HighOpcode,
                                       bool ConvertHigh) const {
   Register Reg = MI.getOperand(0).getReg();
-  bool IsHigh = isHighReg(Reg);
+  bool IsHigh = SystemZ::isHighReg(Reg);
   MI.setDesc(get(IsHigh ? HighOpcode : LowOpcode));
   if (IsHigh && ConvertHigh)
     MI.getOperand(1).setImm(uint32_t(MI.getOperand(1).getImm()));
@@ -163,8 +153,8 @@ void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
                                        unsigned HighOpcode) const {
   Register DestReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  bool DestIsHigh = isHighReg(DestReg);
-  bool SrcIsHigh = isHighReg(SrcReg);
+  bool DestIsHigh = SystemZ::isHighReg(DestReg);
+  bool SrcIsHigh = SystemZ::isHighReg(SrcReg);
   if (!DestIsHigh && !SrcIsHigh)
     MI.setDesc(get(LowOpcodeK));
   else {
@@ -185,8 +175,9 @@ void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
 void SystemZInstrInfo::expandRXYPseudo(MachineInstr &MI, unsigned LowOpcode,
                                        unsigned HighOpcode) const {
   Register Reg = MI.getOperand(0).getReg();
-  unsigned Opcode = getOpcodeForOffset(isHighReg(Reg) ? HighOpcode : LowOpcode,
-                                       MI.getOperand(2).getImm());
+  unsigned Opcode = getOpcodeForOffset(
+      SystemZ::isHighReg(Reg) ? HighOpcode : LowOpcode,
+      MI.getOperand(2).getImm());
   MI.setDesc(get(Opcode));
 }
 
@@ -196,90 +187,8 @@ void SystemZInstrInfo::expandRXYPseudo(MachineInstr &MI, unsigned LowOpcode,
 void SystemZInstrInfo::expandLOCPseudo(MachineInstr &MI, unsigned LowOpcode,
                                        unsigned HighOpcode) const {
   Register Reg = MI.getOperand(0).getReg();
-  unsigned Opcode = isHighReg(Reg) ? HighOpcode : LowOpcode;
+  unsigned Opcode = SystemZ::isHighReg(Reg) ? HighOpcode : LowOpcode;
   MI.setDesc(get(Opcode));
-}
-
-// MI is a load-register-on-condition pseudo instruction.  Replace it with
-// LowOpcode if source and destination are both low GR32s and HighOpcode if
-// source and destination are both high GR32s.
-void SystemZInstrInfo::expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
-                                        unsigned HighOpcode) const {
-  Register DestReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
-  bool DestIsHigh = isHighReg(DestReg);
-  bool SrcIsHigh = isHighReg(SrcReg);
-
-  if (!DestIsHigh && !SrcIsHigh)
-    MI.setDesc(get(LowOpcode));
-  else if (DestIsHigh && SrcIsHigh)
-    MI.setDesc(get(HighOpcode));
-  else
-    LOCRMuxJumps++;
-
-  // If we were unable to implement the pseudo with a single instruction, we
-  // need to convert it back into a branch sequence.  This cannot be done here
-  // since the caller of expandPostRAPseudo does not handle changes to the CFG
-  // correctly.  This change is defered to the SystemZExpandPseudo pass.
-}
-
-// MI is a select pseudo instruction.  Replace it with LowOpcode if source
-// and destination are all low GR32s and HighOpcode if source and destination
-// are all high GR32s.  Otherwise, use the two-operand MixedOpcode.
-void SystemZInstrInfo::expandSELRPseudo(MachineInstr &MI, unsigned LowOpcode,
-                                        unsigned HighOpcode,
-                                        unsigned MixedOpcode) const {
-  Register DestReg = MI.getOperand(0).getReg();
-  Register Src1Reg = MI.getOperand(1).getReg();
-  Register Src2Reg = MI.getOperand(2).getReg();
-  bool DestIsHigh = isHighReg(DestReg);
-  bool Src1IsHigh = isHighReg(Src1Reg);
-  bool Src2IsHigh = isHighReg(Src2Reg);
-
-  // If sources and destination aren't all high or all low, we may be able to
-  // simplify the operation by moving one of the sources to the destination
-  // first.  But only if this doesn't clobber the other source.
-  if (DestReg != Src1Reg && DestReg != Src2Reg) {
-    if (DestIsHigh != Src1IsHigh) {
-      emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, Src1Reg,
-                    SystemZ::LR, 32, MI.getOperand(1).isKill(),
-                    MI.getOperand(1).isUndef());
-      MI.getOperand(1).setReg(DestReg);
-      Src1Reg = DestReg;
-      Src1IsHigh = DestIsHigh;
-    } else if (DestIsHigh != Src2IsHigh) {
-      emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, Src2Reg,
-                    SystemZ::LR, 32, MI.getOperand(2).isKill(),
-                    MI.getOperand(2).isUndef());
-      MI.getOperand(2).setReg(DestReg);
-      Src2Reg = DestReg;
-      Src2IsHigh = DestIsHigh;
-    }
-  }
-
-  // If the destination (now) matches one source, prefer this to be first.
-  if (DestReg != Src1Reg && DestReg == Src2Reg) {
-    commuteInstruction(MI, false, 1, 2);
-    std::swap(Src1Reg, Src2Reg);
-    std::swap(Src1IsHigh, Src2IsHigh);
-  }
-
-  if (!DestIsHigh && !Src1IsHigh && !Src2IsHigh)
-    MI.setDesc(get(LowOpcode));
-  else if (DestIsHigh && Src1IsHigh && Src2IsHigh)
-    MI.setDesc(get(HighOpcode));
-  else {
-    // Given the simplifcation above, we must already have a two-operand case.
-    assert (DestReg == Src1Reg);
-    MI.setDesc(get(MixedOpcode));
-    MI.tieOperands(0, 1);
-    LOCRMuxJumps++;
-  }
-
-  // If we were unable to implement the pseudo with a single instruction, we
-  // need to convert it back into a branch sequence.  This cannot be done here
-  // since the caller of expandPostRAPseudo does not handle changes to the CFG
-  // correctly.  This change is defered to the SystemZExpandPseudo pass.
 }
 
 // MI is an RR-style pseudo instruction that zero-extends the low Size bits
@@ -341,8 +250,8 @@ SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
                                 unsigned Size, bool KillSrc,
                                 bool UndefSrc) const {
   unsigned Opcode;
-  bool DestIsHigh = isHighReg(DestReg);
-  bool SrcIsHigh = isHighReg(SrcReg);
+  bool DestIsHigh = SystemZ::isHighReg(DestReg);
+  bool SrcIsHigh = SystemZ::isHighReg(SrcReg);
   if (DestIsHigh && SrcIsHigh)
     Opcode = SystemZ::RISBHH;
   else if (DestIsHigh && !SrcIsHigh)
@@ -1359,15 +1268,6 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandLOCPseudo(MI, SystemZ::LOCHI, SystemZ::LOCHHI);
     return true;
 
-  case SystemZ::LOCRMux:
-    expandLOCRPseudo(MI, SystemZ::LOCR, SystemZ::LOCFHR);
-    return true;
-
-  case SystemZ::SELRMux:
-    expandSELRPseudo(MI, SystemZ::SELR, SystemZ::SELFHR,
-                         SystemZ::LOCRMux);
-    return true;
-
   case SystemZ::STCMux:
     expandRXYPseudo(MI, SystemZ::STC, SystemZ::STCH);
     return true;
@@ -1469,8 +1369,8 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
 
   case SystemZ::RISBMux: {
-    bool DestIsHigh = isHighReg(MI.getOperand(0).getReg());
-    bool SrcIsHigh = isHighReg(MI.getOperand(2).getReg());
+    bool DestIsHigh = SystemZ::isHighReg(MI.getOperand(0).getReg());
+    bool SrcIsHigh = SystemZ::isHighReg(MI.getOperand(2).getReg());
     if (SrcIsHigh == DestIsHigh)
       MI.setDesc(get(DestIsHigh ? SystemZ::RISBHH : SystemZ::RISBLL));
     else {
