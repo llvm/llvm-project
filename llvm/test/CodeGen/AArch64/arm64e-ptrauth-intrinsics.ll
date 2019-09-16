@@ -670,6 +670,24 @@ define i64 @test_strip(i64 %arg) {
   ret i64 %tmp
 }
 
+define i64 @test_blend(i64 %arg, i64 %arg1) {
+; ALL-LABEL: test_blend:
+; ALL:       ; %bb.0:
+; ALL-NEXT:    bfi x0, x1, #48, #16
+; ALL-NEXT:    ret
+  %tmp = call i64 @llvm.ptrauth.blend.i64(i64 %arg, i64 %arg1)
+  ret i64 %tmp
+}
+
+define i64 @test_blend_constant(i64 %arg) {
+; ALL-LABEL: test_blend_constant:
+; ALL:       ; %bb.0:
+; ALL-NEXT:    movk x0, #12345, lsl #48
+; ALL-NEXT:    ret
+  %tmp = call i64 @llvm.ptrauth.blend.i64(i64 %arg, i64 12345)
+  ret i64 %tmp
+}
+
 
 define i64 @test_auth_cse(i64 %arg, i64 %arg1) {
 ; UNCHECKED-LABEL: test_auth_cse:
@@ -767,3 +785,4 @@ declare i64 @llvm.ptrauth.sign.i64(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign.generic.i64(i64, i64)
 declare i64 @llvm.ptrauth.resign.i64(i64, i32, i64, i32, i64)
 declare i64 @llvm.ptrauth.strip.i64(i64, i32)
+declare i64 @llvm.ptrauth.blend.i64(i64, i64)

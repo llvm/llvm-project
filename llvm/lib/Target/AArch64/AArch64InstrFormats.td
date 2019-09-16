@@ -694,6 +694,13 @@ def i64_imm0_65535 : Operand<i64>, TImmLeaf<i64, [{
 }]>;
 }
 
+def imm64_0_65535 : Operand<i64>, ImmLeaf<i64, [{
+  return Imm < 65536;
+}]> {
+  let ParserMatchClass = AsmImmRange<0, 65535>;
+  let PrintMethod = "printImmHex";
+}
+
 // imm0_255 predicate - True if the immediate is in the range [0,255].
 def Imm0_255Operand : AsmImmRange<0,255>;
 
