@@ -72,11 +72,8 @@ void GDBRemoteCommunicationHistory::Dump(Stream &strm) const {
     if (entry.type == GDBRemotePacket::ePacketTypeInvalid ||
         entry.packet.data.empty())
       break;
-    strm.Printf("history[%u] tid=0x%4.4" PRIx64 " <%4u> %s packet: %s\n",
-                entry.packet_idx, entry.tid, entry.bytes_transmitted,
-                (entry.type == GDBRemotePacket::ePacketTypeSend) ? "send"
-                                                                 : "read",
-                entry.packet.data.c_str());
+    strm.Printf("history[%u] ", entry.packet_idx);
+    entry.Dump(strm);
   }
 }
 

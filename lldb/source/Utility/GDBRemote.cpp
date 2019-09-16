@@ -51,6 +51,23 @@ void GDBRemotePacket::Serialize(raw_ostream &strm) const {
   strm.flush();
 }
 
+llvm::StringRef GDBRemotePacket::GetTypeStr() const {
+  switch (type) {
+  case GDBRemotePacket::ePacketTypeSend:
+    return "send";
+  case GDBRemotePacket::ePacketTypeRecv:
+    return "read";
+  case GDBRemotePacket::ePacketTypeInvalid:
+    return "invalid";
+  }
+  llvm_unreachable("All enum cases should be handled");
+}
+
+void GDBRemotePacket::Dump(Stream &strm) const {
+  strm.Printf("tid=0x%4.4" PRIx64 " <%4u> %s packet: %s\n", tid,
+              bytes_transmitted, GetTypeStr().data(), packet.data.c_str());
+}
+
 void yaml::ScalarEnumerationTraits<GDBRemotePacket::Type>::enumeration(
     IO &io, GDBRemotePacket::Type &value) {
   io.enumCase(value, "Invalid", GDBRemotePacket::ePacketTypeInvalid);

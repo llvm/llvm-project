@@ -70,12 +70,16 @@ struct GDBRemotePacket {
   };
 
   void Serialize(llvm::raw_ostream &strm) const;
+  void Dump(Stream &strm) const;
 
   BinaryData packet;
   Type type;
   uint32_t bytes_transmitted;
   uint32_t packet_idx;
   lldb::tid_t tid;
+
+private:
+  llvm::StringRef GetTypeStr() const;
 };
 
 } // namespace lldb_private
