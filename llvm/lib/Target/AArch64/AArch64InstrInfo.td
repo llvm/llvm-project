@@ -724,6 +724,17 @@ defm FCADD : SIMDThreeSameVectorComplexHSD<1, 0b111, complexrotateopodd,
 defm FCMLA : SIMDIndexedTiedComplexHSD<1, 0, 1, complexrotateop, "fcmla",
                                        null_frag>;
 
+def AArch64authcall : SDNode<"AArch64ISD::AUTH_CALL",
+                             SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+
+def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
+                             SDTypeProfile<0, 4, [SDTCisPtrTy<0>,
+                                                  SDTCisVT<2, i32>,
+                                                  SDTCisVT<3, i64>]>,
+                             [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
 // v8.3a Pointer Authentication
 // These instructions inhabit part of the hint space and so can be used for
 // armv8 targets
@@ -782,15 +793,29 @@ let Predicates = [HasPA] in {
   def PACGA : SignAuthTwoOperand<0b1100, "pacga", int_ptrauth_sign_generic>;
 
   // Combined Instructions
-  def BRAA    : AuthBranchTwoOperands<0, 0, "braa">;
-  def BRAB    : AuthBranchTwoOperands<0, 1, "brab">;
-  def BLRAA   : AuthBranchTwoOperands<1, 0, "blraa">;
-  def BLRAB   : AuthBranchTwoOperands<1, 1, "blrab">;
+  let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+    def BRAA    : AuthBranchTwoOperands<0, 0, "braa">;
+    def BRAB    : AuthBranchTwoOperands<0, 1, "brab">;
+    def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
+    def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
+  }
 
-  def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
-  def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
-  def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
-  def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
+  let isCall = 1, Defs = [LR], Uses = [SP] in {
+    def BLRAA   : AuthBranchTwoOperands<1, 0, "blraa">;
+    def BLRAB   : AuthBranchTwoOperands<1, 1, "blrab">;
+
+    def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
+    def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
+  }
+
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 0), GPR64sp:$Rm),
+            (BLRAA GPR64:$Rn, GPR64:$Rm)>;
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 1), GPR64sp:$Rm),
+            (BLRAB GPR64:$Rn, GPR64:$Rm)>;
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 0), (i64 0)),
+            (BLRAAZ GPR64:$Rn)>;
+  def : Pat<(AArch64authcall GPR64:$Rn, (i32 1), (i64 0)),
+            (BLRABZ GPR64:$Rn)>;
 
   let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
     def RETAA   : AuthReturn<0b010, 0, "retaa">;
@@ -828,6 +853,26 @@ let Predicates = [HasPA] in {
     let Defs = [X16,X17,NZCV];
     let Uses = [X16,X17];
   }
+
+  let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+      Uses = [SP] in {
+    def AUTH_TCRETURNriri : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff,
+                                                i32imm:$Key, tcGPR64:$Rn),
+                                 []>, Sched<[WriteBrReg]>;
+    def AUTH_TCRETURNrii : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff,
+                                                i32imm:$Key),
+                                 []>, Sched<[WriteBrReg]>;
+  }
+
+  def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+                              tcGPR64:$Rn),
+            (AUTH_TCRETURNriri tcGPR64:$dst, imm:$FPDiff, imm:$Key,
+                               tcGPR64:$Rn)>;
+
+  def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
+                              (i64 0)),
+            (AUTH_TCRETURNrii tcGPR64:$dst, imm:$FPDiff, imm:$Key)>;
+
 }
 
 // v8.3a floating point conversion for javascript
