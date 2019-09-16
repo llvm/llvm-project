@@ -21,6 +21,15 @@ have questions or comments, the `LLVM Developer's Mailing List
 them.
 
 
+Known Issues
+============
+
+These are issues that couldn't be fixed before the release. See the bug reports
+for the latest status.
+
+* `PR40547 <https://llvm.org/pr40547>`_ Clang gets miscompiled by GCC 9.
+
+
 Non-comprehensive list of changes in this release
 =================================================
 
