@@ -15,7 +15,7 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x1020
+// CHECK-NEXT: Address: 0x1320
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 64
 // CHECK-NEXT: Link: 0
@@ -24,9 +24,9 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     0x3018 R_X86_64_JUMP_SLOT bar 0x0
-// CHECK-NEXT:     0x3020 R_X86_64_JUMP_SLOT zed 0x0
-// CHECK-NEXT:     0x3028 R_X86_64_JUMP_SLOT _start 0x0
+// CHECK-NEXT:     0x3438 R_X86_64_JUMP_SLOT bar 0x0
+// CHECK-NEXT:     0x3440 R_X86_64_JUMP_SLOT zed 0x0
+// CHECK-NEXT:     0x3448 R_X86_64_JUMP_SLOT _start 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -36,7 +36,7 @@
 // CHECK2-NEXT:   SHF_ALLOC
 // CHECK2-NEXT:   SHF_EXECINSTR
 // CHECK2-NEXT: ]
-// CHECK2-NEXT: Address: 0x201020
+// CHECK2-NEXT: Address: 0x2012E0
 // CHECK2-NEXT: Offset:
 // CHECK2-NEXT: Size: 48
 // CHECK2-NEXT: Link: 0
@@ -45,8 +45,8 @@
 
 // CHECK2:      Relocations [
 // CHECK2-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK2-NEXT:     0x203018 R_X86_64_JUMP_SLOT bar 0x0
-// CHECK2-NEXT:     0x203020 R_X86_64_JUMP_SLOT zed 0x0
+// CHECK2-NEXT:     0x2033F8 R_X86_64_JUMP_SLOT bar 0x0
+// CHECK2-NEXT:     0x203400 R_X86_64_JUMP_SLOT zed 0x0
 // CHECK2-NEXT:   }
 // CHECK2-NEXT: ]
 
@@ -63,22 +63,22 @@
 // DISASM:      Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:   1020:       pushq 8162(%rip)
-// DISASM-NEXT:               jmpq *8164(%rip)
+// DISASM-NEXT:   1320:       pushq 8450(%rip)
+// DISASM-NEXT:               jmpq *8452(%rip)
 // DISASM-NEXT:               nopl (%rax)
 // DISASM-EMPTY:
 // DISASM-NEXT:   bar@plt:
-// DISASM-NEXT:   1030:       jmpq *8162(%rip)
+// DISASM-NEXT:   1330:       jmpq *8450(%rip)
 // DISASM-NEXT:               pushq $0
 // DISASM-NEXT:               jmp -32 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT:   zed@plt:
-// DISASM-NEXT:   1040:       jmpq *8154(%rip)
+// DISASM-NEXT:   1340:       jmpq *8442(%rip)
 // DISASM-NEXT:               pushq $1
 // DISASM-NEXT:               jmp -48 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT:   _start@plt:
-// DISASM-NEXT:   1050:       jmpq *8146(%rip)
+// DISASM-NEXT:   1350:       jmpq *8434(%rip)
 // DISASM-NEXT:               pushq $2
 // DISASM-NEXT:               jmp -64 <.plt>
 
@@ -99,17 +99,17 @@
 // DISASM2:      Disassembly of section .plt:
 // DISASM2-EMPTY:
 // DISASM2-NEXT: .plt:
-// DISASM2-NEXT:  201020:       pushq 8162(%rip)
-// DISASM2-NEXT:                jmpq *8164(%rip)
+// DISASM2-NEXT:  2012e0:       pushq 8450(%rip)
+// DISASM2-NEXT:                jmpq *8452(%rip)
 // DISASM2-NEXT:                nopl  (%rax)
 // DISASM2-EMPTY:
 // DISASM2-NEXT: bar@plt:
-// DISASM2-NEXT:  201030:       jmpq *8162(%rip)
+// DISASM2-NEXT:  2012f0:       jmpq *8450(%rip)
 // DISASM2-NEXT:                pushq $0
 // DISASM2-NEXT:                jmp -32 <.plt>
 // DISASM2-EMPTY:
 // DISASM2-NEXT: zed@plt:
-// DISASM2-NEXT:  201040:       jmpq *8154(%rip)
+// DISASM2-NEXT:  201300:       jmpq *8442(%rip)
 // DISASM2-NEXT:                pushq $1
 // DISASM2-NEXT:                jmp -48 <.plt>
 // DISASM2-NOT:   {{.}}

@@ -80,6 +80,90 @@ enum VPTMaskValue {
   TETE  = 15  // 0b1111
 };
 
+unsigned VCMPOpcodeToVPT(unsigned Opcode) {
+  switch (Opcode) {
+  case ARM::MVE_VCMPf32:
+    return ARM::MVE_VPTv4f32;
+  case ARM::MVE_VCMPf16:
+    return ARM::MVE_VPTv8f16;
+  case ARM::MVE_VCMPi8:
+    return ARM::MVE_VPTv16i8;
+  case ARM::MVE_VCMPi16:
+    return ARM::MVE_VPTv8i16;
+  case ARM::MVE_VCMPi32:
+    return ARM::MVE_VPTv4i32;
+  case ARM::MVE_VCMPu8:
+    return ARM::MVE_VPTv16u8;
+  case ARM::MVE_VCMPu16:
+    return ARM::MVE_VPTv8u16;
+  case ARM::MVE_VCMPu32:
+    return ARM::MVE_VPTv4u32;
+  case ARM::MVE_VCMPs8:
+    return ARM::MVE_VPTv16s8;
+  case ARM::MVE_VCMPs16:
+    return ARM::MVE_VPTv8s16;
+  case ARM::MVE_VCMPs32:
+    return ARM::MVE_VPTv4s32;
+
+  case ARM::MVE_VCMPf32r:
+    return ARM::MVE_VPTv4f32r;
+  case ARM::MVE_VCMPf16r:
+    return ARM::MVE_VPTv8f16r;
+  case ARM::MVE_VCMPi8r:
+    return ARM::MVE_VPTv16i8r;
+  case ARM::MVE_VCMPi16r:
+    return ARM::MVE_VPTv8i16r;
+  case ARM::MVE_VCMPi32r:
+    return ARM::MVE_VPTv4i32r;
+  case ARM::MVE_VCMPu8r:
+    return ARM::MVE_VPTv16u8r;
+  case ARM::MVE_VCMPu16r:
+    return ARM::MVE_VPTv8u16r;
+  case ARM::MVE_VCMPu32r:
+    return ARM::MVE_VPTv4u32r;
+  case ARM::MVE_VCMPs8r:
+    return ARM::MVE_VPTv16s8r;
+  case ARM::MVE_VCMPs16r:
+    return ARM::MVE_VPTv8s16r;
+  case ARM::MVE_VCMPs32r:
+    return ARM::MVE_VPTv4s32r;
+
+  default:
+    return 0;
+  }
+}
+
+MachineInstr *findVCMPToFoldIntoVPST(MachineBasicBlock::iterator MI,
+                                     const TargetRegisterInfo *TRI,
+                                     unsigned &NewOpcode) {
+  // Search backwards to the instruction that defines VPR. This may or not
+  // be a VCMP, we check that after this loop. If we find another instruction
+  // that reads cpsr, we return nullptr.
+  MachineBasicBlock::iterator CmpMI = MI;
+  while (CmpMI != MI->getParent()->begin()) {
+    --CmpMI;
+    if (CmpMI->modifiesRegister(ARM::VPR, TRI))
+      break;
+    if (CmpMI->readsRegister(ARM::VPR, TRI))
+      break;
+  }
+
+  if (CmpMI == MI)
+    return nullptr;
+  NewOpcode = VCMPOpcodeToVPT(CmpMI->getOpcode());
+  if (NewOpcode == 0)
+    return nullptr;
+
+  // Search forward from CmpMI to MI, checking if either register was def'd
+  if (registerDefinedBetween(CmpMI->getOperand(1).getReg(), std::next(CmpMI),
+                             MI, TRI))
+    return nullptr;
+  if (registerDefinedBetween(CmpMI->getOperand(2).getReg(), std::next(CmpMI),
+                             MI, TRI))
+    return nullptr;
+  return &*CmpMI;
+}
+
 bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
   bool Modified = false;
   MachineBasicBlock::instr_iterator MBIter = Block.instr_begin();
@@ -123,25 +207,41 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       ++MBIter;
     };
 
-    // Create the new VPST
-    MachineInstrBuilder MIBuilder =
-        BuildMI(Block, MI, dl, TII->get(ARM::MVE_VPST));
+    unsigned BlockMask = 0;
     switch (VPTInstCnt) {
     case 1:
-      MIBuilder.addImm(VPTMaskValue::T);
+      BlockMask = VPTMaskValue::T;
       break;
     case 2:
-      MIBuilder.addImm(VPTMaskValue::TT);
+      BlockMask = VPTMaskValue::TT;
       break;
     case 3:
-      MIBuilder.addImm(VPTMaskValue::TTT);
+      BlockMask = VPTMaskValue::TTT;
       break;
     case 4:
-      MIBuilder.addImm(VPTMaskValue::TTTT);
+      BlockMask = VPTMaskValue::TTTT;
       break;
     default:
       llvm_unreachable("Unexpected number of instruction in a VPT block");
     };
+
+    // Search back for a VCMP that can be folded to create a VPT, or else create
+    // a VPST directly
+    MachineInstrBuilder MIBuilder;
+    unsigned NewOpcode;
+    MachineInstr *VCMP = findVCMPToFoldIntoVPST(MI, TRI, NewOpcode);
+    if (VCMP) {
+      LLVM_DEBUG(dbgs() << "  folding VCMP into VPST: "; VCMP->dump());
+      MIBuilder = BuildMI(Block, MI, dl, TII->get(NewOpcode));
+      MIBuilder.addImm(BlockMask);
+      MIBuilder.add(VCMP->getOperand(1));
+      MIBuilder.add(VCMP->getOperand(2));
+      MIBuilder.add(VCMP->getOperand(3));
+      VCMP->eraseFromParent();
+    } else {
+      MIBuilder = BuildMI(Block, MI, dl, TII->get(ARM::MVE_VPST));
+      MIBuilder.addImm(BlockMask);
+    }
 
     finalizeBundle(
         Block, MachineBasicBlock::instr_iterator(MIBuilder.getInstr()), MBIter);

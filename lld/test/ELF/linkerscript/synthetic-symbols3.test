@@ -7,5 +7,5 @@
 PROVIDE_HIDDEN(_begin_sec = _start);
 PROVIDE_HIDDEN(_end_sec = ADDR(.text) + SIZEOF(.text));
 
-# CHECK:       0000000000201000         .text     00000000 .hidden _begin_sec
-# CHECK-NEXT:  0000000000201001         .text     00000000 .hidden _end_sec
+# CHECK:       00000000002011ac         .text     00000000 .hidden _begin_sec
+# CHECK-NEXT:  00000000002011ad         .text     00000000 .hidden _end_sec

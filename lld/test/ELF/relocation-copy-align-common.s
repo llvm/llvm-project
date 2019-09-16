@@ -18,8 +18,8 @@
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:     SHF_WRITE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x203000
-# CHECK-NEXT:   Offset: 0x3000
+# CHECK-NEXT:   Address: 0x203360
+# CHECK-NEXT:   Offset: 0x360
 # CHECK-NEXT:   Size: 64
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
@@ -29,7 +29,7 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section {{.*}} .rela.dyn {
-# CHECK-NEXT:     0x203020 R_X86_64_COPY foo 0x0
+# CHECK-NEXT:     0x203380 R_X86_64_COPY foo 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

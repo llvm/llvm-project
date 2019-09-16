@@ -6678,7 +6678,7 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
       std::next(MachineBasicBlock::iterator(LastMI)), MBB->end());
   createPHIsForSelects(MIItBegin, MIItEnd, StartMBB, FalseMBB, MBB);
 
-  StartMBB->erase(MIItBegin, MIItEnd);
+  MBB->erase(MIItBegin, MIItEnd);
   return JoinMBB;
 }
 

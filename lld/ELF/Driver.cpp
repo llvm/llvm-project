@@ -48,6 +48,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
@@ -298,6 +299,9 @@ static void checkOptions() {
 
   if (config->fixCortexA53Errata843419 && config->emachine != EM_AARCH64)
     error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
+
+  if (config->fixCortexA8 && config->emachine != EM_ARM)
+    error("--fix-cortex-a8 is only supported on ARM targets");
 
   if (config->tocOptimize && config->emachine != EM_PPC64)
     error("--toc-optimize is only supported on the PowerPC64 target");
@@ -835,6 +839,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->filterList = args::getStrings(args, OPT_filter);
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419);
+  config->fixCortexA8 = args.hasArg(OPT_fix_cortex_a8);
   config->forceBTI = args.hasArg(OPT_force_bti);
   config->requireCET = args.hasArg(OPT_require_cet);
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
@@ -1668,12 +1673,6 @@ template <class ELFT> static uint32_t getAndFeatures() {
   return ret;
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -1764,7 +1763,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
   if (!bitcodeFiles.empty())
-    for (const char *s : libcallRoutineNames)
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
 
   // Return if there were name resolution errors.
