@@ -661,6 +661,16 @@ define i64 @test_resign_da_dzb(i64 %arg, i64 %arg1, i64 %arg2) {
   ret i64 %tmp
 }
 
+define i64 @test_strip(i64 %arg) {
+; ALL-LABEL: test_strip:
+; ALL:       ; %bb.0:
+; ALL-NEXT:    xpaci x0
+; ALL-NEXT:    ret
+  %tmp = call i64 @llvm.ptrauth.strip.i64(i64 %arg, i32 0)
+  ret i64 %tmp
+}
+
+
 define i64 @test_auth_cse(i64 %arg, i64 %arg1) {
 ; UNCHECKED-LABEL: test_auth_cse:
 ; UNCHECKED:       ; %bb.0:
@@ -756,3 +766,4 @@ declare i64 @llvm.ptrauth.auth.i64(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign.i64(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign.generic.i64(i64, i64)
 declare i64 @llvm.ptrauth.resign.i64(i64, i32, i64, i32, i64)
+declare i64 @llvm.ptrauth.strip.i64(i64, i32)

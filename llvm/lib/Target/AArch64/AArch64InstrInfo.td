@@ -767,8 +767,17 @@ let Predicates = [HasPA] in {
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
-  def XPACI : SignAuthZero<0b100, 0b00, "xpaci">;
-  def XPACD : SignAuthZero<0b100, 0b01, "xpacd">;
+  def XPACI : SignAuthZero<0b100, 0b00, "xpaci", null_frag>;
+  // Pseudo of the previous instruction with untied operands. Lowers to:
+  // mov $dst, $src
+  // xpaci $dst
+  def XPACIuntied : Pseudo<(outs GPR64:$dst), (ins GPR64:$src), []>, Sched<[]>;
+  def : Pat<(int_ptrauth_strip GPR64:$Rd, 0), (XPACIuntied GPR64:$Rd)>;
+  def : Pat<(int_ptrauth_strip GPR64:$Rd, 1), (XPACIuntied GPR64:$Rd)>;
+
+  def XPACD : SignAuthZero<0b100, 0b01, "xpacd", null_frag>;
+  def : Pat<(int_ptrauth_strip GPR64:$Rd, 2), (XPACD GPR64:$Rd)>;
+  def : Pat<(int_ptrauth_strip GPR64:$Rd, 3), (XPACD GPR64:$Rd)>;
 
   def PACGA : SignAuthTwoOperand<0b1100, "pacga", int_ptrauth_sign_generic>;
 
