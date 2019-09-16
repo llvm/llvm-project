@@ -1198,62 +1198,6 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   }
 }
 
-llvm::Optional<swift::MetadataKind>
-SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise(Status *error) {
-  if (error)
-    error->Clear();
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
-  if (log)
-    log->Printf("[MetadataPromise] asked to fulfill kind promise at location "
-                "0x%" PRIx64,
-                m_metadata_location);
-
-  if (m_metadata_kind.hasValue())
-    return m_metadata_kind;
-
-  auto swift_ast_ctx = m_for_object_sp->GetScratchSwiftASTContext();
-  if (!swift_ast_ctx) {
-    error->SetErrorString("couldn't get Swift scratch context");
-    return llvm::None;
-  }
-  auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
-
-  swift::remoteAST::Result<swift::MetadataKind> result =
-      remote_ast.getKindForRemoteTypeMetadata(
-          swift::remote::RemoteAddress(m_metadata_location));
-
-  if (result) {
-    m_metadata_kind = result.getValue();
-    if (log)
-      log->Printf("[MetadataPromise] result is kind %u", result.getValue());
-    return m_metadata_kind;
-  } else {
-    const auto &failure = result.getFailure();
-    if (error)
-      error->SetErrorStringWithFormat("error in resolving type: %s",
-                                      failure.render().c_str());
-    if (log)
-      log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
-    return m_metadata_kind;
-  }
-}
-
-bool SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined() {
-  if (llvm::Optional<swift::MetadataKind> kind_promise = FulfillKindPromise()) {
-    switch (kind_promise.getValue()) {
-    case swift::MetadataKind::Class:
-    case swift::MetadataKind::Existential:
-    case swift::MetadataKind::ObjCClassWrapper:
-      return false;
-    default:
-      return true;
-    }
-  }
-  llvm_unreachable("Unknown metadata kind");
-}
-
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
                                          ValueObject &for_object) {
