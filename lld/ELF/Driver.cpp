@@ -48,6 +48,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
@@ -1672,12 +1673,6 @@ template <class ELFT> static uint32_t getAndFeatures() {
   return ret;
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -1768,7 +1763,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
   if (!bitcodeFiles.empty())
-    for (const char *s : libcallRoutineNames)
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
 
   // Return if there were name resolution errors.
