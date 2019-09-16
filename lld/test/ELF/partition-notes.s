@@ -22,7 +22,7 @@
 // CHECK-NEXT: Displaying notes
 // CHECK-NEXT: Owner
 // CHECK-NEXT: GNU                   0x00000014	NT_GNU_BUILD_ID (unique build ID bitstring)
-// CHECK-NEXT: Build ID: 0f4d5297cbbe52e4bea558eeb792944670de22e1
+// CHECK-NEXT: Build ID: 08b93eab87177a2356d1b0d1148339463f98dac2
 
 .section .llvm_sympart,"",@llvm_sympart
 .asciz "part1"

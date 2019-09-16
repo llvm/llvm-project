@@ -14,8 +14,8 @@
 
 # CHECK:      .gdb_index contents:
 # CHECK:      Address area offset = 0x28, has 2 entries:
-# CHECK-NEXT:  Low/High address = [0x201000, 0x201001) (Size: 0x1), CU id = 0
-# CHECK-NEXT:  Low/High address = [0x201001, 0x201003) (Size: 0x2), CU id = 0
+# CHECK-NEXT:  Low/High address = [0x201120, 0x201121) (Size: 0x1), CU id = 0
+# CHECK-NEXT:  Low/High address = [0x201121, 0x201123) (Size: 0x2), CU id = 0
 
 .text
 .section .text._Z3zedv,"ax",@progbits

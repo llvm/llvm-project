@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +v8.4a -O2 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=AArch64-v8_3
 // RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +v8.5a -O2 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=AArch64-v8_3
 
+// REQUIRES: rewrite
+
 #include <arm_acle.h>
 
 /* 8 SYNCHRONIZATION, BARRIER AND HINT INTRINSICS */

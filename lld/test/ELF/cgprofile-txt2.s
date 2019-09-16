@@ -9,13 +9,13 @@
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 # CHECK:      Name: A
-# CHECK-NEXT: Value: 0x201003
+# CHECK-NEXT: Value: 0x201123
 # CHECK:      Name: B
-# CHECK-NEXT: Value: 0x201000
+# CHECK-NEXT: Value: 0x201120
 # CHECK:      Name: C
-# CHECK-NEXT: Value: 0x201001
+# CHECK-NEXT: Value: 0x201121
 # CHECK:      Name: D
-# CHECK-NEXT: Value: 0x201002
+# CHECK-NEXT: Value: 0x201122
 
 .section    .text.A,"ax",@progbits
 .globl  A

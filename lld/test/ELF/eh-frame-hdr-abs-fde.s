@@ -8,12 +8,12 @@
 # RUN: llvm-objdump -s -dwarf=frames %t | FileCheck %s
 
 # CHECK:      Contents of section .eh_frame_hdr:
-# CHECK-NEXT:  200190 011b033b 14000000 01000000 700e0000
+# CHECK-NEXT:  200190 011b033b 14000000 01000000 54100000
 #                                                ^-- 0x201000 - 0x200190
 #                                                    .text    - .eh_frame_hdr
 # CHECK-NEXT:  2001a0 30000000
 # CHECK:      Contents of section .text:
-# CHECK-NEXT:  201000 90
+# CHECK-NEXT:  2011e4 90
 
 # CHECK: Augmentation:          "zLR"
 # CHECK: Augmentation data:     00 1B

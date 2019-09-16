@@ -1783,6 +1783,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FMAD:
   case AMDGPU::G_FSQRT:
   case AMDGPU::G_FFLOOR:
+  case AMDGPU::G_FCEIL:
+  case AMDGPU::G_FRINT:
   case AMDGPU::G_SITOFP:
   case AMDGPU::G_UITOFP:
   case AMDGPU::G_FPTRUNC:

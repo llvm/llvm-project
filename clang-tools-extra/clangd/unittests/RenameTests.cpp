@@ -136,6 +136,13 @@ TEST(RenameTest, Renameable) {
        )cpp",
           "not a supported kind", HeaderFile},
 
+      {
+
+          R"cpp(
+        struct X { X operator++(int) {} };
+        void f(X x) {x+^+;})cpp",
+          "not a supported kind", HeaderFile},
+
       {R"cpp(// foo is declared outside the file.
         void fo^o() {}
       )cpp", "used outside main file", !HeaderFile/*cc file*/},
