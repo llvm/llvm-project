@@ -170,14 +170,14 @@ let Defs = [SCC] in {
 let WaveSizePredicate = isWave32 in {
 def : GCNPat <
   (int_amdgcn_wqm_vote i1:$src0),
-  (S_WQM_B32 $src0)
+  (S_WQM_B32 SSrc_b32:$src0)
 >;
 }
 
 let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (int_amdgcn_wqm_vote i1:$src0),
-  (S_WQM_B64 $src0)
+  (S_WQM_B64 SSrc_b64:$src0)
 >;
 }
 
