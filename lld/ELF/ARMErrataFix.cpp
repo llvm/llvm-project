@@ -250,7 +250,7 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
   if (off >= limit || limit - off < 8) {
     // Need at least 2 4-byte sized instructions to trigger erratum.
     off = limit;
-    return {0, 0};
+    return {0, 0, nullptr};
   }
 
   ScanResult scanRes = {0, 0, nullptr};
