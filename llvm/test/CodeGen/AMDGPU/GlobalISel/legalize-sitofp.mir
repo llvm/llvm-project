@@ -143,12 +143,12 @@ body: |
 ...
 
 ---
-name: test_sitofp_s32_to_s16
+name: test_sitofp_s16_to_s32
 body: |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: test_sitofp_s32_to_s16
+    ; CHECK-LABEL: name: test_sitofp_s16_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s16) = G_SITOFP [[COPY]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SITOFP]](s16)

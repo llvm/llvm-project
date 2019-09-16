@@ -415,14 +415,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                {S32, S8}, {S128, S32}, {S128, S64}, {S32, LLT::scalar(24)}})
     .scalarize(0);
 
+  // TODO: Legal for s1->s64, requires split for VALU.
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-    .legalFor({{S32, S32}, {S64, S32}, {S16, S32}})
+    .legalFor({{S32, S32}, {S64, S32}, {S16, S32}, {S32, S1}, {S16, S1}})
     .lowerFor({{S32, S64}})
     .customFor({{S64, S64}})
     .scalarize(0);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-    .legalFor({{S32, S32}, {S32, S64}})
+    .legalFor({{S32, S32}, {S32, S64}, {S32, S16}})
     .scalarize(0);
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
