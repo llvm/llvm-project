@@ -11,13 +11,13 @@
 
 ## Check _TLS_MODULE_BASE_ used by LD produces a dynamic relocation with a value of 0.
 # LD-REL:      .rela.dyn {
-# LD-REL-NEXT:   0x20A0 R_X86_64_TLSDESC - 0x0
+# LD-REL-NEXT:   0x2318 R_X86_64_TLSDESC - 0x0
 # LD-REL-NEXT: }
 
-## 0x20a0-0x1007 = 4249
+## 0x2318-0x1267 = 4273
 ## dtpoff(a) = 8, dtpoff(b) = 12
-# LD:            leaq 4249(%rip), %rax
-# LD-NEXT: 1007: callq *(%rax)
+# LD:            leaq 4273(%rip), %rax
+# LD-NEXT: 1267: callq *(%rax)
 # LD-NEXT:       movl %fs:8(%rax), %edx
 # LD-NEXT:       addl %fs:12(%rax), %edx
 

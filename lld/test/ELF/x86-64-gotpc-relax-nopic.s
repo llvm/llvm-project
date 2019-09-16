@@ -10,21 +10,21 @@
 # SYMRELOC:      Symbols [
 # SYMRELOC:       Symbol {
 # SYMRELOC:        Name: bar
-# SYMRELOC-NEXT:   Value: 0x202000
+# SYMRELOC-NEXT:   Value: 0x202197
 
-## 2105344 = 0x202000 (bar)
+## 2105751 = 0x202197 (bar)
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: _start:
-# DISASM-NEXT:   201000:       adcq  $2105344, %rax
-# DISASM-NEXT:                 addq  $2105344, %rbx
-# DISASM-NEXT:                 andq  $2105344, %rcx
-# DISASM-NEXT:                 cmpq  $2105344, %rdx
-# DISASM-NEXT:                 orq   $2105344, %rdi
-# DISASM-NEXT:                 sbbq  $2105344, %rsi
-# DISASM-NEXT:                 subq  $2105344, %rbp
-# DISASM-NEXT:                 xorq  $2105344, %r8
-# DISASM-NEXT:                 testq $2105344, %r15
+# DISASM-NEXT:   201158:       adcq  $2105751, %rax
+# DISASM-NEXT:                 addq  $2105751, %rbx
+# DISASM-NEXT:                 andq  $2105751, %rcx
+# DISASM-NEXT:                 cmpq  $2105751, %rdx
+# DISASM-NEXT:                 orq   $2105751, %rdi
+# DISASM-NEXT:                 sbbq  $2105751, %rsi
+# DISASM-NEXT:                 subq  $2105751, %rbp
+# DISASM-NEXT:                 xorq  $2105751, %r8
+# DISASM-NEXT:                 testq $2105751, %r15
 
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t2
 # RUN: llvm-readobj -S -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
@@ -37,8 +37,8 @@
 # SEC-PIC-NEXT:     SHF_ALLOC
 # SEC-PIC-NEXT:     SHF_WRITE
 # SEC-PIC-NEXT:   ]
-# SEC-PIC-NEXT:   Address: 0x20A0
-# SEC-PIC-NEXT:   Offset: 0x20A0
+# SEC-PIC-NEXT:   Address: 0x2348
+# SEC-PIC-NEXT:   Offset: 0x348
 # SEC-PIC-NEXT:   Size: 8
 # SEC-PIC-NEXT:   Link:
 # SEC-PIC-NEXT:   Info:
@@ -47,7 +47,7 @@
 # SEC-PIC-NEXT: }
 # SEC-PIC:      Relocations [
 # SEC-PIC-NEXT:   Section ({{.*}}) .rela.dyn {
-# SEC-PIC-NEXT:     0x20A0 R_X86_64_RELATIVE - 0x3000
+# SEC-PIC-NEXT:     0x2348 R_X86_64_RELATIVE - 0x3350
 # SEC-PIC-NEXT:   }
 # SEC-PIC-NEXT: ]
 # SEC-PIC:      0x000000006FFFFFF9 RELACOUNT            1
@@ -58,15 +58,15 @@
 # DISASM-PIC:      Disassembly of section .text:
 # DISASM-PIC-EMPTY:
 # DISASM-PIC-NEXT: _start:
-# DISASM-PIC-NEXT: 1000:       adcq  4249(%rip), %rax
-# DISASM-PIC-NEXT:             addq  4242(%rip), %rbx
-# DISASM-PIC-NEXT:             andq  4235(%rip), %rcx
-# DISASM-PIC-NEXT:             cmpq  4228(%rip), %rdx
-# DISASM-PIC-NEXT:             orq   4221(%rip), %rdi
-# DISASM-PIC-NEXT:             sbbq  4214(%rip), %rsi
-# DISASM-PIC-NEXT:             subq  4207(%rip), %rbp
-# DISASM-PIC-NEXT:             xorq  4200(%rip), %r8
-# DISASM-PIC-NEXT:             testq %r15, 4193(%rip)
+# DISASM-PIC-NEXT: 1268:       adcq  4313(%rip), %rax
+# DISASM-PIC-NEXT:             addq  4306(%rip), %rbx
+# DISASM-PIC-NEXT:             andq  4299(%rip), %rcx
+# DISASM-PIC-NEXT:             cmpq  4292(%rip), %rdx
+# DISASM-PIC-NEXT:             orq   4285(%rip), %rdi
+# DISASM-PIC-NEXT:             sbbq  4278(%rip), %rsi
+# DISASM-PIC-NEXT:             subq  4271(%rip), %rbp
+# DISASM-PIC-NEXT:             xorq  4264(%rip), %r8
+# DISASM-PIC-NEXT:             testq %r15, 4257(%rip)
 
 .data
 .type   bar, @object

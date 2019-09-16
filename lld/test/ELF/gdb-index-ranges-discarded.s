@@ -5,7 +5,7 @@
 
 # CHECK:      .gdb_index contents:
 # CHECK:       Address area offset = 0x28, has 1 entries:
-# CHECK-NEXT:    Low/High address = [0x201000, 0x201001) (Size: 0x1), CU id = 0
+# CHECK-NEXT:    Low/High address = [0x201120, 0x201121) (Size: 0x1), CU id = 0
 
 ## .debug_ranges contains 2 entries. .Lfunc_end0 is defined in the discarded
 ## .text.foo. Test we resolve it to a non-zero value, otherwise the address area

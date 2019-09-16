@@ -555,7 +555,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (OutputSection *sec : outputSections)
     sec->maybeCompress<ELFT>();
 
-  script->allocateHeaders(mainPart->phdrs);
+  if (script->hasSectionsCommand)
+    script->allocateHeaders(mainPart->phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
@@ -2217,8 +2218,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // previous segment anyway.
       //
       // TODO Enable this technique on all targets.
-      bool enable = config->emachine != EM_HEXAGON &&
-                    config->emachine != EM_X86_64;
+      bool enable = config->emachine != EM_HEXAGON;
 
       if (!enable ||
           (config->zSeparateCode && prev &&
