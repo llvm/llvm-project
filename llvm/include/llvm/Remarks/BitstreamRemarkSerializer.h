@@ -148,6 +148,10 @@ struct BitstreamRemarkSerializer : public RemarkSerializer {
   std::unique_ptr<MetaSerializer>
   metaSerializer(raw_ostream &OS,
                  Optional<StringRef> ExternalFilename = None) override;
+
+  static bool classof(const RemarkSerializer *S) {
+    return S->SerializerFormat == Format::Bitstream;
+  }
 };
 
 /// Serializer of metadata for bitstream remarks.

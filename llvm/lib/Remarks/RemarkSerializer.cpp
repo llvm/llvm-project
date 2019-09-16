@@ -42,9 +42,7 @@ remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
     return createStringError(std::errc::invalid_argument,
                              "Unknown remark serializer format.");
   case Format::YAML:
-    return createStringError(std::errc::invalid_argument,
-                             "Unable to use a string table with the yaml "
-                             "format. Use 'yaml-strtab' instead.");
+    return std::make_unique<YAMLRemarkSerializer>(OS, Mode, std::move(StrTab));
   case Format::YAMLStrTab:
     return llvm::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode,
                                                          std::move(StrTab));

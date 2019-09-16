@@ -326,7 +326,7 @@ StringRef BitstreamRemarkSerializerHelper::getBuffer() {
 
 BitstreamRemarkSerializer::BitstreamRemarkSerializer(raw_ostream &OS,
                                                      SerializerMode Mode)
-    : RemarkSerializer(OS, Mode),
+    : RemarkSerializer(Format::Bitstream, OS, Mode),
       Helper(BitstreamRemarkContainerType::SeparateRemarksFile) {
   assert(Mode == SerializerMode::Separate &&
          "For SerializerMode::Standalone, a pre-filled string table needs to "
@@ -338,7 +338,7 @@ BitstreamRemarkSerializer::BitstreamRemarkSerializer(raw_ostream &OS,
 BitstreamRemarkSerializer::BitstreamRemarkSerializer(raw_ostream &OS,
                                                      SerializerMode Mode,
                                                      StringTable StrTabIn)
-    : RemarkSerializer(OS, Mode),
+    : RemarkSerializer(Format::Bitstream, OS, Mode),
       Helper(Mode == SerializerMode::Separate
                  ? BitstreamRemarkContainerType::SeparateRemarksFile
                  : BitstreamRemarkContainerType::Standalone) {
