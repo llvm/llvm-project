@@ -194,10 +194,13 @@ static bool allSameBlock(ArrayRef<Value *> VL) {
   return true;
 }
 
-/// \returns True if all of the values in \p VL are constants.
+/// \returns True if all of the values in \p VL are constants (but not
+/// globals/constant expressions).
 static bool allConstant(ArrayRef<Value *> VL) {
+  // Constant expressions and globals can't be vectorized like normal integer/FP
+  // constants.
   for (Value *i : VL)
-    if (!isa<Constant>(i))
+    if (!isa<Constant>(i) || isa<ConstantExpr>(i) || isa<GlobalValue>(i))
       return false;
   return true;
 }
@@ -2270,7 +2273,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                 (unsigned) Instruction::ShuffleVector : S.getOpcode();
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
-      PHINode *PH = dyn_cast<PHINode>(VL0);
+      auto *PH = cast<PHINode>(VL0);
 
       // Check for terminator values (e.g. invoke).
       for (unsigned j = 0; j < VL.size(); ++j)
@@ -2710,7 +2713,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL) {
-          CallInst *CI2 = dyn_cast<CallInst>(V);
+          auto *CI2 = cast<CallInst>(V);
           Operands.push_back(CI2->getArgOperand(i));
         }
         buildTree_rec(Operands, Depth + 1, {TE, i});
@@ -3525,6 +3528,7 @@ void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
         break;
     }
   }
+  assert(LastInst && "Failed to find last instruction in bundle");
 
   // Set the insertion point after the last instruction in the bundle. Set the
   // debug location to Front.
@@ -3673,7 +3677,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
-      PHINode *PH = dyn_cast<PHINode>(VL0);
+      auto *PH = cast<PHINode>(VL0);
       Builder.SetInsertPoint(PH->getParent()->getFirstNonPHI());
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
       PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
@@ -3797,7 +3801,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         return E->VectorizedValue;
       }
 
-      CastInst *CI = dyn_cast<CastInst>(VL0);
+      auto *CI = cast<CastInst>(VL0);
       Value *V = Builder.CreateCast(CI->getOpcode(), InVec, VecTy);
       if (NeedToShuffleReuses) {
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),

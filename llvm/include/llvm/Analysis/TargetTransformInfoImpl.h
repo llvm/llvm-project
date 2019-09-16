@@ -294,10 +294,6 @@ public:
 
   bool isTypeLegal(Type *Ty) { return false; }
 
-  unsigned getJumpBufAlignment() { return 0; }
-
-  unsigned getJumpBufSize() { return 0; }
-
   bool shouldBuildLookupTables() { return true; }
   bool shouldBuildLookupTablesForConstant(Constant *C) { return true; }
 

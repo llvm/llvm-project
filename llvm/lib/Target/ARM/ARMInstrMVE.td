@@ -1058,6 +1058,13 @@ def MVE_VREV32_16 : MVE_VREV<"vrev32", "16", 0b01, 0b01>;
 def MVE_VREV16_8  : MVE_VREV<"vrev16", "8", 0b00, 0b10>;
 
 let Predicates = [HasMVEInt] in {
+  def : Pat<(v8i16 (bswap (v8i16 MQPR:$src))),
+            (v8i16 (MVE_VREV16_8 (v8i16 MQPR:$src)))>;
+  def : Pat<(v4i32 (bswap (v4i32 MQPR:$src))),
+            (v4i32 (MVE_VREV32_8 (v4i32 MQPR:$src)))>;
+}
+
+let Predicates = [HasMVEInt] in {
   def : Pat<(v4i32 (ARMvrev64 (v4i32 MQPR:$src))),
             (v4i32 (MVE_VREV64_32 (v4i32 MQPR:$src)))>;
   def : Pat<(v8i16 (ARMvrev64 (v8i16 MQPR:$src))),
@@ -1755,6 +1762,15 @@ def MVE_VCLSs32 : MVE_VCLSCLZ<"vcls", "s32", 0b10, 0b0>;
 def MVE_VCLZs8  : MVE_VCLSCLZ<"vclz", "i8",  0b00, 0b1>;
 def MVE_VCLZs16 : MVE_VCLSCLZ<"vclz", "i16", 0b01, 0b1>;
 def MVE_VCLZs32 : MVE_VCLSCLZ<"vclz", "i32", 0b10, 0b1>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 ( ctlz (v16i8 MQPR:$val1))),
+            (v16i8 ( MVE_VCLZs8 (v16i8 MQPR:$val1)))>;
+  def : Pat<(v4i32 ( ctlz (v4i32 MQPR:$val1))),
+            (v4i32 ( MVE_VCLZs32 (v4i32 MQPR:$val1)))>;
+  def : Pat<(v8i16 ( ctlz (v8i16 MQPR:$val1))),
+            (v8i16 ( MVE_VCLZs16 (v8i16 MQPR:$val1)))>;
+}
 
 class MVE_VABSNEG_int<string iname, string suffix, bits<2> size, bit negate,
                       list<dag> pattern=[]>
@@ -3763,6 +3779,17 @@ def MVE_VBRSR8  : MVE_VBRSR<"vbrsr", "8", 0b00>;
 def MVE_VBRSR16 : MVE_VBRSR<"vbrsr", "16", 0b01>;
 def MVE_VBRSR32 : MVE_VBRSR<"vbrsr", "32", 0b10>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 ( bitreverse (v16i8 MQPR:$val1))),
+            (v16i8 ( MVE_VBRSR8 (v16i8 MQPR:$val1), (t2MOVi (i32 8)) ))>;
+
+  def : Pat<(v4i32 ( bitreverse (v4i32 MQPR:$val1))),
+            (v4i32 ( MVE_VBRSR32 (v4i32 MQPR:$val1), (t2MOVi (i32 32)) ))>;
+
+  def : Pat<(v8i16 ( bitreverse (v8i16 MQPR:$val1))),
+            (v8i16 ( MVE_VBRSR16 (v8i16 MQPR:$val1), (t2MOVi (i32 16)) ))>;
+}
+
 class MVE_VMUL_qr_int<string iname, string suffix,
                       bits<2> size, list<dag> pattern=[]>
   : MVE_qDest_rSrc<iname, suffix, "", pattern> {
@@ -4526,7 +4553,7 @@ class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> patte
   let Inst{7} = fc{0};
   let Inst{4} = 0b0;
 
-  let Defs = [VPR, P0];
+  let Defs = [VPR];
 }
 
 class MVE_VPTt1<string suffix, bits<2> size, dag iops>
@@ -4542,7 +4569,7 @@ class MVE_VPTt1<string suffix, bits<2> size, dag iops>
 
 class MVE_VPTt1i<string suffix, bits<2> size>
  : MVE_VPTt1<suffix, size,
-           (ins vpt_mask:$Mk, pred_basic_i:$fc, MQPR:$Qn, MQPR:$Qm)> {
+           (ins vpt_mask:$Mk, MQPR:$Qn, MQPR:$Qm, pred_basic_i:$fc)> {
   let Inst{12} = 0b0;
   let Inst{0} = 0b0;
 }
@@ -4553,7 +4580,7 @@ def MVE_VPTv16i8 : MVE_VPTt1i<"i8", 0b00>;
 
 class MVE_VPTt1u<string suffix, bits<2> size>
  : MVE_VPTt1<suffix, size,
-           (ins vpt_mask:$Mk, pred_basic_u:$fc, MQPR:$Qn, MQPR:$Qm)> {
+           (ins vpt_mask:$Mk, MQPR:$Qn, MQPR:$Qm, pred_basic_u:$fc)> {
   let Inst{12} = 0b0;
   let Inst{0} = 0b1;
 }
@@ -4564,7 +4591,7 @@ def MVE_VPTv16u8 : MVE_VPTt1u<"u8", 0b00>;
 
 class MVE_VPTt1s<string suffix, bits<2> size>
  : MVE_VPTt1<suffix, size,
-           (ins vpt_mask:$Mk, pred_basic_s:$fc, MQPR:$Qn, MQPR:$Qm)> {
+           (ins vpt_mask:$Mk, MQPR:$Qn, MQPR:$Qm, pred_basic_s:$fc)> {
   let Inst{12} = 0b1;
 }
 
@@ -4586,7 +4613,7 @@ class MVE_VPTt2<string suffix, bits<2> size, dag iops>
 
 class MVE_VPTt2i<string suffix, bits<2> size>
   : MVE_VPTt2<suffix, size,
-            (ins vpt_mask:$Mk, pred_basic_i:$fc, MQPR:$Qn, GPRwithZR:$Rm)> {
+            (ins vpt_mask:$Mk, MQPR:$Qn, GPRwithZR:$Rm, pred_basic_i:$fc)> {
   let Inst{12} = 0b0;
   let Inst{5} = 0b0;
 }
@@ -4597,7 +4624,7 @@ def MVE_VPTv16i8r : MVE_VPTt2i<"i8", 0b00>;
 
 class MVE_VPTt2u<string suffix, bits<2> size>
   : MVE_VPTt2<suffix, size,
-            (ins vpt_mask:$Mk, pred_basic_u:$fc, MQPR:$Qn, GPRwithZR:$Rm)> {
+            (ins vpt_mask:$Mk, MQPR:$Qn, GPRwithZR:$Rm, pred_basic_u:$fc)> {
   let Inst{12} = 0b0;
   let Inst{5} = 0b1;
 }
@@ -4608,7 +4635,7 @@ def MVE_VPTv16u8r : MVE_VPTt2u<"u8", 0b00>;
 
 class MVE_VPTt2s<string suffix, bits<2> size>
   : MVE_VPTt2<suffix, size,
-            (ins vpt_mask:$Mk, pred_basic_s:$fc, MQPR:$Qn, GPRwithZR:$Rm)> {
+            (ins vpt_mask:$Mk, MQPR:$Qn, GPRwithZR:$Rm, pred_basic_s:$fc)> {
   let Inst{12} = 0b1;
 }
 
@@ -4637,12 +4664,12 @@ class MVE_VPTf<string suffix, bit size, dag iops, string asm, list<dag> pattern=
   let Inst{7} = fc{0};
   let Inst{4} = 0b0;
 
-  let Defs = [P0];
+  let Defs = [VPR];
   let Predicates = [HasMVEFloat];
 }
 
 class MVE_VPTft1<string suffix, bit size>
-  : MVE_VPTf<suffix, size, (ins vpt_mask:$Mk, pred_basic_fp:$fc, MQPR:$Qn, MQPR:$Qm),
+  : MVE_VPTf<suffix, size, (ins vpt_mask:$Mk, MQPR:$Qn, MQPR:$Qm, pred_basic_fp:$fc),
           "$fc, $Qn, $Qm"> {
   bits<3> fc;
   bits<4> Qm;
@@ -4657,7 +4684,7 @@ def MVE_VPTv4f32         : MVE_VPTft1<"f32", 0b0>;
 def MVE_VPTv8f16         : MVE_VPTft1<"f16", 0b1>;
 
 class MVE_VPTft2<string suffix, bit size>
-  : MVE_VPTf<suffix, size, (ins vpt_mask:$Mk, pred_basic_fp:$fc, MQPR:$Qn, GPRwithZR:$Rm),
+  : MVE_VPTf<suffix, size, (ins vpt_mask:$Mk, MQPR:$Qn, GPRwithZR:$Rm, pred_basic_fp:$fc),
           "$fc, $Qn, $Rm"> {
   bits<3> fc;
   bits<4> Rm;
@@ -4683,7 +4710,7 @@ def MVE_VPST : MVE_MI<(outs ), (ins vpt_mask:$Mk), NoItinerary,
   let Unpredictable{7} = 0b1;
   let Unpredictable{5} = 0b1;
 
-  let Defs = [P0];
+  let Defs = [VPR];
 }
 
 def MVE_VPSEL : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm), NoItinerary,
@@ -4892,6 +4919,10 @@ class MVE_vector_store_typed<ValueType Ty, Instruction RegImmInst,
                              PatFrag StoreKind, int shift>
   : Pat<(StoreKind (Ty MQPR:$val), t2addrmode_imm7<shift>:$addr),
         (RegImmInst (Ty MQPR:$val), t2addrmode_imm7<shift>:$addr)>;
+class MVE_vector_maskedstore_typed<ValueType Ty, Instruction RegImmInst,
+                                   PatFrag StoreKind, int shift>
+  : Pat<(StoreKind (Ty MQPR:$val), t2addrmode_imm7<shift>:$addr, VCCR:$pred),
+        (RegImmInst (Ty MQPR:$val), t2addrmode_imm7<shift>:$addr, (i32 1), VCCR:$pred)>;
 
 multiclass MVE_vector_store<Instruction RegImmInst, PatFrag StoreKind,
                             int shift> {
@@ -4908,6 +4939,10 @@ class MVE_vector_load_typed<ValueType Ty, Instruction RegImmInst,
                             PatFrag LoadKind, int shift>
   : Pat<(Ty (LoadKind t2addrmode_imm7<shift>:$addr)),
         (Ty (RegImmInst t2addrmode_imm7<shift>:$addr))>;
+class MVE_vector_maskedload_typed<ValueType Ty, Instruction RegImmInst,
+                                  PatFrag LoadKind, int shift>
+  : Pat<(Ty (LoadKind t2addrmode_imm7<shift>:$addr, VCCR:$pred, (Ty NEONimmAllZerosV))),
+        (Ty (RegImmInst t2addrmode_imm7<shift>:$addr, (i32 1), VCCR:$pred))>;
 
 multiclass MVE_vector_load<Instruction RegImmInst, PatFrag LoadKind,
                            int shift> {
@@ -4953,6 +4988,28 @@ def aligned16_post_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
   return cast<StoreSDNode>(N)->getAlignment() >= 2;
 }]>;
 
+def alignedmaskedload32 : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
+                                  (masked_ld node:$ptr, node:$pred, node:$passthru), [{
+  return cast<MaskedLoadSDNode>(N)->getAlignment() >= 4;
+}]>;
+def alignedmaskedload16 : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
+                                  (masked_ld node:$ptr, node:$pred, node:$passthru), [{
+  return cast<MaskedLoadSDNode>(N)->getAlignment() >= 2;
+}]>;
+def maskedload : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
+                         (masked_ld node:$ptr, node:$pred, node:$passthru)>;
+
+def alignedmaskedstore32 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
+                                   (masked_st node:$val, node:$ptr, node:$pred), [{
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 4;
+}]>;
+def alignedmaskedstore16 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
+                                   (masked_st node:$val, node:$ptr, node:$pred), [{
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 2;
+}]>;
+def maskedstore : PatFrag<(ops node:$val, node:$ptr, node:$pred),
+                          (masked_st node:$val, node:$ptr, node:$pred)>;
+
 let Predicates = [HasMVEInt, IsLE] in {
   // Stores
   defm : MVE_vector_store<MVE_VSTRBU8, byte_alignedstore, 0>;
@@ -4971,6 +5028,26 @@ let Predicates = [HasMVEInt, IsLE] in {
   defm : MVE_vector_offset_store<MVE_VSTRHU16_post, aligned16_post_store, 1>;
   defm : MVE_vector_offset_store<MVE_VSTRWU32_pre, aligned32_pre_store, 2>;
   defm : MVE_vector_offset_store<MVE_VSTRWU32_post, aligned32_post_store, 2>;
+
+  // Unaligned masked stores (aligned are below)
+  def : Pat<(maskedstore (v4i32 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 MQPR:$val, t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(maskedstore (v4f32 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 MQPR:$val, t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(maskedstore (v8i16 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 MQPR:$val, t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(maskedstore (v8f16 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 MQPR:$val, t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+
+  // Unaligned masked loads
+  def : Pat<(v4i32 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v4i32 NEONimmAllZerosV))),
+            (v4i32 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred))>;
+  def : Pat<(v4f32 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v4f32 NEONimmAllZerosV))),
+            (v4f32 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred))>;
+  def : Pat<(v8i16 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v8i16 NEONimmAllZerosV))),
+            (v8i16 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred))>;
+  def : Pat<(v8f16 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v8f16 NEONimmAllZerosV))),
+            (v8f16 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred))>;
 }
 
 let Predicates = [HasMVEInt, IsBE] in {
@@ -5025,8 +5102,41 @@ let Predicates = [HasMVEInt, IsBE] in {
   def : MVE_vector_offset_store_typed<v4i32, MVE_VSTRWU32_post, aligned32_post_store, 2>;
   def : MVE_vector_offset_store_typed<v4f32, MVE_VSTRWU32_pre, aligned32_pre_store, 2>;
   def : MVE_vector_offset_store_typed<v4f32, MVE_VSTRWU32_post, aligned32_post_store, 2>;
+
+  // Unaligned masked stores (aligned are below)
+  def : Pat<(maskedstore (v4i32 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 (MVE_VREV32_8 MQPR:$val), t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(maskedstore (v4f32 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 (MVE_VREV32_8 MQPR:$val), t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(maskedstore (v8i16 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 (MVE_VREV16_8 MQPR:$val), t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  def : Pat<(maskedstore (v8f16 MQPR:$val), t2addrmode_imm7<0>:$addr, VCCR:$pred),
+            (MVE_VSTRBU8 (MVE_VREV16_8 MQPR:$val), t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)>;
+  // Unaligned masked loads
+  def : Pat<(v4i32 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v4i32 NEONimmAllZerosV))),
+            (v4i32 (MVE_VREV32_8 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)))>;
+  def : Pat<(v4f32 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v4f32 NEONimmAllZerosV))),
+            (v4f32 (MVE_VREV32_8 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)))>;
+  def : Pat<(v8i16 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v8i16 NEONimmAllZerosV))),
+            (v8i16 (MVE_VREV16_8 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)))>;
+  def : Pat<(v8f16 (maskedload t2addrmode_imm7<0>:$addr, VCCR:$pred, (v8f16 NEONimmAllZerosV))),
+            (v8f16 (MVE_VREV16_8 (MVE_VLDRBU8 t2addrmode_imm7<0>:$addr, (i32 1), VCCR:$pred)))>;
 }
 
+let Predicates = [HasMVEInt] in {
+  // Aligned masked store, shared between LE and BE
+  def : MVE_vector_maskedstore_typed<v16i8, MVE_VSTRBU8, maskedstore, 0>;
+  def : MVE_vector_maskedstore_typed<v8i16, MVE_VSTRHU16, alignedmaskedstore16, 1>;
+  def : MVE_vector_maskedstore_typed<v8f16, MVE_VSTRHU16, alignedmaskedstore16, 1>;
+  def : MVE_vector_maskedstore_typed<v4i32, MVE_VSTRWU32, alignedmaskedstore32, 2>;
+  def : MVE_vector_maskedstore_typed<v4f32, MVE_VSTRWU32, alignedmaskedstore32, 2>;
+  // Aligned masked loads
+  def : MVE_vector_maskedload_typed<v16i8, MVE_VLDRBU8, maskedload, 0>;
+  def : MVE_vector_maskedload_typed<v8i16, MVE_VLDRHU16, alignedmaskedload16, 1>;
+  def : MVE_vector_maskedload_typed<v8f16, MVE_VLDRHU16, alignedmaskedload16, 1>;
+  def : MVE_vector_maskedload_typed<v4i32, MVE_VLDRWU32, alignedmaskedload32, 2>;
+  def : MVE_vector_maskedload_typed<v4f32, MVE_VLDRWU32, alignedmaskedload32, 2>;
+}
 
 // Widening/Narrowing Loads/Stores
 

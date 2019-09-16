@@ -383,8 +383,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vpnot_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: vpnot_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.s32 lt, q0, zr
-; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vpt.s32 lt, q0, zr
 ; CHECK-NEXT:    vcmpt.s32 gt, q1, zr
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst

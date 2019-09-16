@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 // This file implements Section Patching for the purpose of working around
-// errata in CPUs. The general principle is that an erratum sequence of one or
+// the AArch64 Cortex-53 errata 843419 that affects r0p0, r0p1, r0p2 and r0p4
+// versions of the core.
+//
+// The general principle is that an erratum sequence of one or
 // more instructions is detected in the instruction stream, one of the
 // instructions in the sequence is replaced with a branch to a patch sequence
 // of replacement instructions. At the end of the replacement sequence the
@@ -20,12 +23,6 @@
 // - We can overwrite an instruction in the erratum sequence with a branch to
 // the replacement sequence.
 // - We can place the replacement sequence within range of the branch.
-
-// FIXME:
-// - The implementation here only supports one patch, the AArch64 Cortex-53
-// errata 843419 that affects r0p0, r0p1, r0p2 and r0p4 versions of the core.
-// To keep the initial version simple there is no support for multiple
-// architectures or selection of different patches.
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ErrataFix.h"

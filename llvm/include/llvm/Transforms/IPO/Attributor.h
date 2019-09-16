@@ -97,6 +97,7 @@
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/PassManager.h"
@@ -550,6 +551,14 @@ struct InformationCache {
     return FuncRWInstsMap[&F];
   }
 
+  /// Return TargetLibraryInfo for function \p F.
+  TargetLibraryInfo *getTargetLibraryInfoForFunction(const Function &F) {
+    return FuncTLIMap[&F];
+  }
+
+  /// Return datalayout used in the module.
+  const DataLayout &getDL() { return DL; }
+
 private:
   /// A map type from functions to opcode to instruction maps.
   using FuncInstOpcodeMapTy = DenseMap<const Function *, OpcodeInstMapTy>;
@@ -557,12 +566,18 @@ private:
   /// A map type from functions to their read or write instructions.
   using FuncRWInstsMapTy = DenseMap<const Function *, InstructionVectorTy>;
 
+  /// A map type from functions to their TLI.
+  using FuncTLIMapTy = DenseMap<const Function *, TargetLibraryInfo *>;
+
   /// A nested map that remembers all instructions in a function with a certain
   /// instruction opcode (Instruction::getOpcode()).
   FuncInstOpcodeMapTy FuncInstOpcodeMap;
 
   /// A map from functions to their instructions that may read or write memory.
   FuncRWInstsMapTy FuncRWInstsMap;
+
+  /// A map from functions to their TLI.
+  FuncTLIMapTy FuncTLIMap;
 
   /// The datalayout used in the module.
   const DataLayout &DL;
@@ -689,13 +704,15 @@ struct Attributor {
   /// abstract attribute objects for them.
   ///
   /// \param F The function that is checked for attribute opportunities.
+  /// \param TLIGetter helper function to get TargetLibraryInfo Analysis result.
   ///
   /// Note that abstract attribute instances are generally created even if the
   /// IR already contains the information they would deduce. The most important
   /// reason for this is the single interface, the one of the abstract attribute
   /// instance, which can be queried without the need to look at the IR in
   /// various places.
-  void identifyDefaultAbstractAttributes(Function &F);
+  void identifyDefaultAbstractAttributes(
+      Function &F, std::function<TargetLibraryInfo *(Function &)> &TLIGetter);
 
   /// Mark the internal function \p F as live.
   ///
@@ -704,7 +721,11 @@ struct Attributor {
   void markLiveInternalFunction(const Function &F) {
     assert(F.hasInternalLinkage() &&
             "Only internal linkage is assumed dead initially.");
-    identifyDefaultAbstractAttributes(const_cast<Function &>(F));
+
+    std::function<TargetLibraryInfo *(Function &)> TLIGetter =
+        [&](Function &F) -> TargetLibraryInfo * { return nullptr; };
+
+    identifyDefaultAbstractAttributes(const_cast<Function &>(F), TLIGetter);
   }
 
   /// Record that \p I is deleted after information was manifested.
@@ -1720,6 +1741,30 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueSimplify &createForPosition(const IRPosition &IRP,
                                             Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
+                       public IRPosition {
+  AAHeapToStack(const IRPosition &IRP) : IRPosition(IRP) {}
+
+  /// Returns true if HeapToStack conversion is assumed to be possible.
+  bool isAssumedHeapToStack() const { return getAssumed(); }
+
+  /// Returns true if HeapToStack conversion is known to be possible.
+  bool isKnownHeapToStack() const { return getKnown(); }
+
+  /// Return an IR position, see struct IRPosition.
+  ///
+  ///{
+  IRPosition &getIRPosition() { return *this; }
+  const IRPosition &getIRPosition() const { return *this; }
+  ///}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;

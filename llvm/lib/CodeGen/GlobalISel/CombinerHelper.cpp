@@ -673,10 +673,8 @@ static bool findGISelOptimalMemOpLowering(
       // SDAGisms map cleanly to GISel concepts.
       if (NewTy.isVector())
         NewTy = NewTy.getSizeInBits() > 64 ? LLT::scalar(64) : LLT::scalar(32);
+      NewTy = LLT::scalar(PowerOf2Floor(NewTy.getSizeInBits() - 1));
       unsigned NewTySize = NewTy.getSizeInBytes();
-
-      NewTy = LLT::scalar(PowerOf2Floor(NewTy.getSizeInBits()-1));
-      NewTySize = NewTy.getSizeInBytes();
       assert(NewTySize > 0 && "Could not find appropriate type");
 
       // If the new LLT cannot cover all of the remaining bits, then consider

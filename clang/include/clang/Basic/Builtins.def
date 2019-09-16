@@ -461,7 +461,7 @@ BUILTIN(__builtin_rotateleft64, "UWiUWiUWi", "nc")
 BUILTIN(__builtin_rotateright8, "UcUcUc", "nc")
 BUILTIN(__builtin_rotateright16, "UsUsUs", "nc")
 BUILTIN(__builtin_rotateright32, "UZiUZiUZi", "nc")
-BUILTIN(__builtin_rotateright64, "UWiUWiWi", "nc")
+BUILTIN(__builtin_rotateright64, "UWiUWiUWi", "nc")
 
 // Random GCC builtins
 BUILTIN(__builtin_constant_p, "i.", "nctu")

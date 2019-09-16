@@ -6,9 +6,9 @@
 # RUN: ld.lld %t.o -o %t --gc-sections
 # RUN: llvm-objdump -t -section-headers %t | FileCheck %s
 
-# CHECK: .data         00000008 0000000000202000 DATA
+# CHECK: .data         00000008 000000000020215c DATA
 
-# CHECK: 0000000000202008         .data                 00000000 _edata
+# CHECK: 0000000000202164         .data                 00000000 _edata
 
 .text
 .globl _start

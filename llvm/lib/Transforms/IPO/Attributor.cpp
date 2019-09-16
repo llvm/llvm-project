@@ -24,6 +24,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -134,6 +135,12 @@ static cl::opt<unsigned> DepRecInterval(
     "attributor-dependence-recompute-interval", cl::Hidden,
     cl::desc("Number of iterations until dependences are recomputed."),
     cl::init(4));
+
+static cl::opt<bool> EnableHeapToStack("enable-heap-to-stack-conversion",
+                                       cl::init(true), cl::Hidden);
+
+static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size",
+                                       cl::init(128), cl::Hidden);
 
 /// Logic operators for the change status enum class.
 ///
@@ -3185,6 +3192,212 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   }
 };
 
+/// ----------------------- Heap-To-Stack Conversion ---------------------------
+struct AAHeapToStackImpl : public AAHeapToStack {
+  AAHeapToStackImpl(const IRPosition &IRP) : AAHeapToStack(IRP) {}
+
+  const std::string getAsStr() const override {
+    return "[H2S] Mallocs: " + std::to_string(MallocCalls.size());
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    assert(getState().isValidState() &&
+           "Attempted to manifest an invalid state!");
+
+    ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
+    Function *F = getAssociatedFunction();
+    const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+
+    for (Instruction *MallocCall : MallocCalls) {
+      // This malloc cannot be replaced.
+      if (BadMallocCalls.count(MallocCall))
+        continue;
+
+      for (Instruction *FreeCall : FreesForMalloc[MallocCall]) {
+        LLVM_DEBUG(dbgs() << "H2S: Removing free call: " << *FreeCall << "\n");
+        A.deleteAfterManifest(*FreeCall);
+        HasChanged = ChangeStatus::CHANGED;
+      }
+
+      LLVM_DEBUG(dbgs() << "H2S: Removing malloc call: " << *MallocCall
+                        << "\n");
+
+      Constant *Size;
+      if (isCallocLikeFn(MallocCall, TLI)) {
+        auto *Num = cast<ConstantInt>(MallocCall->getOperand(0));
+        auto *SizeT = dyn_cast<ConstantInt>(MallocCall->getOperand(1));
+        APInt TotalSize = SizeT->getValue() * Num->getValue();
+        Size =
+            ConstantInt::get(MallocCall->getOperand(0)->getType(), TotalSize);
+      } else {
+        Size = cast<ConstantInt>(MallocCall->getOperand(0));
+      }
+
+      unsigned AS = cast<PointerType>(MallocCall->getType())->getAddressSpace();
+      Instruction *AI = new AllocaInst(Type::getInt8Ty(F->getContext()), AS,
+                                       Size, "", MallocCall->getNextNode());
+
+      if (AI->getType() != MallocCall->getType())
+        AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
+                             AI->getNextNode());
+
+      MallocCall->replaceAllUsesWith(AI);
+
+      if (auto *II = dyn_cast<InvokeInst>(MallocCall)) {
+        auto *NBB = II->getNormalDest();
+        BranchInst::Create(NBB, MallocCall->getParent());
+        A.deleteAfterManifest(*MallocCall);
+      } else {
+        A.deleteAfterManifest(*MallocCall);
+      }
+
+      if (isCallocLikeFn(MallocCall, TLI)) {
+        auto *BI = new BitCastInst(AI, MallocCall->getType(), "calloc_bc",
+                                   AI->getNextNode());
+        Value *Ops[] = {
+            BI, ConstantInt::get(F->getContext(), APInt(8, 0, false)), Size,
+            ConstantInt::get(Type::getInt1Ty(F->getContext()), false)};
+
+        Type *Tys[] = {BI->getType(), MallocCall->getOperand(0)->getType()};
+        Module *M = F->getParent();
+        Function *Fn = Intrinsic::getDeclaration(M, Intrinsic::memset, Tys);
+        CallInst::Create(Fn, Ops, "", BI->getNextNode());
+      }
+      HasChanged = ChangeStatus::CHANGED;
+    }
+
+    return HasChanged;
+  }
+
+  /// Collection of all malloc calls in a function.
+  SmallSetVector<Instruction *, 4> MallocCalls;
+
+  /// Collection of malloc calls that cannot be converted.
+  DenseSet<const Instruction *> BadMallocCalls;
+
+  /// A map for each malloc call to the set of associated free calls.
+  DenseMap<Instruction *, SmallPtrSet<Instruction *, 4>> FreesForMalloc;
+
+  ChangeStatus updateImpl(Attributor &A) override;
+};
+
+ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
+  const Function *F = getAssociatedFunction();
+  const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+
+  auto UsesCheck = [&](Instruction &I) {
+    SmallPtrSet<const Use *, 8> Visited;
+    SmallVector<const Use *, 8> Worklist;
+
+    for (Use &U : I.uses())
+      Worklist.push_back(&U);
+
+    while (!Worklist.empty()) {
+      const Use *U = Worklist.pop_back_val();
+      if (!Visited.insert(U).second)
+        continue;
+
+      auto *UserI = U->getUser();
+
+      if (isa<LoadInst>(UserI) || isa<StoreInst>(UserI))
+        continue;
+
+      // NOTE: Right now, if a function that has malloc pointer as an argument
+      // frees memory, we assume that the malloc pointer is freed.
+
+      // TODO: Add nofree callsite argument attribute to indicate that pointer
+      // argument is not freed.
+      if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        if (!CB->isArgOperand(U))
+          continue;
+
+        if (CB->isLifetimeStartOrEnd())
+          continue;
+
+        // Record malloc.
+        if (isFreeCall(UserI, TLI)) {
+          FreesForMalloc[&I].insert(
+              cast<Instruction>(const_cast<User *>(UserI)));
+          continue;
+        }
+
+        // If a function does not free memory we are fine
+        const auto &NoFreeAA =
+            A.getAAFor<AANoFree>(*this, IRPosition::callsite_function(*CB));
+
+        unsigned ArgNo = U - CB->arg_begin();
+        const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
+            *this, IRPosition::callsite_argument(*CB, ArgNo));
+
+        if (!NoCaptureAA.isAssumedNoCapture() || !NoFreeAA.isAssumedNoFree()) {
+          LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
+          return false;
+        }
+        continue;
+      }
+
+      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI)) {
+        for (Use &U : UserI->uses())
+          Worklist.push_back(&U);
+        continue;
+      }
+
+      // Unknown user.
+      LLVM_DEBUG(dbgs() << "[H2S] Unknown user: " << *UserI << "\n");
+      return false;
+    }
+    return true;
+  };
+
+  auto MallocCallocCheck = [&](Instruction &I) {
+    if (isMallocLikeFn(&I, TLI)) {
+      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (!Size->getValue().sle(MaxHeapToStackSize))
+          return true;
+    } else if (isCallocLikeFn(&I, TLI)) {
+      bool Overflow = false;
+      if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
+          if (!(Size->getValue().umul_ov(Num->getValue(), Overflow))
+                   .sle(MaxHeapToStackSize))
+            if (!Overflow)
+              return true;
+    } else {
+      BadMallocCalls.insert(&I);
+      return true;
+    }
+
+    if (BadMallocCalls.count(&I))
+      return true;
+
+    if (UsesCheck(I))
+      MallocCalls.insert(&I);
+    else
+      BadMallocCalls.insert(&I);
+    return true;
+  };
+
+  size_t NumBadMallocs = BadMallocCalls.size();
+
+  A.checkForAllCallLikeInstructions(MallocCallocCheck, *this);
+
+  if (NumBadMallocs != BadMallocCalls.size())
+    return ChangeStatus::CHANGED;
+
+  return ChangeStatus::UNCHANGED;
+}
+
+struct AAHeapToStackFunction final : public AAHeapToStackImpl {
+  AAHeapToStackFunction(const IRPosition &IRP) : AAHeapToStackImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECL(MallocCalls, Function,
+               "Number of MallocCalls converted to allocas");
+    BUILD_STAT_NAME(MallocCalls, Function) += MallocCalls.size();
+  }
+};
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -3632,9 +3845,13 @@ ChangeStatus Attributor::run(Module &M) {
   return ManifestChange;
 }
 
-void Attributor::identifyDefaultAbstractAttributes(Function &F) {
+void Attributor::identifyDefaultAbstractAttributes(
+    Function &F, std::function<TargetLibraryInfo *(Function &)> &TLIGetter) {
   if (!VisitedFunctions.insert(&F).second)
     return;
+
+  if (EnableHeapToStack)
+    InfoCache.FuncTLIMap[&F] = TLIGetter(F);
 
   IRPosition FPos = IRPosition::function(F);
 
@@ -3657,6 +3874,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
   // Every function might be "no-return".
   getOrCreateAAFor<AANoReturn>(FPos);
+
+  // Every function might be applicable for Heap-To-Stack conversion.
+  if (EnableHeapToStack)
+    getOrCreateAAFor<AAHeapToStack>(FPos);
 
   // Return attributes are only appropriate if the return type is non void.
   Type *ReturnType = F.getReturnType();
@@ -3842,7 +4063,8 @@ void AbstractAttribute::print(raw_ostream &OS) const {
 ///                       Pass (Manager) Boilerplate
 /// ----------------------------------------------------------------------------
 
-static bool runAttributorOnModule(Module &M) {
+static bool runAttributorOnModule(
+    Module &M, std::function<TargetLibraryInfo *(Function &)> &TLIGetter) {
   if (DisableAttributor)
     return false;
 
@@ -3877,14 +4099,21 @@ static bool runAttributorOnModule(Module &M) {
 
     // Populate the Attributor with abstract attribute opportunities in the
     // function and the information cache with IR information.
-    A.identifyDefaultAbstractAttributes(F);
+    A.identifyDefaultAbstractAttributes(F, TLIGetter);
   }
 
   return A.run(M) == ChangeStatus::CHANGED;
 }
 
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (runAttributorOnModule(M)) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  std::function<TargetLibraryInfo *(Function &)> TLIGetter =
+      [&](Function &F) -> TargetLibraryInfo * {
+    return &FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+
+  if (runAttributorOnModule(M, TLIGetter)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
   }
@@ -3903,11 +4132,15 @@ struct AttributorLegacyPass : public ModulePass {
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-    return runAttributorOnModule(M);
+    std::function<TargetLibraryInfo *(Function &)> TLIGetter =
+        [&](Function &F) -> TargetLibraryInfo * { return nullptr; };
+
+    return runAttributorOnModule(M, TLIGetter);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     // FIXME: Think about passes we will preserve and add them here.
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 };
 
@@ -3931,6 +4164,7 @@ const char AADereferenceable::ID = 0;
 const char AAAlign::ID = 0;
 const char AANoCapture::ID = 0;
 const char AAValueSimplify::ID = 0;
+const char AAHeapToStack::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -3992,6 +4226,23 @@ const char AAValueSimplify::ID = 0;
     return *AA;                                                                \
   }
 
+#define CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(CLASS)            \
+  CLASS &CLASS::createForPosition(const IRPosition &IRP, Attributor &A) {      \
+    CLASS *AA = nullptr;                                                       \
+    switch (IRP.getPositionKind()) {                                           \
+      SWITCH_PK_INV(CLASS, IRP_INVALID, "invalid")                             \
+      SWITCH_PK_INV(CLASS, IRP_ARGUMENT, "argument")                           \
+      SWITCH_PK_INV(CLASS, IRP_FLOAT, "floating")                              \
+      SWITCH_PK_INV(CLASS, IRP_RETURNED, "returned")                           \
+      SWITCH_PK_INV(CLASS, IRP_CALL_SITE_RETURNED, "call site returned")       \
+      SWITCH_PK_INV(CLASS, IRP_CALL_SITE_ARGUMENT, "call site argument")       \
+      SWITCH_PK_INV(CLASS, IRP_CALL_SITE, "call site")                         \
+      SWITCH_PK_CREATE(CLASS, IRP, IRP_FUNCTION, Function)                     \
+    }                                                                          \
+    AA->initialize(A);                                                         \
+    return *AA;                                                                \
+  }
+
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUnwind)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoSync)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
@@ -4009,6 +4260,8 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
+
 #undef CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION
 #undef CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION
@@ -4017,5 +4270,6 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 
 INITIALIZE_PASS_BEGIN(AttributorLegacyPass, "attributor",
                       "Deduce and propagate attributes", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AttributorLegacyPass, "attributor",
                     "Deduce and propagate attributes", false, false)

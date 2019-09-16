@@ -5,9 +5,9 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (3) .rela.text {
-# CHECK-NEXT:     0x201000 R_X86_64_64 .text 0x11
-# CHECK-NEXT:     0x201008 R_X86_64_64 .text 0x11
-# CHECK-NEXT:     0x201011 R_X86_64_64 .rodata 0x0
+# CHECK-NEXT:     0x201128 R_X86_64_64 .text 0x11
+# CHECK-NEXT:     0x201130 R_X86_64_64 .text 0x11
+# CHECK-NEXT:     0x201139 R_X86_64_64 .rodata 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

@@ -1087,6 +1087,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  endif // _LIBCPP_HAS_THREAD_API
 #endif // _LIBCPP_HAS_NO_THREADS
 
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+#  if (defined(__ANDROID__) && __ANDROID_API__ >= 30) || _LIBCPP_GLIBC_PREREQ(2, 30)
+#    define _LIBCPP_HAS_COND_CLOCKWAIT
+#  endif
+#endif
+
 #if defined(_LIBCPP_HAS_NO_THREADS) && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 #error _LIBCPP_HAS_THREAD_API_PTHREAD may only be defined when \
        _LIBCPP_HAS_NO_THREADS is not defined.

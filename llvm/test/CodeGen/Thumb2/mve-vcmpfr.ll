@@ -112,8 +112,7 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_one_v4f32(<4 x float> %src, float %src2
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
 ; CHECK-MVEFP-NEXT:    vmov r0, s4
 ; CHECK-MVEFP-NEXT:    vdup.32 q1, r0
-; CHECK-MVEFP-NEXT:    vcmp.f32 le, q1, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f32 le, q1, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f32 le, q0, r0
 ; CHECK-MVEFP-NEXT:    vpnot
 ; CHECK-MVEFP-NEXT:    vpsel q0, q2, q3
@@ -403,8 +402,7 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_ueq_v4f32(<4 x float> %src, float %src2
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
 ; CHECK-MVEFP-NEXT:    vmov r0, s4
 ; CHECK-MVEFP-NEXT:    vdup.32 q1, r0
-; CHECK-MVEFP-NEXT:    vcmp.f32 le, q1, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f32 le, q1, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f32 le, q0, r0
 ; CHECK-MVEFP-NEXT:    vpsel q0, q2, q3
 ; CHECK-MVEFP-NEXT:    bx lr
@@ -742,8 +740,7 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_ord_v4f32(<4 x float> %src, float %src2
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
 ; CHECK-MVEFP-NEXT:    vmov r0, s4
 ; CHECK-MVEFP-NEXT:    vdup.32 q1, r0
-; CHECK-MVEFP-NEXT:    vcmp.f32 le, q1, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f32 le, q1, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f32 lt, q0, r0
 ; CHECK-MVEFP-NEXT:    vpnot
 ; CHECK-MVEFP-NEXT:    vpsel q0, q2, q3
@@ -801,8 +798,7 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_uno_v4f32(<4 x float> %src, float %src2
 ; CHECK-MVEFP:       @ %bb.0: @ %entry
 ; CHECK-MVEFP-NEXT:    vmov r0, s4
 ; CHECK-MVEFP-NEXT:    vdup.32 q1, r0
-; CHECK-MVEFP-NEXT:    vcmp.f32 le, q1, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f32 le, q1, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f32 lt, q0, r0
 ; CHECK-MVEFP-NEXT:    vpsel q0, q2, q3
 ; CHECK-MVEFP-NEXT:    bx lr
@@ -1073,8 +1069,7 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_one_v8f16(<8 x half> %src, half* %src2p,
 ; CHECK-MVEFP-NEXT:    vldr.16 s12, [r0]
 ; CHECK-MVEFP-NEXT:    vmov r0, s12
 ; CHECK-MVEFP-NEXT:    vdup.16 q3, r0
-; CHECK-MVEFP-NEXT:    vcmp.f16 le, q3, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f16 le, q3, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f16 le, q0, r0
 ; CHECK-MVEFP-NEXT:    vpnot
 ; CHECK-MVEFP-NEXT:    vpsel q0, q1, q2
@@ -1725,8 +1720,7 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_ueq_v8f16(<8 x half> %src, half* %src2p,
 ; CHECK-MVEFP-NEXT:    vldr.16 s12, [r0]
 ; CHECK-MVEFP-NEXT:    vmov r0, s12
 ; CHECK-MVEFP-NEXT:    vdup.16 q3, r0
-; CHECK-MVEFP-NEXT:    vcmp.f16 le, q3, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f16 le, q3, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f16 le, q0, r0
 ; CHECK-MVEFP-NEXT:    vpsel q0, q1, q2
 ; CHECK-MVEFP-NEXT:    bx lr
@@ -2490,8 +2484,7 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_ord_v8f16(<8 x half> %src, half* %src2p,
 ; CHECK-MVEFP-NEXT:    vldr.16 s12, [r0]
 ; CHECK-MVEFP-NEXT:    vmov r0, s12
 ; CHECK-MVEFP-NEXT:    vdup.16 q3, r0
-; CHECK-MVEFP-NEXT:    vcmp.f16 le, q3, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f16 le, q3, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f16 lt, q0, r0
 ; CHECK-MVEFP-NEXT:    vpnot
 ; CHECK-MVEFP-NEXT:    vpsel q0, q1, q2
@@ -2620,8 +2613,7 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_uno_v8f16(<8 x half> %src, half* %src2p,
 ; CHECK-MVEFP-NEXT:    vldr.16 s12, [r0]
 ; CHECK-MVEFP-NEXT:    vmov r0, s12
 ; CHECK-MVEFP-NEXT:    vdup.16 q3, r0
-; CHECK-MVEFP-NEXT:    vcmp.f16 le, q3, q0
-; CHECK-MVEFP-NEXT:    vpst
+; CHECK-MVEFP-NEXT:    vpt.f16 le, q3, q0
 ; CHECK-MVEFP-NEXT:    vcmpt.f16 lt, q0, r0
 ; CHECK-MVEFP-NEXT:    vpsel q0, q1, q2
 ; CHECK-MVEFP-NEXT:    bx lr
