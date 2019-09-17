@@ -56,6 +56,7 @@ add_unittest(ClangdUnitTests ClangdTests
   RIFFTests.cpp
   SelectionTests.cpp
   SemanticHighlightingTests.cpp
+  SemanticSelectionTests.cpp
   SerializationTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
