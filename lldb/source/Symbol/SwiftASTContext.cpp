@@ -46,7 +46,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/Frontend.h"
-#include "swift/Frontend/ParseableInterfaceModuleLoader.h"
+#include "swift/Frontend/ModuleInterfaceLoader.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
@@ -3459,13 +3459,13 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     loading_mode = swift::ModuleLoadingMode::PreferSerialized;
     break;
   case eSwiftModuleLoadingModePreferParseable:
-    loading_mode = swift::ModuleLoadingMode::PreferParseable;
+    loading_mode = swift::ModuleLoadingMode::PreferInterface;
     break;
   case eSwiftModuleLoadingModeOnlySerialized:
     loading_mode = swift::ModuleLoadingMode::OnlySerialized;
     break;
   case eSwiftModuleLoadingModeOnlyParseable:
-    loading_mode = swift::ModuleLoadingMode::OnlyParseable;
+    loading_mode = swift::ModuleLoadingMode::OnlyInterface;
     break;
   }
 
@@ -3491,7 +3491,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap;
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
-        swift::ParseableInterfaceModuleLoader::create(
+        swift::ModuleInterfaceLoader::create(
             *m_ast_context_ap, moduleCachePath, prebuiltModuleCachePath,
             m_dependency_tracker.get(), loading_mode));
     if (parseable_module_loader_ap)
