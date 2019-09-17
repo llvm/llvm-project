@@ -69,13 +69,13 @@ static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
 namespace {
 
 static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
-  {eSwiftModuleLoadingModePreferParseable, "prefer-parseable",
+  {eSwiftModuleLoadingModePreferInterface, "prefer-interface",
     "Prefer loading Swift modules via their .swiftinterface file, but fall back "
     " to the .swiftmodule if it is missing."},
   {eSwiftModuleLoadingModePreferSerialized, "prefer-serialized",
     "Prefer loading Swift module via their .swiftmodule file if present, but "
     "fall back to the .swiftinterface if it is missing or invalid (default)."},
-  {eSwiftModuleLoadingModeOnlyParseable, "only-parseable",
+  {eSwiftModuleLoadingModeOnlyInterface, "only-interface",
     "Only load Swift modules via their .swiftinterface file - ignore "
     ".swiftmodule files."},
   {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
