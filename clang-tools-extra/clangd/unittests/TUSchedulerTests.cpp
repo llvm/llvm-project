@@ -769,12 +769,14 @@ TEST_F(TUSchedulerTests, CommandLineWarnings) {
   // We should not see warnings from command-line parsing.
   CDB.ExtraClangFlags = {"-Wsome-unknown-warning"};
 
+  // (!) 'Ready' must live longer than TUScheduler.
+  Notification Ready;
+
   TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
                 /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/captureDiags(),
                 /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
                 ASTRetentionPolicy());
 
-  Notification Ready;
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
                   WantDiagnostics::Yes, [&](std::vector<Diag> D) {

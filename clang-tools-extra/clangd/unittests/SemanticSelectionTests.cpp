@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangdServer.h"
 #include "Matchers.h"
 #include "Protocol.h"
 #include "SemanticSelection.h"
 #include "SourceCode.h"
+#include "SyncAPI.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -22,6 +25,11 @@ namespace clang {
 namespace clangd {
 namespace {
 using ::testing::ElementsAreArray;
+
+class IgnoreDiagnostics : public DiagnosticsConsumer {
+  void onDiagnosticsReady(PathRef File,
+                          std::vector<Diag> Diagnostics) override {}
+};
 
 TEST(SemanticSelection, All) {
   const char *Tests[] = {
@@ -137,6 +145,36 @@ TEST(SemanticSelection, All) {
                 ElementsAreArray(T.ranges()))
         << Test;
   }
+}
+
+TEST(SemanticSelection, RunViaClangDServer) {
+  MockFSProvider FS;
+  IgnoreDiagnostics DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto FooH = testPath("foo.h");
+  FS.Files[FooH] = R"cpp(
+    int foo(int x);
+    #define HASH(x) ((x) % 10)
+  )cpp";
+
+  auto FooCpp = testPath("Foo.cpp");
+  const char *SourceContents = R"cpp(
+  #include "foo.h"
+  [[void bar(int& inp) [[{
+    // inp = HASH(foo(inp));
+    [[inp = [[HASH([[foo([[in^p]])]])]]]];
+  }]]]]
+  )cpp";
+  Annotations SourceAnnotations(SourceContents);
+  FS.Files[FooCpp] = SourceAnnotations.code();
+  Server.addDocument(FooCpp, SourceAnnotations.code());
+
+  auto Ranges = runSemanticRanges(Server, FooCpp, SourceAnnotations.point());
+  ASSERT_TRUE(bool(Ranges))
+      << "getSemanticRange returned an error: " << Ranges.takeError();
+  EXPECT_THAT(*Ranges, ElementsAreArray(SourceAnnotations.ranges()));
 }
 } // namespace
 } // namespace clangd
