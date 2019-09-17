@@ -34,15 +34,20 @@ class APILogTestCase(TestBase):
         with open(logfile, 'r') as f:
             log = f.read()
 
-        # Find the debugger addr.
+        # Find the SBDebugger's address.
         debugger_addr = re.findall(
             r"lldb::SBDebugger::GetScriptingLanguage\(const char \*\) \(0x([0-9a-fA-F]+),",
-            log)[0]
+            log)
 
+        # Make sure we've found a match.
+        self.assertTrue(debugger_addr, log)
+
+        # Make sure the GetScriptingLanguage matches.
         get_scripting_language = 'lldb::SBDebugger::GetScriptingLanguage(const char *) (0x{}, "")'.format(
-            debugger_addr)
-        create_target = 'lldb::SBDebugger::CreateTarget(const char *) (0x{}, "")'.format(
-            debugger_addr)
-
+            debugger_addr[0])
         self.assertTrue(get_scripting_language in log, log)
+
+        # Make sure the address matches.
+        create_target = 'lldb::SBDebugger::CreateTarget(const char *) (0x{}, "")'.format(
+            debugger_addr[0])
         self.assertTrue(create_target in log, log)
