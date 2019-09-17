@@ -1621,6 +1621,13 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
   std::string Ret("  enum Spelling {\n");
   std::set<std::string> Uniques;
   unsigned Idx = 0;
+
+  // If we have a need to have this many spellings we likely need to add an
+  // extra bit to the SpellingIndex in AttributeCommonInfo, then increase the
+  // value of SpellingNotCalculated there and here.
+  assert(Spellings.size() < 15 &&
+         "Too many spellings, would step on SpellingNotCalculated in "
+         "AttributeCommonInfo");
   for (auto I = Spellings.begin(), E = Spellings.end(); I != E; ++I, ++Idx) {
     const FlattenedSpelling &S = *I;
     const std::string &Variety = S.variety();
@@ -1654,6 +1661,7 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
     // enumerator.
     Ret += "    " + EnumName + " = " + llvm::utostr(Idx);
   }
+  Ret += ",\n  SpellingNotCalculated = 15\n";
   Ret += "\n  };\n\n";
   return Ret;
 }

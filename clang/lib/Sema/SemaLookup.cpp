@@ -3701,6 +3701,7 @@ NamedDecl *VisibleDeclsRecord::checkHidden(NamedDecl *ND) {
   return nullptr;
 }
 
+namespace {
 class LookupVisibleHelper {
 public:
   LookupVisibleHelper(VisibleDeclConsumer &Consumer, bool IncludeDependentBases,
@@ -4025,6 +4026,7 @@ private:
   bool IncludeDependentBases;
   bool LoadExternal;
 };
+} // namespace
 
 void Sema::LookupVisibleDecls(Scope *S, LookupNameKind Kind,
                               VisibleDeclConsumer &Consumer,

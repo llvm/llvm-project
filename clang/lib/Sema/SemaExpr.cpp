@@ -15507,6 +15507,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   }
 
   if (LangOpts.OpenMP) {
+    markOpenMPDeclareVariantFuncsReferenced(Loc, Func, MightBeOdrUse);
     if (LangOpts.OpenMPIsDevice)
       checkOpenMPDeviceFunction(Loc, Func);
     else
