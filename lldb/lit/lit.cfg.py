@@ -85,6 +85,6 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
 # module can't be found.
 try:
     import psutil  # noqa: F401
-    lit_config.maxIndividualTestTime = 600
+    lit_config.maxIndividualTestTime = 900
 except ImportError:
     pass
