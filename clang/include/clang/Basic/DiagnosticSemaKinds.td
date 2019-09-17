@@ -3253,7 +3253,7 @@ def warn_impcast_integer_precision_constant : Warning<
 def warn_impcast_bitfield_precision_constant : Warning<
   "implicit truncation from %2 to bit-field changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
-def warn_impcast_constant_int_to_objc_bool : Warning<
+def warn_impcast_constant_value_to_objc_bool : Warning<
   "implicit conversion from constant value %0 to 'BOOL'; "
   "the only well defined values for 'BOOL' are YES and NO">,
   InGroup<ObjCBoolConstantConversion>;
@@ -3271,6 +3271,12 @@ def warn_impcast_literal_float_to_integer_out_of_range : Warning<
 def warn_impcast_float_integer : Warning<
   "implicit conversion turns floating-point number into integer: %0 to %1">,
   InGroup<FloatConversion>, DefaultIgnore;
+def warn_impcast_float_to_objc_signed_char_bool : Warning<
+  "implicit conversion from floating-point type %0 to 'BOOL'">,
+  InGroup<ObjCSignedCharBoolImplicitFloatConversion>;
+def warn_impcast_int_to_objc_signed_char_bool : Warning<
+  "implicit conversion from integral type %0 to 'BOOL'">,
+  InGroup<ObjCSignedCharBoolImplicitIntConversion>, DefaultIgnore;
 
 def warn_impcast_float_to_integer : Warning<
   "implicit conversion from %0 to %1 changes value from %2 to %3">,
