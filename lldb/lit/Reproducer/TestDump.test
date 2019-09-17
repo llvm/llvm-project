@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # This tests the reproducer dump functionality.
 
 # Generate a reproducer.
