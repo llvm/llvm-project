@@ -53,6 +53,7 @@ LLVM_MONOREPO_SVN_MAPPING = {
         'debuginfo-tests',
         'dragonegg',
         'klee',
+        'libc',
         'libclc',
         'libcxx',
         'libcxxabi',

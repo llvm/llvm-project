@@ -18,4 +18,8 @@
 # COMMANDS: target create
 # COMMANDS: command source
 
+# RUN: %lldb -b -o 'reproducer dump -p gdb -f %t.repro' | FileCheck %s --check-prefix GDB
+# GDB: send packet: $QStartNoAckMode#b0
+# GDB: read packet: $OK#9a
+
 # RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix FILES

@@ -160,8 +160,8 @@ body: |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT3]](<4 x s16>), %bb.1
-  ; CHECK:   [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
   ; CHECK:   [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[PHI]](<4 x s16>), 0
+  ; CHECK:   [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
   ; CHECK:   [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF4]], [[EXTRACT1]](<3 x s16>), 0
   ; CHECK:   $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31

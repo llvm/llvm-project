@@ -109,8 +109,7 @@ static Status save_socket_id_to_file(const std::string &socket_id,
   if (auto Err =
           handleErrors(llvm::writeFileAtomically(
                            temp_file_path, temp_file_spec.GetPath(), socket_id),
-                       [&status, &temp_file_path,
-                        &file_spec](const AtomicFileWriteError &E) {
+                       [&status, &file_spec](const AtomicFileWriteError &E) {
                          std::string ErrorMsgBuffer;
                          llvm::raw_string_ostream S(ErrorMsgBuffer);
                          E.log(S);
