@@ -17,11 +17,11 @@ target triple = "aarch64--"
 
 ; We use __fixunstfti as the common denominator for __fixunstfti on Linux and
 ; ___fixunstfti on iOS
-; ERROR: unable to lower arguments: i128 (i128)* (in function: ABIi128)
+; ERROR: unable to translate instruction: ret
 ; FALLBACK: ldr q0,
 ; FALLBACK-NEXT: bl __fixunstfti
 ;
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments: i128 (i128)* (in function: ABIi128)
+; FALLBACK-WITH-REPORT-ERR: unable to translate instruction: ret
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for ABIi128
 ; FALLBACK-WITH-REPORT-OUT-LABEL: ABIi128:
 ; FALLBACK-WITH-REPORT-OUT: ldr q0,
@@ -73,7 +73,7 @@ define i128 @sequence_sizes([8 x i8] %in) {
 }
 
 ; Just to make sure we don't accidentally emit a normal load/store.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %2:gpr(s64) = G_LOAD %0:gpr(p0) :: (load seq_cst 8 from %ir.addr)  (in function: atomic_ops)
+; FALLBACK-WITH-REPORT-ERR: cannot select: G_STORE %1:gpr(s64), %0:gpr64sp(p0) :: (store unordered 8 into %ir.addr) (in function: atomic_ops)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for atomic_ops
 ; FALLBACK-WITH-REPORT-LABEL: atomic_ops:
 define i64 @atomic_ops(i64* %addr) {
@@ -96,24 +96,6 @@ define void @test_write_register_intrin() {
 @_ZTIi = external global i8*
 declare i32 @__gxx_personality_v0(...)
 
-; Check that we fallback on invoke translation failures.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: invoke: '  invoke void %callee(i128 0)
-; FALLBACK-WITH-REPORT-NEXT:   to label %continue unwind label %broken' (in function: invoke_weird_type)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for invoke_weird_type
-; FALLBACK-WITH-REPORT-OUT-LABEL: invoke_weird_type:
-define void @invoke_weird_type(void(i128)* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-  invoke void %callee(i128 0)
-    to label %continue unwind label %broken
-
-broken:
-  landingpad { i8*, i32 } catch i8* bitcast(i8** @_ZTIi to i8*)
-  ret void
-
-continue:
-  ret void
-}
-
-; Check that we fallback on invoke translation failures.
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s128) = G_FCONSTANT fp128 0xL00000000000000004000000000000000
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for test_quad_dump
 ; FALLBACK-WITH-REPORT-OUT-LABEL: test_quad_dump:
@@ -185,7 +167,7 @@ define void @nonpow2_load_narrowing() {
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %5:fpr32(s32) = G_EXTRACT %21:fpr(s128), 64 (in function: nonpow2_store_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %5:fpr32(s32) = G_EXTRACT %{{[0-9]+}}:fpr(s128), 64 (in function: nonpow2_store_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_store_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_store_narrowing:
 define void @nonpow2_store_narrowing(i96* %c) {
@@ -206,4 +188,15 @@ define void @nonpow2_vector_add_fewerelements() {
   %ex = extractelement <7 x i64> %dummy, i64 0
   store i64 %ex, i64* undef
   ret void
+}
+
+; Currently can't handle dealing with a split type (s128 -> 2 x s64) on the stack yet.
+declare void @use_s128(i128 %a, i128 %b)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower arguments: i32 (i32, i128, i32, i32, i32, i128, i32)* (in function: fn1)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for fn1
+; FALLBACK-WITH-REPORT-OUT-LABEL: fn1:
+define i32 @fn1(i32 %p1, i128 %p2, i32 %p3, i32 %p4, i32 %p5, i128 %p6, i32 %p7) {
+entry:
+  call void @use_s128(i128 %p2, i128 %p6)
+  ret i32 0
 }

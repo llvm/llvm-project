@@ -26,8 +26,8 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/ClangForward.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/ConstString.h"
@@ -68,9 +68,8 @@ public:
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
 
-  static void EnumerateSupportedLanguages(
-      std::set<lldb::LanguageType> &languages_for_types,
-      std::set<lldb::LanguageType> &languages_for_expressions);
+  static LanguageSet GetSupportedLanguagesForTypes();
+  static LanguageSet GetSupportedLanguagesForExpressions();
 
   static void Initialize();
 
@@ -250,7 +249,7 @@ public:
           &type_fields,
       bool packed = false);
 
-  static bool IsOperator(const char *name,
+  static bool IsOperator(llvm::StringRef name,
                          clang::OverloadedOperatorKind &op_kind);
 
   // Structure, Unions, Classes
@@ -465,6 +464,8 @@ public:
 
   CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                            size_t arg_idx) override;
+
+  CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   // CompilerDeclContext override functions
 
@@ -692,6 +693,8 @@ public:
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
   // Exploring the type
+
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
 
   llvm::Optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                        ExecutionContextScope *exe_scope) {
@@ -1039,13 +1042,9 @@ public:
   }
 private:
   lldb::TargetWP m_target_wp;
-  lldb::ClangPersistentVariablesUP m_persistent_variables; ///< These are the
-                                                           ///persistent
-                                                           ///variables
-                                                           ///associated with
-                                                           ///this process for
-                                                           ///the expression
-                                                           ///parser.
+  std::unique_ptr<PersistentExpressionState>
+      m_persistent_variables; // These are the persistent variables associated
+                              // with this process for the expression parser
 };
 
 } // namespace lldb_private

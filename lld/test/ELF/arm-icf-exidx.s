@@ -25,10 +25,10 @@ __aeabi_unwind_cpp_pr0:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: g:
-// CHECK-NEXT:    11000:        1e ff 2f e1     bx      lr
+// CHECK-NEXT:    110ec:        1e ff 2f e1     bx      lr
 // CHECK: __aeabi_unwind_cpp_pr0:
-// CHECK-NEXT:    11004:        00 f0 20 e3     nop
-// CHECK-NEXT:    11008:        1e ff 2f e1     bx      lr
+// CHECK-NEXT:    110f0:        00 f0 20 e3     nop
+// CHECK-NEXT:    110f4:        1e ff 2f e1     bx      lr
 
 // CHECK: Contents of section .ARM.exidx:
-// CHECK-NEXT:  100d4 2c0f0000 b0b0b080 280f0000 01000000
+// CHECK-NEXT:  100d4 18100000 b0b0b080 14100000 01000000

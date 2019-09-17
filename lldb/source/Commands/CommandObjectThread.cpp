@@ -281,9 +281,7 @@ public:
               "invalid boolean value for option '%c'", short_option);
       } break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -485,9 +483,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -823,13 +819,6 @@ public:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    if (!GetDebugger().GetSelectedTarget()) {
-      result.AppendError("invalid target, create a debug target using the "
-                         "'target create' command");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process exists. Cannot continue");
@@ -851,7 +840,7 @@ public:
         std::vector<Thread *> resume_threads;
         for (auto &entry : command.entries()) {
           uint32_t thread_idx;
-          if (entry.ref.getAsInteger(0, thread_idx)) {
+          if (entry.ref().getAsInteger(0, thread_idx)) {
             result.AppendErrorWithFormat(
                 "invalid thread index argument: \"%s\".\n", entry.c_str());
             result.SetStatus(eReturnStatusFailed);
@@ -1037,9 +1026,7 @@ public:
         }
       } break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1097,13 +1084,7 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
-    if (target == nullptr) {
-      result.AppendError("invalid target, create a debug target using the "
-                         "'target create' command");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target = &GetSelectedTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
@@ -1426,7 +1407,7 @@ public:
         break;
 
       default:
-        return Status("invalid short option character '%c'", short_option);
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1560,9 +1541,7 @@ public:
         }
       } break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1744,7 +1723,7 @@ public:
         m_force = true;
         break;
       default:
-        return Status("invalid short option character '%c'", short_option);
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1866,9 +1845,7 @@ public:
         m_verbose = true;
         break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }

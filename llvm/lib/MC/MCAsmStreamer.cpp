@@ -23,6 +23,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -310,13 +311,13 @@ public:
   void EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
   void EmitWinCFIStartChained(SMLoc Loc) override;
   void EmitWinCFIEndChained(SMLoc Loc) override;
-  void EmitWinCFIPushReg(unsigned Register, SMLoc Loc) override;
-  void EmitWinCFISetFrame(unsigned Register, unsigned Offset,
+  void EmitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
+  void EmitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
   void EmitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
-  void EmitWinCFISaveReg(unsigned Register, unsigned Offset,
+  void EmitWinCFISaveReg(MCRegister Register, unsigned Offset,
                          SMLoc Loc) override;
-  void EmitWinCFISaveXMM(unsigned Register, unsigned Offset,
+  void EmitWinCFISaveXMM(MCRegister Register, unsigned Offset,
                          SMLoc Loc) override;
   void EmitWinCFIPushFrame(bool Code, SMLoc Loc) override;
   void EmitWinCFIEndProlog(SMLoc Loc) override;
@@ -1119,6 +1120,16 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
 void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                          unsigned ValueSize,
                                          unsigned MaxBytesToEmit) {
+  if (MAI->useDotAlignForAlignment()) {
+    if (!isPowerOf2_32(ByteAlignment))
+      report_fatal_error("Only power-of-two alignments are supported "
+                         "with .align.");
+    OS << "\t.align\t";
+    OS << Log2_32(ByteAlignment);
+    EmitEOL();
+    return;
+  }
+
   // Some assemblers don't support non-power of two alignments, so we always
   // emit alignments as a power of two if possible.
   if (isPowerOf2_32(ByteAlignment)) {
@@ -1737,6 +1748,12 @@ void MCAsmStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   // We only do this so the section switch that terminates the handler
   // data block is visible.
   WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo();
+
+  // Do nothing if no frame is open. MCStreamer should've already reported an
+  // error.
+  if (!CurFrame)
+    return;
+
   MCSection *TextSec = &CurFrame->Function->getSection();
   MCSection *XData = getAssociatedXDataSection(TextSec);
   SwitchSectionNoChange(XData);
@@ -1745,18 +1762,21 @@ void MCAsmStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIPushReg(unsigned Register, SMLoc Loc) {
+void MCAsmStreamer::EmitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
   MCStreamer::EmitWinCFIPushReg(Register, Loc);
 
-  OS << "\t.seh_pushreg " << Register;
+  OS << "\t.seh_pushreg ";
+  InstPrinter->printRegName(OS, Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISetFrame(unsigned Register, unsigned Offset,
+void MCAsmStreamer::EmitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                        SMLoc Loc) {
   MCStreamer::EmitWinCFISetFrame(Register, Offset, Loc);
 
-  OS << "\t.seh_setframe " << Register << ", " << Offset;
+  OS << "\t.seh_setframe ";
+  InstPrinter->printRegName(OS, Register);
+  OS << ", " << Offset;
   EmitEOL();
 }
 
@@ -1767,19 +1787,23 @@ void MCAsmStreamer::EmitWinCFIAllocStack(unsigned Size, SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISaveReg(unsigned Register, unsigned Offset,
+void MCAsmStreamer::EmitWinCFISaveReg(MCRegister Register, unsigned Offset,
                                       SMLoc Loc) {
   MCStreamer::EmitWinCFISaveReg(Register, Offset, Loc);
 
-  OS << "\t.seh_savereg " << Register << ", " << Offset;
+  OS << "\t.seh_savereg ";
+  InstPrinter->printRegName(OS, Register);
+  OS << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISaveXMM(unsigned Register, unsigned Offset,
+void MCAsmStreamer::EmitWinCFISaveXMM(MCRegister Register, unsigned Offset,
                                       SMLoc Loc) {
   MCStreamer::EmitWinCFISaveXMM(Register, Offset, Loc);
 
-  OS << "\t.seh_savexmm " << Register << ", " << Offset;
+  OS << "\t.seh_savexmm ";
+  InstPrinter->printRegName(OS, Register);
+  OS << ", " << Offset;
   EmitEOL();
 }
 

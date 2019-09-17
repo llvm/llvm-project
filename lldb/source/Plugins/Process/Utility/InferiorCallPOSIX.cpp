@@ -12,7 +12,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
@@ -79,17 +79,23 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
       AddressRange mmap_range;
       if (sc.GetAddressRange(range_scope, 0, use_inline_block_range,
                              mmap_range)) {
-        ClangASTContext *clang_ast_context =
-            process->GetTarget().GetScratchClangASTContext();
-        CompilerType clang_void_ptr_type =
-            clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        auto type_system_or_err =
+            process->GetTarget().GetScratchTypeSystemForLanguage(
+                eLanguageTypeC);
+        if (!type_system_or_err) {
+          llvm::consumeError(type_system_or_err.takeError());
+          return false;
+        }
+        CompilerType void_ptr_type =
+            type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid)
+                .GetPointerType();
         const ArchSpec arch = process->GetTarget().GetArchitecture();
         MmapArgList args =
             process->GetTarget().GetPlatform()->GetMmapArgumentList(
                 arch, addr, length, prot_arg, flags, fd, offset);
         lldb::ThreadPlanSP call_plan_sp(
             new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
-                                       clang_void_ptr_type, args, options));
+                                       void_ptr_type, args, options));
         if (call_plan_sp) {
           DiagnosticManager diagnostics;
 
@@ -172,63 +178,6 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
             }
           }
         }
-      }
-    }
-  }
-
-  return false;
-}
-
-// FIXME: This has nothing to do with Posix, it is just a convenience function
-// that calls a
-// function of the form "void * (*)(void)".  We should find a better place to
-// put this.
-
-bool lldb_private::InferiorCall(Process *process, const Address *address,
-                                addr_t &returned_func, bool trap_exceptions) {
-  Thread *thread =
-      process->GetThreadList().GetExpressionExecutionThread().get();
-  if (thread == nullptr || address == nullptr)
-    return false;
-
-  EvaluateExpressionOptions options;
-  options.SetStopOthers(true);
-  options.SetUnwindOnError(true);
-  options.SetIgnoreBreakpoints(true);
-  options.SetTryAllThreads(true);
-  options.SetDebug(false);
-  options.SetTimeout(process->GetUtilityExpressionTimeout());
-  options.SetTrapExceptions(trap_exceptions);
-
-  ClangASTContext *clang_ast_context =
-      process->GetTarget().GetScratchClangASTContext();
-  CompilerType clang_void_ptr_type =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-  lldb::ThreadPlanSP call_plan_sp(
-      new ThreadPlanCallFunction(*thread, *address, clang_void_ptr_type,
-                                 llvm::ArrayRef<addr_t>(), options));
-  if (call_plan_sp) {
-    DiagnosticManager diagnostics;
-
-    StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
-    if (frame) {
-      ExecutionContext exe_ctx;
-      frame->CalculateExecutionContext(exe_ctx);
-      ExpressionResults result =
-          process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
-      if (result == eExpressionCompleted) {
-        returned_func =
-            call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
-                LLDB_INVALID_ADDRESS);
-
-        if (process->GetAddressByteSize() == 4) {
-          if (returned_func == UINT32_MAX)
-            return false;
-        } else if (process->GetAddressByteSize() == 8) {
-          if (returned_func == UINT64_MAX)
-            return false;
-        }
-        return true;
       }
     }
   }

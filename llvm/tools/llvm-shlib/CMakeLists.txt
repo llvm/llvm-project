@@ -182,6 +182,6 @@ if(MSVC)
     VERBATIM )
 
   # Finally link the target.
-  add_llvm_library(LLVM-C SHARED ${SOURCES} DEPENDS intrinsics_gen)
+  add_llvm_library(LLVM-C SHARED INSTALL_WITH_TOOLCHAIN ${SOURCES} DEPENDS intrinsics_gen)
 
 endif()

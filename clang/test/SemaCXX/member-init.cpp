@@ -184,7 +184,7 @@ void g() { f<int>(); } // expected-note {{in instantiation of function template 
 namespace PR22056 {
 template <int N>
 struct S {
-  int x[3] = {[N] = 3};
+  int x[3] = {[N] = 3}; // expected-warning {{C99 extension}}
 };
 }
 

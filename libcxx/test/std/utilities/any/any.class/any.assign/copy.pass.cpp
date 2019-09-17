@@ -20,7 +20,7 @@
 #include <cassert>
 
 #include "any_helpers.h"
-#include "count_new.hpp"
+#include "count_new.h"
 #include "test_macros.h"
 
 using std::any;

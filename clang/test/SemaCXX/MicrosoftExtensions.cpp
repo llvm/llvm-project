@@ -6,41 +6,6 @@
 
 #if TEST1
 
-// Microsoft doesn't validate exception specification.
-namespace microsoft_exception_spec {
-
-void foo(); // expected-note {{previous declaration}}
-void foo() throw(); // expected-warning {{exception specification in declaration does not match previous declaration}}
-
-void r6() throw(...); // expected-note {{previous declaration}}
-void r6() throw(int); // expected-warning {{exception specification in declaration does not match previous declaration}}
-
-struct Base {
-  virtual void f2();
-  virtual void f3() throw(...);
-};
-
-struct Derived : Base {
-  virtual void f2() throw(...);
-  virtual void f3();
-};
-
-class A {
-  virtual ~A() throw();
-#if __cplusplus <= 199711L
-  // expected-note@-2 {{overridden virtual function is here}}
-#endif
-};
-
-class B : public A {
-  virtual ~B();
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{exception specification of overriding function is more lax than base version}}
-#endif
-};
-
-}
-
 // MSVC allows type definition in anonymous union and struct
 struct A
 {
@@ -475,6 +440,11 @@ struct SealedType sealed : SomeBase {
 // expected-error@+1 {{base 'SealedType' is marked 'sealed'}}
 struct InheritFromSealed : SealedType {};
 
+class SealedDestructor { // expected-note {{mark 'SealedDestructor' as 'sealed' to silence this warning}}
+    // expected-warning@+1 {{'sealed' keyword is a Microsoft extension}}
+    virtual ~SealedDestructor() sealed; // expected-warning {{class with destructor marked 'sealed' cannot be inherited from}}
+};
+
 void AfterClassBody() {
   // expected-warning@+1 {{attribute 'deprecated' is ignored, place it after "struct" to apply attribute to type declaration}}
   struct D {} __declspec(deprecated);
@@ -493,14 +463,6 @@ template <typename TX> struct A {
     blah x;  // expected-error {{unknown type name 'blah'}}
   };
 };
-}
-
-namespace PR25265 {
-struct S {
-  int fn() throw(); // expected-note {{previous declaration is here}}
-};
-
-int S::fn() { return 0; } // expected-warning {{is missing exception specification}}
 }
 
 class PR34109_class {

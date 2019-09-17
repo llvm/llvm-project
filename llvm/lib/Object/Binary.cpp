@@ -18,6 +18,7 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Minidump.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/TapiUniversal.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -86,6 +87,8 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::minidump:
     return MinidumpFile::create(Buffer);
+  case file_magic::tapi_file:
+    return TapiUniversal::create(Buffer);
   }
   llvm_unreachable("Unexpected Binary File Type");
 }

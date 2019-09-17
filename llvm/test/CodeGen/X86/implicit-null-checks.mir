@@ -384,7 +384,7 @@
 ---
 name:            imp_null_check_with_bitwise_op_0
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_0
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -424,7 +424,7 @@ body:             |
 ...
 ---
 name:            imp_null_check_with_bitwise_op_1
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -468,7 +468,7 @@ body:             |
 ---
 name:            imp_null_check_with_bitwise_op_2
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_2
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -509,7 +509,7 @@ body:             |
 ---
 name:            imp_null_check_with_bitwise_op_3
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_3
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -549,7 +549,7 @@ body:             |
 ---
 name:            imp_null_check_with_bitwise_op_4
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_4
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -590,7 +590,7 @@ body:             |
 ---
 name:            no_hoist_across_call
 # CHECK-LABEL: name:            no_hoist_across_call
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -638,7 +638,7 @@ name:            dependency_live_in_hazard
 # an implicit null check -- hoisting it will require hosting the move
 # to $esi and we cannot do that without clobbering the use of $rsi in
 # the first instruction in bb.1.not_null.
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -672,7 +672,7 @@ name:            use_alternate_load_op
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -703,7 +703,7 @@ name:            imp_null_check_gep_load_with_use_dep
 # CHECK:  bb.0.entry:
 # CHECK:    $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load 4 from %ir.x)
 # CHECK-NEXT:    JMP_1 %bb.1
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
@@ -735,7 +735,7 @@ name:            imp_null_check_load_with_base_sep
 # CHECK:     $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
 # CHECK-NEXT:    $esi = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $esi, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
 # CHECK-NEXT:    JMP_1 %bb.1
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
@@ -768,7 +768,7 @@ name:            inc_store
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -798,7 +798,7 @@ name:            inc_store_plus_offset
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -829,7 +829,7 @@ name:            inc_store_with_dep
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -860,7 +860,7 @@ name:            inc_store_with_dep_in_null
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -895,7 +895,7 @@ name:            inc_store_with_volatile
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -925,7 +925,7 @@ name:            inc_store_with_two_dep
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -957,7 +957,7 @@ name:            inc_store_with_redefined_base
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -988,7 +988,7 @@ name:            inc_store_with_reused_base
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1020,7 +1020,7 @@ name:            inc_store_across_call
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1062,7 +1062,7 @@ name:            inc_store_with_dep_in_dep
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1095,7 +1095,7 @@ name:            inc_store_with_load_over_store
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1127,7 +1127,7 @@ name:            inc_store_with_store_over_load
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1159,7 +1159,7 @@ name:            inc_store_with_store_over_store
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1190,7 +1190,7 @@ name:            inc_store_with_load_and_store
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1221,7 +1221,7 @@ name:            inc_store_and_load_no_alias
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1253,7 +1253,7 @@ name:            inc_store_and_load_alias
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -1285,7 +1285,7 @@ name:            inc_spill_dep
 # CHECK-NEXT:    JCC_1 %bb.2, 4, implicit killed $eflags
 # CHECK: bb.1.not_null
 
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8}

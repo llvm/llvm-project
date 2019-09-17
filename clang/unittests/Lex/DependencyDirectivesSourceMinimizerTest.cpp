@@ -617,4 +617,46 @@ ort \
             minimize_source_to_dependency_directives::cxx_module_decl);
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, SkippedPPRangesBasic) {
+  SmallString<128> Out;
+  SmallVector<Token, 32> Toks;
+  StringRef Source = "#ifndef GUARD\n"
+                     "#define GUARD\n"
+                     "void foo();\n"
+                     "#endif\n";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Toks));
+  SmallVector<SkippedRange, 4> Ranges;
+  ASSERT_FALSE(computeSkippedRanges(Toks, Ranges));
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges[0].Offset, 0);
+  EXPECT_EQ(Ranges[0].Length, (int)Out.find("#endif"));
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, SkippedPPRangesNested) {
+  SmallString<128> Out;
+  SmallVector<Token, 32> Toks;
+  StringRef Source = "#ifndef GUARD\n"
+                     "#define GUARD\n"
+                     "#if FOO\n"
+                     "#include hello\n"
+                     "#elif BAR\n"
+                     "#include bye\n"
+                     "#endif\n"
+                     "#else\n"
+                     "#include nothing\n"
+                     "#endif\n";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Toks));
+  SmallVector<SkippedRange, 4> Ranges;
+  ASSERT_FALSE(computeSkippedRanges(Toks, Ranges));
+  EXPECT_EQ(Ranges.size(), 4u);
+  EXPECT_EQ(Ranges[0].Offset, (int)Out.find("#if FOO"));
+  EXPECT_EQ(Ranges[0].Offset + Ranges[0].Length, (int)Out.find("#elif"));
+  EXPECT_EQ(Ranges[1].Offset, (int)Out.find("#elif BAR"));
+  EXPECT_EQ(Ranges[1].Offset + Ranges[1].Length, (int)Out.find("#endif"));
+  EXPECT_EQ(Ranges[2].Offset, 0);
+  EXPECT_EQ(Ranges[2].Length, (int)Out.find("#else"));
+  EXPECT_EQ(Ranges[3].Offset, (int)Out.find("#else"));
+  EXPECT_EQ(Ranges[3].Offset + Ranges[3].Length, (int)Out.rfind("#endif"));
+}
+
 } // end anonymous namespace

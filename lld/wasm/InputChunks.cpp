@@ -100,7 +100,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
   verifyRelocTargets();
 #endif
 
-  LLVM_DEBUG(dbgs() << "applying relocations: " << getName()
+  LLVM_DEBUG(dbgs() << "applying relocations: " << toString(this)
                     << " count=" << relocations.size() << "\n");
   int32_t off = outputOffset - getInputSectionOffset();
 

@@ -1,0 +1,57 @@
+# RUN: llc %s -o - -run-pass=if-converter -verify-machineinstrs | FileCheck %s
+# Make sure we correctly if-convert blocks containing an INLINEASM_BR.
+# CHECK: t2CMPri killed renamable $r2, 34
+# CHECK-NEXT: $r0 = t2MOVi 2, 1, $cpsr, $noreg
+# CHECK-NEXT: $r0 = t2MOVi 3, 0, killed $cpsr, $noreg, implicit killed $r0
+# CHECK-NEXT: tBL 14, $noreg, @fn2
+# CHECK-NEXT: INLINEASM_BR &"", 9, 13, 0, 13, blockaddress(@fn1, %ir-block.l_yes)
+# CHECK-NEXT: t2B %bb.1, 14, $noreg
+--- |
+  target triple = "thumbv7-unknown-linux-gnueabi"
+  
+  define dso_local void @fn1() {
+  l_yes:
+    ret void
+  }
+  
+  declare dso_local i32 @fn2(...)
+...
+---
+name:            fn1
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1, $r2, $r4, $lr
+  
+    $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $lr
+    t2CMPri killed renamable $r2, 34, 14, $noreg, implicit-def $cpsr
+    t2Bcc %bb.2, 1, killed $cpsr
+  
+  bb.1:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    liveins: $r1
+  
+    $r0 = t2MOVi 3, 14, $noreg, $noreg
+    tBL 14, $noreg, @fn2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $sp, implicit-def dead $r0
+    INLINEASM_BR &"", 9, 13, 0, 13, blockaddress(@fn1, %ir-block.l_yes)
+    t2B %bb.3, 14, $noreg
+  
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    liveins: $r1
+  
+    $r0 = t2MOVi 2, 14, $noreg, $noreg
+    tBL 14, $noreg, @fn2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $sp, implicit-def dead $r0
+    INLINEASM_BR &"", 9, 13, 0, 13, blockaddress(@fn1, %ir-block.l_yes)
+    t2B %bb.3, 14, $noreg
+  
+  bb.3:
+    INLINEASM &"", 1
+    $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
+  
+  bb.4.l_yes (address-taken):
+    $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
+
+...

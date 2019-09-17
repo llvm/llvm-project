@@ -823,7 +823,7 @@ static void callSpecialFunction(G &&Gen, StringRef FuncName, QualType QT,
   Gen.callFunc(FuncName, QT, Addrs, CGF);
 }
 
-template <size_t N> std::array<Address, N> createNullAddressArray();
+template <size_t N> static std::array<Address, N> createNullAddressArray();
 
 template <> std::array<Address, 1> createNullAddressArray() {
   return std::array<Address, 1>({{Address(nullptr, CharUnits::Zero())}});

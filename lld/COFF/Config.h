@@ -122,6 +122,7 @@ struct Configuration {
   bool dll = false;
   StringRef implib;
   std::vector<Export> exports;
+  bool hadExplicitExports;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
   Symbol *delayLoadHelper = nullptr;
@@ -188,6 +189,9 @@ struct Configuration {
 
   // Used for /thinlto-object-suffix-replace:
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
+
+  // Used for /lto-obj-path:
+  llvm::StringRef ltoObjPath;
 
   uint64_t align = 4096;
   uint64_t imageBase = -1;

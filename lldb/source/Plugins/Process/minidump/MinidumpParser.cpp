@@ -188,6 +188,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
   case OSPlatform::Win32NT:
   case OSPlatform::Win32CE:
     triple.setOS(llvm::Triple::OSType::Win32);
+    triple.setVendor(llvm::Triple::VendorType::PC);
     break;
   case OSPlatform::Linux:
     triple.setOS(llvm::Triple::OSType::Linux);

@@ -166,8 +166,7 @@ entry:
 define <64 x i8> @and_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: and_v64i8:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; KNL-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpandd %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: and_v64i8:
@@ -181,8 +180,11 @@ define <64 x i8> @and_v64i8(<64 x i8> %a, <64 x i8> %b) {
 define <64 x i8> @andn_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: andn_v64i8:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandnps %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    vandnps %ymm1, %ymm3, %ymm1
+; KNL-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; KNL-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
+; KNL-NEXT:    vandnps %ymm2, %ymm3, %ymm2
+; KNL-NEXT:    vandnps %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: andn_v64i8:
@@ -200,8 +202,7 @@ define <64 x i8> @andn_v64i8(<64 x i8> %a, <64 x i8> %b) {
 define <64 x i8> @or_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: or_v64i8:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; KNL-NEXT:    vorps %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: or_v64i8:
@@ -215,8 +216,7 @@ define <64 x i8> @or_v64i8(<64 x i8> %a, <64 x i8> %b) {
 define <64 x i8> @xor_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: xor_v64i8:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; KNL-NEXT:    vxorps %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: xor_v64i8:
@@ -230,8 +230,7 @@ define <64 x i8> @xor_v64i8(<64 x i8> %a, <64 x i8> %b) {
 define <32 x i16> @and_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; KNL-LABEL: and_v32i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; KNL-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpandd %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: and_v32i16:
@@ -245,8 +244,11 @@ define <32 x i16> @and_v32i16(<32 x i16> %a, <32 x i16> %b) {
 define <32 x i16> @andn_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; KNL-LABEL: andn_v32i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vandnps %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    vandnps %ymm1, %ymm3, %ymm1
+; KNL-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; KNL-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
+; KNL-NEXT:    vandnps %ymm2, %ymm3, %ymm2
+; KNL-NEXT:    vandnps %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: andn_v32i16:
@@ -262,8 +264,7 @@ define <32 x i16> @andn_v32i16(<32 x i16> %a, <32 x i16> %b) {
 define <32 x i16> @or_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; KNL-LABEL: or_v32i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; KNL-NEXT:    vorps %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: or_v32i16:
@@ -277,8 +278,7 @@ define <32 x i16> @or_v32i16(<32 x i16> %a, <32 x i16> %b) {
 define <32 x i16> @xor_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; KNL-LABEL: xor_v32i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; KNL-NEXT:    vxorps %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: xor_v32i16:

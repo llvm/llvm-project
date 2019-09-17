@@ -680,7 +680,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Skylake Xeon:
     case 0x55:
       *Type = X86::INTEL_COREI7;
-      if (Features3 & (1 << (X86::FEATURE_AVX512BF16 - 64)))
+      if (Features2 & (1 << (X86::FEATURE_AVX512BF16 - 32)))
         *Subtype = X86::INTEL_COREI7_COOPERLAKE; // "cooperlake"
       else if (Features2 & (1 << (X86::FEATURE_AVX512VNNI - 32)))
         *Subtype = X86::INTEL_COREI7_CASCADELAKE; // "cascadelake"
@@ -765,7 +765,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         break;
       }
 
-      if (Features3 & (1 << (X86::FEATURE_AVX512BF16 - 64))) {
+      if (Features2 & (1 << (X86::FEATURE_AVX512BF16 - 32))) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_COOPERLAKE;
         break;
@@ -1088,6 +1088,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VP2INTERSECT);
 
+  bool HasLeaf7Subleaf1 =
+      MaxLeaf >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save)
+    setFeature(X86::FEATURE_AVX512BF16);
+
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
@@ -1378,7 +1383,6 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["bmi2"]       = HasLeaf7 && ((EBX >>  8) & 1);
   Features["invpcid"]    = HasLeaf7 && ((EBX >> 10) & 1);
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
-  Features["mpx"]        = HasLeaf7 && ((EBX >> 14) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;

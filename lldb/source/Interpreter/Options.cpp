@@ -645,8 +645,6 @@ bool Options::VerifyPartialOptions(CommandReturnObject &result) {
 bool Options::HandleOptionCompletion(CompletionRequest &request,
                                      OptionElementVector &opt_element_vector,
                                      CommandInterpreter &interpreter) {
-  request.SetWordComplete(true);
-
   // For now we just scan the completions to see if the cursor position is in
   // an option or its argument.  Otherwise we'll call HandleArgumentCompletion.
   // In the future we can use completion to validate options as well if we
@@ -654,8 +652,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
   auto opt_defs = GetDefinitions();
 
-  std::string cur_opt_std_str = request.GetCursorArgumentPrefix().str();
-  const char *cur_opt_str = cur_opt_std_str.c_str();
+  llvm::StringRef cur_opt_str = request.GetCursorArgumentPrefix();
 
   for (size_t i = 0; i < opt_element_vector.size(); i++) {
     int opt_pos = opt_element_vector[i].opt_pos;
@@ -669,13 +666,13 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         // FIXME: We should scan the other options provided and only complete
         // options
         // within the option group they belong to.
-        char opt_str[3] = {'-', 'a', '\0'};
+        std::string opt_str = "-a";
 
         for (auto &def : opt_defs) {
           if (!def.short_option)
             continue;
           opt_str[1] = def.short_option;
-          request.AddCompletion(opt_str);
+          request.AddCompletion(opt_str, def.usage_text);
         }
 
         return true;
@@ -687,7 +684,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
           full_name.erase(full_name.begin() + 2, full_name.end());
           full_name.append(def.long_option);
-          request.AddCompletion(full_name.c_str());
+          request.AddCompletion(full_name, def.usage_text);
         }
         return true;
       } else if (opt_defs_index != OptionArgElement::eUnrecognizedArg) {
@@ -695,17 +692,14 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         // anyway (getopt_long_only is happy with shortest unique string, but
         // it's still a nice thing to do.)  Otherwise return The string so the
         // upper level code will know this is a full match and add the " ".
-        if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
-            cur_opt_str[1] == '-' &&
-            strcmp(opt_defs[opt_defs_index].long_option, cur_opt_str) != 0) {
-          std::string full_name("--");
-          full_name.append(opt_defs[opt_defs_index].long_option);
-          request.AddCompletion(full_name.c_str());
+        const OptionDefinition &opt = opt_defs[opt_defs_index];
+        llvm::StringRef long_option = opt.long_option;
+        if (cur_opt_str.startswith("--") && cur_opt_str != long_option) {
+          request.AddCompletion("--" + long_option.str(), opt.usage_text);
           return true;
-        } else {
+        } else
           request.AddCompletion(request.GetCursorArgument());
-          return true;
-        }
+        return true;
       } else {
         // FIXME - not handling wrong options yet:
         // Check to see if they are writing a long option & complete it.
@@ -713,18 +707,11 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
         // elements
         // that are not unique up to this point.  getopt_long_only does
         // shortest unique match for long options already.
-
-        if (cur_opt_str && strlen(cur_opt_str) > 2 && cur_opt_str[0] == '-' &&
-            cur_opt_str[1] == '-') {
+        if (cur_opt_str.consume_front("--")) {
           for (auto &def : opt_defs) {
-            if (!def.long_option)
-              continue;
-
-            if (strstr(def.long_option, cur_opt_str + 2) == def.long_option) {
-              std::string full_name("--");
-              full_name.append(def.long_option);
-              request.AddCompletion(full_name.c_str());
-            }
+            llvm::StringRef long_option(def.long_option);
+            if (long_option.startswith(cur_opt_str))
+              request.AddCompletion("--" + long_option.str(), def.usage_text);
           }
         }
         return true;
@@ -739,7 +726,6 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
       if (opt_defs_index != -1) {
         HandleOptionArgumentCompletion(subrequest, opt_element_vector, i,
                                        interpreter);
-        request.SetWordComplete(subrequest.GetWordComplete());
         return true;
       } else {
         // No completion callback means no completions...
@@ -754,7 +740,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
   return false;
 }
 
-bool Options::HandleOptionArgumentCompletion(
+void Options::HandleOptionArgumentCompletion(
     CompletionRequest &request, OptionElementVector &opt_element_vector,
     int opt_element_index, CommandInterpreter &interpreter) {
   auto opt_defs = GetDefinitions();
@@ -767,7 +753,6 @@ bool Options::HandleOptionArgumentCompletion(
 
   const auto &enum_values = opt_defs[opt_defs_index].enum_values;
   if (!enum_values.empty()) {
-    bool return_value = false;
     std::string match_string(
         request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos),
         request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos) +
@@ -777,10 +762,8 @@ bool Options::HandleOptionArgumentCompletion(
       if (strstr(enum_value.string_value, match_string.c_str()) ==
           enum_value.string_value) {
         request.AddCompletion(enum_value.string_value);
-        return_value = true;
       }
     }
-    return return_value;
   }
 
   // If this is a source file or symbol type completion, and  there is a -shlib
@@ -836,7 +819,7 @@ bool Options::HandleOptionArgumentCompletion(
     }
   }
 
-  return CommandCompletions::InvokeCommonCompletionCallbacks(
+  CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, completion_mask, request, filter_up.get());
 }
 
@@ -954,7 +937,7 @@ static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
   for (const char *arg : parsed) {
     auto pos = FindOriginalIter(arg, original);
     assert(pos != original.end());
-    result.AppendArgument(pos->ref, pos->quote);
+    result.AppendArgument(pos->ref(), pos->GetQuoteChar());
   }
   return result;
 }
@@ -965,8 +948,8 @@ static size_t FindArgumentIndexForOption(const Args &args,
   std::string long_opt =
       llvm::formatv("--{0}", long_option.definition->long_option);
   for (const auto &entry : llvm::enumerate(args)) {
-    if (entry.value().ref.startswith(short_opt) ||
-        entry.value().ref.startswith(long_opt))
+    if (entry.value().ref().startswith(short_opt) ||
+        entry.value().ref().startswith(long_opt))
       return entry.index();
   }
 
@@ -1105,7 +1088,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
       continue;
 
     if (!input_line.empty()) {
-      auto tmp_arg = args_copy[idx].ref;
+      auto tmp_arg = args_copy[idx].ref();
       size_t pos = input_line.find(tmp_arg);
       if (pos != std::string::npos)
         input_line.erase(pos, tmp_arg.size());
@@ -1115,9 +1098,9 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
          OptionParser::eNoArgument) &&
         (OptionParser::GetOptionArgument() != nullptr) &&
         (idx < args_copy.GetArgumentCount()) &&
-        (args_copy[idx].ref == OptionParser::GetOptionArgument())) {
+        (args_copy[idx].ref() == OptionParser::GetOptionArgument())) {
       if (input_line.size() > 0) {
-        auto tmp_arg = args_copy[idx].ref;
+        auto tmp_arg = args_copy[idx].ref();
         size_t pos = input_line.find(tmp_arg);
         if (pos != std::string::npos)
           input_line.erase(pos, tmp_arg.size());
@@ -1308,7 +1291,7 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
   const Args::ArgEntry &cursor = args[cursor_index];
   if ((static_cast<int32_t>(dash_dash_pos) == -1 ||
        cursor_index < dash_dash_pos) &&
-      !cursor.IsQuoted() && cursor.ref == "-") {
+      !cursor.IsQuoted() && cursor.ref() == "-") {
     option_element_vector.push_back(
         OptionArgElement(OptionArgElement::eBareDash, cursor_index,
                          OptionArgElement::eBareDash));

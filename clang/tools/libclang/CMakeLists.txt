@@ -19,6 +19,7 @@ set(SOURCES
   CXString.cpp
   CXType.cpp
   Indexing.cpp
+  FatalErrorHandler.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
@@ -43,6 +44,7 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
+  LLVMSupport
 )
 
 if (CLANG_ENABLE_ARCMT)
@@ -97,7 +99,10 @@ endif()
 add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCHAIN
   OUTPUT_NAME ${output_name}
   ${SOURCES}
-  DEPENDS clang-resource-headers
+
+  DEPENDS
+  ClangDriverOptions
+  clang-resource-headers
 
   LINK_LIBS
   ${LIBS}

@@ -18,12 +18,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-void GDBRemoteCommunicationHistory::Entry::Serialize(raw_ostream &strm) const {
-  yaml::Output yout(strm);
-  yout << const_cast<GDBRemoteCommunicationHistory::Entry &>(*this);
-  strm.flush();
-}
-
 GDBRemoteCommunicationHistory::GDBRemoteCommunicationHistory(uint32_t size)
     : m_packets(), m_curr_idx(0), m_total_packet_count(0),
       m_dumped_to_log(false) {
@@ -33,7 +27,8 @@ GDBRemoteCommunicationHistory::GDBRemoteCommunicationHistory(uint32_t size)
 
 GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() {}
 
-void GDBRemoteCommunicationHistory::AddPacket(char packet_char, PacketType type,
+void GDBRemoteCommunicationHistory::AddPacket(char packet_char,
+                                              GDBRemotePacket::Type type,
                                               uint32_t bytes_transmitted) {
   const size_t size = m_packets.size();
   if (size == 0)
@@ -50,7 +45,8 @@ void GDBRemoteCommunicationHistory::AddPacket(char packet_char, PacketType type,
 }
 
 void GDBRemoteCommunicationHistory::AddPacket(const std::string &src,
-                                              uint32_t src_len, PacketType type,
+                                              uint32_t src_len,
+                                              GDBRemotePacket::Type type,
                                               uint32_t bytes_transmitted) {
   const size_t size = m_packets.size();
   if (size == 0)
@@ -72,13 +68,12 @@ void GDBRemoteCommunicationHistory::Dump(Stream &strm) const {
   const uint32_t stop_idx = m_curr_idx + size;
   for (uint32_t i = first_idx; i < stop_idx; ++i) {
     const uint32_t idx = NormalizeIndex(i);
-    const Entry &entry = m_packets[idx];
-    if (entry.type == ePacketTypeInvalid || entry.packet.data.empty())
+    const GDBRemotePacket &entry = m_packets[idx];
+    if (entry.type == GDBRemotePacket::ePacketTypeInvalid ||
+        entry.packet.data.empty())
       break;
-    strm.Printf("history[%u] tid=0x%4.4" PRIx64 " <%4u> %s packet: %s\n",
-                entry.packet_idx, entry.tid, entry.bytes_transmitted,
-                (entry.type == ePacketTypeSend) ? "send" : "read",
-                entry.packet.data.c_str());
+    strm.Printf("history[%u] ", entry.packet_idx);
+    entry.Dump(strm);
   }
 }
 
@@ -92,51 +87,15 @@ void GDBRemoteCommunicationHistory::Dump(Log *log) const {
   const uint32_t stop_idx = m_curr_idx + size;
   for (uint32_t i = first_idx; i < stop_idx; ++i) {
     const uint32_t idx = NormalizeIndex(i);
-    const Entry &entry = m_packets[idx];
-    if (entry.type == ePacketTypeInvalid || entry.packet.data.empty())
+    const GDBRemotePacket &entry = m_packets[idx];
+    if (entry.type == GDBRemotePacket::ePacketTypeInvalid ||
+        entry.packet.data.empty())
       break;
     LLDB_LOGF(log, "history[%u] tid=0x%4.4" PRIx64 " <%4u> %s packet: %s",
               entry.packet_idx, entry.tid, entry.bytes_transmitted,
-              (entry.type == ePacketTypeSend) ? "send" : "read",
+              (entry.type == GDBRemotePacket::ePacketTypeSend) ? "send"
+                                                               : "read",
               entry.packet.data.c_str());
   }
 }
 
-void yaml::ScalarEnumerationTraits<GDBRemoteCommunicationHistory::PacketType>::
-    enumeration(IO &io, GDBRemoteCommunicationHistory::PacketType &value) {
-  io.enumCase(value, "Invalid",
-              GDBRemoteCommunicationHistory::ePacketTypeInvalid);
-  io.enumCase(value, "Send", GDBRemoteCommunicationHistory::ePacketTypeSend);
-  io.enumCase(value, "Recv", GDBRemoteCommunicationHistory::ePacketTypeRecv);
-}
-
-void yaml::ScalarTraits<GDBRemoteCommunicationHistory::Entry::BinaryData>::
-    output(const GDBRemoteCommunicationHistory::Entry::BinaryData &Val, void *,
-           raw_ostream &Out) {
-  Out << toHex(Val.data);
-}
-
-StringRef
-yaml::ScalarTraits<GDBRemoteCommunicationHistory::Entry::BinaryData>::input(
-    StringRef Scalar, void *,
-    GDBRemoteCommunicationHistory::Entry::BinaryData &Val) {
-  Val.data = fromHex(Scalar);
-  return {};
-}
-
-void yaml::MappingTraits<GDBRemoteCommunicationHistory::Entry>::mapping(
-    IO &io, GDBRemoteCommunicationHistory::Entry &Entry) {
-  io.mapRequired("packet", Entry.packet);
-  io.mapRequired("type", Entry.type);
-  io.mapRequired("bytes", Entry.bytes_transmitted);
-  io.mapRequired("index", Entry.packet_idx);
-  io.mapRequired("tid", Entry.tid);
-}
-
-StringRef yaml::MappingTraits<GDBRemoteCommunicationHistory::Entry>::validate(
-    IO &io, GDBRemoteCommunicationHistory::Entry &Entry) {
-  if (Entry.bytes_transmitted != Entry.packet.data.size())
-    return "BinaryData size doesn't match bytes transmitted";
-
-  return {};
-}

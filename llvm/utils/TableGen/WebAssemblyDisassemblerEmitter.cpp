@@ -167,7 +167,7 @@ void emitWebAssemblyDisassemblerTables(
     OS << " },\n";
   }
   OS << "  { 0, nullptr }\n};\n\n";
-  OS << "} // End llvm namespace\n";
+  OS << "} // end namespace llvm\n";
 }
 
 } // namespace llvm

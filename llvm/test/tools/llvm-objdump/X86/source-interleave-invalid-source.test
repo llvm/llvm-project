@@ -13,6 +13,6 @@
 
 # CHECK:      main:
 # CHECK-NEXT: ; int main() {
-# WARN:       warning: debug info line number 9999 exceeds the number of lines in {{.*}}source-interleave-x86_64.c
+# WARN:       warning: '{{.*}}': debug info line number 9999 exceeds the number of lines in {{.*}}source-interleave-x86_64.c
 # GOOD:       ;   int *b = &a;
 # CHECK:      ;   return *b + foo();

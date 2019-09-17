@@ -10,8 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_RESTRICTINCLUDESSCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../ClangTidyDiagnosticConsumer.h"
-#include "../utils/OptionsUtils.h"
+#include "../GlobList.h"
 
 namespace clang {
 namespace tidy {

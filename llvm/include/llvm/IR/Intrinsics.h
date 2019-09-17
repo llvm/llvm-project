@@ -100,7 +100,7 @@ namespace Intrinsic {
       Integer, Vector, Pointer, Struct,
       Argument, ExtendArgument, TruncArgument, HalfVecArgument,
       SameVecWidthArgument, PtrToArgument, PtrToElt, VecOfAnyPtrsToElt,
-      VecElementArgument
+      VecElementArgument, ScalableVecArgument
     } Kind;
 
     union {

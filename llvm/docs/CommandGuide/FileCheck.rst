@@ -648,7 +648,7 @@ The ``--enable-var-scope`` option has the same effect on numeric variables as
 on string variables.
 
 Important note: In its current implementation, an expression cannot use a
-numeric variable with a non-empty expression defined on the same line.
+numeric variable defined earlier in the same CHECK directive.
 
 FileCheck Pseudo Numeric Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

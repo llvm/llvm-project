@@ -4,7 +4,6 @@ add_lldb_unittest(UtilityTests
   OptionsWithRawTest.cpp
   ArchSpecTest.cpp
   BroadcasterTest.cpp
-  CleanUpTest.cpp
   ConstStringTest.cpp
   CompletionRequestTest.cpp
   DataExtractorTest.cpp
@@ -18,6 +17,7 @@ add_lldb_unittest(UtilityTests
   NameMatchesTest.cpp
   PredicateTest.cpp
   ProcessInfoTest.cpp
+  ProcessInstanceInfoTest.cpp
   RangeMapTest.cpp
   RangeTest.cpp
   RegisterValueTest.cpp

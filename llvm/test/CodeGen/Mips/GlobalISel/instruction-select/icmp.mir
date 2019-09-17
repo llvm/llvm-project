@@ -18,7 +18,7 @@
 ...
 ---
 name:            eq_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -44,7 +44,7 @@ body:             |
 ...
 ---
 name:            ne_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -70,7 +70,7 @@ body:             |
 ...
 ---
 name:            sgt_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -95,7 +95,7 @@ body:             |
 ...
 ---
 name:            sge_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -121,7 +121,7 @@ body:             |
 ...
 ---
 name:            slt_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -146,7 +146,7 @@ body:             |
 ...
 ---
 name:            sle_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -172,7 +172,7 @@ body:             |
 ...
 ---
 name:            ugt_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -197,7 +197,7 @@ body:             |
 ...
 ---
 name:            uge_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -223,7 +223,7 @@ body:             |
 ...
 ---
 name:            ult_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -248,7 +248,7 @@ body:             |
 ...
 ---
 name:            ule_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -274,7 +274,7 @@ body:             |
 ...
 ---
 name:            eq_ptr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

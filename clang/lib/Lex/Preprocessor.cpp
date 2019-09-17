@@ -158,6 +158,11 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 
   if (this->PPOpts->GeneratePreamble)
     PreambleConditionalStack.startRecording();
+
+  ExcludedConditionalDirectiveSkipMappings =
+      this->PPOpts->ExcludedConditionalDirectiveSkipMappings;
+  if (ExcludedConditionalDirectiveSkipMappings)
+    ExcludedConditionalDirectiveSkipMappings->clear();
 }
 
 Preprocessor::~Preprocessor() {
@@ -563,7 +568,7 @@ void Preprocessor::EnterMainSourceFile() {
     // Lookup and save the FileID for the through header. If it isn't found
     // in the search path, it's a fatal error.
     const DirectoryLookup *CurDir;
-    const FileEntry *File = LookupFile(
+    Optional<FileEntryRef> File = LookupFile(
         SourceLocation(), PPOpts->PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr, CurDir,
         /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,
@@ -575,7 +580,7 @@ void Preprocessor::EnterMainSourceFile() {
       return;
     }
     setPCHThroughHeaderFileID(
-        SourceMgr.createFileID(File, SourceLocation(), SrcMgr::C_User));
+        SourceMgr.createFileID(*File, SourceLocation(), SrcMgr::C_User));
   }
 
   // Skip tokens from the Predefines and if needed the main file.

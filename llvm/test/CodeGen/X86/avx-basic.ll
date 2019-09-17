@@ -19,8 +19,8 @@ define void @zero128() nounwind ssp {
 define void @zero256() nounwind ssp {
 ; CHECK-LABEL: zero256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movq _x@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    movq _x@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
 ; CHECK-NEXT:    movq _y@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)

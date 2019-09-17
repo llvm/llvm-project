@@ -12,9 +12,9 @@ entry:
 
 ; CHECK-LABEL: read_flags:
 ; CHECK:      pushq   %rbp
-; CHECK:      .seh_pushreg 5
+; CHECK:      .seh_pushreg %rbp
 ; CHECK:      movq    %rsp, %rbp
-; CHECK:      .seh_setframe 5, 0
+; CHECK:      .seh_setframe %rbp, 0
 ; CHECK:      .seh_endprologue
 ; CHECK-NEXT: pushfq
 ; CHECK-NEXT: popq    %rax
@@ -28,9 +28,9 @@ entry:
 
 ; CHECK-LABEL: write_flags:
 ; CHECK:      pushq   %rbp
-; CHECK:      .seh_pushreg 5
+; CHECK:      .seh_pushreg %rbp
 ; CHECK:      movq    %rsp, %rbp
-; CHECK:      .seh_setframe 5, 0
+; CHECK:      .seh_setframe %rbp, 0
 ; CHECK:      .seh_endprologue
 ; CHECK-NEXT: pushq   %rcx
 ; CHECK-NEXT: popfq

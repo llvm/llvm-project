@@ -267,6 +267,7 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     switch (RVExpr->getKind()) {
     case RISCVMCExpr::VK_RISCV_None:
     case RISCVMCExpr::VK_RISCV_Invalid:
+    case RISCVMCExpr::VK_RISCV_32_PCREL:
       llvm_unreachable("Unhandled fixup kind!");
     case RISCVMCExpr::VK_RISCV_TPREL_ADD:
       // tprel_add is only used to indicate that a relocation should be emitted

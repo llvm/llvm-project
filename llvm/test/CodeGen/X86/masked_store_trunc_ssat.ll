@@ -6450,11 +6450,12 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ;
 ; AVX512F-LABEL: truncstore_v32i16_v32i8:
 ; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpacksswb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512F-NEXT:    vpmovmskb %ymm2, %eax
+; AVX512F-NEXT:    vpmovmskb %ymm1, %eax
 ; AVX512F-NEXT:    notl %eax
 ; AVX512F-NEXT:    testb $1, %al
 ; AVX512F-NEXT:    jne .LBB15_1

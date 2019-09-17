@@ -74,8 +74,14 @@ define i32 @casts() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r67 = uitofp i64 undef to float
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r68 = sitofp i64 undef to double
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r69 = uitofp i64 undef to double
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %q70 = sext <4 x i8> undef to <4 x i32>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %q71 = sext <8 x i8> undef to <8 x i16>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s70 = sext <4 x i8> undef to <4 x i32>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r70 = sext <8 x i8> undef to <8 x i32>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r71 = sext <16 x i8> undef to <16 x i32>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %q72 = zext <4 x i8> undef to <4 x i32>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %q73 = zext <8 x i8> undef to <8 x i16>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s72 = zext <4 x i8> undef to <4 x i32>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r72 = zext <8 x i8> undef to <8 x i32>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r73 = zext <16 x i8> undef to <16 x i32>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %rext_0 = sext <8 x i8> undef to <8 x i64>
@@ -84,6 +90,12 @@ define i32 @casts() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %rext_3 = zext <8 x i16> undef to <8 x i64>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rext_4 = sext <4 x i16> undef to <4 x i64>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rext_5 = zext <4 x i16> undef to <4 x i64>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_6 = sext <2 x i8> undef to <2 x i64>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_7 = zext <2 x i8> undef to <2 x i64>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_8 = sext <2 x i16> undef to <2 x i64>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_9 = zext <2 x i16> undef to <2 x i64>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_a = sext <2 x i32> undef to <2 x i64>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rext_b = zext <2 x i32> undef to <2 x i64>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r74 = trunc <8 x i32> undef to <8 x i8>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %r75 = trunc <16 x i32> undef to <16 x i8>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r80 = fptrunc double undef to float
@@ -329,16 +341,28 @@ define i32 @casts() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r67 = uitofp i64 undef to float
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r68 = sitofp i64 undef to double
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r69 = uitofp i64 undef to double
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r70 = sext <8 x i8> undef to <8 x i32>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %r71 = sext <16 x i8> undef to <16 x i32>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r72 = zext <8 x i8> undef to <8 x i32>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %r73 = zext <16 x i8> undef to <16 x i32>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %rext_0 = sext <8 x i8> undef to <8 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %rext_1 = zext <8 x i8> undef to <8 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %rext_2 = sext <8 x i16> undef to <8 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %rext_3 = zext <8 x i16> undef to <8 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %rext_4 = sext <4 x i16> undef to <4 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %rext_5 = zext <4 x i16> undef to <4 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %q70 = sext <4 x i8> undef to <4 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %q71 = sext <8 x i8> undef to <8 x i16>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s70 = sext <4 x i8> undef to <4 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %r70 = sext <8 x i8> undef to <8 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %r71 = sext <16 x i8> undef to <16 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %q72 = zext <4 x i8> undef to <4 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %q73 = zext <8 x i8> undef to <8 x i16>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s72 = zext <4 x i8> undef to <4 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %r72 = zext <8 x i8> undef to <8 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %r73 = zext <16 x i8> undef to <16 x i32>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 330 for instruction: %rext_0 = sext <8 x i8> undef to <8 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %rext_1 = zext <8 x i8> undef to <8 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 330 for instruction: %rext_2 = sext <8 x i16> undef to <8 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %rext_3 = zext <8 x i16> undef to <8 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: %rext_4 = sext <4 x i16> undef to <4 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %rext_5 = zext <4 x i16> undef to <4 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %rext_6 = sext <2 x i8> undef to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %rext_7 = zext <2 x i8> undef to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %rext_8 = sext <2 x i16> undef to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %rext_9 = zext <2 x i16> undef to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %rext_a = sext <2 x i32> undef to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %rext_b = zext <2 x i32> undef to <2 x i64>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r74 = trunc <8 x i32> undef to <8 x i8>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r75 = trunc <16 x i32> undef to <16 x i8>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r80 = fptrunc double undef to float
@@ -591,8 +615,14 @@ define i32 @casts() {
   %r68 = sitofp i64 undef to double
   %r69 = uitofp i64 undef to double
 
+  %q70 = sext <4 x i8> undef to <4 x i32>
+  %q71 = sext <8 x i8> undef to <8 x i16>
+  %s70 = sext <4 x i8> undef to <4 x i32>
   %r70 = sext <8 x i8> undef to <8 x i32>
   %r71 = sext <16 x i8> undef to <16 x i32>
+  %q72 = zext <4 x i8> undef to <4 x i32>
+  %q73 = zext <8 x i8> undef to <8 x i16>
+  %s72 = zext <4 x i8> undef to <4 x i32>
   %r72 = zext <8 x i8> undef to <8 x i32>
   %r73 = zext <16 x i8> undef to <16 x i32>
 
@@ -602,6 +632,12 @@ define i32 @casts() {
   %rext_3 = zext <8 x i16> undef to <8 x i64>
   %rext_4 = sext <4 x i16> undef to <4 x i64>
   %rext_5 = zext <4 x i16> undef to <4 x i64>
+  %rext_6 = sext <2 x i8> undef to <2 x i64>
+  %rext_7 = zext <2 x i8> undef to <2 x i64>
+  %rext_8 = sext <2 x i16> undef to <2 x i64>
+  %rext_9 = zext <2 x i16> undef to <2 x i64>
+  %rext_a = sext <2 x i32> undef to <2 x i64>
+  %rext_b = zext <2 x i32> undef to <2 x i64>
 
   ; Vector cast cost of instructions lowering the cast to the stack.
   %r74 = trunc <8 x i32> undef to <8 x i8>
@@ -866,14 +902,14 @@ define i32 @load_extends() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4 = sext <2 x i8> %loadv2i8 to <2 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = zext <2 x i8> %loadv2i8 to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v4 = sext <2 x i8> %loadv2i8 to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5 = zext <2 x i8> %loadv2i8 to <2 x i64>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v6 = sext <4 x i16> %loadv4i16 to <4 x i32>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v7 = zext <4 x i16> %loadv4i16 to <4 x i32>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8 = sext <2 x i16> %loadv2i16 to <2 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v9 = zext <2 x i16> %loadv2i16 to <2 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v10 = sext <2 x i32> %loadv2i32 to <2 x i64>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v8 = sext <2 x i16> %loadv2i16 to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v9 = zext <2 x i16> %loadv2i16 to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v10 = sext <2 x i32> %loadv2i32 to <2 x i64>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 

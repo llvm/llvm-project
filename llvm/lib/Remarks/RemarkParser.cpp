@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/RemarkParser.h"
+#include "BitstreamRemarkParser.h"
 #include "YAMLRemarkParser.h"
 #include "llvm-c/Remarks.h"
 #include "llvm/ADT/STLExtras.h"
@@ -57,8 +58,7 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
         std::make_error_code(std::errc::invalid_argument),
         "The YAML with string table format requires a parsed string table.");
   case Format::Bitstream:
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Parsing bitstream remarks is not supported.");
+    return std::make_unique<BitstreamRemarkParser>(Buf);
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
@@ -77,8 +77,7 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
   case Format::YAMLStrTab:
     return std::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(StrTab));
   case Format::Bitstream:
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Parsing bitstream remarks is not supported.");
+    return std::make_unique<BitstreamRemarkParser>(Buf, std::move(StrTab));
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
@@ -96,8 +95,7 @@ llvm::remarks::createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
   case Format::YAMLStrTab:
     return createYAMLParserFromMeta(Buf, std::move(StrTab));
   case Format::Bitstream:
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Parsing bitstream remarks is not supported.");
+    return createBitstreamParserFromMeta(Buf, std::move(StrTab));
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
@@ -105,6 +103,7 @@ llvm::remarks::createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
   llvm_unreachable("unhandled ParseFormat");
 }
 
+namespace {
 // Wrapper that holds the state needed to interact with the C API.
 struct CParser {
   std::unique_ptr<RemarkParser> TheParser;
@@ -120,6 +119,7 @@ struct CParser {
   bool hasError() const { return Err.hasValue(); }
   const char *getMessage() const { return Err ? Err->c_str() : nullptr; };
 };
+} // namespace
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CParser, LLVMRemarkParserRef)
@@ -127,6 +127,12 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CParser, LLVMRemarkParserRef)
 extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
                                                           uint64_t Size) {
   return wrap(new CParser(Format::YAML,
+                          StringRef(static_cast<const char *>(Buf), Size)));
+}
+
+extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateBitstream(const void *Buf,
+                                                               uint64_t Size) {
+  return wrap(new CParser(Format::Bitstream,
                           StringRef(static_cast<const char *>(Buf), Size)));
 }
 

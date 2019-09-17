@@ -37,7 +37,7 @@
 ---
 name:            g
 # CHECK-LABEL: name: g
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

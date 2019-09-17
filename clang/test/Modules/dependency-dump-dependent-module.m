@@ -1,8 +1,6 @@
 // When a module depends on another, check that we dump the dependency header
 // files for both.
 
-// REQUIRES: shell
-
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -module-dependency-dir %t/vfs -F %S/Inputs -I %S/Inputs -verify %s
 // expected-no-diagnostics

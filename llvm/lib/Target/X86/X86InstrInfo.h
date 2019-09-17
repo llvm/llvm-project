@@ -67,6 +67,9 @@ unsigned getSwappedVPCMPImm(unsigned Imm);
 /// Get the VPCOM immediate if the opcodes are swapped.
 unsigned getSwappedVPCOMImm(unsigned Imm);
 
+/// Get the VCMP immediate if the opcodes are swapped.
+unsigned getSwappedVCMPImm(unsigned Imm);
+
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is
@@ -317,22 +320,10 @@ public:
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
-  void storeRegToAddr(MachineFunction &MF, unsigned SrcReg, bool isKill,
-                      SmallVectorImpl<MachineOperand> &Addr,
-                      const TargetRegisterClass *RC,
-                      ArrayRef<MachineMemOperand *> MMOs,
-                      SmallVectorImpl<MachineInstr *> &NewMIs) const;
-
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, unsigned DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
-
-  void loadRegFromAddr(MachineFunction &MF, unsigned DestReg,
-                       SmallVectorImpl<MachineOperand> &Addr,
-                       const TargetRegisterClass *RC,
-                       ArrayRef<MachineMemOperand *> MMOs,
-                       SmallVectorImpl<MachineInstr *> &NewMIs) const;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -526,6 +517,10 @@ public:
 
 #define GET_INSTRINFO_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
+
+  static bool hasLockPrefix(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & X86II::LOCK;
+  }
 
   Optional<ParamLoadedValue>
   describeLoadedValue(const MachineInstr &MI) const override;

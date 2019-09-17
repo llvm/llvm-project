@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "ClangdUnit.h"
 #include "Diagnostics.h"
+#include "ParsedAST.h"
 #include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"

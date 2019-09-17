@@ -191,6 +191,8 @@ std::string EVT::getEVTString() const {
   case MVT::v3f16:   return "v3f16";
   case MVT::v4f16:   return "v4f16";
   case MVT::v8f16:   return "v8f16";
+  case MVT::v16f16:  return "v16f16";
+  case MVT::v32f16:  return "v32f16";
   case MVT::v3f32:   return "v3f32";
   case MVT::v4f32:   return "v4f32";
   case MVT::v5f32:   return "v5f32";
@@ -330,6 +332,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::v3f16:   return VectorType::get(Type::getHalfTy(Context), 3);
   case MVT::v4f16:   return VectorType::get(Type::getHalfTy(Context), 4);
   case MVT::v8f16:   return VectorType::get(Type::getHalfTy(Context), 8);
+  case MVT::v16f16:  return VectorType::get(Type::getHalfTy(Context), 16);
+  case MVT::v32f16:  return VectorType::get(Type::getHalfTy(Context), 32);
   case MVT::v1f32:   return VectorType::get(Type::getFloatTy(Context), 1);
   case MVT::v2f32:   return VectorType::get(Type::getFloatTy(Context), 2);
   case MVT::v3f32:   return VectorType::get(Type::getFloatTy(Context), 3);

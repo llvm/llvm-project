@@ -31,8 +31,10 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Timer.h"
 
 #include <list>
 #include <string>
@@ -93,6 +95,17 @@ static cl::opt<bool> ShowSizes(
     "show-sizes",
     cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
     cl::init(false));
+
+static cl::opt<bool> ShowTimes("show-times",
+                               cl::desc("Show times for llvm-jitlink phases"),
+                               cl::init(false));
+
+static cl::opt<std::string> SlabAllocateSizeString(
+    "slab-allocate",
+    cl::desc("Allocate from a slab of the given size "
+             "(allowable suffixes: Kb, Mb, Gb. default = "
+             "Kb)"),
+    cl::init(""));
 
 static cl::opt<bool> ShowRelocatedSectionContents(
     "show-relocated-section-contents",
@@ -216,7 +229,175 @@ static void dumpSectionContents(raw_ostream &OS, AtomGraph &G) {
   }
 }
 
-Session::Session(Triple TT) : ObjLayer(ES, MemMgr), TT(std::move(TT)) {
+class JITLinkSlabAllocator final : public JITLinkMemoryManager {
+public:
+  static Expected<std::unique_ptr<JITLinkSlabAllocator>>
+  Create(uint64_t SlabSize) {
+    Error Err = Error::success();
+    std::unique_ptr<JITLinkSlabAllocator> Allocator(
+        new JITLinkSlabAllocator(SlabSize, Err));
+    if (Err)
+      return std::move(Err);
+    return std::move(Allocator);
+  }
+
+  Expected<std::unique_ptr<JITLinkMemoryManager::Allocation>>
+  allocate(const SegmentsRequestMap &Request) override {
+
+    using AllocationMap = DenseMap<unsigned, sys::MemoryBlock>;
+
+    // Local class for allocation.
+    class IPMMAlloc : public Allocation {
+    public:
+      IPMMAlloc(AllocationMap SegBlocks) : SegBlocks(std::move(SegBlocks)) {}
+      MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
+        assert(SegBlocks.count(Seg) && "No allocation for segment");
+        return {static_cast<char *>(SegBlocks[Seg].base()),
+                SegBlocks[Seg].allocatedSize()};
+      }
+      JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
+        assert(SegBlocks.count(Seg) && "No allocation for segment");
+        return reinterpret_cast<JITTargetAddress>(SegBlocks[Seg].base());
+      }
+      void finalizeAsync(FinalizeContinuation OnFinalize) override {
+        OnFinalize(applyProtections());
+      }
+      Error deallocate() override {
+        for (auto &KV : SegBlocks)
+          if (auto EC = sys::Memory::releaseMappedMemory(KV.second))
+            return errorCodeToError(EC);
+        return Error::success();
+      }
+
+    private:
+      Error applyProtections() {
+        for (auto &KV : SegBlocks) {
+          auto &Prot = KV.first;
+          auto &Block = KV.second;
+          if (auto EC = sys::Memory::protectMappedMemory(Block, Prot))
+            return errorCodeToError(EC);
+          if (Prot & sys::Memory::MF_EXEC)
+            sys::Memory::InvalidateInstructionCache(Block.base(),
+                                                    Block.allocatedSize());
+        }
+        return Error::success();
+      }
+
+      AllocationMap SegBlocks;
+    };
+
+    AllocationMap Blocks;
+
+    for (auto &KV : Request) {
+      auto &Seg = KV.second;
+
+      if (Seg.getContentAlignment() > PageSize)
+        return make_error<StringError>("Cannot request higher than page "
+                                       "alignment",
+                                       inconvertibleErrorCode());
+
+      if (PageSize % Seg.getContentAlignment() != 0)
+        return make_error<StringError>("Page size is not a multiple of "
+                                       "alignment",
+                                       inconvertibleErrorCode());
+
+      uint64_t ZeroFillStart =
+          alignTo(Seg.getContentSize(), Seg.getZeroFillAlignment());
+      uint64_t SegmentSize = ZeroFillStart + Seg.getZeroFillSize();
+
+      // Round segment size up to page boundary.
+      SegmentSize = (SegmentSize + PageSize - 1) & ~(PageSize - 1);
+
+      // Take segment bytes from the front of the slab.
+      void *SlabBase = SlabRemaining.base();
+      uint64_t SlabRemainingSize = SlabRemaining.allocatedSize();
+
+      if (SegmentSize > SlabRemainingSize)
+        return make_error<StringError>("Slab allocator out of memory",
+                                       inconvertibleErrorCode());
+
+      sys::MemoryBlock SegMem(SlabBase, SegmentSize);
+      SlabRemaining =
+          sys::MemoryBlock(reinterpret_cast<char *>(SlabBase) + SegmentSize,
+                           SlabRemainingSize - SegmentSize);
+
+      // Zero out the zero-fill memory.
+      memset(static_cast<char *>(SegMem.base()) + ZeroFillStart, 0,
+             Seg.getZeroFillSize());
+
+      // Record the block for this segment.
+      Blocks[KV.first] = std::move(SegMem);
+    }
+    return std::unique_ptr<InProcessMemoryManager::Allocation>(
+        new IPMMAlloc(std::move(Blocks)));
+  }
+
+private:
+  JITLinkSlabAllocator(uint64_t SlabSize, Error &Err) {
+    ErrorAsOutParameter _(&Err);
+
+    PageSize = sys::Process::getPageSizeEstimate();
+
+    if (!isPowerOf2_64(PageSize)) {
+      Err = make_error<StringError>("Page size is not a power of 2",
+                                    inconvertibleErrorCode());
+      return;
+    }
+
+    // Round slab request up to page size.
+    SlabSize = (SlabSize + PageSize - 1) & ~(PageSize - 1);
+
+    const sys::Memory::ProtectionFlags ReadWrite =
+        static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                  sys::Memory::MF_WRITE);
+
+    std::error_code EC;
+    SlabRemaining =
+        sys::Memory::allocateMappedMemory(SlabSize, nullptr, ReadWrite, EC);
+
+    if (EC) {
+      Err = errorCodeToError(EC);
+      return;
+    }
+  }
+
+  sys::MemoryBlock SlabRemaining;
+  uint64_t PageSize = 0;
+};
+
+Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
+  SizeString = SizeString.trim();
+
+  uint64_t Units = 1024;
+
+  if (SizeString.endswith_lower("kb"))
+    SizeString = SizeString.drop_back(2).rtrim();
+  else if (SizeString.endswith_lower("mb")) {
+    Units = 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.endswith_lower("gb")) {
+    Units = 1024 * 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  }
+
+  uint64_t SlabSize = 0;
+  if (SizeString.getAsInteger(10, SlabSize))
+    return make_error<StringError>("Invalid numeric format for slab size",
+                                   inconvertibleErrorCode());
+
+  return SlabSize * Units;
+}
+
+static std::unique_ptr<jitlink::JITLinkMemoryManager> createMemoryManager() {
+  if (!SlabAllocateSizeString.empty()) {
+    auto SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
+    return ExitOnErr(JITLinkSlabAllocator::Create(SlabSize));
+  }
+  return std::make_unique<jitlink::InProcessMemoryManager>();
+}
+
+Session::Session(Triple TT)
+    : MemMgr(createMemoryManager()), ObjLayer(ES, *MemMgr), TT(std::move(TT)) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -604,6 +785,13 @@ Expected<int> runEntryPoint(Session &S, JITEvaluatedSymbol EntryPoint) {
   return EntryPointPtr(EntryPointArgs.size() - 1, EntryPointArgs.data());
 }
 
+struct JITLinkTimers {
+  TimerGroup JITLinkTG{"llvm-jitlink timers", "timers for llvm-jitlink phases"};
+  Timer LoadObjectsTimer{"load", "time to load/add object files", JITLinkTG};
+  Timer LinkTimer{"link", "time to link object files", JITLinkTG};
+  Timer RunTimer{"run", "time to execute jitlink'd code", JITLinkTG};
+};
+
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
 
@@ -614,6 +802,10 @@ int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "llvm jitlink tool");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
+  /// If timers are enabled, create a JITLinkTimers instance.
+  std::unique_ptr<JITLinkTimers> Timers =
+      ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
+
   Session S(getFirstFileTriple());
 
   ExitOnErr(sanitizeArguments(S));
@@ -622,9 +814,17 @@ int main(int argc, char *argv[]) {
     ExitOnErr(loadProcessSymbols(S));
   ExitOnErr(loadDylibs());
 
-  ExitOnErr(loadObjects(S));
 
-  auto EntryPoint = ExitOnErr(getMainEntryPoint(S));
+  {
+    TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
+    ExitOnErr(loadObjects(S));
+  }
+
+  JITEvaluatedSymbol EntryPoint = 0;
+  {
+    TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
+    EntryPoint = ExitOnErr(getMainEntryPoint(S));
+  }
 
   if (ShowAddrs)
     S.dumpSessionInfo(outs());
@@ -636,5 +836,11 @@ int main(int argc, char *argv[]) {
   if (NoExec)
     return 0;
 
-  return ExitOnErr(runEntryPoint(S, EntryPoint));
+  int Result = 0;
+  {
+    TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
+    Result = ExitOnErr(runEntryPoint(S, EntryPoint));
+  }
+
+  return Result;
 }

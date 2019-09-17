@@ -101,7 +101,7 @@
 ...
 ---
 name:            test_load_i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -139,7 +139,7 @@ body:             |
 ...
 ---
 name:            test_load_i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -177,7 +177,7 @@ body:             |
 ...
 ---
 name:            test_load_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -215,7 +215,7 @@ body:             |
 ...
 ---
 name:            test_load_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -253,7 +253,7 @@ body:             |
 ...
 ---
 name:            test_load_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -303,7 +303,7 @@ body:             |
 ...
 ---
 name:            test_load_float_vecreg
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -353,7 +353,7 @@ body:             |
 ...
 ---
 name:            test_load_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -403,7 +403,7 @@ body:             |
 ...
 ---
 name:            test_load_double_vecreg
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -453,7 +453,7 @@ body:             |
 ...
 ---
 name:            test_store_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -496,7 +496,7 @@ body:             |
 ...
 ---
 name:            test_store_i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -539,7 +539,7 @@ body:             |
 ...
 ---
 name:            test_store_float
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -594,7 +594,7 @@ body:             |
 ...
 ---
 name:            test_store_float_vec
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -649,7 +649,7 @@ body:             |
 ...
 ---
 name:            test_store_double
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -705,7 +705,7 @@ body:             |
 ...
 ---
 name:            test_store_double_vec
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -760,7 +760,7 @@ body:             |
 ...
 ---
 name:            test_load_ptr
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -799,7 +799,7 @@ body:             |
 ...
 ---
 name:            test_store_ptr
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -838,7 +838,7 @@ body:             |
 ...
 ---
 name:            test_gep_folding
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -891,7 +891,7 @@ body:             |
 ...
 ---
 name:            test_gep_folding_largeGepIndex
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

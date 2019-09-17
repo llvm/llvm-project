@@ -60,10 +60,11 @@ using namespace llvm::cflaa;
 
 #define DEBUG_TYPE "cfl-steens-aa"
 
-CFLSteensAAResult::CFLSteensAAResult(const TargetLibraryInfo &TLI)
-    : AAResultBase(), TLI(TLI) {}
+CFLSteensAAResult::CFLSteensAAResult(
+    std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
+    : AAResultBase(), GetTLI(std::move(GetTLI)) {}
 CFLSteensAAResult::CFLSteensAAResult(CFLSteensAAResult &&Arg)
-    : AAResultBase(std::move(Arg)), TLI(Arg.TLI) {}
+    : AAResultBase(std::move(Arg)), GetTLI(std::move(Arg.GetTLI)) {}
 CFLSteensAAResult::~CFLSteensAAResult() = default;
 
 /// Information we have about a function and would like to keep around.
@@ -181,7 +182,7 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
 
 // Builds the graph + StratifiedSets for a function.
 CFLSteensAAResult::FunctionInfo CFLSteensAAResult::buildSetsFrom(Function *Fn) {
-  CFLGraphBuilder<CFLSteensAAResult> GraphBuilder(*this, TLI, *Fn);
+  CFLGraphBuilder<CFLSteensAAResult> GraphBuilder(*this, GetTLI(*Fn), *Fn);
   StratifiedSetsBuilder<InstantiatedValue> SetBuilder;
 
   // Add all CFLGraph nodes and all Dereference edges to StratifiedSets
@@ -331,7 +332,10 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
 AnalysisKey CFLSteensAA::Key;
 
 CFLSteensAAResult CFLSteensAA::run(Function &F, FunctionAnalysisManager &AM) {
-  return CFLSteensAAResult(AM.getResult<TargetLibraryAnalysis>(F));
+  auto GetTLI = [&AM](Function &F) -> const TargetLibraryInfo & {
+    return AM.getResult<TargetLibraryAnalysis>(F);
+  };
+  return CFLSteensAAResult(GetTLI);
 }
 
 char CFLSteensAAWrapperPass::ID = 0;
@@ -347,8 +351,10 @@ CFLSteensAAWrapperPass::CFLSteensAAWrapperPass() : ImmutablePass(ID) {
 }
 
 void CFLSteensAAWrapperPass::initializePass() {
-  auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
-  Result.reset(new CFLSteensAAResult(TLIWP.getTLI()));
+  auto GetTLI = [this](Function &F) -> const TargetLibraryInfo & {
+    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  };
+  Result.reset(new CFLSteensAAResult(GetTLI));
 }
 
 void CFLSteensAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

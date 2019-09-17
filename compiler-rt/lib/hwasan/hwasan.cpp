@@ -276,10 +276,10 @@ static void InitGlobalsFromPhdrs(ElfW(Addr) base, const ElfW(Phdr) * phdr,
     while (note < nend) {
       auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(note);
       const char *name = note + sizeof(ElfW(Nhdr));
-      const char *desc = name + nhdr->n_namesz;
+      const char *desc = name + RoundUpTo(nhdr->n_namesz, 4);
       if (nhdr->n_type != NT_LLVM_HWASAN_GLOBALS ||
           internal_strcmp(name, "LLVM") != 0) {
-        note = desc + nhdr->n_descsz;
+        note = desc + RoundUpTo(nhdr->n_descsz, 4);
         continue;
       }
 

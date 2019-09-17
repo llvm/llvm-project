@@ -416,6 +416,51 @@ Scalar &Scalar::operator=(llvm::APInt rhs) {
 
 Scalar::~Scalar() = default;
 
+Scalar::Type Scalar::GetBestTypeForBitSize(size_t bit_size, bool sign) {
+  // Scalar types are always host types, hence the sizeof().
+  if (sign) {
+    if (bit_size <= sizeof(int)*8) return Scalar::e_sint;
+    if (bit_size <= sizeof(long)*8) return Scalar::e_slong;
+    if (bit_size <= sizeof(long long)*8) return Scalar::e_slonglong;
+    if (bit_size <= 128) return Scalar::e_sint128;
+    if (bit_size <= 256) return Scalar::e_sint256;
+    if (bit_size <= 512) return Scalar::e_sint512;
+  } else {
+    if (bit_size <= sizeof(unsigned int)*8) return Scalar::e_uint;
+    if (bit_size <= sizeof(unsigned long)*8) return Scalar::e_ulong;
+    if (bit_size <= sizeof(unsigned long long)*8) return Scalar::e_ulonglong;
+    if (bit_size <= 128) return Scalar::e_uint128;
+    if (bit_size <= 256) return Scalar::e_uint256;
+    if (bit_size <= 512) return Scalar::e_uint512;
+  }
+  return Scalar::e_void;
+};
+
+void Scalar::TruncOrExtendTo(Scalar::Type type, uint16_t bits) {
+  switch (type) {
+  case e_sint:
+  case e_slong:
+  case e_slonglong:
+  case e_sint128:
+  case e_sint256:
+  case e_sint512:
+    m_integer = m_integer.sextOrTrunc(bits);
+    break;
+  case e_uint:
+  case e_ulong:
+  case e_ulonglong:
+  case e_uint128:
+  case e_uint256:
+  case e_uint512:
+    m_integer = m_integer.zextOrTrunc(bits);
+    break;
+  default:
+    llvm_unreachable("Promoting a Scalar to a specific number of bits is only "
+                     "supported for integer types.");
+  }
+  m_type = type;
+}
+
 bool Scalar::Promote(Scalar::Type type) {
   bool success = false;
   switch (m_type) {

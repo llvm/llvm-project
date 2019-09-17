@@ -100,7 +100,6 @@ def GNUComplexInteger : DiagGroup<"gnu-complex-integer">;
 def GNUConditionalOmittedOperand : DiagGroup<"gnu-conditional-omitted-operand">;
 def ConfigMacros : DiagGroup<"config-macros">;
 def : DiagGroup<"ctor-dtor-privacy">;
-def GNUDesignator : DiagGroup<"gnu-designator">;
 def GNUStringLiteralOperatorTemplate :
   DiagGroup<"gnu-string-literal-operator-template">;
 def UndefinedVarTemplate : DiagGroup<"undefined-var-template">;
@@ -114,6 +113,7 @@ def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor",
                                      [DeleteNonAbstractNonVirtualDtor,
                                       DeleteAbstractNonVirtualDtor]>;
 def AbstractFinalClass : DiagGroup<"abstract-final-class">;
+def FinalDtorNonFinalClass : DiagGroup<"final-dtor-non-final-class">;
 
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
@@ -145,6 +145,12 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAttributes,
                                           DeprecatedThisCapture,
                                           DeprecatedWritableStr]>,
                  DiagCategory<"Deprecations">;
+
+def CXX2aDesignator : DiagGroup<"c++2a-designator">;
+// Allow -Wno-c99-designator to be used to turn off all warnings on valid C99
+// designators (including the warning controlled by -Wc++2a-designator).
+def C99Designator : DiagGroup<"c99-designator", [CXX2aDesignator]>;
+def GNUDesignator : DiagGroup<"gnu-designator">;
 
 def DynamicExceptionSpec
     : DiagGroup<"dynamic-exception-spec", [DeprecatedDynamicExceptionSpec]>;
@@ -289,9 +295,11 @@ def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
+def DanglingGsl : DiagGroup<"dangling-gsl">;
 def ReturnStackAddress : DiagGroup<"return-stack-address">;
 def Dangling : DiagGroup<"dangling", [DanglingField,
                                       DanglingInitializerList,
+                                      DanglingGsl,
                                       ReturnStackAddress]>;
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
@@ -512,6 +520,7 @@ def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
 def Varargs : DiagGroup<"varargs">;
+def XorUsedAsPow : DiagGroup<"xor-used-as-pow">;
 
 def Unsequenced : DiagGroup<"unsequenced">;
 // GCC name for -Wunsequenced
@@ -623,7 +632,9 @@ def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
 def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
 def UserDefinedLiterals : DiagGroup<"user-defined-literals">;
 def UserDefinedWarnings : DiagGroup<"user-defined-warnings">;
-def Reorder : DiagGroup<"reorder">;
+def ReorderCtor : DiagGroup<"reorder-ctor">;
+def ReorderInitList : DiagGroup<"reorder-init-list">;
+def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
 def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
 def CustomAtomic : DiagGroup<"custom-atomic-properties">;
@@ -893,7 +904,7 @@ def CXX17 : DiagGroup<"c++17-extensions">;
 
 // A warning group for warnings about using C++2a features as extensions in
 // earlier C++ versions.
-def CXX2a : DiagGroup<"c++2a-extensions">;
+def CXX2a : DiagGroup<"c++2a-extensions", [CXX2aDesignator]>;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
@@ -906,7 +917,7 @@ def DelegatingCtorCycles :
 def C11 : DiagGroup<"c11-extensions">;
 
 // A warning group for warnings about using C99 features as extensions.
-def C99 : DiagGroup<"c99-extensions">;
+def C99 : DiagGroup<"c99-extensions", [C99Designator]>;
 
 // A warning group for warnings about GCC extensions.
 def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
@@ -1031,6 +1042,7 @@ def BackendOptimizationFailure : DiagGroup<"pass-failed">;
 def ProfileInstrMissing : DiagGroup<"profile-instr-missing">;
 def ProfileInstrOutOfDate : DiagGroup<"profile-instr-out-of-date">;
 def ProfileInstrUnprofiled : DiagGroup<"profile-instr-unprofiled">;
+def MisExpect : DiagGroup<"misexpect">;
 
 // AddressSanitizer frontend instrumentation remarks.
 def SanitizeAddressRemarks : DiagGroup<"sanitize-address">;

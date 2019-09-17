@@ -61,7 +61,7 @@ static const StatementMatcher IncrementVarMatcher() {
   return declRefExpr(to(varDecl(hasType(isInteger())).bind(IncrementVarName)));
 }
 
-/// \brief The matcher for loops over arrays.
+/// The matcher for loops over arrays.
 ///
 /// In this general example, assuming 'j' and 'k' are of integral type:
 /// \code
@@ -97,7 +97,7 @@ StatementMatcher makeArrayLoopMatcher() {
       .bind(LoopNameArray);
 }
 
-/// \brief The matcher used for iterator-based for loops.
+/// The matcher used for iterator-based for loops.
 ///
 /// This matcher is more flexible than array-based loops. It will match
 /// catch loops of the following textual forms (regardless of whether the
@@ -204,7 +204,7 @@ StatementMatcher makeIteratorLoopMatcher() {
       .bind(LoopNameIterator);
 }
 
-/// \brief The matcher used for array-like containers (pseudoarrays).
+/// The matcher used for array-like containers (pseudoarrays).
 ///
 /// This matcher is more flexible than array-based loops. It will match
 /// loops of the following textual forms (regardless of whether the
@@ -296,7 +296,7 @@ StatementMatcher makePseudoArrayLoopMatcher() {
       .bind(LoopNamePseudoArray);
 }
 
-/// \brief Determine whether Init appears to be an initializing an iterator.
+/// Determine whether Init appears to be an initializing an iterator.
 ///
 /// If it is, returns the object whose begin() or end() method is called, and
 /// the output parameter isArrow is set to indicate whether the initialization
@@ -326,7 +326,7 @@ static const Expr *getContainerFromBeginEndCall(const Expr *Init, bool IsBegin,
   return SourceExpr;
 }
 
-/// \brief Determines the container whose begin() and end() functions are called
+/// Determines the container whose begin() and end() functions are called
 /// for an iterator-based loop.
 ///
 /// BeginExpr must be a member call to a function named "begin()", and EndExpr
@@ -355,7 +355,7 @@ static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
   return BeginContainerExpr;
 }
 
-/// \brief Obtain the original source code text from a SourceRange.
+/// Obtain the original source code text from a SourceRange.
 static StringRef getStringFromRange(SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
@@ -368,7 +368,7 @@ static StringRef getStringFromRange(SourceManager &SourceMgr,
                               LangOpts);
 }
 
-/// \brief If the given expression is actually a DeclRefExpr or a MemberExpr,
+/// If the given expression is actually a DeclRefExpr or a MemberExpr,
 /// find and return the underlying ValueDecl; otherwise, return NULL.
 static const ValueDecl *getReferencedVariable(const Expr *E) {
   if (const DeclRefExpr *DRE = getDeclRef(E))
@@ -378,7 +378,7 @@ static const ValueDecl *getReferencedVariable(const Expr *E) {
   return nullptr;
 }
 
-/// \brief Returns true when the given expression is a member expression
+/// Returns true when the given expression is a member expression
 /// whose base is `this` (implicitly or not).
 static bool isDirectMemberExpr(const Expr *E) {
   if (const auto *Member = dyn_cast<MemberExpr>(E->IgnoreParenImpCasts()))
@@ -386,7 +386,7 @@ static bool isDirectMemberExpr(const Expr *E) {
   return false;
 }
 
-/// \brief Given an expression that represents an usage of an element from the
+/// Given an expression that represents an usage of an element from the
 /// containter that we are iterating over, returns false when it can be
 /// guaranteed this element cannot be modified as a result of this usage.
 static bool canBeModified(ASTContext *Context, const Expr *E) {
@@ -406,7 +406,7 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
   return true;
 }
 
-/// \brief Returns true when it can be guaranteed that the elements of the
+/// Returns true when it can be guaranteed that the elements of the
 /// container are not being modified.
 static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
   for (const Usage &U : Usages) {
@@ -422,7 +422,7 @@ static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
   return true;
 }
 
-/// \brief Returns true if the elements of the container are never accessed
+/// Returns true if the elements of the container are never accessed
 /// by reference.
 static bool usagesReturnRValues(const UsageResult &Usages) {
   for (const auto &U : Usages) {
@@ -432,7 +432,7 @@ static bool usagesReturnRValues(const UsageResult &Usages) {
   return true;
 }
 
-/// \brief Returns true if the container is const-qualified.
+/// Returns true if the container is const-qualified.
 static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
   if (const auto *VDec = getReferencedVariable(ContainerExpr)) {
     QualType CType = VDec->getType();
@@ -491,7 +491,7 @@ void LoopConvertCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(makePseudoArrayLoopMatcher(), this);
 }
 
-/// \brief Given the range of a single declaration, such as:
+/// Given the range of a single declaration, such as:
 /// \code
 ///   unsigned &ThisIsADeclarationThatCanSpanSeveralLinesOfCode =
 ///       InitializationValues[I];
@@ -515,7 +515,7 @@ void LoopConvertCheck::getAliasRange(SourceManager &SM, SourceRange &Range) {
       SourceRange(Range.getBegin(), Range.getEnd().getLocWithOffset(Offset));
 }
 
-/// \brief Computes the changes needed to convert a given for loop, and
+/// Computes the changes needed to convert a given for loop, and
 /// applies them.
 void LoopConvertCheck::doConversion(
     ASTContext *Context, const VarDecl *IndexVar,
@@ -650,7 +650,7 @@ void LoopConvertCheck::doConversion(
   TUInfo->getGeneratedDecls().insert(make_pair(Loop, VarName));
 }
 
-/// \brief Returns a string which refers to the container iterated over.
+/// Returns a string which refers to the container iterated over.
 StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
                                                const ForStmt *Loop,
                                                const Expr *ContainerExpr) {
@@ -666,7 +666,7 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
   return ContainerString;
 }
 
-/// \brief Determines what kind of 'auto' must be used after converting a for
+/// Determines what kind of 'auto' must be used after converting a for
 /// loop that iterates over an array or pseudoarray.
 void LoopConvertCheck::getArrayLoopQualifiers(ASTContext *Context,
                                               const BoundNodes &Nodes,
@@ -701,7 +701,7 @@ void LoopConvertCheck::getArrayLoopQualifiers(ASTContext *Context,
   }
 }
 
-/// \brief Determines what kind of 'auto' must be used after converting an
+/// Determines what kind of 'auto' must be used after converting an
 /// iterator based for loop.
 void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
                                                  const BoundNodes &Nodes,
@@ -743,7 +743,7 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
   }
 }
 
-/// \brief Determines the parameters needed to build the range replacement.
+/// Determines the parameters needed to build the range replacement.
 void LoopConvertCheck::determineRangeDescriptor(
     ASTContext *Context, const BoundNodes &Nodes, const ForStmt *Loop,
     LoopFixerKind FixerKind, const Expr *ContainerExpr,
@@ -756,7 +756,7 @@ void LoopConvertCheck::determineRangeDescriptor(
     getArrayLoopQualifiers(Context, Nodes, ContainerExpr, Usages, Descriptor);
 }
 
-/// \brief Check some of the conditions that must be met for the loop to be
+/// Check some of the conditions that must be met for the loop to be
 /// convertible.
 bool LoopConvertCheck::isConvertible(ASTContext *Context,
                                      const ast_matchers::BoundNodes &Nodes,

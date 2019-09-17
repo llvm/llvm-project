@@ -136,3 +136,24 @@ sb t1, %pcrel_lo(2b)(a2)
 # RELAX-RELOC: R_RISCV_RELAX - 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(.Ltmp1), kind: fixup_riscv_pcrel_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
+
+# Check that a relocation is not emitted for a symbol difference which has
+# been folded to a fixup with an absolute value. This can happen when a
+# difference expression refers to two symbols, at least one of which is
+# not defined at the point it is referenced. Then during *assembler*
+# relaxation when both symbols have become defined the difference may be folded
+# down to a fixup simply containing the absolute value. We want to ensure that
+# we don't force a relocation to be emitted for this absolute value even
+# when linker relaxation is enabled. The reason for this is that one instance
+# where this pattern appears in in the .eh_frame section (the CIE 'length'
+# field), and the .eh_frame section cannot be parsed by the linker unless the
+# fixup has been resolved to a concrete value instead of a relocation.
+  .data
+lo:
+  .word hi-lo
+  .quad hi-lo
+# NORELAX-RELOC-NOT: R_RISCV_32
+# NORELAX-RELOC-NOT: R_RISCV_64
+# RELAX-RELOC-NOT: R_RISCV_32
+# RELAX-RELOC-NOT: R_RISCV_64
+hi:

@@ -1215,7 +1215,7 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     tok::r_square, tok::r_square
   };
 
-  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17;
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17 && !PP.getLangOpts().C2x;
 
   StringRef MacroName;
   if (PreferClangAttr)
@@ -1224,24 +1224,19 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     MacroName = PP.getLastMacroWithSpelling(Loc, FallthroughTokens);
   if (MacroName.empty() && !PreferClangAttr)
     MacroName = PP.getLastMacroWithSpelling(Loc, ClangFallthroughTokens);
-  if (MacroName.empty())
-    MacroName = PreferClangAttr ? "[[clang::fallthrough]]" : "[[fallthrough]]";
+  if (MacroName.empty()) {
+    if (!PreferClangAttr)
+      MacroName = "[[fallthrough]]";
+    else if (PP.getLangOpts().CPlusPlus)
+      MacroName = "[[clang::fallthrough]]";
+    else
+      MacroName = "__attribute__((fallthrough))";
+  }
   return MacroName;
 }
 
 static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
                                             bool PerFunction) {
-  // Only perform this analysis when using [[]] attributes. There is no good
-  // workflow for this warning when not using C++11. There is no good way to
-  // silence the warning (no attribute is available) unless we are using
-  // [[]] attributes. One could use pragmas to silence the warning, but as a
-  // general solution that is gross and not in the spirit of this warning.
-  //
-  // NOTE: This an intermediate solution. There are on-going discussions on
-  // how to properly support this warning outside of C++11 with an annotation.
-  if (!AC.getASTContext().getLangOpts().DoubleSquareBracketAttributes)
-    return;
-
   FallthroughMapper FM(S);
   FM.TraverseStmt(AC.getBody());
 
@@ -1281,25 +1276,24 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
       SourceLocation L = Label->getBeginLoc();
       if (L.isMacroID())
         continue;
-      if (S.getLangOpts().CPlusPlus11) {
-        const Stmt *Term = B->getTerminatorStmt();
-        // Skip empty cases.
-        while (B->empty() && !Term && B->succ_size() == 1) {
-          B = *B->succ_begin();
-          Term = B->getTerminatorStmt();
-        }
-        if (!(B->empty() && Term && isa<BreakStmt>(Term))) {
-          Preprocessor &PP = S.getPreprocessor();
-          StringRef AnnotationSpelling = getFallthroughAttrSpelling(PP, L);
-          SmallString<64> TextToInsert(AnnotationSpelling);
-          TextToInsert += "; ";
-          S.Diag(L, diag::note_insert_fallthrough_fixit) <<
-              AnnotationSpelling <<
-              FixItHint::CreateInsertion(L, TextToInsert);
-        }
+
+      const Stmt *Term = B->getTerminatorStmt();
+      // Skip empty cases.
+      while (B->empty() && !Term && B->succ_size() == 1) {
+        B = *B->succ_begin();
+        Term = B->getTerminatorStmt();
       }
-      S.Diag(L, diag::note_insert_break_fixit) <<
-        FixItHint::CreateInsertion(L, "break; ");
+      if (!(B->empty() && Term && isa<BreakStmt>(Term))) {
+        Preprocessor &PP = S.getPreprocessor();
+        StringRef AnnotationSpelling = getFallthroughAttrSpelling(PP, L);
+        SmallString<64> TextToInsert(AnnotationSpelling);
+        TextToInsert += "; ";
+        S.Diag(L, diag::note_insert_fallthrough_fixit)
+            << AnnotationSpelling
+            << FixItHint::CreateInsertion(L, TextToInsert);
+      }
+      S.Diag(L, diag::note_insert_break_fixit)
+          << FixItHint::CreateInsertion(L, "break; ");
     }
   }
 

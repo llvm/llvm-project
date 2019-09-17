@@ -4,8 +4,10 @@ static_library("GSYM") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "FileWriter.cpp",
     "FunctionInfo.cpp",
     "InlineInfo.cpp",
+    "LineTable.cpp",
     "Range.cpp",
   ]
 }

@@ -129,9 +129,18 @@ void MachOReader::readLoadCommands(Object &O) const {
     case MachO::LC_SYMTAB:
       O.SymTabCommandIndex = O.LoadCommands.size();
       break;
+    case MachO::LC_DYSYMTAB:
+      O.DySymTabCommandIndex = O.LoadCommands.size();
+      break;
     case MachO::LC_DYLD_INFO:
     case MachO::LC_DYLD_INFO_ONLY:
       O.DyLdInfoCommandIndex = O.LoadCommands.size();
+      break;
+    case MachO::LC_DATA_IN_CODE:
+      O.DataInCodeCommandIndex = O.LoadCommands.size();
+      break;
+    case MachO::LC_FUNCTION_STARTS:
+      O.FunctionStartsCommandIndex = O.LoadCommands.size();
       break;
     }
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
@@ -222,6 +231,35 @@ void MachOReader::readExportInfo(Object &O) const {
   O.Exports.Trie = MachOObj.getDyldInfoExportsTrie();
 }
 
+void MachOReader::readDataInCodeData(Object &O) const {
+  if (!O.DataInCodeCommandIndex)
+    return;
+  const MachO::linkedit_data_command &LDC =
+      O.LoadCommands[*O.DataInCodeCommandIndex]
+          .MachOLoadCommand.linkedit_data_command_data;
+
+  O.DataInCode.Data = arrayRefFromStringRef(
+      MachOObj.getData().substr(LDC.dataoff, LDC.datasize));
+}
+
+void MachOReader::readFunctionStartsData(Object &O) const {
+  if (!O.FunctionStartsCommandIndex)
+    return;
+  const MachO::linkedit_data_command &LDC =
+      O.LoadCommands[*O.FunctionStartsCommandIndex]
+          .MachOLoadCommand.linkedit_data_command_data;
+
+  O.FunctionStarts.Data = arrayRefFromStringRef(
+      MachOObj.getData().substr(LDC.dataoff, LDC.datasize));
+}
+
+void MachOReader::readIndirectSymbolTable(Object &O) const {
+  MachO::dysymtab_command DySymTab = MachOObj.getDysymtabLoadCommand();
+  for (uint32_t i = 0; i < DySymTab.nindirectsyms; ++i)
+    O.IndirectSymTable.Symbols.push_back(
+        MachOObj.getIndirectSymbolTableEntry(DySymTab, i));
+}
+
 std::unique_ptr<Object> MachOReader::create() const {
   auto Obj = std::make_unique<Object>();
   readHeader(*Obj);
@@ -233,6 +271,9 @@ std::unique_ptr<Object> MachOReader::create() const {
   readWeakBindInfo(*Obj);
   readLazyBindInfo(*Obj);
   readExportInfo(*Obj);
+  readDataInCodeData(*Obj);
+  readFunctionStartsData(*Obj);
+  readIndirectSymbolTable(*Obj);
   return Obj;
 }
 

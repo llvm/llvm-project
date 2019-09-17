@@ -85,7 +85,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     }
 
     if (const DeclStmt *DS = dyn_cast<DeclStmt>(StoreE)) {
-      const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
+      const VarDecl *VD = cast<VarDecl>(DS->getSingleDecl());
       ex = VD->getInit();
     }
 
@@ -108,7 +108,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   if (OS.str().empty())
     OS << DefaultMsg;
 
-  auto R = std::make_unique<BugReport>(*BT, OS.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
   if (ex) {
     R->addRange(ex->getSourceRange());
     bugreporter::trackExpressionValue(N, ex, *R);

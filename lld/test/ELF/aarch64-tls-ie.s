@@ -14,8 +14,8 @@
 # RELOC-NEXT:     SHF_ALLOC
 # RELOC-NEXT:     SHF_WRITE
 # RELOC-NEXT:   ]
-# RELOC-NEXT:   Address: 0x2200B0
-# RELOC-NEXT:   Offset: 0x200B0
+# RELOC-NEXT:   Address: 0x220338
+# RELOC-NEXT:   Offset: 0x338
 # RELOC-NEXT:   Size: 16
 # RELOC-NEXT:   Link: 0
 # RELOC-NEXT:   Info: 0
@@ -24,8 +24,8 @@
 # RELOC-NEXT: }
 # RELOC:      Relocations [
 # RELOC-NEXT:  Section ({{.*}}) .rela.dyn {
-# RELOC-NEXT:    0x2200B8 R_AARCH64_TLS_TPREL64 bar 0x0
-# RELOC-NEXT:    0x2200B0 R_AARCH64_TLS_TPREL64 foo 0x0
+# RELOC-NEXT:    0x220340 R_AARCH64_TLS_TPREL64 bar 0x0
+# RELOC-NEXT:    0x220338 R_AARCH64_TLS_TPREL64 foo 0x0
 # RELOC-NEXT:  }
 # RELOC-NEXT:]
 
@@ -34,10 +34,10 @@
 ## Page(0x2200B8) - Page(0x210000) = 0x10000 = 65536
 ## 0x2200B8 & 0xff8 = 0xB8 = 184
 # CHECK:     _start:
-# CHECK-NEXT: 210000: adrp x0, #65536
-# CHECK-NEXT: 210004: ldr  x0, [x0, #176]
-# CHECK-NEXT: 210008: adrp x0, #65536
-# CHECK-NEXT: 21000c: ldr  x0, [x0, #184]
+# CHECK-NEXT: 210278: adrp x0, #65536
+# CHECK-NEXT: 21027c: ldr  x0, [x0, #824]
+# CHECK-NEXT: 210280: adrp x0, #65536
+# CHECK-NEXT: 210284: ldr  x0, [x0, #832]
 
 .globl _start
 _start:

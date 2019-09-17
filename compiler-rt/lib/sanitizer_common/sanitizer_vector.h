@@ -23,11 +23,7 @@ namespace __sanitizer {
 template<typename T>
 class Vector {
  public:
-  explicit Vector()
-      : begin_()
-      , end_()
-      , last_() {
-  }
+  Vector() : begin_(), end_(), last_() {}
 
   ~Vector() {
     if (begin_)

@@ -139,6 +139,7 @@ def Post       : BlockCommand<"post">;
 def Pre        : BlockCommand<"pre">;
 def Remark     : BlockCommand<"remark">;
 def Remarks    : BlockCommand<"remarks">;
+def Retval     : BlockCommand<"retval">;
 def Sa         : BlockCommand<"sa">;
 def See        : BlockCommand<"see">;
 def Since      : BlockCommand<"since">;

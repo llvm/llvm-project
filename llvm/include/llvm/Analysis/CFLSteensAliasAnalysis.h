@@ -42,7 +42,8 @@ class CFLSteensAAResult : public AAResultBase<CFLSteensAAResult> {
   class FunctionInfo;
 
 public:
-  explicit CFLSteensAAResult(const TargetLibraryInfo &TLI);
+  explicit CFLSteensAAResult(
+      std::function<const TargetLibraryInfo &(Function &)> GetTLI);
   CFLSteensAAResult(CFLSteensAAResult &&Arg);
   ~CFLSteensAAResult();
 
@@ -90,7 +91,7 @@ public:
   }
 
 private:
-  const TargetLibraryInfo &TLI;
+  std::function<const TargetLibraryInfo &(Function &)> GetTLI;
 
   /// Cached mapping of Functions to their StratifiedSets.
   /// If a function's sets are currently being built, it is marked

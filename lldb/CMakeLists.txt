@@ -70,9 +70,8 @@ add_subdirectory(tools)
 add_subdirectory(docs)
 
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
-option(LLDB_TEST_USE_CUSTOM_C_COMPILER "Use the C compiler provided via LLDB_TEST_C_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
-option(LLDB_TEST_USE_CUSTOM_CXX_COMPILER "Use the C++ compiler provided via LLDB_TEST_CXX_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 if(LLDB_INCLUDE_TESTS)
+  set(LLDB_TEST_BUILD_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
   # Set the path to the default lldb test executable.
   set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")
@@ -81,15 +80,11 @@ if(LLDB_INCLUDE_TESTS)
   set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
   set(LLDB_DEFAULT_TEST_FILECHECK "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck${CMAKE_EXECUTABLE_SUFFIX}")
 
-  if (NOT LLDB_TEST_USE_CUSTOM_C_COMPILER AND TARGET clang)
+  if (TARGET clang)
     set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_C_COMPILER "")
-  endif()
-
-  if (NOT LLDB_TEST_USE_CUSTOM_CXX_COMPILER AND TARGET clang)
     set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
   else()
+    set(LLDB_DEFAULT_TEST_C_COMPILER "")
     set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
   endif()
 
@@ -101,7 +96,7 @@ if(LLDB_INCLUDE_TESTS)
 
   if (("${LLDB_TEST_C_COMPILER}" STREQUAL "") OR
       ("${LLDB_TEST_CXX_COMPILER}" STREQUAL ""))
-    message(FATAL_ERROR "LLDB test compilers not specified.  Tests will not run")
+    message(FATAL_ERROR "LLDB test compilers not specified. Tests will not run.")
   endif()
 
   set(LLDB_TEST_DEPS lldb)

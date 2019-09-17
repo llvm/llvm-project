@@ -20,7 +20,7 @@
 #include <new>
 #include <cstdlib>
 
-#include "count_new.hpp"
+#include "count_new.h"
 #include "test_macros.h"
 #include "deleter_types.h"
 

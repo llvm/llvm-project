@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -365,6 +366,11 @@ void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
 
   if (!Ctx.isInstantiationRecord())
     ++NonInstantiationEntries;
+
+  // Check to see if we're low on stack space. We can't do anything about this
+  // from here, but we can at least warn the user.
+  if (isStackNearlyExhausted())
+    warnStackExhausted(Ctx.PointOfInstantiation);
 }
 
 void Sema::popCodeSynthesisContext() {
@@ -1252,9 +1258,8 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
 
   // Create new LoopHintValueAttr with integral expression in place of the
   // non-type template parameter.
-  return LoopHintAttr::CreateImplicit(
-      getSema().Context, LH->getSemanticSpelling(), LH->getOption(),
-      LH->getState(), TransformedExpr, LH->getRange());
+  return LoopHintAttr::CreateImplicit(getSema().Context, LH->getOption(),
+                                      LH->getState(), TransformedExpr, *LH);
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(

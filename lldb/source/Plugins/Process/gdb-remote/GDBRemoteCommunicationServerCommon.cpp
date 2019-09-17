@@ -29,9 +29,9 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/Triple.h"
@@ -259,6 +259,15 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
     response.Format("os_version:{0}", version.getAsString());
     response.PutChar(';');
   }
+
+#if defined(__APPLE__)
+  llvm::VersionTuple maccatalyst_version = HostInfo::GetMacCatalystVersion();
+  if (!maccatalyst_version.empty()) {
+    response.Format("maccatalyst_version:{0}",
+                    maccatalyst_version.getAsString());
+    response.PutChar(';');
+  }
+#endif
 
   std::string s;
   if (HostInfo::GetOSBuildString(s)) {
@@ -550,10 +559,10 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead(
   packet.SetFilePos(::strlen("vFile:pread:"));
   int fd = packet.GetS32(-1);
   if (packet.GetChar() == ',') {
-    size_t count = packet.GetU64(UINT64_MAX);
+    size_t count = packet.GetU64(SIZE_MAX);
     if (packet.GetChar() == ',') {
       off_t offset = packet.GetU64(UINT32_MAX);
-      if (count == UINT64_MAX) {
+      if (count == SIZE_MAX) {
         response.Printf("F-1:%i", EINVAL);
         return SendPacketNoLock(response.GetString());
       }

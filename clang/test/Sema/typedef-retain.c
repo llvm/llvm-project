@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -fno-lax-vector-conversions
+// RUN: %clang_cc1 -fsyntax-only -verify %s -flax-vector-conversions=none
 
 typedef float float4 __attribute__((vector_size(16)));
 typedef int int4 __attribute__((vector_size(16)));

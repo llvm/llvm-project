@@ -4495,6 +4495,8 @@ public:
 
   // Explicit InitListExpr's originate from source code (and have valid source
   // locations). Implicit InitListExpr's are created by the semantic analyzer.
+  // FIXME: This is wrong; InitListExprs created by semantic analysis have
+  // valid source locations too!
   bool isExplicit() const {
     return LBraceLoc.isValid() && RBraceLoc.isValid();
   }
@@ -4828,6 +4830,10 @@ public:
   /// initializer value itself, if present.
   SourceLocation getEqualOrColonLoc() const { return EqualOrColonLoc; }
   void setEqualOrColonLoc(SourceLocation L) { EqualOrColonLoc = L; }
+
+  /// Whether this designated initializer should result in direct-initialization
+  /// of the designated subobject (eg, '{.foo{1, 2, 3}}').
+  bool isDirectInit() const { return EqualOrColonLoc.isInvalid(); }
 
   /// Determines whether this designated initializer used the
   /// deprecated GNU syntax for designated initializers.

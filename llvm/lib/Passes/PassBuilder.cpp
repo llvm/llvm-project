@@ -477,10 +477,15 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // We provide the opt remark emitter pass for LICM to use. We only need to do
   // this once as it is immutable.
   FPM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1), DebugLogging));
+  FPM.addPass(createFunctionToLoopPassAdaptor(
+      std::move(LPM1), EnableMSSALoopDependency, DebugLogging));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2), DebugLogging));
+  // The loop passes in LPM2 (IndVarSimplifyPass, LoopIdiomRecognizePass,
+  // LoopDeletionPass and LoopFullUnrollPass) do not preserve MemorySSA.
+  // *All* loop passes must preserve it, in order to be able to use it.
+  FPM.addPass(createFunctionToLoopPassAdaptor(
+      std::move(LPM2), /*UseMemorySSA=*/false, DebugLogging));
 
   // Eliminate redundancies.
   if (Level != O1) {
@@ -517,7 +522,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(DSEPass());
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-      DebugLogging));
+      EnableMSSALoopDependency, DebugLogging));
 
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
@@ -593,7 +598,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   MPM.addPass(PGOInstrumentationGen(IsCS));
 
   FunctionPassManager FPM;
-  FPM.addPass(createFunctionToLoopPassAdaptor(LoopRotatePass(), DebugLogging));
+  FPM.addPass(createFunctionToLoopPassAdaptor(
+      LoopRotatePass(), EnableMSSALoopDependency, DebugLogging));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   // Add the profile lowering pass.
@@ -894,8 +900,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
     C(OptimizePM, Level);
 
   // First rotate loops that may have been un-rotated by prior passes.
-  OptimizePM.addPass(
-      createFunctionToLoopPassAdaptor(LoopRotatePass(), DebugLogging));
+  OptimizePM.addPass(createFunctionToLoopPassAdaptor(
+      LoopRotatePass(), EnableMSSALoopDependency, DebugLogging));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
@@ -954,7 +960,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-      DebugLogging));
+      EnableMSSALoopDependency, DebugLogging));
 
   // Now that we've vectorized and unrolled loops, we may have more refined
   // alignment information, try to re-derive it here.
@@ -1575,6 +1581,26 @@ Expected<bool> parseLoopUnswitchOptions(StringRef Params) {
   }
   return Result;
 }
+
+Expected<bool> parseMergedLoadStoreMotionOptions(StringRef Params) {
+  bool Result = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "split-footer-bb") {
+      Result = Enable;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid MergedLoadStoreMotion pass parameter '{0}' ",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
@@ -1662,7 +1688,7 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
   // Explicitly handle pass manager names.
   if (Name == "function")
     return true;
-  if (Name == "loop")
+  if (Name == "loop" || Name == "loop-mssa")
     return true;
 
   // Explicitly handle custom-parsed pass names.
@@ -1686,7 +1712,7 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 template <typename CallbacksT>
 static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks) {
   // Explicitly handle pass manager names.
-  if (Name == "loop")
+  if (Name == "loop" || Name == "loop-mssa")
     return true;
 
   // Explicitly handle custom-parsed pass names.
@@ -1990,14 +2016,15 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       FPM.addPass(std::move(NestedFPM));
       return Error::success();
     }
-    if (Name == "loop") {
+    if (Name == "loop" || Name == "loop-mssa") {
       LoopPassManager LPM(DebugLogging);
       if (auto Err = parseLoopPassPipeline(LPM, InnerPipeline, VerifyEachPass,
                                            DebugLogging))
         return Err;
       // Add the nested pass manager with the appropriate adaptor.
-      FPM.addPass(
-          createFunctionToLoopPassAdaptor(std::move(LPM), DebugLogging));
+      bool UseMemorySSA = (Name == "loop-mssa");
+      FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
+                                                  DebugLogging));
       return Error::success();
     }
     if (auto Count = parseRepeatPassName(Name)) {

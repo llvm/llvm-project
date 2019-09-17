@@ -7,13 +7,13 @@
 
 ## Sanity check that the section header table is at offset 64:
 # RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=VALIDATE
-# VALIDATE: SectionHeaderOffset: 0x40{{$}}
+# VALIDATE: SectionHeaderOffset: 0x80{{$}}
 
 ## Truncate the file to end before the section header table ends.
-# RUN: %python -c "with open('%/t.o', 'r+b') as input: input.truncate(65)"
+# RUN: %python -c "with open('%/t.o', 'r+b') as input: input.truncate(0x7f)"
 # RUN: not llvm-objcopy %t.o 2>&1 | FileCheck %s -DINPUT=%t.o --check-prefix=CASE1
 
-# CASE1: error: '[[INPUT]]': section header table goes past the end of the file: e_shoff = 0x40
+# CASE1: error: '[[INPUT]]': section header table goes past the end of the file: e_shoff = 0x80
 
 ## Set the e_shoff field to a value much larger than the object file size.
 # RUN: %python -c "with open('%/t2.o', 'r+b') as input: import struct; bytes = struct.pack('<Q', 0x40000000); input.seek(40); input.write(bytes)"

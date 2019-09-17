@@ -49,9 +49,10 @@
 
 using namespace llvm;
 
-cl::opt<bool> EnableIPRA("enable-ipra", cl::init(false), cl::Hidden,
-                         cl::desc("Enable interprocedural register allocation "
-                                  "to reduce load/store at procedure calls."));
+static cl::opt<bool>
+    EnableIPRA("enable-ipra", cl::init(false), cl::Hidden,
+               cl::desc("Enable interprocedural register allocation "
+                        "to reduce load/store at procedure calls."));
 static cl::opt<bool> DisablePostRASched("disable-post-ra", cl::Hidden,
     cl::desc("Disable Post Regalloc Scheduler"));
 static cl::opt<bool> DisableBranchFold("disable-branch-fold", cl::Hidden,
@@ -152,8 +153,10 @@ static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
 // substitutePass(&PostRASchedulerID, &PostMachineSchedulerID).
 // Targets can return true in targetSchedulesPostRAScheduling() and
 // insert a PostRA scheduling pass wherever it wants.
-cl::opt<bool> MISchedPostRA("misched-postra", cl::Hidden,
-  cl::desc("Run MachineScheduler post regalloc (independent of preRA sched)"));
+static cl::opt<bool> MISchedPostRA(
+    "misched-postra", cl::Hidden,
+    cl::desc(
+        "Run MachineScheduler post regalloc (independent of preRA sched)"));
 
 // Experimental option to run live interval analysis early.
 static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
@@ -175,10 +178,10 @@ static cl::opt<CFLAAType> UseCFLAA(
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
 /// to duplicate their names all over the place.
-const char *StartAfterOptName = "start-after";
-const char *StartBeforeOptName = "start-before";
-const char *StopAfterOptName = "stop-after";
-const char *StopBeforeOptName = "stop-before";
+static const char *StartAfterOptName = "start-after";
+static const char *StartBeforeOptName = "start-before";
+static const char *StopAfterOptName = "stop-after";
+static const char *StopBeforeOptName = "stop-before";
 
 static cl::opt<std::string>
     StartAfterOpt(StringRef(StartAfterOptName),

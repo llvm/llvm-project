@@ -29,13 +29,13 @@ catch:
 
 ; CHECK: f: # @f
 ; CHECK: pushq   %rbp
-; CHECK: .seh_pushreg 5
+; CHECK: .seh_pushreg %rbp
 ; CHECK: subq    $64, %rsp
 ; CHECK: .seh_stackalloc 64
 ; CHECK: leaq    64(%rsp), %rbp
-; CHECK: .seh_setframe 5, 64
+; CHECK: .seh_setframe %rbp, 64
 ; CHECK: movaps  %xmm6, -16(%rbp)        # 16-byte Spill
-; CHECK: .seh_savexmm 6, 48
+; CHECK: .seh_savexmm %xmm6, 48
 ; CHECK: .seh_endprologue
 ; CHECK: movq    $-2, -24(%rbp)
 ; CHECK: movsd   fp_global(%rip), %xmm6  # xmm6 = mem[0],zero
@@ -54,12 +54,12 @@ catch:
 ; CHECK: # %catch
 ; CHECK: movq    %rdx, 16(%rsp)
 ; CHECK: pushq   %rbp
-; CHECK: .seh_pushreg 5
+; CHECK: .seh_pushreg %rbp
 ; CHECK: subq    $48, %rsp
 ; CHECK: .seh_stackalloc 48
 ; CHECK: leaq    64(%rdx), %rbp
 ; CHECK: movapd  %xmm6, 32(%rsp)
-; CHECK: .seh_savexmm 6, 32
+; CHECK: .seh_savexmm %xmm6, 32
 ; CHECK: .seh_endprologue
 ; CHECK: movapd  32(%rsp), %xmm6
 ; CHECK: leaq    .LBB0_1(%rip), %rax

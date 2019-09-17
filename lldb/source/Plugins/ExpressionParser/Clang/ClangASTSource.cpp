@@ -9,6 +9,7 @@
 #include "ClangASTSource.h"
 
 #include "ASTDumper.h"
+#include "ClangDeclVendor.h"
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Core/Module.h"
@@ -100,17 +101,15 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
       if (!language_runtime)
         break;
 
-      DeclVendor *runtime_decl_vendor = language_runtime->GetDeclVendor();
-
-      if (!runtime_decl_vendor)
-        break;
-
-      sources.push_back(runtime_decl_vendor->GetImporterSource());
+      if (auto *runtime_decl_vendor = llvm::dyn_cast_or_null<ClangDeclVendor>(
+              language_runtime->GetDeclVendor())) {
+        sources.push_back(runtime_decl_vendor->GetImporterSource());
+      }
     } while (false);
 
     do {
-      DeclVendor *modules_decl_vendor =
-          m_target->GetClangModulesDeclVendor();
+      auto *modules_decl_vendor = llvm::cast<ClangModulesDeclVendor>(
+          m_target->GetClangModulesDeclVendor());
 
       if (!modules_decl_vendor)
         break;
@@ -973,7 +972,8 @@ void ClangASTSource::FindExternalVisibleDecls(
         uint32_t max_matches = 1;
         std::vector<clang::NamedDecl *> decls;
 
-        if (!decl_vendor->FindDecls(name, append, max_matches, decls))
+        auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+        if (!clang_decl_vendor->FindDecls(name, append, max_matches, decls))
           break;
 
         if (log) {
@@ -1425,7 +1425,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     uint32_t max_matches = 1;
     std::vector<clang::NamedDecl *> decls;
 
-    if (!decl_vendor->FindDecls(interface_name, append, max_matches, decls))
+    auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+    if (!clang_decl_vendor->FindDecls(interface_name, append, max_matches,
+                                      decls))
       break;
 
     ObjCInterfaceDecl *runtime_interface_decl =
@@ -1614,7 +1616,8 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     uint32_t max_matches = 1;
     std::vector<clang::NamedDecl *> decls;
 
-    if (!decl_vendor->FindDecls(class_name, append, max_matches, decls))
+    auto *clang_decl_vendor = llvm::cast<ClangDeclVendor>(decl_vendor);
+    if (!clang_decl_vendor->FindDecls(class_name, append, max_matches, decls))
       break;
 
     DeclFromUser<const ObjCInterfaceDecl> interface_decl_from_runtime(

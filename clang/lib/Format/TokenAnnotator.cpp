@@ -40,6 +40,21 @@ static bool canBeObjCSelectorComponent(const FormatToken &Tok) {
   return Tok.Tok.getIdentifierInfo() != nullptr;
 }
 
+/// With `Left` being '(', check if we're at either `[...](` or
+/// `[...]<...>(`, where the [ opens a lambda capture list.
+static bool isLambdaParameterList(const FormatToken *Left) {
+  // Skip <...> if present.
+  if (Left->Previous && Left->Previous->is(tok::greater) &&
+      Left->Previous->MatchingParen &&
+      Left->Previous->MatchingParen->is(TT_TemplateOpener))
+    Left = Left->Previous->MatchingParen;
+
+  // Check for `[...]`.
+  return Left->Previous && Left->Previous->is(tok::r_square) &&
+         Left->Previous->MatchingParen &&
+         Left->Previous->MatchingParen->is(TT_LambdaLSquare);
+}
+
 /// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
@@ -191,9 +206,7 @@ private:
                Left->Previous->is(TT_JsTypeColon)) {
       // let x: (SomeType);
       Contexts.back().IsExpression = false;
-    } else if (Left->Previous && Left->Previous->is(tok::r_square) &&
-               Left->Previous->MatchingParen &&
-               Left->Previous->MatchingParen->is(TT_LambdaLSquare)) {
+    } else if (isLambdaParameterList(Left)) {
       // This is a parameter list of a lambda expression.
       Contexts.back().IsExpression = false;
     } else if (Line.InPPDirective &&
@@ -2611,6 +2624,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Style.Language == FormatStyle::LK_JavaScript ||
            !Left.TokenText.endswith("=*/");
   if (Right.is(tok::l_paren)) {
+    // using (FileStream fs...
+    if (Style.isCSharp() && Left.is(tok::kw_using) &&
+        Style.SpaceBeforeParens != FormatStyle::SBPO_Never)
+      return true;
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))
       return true;
@@ -2746,6 +2763,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                        tok::kw_void))
         return true;
     }
+    // `foo as const;` casts into a const type.
+    if (Left.endsSequence(tok::kw_const, Keywords.kw_as)) {
+      return false;
+    }
     if ((Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                       tok::kw_const) ||
          // "of" is only a keyword if it appears after another identifier
@@ -2870,7 +2891,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       Left.isOneOf(tok::arrow, tok::period, tok::arrowstar, tok::periodstar) ||
       (Right.is(tok::period) && Right.isNot(TT_DesignatedInitializerPeriod)))
     return false;
-  if (!Style.SpaceBeforeAssignmentOperators &&
+  if (!Style.SpaceBeforeAssignmentOperators && Left.isNot(TT_TemplateCloser) &&
       Right.getPrecedence() == prec::Assignment)
     return false;
   if (Style.Language == FormatStyle::LK_Java && Right.is(tok::coloncolon) &&

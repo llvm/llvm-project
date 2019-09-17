@@ -30,6 +30,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -321,7 +322,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Align: {
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
     unsigned Offset = Layout.getFragmentOffset(&AF);
-    unsigned Size = OffsetToAlignment(Offset, AF.getAlignment());
+    unsigned Size = offsetToAlignment(Offset, llvm::Align(AF.getAlignment()));
 
     // Insert extra Nops for code alignment if the target define
     // shouldInsertExtraNopBytesForCodeAlign target hook.

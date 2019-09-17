@@ -43,8 +43,8 @@ public:
 
 class ArgParser {
 public:
-  // Concatenate LINK environment variable and given arguments and parse them.
-  llvm::opt::InputArgList parseLINK(std::vector<const char *> args);
+  // Parses command line options.
+  llvm::opt::InputArgList parse(llvm::ArrayRef<const char *> args);
 
   // Tokenizes a given string and then parses as command line options.
   llvm::opt::InputArgList parse(StringRef s) { return parse(tokenize(s)); }
@@ -56,8 +56,8 @@ public:
   parseDirectives(StringRef s);
 
 private:
-  // Parses command line options.
-  llvm::opt::InputArgList parse(llvm::ArrayRef<const char *> args);
+  // Concatenate LINK environment variable.
+  void addLINK(SmallVector<const char *, 256> &argv);
 
   std::vector<const char *> tokenize(StringRef s);
 
@@ -77,7 +77,7 @@ public:
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive);
+  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
 private:
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
@@ -97,6 +97,10 @@ private:
 
   // Library search path. The first element is always "" (current directory).
   std::vector<StringRef> searchPaths;
+
+  // Convert resource files and potentially merge input resource object
+  // trees into one resource tree.
+  void convertResources();
 
   void maybeExportMinGWSymbols(const llvm::opt::InputArgList &args);
 
@@ -120,7 +124,8 @@ private:
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
 
-  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive);
+  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
+                 bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);
 
@@ -184,7 +189,8 @@ void assignExportOrdinals();
 void checkFailIfMismatch(StringRef arg, InputFile *source);
 
 // Convert Windows resource files (.res files) to a .obj file.
-MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs);
+MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
+                                 ArrayRef<ObjFile *> objs);
 
 void runMSVCLinker(std::string rsp, ArrayRef<StringRef> objects);
 

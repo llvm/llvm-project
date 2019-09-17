@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -48,6 +49,7 @@ class ScopedPrinter;
 namespace object {
 
 class WindowsResource;
+class ResourceSectionRef;
 
 const size_t WIN_RES_MAGIC_SIZE = 16;
 const size_t WIN_RES_NULL_ENTRY_SIZE = 16;
@@ -151,8 +153,11 @@ private:
 class WindowsResourceParser {
 public:
   class TreeNode;
-  WindowsResourceParser();
+  WindowsResourceParser(bool MinGW = false);
   Error parse(WindowsResource *WR, std::vector<std::string> &Duplicates);
+  Error parse(ResourceSectionRef &RSR, StringRef Filename,
+              std::vector<std::string> &Duplicates);
+  void cleanUpManifests(std::vector<std::string> &Duplicates);
   void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }
   const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
@@ -181,32 +186,38 @@ public:
   private:
     friend class WindowsResourceParser;
 
-    static uint32_t StringCount;
-    static uint32_t DataCount;
-
-    static std::unique_ptr<TreeNode> createStringNode();
+    // Index is the StringTable vector index for this node's name.
+    static std::unique_ptr<TreeNode> createStringNode(uint32_t Index);
     static std::unique_ptr<TreeNode> createIDNode();
+    // DataIndex is the Data vector index that the data node points at.
     static std::unique_ptr<TreeNode> createDataNode(uint16_t MajorVersion,
                                                     uint16_t MinorVersion,
                                                     uint32_t Characteristics,
-                                                    uint32_t Origin);
+                                                    uint32_t Origin,
+                                                    uint32_t DataIndex);
 
-    explicit TreeNode(bool IsStringNode);
+    explicit TreeNode(uint32_t StringIndex);
     TreeNode(uint16_t MajorVersion, uint16_t MinorVersion,
-             uint32_t Characteristics, uint32_t Origin);
+             uint32_t Characteristics, uint32_t Origin, uint32_t DataIndex);
 
     bool addEntry(const ResourceEntryRef &Entry, uint32_t Origin,
-                  bool &IsNewTypeString, bool &IsNewNameString,
+                  std::vector<std::vector<uint8_t>> &Data,
+                  std::vector<std::vector<UTF16>> &StringTable,
                   TreeNode *&Result);
-    TreeNode &addTypeNode(const ResourceEntryRef &Entry, bool &IsNewTypeString);
-    TreeNode &addNameNode(const ResourceEntryRef &Entry, bool &IsNewNameString);
+    TreeNode &addTypeNode(const ResourceEntryRef &Entry,
+                          std::vector<std::vector<UTF16>> &StringTable);
+    TreeNode &addNameNode(const ResourceEntryRef &Entry,
+                          std::vector<std::vector<UTF16>> &StringTable);
     bool addLanguageNode(const ResourceEntryRef &Entry, uint32_t Origin,
+                         std::vector<std::vector<uint8_t>> &Data,
                          TreeNode *&Result);
     bool addDataChild(uint32_t ID, uint16_t MajorVersion, uint16_t MinorVersion,
                       uint32_t Characteristics, uint32_t Origin,
-                      TreeNode *&Result);
+                      uint32_t DataIndex, TreeNode *&Result);
     TreeNode &addIDChild(uint32_t ID);
-    TreeNode &addNameChild(ArrayRef<UTF16> NameRef, bool &IsNewString);
+    TreeNode &addNameChild(ArrayRef<UTF16> NameRef,
+                           std::vector<std::vector<UTF16>> &StringTable);
+    void shiftDataIndexDown(uint32_t Index);
 
     bool IsDataNode = false;
     uint32_t StringIndex;
@@ -222,12 +233,30 @@ public:
     uint32_t Origin;
   };
 
+  struct StringOrID {
+    bool IsString;
+    ArrayRef<UTF16> String;
+    uint32_t ID;
+
+    StringOrID(uint32_t ID) : IsString(false), ID(ID) {}
+    StringOrID(ArrayRef<UTF16> String) : IsString(true), String(String) {}
+  };
+
 private:
+  Error addChildren(TreeNode &Node, ResourceSectionRef &RSR,
+                    const coff_resource_dir_table &Table, uint32_t Origin,
+                    std::vector<StringOrID> &Context,
+                    std::vector<std::string> &Duplicates);
+  bool shouldIgnoreDuplicate(const ResourceEntryRef &Entry) const;
+  bool shouldIgnoreDuplicate(const std::vector<StringOrID> &Context) const;
+
   TreeNode Root;
   std::vector<std::vector<uint8_t>> Data;
   std::vector<std::vector<UTF16>> StringTable;
 
   std::vector<std::string> InputFilenames;
+
+  bool MinGW;
 };
 
 Expected<std::unique_ptr<MemoryBuffer>>

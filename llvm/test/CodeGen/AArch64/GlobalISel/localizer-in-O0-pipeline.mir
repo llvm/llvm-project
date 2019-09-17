@@ -29,7 +29,7 @@
 ---
 # CHECK-LABEL: name: foo
 name:            foo
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -60,18 +60,18 @@ registers:
 
 # Second block will get the constant 1.0 when the localizer is enabled.
 # CHECK: bb.1.{{[a-zA-Z0-9]+}}:
-# OPT-NOT: G_FCONSTANT
+# OPT: [[FONE:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 1.000000e+00
 # OPTNONE: [[FONE:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 1.000000e+00
 # CHECK: G_BR %bb.3
 
 # Thrid block will get the constant 2.0 when the localizer is enabled.
 # CHECK: bb.2.{{[a-zA-Z0-9]+}}:
-# OPT-NOT: G_FCONSTANT
+# OPT: [[FTWO:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 2.000000e+00
 # OPTNONE: [[FTWO:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 2.000000e+00
 
 # CHECK: bb.3.end
 # OPTNONE: %2:fpr(s32) = PHI [[FONE]](s32), %bb.1, [[FTWO]](s32), %bb.2
-# OPT: %2:fpr(s32) = PHI %4(s32), %bb.1, %5(s32), %bb.2
+# OPT: %2:fpr(s32) = PHI [[FONE]](s32), %bb.1, [[FTWO]](s32), %bb.2
 # CHECK-NEXT: G_FADD %0, %2
 body:             |
   bb.0 (%ir-block.0):

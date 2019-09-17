@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=3 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_sync.ll but with a personality which
 ; indicates that the exception handler *can* catch asynchronous exceptions. As
@@ -42,12 +42,12 @@ entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
 ; CHECK: invoke void @"?overflow@@YAXXZ"()
-; CHECK:          to label %invoke.cont unwind label %catch.dispatch
+; CHECK:          to label %invoke.cont.dead unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ"()
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
-; CHECK:      invoke.cont:
+; CHECK:      invoke.cont.dead:
 ; CHECK-NEXT: unreachable
   br label %invoke.cont1
 
@@ -83,7 +83,7 @@ entry:
 ; CHECK-NOT:  nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* dereferenceable_or_null(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
+; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ_may_throw"()
 ; CHECK-NEXT:   unreachable
   %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
@@ -101,12 +101,12 @@ entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
 ; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"() 
-; CHECK:          to label %invoke.cont unwind label %catch.dispatch
+; CHECK:          to label %invoke.cont.dead unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ_may_throw"() 
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
-; CHECK:      invoke.cont:
+; CHECK:      invoke.cont.dead:
 ; CHECK-NEXT: unreachable
   br label %invoke.cont1
 

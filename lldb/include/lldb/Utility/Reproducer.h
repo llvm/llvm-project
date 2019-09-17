@@ -10,7 +10,6 @@
 #define LLDB_UTILITY_REPRODUCER_H
 
 #include "lldb/Utility/FileSpec.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileCollector.h"
@@ -184,10 +183,37 @@ private:
   std::vector<std::unique_ptr<DataRecorder>> m_data_recorders;
 };
 
+class ProcessGDBRemoteProvider
+    : public repro::Provider<ProcessGDBRemoteProvider> {
+public:
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+
+  ProcessGDBRemoteProvider(const FileSpec &directory) : Provider(directory) {}
+
+  llvm::raw_ostream *GetHistoryStream();
+
+  void SetCallback(std::function<void()> callback) {
+    m_callback = std::move(callback);
+  }
+
+  void Keep() override { m_callback(); }
+  void Discard() override { m_callback(); }
+
+  static char ID;
+
+private:
+  std::function<void()> m_callback;
+  std::unique_ptr<llvm::raw_fd_ostream> m_stream_up;
+};
+
 /// The generator is responsible for the logic needed to generate a
 /// reproducer. For doing so it relies on providers, who serialize data that
 /// is necessary for reproducing  a failure.
 class Generator final {
+
 public:
   Generator(const FileSpec &root);
   ~Generator();
@@ -298,6 +324,19 @@ private:
   llvm::Optional<Loader> m_loader;
 
   mutable std::mutex m_mutex;
+};
+
+/// Helper class for replaying commands through the reproducer.
+class CommandLoader {
+public:
+  CommandLoader(std::vector<std::string> files) : m_files(files) {}
+
+  static std::unique_ptr<CommandLoader> Create(Loader *loader);
+  llvm::Optional<std::string> GetNextFile();
+
+private:
+  std::vector<std::string> m_files;
+  unsigned m_index = 0;
 };
 
 } // namespace repro

@@ -47,13 +47,10 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
   if (CGOpts.DisableLifetimeMarkers)
     return false;
 
-  // Disable lifetime markers in msan builds.
-  // FIXME: Remove this when msan works with lifetime markers.
-  if (LangOpts.Sanitize.has(SanitizerKind::Memory))
-    return false;
-
-  // Asan uses markers for use-after-scope checks.
-  if (CGOpts.SanitizeAddressUseAfterScope)
+  // Sanitizers may use markers.
+  if (CGOpts.SanitizeAddressUseAfterScope ||
+      LangOpts.Sanitize.has(SanitizerKind::HWAddress) ||
+      LangOpts.Sanitize.has(SanitizerKind::Memory))
     return true;
 
   // For now, only in optimized builds.
@@ -2206,7 +2203,7 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
 
   // Get the current enclosing function if it exists. If it doesn't
   // we can't check the target features anyhow.
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   if (!FD)
     return;
 

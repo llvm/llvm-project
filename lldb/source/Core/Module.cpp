@@ -1037,6 +1037,15 @@ size_t Module::FindTypes(
   return num_matches;
 }
 
+size_t Module::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                         LanguageSet languages, bool append, TypeMap &types) {
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  if (SymbolFile *symbols = GetSymbolFile())
+    return symbols->FindTypes(pattern, languages, append, types);
+  return 0;
+}
+
 SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -1623,6 +1632,26 @@ bool Module::RemapSourceFile(llvm::StringRef path,
                              std::string &new_path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   return m_source_mappings.RemapPath(path, new_path);
+}
+
+bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
+  if (!arch_spec.IsValid())
+    return false;
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES),
+           "module has arch %s, merging/replacing with arch %s",
+           m_arch.GetTriple().getTriple().c_str(),
+           arch_spec.GetTriple().getTriple().c_str());
+  if (!m_arch.IsCompatibleMatch(arch_spec)) {
+    // The new architecture is different, we just need to replace it.
+    return SetArchitecture(arch_spec);
+  }
+
+  // Merge bits from arch_spec into "merged_arch" and set our architecture.
+  ArchSpec merged_arch(m_arch);
+  merged_arch.MergeFrom(arch_spec);
+  // SetArchitecture() is a no-op if m_arch is already valid.
+  m_arch = ArchSpec();
+  return SetArchitecture(merged_arch);
 }
 
 llvm::VersionTuple Module::GetVersion() {

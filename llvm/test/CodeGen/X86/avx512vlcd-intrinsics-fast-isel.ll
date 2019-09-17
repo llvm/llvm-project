@@ -7,7 +7,6 @@ define <2 x i64> @test_mm_broadcastmb_epi64(<2 x i64> %a, <2 x i64> %b) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X86-NEXT:    retl
@@ -34,7 +33,6 @@ define <4 x i64> @test_mm256_broadcastmb_epi64(<4 x i64> %a, <4 x i64> %b) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X86-NEXT:    retl

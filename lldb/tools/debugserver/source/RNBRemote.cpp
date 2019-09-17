@@ -2091,9 +2091,6 @@ rnb_err_t set_logging(const char *p) {
         } else if (strncmp(p, "LOG_SHLIB", sizeof("LOG_SHLIB") - 1) == 0) {
           p += sizeof("LOG_SHLIB") - 1;
           bitmask |= LOG_SHLIB;
-        } else if (strncmp(p, "LOG_MEMORY", sizeof("LOG_MEMORY") - 1) == 0) {
-          p += sizeof("LOG_MEMORY") - 1;
-          bitmask |= LOG_MEMORY;
         } else if (strncmp(p, "LOG_MEMORY_DATA_SHORT",
                            sizeof("LOG_MEMORY_DATA_SHORT") - 1) == 0) {
           p += sizeof("LOG_MEMORY_DATA_SHORT") - 1;
@@ -2106,6 +2103,9 @@ rnb_err_t set_logging(const char *p) {
                            sizeof("LOG_MEMORY_PROTECTIONS") - 1) == 0) {
           p += sizeof("LOG_MEMORY_PROTECTIONS") - 1;
           bitmask |= LOG_MEMORY_PROTECTIONS;
+        } else if (strncmp(p, "LOG_MEMORY", sizeof("LOG_MEMORY") - 1) == 0) {
+          p += sizeof("LOG_MEMORY") - 1;
+          bitmask |= LOG_MEMORY;
         } else if (strncmp(p, "LOG_BREAKPOINTS",
                            sizeof("LOG_BREAKPOINTS") - 1) == 0) {
           p += sizeof("LOG_BREAKPOINTS") - 1;
@@ -2665,6 +2665,17 @@ void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
     for (size_t i = 0; i < buf_size; i++)
       ostrm << RAWHEX8(p[i]);
   }
+}
+
+std::string cstring_to_asciihex_string(const char *str) {
+  std::string hex_str;
+  hex_str.reserve (strlen (str) * 2);
+  while (str && *str) {
+    char hexbuf[5];
+    snprintf (hexbuf, sizeof(hexbuf), "%02x", *str++);
+    hex_str += hexbuf;
+  }
+  return hex_str;
 }
 
 void append_hexified_string(std::ostream &ostrm, const std::string &string) {
@@ -3818,8 +3829,13 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             }
           }
           if (attach_failed_due_to_sip) {
-            SendPacket("E87"); // E87 is the magic value which says that we are
-                               // not allowed to attach
+            std::string return_message = "E96;";
+            return_message += cstring_to_asciihex_string(
+                "Process attach denied, possibly because "
+                "System Integrity Protection is enabled and "
+                "process does not allow attaching.");
+
+            SendPacket(return_message.c_str());
             DNBLogError("Attach failed because process does not allow "
                         "attaching: \"%s\".",
                         err_str);

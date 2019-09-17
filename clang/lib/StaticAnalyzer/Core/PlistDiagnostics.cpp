@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
@@ -20,7 +21,6 @@
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -134,6 +134,7 @@ private:
   void EmitRanges(raw_ostream &o, const ArrayRef<SourceRange> Ranges,
                   unsigned indent);
   void EmitMessage(raw_ostream &o, StringRef Message, unsigned indent);
+  void EmitFixits(raw_ostream &o, ArrayRef<FixItHint> fixits, unsigned indent);
 
   void ReportControlFlow(raw_ostream &o,
                          const PathDiagnosticControlFlowPiece& P,
@@ -222,6 +223,33 @@ void PlistPrinter::EmitMessage(raw_ostream &o, StringRef Message,
   EmitString(o, Message) << '\n';
 }
 
+void PlistPrinter::EmitFixits(raw_ostream &o, ArrayRef<FixItHint> fixits,
+                              unsigned indent) {
+  if (fixits.size() == 0)
+    return;
+
+  const SourceManager &SM = PP.getSourceManager();
+  const LangOptions &LangOpts = PP.getLangOpts();
+
+  Indent(o, indent) << "<key>fixits</key>\n";
+  Indent(o, indent) << "<array>\n";
+  for (const auto &fixit : fixits) {
+    assert(!fixit.isNull());
+    // FIXME: Add support for InsertFromRange and BeforePreviousInsertion.
+    assert(!fixit.InsertFromRange.isValid() && "Not implemented yet!");
+    assert(!fixit.BeforePreviousInsertions && "Not implemented yet!");
+    Indent(o, indent) << " <dict>\n";
+    Indent(o, indent) << "  <key>remove_range</key>\n";
+    EmitRange(o, SM, Lexer::getAsCharRange(fixit.RemoveRange, SM, LangOpts),
+              FM, indent + 2);
+    Indent(o, indent) << "  <key>insert_string</key>";
+    EmitString(o, fixit.CodeToInsert);
+    o << "\n";
+    Indent(o, indent) << " </dict>\n";
+  }
+  Indent(o, indent) << "</array>\n";
+}
+
 void PlistPrinter::ReportControlFlow(raw_ostream &o,
                                      const PathDiagnosticControlFlowPiece& P,
                                      unsigned indent) {
@@ -272,6 +300,9 @@ void PlistPrinter::ReportControlFlow(raw_ostream &o,
     EmitString(o, s) << '\n';
   }
 
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on constrol flow pieces are not implemented yet!");
+
   --indent;
   Indent(o, indent) << "</dict>\n";
 }
@@ -308,6 +339,9 @@ void PlistPrinter::ReportEvent(raw_ostream &o, const PathDiagnosticEventPiece& P
   // Output the text.
   EmitMessage(o, P.getString(), indent);
 
+  // Output the fixits.
+  EmitFixits(o, P.getFixits(), indent);
+
   // Finish up.
   --indent;
   Indent(o, indent); o << "</dict>\n";
@@ -335,6 +369,9 @@ void PlistPrinter::ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
 
   if (auto callExit = P.getCallExitEvent())
     ReportPiece(o, *callExit, indent, depth, /*includeControlFlow*/ true);
+
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on call pieces are not implemented yet!");
 }
 
 void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
@@ -347,6 +384,9 @@ void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
        I != E; ++I) {
     ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ false);
   }
+
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on constrol flow pieces are not implemented yet!");
 }
 
 void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
@@ -404,6 +444,9 @@ void PlistPrinter::ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
   // Output the text.
   EmitMessage(o, P.getString(), indent);
 
+  // Output the fixits.
+  EmitFixits(o, P.getFixits(), indent);
+
   // Finish up.
   --indent;
   Indent(o, indent); o << "</dict>\n";
@@ -431,6 +474,9 @@ void PlistPrinter::ReportPopUp(raw_ostream &o,
 
   // Output the text.
   EmitMessage(o, P.getString(), indent);
+
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on pop-up pieces are not implemented yet!");
 
   // Finish up.
   --indent;
@@ -633,7 +679,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "   <key>type</key>";
     EmitString(o, D->getBugType()) << '\n';
     o << "   <key>check_name</key>";
-    EmitString(o, D->getCheckName()) << '\n';
+    EmitString(o, D->getCheckerName()) << '\n';
 
     o << "   <!-- This hash is experimental and going to change! -->\n";
     o << "   <key>issue_hash_content_of_line_in_context</key>";
@@ -643,7 +689,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
                                             : D->getLocation().asLocation()),
                     SM);
     const Decl *DeclWithIssue = D->getDeclWithIssue();
-    EmitString(o, GetIssueHash(SM, L, D->getCheckName(), D->getBugType(),
+    EmitString(o, GetIssueHash(SM, L, D->getCheckerName(), D->getBugType(),
                                DeclWithIssue, LangOpts))
         << '\n';
 

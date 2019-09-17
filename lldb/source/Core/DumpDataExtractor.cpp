@@ -14,12 +14,12 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "clang/AST/ASTContext.h"
@@ -28,6 +28,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <limits>
@@ -64,8 +65,12 @@ static float half2float(uint16_t half) {
   return u.f * ldexpf(1, -112);
 }
 
-static bool GetAPInt(const DataExtractor &data, lldb::offset_t *offset_ptr,
-                     lldb::offset_t byte_size, llvm::APInt &result) {
+static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
+                                            lldb::offset_t *offset_ptr,
+                                            lldb::offset_t byte_size) {
+  if (byte_size == 0)
+    return llvm::None;
+
   llvm::SmallVector<uint64_t, 2> uint64_array;
   lldb::offset_t bytes_left = byte_size;
   uint64_t u64;
@@ -81,8 +86,7 @@ static bool GetAPInt(const DataExtractor &data, lldb::offset_t *offset_ptr,
       }
       uint64_array.push_back(u64);
     }
-    result = llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
-    return true;
+    return llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
   } else if (byte_order == lldb::eByteOrderBig) {
     lldb::offset_t be_offset = *offset_ptr + byte_size;
     lldb::offset_t temp_offset;
@@ -101,18 +105,17 @@ static bool GetAPInt(const DataExtractor &data, lldb::offset_t *offset_ptr,
       uint64_array.push_back(u64);
     }
     *offset_ptr += byte_size;
-    result = llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
-    return true;
+    return llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
   }
-  return false;
+  return llvm::None;
 }
 
 static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
                                 lldb::offset_t offset, lldb::offset_t byte_size,
                                 bool is_signed, unsigned radix) {
-  llvm::APInt apint;
-  if (GetAPInt(data, &offset, byte_size, apint)) {
-    std::string apint_str(apint.toString(radix, is_signed));
+  llvm::Optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
+  if (apint.hasValue()) {
+    std::string apint_str(apint.getValue().toString(radix, is_signed));
     switch (radix) {
     case 2:
       s->Write("0b", 2);
@@ -555,49 +558,31 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
       if (target_sp) {
-        ClangASTContext *clang_ast = target_sp->GetScratchClangASTContext();
-        if (clang_ast) {
-          clang::ASTContext *ast = clang_ast->getASTContext();
-          if (ast) {
-            llvm::SmallVector<char, 256> sv;
-            // Show full precision when printing float values
-            const unsigned format_precision = 0;
-            const unsigned format_max_padding = 100;
-            size_t item_bit_size = item_byte_size * 8;
+        auto type_system_or_err =
+            target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
+        if (!type_system_or_err) {
+          llvm::consumeError(type_system_or_err.takeError());
+        } else {
+          auto &type_system = *type_system_or_err;
+          llvm::SmallVector<char, 256> sv;
+          // Show full precision when printing float values
+          const unsigned format_precision = 0;
+          const unsigned format_max_padding =
+              target_sp->GetMaxZeroPaddingInFloatFormat();
 
-            if (item_bit_size == ast->getTypeSize(ast->FloatTy)) {
-              llvm::APInt apint(item_bit_size,
-                                DE.GetMaxU64(&offset, item_byte_size));
-              llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->FloatTy),
-                                    apint);
-              apfloat.toString(sv, format_precision, format_max_padding);
-            } else if (item_bit_size == ast->getTypeSize(ast->DoubleTy)) {
-              llvm::APInt apint;
-              if (GetAPInt(DE, &offset, item_byte_size, apint)) {
-                llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->DoubleTy),
-                                      apint);
-                apfloat.toString(sv, format_precision, format_max_padding);
-              }
-            } else if (item_bit_size == ast->getTypeSize(ast->LongDoubleTy)) {
-              const auto &semantics =
-                  ast->getFloatTypeSemantics(ast->LongDoubleTy);
+          const auto &semantics =
+              type_system.GetFloatTypeSemantics(item_byte_size);
 
-              offset_t byte_size = item_byte_size;
-              if (&semantics == &llvm::APFloatBase::x87DoubleExtended())
-                byte_size = (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
-
-              llvm::APInt apint;
-              if (GetAPInt(DE, &offset, byte_size, apint)) {
-                llvm::APFloat apfloat(semantics, apint);
-                apfloat.toString(sv, format_precision, format_max_padding);
-              }
-            } else if (item_bit_size == ast->getTypeSize(ast->HalfTy)) {
-              llvm::APInt apint(item_bit_size, DE.GetU16(&offset));
-              llvm::APFloat apfloat(ast->getFloatTypeSemantics(ast->HalfTy),
-                                    apint);
-              apfloat.toString(sv, format_precision, format_max_padding);
-            }
-
+          // Recalculate the byte size in case of a difference. This is possible
+          // when item_byte_size is 16 (128-bit), because you could get back the
+          // x87DoubleExtended semantics which has a byte size of 10 (80-bit).
+          const size_t semantics_byte_size =
+              (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
+          llvm::Optional<llvm::APInt> apint =
+              GetAPInt(DE, &offset, semantics_byte_size);
+          if (apint.hasValue()) {
+            llvm::APFloat apfloat(semantics, apint.getValue());
+            apfloat.toString(sv, format_precision, format_max_padding);
             if (!sv.empty()) {
               s->Printf("%*.*s", (int)sv.size(), (int)sv.size(), sv.data());
               used_upfloat = true;

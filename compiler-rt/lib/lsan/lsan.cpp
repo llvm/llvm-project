@@ -50,7 +50,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
   }
 }
 
-using namespace __lsan;  // NOLINT
+using namespace __lsan;
 
 static void InitializeFlags() {
   // Set all the default values.

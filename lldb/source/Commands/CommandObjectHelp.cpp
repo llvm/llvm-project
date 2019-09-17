@@ -96,7 +96,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
     // Get command object for the first command argument. Only search built-in
     // command dictionary.
     StringList matches;
-    auto command_name = command[0].ref;
+    auto command_name = command[0].ref();
     cmd_obj = m_interpreter.GetCommandObject(command_name, &matches);
 
     if (cmd_obj != nullptr) {
@@ -107,7 +107,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
       // object that corresponds to the help command entered.
       std::string sub_command;
       for (auto &entry : command.entries().drop_front()) {
-        sub_command = entry.ref;
+        sub_command = entry.ref();
         matches.Clear();
         if (sub_cmd_obj->IsAlias())
           sub_cmd_obj =
@@ -201,24 +201,24 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   return result.Succeeded();
 }
 
-int CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
+void CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
   // Return the completions of the commands in the help system:
   if (request.GetCursorIndex() == 0) {
-    return m_interpreter.HandleCompletionMatches(request);
-  } else {
-    CommandObject *cmd_obj =
-        m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
-
-    // The command that they are getting help on might be ambiguous, in which
-    // case we should complete that, otherwise complete with the command the
-    // user is getting help on...
-
-    if (cmd_obj) {
-      request.GetParsedLine().Shift();
-      request.SetCursorIndex(request.GetCursorIndex() - 1);
-      return cmd_obj->HandleCompletion(request);
-    } else {
-      return m_interpreter.HandleCompletionMatches(request);
-    }
+    m_interpreter.HandleCompletionMatches(request);
+    return;
   }
+  CommandObject *cmd_obj =
+      m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref());
+
+  // The command that they are getting help on might be ambiguous, in which
+  // case we should complete that, otherwise complete with the command the
+  // user is getting help on...
+
+  if (cmd_obj) {
+    request.GetParsedLine().Shift();
+    request.SetCursorIndex(request.GetCursorIndex() - 1);
+    cmd_obj->HandleCompletion(request);
+    return;
+  }
+  m_interpreter.HandleCompletionMatches(request);
 }

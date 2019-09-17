@@ -215,7 +215,7 @@ static const llvm::sys::UnicodeCharRange C99AllowedIDCharRanges[] = {
   // Digits (2)
   { 0x06F0, 0x06F9 },
 
-  // Devanagari and Special characeter 0x093D.
+  // Devanagari and Special character 0x093D.
   { 0x0901, 0x0903 }, { 0x0905, 0x0939 }, { 0x093D, 0x094D },
   { 0x0950, 0x0952 }, { 0x0958, 0x0963 },
 

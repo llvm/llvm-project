@@ -1,5 +1,4 @@
-; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-disable=false -S < %s | FileCheck %s
-; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-disable=false -attributor-verify=true -S < %s | FileCheck %s
+; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s
 ;
 ; This is an evolved example to stress test SCC parameter attribute propagation.
 ; The SCC in this test is made up of the following six function, three of which
@@ -103,7 +102,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind
-; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned %w0)
+; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned "no-capture-maybe-returned" %w0)
 define i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
   %tobool = icmp ne i32* %n0, null
@@ -162,4 +161,5 @@ entry:
 ; CHECK-NOT: attributes #
 ; CHECK: attributes #{{.*}} = { nofree nosync nounwind }
 ; CHECK: attributes #{{.*}} = { nofree norecurse nosync nounwind }
+; CHECK: attributes #{{.*}} = { nosync }
 ; CHECK-NOT: attributes #

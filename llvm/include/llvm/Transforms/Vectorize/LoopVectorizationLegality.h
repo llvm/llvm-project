@@ -444,8 +444,8 @@ private:
   /// Holds the widest induction type encountered.
   Type *WidestIndTy = nullptr;
 
-  /// Allowed outside users. This holds the induction and reduction
-  /// vars which can be accessed from outside the loop.
+  /// Allowed outside users. This holds the variables that can be accessed from
+  /// outside the loop.
   SmallPtrSet<Value *, 4> AllowedExit;
 
   /// Can we assume the absence of NaNs.

@@ -709,6 +709,8 @@ public:
       case ISD::STRICT_FFLOOR:
       case ISD::STRICT_FROUND:
       case ISD::STRICT_FTRUNC:
+      case ISD::STRICT_FP_TO_SINT:
+      case ISD::STRICT_FP_TO_UINT:
       case ISD::STRICT_FP_ROUND:
       case ISD::STRICT_FP_EXTEND:
         return true;
@@ -1358,6 +1360,9 @@ public:
   /// constraints on surrounding memory operations beyond the normal memory
   /// aliasing rules.
   bool isUnordered() const { return MMO->isUnordered(); }
+
+  /// Returns true if the memory operation is neither atomic or volatile.
+  bool isSimple() const { return !isAtomic() && !isVolatile(); }
 
   /// Return the type of the in-memory value.
   EVT getMemoryVT() const { return MemoryVT; }
@@ -2195,8 +2200,6 @@ public:
       : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
     LSBaseSDNodeBits.AddressingMode = AM;
     assert(getAddressingMode() == AM && "Value truncated");
-    assert((!MMO->isAtomic() || MMO->isVolatile()) &&
-           "use an AtomicSDNode instead for non-volatile atomics");
   }
 
   const SDValue &getOffset() const {

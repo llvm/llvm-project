@@ -153,9 +153,8 @@ static unsigned AdrImmBits(unsigned Value) {
 static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                                  uint64_t Value, MCContext &Ctx,
                                  const Triple &TheTriple, bool IsResolved) {
-  unsigned Kind = Fixup.getKind();
   int64_t SignedValue = static_cast<int64_t>(Value);
-  switch (Kind) {
+  switch (Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case AArch64::fixup_aarch64_pcrel_adr_imm21:

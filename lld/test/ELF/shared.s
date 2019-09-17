@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/Inputs/shared.s -o %t2.o
-// RUN: ld.lld --hash-style=sysv -shared %t2.o -o %t2.so
+// RUN: ld.lld --hash-style=sysv -shared %t2.o -soname=t2.so -o %t2.so
 // RUN: llvm-readobj -S %t2.so | FileCheck --check-prefix=SO %s
 // RUN: ld.lld --hash-style=sysv -dynamic-linker /lib64/ld-linux-x86-64.so.2 -rpath foo -rpath bar --export-dynamic %t.o %t2.so -o %t
 // RUN: llvm-readobj --program-headers --dynamic-table --symbols -S --dyn-syms --section-data --hash-table %t | FileCheck %s
@@ -14,7 +14,7 @@
 // SO-NEXT: Flags [
 // SO-NEXT: ]
 // SO-NEXT: Address:
-// SO-NEXT: Offset: 0x1038
+// SO-NEXT: Offset: 0x1D0
 // SO-NEXT: Size:
 // SO-NEXT: Link:
 // SO-NEXT: Info:
@@ -141,7 +141,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _DYNAMIC
-// CHECK-NEXT:     Value: 0x402000
+// CHECK-NEXT:     Value: 0x402210
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
@@ -152,7 +152,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _start
-// CHECK-NEXT:     Value: 0x401000
+// CHECK-NEXT:     Value: 0x401208
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
@@ -191,7 +191,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _start
-// CHECK-NEXT:     Value: 0x401000
+// CHECK-NEXT:     Value: 0x401208
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Non

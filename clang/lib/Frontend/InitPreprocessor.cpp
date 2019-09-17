@@ -480,6 +480,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_user_defined_literals", "200809L");
     Builder.defineMacro("__cpp_lambdas", "200907L");
     Builder.defineMacro("__cpp_constexpr",
+                        LangOpts.CPlusPlus2a ? "201907L" :
                         LangOpts.CPlusPlus17 ? "201603L" :
                         LangOpts.CPlusPlus14 ? "201304L" : "200704");
     Builder.defineMacro("__cpp_range_based_for",
@@ -540,8 +541,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_template_template_args", "201611L");
 
   // C++20 features.
-  if (LangOpts.CPlusPlus2a)
+  if (LangOpts.CPlusPlus2a) {
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
+    Builder.defineMacro("__cpp_constinit", "201907L");
+  }
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "201811L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");

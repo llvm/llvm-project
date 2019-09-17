@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
-#include "private_constructor.hpp"
+#include "private_constructor.h"
 #include "is_transparent.h"
 
 int main(int, char**)

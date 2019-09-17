@@ -105,7 +105,7 @@ private:
         CompileLayer(*this->ES, ObjLayer,
                      ConcurrentIRCompiler(std::move(JTMB))),
         S(Imps, *this->ES),
-        SpeculateLayer(*this->ES, CompileLayer, S, BlockFreqQuery()),
+        SpeculateLayer(*this->ES, CompileLayer, S, Mangle, BlockFreqQuery()),
         CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
                  std::move(ISMBuilder)) {
     this->ES->getMainJITDylib().addGenerator(
@@ -114,15 +114,12 @@ private:
     this->ES->setDispatchMaterialization(
 
         [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
-          // FIXME: Switch to move capture once we have c  14.
+          // FIXME: Switch to move capture once we have C++14.
           auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
           auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
           CompileThreads.async(std::move(Work));
         });
-    JITEvaluatedSymbol SpeculatorSymbol(JITTargetAddress(&S),
-                                        JITSymbolFlags::Exported);
-    ExitOnErr(this->ES->getMainJITDylib().define(
-        absoluteSymbols({{Mangle("__orc_speculator"), SpeculatorSymbol}})));
+    ExitOnErr(S.addSpeculationRuntime(this->ES->getMainJITDylib(), Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;
     ExitOnErr(CXXRuntimeoverrides.enable(this->ES->getMainJITDylib(), Mangle));
   }

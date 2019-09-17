@@ -17,7 +17,7 @@
 // CHECK-NEXT:   adr x3, (end + start)
 // CHECK-NEXT:   ^
   adr x4, #(end - start)
-// CHECK: error: No relocation available to represent this relative expression
+// CHECK: error: symbol 'start' can not be undefined in a subtraction expression
 // CHECK-NEXT:   adr x4, #(end - start)
 // CHECK-NEXT:   ^
 
@@ -38,6 +38,6 @@
 // CHECK-NEXT:   adrp x3, (end + start)
 // CHECK-NEXT:   ^
   adrp x4, #(end - start)
-// CHECK: error: No relocation available to represent this relative expression
+// CHECK: error: symbol 'start' can not be undefined in a subtraction expression
 // CHECK-NEXT:   adrp x4, #(end - start)
 // CHECK-NEXT:   ^

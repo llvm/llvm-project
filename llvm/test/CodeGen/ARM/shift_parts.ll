@@ -52,7 +52,8 @@ entry:
 define i64 @shift_left_imm_big2(i64 %x) {
 ; CHECK-MVE-LABEL: shift_left_imm_big2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    lsll r0, r1, #32
+; CHECK-MVE-NEXT:    mov r1, r0
+; CHECK-MVE-NEXT:    movs r0, #0
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-NON-MVE-LABEL: shift_left_imm_big2:
@@ -128,7 +129,8 @@ entry:
 define i64 @shift_right_imm_big2(i64 %x) {
 ; CHECK-MVE-LABEL: shift_right_imm_big2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    lsrl r0, r1, #32
+; CHECK-MVE-NEXT:    mov r0, r1
+; CHECK-MVE-NEXT:    movs r1, #0
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-NON-MVE-LABEL: shift_right_imm_big2:
@@ -217,5 +219,64 @@ entry:
   %bf.load = load i40, i40* %0, align 1
   %bf.clear = and i40 %bf.load, -256
   store i40 %bf.clear, i40* %0, align 1
+  ret void
+}
+
+%struct.a = type { i96 }
+
+define void @lsll_128bit_shift(%struct.a* nocapture %x) local_unnamed_addr #0 {
+; CHECK-MVE-LABEL: lsll_128bit_shift:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    movs r1, #0
+; CHECK-MVE-NEXT:    strd r1, r1, [r0]
+; CHECK-MVE-NEXT:    str r1, [r0, #8]
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lsll_128bit_shift:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    movs r1, #0
+; CHECK-NON-MVE-NEXT:    str r1, [r0]
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #4]
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #8]
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %0 = bitcast %struct.a* %x to i128*
+  %bf.load = load i128, i128* %0, align 8
+  %bf.clear4 = and i128 %bf.load, -79228162514264337593543950336
+  store i128 %bf.clear4, i128* %0, align 8
+  ret void
+}
+
+%struct.b = type { i184 }
+
+define void @lsll_256bit_shift(%struct.b* nocapture %x) local_unnamed_addr #0 {
+; CHECK-MVE-LABEL: lsll_256bit_shift:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    movs r1, #0
+; CHECK-MVE-NEXT:    str r1, [r0, #16]
+; CHECK-MVE-NEXT:    strd r1, r1, [r0, #8]
+; CHECK-MVE-NEXT:    strd r1, r1, [r0]
+; CHECK-MVE-NEXT:    ldrb r1, [r0, #23]
+; CHECK-MVE-NEXT:    lsls r1, r1, #24
+; CHECK-MVE-NEXT:    str r1, [r0, #20]
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lsll_256bit_shift:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    movs r1, #0
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #16]
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #8]
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #12]
+; CHECK-NON-MVE-NEXT:    str r1, [r0]
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #4]
+; CHECK-NON-MVE-NEXT:    ldrb r1, [r0, #23]
+; CHECK-NON-MVE-NEXT:    lsls r1, r1, #24
+; CHECK-NON-MVE-NEXT:    str r1, [r0, #20]
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %0 = bitcast %struct.b* %x to i192*
+  %bf.load = load i192, i192* %0, align 8
+  %bf.clear4 = and i192 %bf.load, -24519928653854221733733552434404946937899825954937634816
+  store i192 %bf.clear4, i192* %0, align 8
   ret void
 }

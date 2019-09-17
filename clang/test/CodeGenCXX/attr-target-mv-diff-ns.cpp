@@ -18,8 +18,8 @@ int bar() {
   return foo(1) + ns::foo(2);
 }
 
-// LINUX: @_Z3fooi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_Z3fooi.resolver
-// LINUX: @_ZN2ns3fooEi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_ZN2ns3fooEi.resolver
+// LINUX: @_Z3fooi.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @_Z3fooi.resolver
+// LINUX: @_ZN2ns3fooEi.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @_ZN2ns3fooEi.resolver
 
 // LINUX: define i32 @_Z3fooi.sse4.2(i32 %0)
 // LINUX: ret i32 0
@@ -57,25 +57,25 @@ int bar() {
 // WINDOWS: call i32 @"?foo@@YAHH@Z.resolver"(i32 1)
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.resolver"(i32 2)
 
-// LINUX: define i32 (i32)* @_Z3fooi.resolver() comdat
+// LINUX: define weak_odr i32 (i32)* @_Z3fooi.resolver() comdat
 // LINUX: ret i32 (i32)* @_Z3fooi.arch_sandybridge
 // LINUX: ret i32 (i32)* @_Z3fooi.arch_ivybridge
 // LINUX: ret i32 (i32)* @_Z3fooi.sse4.2
 // LINUX: ret i32 (i32)* @_Z3fooi
 
-// WINDOWS: define dso_local i32 @"?foo@@YAHH@Z.resolver"(i32 %0) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo@@YAHH@Z.resolver"(i32 %0) comdat
 // WINDOWS: call i32 @"?foo@@YAHH@Z.arch_sandybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@@YAHH@Z.arch_ivybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@@YAHH@Z.sse4.2"(i32 %0)
 // WINDOWS: call i32 @"?foo@@YAHH@Z"(i32 %0)
 
-// LINUX: define i32 (i32)* @_ZN2ns3fooEi.resolver() comdat
+// LINUX: define weak_odr i32 (i32)* @_ZN2ns3fooEi.resolver() comdat
 // LINUX: ret i32 (i32)* @_ZN2ns3fooEi.arch_sandybridge
 // LINUX: ret i32 (i32)* @_ZN2ns3fooEi.arch_ivybridge
 // LINUX: ret i32 (i32)* @_ZN2ns3fooEi.sse4.2
 // LINUX: ret i32 (i32)* @_ZN2ns3fooEi
 
-// WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z.resolver"(i32 %0) comdat
+// WINDOWS: define weak_odr dso_local i32 @"?foo@ns@@YAHH@Z.resolver"(i32 %0) comdat
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.arch_sandybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.arch_ivybridge"(i32 %0)
 // WINDOWS: call i32 @"?foo@ns@@YAHH@Z.sse4.2"(i32 %0)

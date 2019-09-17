@@ -163,7 +163,8 @@ OPTIONS
 .. option:: --stack-sizes
 
  Display the contents of the stack sizes section(s), i.e. pairs of function
- names and the size of their stack frames.
+ names and the size of their stack frames. Currently only implemented for GNU
+ style output.
 
 .. option:: --string-dump=<section[,section,...]>, -p
 

@@ -178,7 +178,7 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // frame index registers. Functions which don't want/need this optimization
   // will continue to use the existing code path.
   if (MFI.getUseLocalStackAllocationBlock()) {
-    unsigned Align = MFI.getLocalFrameMaxAlign();
+    unsigned Align = MFI.getLocalFrameMaxAlign().value();
 
     // Adjust to alignment boundary.
     Offset = (Offset + Align - 1) / Align * Align;

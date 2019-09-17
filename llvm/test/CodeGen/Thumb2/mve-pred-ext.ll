@@ -57,17 +57,15 @@ define arm_aapcs_vfpcc <2 x i64> @sext_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    rsbs r3, r3, #0
 ; CHECK-NEXT:    sbcs.w r1, r2, r1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r2, #1
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r2, #-1
-; CHECK-NEXT:    vmov.32 q0[0], r2
-; CHECK-NEXT:    vmov.32 q0[1], r2
+; CHECK-NEXT:    csetm r1, ne
+; CHECK-NEXT:    vmov.32 q0[0], r1
+; CHECK-NEXT:    vmov.32 q0[1], r1
 ; CHECK-NEXT:    vmov.32 q0[2], r0
 ; CHECK-NEXT:    vmov.32 q0[3], r0
 ; CHECK-NEXT:    bx lr
@@ -136,15 +134,13 @@ define arm_aapcs_vfpcc <2 x i64> @zext_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #1
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r1, #-1
+; CHECK-NEXT:    csetm r1, ne
 ; CHECK-NEXT:    rsbs r3, r3, #0
 ; CHECK-NEXT:    sbcs.w r2, r0, r2
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    vmov.32 q0[0], r0
 ; CHECK-NEXT:    vmov.32 q0[2], r1
 ; CHECK-NEXT:    vand q0, q0, q1

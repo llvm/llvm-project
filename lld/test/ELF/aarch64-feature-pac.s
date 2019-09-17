@@ -13,62 +13,65 @@
 # RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
 
-# NOPAC: 0000000000010000 func2:
-# NOPAC-NEXT:    10000: bl      #48 <func3@plt>
-# NOPAC-NEXT:    10004: ret
+# NOPAC: 00000000000102b8 func2:
+# NOPAC-NEXT:    102b8: bl      #56 <func3@plt>
+# NOPAC-NEXT:    102bc: ret
 # NOPAC: Disassembly of section .plt:
-# NOPAC: 0000000000010010 .plt:
-# NOPAC-NEXT:    10010: stp     x16, x30, [sp, #-16]!
-# NOPAC-NEXT:    10014: adrp    x16, #131072
-# NOPAC-NEXT:    10018: ldr     x17, [x16, #16]
-# NOPAC-NEXT:    1001c: add     x16, x16, #16
-# NOPAC-NEXT:    10020: br      x17
-# NOPAC-NEXT:    10024: nop
-# NOPAC-NEXT:    10028: nop
-# NOPAC-NEXT:    1002c: nop
-# NOPAC: 0000000000010030 func3@plt:
-# NOPAC-NEXT:    10030: adrp    x16, #131072
-# NOPAC-NEXT:    10034: ldr     x17, [x16, #24]
-# NOPAC-NEXT:    10038: add     x16, x16, #24
-# NOPAC-NEXT:    1003c: br      x17
+# NOPAC: 00000000000102d0 .plt:
+# NOPAC-NEXT:    102d0: stp     x16, x30, [sp, #-16]!
+# NOPAC-NEXT:    102d4: adrp    x16, #131072
+# NOPAC-NEXT:    102d8: ldr     x17, [x16, #960]
+# NOPAC-NEXT:    102dc: add     x16, x16, #960
+# NOPAC-NEXT:    102e0: br      x17
+# NOPAC-NEXT:    102e4: nop
+# NOPAC-NEXT:    102e8: nop
+# NOPAC-NEXT:    102ec: nop
+# NOPAC: 00000000000102f0 func3@plt:
+# NOPAC-NEXT:    102f0: adrp    x16, #131072
+# NOPAC-NEXT:    102f4: ldr     x17, [x16, #968]
+# NOPAC-NEXT:    102f8: add     x16, x16, #968
+# NOPAC-NEXT:    102fc: br      x17
 
 # NOPACDYN-NOT:   0x0000000070000001 (AARCH64_BTI_PLT)
 # NOPACDYN-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
 
-# RUN: ld.lld %t1.o %t3.o --shared -o %t.so
+# RUN: ld.lld %t1.o %t3.o --shared --soname=t.so -o %t.so
 # RUN: llvm-readelf -n %t.so | FileCheck --check-prefix PACPROP %s
 # RUN: llvm-objdump -d -mattr=+v8.3a --no-show-raw-insn %t.so | FileCheck --check-prefix PACSO %s
-# RUN: llvm-readelf -x .got.plt %t.so | FileCheck --check-prefix SOGOTPLT %s
+# RUN: llvm-readelf -x .got.plt %t.so | FileCheck --check-prefix SOGOTPLT2 %s
 # RUN: llvm-readelf --dynamic-table %t.so |  FileCheck --check-prefix PACDYN %s
 
 ## PAC has no effect on PLT[0], for PLT[N] autia1716 is used to authenticate
 ## the address in x17 (context in x16) before branching to it. The dynamic
 ## loader is responsible for calling pacia1716 on the entry.
-# PACSO: 0000000000010000 func2:
-# PACSO-NEXT:    10000: bl      #48 <func3@plt>
-# PACSO-NEXT:    10004: ret
+# PACSO: 0000000000010310 func2:
+# PACSO-NEXT:    10310: bl      #48 <func3@plt>
+# PACSO-NEXT:    10314: ret
 # PACSO: Disassembly of section .plt:
-# PACSO: 0000000000010010 .plt:
-# PACSO-NEXT:    10010: stp     x16, x30, [sp, #-16]!
-# PACSO-NEXT:    10014: adrp    x16, #131072
-# PACSO-NEXT:    10018: ldr     x17, [x16, #16]
-# PACSO-NEXT:    1001c: add     x16, x16, #16
-# PACSO-NEXT:    10020: br      x17
-# PACSO-NEXT:    10024: nop
-# PACSO-NEXT:    10028: nop
-# PACSO-NEXT:    1002c: nop
-# PACSO: 0000000000010030 func3@plt:
-# PACSO-NEXT:    10030: adrp    x16, #131072
-# PACSO-NEXT:    10034: ldr     x17, [x16, #24]
-# PACSO-NEXT:    10038: add     x16, x16, #24
-# PACSO-NEXT:    1003c: autia1716
-# PACSO-NEXT:    10040: br      x17
-# PACSO-NEXT:    10044: nop
+# PACSO: 0000000000010320 .plt:
+# PACSO-NEXT:    10320: stp     x16, x30, [sp, #-16]!
+# PACSO-NEXT:    10324: adrp    x16, #131072
+# PACSO-NEXT:    10328: ldr     x17, [x16, #1080]
+# PACSO-NEXT:    1032c: add     x16, x16, #1080
+# PACSO-NEXT:    10330: br      x17
+# PACSO-NEXT:    10334: nop
+# PACSO-NEXT:    10338: nop
+# PACSO-NEXT:    1033c: nop
+# PACSO: 0000000000010340 func3@plt:
+# PACSO-NEXT:    10340: adrp    x16, #131072
+# PACSO-NEXT:    10344: ldr     x17, [x16, #1088]
+# PACSO-NEXT:    10348: add     x16, x16, #1088
+# PACSO-NEXT:    1034c: autia1716
+# PACSO-NEXT:    10350: br      x17
+# PACSO-NEXT:    10354: nop
 
-# The .got.plt should be identical between the PAC and no PAC DSO PLT.
 # SOGOTPLT: Hex dump of section '.got.plt':
-# SOGOTPLT-NEXT: 0x00030000 00000000 00000000 00000000 00000000
-# SOGOTPLT-NEXT: 0x00030010 00000000 00000000 10000100 00000000
+# SOGOTPLT-NEXT: 0x000303b0 00000000 00000000 00000000 00000000
+# SOGOTPLT-NEXT: 0x000303c0 00000000 00000000 d0020100 00000000
+
+# SOGOTPLT2: Hex dump of section '.got.plt':
+# SOGOTPLT2-NEXT: 0x00030428 00000000 00000000 00000000 00000000
+# SOGOTPLT2-NEXT: 0x00030438 00000000 00000000 20030100 00000000
 
 # PACPROP: Properties:    aarch64 feature: PAC
 
@@ -86,28 +89,28 @@
 # RUN: llvm-objdump -d -mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s
 
 # PACPLT: Disassembly of section .text:
-# PACPLT: 0000000000210000 func1:
-# PACPLT-NEXT:   210000: bl      #48 <func2@plt>
-# PACPLT-NEXT:   210004: ret
-# PACPLT: 0000000000210008 func3:
-# PACPLT-NEXT:   210008: ret
+# PACPLT: 0000000000210338 func1:
+# PACPLT-NEXT:   210338: bl      #56 <func2@plt>
+# PACPLT-NEXT:   21033c: ret
+# PACPLT: 0000000000210340 func3:
+# PACPLT-NEXT:   210340: ret
 # PACPLT: Disassembly of section .plt:
-# PACPLT: 0000000000210010 .plt:
-# PACPLT-NEXT:   210010: stp     x16, x30, [sp, #-16]!
-# PACPLT-NEXT:   210014: adrp    x16, #131072
-# PACPLT-NEXT:   210018: ldr     x17, [x16, #16]
-# PACPLT-NEXT:   21001c: add     x16, x16, #16
-# PACPLT-NEXT:   210020: br      x17
-# PACPLT-NEXT:   210024: nop
-# PACPLT-NEXT:   210028: nop
-# PACPLT-NEXT:   21002c: nop
-# PACPLT: 0000000000210030 func2@plt:
-# PACPLT-NEXT:   210030: adrp    x16, #131072
-# PACPLT-NEXT:   210034: ldr     x17, [x16, #24]
-# PACPLT-NEXT:   210038: add     x16, x16, #24
-# PACPLT-NEXT:   21003c: autia1716
-# PACPLT-NEXT:   210040: br      x17
-# PACPLT-NEXT:   210044: nop
+# PACPLT: 0000000000210350 .plt:
+# PACPLT-NEXT:   210350: stp     x16, x30, [sp, #-16]!
+# PACPLT-NEXT:   210354: adrp    x16, #131072
+# PACPLT-NEXT:   210358: ldr     x17, [x16, #1144]
+# PACPLT-NEXT:   21035c: add     x16, x16, #1144
+# PACPLT-NEXT:   210360: br      x17
+# PACPLT-NEXT:   210364: nop
+# PACPLT-NEXT:   210368: nop
+# PACPLT-NEXT:   21036c: nop
+# PACPLT: 0000000000210370 func2@plt:
+# PACPLT-NEXT:   210370: adrp    x16, #131072
+# PACPLT-NEXT:   210374: ldr     x17, [x16, #1152]
+# PACPLT-NEXT:   210378: add     x16, x16, #1152
+# PACPLT-NEXT:   21037c: autia1716
+# PACPLT-NEXT:   210380: br      x17
+# PACPLT-NEXT:   210384: nop
 
 
 .section ".note.gnu.property", "a"

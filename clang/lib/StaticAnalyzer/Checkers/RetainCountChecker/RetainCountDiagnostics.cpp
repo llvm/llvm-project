@@ -327,11 +327,11 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
   PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                     const ExplodedNode *N,
-                                    BugReport &BR) override;
+                                    PathSensitiveBugReport &BR) override;
 };
 
 class RefLeakReportVisitor : public RefCountReportVisitor {
@@ -340,7 +340,7 @@ public:
 
   PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                     const ExplodedNode *N,
-                                    BugReport &BR) override;
+                                    PathSensitiveBugReport &BR) override;
 };
 
 } // end namespace retaincountchecker
@@ -448,9 +448,9 @@ annotateStartParameter(const ExplodedNode *N, SymbolRef Sym,
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
-PathDiagnosticPieceRef RefCountReportVisitor::VisitNode(const ExplodedNode *N,
-                                                        BugReporterContext &BRC,
-                                                        BugReport &BR) {
+PathDiagnosticPieceRef
+RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                                 PathSensitiveBugReport &BR) {
 
   const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
   const auto *Checker =
@@ -715,14 +715,16 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
 PathDiagnosticPieceRef
 RefCountReportVisitor::getEndPath(BugReporterContext &BRC,
-                                  const ExplodedNode *EndN, BugReport &BR) {
+                                  const ExplodedNode *EndN,
+                                  PathSensitiveBugReport &BR) {
   BR.markInteresting(Sym);
   return BugReporterVisitor::getDefaultEndPath(BRC, EndN, BR);
 }
 
 PathDiagnosticPieceRef
 RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
-                                 const ExplodedNode *EndN, BugReport &BR) {
+                                 const ExplodedNode *EndN,
+                                 PathSensitiveBugReport &BR) {
 
   // Tell the BugReporterContext to report cases when the tracked symbol is
   // assigned to different variables, etc.
@@ -736,13 +738,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   const MemRegion* FirstBinding = AllocI.R;
   BR.markInteresting(AllocI.InterestingMethodContext);
 
-  const SourceManager& SM = BRC.getSourceManager();
-
-  // Compute an actual location for the leak.  Sometimes a leak doesn't
-  // occur at an actual statement (e.g., transition between blocks; end
-  // of function) so we need to walk the graph and compute a real location.
-  const ExplodedNode *LeakN = EndN;
-  PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(LeakN, SM);
+  PathDiagnosticLocation L = cast<RefLeakReport>(BR).getEndOfPath();
 
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
@@ -813,9 +809,9 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
-                               ExplodedNode *n, SymbolRef sym,
-                               bool isLeak)
-    : BugReport(D, D.getDescription(), n), Sym(sym), isLeak(isLeak) {
+                               ExplodedNode *n, SymbolRef sym, bool isLeak)
+    : PathSensitiveBugReport(D, D.getDescription(), n), Sym(sym),
+      isLeak(isLeak) {
   if (!isLeak)
     addVisitor(std::make_unique<RefCountReportVisitor>(sym));
 }
@@ -823,7 +819,7 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                ExplodedNode *n, SymbolRef sym,
                                StringRef endText)
-    : BugReport(D, D.getDescription(), endText, n) {
+    : PathSensitiveBugReport(D, D.getDescription(), endText, n) {
 
   addVisitor(std::make_unique<RefCountReportVisitor>(sym));
 }
@@ -872,7 +868,7 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
   // FIXME: This will crash the analyzer if an allocation comes from an
   // implicit call (ex: a destructor call).
   // (Currently there are no such allocations in Cocoa, though.)
-  AllocStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  AllocStmt = AllocNode->getStmtForDiagnostics();
 
   if (!AllocStmt) {
     AllocBinding = nullptr;

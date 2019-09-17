@@ -10,13 +10,18 @@
 
 define void @test_lcssa_indvars1()  {
 ; CHECK-LABEL: @test_lcssa_indvars1()
+; CHECK-LABEL: inner.body:
+; CHECK-NEXT:    %iv.inner = phi i64 [ %[[IVNEXT:[0-9]+]], %inner.body.split ], [ 5, %inner.body.preheader ]
+
 ; CHECK-LABEL: inner.body.split:
 ; CHECK-NEXT:    %0 = phi i64 [ %iv.outer.next, %outer.latch ]
-; CHECK-NEXT:    %iv.inner.next = add nsw i64 %iv.inner, -1
+; CHECK-NEXT:    %[[IVNEXT]] = add nsw i64 %iv.inner, -1
+; CHECK-NEXT:    %[[COND:[0-9]+]] = icmp eq i64 %iv.inner, 0
+; CHECK-NEXT:    br i1 %[[COND]], label %exit, label %inner.body
 
 ; CHECK-LABEL: exit:
 ; CHECK-NEXT:    %v4.lcssa = phi i64 [ %0, %inner.body.split ]
-; CHECK-NEXT:    %v8.lcssa.lcssa = phi i64 [ %iv.inner.next, %inner.body.split ]
+; CHECK-NEXT:    %v8.lcssa.lcssa = phi i64 [ %[[IVNEXT]], %inner.body.split ]
 ; CHECK-NEXT:    store i64 %v8.lcssa.lcssa, i64* @b, align 4
 ; CHECK-NEXT:    store i64 %v4.lcssa, i64* @a, align 4
 
@@ -52,9 +57,14 @@ exit:                                             ; preds = %outer.latch
 
 define void @test_lcssa_indvars2()  {
 ; CHECK-LABEL: @test_lcssa_indvars2()
+; CHECK-LABEL: inner.body:
+; CHECK-NEXT:    %iv.inner = phi i64 [ %[[IVNEXT:[0-9]+]], %inner.body.split ], [ 5, %inner.body.preheader ]
+
 ; CHECK-LABEL: inner.body.split:
 ; CHECK-NEXT:    %0 = phi i64 [ %iv.outer, %outer.latch ]
-; CHECK-NEXT:    %iv.inner.next = add nsw i64 %iv.inner, -1
+; CHECK-NEXT:    %[[IVNEXT]] = add nsw i64 %iv.inner, -1
+; CHECK-NEXT:    %[[COND:[0-9]+]] = icmp eq i64 %[[IVNEXT]], 0
+; CHECK-NEXT:    br i1 %[[COND]], label %exit, label %inner.body
 
 ; CHECK-LABEL: exit:
 ; CHECK-NEXT:    %v4.lcssa = phi i64 [ %0, %inner.body.split ]
@@ -93,14 +103,19 @@ exit:                                             ; preds = %outer.latch
 
 define void @test_lcssa_indvars3()  {
 ; CHECK-LABEL: @test_lcssa_indvars3()
+; CHECK-LABEL: inner.body:
+; CHECK-NEXT:    %iv.inner = phi i64 [ %[[IVNEXT:[0-9]+]], %inner.body.split ], [ 5, %inner.body.preheader ]
+
 ; CHECK-LABEL: inner.body.split:
 ; CHECK-NEXT:    %0 = phi i64 [ %iv.outer.next, %outer.latch ]
-; CHECK-NEXT:    %iv.inner.next = add nsw i64 %iv.inner, -1
+; CHECK-NEXT:    %[[IVNEXT]] = add nsw i64 %iv.inner, -1
+; CHECK-NEXT:    %[[COND:[0-9]+]] = icmp eq i64 %iv.inner, 0
+; CHECK-NEXT:    br i1 %[[COND]], label %exit, label %inner.body
 
 ; CHECK-LABEL: exit:
 ; CHECK-NEXT:    %v4.lcssa = phi i64 [ %0, %inner.body.split ]
-; CHECK-NEXT:    %v8.lcssa.lcssa = phi i64 [ %iv.inner.next, %inner.body.split ]
-; CHECK-NEXT:    %v8.lcssa.lcssa.2 = phi i64 [ %iv.inner.next, %inner.body.split ]
+; CHECK-NEXT:    %v8.lcssa.lcssa = phi i64 [ %[[IVNEXT]], %inner.body.split ]
+; CHECK-NEXT:    %v8.lcssa.lcssa.2 = phi i64 [ %[[IVNEXT]], %inner.body.split ]
 ; CHECK-NEXT:    %r1 = add i64 %v8.lcssa.lcssa, %v8.lcssa.lcssa.2
 ; CHECK-NEXT:    store i64 %r1, i64* @b, align 4
 ; CHECK-NEXT:    store i64 %v4.lcssa, i64* @a, align 4
@@ -150,8 +165,12 @@ define void @no_reachable_exits() {
 ; CHECK-LABEL: inner.ph:
 ; CHECK-NEXT:    br label %inner.body
 ; CHECK-LABEL: inner.body:
-; CHECK-NEXT:    %tmp31 = phi i32 [ 0, %inner.ph ], [ %tmp6, %inner.body.split ]
+; CHECK-NEXT:    %tmp31 = phi i32 [ 0, %inner.ph ], [ %[[IVNEXT:[0-9]]], %inner.body.split ]
 ; CHECK-NEXT:    br label %outer.ph
+; CHECK-LABEL: inner.body.split:
+; CHECK-NEXT:    %[[IVNEXT]] = add nsw i32 %tmp31, 1
+; CHECK-NEXT:    br i1 false, label %inner.body, label %exit
+
 
 bb:
   br label %outer.ph

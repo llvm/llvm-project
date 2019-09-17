@@ -335,12 +335,12 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      int64_t Offset;
-      if (!isPointerOffset(StartPtr, NextStore->getPointerOperand(), Offset,
-                           DL))
+      Optional<int64_t> Offset =
+          isPointerOffset(StartPtr, NextStore->getPointerOperand(), DL);
+      if (!Offset)
         break;
 
-      Ranges.addStore(Offset, NextStore);
+      Ranges.addStore(*Offset, NextStore);
     } else {
       MemSetInst *MSI = cast<MemSetInst>(BI);
 
@@ -349,11 +349,11 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      int64_t Offset;
-      if (!isPointerOffset(StartPtr, MSI->getDest(), Offset, DL))
+      Optional<int64_t> Offset = isPointerOffset(StartPtr, MSI->getDest(), DL);
+      if (!Offset)
         break;
 
-      Ranges.addMemSet(Offset, MSI);
+      Ranges.addMemSet(*Offset, MSI);
     }
   }
 
@@ -1432,7 +1432,7 @@ bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
     return false;
 
   auto *MD = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
-  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   auto LookupAliasAnalysis = [this]() -> AliasAnalysis & {
     return getAnalysis<AAResultsWrapperPass>().getAAResults();

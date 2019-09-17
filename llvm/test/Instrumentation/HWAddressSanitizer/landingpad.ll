@@ -1,5 +1,6 @@
-; RUN: opt < %s -mtriple aarch64-linux-android -hwasan -S | FileCheck %s --check-prefixes=COMMON,ARM
-; RUN: opt < %s -mtriple x86_64-linux          -hwasan -S | FileCheck %s --check-prefixes=COMMON,X86
+; RUN: opt < %s -mtriple aarch64-linux-android29 -hwasan -S | FileCheck %s --check-prefixes=COMMON,LP,ARM
+; RUN: opt < %s -mtriple x86_64-linux -hwasan-instrument-landing-pads -hwasan -S | FileCheck %s --check-prefixes=COMMON,LP,X86
+; RUN: opt < %s -mtriple aarch64-linux-android30 -hwasan -S | FileCheck %s --check-prefixes=COMMON,NOLP
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android"
@@ -15,8 +16,9 @@ lpad:
   %0 = landingpad { i8*, i32 }
           catch i8* null
 
-  ; COMMON-NEXT: %[[X:[^ ]*]] = call i64 @llvm.read_register.i64(metadata ![[META:[^ ]*]])
-  ; COMMON-NEXT: call void @__hwasan_handle_vfork(i64 %[[X]])
+  ; NOLP-NOT: call void @__hwasan_handle_vfork
+  ; LP-NEXT: %[[X:[^ ]*]] = call i64 @llvm.read_register.i64(metadata ![[META:[^ ]*]])
+  ; LP-NEXT: call void @__hwasan_handle_vfork(i64 %[[X]])
 
   %1 = extractvalue { i8*, i32 } %0, 0
   %2 = tail call i8* @__cxa_begin_catch(i8* %1)

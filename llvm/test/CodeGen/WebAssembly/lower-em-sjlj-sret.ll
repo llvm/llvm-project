@@ -15,11 +15,11 @@ entry:
   %env = alloca [1 x %struct.__jmp_buf_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env, i32 0, i32 0
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
-; This is the function pointer to pass to invoke.
-; It needs to be the first argument (that's what we're testing here)
-; CHECK:	i32.const	$push[[FPTR:[0-9]+]]=, returns_struct
-; This is the sret stack region (as an offset from the stack pointer local)
-; CHECK:	call	"__invoke_{i32.i32}", $pop[[FPTR]]
+  ; This is the function pointer to pass to invoke.
+  ; It needs to be the first argument (that's what we're testing here)
+  ; CHECK: i32.const $push[[FPTR:[0-9]+]]=, returns_struct
+  ; This is the sret stack region (as an offset from the stack pointer local)
+  ; CHECK: call "__invoke_{i32.i32}", $pop[[FPTR]]
   %ret = call {i32, i32} @returns_struct()
   ret {i32, i32} %ret
 }

@@ -58,8 +58,8 @@ def SDT_PPCldvsxlh : SDTypeProfile<1, 1, [
   SDTCisVT<0, v4f32>, SDTCisPtrTy<1>
 ]>;
 
-def SDT_PPCfpextlh : SDTypeProfile<1, 1, [
-  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>
+def SDT_PPCfpexth : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>, SDTCisPtrTy<2>
 ]>;
 
 // Little-endian-specific nodes.
@@ -102,7 +102,7 @@ def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
 def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
 
-def PPCfpextlh : SDNode<"PPCISD::FP_EXTEND_LH", SDT_PPCfpextlh, []>;
+def PPCfpexth : SDNode<"PPCISD::FP_EXTEND_HALF", SDT_PPCfpexth, []>;
 def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -1086,7 +1086,8 @@ def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 0)),
 def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 1)),
           (v2f64 (XVCVUXWDP (v2i64 (XXMRGLW $C, $C))))>;
 
-def : Pat<(v2f64 (PPCfpextlh v4f32:$C)), (XVCVSPDP (XXMRGHW $C, $C))>;
+def : Pat<(v2f64 (PPCfpexth v4f32:$C, 0)), (XVCVSPDP (XXMRGHW $C, $C))>;
+def : Pat<(v2f64 (PPCfpexth v4f32:$C, 1)), (XVCVSPDP (XXMRGLW $C, $C))>;
 
 // Loads.
 let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
@@ -1314,7 +1315,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
       isReMaterializable = 1 in {
     def XXLEQVOnes : XX3Form_SameOp<60, 186, (outs vsrc:$XT), (ins),
                          "xxleqv $XT, $XT, $XT", IIC_VecGeneral,
-                         [(set v4i32:$XT, (v4i32 immAllOnesV))]>;
+                         [(set v4i32:$XT, (bitconvert (v16i8 immAllOnesV)))]>;
   }
 
   def XXLORC : XX3Form<60, 170,
@@ -1593,16 +1594,33 @@ let Predicates = [HasDirectMove] in {
   def MFVSRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$rA), (ins vsfrc:$XT),
                                "mfvsrwz $rA, $XT", IIC_VecGeneral,
                                [(set i32:$rA, (PPCmfvsr f64:$XT))]>;
+  let isCodeGenOnly = 1 in
+  def MFVRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$rA), (ins vsrc:$XT),
+                               "mfvsrwz $rA, $XT", IIC_VecGeneral,
+                               []>;
   def MTVSRD : XX1_RS6_RD5_XO<31, 179, (outs vsfrc:$XT), (ins g8rc:$rA),
                               "mtvsrd $XT, $rA", IIC_VecGeneral,
                               [(set f64:$XT, (PPCmtvsra i64:$rA))]>,
       Requires<[In64BitMode]>;
+  let isCodeGenOnly = 1 in
+  def MTVRD : XX1_RS6_RD5_XO<31, 179, (outs vsrc:$XT), (ins g8rc:$rA),
+                              "mtvsrd $XT, $rA", IIC_VecGeneral,
+                              []>,
+      Requires<[In64BitMode]>;
   def MTVSRWA : XX1_RS6_RD5_XO<31, 211, (outs vsfrc:$XT), (ins gprc:$rA),
                                "mtvsrwa $XT, $rA", IIC_VecGeneral,
                                [(set f64:$XT, (PPCmtvsra i32:$rA))]>;
+  let isCodeGenOnly = 1 in
+  def MTVRWA : XX1_RS6_RD5_XO<31, 211, (outs vsrc:$XT), (ins gprc:$rA),
+                               "mtvsrwa $XT, $rA", IIC_VecGeneral,
+                               []>;
   def MTVSRWZ : XX1_RS6_RD5_XO<31, 243, (outs vsfrc:$XT), (ins gprc:$rA),
                                "mtvsrwz $XT, $rA", IIC_VecGeneral,
                                [(set f64:$XT, (PPCmtvsrz i32:$rA))]>;
+  let isCodeGenOnly = 1 in
+  def MTVRWZ : XX1_RS6_RD5_XO<31, 243, (outs vsrc:$XT), (ins gprc:$rA),
+                               "mtvsrwz $XT, $rA", IIC_VecGeneral,
+                               []>;
 } // HasDirectMove
 
 let Predicates = [IsISA3_0, HasDirectMove] in {
@@ -1626,6 +1644,22 @@ def : InstAlias<"mfvrd $rA, $XT",
                 (MFVRD g8rc:$rA, vrrc:$XT), 0>;
 def : InstAlias<"mffprd $rA, $src",
                 (MFVSRD g8rc:$rA, f8rc:$src)>;
+def : InstAlias<"mtvrd $XT, $rA",
+                (MTVRD vrrc:$XT, g8rc:$rA), 0>;
+def : InstAlias<"mtfprd $dst, $rA",
+                (MTVSRD f8rc:$dst, g8rc:$rA)>;
+def : InstAlias<"mfvrwz $rA, $XT",
+                (MFVRWZ gprc:$rA, vrrc:$XT), 0>;
+def : InstAlias<"mffprwz $rA, $src",
+                (MFVSRWZ gprc:$rA, f8rc:$src)>;
+def : InstAlias<"mtvrwa $XT, $rA",
+                (MTVRWA vrrc:$XT, gprc:$rA), 0>;
+def : InstAlias<"mtfprwa $dst, $rA",
+                (MTVSRWA f8rc:$dst, gprc:$rA)>;
+def : InstAlias<"mtvrwz $XT, $rA",
+                (MTVRWZ vrrc:$XT, gprc:$rA), 0>;
+def : InstAlias<"mtfprwz $dst, $rA",
+                (MTVSRWZ f8rc:$dst, gprc:$rA)>;
 
 /*  Direct moves of various widths from GPR's into VSR's. Each move lines
     the value up into element 0 (both BE and LE). Namely, entities smaller than
@@ -4103,8 +4137,6 @@ let AddedComplexity = 400 in {
   }
 
   let Predicates = [HasP8Vector] in {
-    def : Pat<(v4i32 (bitconvert (v16i8 immAllOnesV))),
-              (XXLEQVOnes)>;
     def : Pat<(v1i128 (bitconvert (v16i8 immAllOnesV))),
               (v1i128 (COPY_TO_REGCLASS(XXLEQVOnes), VSRC))>;
     def : Pat<(v2i64 (bitconvert (v16i8 immAllOnesV))),

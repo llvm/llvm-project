@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "test_macros.h"
-#include "container_debug_tests.hpp"
+#include "container_debug_tests.h"
 #include "debug_mode_helper.h"
 
 using namespace IteratorDebugChecks;

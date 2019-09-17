@@ -1226,6 +1226,14 @@ public:
 
   void setInit(Expr *I);
 
+  /// Get the initializing declaration of this variable, if any. This is
+  /// usually the definition, except that for a static data member it can be
+  /// the in-class declaration.
+  VarDecl *getInitializingDeclaration();
+  const VarDecl *getInitializingDeclaration() const {
+    return const_cast<VarDecl *>(this)->getInitializingDeclaration();
+  }
+
   /// Determine whether this variable's value might be usable in a
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
@@ -3744,6 +3752,30 @@ public:
 
   void setNonTrivialToPrimitiveDestroy(bool V) {
     RecordDeclBits.NonTrivialToPrimitiveDestroy = V;
+  }
+
+  bool hasNonTrivialToPrimitiveDefaultInitializeCUnion() const {
+    return RecordDeclBits.HasNonTrivialToPrimitiveDefaultInitializeCUnion;
+  }
+
+  void setHasNonTrivialToPrimitiveDefaultInitializeCUnion(bool V) {
+    RecordDeclBits.HasNonTrivialToPrimitiveDefaultInitializeCUnion = V;
+  }
+
+  bool hasNonTrivialToPrimitiveDestructCUnion() const {
+    return RecordDeclBits.HasNonTrivialToPrimitiveDestructCUnion;
+  }
+
+  void setHasNonTrivialToPrimitiveDestructCUnion(bool V) {
+    RecordDeclBits.HasNonTrivialToPrimitiveDestructCUnion = V;
+  }
+
+  bool hasNonTrivialToPrimitiveCopyCUnion() const {
+    return RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion;
+  }
+
+  void setHasNonTrivialToPrimitiveCopyCUnion(bool V) {
+    RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion = V;
   }
 
   /// Determine whether this class can be passed in registers. In C++ mode,

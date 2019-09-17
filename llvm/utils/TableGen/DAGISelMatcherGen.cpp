@@ -141,7 +141,7 @@ namespace {
                                         SmallVectorImpl<unsigned> &ResultOps);
     };
 
-} // end anon namespace.
+} // end anonymous namespace
 
 MatcherGen::MatcherGen(const PatternToMatch &pattern,
                        const CodeGenDAGPatterns &cgp)

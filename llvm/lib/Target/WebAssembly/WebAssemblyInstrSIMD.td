@@ -712,6 +712,42 @@ defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_f32x4_u", 172>;
 defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_sat_f64x2_s", 173>;
 defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_sat_f64x2_u", 174>;
 
+// Widening operations
+multiclass SIMDWiden<ValueType vec_t, string vec, ValueType arg_t, string arg,
+                     bits<32> baseInst> {
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_signed,
+                        vec#".widen_low_"#arg#"_s", baseInst>;
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_signed,
+                        vec#".widen_high_"#arg#"_s", !add(baseInst, 1)>;
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_low_unsigned,
+                        vec#".widen_low_"#arg#"_u", !add(baseInst, 2)>;
+  defm "" : SIMDConvert<vec_t, arg_t, int_wasm_widen_high_unsigned,
+                        vec#".widen_high_"#arg#"_u", !add(baseInst, 3)>;
+}
+
+defm "" : SIMDWiden<v8i16, "i16x8", v16i8, "i8x16", 202>;
+defm "" : SIMDWiden<v4i32, "i32x4", v8i16, "i16x8", 206>;
+
+// Narrowing operations
+multiclass SIMDNarrow<ValueType vec_t, string vec, ValueType arg_t, string arg,
+                      bits<32> baseInst> {
+  defm NARROW_S_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$low, V128:$high), (outs), (ins),
+           [(set (vec_t V128:$dst), (vec_t (int_wasm_narrow_signed
+             (arg_t V128:$low), (arg_t V128:$high))))],
+           vec#".narrow_"#arg#"_s\t$dst, $low, $high", vec#".narrow_"#arg#"_s",
+           baseInst>;
+  defm NARROW_U_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$low, V128:$high), (outs), (ins),
+           [(set (vec_t V128:$dst), (vec_t (int_wasm_narrow_unsigned
+             (arg_t V128:$low), (arg_t V128:$high))))],
+           vec#".narrow_"#arg#"_u\t$dst, $low, $high", vec#".narrow_"#arg#"_u",
+           !add(baseInst, 1)>;
+}
+
+defm "" : SIMDNarrow<v16i8, "i8x16", v8i16, "i16x8", 198>;
+defm "" : SIMDNarrow<v8i16, "i16x8", v4i32, "i32x4", 200>;
+
 // Lower llvm.wasm.trunc.saturate.* to saturating instructions
 def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
           (fp_to_sint_v4i32_v4f32 (v4f32 V128:$src))>;
@@ -732,3 +768,24 @@ foreach t2 = !foldl(
   )
 ) in
 def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
+
+//===----------------------------------------------------------------------===//
+// Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
+//===----------------------------------------------------------------------===//
+multiclass SIMDQFM<ValueType vec_t, string vec, bits<32> baseInst> {
+  defm QFMA_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
+           (outs), (ins),
+           [(set (vec_t V128:$dst),
+             (int_wasm_qfma (vec_t V128:$a), (vec_t V128:$b), (vec_t V128:$c)))],
+           vec#".qfma\t$dst, $a, $b, $c", vec#".qfma", baseInst>;
+  defm QFMS_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
+           (outs), (ins),
+           [(set (vec_t V128:$dst),
+             (int_wasm_qfms (vec_t V128:$a), (vec_t V128:$b), (vec_t V128:$c)))],
+           vec#".qfms\t$dst, $a, $b, $c", vec#".qfms", !add(baseInst, 1)>;
+}
+
+defm "" : SIMDQFM<v4f32, "f32x4", 0x98>;
+defm "" : SIMDQFM<v2f64, "f64x2", 0xa3>;

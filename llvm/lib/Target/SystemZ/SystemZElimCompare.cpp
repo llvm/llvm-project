@@ -378,11 +378,8 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
   }
 
   // CC is now live after MI.
-  if (!ConvOpc) {
-    int CCDef = MI.findRegisterDefOperandIdx(SystemZ::CC, false, true, TRI);
-    assert(CCDef >= 0 && "Couldn't find CC set");
-    MI.getOperand(CCDef).setIsDead(false);
-  }
+  if (!ConvOpc)
+    MI.clearRegisterDeads(SystemZ::CC);
 
   // Check if MI lies before Compare.
   bool BeforeCmp = false;

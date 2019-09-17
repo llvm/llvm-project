@@ -49,6 +49,19 @@ entry:
   ret i16 %conv
 }
 
+define i64 @load4_s32_to_zextLoad4_s64(i32* %px) {
+; MIPS32-LABEL: load4_s32_to_zextLoad4_s64:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lw $2, 0($4)
+; MIPS32-NEXT:    ori $3, $zero, 0
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %0 = load i32, i32* %px
+  %conv = zext i32 %0 to i64
+  ret i64 %conv
+}
+
 define i32 @load1_s8_to_sextLoad1_s32(i8* %px) {
 ; MIPS32-LABEL: load1_s8_to_sextLoad1_s32:
 ; MIPS32:       # %bb.0: # %entry
@@ -95,4 +108,19 @@ entry:
   %0 = load i8, i8* %px
   %conv = sext i8 %0 to i16
   ret i16 %conv
+}
+
+define i64 @load4_s32_to_sextLoad4_s64(i32* %px) {
+; MIPS32-LABEL: load4_s32_to_sextLoad4_s64:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lw $1, 0($4)
+; MIPS32-NEXT:    ori $2, $zero, 31
+; MIPS32-NEXT:    srav $3, $1, $2
+; MIPS32-NEXT:    move $2, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %0 = load i32, i32* %px
+  %conv = sext i32 %0 to i64
+  ret i64 %conv
 }

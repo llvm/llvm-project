@@ -104,7 +104,7 @@ write your new modified bitfield to FPM2, and vice versa. Only when you commit
 the file to disk do you need to swap the value in the SuperBlock to point to
 the new ``FreeBlockMapBlock``.
 
-The Free Block Maps are stored as a series of single blocks thoughout the file
+The Free Block Maps are stored as a series of single blocks throughout the file
 at intervals of BlockSize. Because each FPM block is of size ``BlockSize``
 bytes, it contains 8 times as many bits as an interval has blocks. This means
 that the first block of each FPM refers to the first 8 intervals of the file

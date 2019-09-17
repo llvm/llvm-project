@@ -6,7 +6,7 @@
 ; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 
 ; CHECK:      Name: g
-; CHECK-NEXT: Value: 0x1000
+; CHECK-NEXT: Value:
 ; CHECK-NEXT: Size: 0
 ; CHECK-NEXT: Binding: Local
 ; CHECK-NEXT: Type: None
@@ -16,7 +16,7 @@
 ; CHECK-NEXT: Section: .text
 
 ; CHECK:      Name: a
-; CHECK-NEXT: Value: 0x3000
+; CHECK-NEXT: Value:
 ; CHECK-NEXT: Size: 0
 ; CHECK-NEXT: Binding: Local
 ; CHECK-NEXT: Type: None
@@ -25,7 +25,7 @@
 ; CHECK-NEXT: ]
 ; CHECK-NEXT: Section: .data
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare hidden void @g()

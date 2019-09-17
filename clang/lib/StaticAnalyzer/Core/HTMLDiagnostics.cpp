@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
@@ -23,7 +24,6 @@
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -555,8 +555,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
     os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << GetIssueHash(SMgr, L, D.getCheckName(), D.getBugType(), DeclWithIssue,
-                       PP.getLangOpts()) << " -->\n";
+       << GetIssueHash(SMgr, L, D.getCheckerName(), D.getBugType(),
+                       DeclWithIssue, PP.getLangOpts())
+       << " -->\n";
 
     os << "\n<!-- BUGLINE "
        << LineNumber

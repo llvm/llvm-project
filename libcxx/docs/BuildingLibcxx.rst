@@ -204,7 +204,7 @@ libc++ specific options
   Do not export any symbols from the static libc++ library.
   This is useful when the static libc++ library is being linked into shared
   libraries that may be used in with other shared libraries that use different
-  C++ library. We want to avoid avoid exporting any libc++ symbols in that case.
+  C++ library. We want to avoid exporting any libc++ symbols in that case.
 
 .. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
 

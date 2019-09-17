@@ -3645,7 +3645,7 @@ generate_canonical(_URNG& __g)
     const size_t __logR = __log2<uint64_t, _URNG::max() - _URNG::min() + uint64_t(1)>::value;
 #endif
     const size_t __k = __b / __logR + (__b % __logR != 0) + (__b == 0);
-    const _RealType _Rp = _URNG::max() - _URNG::min() + _RealType(1);
+    const _RealType _Rp = static_cast<_RealType>(_URNG::max() - _URNG::min()) + _RealType(1);
     _RealType __base = _Rp;
     _RealType _Sp = __g() - _URNG::min();
     for (size_t __i = 1; __i < __k; ++__i, __base *= _Rp)

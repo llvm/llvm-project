@@ -756,13 +756,16 @@ public:
   unsigned short CapRegionKind;
 
   unsigned short OpenMPLevel;
+  unsigned short OpenMPCaptureLevel;
 
   CapturedRegionScopeInfo(DiagnosticsEngine &Diag, Scope *S, CapturedDecl *CD,
                           RecordDecl *RD, ImplicitParamDecl *Context,
-                          CapturedRegionKind K, unsigned OpenMPLevel)
+                          CapturedRegionKind K, unsigned OpenMPLevel,
+                          unsigned OpenMPCaptureLevel)
       : CapturingScopeInfo(Diag, ImpCap_CapturedRegion),
         TheCapturedDecl(CD), TheRecordDecl(RD), TheScope(S),
-        ContextParam(Context), CapRegionKind(K), OpenMPLevel(OpenMPLevel) {
+        ContextParam(Context), CapRegionKind(K), OpenMPLevel(OpenMPLevel),
+        OpenMPCaptureLevel(OpenMPCaptureLevel) {
     Kind = SK_CapturedRegion;
   }
 
@@ -816,6 +819,9 @@ public:
 
   /// Whether the lambda contains an unexpanded parameter pack.
   bool ContainsUnexpandedParameterPack = false;
+
+  /// Packs introduced by this lambda, if any.
+  SmallVector<NamedDecl*, 4> LocalPacks;
 
   /// If this is a generic lambda, use this as the depth of
   /// each 'auto' parameter, during initial AST construction.

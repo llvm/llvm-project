@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-none %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t
-# RUN: llvm-objdump %t -d | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-objdump %t -d --no-show-raw-insn | FileCheck %s --check-prefix=DISASM
 # RUN: llvm-readelf %t --symbols | FileCheck %s --check-prefix=SYM
 
 # It would be much easier to understand/read this test if llvm-objdump would print
@@ -15,10 +15,10 @@
 # DISASM: Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: $x.0:
-# DISASM-NEXT:   10000:       28 00 10 58     ldr     x8, #131076
+# DISASM-NEXT:   1022c:       ldr     x8, #131176
 
 # SYM: Symbol table '.symtab'
-# SYM:  0000000000030004     0 NOTYPE  LOCAL  DEFAULT    6 patatino
+# SYM:  0000000000030294     0 NOTYPE  LOCAL  DEFAULT    6 patatino
 
   ldr x8, patatino
   .data

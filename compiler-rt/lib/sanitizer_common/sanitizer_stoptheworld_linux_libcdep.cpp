@@ -223,10 +223,11 @@ bool ThreadSuspender::SuspendAllThreads() {
       case ThreadLister::Ok:
         break;
     }
-    for (tid_t tid : threads)
+    for (tid_t tid : threads) {
       if (SuspendThread(tid))
         retry = true;
-  };
+    }
+  }
   return suspended_threads_list_.ThreadCount();
 }
 

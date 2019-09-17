@@ -11,8 +11,8 @@
 
 ## A non-preemptable symbol (b) has 0 st_shndx.
 # IE-REL:      .rela.dyn {
-# IE-REL-NEXT:   0x2005C R_PPC_TPREL32 - 0xC
-# IE-REL-NEXT:   0x20058 R_PPC_TPREL32 a 0x0
+# IE-REL-NEXT:   0x20224 R_PPC_TPREL32 - 0xC
+# IE-REL-NEXT:   0x20220 R_PPC_TPREL32 a 0x0
 # IE-REL-NEXT: }
 
 ## &.got[0] - _GLOBAL_OFFSET_TABLE_ = 0

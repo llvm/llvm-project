@@ -20,31 +20,31 @@ namespace utils {
 
 typedef llvm::SmallSet<llvm::StringRef, 5> HeaderFileExtensionsSet;
 
-/// \brief Checks whether expansion location of \p Loc is in header file.
+/// Checks whether expansion location of \p Loc is in header file.
 bool isExpansionLocInHeaderFile(
     SourceLocation Loc, const SourceManager &SM,
     const HeaderFileExtensionsSet &HeaderFileExtensions);
 
-/// \brief Checks whether presumed location of \p Loc is in header file.
+/// Checks whether presumed location of \p Loc is in header file.
 bool isPresumedLocInHeaderFile(
     SourceLocation Loc, SourceManager &SM,
     const HeaderFileExtensionsSet &HeaderFileExtensions);
 
-/// \brief Checks whether spelling location of \p Loc is in header file.
+/// Checks whether spelling location of \p Loc is in header file.
 bool isSpellingLocInHeaderFile(
     SourceLocation Loc, SourceManager &SM,
     const HeaderFileExtensionsSet &HeaderFileExtensions);
 
-/// \brief Returns recommended default value for the list of header file
+/// Returns recommended default value for the list of header file
 /// extensions.
 inline StringRef defaultHeaderFileExtensions() { return ",h,hh,hpp,hxx"; }
 
-/// \brief Parses header file extensions from a semicolon-separated list.
+/// Parses header file extensions from a semicolon-separated list.
 bool parseHeaderFileExtensions(StringRef AllHeaderFileExtensions,
                                HeaderFileExtensionsSet &HeaderFileExtensions,
                                char delimiter);
 
-/// \brief Decides whether a file has a header file extension.
+/// Decides whether a file has a header file extension.
 bool isHeaderFileExtension(StringRef FileName,
                            const HeaderFileExtensionsSet &HeaderFileExtensions);
 

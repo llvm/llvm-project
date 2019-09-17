@@ -1479,6 +1479,9 @@ TEST_F(FormatTestJS, TypeAnnotations) {
       "                    .someFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
   verifyFormat("const xIsALongIdent:\n""    YJustBarelyFitsLinex[];",
       getGoogleJSStyleWithColumns(20));
+  verifyFormat("const x = {\n"
+               "  y: 1\n"
+               "} as const;");
 }
 
 TEST_F(FormatTestJS, UnionIntersectionTypes) {

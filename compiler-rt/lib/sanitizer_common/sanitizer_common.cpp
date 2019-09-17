@@ -323,7 +323,7 @@ static int InstallMallocFreeHooks(void (*malloc_hook)(const void *, uptr),
 
 } // namespace __sanitizer
 
-using namespace __sanitizer;  // NOLINT
+using namespace __sanitizer;
 
 extern "C" {
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_report_error_summary,

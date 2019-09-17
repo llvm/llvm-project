@@ -29,6 +29,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -154,6 +155,11 @@ public:
                            int &maxStages,
                            raw_ostream &OS);
 
+  // Emit code for a subset of itineraries.
+  void emitForItineraries(raw_ostream &OS,
+                          std::vector<Record *> &ProcItinList,
+                          std::string DFAName);
+
   void run(raw_ostream &OS);
 };
 
@@ -186,7 +192,14 @@ class State {
   const int stateNum;
   mutable bool isInitial;
   mutable std::set<unsigned> stateInfo;
-  typedef std::map<std::vector<unsigned>, const State *> TransitionMap;
+
+  struct TransitionInfo {
+    // Maps from a resource bitmask in this state to the equivalent resource
+    // bitmap in the transitioned-to state. This is a 1-to-N mapping.
+    std::vector<std::pair<unsigned, unsigned>> ResourceTransitions;
+    const State *S;
+  };
+  using TransitionMap = std::map<std::vector<unsigned>, TransitionInfo>;
   mutable TransitionMap Transitions;
 
   State();
@@ -215,9 +228,14 @@ class State {
   // PossibleStates is the set of valid resource states that ensue from valid
   // transitions.
   //
-  void AddInsnClass(std::vector<unsigned> &InsnClass,
-                        std::map<unsigned, unsigned> &ComboBitToBitsMap,
-                        std::set<unsigned> &PossibleStates) const;
+  // TransitionInfo maps from a resource bitmask B in this state to a resource
+  // bitmask B' in PossibleStates. This is a one-to-many (or none) mapping.
+  //
+  void AddInsnClass(
+      std::vector<unsigned> &InsnClass,
+      std::map<unsigned, unsigned> &ComboBitToBitsMap,
+      std::set<unsigned> &PossibleStates,
+      std::vector<std::pair<unsigned, unsigned>> &TransitionInfo) const;
 
   //
   // AddInsnClassStages - Return all combinations of resource reservation
@@ -225,16 +243,17 @@ class State {
   // which are possible from this state (PossibleStates).
   //
   void AddInsnClassStages(std::vector<unsigned> &InsnClass,
-                        std::map<unsigned, unsigned> &ComboBitToBitsMap,
-                        unsigned chkstage, unsigned numstages,
-                        unsigned prevState, unsigned origState,
-                        DenseSet<unsigned> &VisitedResourceStates,
-                        std::set<unsigned> &PossibleStates) const;
+                          std::map<unsigned, unsigned> &ComboBitToBitsMap,
+                          unsigned chkstage, unsigned numstages,
+                          unsigned prevState, unsigned origState,
+                          DenseSet<unsigned> &VisitedResourceStates) const;
 
   //
-  // addTransition - Add a transition from this state given the input InsnClass
+  // addTransition - Add a transition from this state given the input InsnClass.
   //
-  void addTransition(std::vector<unsigned> InsnClass, const State *To) const;
+  void addTransition(
+      std::vector<unsigned> InsnClass, const State *To,
+      const std::vector<std::pair<unsigned, unsigned>> &TransitionInfo) const;
 
   //
   // hasTransition - Returns true if there is a transition from this state
@@ -323,11 +342,12 @@ State::State() :
 //
 // addTransition - Add a transition from this state given the input InsnClass
 //
-void State::addTransition(std::vector<unsigned> InsnClass, const State *To)
-      const {
+void State::addTransition(
+    std::vector<unsigned> InsnClass, const State *To,
+    const std::vector<std::pair<unsigned, unsigned>> &TransitionInfo) const {
   assert(!Transitions.count(InsnClass) &&
       "Cannot have multiple transitions for the same input");
-  Transitions[InsnClass] = To;
+  Transitions[InsnClass] = {TransitionInfo, To};
 }
 
 //
@@ -345,9 +365,11 @@ bool State::hasTransition(std::vector<unsigned> InsnClass) const {
 // PossibleStates is the set of valid resource states that ensue from valid
 // transitions.
 //
-void State::AddInsnClass(std::vector<unsigned> &InsnClass,
-                        std::map<unsigned, unsigned> &ComboBitToBitsMap,
-                        std::set<unsigned> &PossibleStates) const {
+void State::AddInsnClass(
+    std::vector<unsigned> &InsnClass,
+    std::map<unsigned, unsigned> &ComboBitToBitsMap,
+    std::set<unsigned> &PossibleStates,
+    std::vector<std::pair<unsigned, unsigned>> &TransitionInfo) const {
   //
   // Iterate over all resource states in currentState.
   //
@@ -356,25 +378,26 @@ void State::AddInsnClass(std::vector<unsigned> &InsnClass,
 
   for (std::set<unsigned>::iterator SI = stateInfo.begin();
        SI != stateInfo.end(); ++SI) {
-    unsigned thisState = *SI;
+    unsigned ThisState = *SI;
 
     DenseSet<unsigned> VisitedResourceStates;
 
-    LLVM_DEBUG(dbgs() << "  thisState: 0x" << Twine::utohexstr(thisState)
+    LLVM_DEBUG(dbgs() << "  thisState: 0x" << Twine::utohexstr(ThisState)
                       << "\n");
-    AddInsnClassStages(InsnClass, ComboBitToBitsMap,
-                                numstages - 1, numstages,
-                                thisState, thisState,
-                                VisitedResourceStates, PossibleStates);
+    AddInsnClassStages(InsnClass, ComboBitToBitsMap, numstages - 1, numstages,
+                       ThisState, ThisState, VisitedResourceStates);
+    for (unsigned NewState : VisitedResourceStates) {
+      PossibleStates.insert(NewState);
+      TransitionInfo.emplace_back(ThisState, NewState);
+    }
   }
 }
 
-void State::AddInsnClassStages(std::vector<unsigned> &InsnClass,
-                        std::map<unsigned, unsigned> &ComboBitToBitsMap,
-                        unsigned chkstage, unsigned numstages,
-                        unsigned prevState, unsigned origState,
-                        DenseSet<unsigned> &VisitedResourceStates,
-                        std::set<unsigned> &PossibleStates) const {
+void State::AddInsnClassStages(
+    std::vector<unsigned> &InsnClass,
+    std::map<unsigned, unsigned> &ComboBitToBitsMap, unsigned chkstage,
+    unsigned numstages, unsigned prevState, unsigned origState,
+    DenseSet<unsigned> &VisitedResourceStates) const {
   assert((chkstage < numstages) && "AddInsnClassStages: stage out of range");
   unsigned thisStage = InsnClass[chkstage];
 
@@ -432,7 +455,6 @@ void State::AddInsnClassStages(std::vector<unsigned> &InsnClass,
         if (ResultingResourceState != prevState) {
           if (VisitedResourceStates.count(ResultingResourceState) == 0) {
             VisitedResourceStates.insert(ResultingResourceState);
-            PossibleStates.insert(ResultingResourceState);
             LLVM_DEBUG(dbgs()
                        << "\tResultingResourceState: 0x"
                        << Twine::utohexstr(ResultingResourceState) << "\n");
@@ -450,10 +472,9 @@ void State::AddInsnClassStages(std::vector<unsigned> &InsnClass,
         //
         if (ResultingResourceState != prevState) {
           LLVM_DEBUG(dbgs() << "\n");
-          AddInsnClassStages(InsnClass, ComboBitToBitsMap,
-                                chkstage - 1, numstages,
-                                ResultingResourceState, origState,
-                                VisitedResourceStates, PossibleStates);
+          AddInsnClassStages(InsnClass, ComboBitToBitsMap, chkstage - 1,
+                             numstages, ResultingResourceState, origState,
+                             VisitedResourceStates);
         } else {
           LLVM_DEBUG(dbgs() << "\tSkipped Add - no resources available\n");
         }
@@ -545,14 +566,6 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
   LLVM_DEBUG(dbgs() << "writeTableAndAPI\n");
   LLVM_DEBUG(dbgs() << "Total states: " << numStates << "\n");
 
-  OS << "namespace llvm {\n";
-
-  OS << "\n// Input format:\n";
-  OS << "#define DFA_MAX_RESTERMS        " << DFA_MAX_RESTERMS
-     << "\t// maximum AND'ed resource terms\n";
-  OS << "#define DFA_MAX_RESOURCES       " << DFA_MAX_RESOURCES
-     << "\t// maximum resource bits in one term\n";
-
   OS << "\n// " << TargetName << "DFAStateInputTable[][2] = "
      << "pairs of <Input, NextState> for all valid\n";
   OS << "//                           transitions.\n";
@@ -580,16 +593,9 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
         II = SI->Transitions.begin(), IE = SI->Transitions.end();
         II != IE; ++II) {
       OS << "{0x" << Twine::utohexstr(getDFAInsnInput(II->first)) << ", "
-         << II->second->stateNum << "},\t";
+         << II->second.S->stateNum << "},\t";
     }
     ValidTransitions += SI->Transitions.size();
-
-    // If there are no valid transitions from this stage, we need a sentinel
-    // transition.
-    if (ValidTransitions == StateEntry[i]) {
-      OS << SentinelEntry << ",\t";
-      ++ValidTransitions;
-    }
 
     OS << " // state " << i << ": " << StateEntry[i];
     if (StateEntry[i] != (ValidTransitions-1)) {   // More than one transition.
@@ -612,8 +618,6 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
   OS << "// " << numStates << " states\n";
   OS << "const unsigned int " << TargetName << "DFAStateEntryTable[] = {\n";
 
-  // Multiply i by 2 since each entry in DFAStateInputTable is a set of
-  // two numbers.
   unsigned lastState = 0;
   for (unsigned i = 0; i < numStates; ++i) {
     if (i && ((i % 10) == 0)) {
@@ -622,25 +626,44 @@ void DFA::writeTableAndAPI(raw_ostream &OS, const std::string &TargetName,
     }
     OS << StateEntry[i] << ", ";
   }
-
   // Print out the index to the sentinel entry in StateInputTable
   OS << ValidTransitions << ", ";
   OS << "   // states " << (lastState+1) << ":" << numStates << "\n";
-
   OS << "};\n";
-  OS << "} // namespace\n";
 
-  //
-  // Emit DFA Packetizer tables if the target is a VLIW machine.
-  //
-  std::string SubTargetClassName = TargetName + "GenSubtargetInfo";
-  OS << "\n" << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
-  OS << "namespace llvm {\n";
-  OS << "DFAPacketizer *" << SubTargetClassName << "::"
-     << "createDFAPacketizer(const InstrItineraryData *IID) const {\n"
-     << "   return new DFAPacketizer(IID, " << TargetName
-     << "DFAStateInputTable, " << TargetName << "DFAStateEntryTable);\n}\n\n";
-  OS << "} // End llvm namespace \n";
+  // Generate the resource transition table.
+  OS << "const unsigned " << TargetName
+     << "DFAResourceTransitionTable[][2] = {  \n";
+  int N = 0;
+  StateEntry.clear();
+  for (const State &S : states) {
+    for (auto &KV : S.Transitions) {
+      StateEntry.push_back(N);
+      for (std::pair<unsigned, unsigned> &T : KV.second.ResourceTransitions) {
+        OS << "{0x" << utohexstr(T.first) << ", 0x" << utohexstr(T.second)
+           << "}, ";
+        ++N;
+      }
+    }
+    OS << "\n  ";
+  }
+  // Add a sentinel entry to terminate the search.
+  StateEntry.push_back(N);
+  OS << "\n  {~0U,~0U}\n};\n\n";
+
+  OS << "// " << TargetName << "DFAResourceTransitionEntryTable[i] = "
+     << "Index of the first entry in DFAResourceTransitionTable for\n";
+  OS << "// the ith transition.\n";
+  OS << "const unsigned int " << TargetName
+     << "DFAResourceTransitionEntryTable[] = {  \n";
+
+  N = 0;
+  for (int S : StateEntry) {
+    OS << S << ",";
+    if (N++ % 10 == 0)
+      OS << "\n  ";
+  }
+  OS << "\n  ~0U\n};\n";
 }
 
 //
@@ -837,10 +860,32 @@ int DFAPacketizerEmitter::collectAllInsnClasses(const std::string &ProcName,
 // Run the worklist algorithm to generate the DFA.
 //
 void DFAPacketizerEmitter::run(raw_ostream &OS) {
+  OS << "\n"
+     << "#include \"llvm/CodeGen/DFAPacketizer.h\"\n";
+  OS << "namespace llvm {\n";
+
+  OS << "\n// Input format:\n";
+  OS << "#define DFA_MAX_RESTERMS        " << DFA_MAX_RESTERMS
+     << "\t// maximum AND'ed resource terms\n";
+  OS << "#define DFA_MAX_RESOURCES       " << DFA_MAX_RESOURCES
+     << "\t// maximum resource bits in one term\n";
+
   // Collect processor iteraries.
   std::vector<Record*> ProcItinList =
     Records.getAllDerivedDefinitions("ProcessorItineraries");
 
+  std::unordered_map<std::string, std::vector<Record*>> ItinsByNamespace;
+  for (Record *R : ProcItinList)
+    ItinsByNamespace[R->getValueAsString("PacketizerNamespace")].push_back(R);
+
+  for (auto &KV : ItinsByNamespace)
+    emitForItineraries(OS, KV.second, KV.first);
+  OS << "} // end namespace llvm\n";
+}
+
+void DFAPacketizerEmitter::emitForItineraries(
+    raw_ostream &OS, std::vector<Record *> &ProcItinList,
+    std::string DFAName) {
   //
   // Collect the Functional units.
   //
@@ -940,7 +985,9 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
       if (!current->hasTransition(InsnClass) &&
           current->canMaybeAddInsnClass(InsnClass, ComboBitToBitsMap)) {
         const State *NewState = nullptr;
-        current->AddInsnClass(InsnClass, ComboBitToBitsMap, NewStateResources);
+        std::vector<std::pair<unsigned, unsigned>> TransitionInfo;
+        current->AddInsnClass(InsnClass, ComboBitToBitsMap, NewStateResources,
+                              TransitionInfo);
         if (NewStateResources.empty()) {
           LLVM_DEBUG(dbgs() << "  Skipped - no new states generated\n");
           continue;
@@ -976,14 +1023,28 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
           });
         }
 
-        current->addTransition(InsnClass, NewState);
+        current->addTransition(InsnClass, NewState, TransitionInfo);
       }
     }
   }
 
   // Print out the table.
-  D.writeTableAndAPI(OS, TargetName,
-               numInsnClasses, maxResources, numCombos, maxStages);
+  D.writeTableAndAPI(OS, TargetName + DFAName, numInsnClasses, maxResources,
+                     numCombos, maxStages);
+
+  OS << "} // end namespace llvm\n";
+
+  std::string SubTargetClassName = TargetName + "GenSubtargetInfo";
+  OS << "namespace llvm {\n";
+  OS << "DFAPacketizer *" << SubTargetClassName << "::"
+     << "create" << DFAName
+     << "DFAPacketizer(const InstrItineraryData *IID) const {\n"
+     << "   return new DFAPacketizer(IID, " << TargetName << DFAName
+     << "DFAStateInputTable, " << TargetName << DFAName
+     << "DFAStateEntryTable, " << TargetName << DFAName
+     << "DFAResourceTransitionTable, " << TargetName << DFAName
+     << "DFAResourceTransitionEntryTable"
+     << ");\n}\n\n";
 }
 
 namespace llvm {

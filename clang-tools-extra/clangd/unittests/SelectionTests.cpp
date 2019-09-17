@@ -210,6 +210,15 @@ TEST(SelectionTest, CommonAncestor) {
           )cpp",
           "FunctionProtoTypeLoc",
       },
+      {
+          R"cpp(
+            struct S {
+              int foo;
+              int bar() { return [[f^oo]]; }
+            };
+          )cpp",
+          "MemberExpr", // Not implicit CXXThisExpr!
+      },
 
       // Point selections.
       {"void foo() { [[^foo]](); }", "DeclRefExpr"},
@@ -261,6 +270,22 @@ TEST(SelectionTest, CommonAncestor) {
              struct Foo<U<int>*> {};
           )cpp",
           "TemplateTemplateParmDecl"},
+
+      // Foreach has a weird AST, ensure we can select parts of the range init.
+      // This used to fail, because the DeclStmt for C claimed the whole range.
+      {
+          R"cpp(
+            struct Str {
+              const char *begin();
+              const char *end();
+            };
+            Str makeStr(const char*);
+            void loop() {
+              for (const char* C : [[mak^eStr("foo"^)]])
+                ;
+            }
+          )cpp",
+          "CallExpr"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
@@ -344,6 +369,25 @@ TEST(SelectionTest, Selected) {
     EXPECT_THAT(Complete, UnorderedElementsAreArray(Test.ranges("C"))) << C;
     EXPECT_THAT(Partial, UnorderedElementsAreArray(Test.ranges())) << C;
   }
+}
+
+TEST(SelectionTest, PathologicalPreprocessor) {
+  const char *Case = R"cpp(
+#define MACRO while(1)
+    void test() {
+#include "Expand.inc"
+        br^eak;
+    }
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["Expand.inc"] = "MACRO\n";
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty());
+  auto T = makeSelectionTree(Case, AST);
+
+  EXPECT_EQ("BreakStmt", T.commonAncestor()->kind());
+  EXPECT_EQ("WhileStmt", T.commonAncestor()->Parent->kind());
 }
 
 TEST(SelectionTest, Implicit) {

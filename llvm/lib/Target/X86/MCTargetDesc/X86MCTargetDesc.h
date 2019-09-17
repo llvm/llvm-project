@@ -58,6 +58,10 @@ unsigned getDwarfRegFlavour(const Triple &TT, bool isEH);
 
 void initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI);
 
+
+/// Returns true if this instruction has a LOCK prefix.
+bool hasLockPrefix(const MCInst &MI);
+
 /// Create a X86 MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.
 MCSubtargetInfo *createX86MCSubtargetInfo(const Triple &TT, StringRef CPU,

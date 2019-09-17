@@ -170,7 +170,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << "' expression is undefined";
       }
     }
-    auto report = std::make_unique<BugReport>(*BT, OS.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
     if (Ex) {
       report->addRange(Ex->getSourceRange());
       bugreporter::trackExpressionValue(N, Ex, *report);

@@ -539,12 +539,9 @@ define i64 @testNegOverflow(i64 %a) {
 ;
 ; X86-LABEL: testNegOverflow:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    mull %edx
-; X86-NEXT:    shll $31, %ecx
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shll $31, %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 entry:

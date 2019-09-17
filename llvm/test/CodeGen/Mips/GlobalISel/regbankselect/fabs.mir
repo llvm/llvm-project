@@ -9,7 +9,7 @@
 ...
 ---
 name:            fabs_f32
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |
@@ -36,7 +36,7 @@ body:             |
 ...
 ---
 name:            fabs_f64
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 body:             |

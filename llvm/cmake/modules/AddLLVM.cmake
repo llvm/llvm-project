@@ -8,6 +8,8 @@ function(llvm_update_compile_flags name)
     set(update_src_props ON)
   endif()
 
+  list(APPEND LLVM_COMPILE_CFLAGS " ${LLVM_COMPILE_FLAGS}")
+
   # LLVM_REQUIRES_EH is an internal flag that individual targets can use to
   # force EH
   if(LLVM_REQUIRES_EH OR LLVM_ENABLE_EH)
@@ -54,6 +56,7 @@ function(llvm_update_compile_flags name)
   #   - LLVM_COMPILE_FLAGS is list.
   #   - PROPERTY COMPILE_FLAGS is string.
   string(REPLACE ";" " " target_compile_flags " ${LLVM_COMPILE_FLAGS}")
+  string(REPLACE ";" " " target_compile_cflags " ${LLVM_COMPILE_CFLAGS}")
 
   if(update_src_props)
     foreach(fn ${sources})
@@ -61,6 +64,10 @@ function(llvm_update_compile_flags name)
       if("${suf}" STREQUAL ".cpp")
         set_property(SOURCE ${fn} APPEND_STRING PROPERTY
           COMPILE_FLAGS "${target_compile_flags}")
+      endif()
+      if("${suf}" STREQUAL ".c")
+        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
+          COMPILE_FLAGS "${target_compile_cflags}")
       endif()
     endforeach()
   else()

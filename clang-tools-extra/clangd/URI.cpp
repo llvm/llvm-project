@@ -26,7 +26,7 @@ inline llvm::Error make_string_error(const llvm::Twine &Message) {
                                              llvm::inconvertibleErrorCode());
 }
 
-/// \brief This manages file paths in the file system. All paths in the scheme
+/// This manages file paths in the file system. All paths in the scheme
 /// are absolute (with leading '/').
 /// Note that this scheme is hardcoded into the library and not registered in
 /// registry.

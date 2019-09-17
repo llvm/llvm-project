@@ -34,7 +34,7 @@ Symbols:
 # CASE2-NEXT: Flags [
 # CASE2-NEXT: ]
 # CASE2-NEXT: Address: 0x0
-# CASE2-NEXT: Offset: 0x140
+# CASE2-NEXT: Offset: 0x40
 # CASE2-NEXT: Size: 2
 # CASE2-NEXT: Link: 0
 # CASE2-NEXT: Info: 0
@@ -69,7 +69,7 @@ Symbols:
 # CASE3-NEXT: Flags [
 # CASE3-NEXT: ]
 # CASE3-NEXT: Address: 0x0
-# CASE3-NEXT: Offset: 0x140
+# CASE3-NEXT: Offset: 0x40
 # CASE3-NEXT: Size: 2
 # CASE3-NEXT: Link: 0
 # CASE3-NEXT: Info: 0
@@ -105,7 +105,7 @@ Symbols:
 # CASE4-NEXT: Flags [
 # CASE4-NEXT: ]
 # CASE4-NEXT: Address: 0x0
-# CASE4-NEXT: Offset: 0x140
+# CASE4-NEXT: Offset: 0x40
 # CASE4-NEXT: Size: 3
 # CASE4-NEXT: Link: 0
 # CASE4-NEXT: Info: 0
@@ -141,7 +141,7 @@ Symbols:
 # CASE5-NEXT: Flags [ (0x0)
 # CASE5-NEXT: ]
 # CASE5-NEXT: Address: 0x0
-# CASE5-NEXT: Offset: 0x140
+# CASE5-NEXT: Offset: 0x40
 # CASE5-NEXT: Size: 2
 # CASE5-NEXT: Link: 0
 # CASE5-NEXT: Info: 0

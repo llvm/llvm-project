@@ -313,9 +313,9 @@ struct SysAlias {
   uint16_t Encoding;
   FeatureBitset FeaturesRequired;
 
-  SysAlias (const char *N, uint16_t E) : Name(N), Encoding(E) {};
-  SysAlias (const char *N, uint16_t E, FeatureBitset F) :
-    Name(N), Encoding(E), FeaturesRequired(F) {};
+  constexpr SysAlias(const char *N, uint16_t E) : Name(N), Encoding(E) {}
+  constexpr SysAlias(const char *N, uint16_t E, FeatureBitset F)
+      : Name(N), Encoding(E), FeaturesRequired(F) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
@@ -326,9 +326,10 @@ struct SysAlias {
 
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
-  SysAliasReg(const char *N, uint16_t E, bool R) : SysAlias(N, E), NeedsReg(R) {};
-  SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F) : SysAlias(N, E, F),
-    NeedsReg(R) {};
+  constexpr SysAliasReg(const char *N, uint16_t E, bool R)
+      : SysAlias(N, E), NeedsReg(R) {}
+  constexpr SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F)
+      : SysAlias(N, E, F), NeedsReg(R) {}
 };
 
 namespace AArch64AT{
@@ -634,6 +635,10 @@ namespace AArch64II {
 
     /// MO_TAGGED - With MO_PAGE, indicates that the page includes a memory tag
     /// in bits 56-63.
+    /// On a FrameIndex operand, indicates that the underlying memory is tagged
+    /// with an unknown tag value (MTE); this needs to be lowered either to an
+    /// SP-relative load or store instruction (which do not check tags), or to
+    /// an LDG instruction to obtain the tag value.
     MO_TAGGED = 0x400,
   };
 } // end namespace AArch64II

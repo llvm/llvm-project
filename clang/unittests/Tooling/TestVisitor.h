@@ -85,8 +85,8 @@ public:
   }
 
 protected:
-  virtual ASTFrontendAction* CreateTestAction() {
-    return new TestAction(this);
+  virtual std::unique_ptr<ASTFrontendAction> CreateTestAction() {
+    return std::make_unique<TestAction>(this);
   }
 
   class FindConsumer : public ASTConsumer {

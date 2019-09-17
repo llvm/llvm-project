@@ -45,7 +45,8 @@ struct AnalysisResultsForFn {
   PostDominatorTree *PDT;
 };
 
-bool runIPSCCP(Module &M, const DataLayout &DL, const TargetLibraryInfo *TLI,
+bool runIPSCCP(Module &M, const DataLayout &DL,
+               std::function<const TargetLibraryInfo &(Function &)> GetTLI,
                function_ref<AnalysisResultsForFn(Function &)> getAnalysis);
 } // end namespace llvm
 

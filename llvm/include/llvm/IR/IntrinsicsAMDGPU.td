@@ -175,6 +175,7 @@ def int_amdgcn_implicit_buffer_ptr :
 
 // Set EXEC to the 64-bit value given.
 // This is always moved to the beginning of the basic block.
+// FIXME: Should be mangled for wave size.
 def int_amdgcn_init_exec : Intrinsic<[],
   [llvm_i64_ty],      // 64-bit literal constant
   [IntrConvergent, ImmArg<0>]>;
@@ -185,7 +186,7 @@ def int_amdgcn_init_exec : Intrinsic<[],
 def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [llvm_i32_ty,       // 32-bit SGPR input
    llvm_i32_ty],      // bit offset of the thread count
-  [IntrConvergent]>;
+  [IntrConvergent, ImmArg<1>]>;
 
 def int_amdgcn_wavefrontsize :
   GCCBuiltin<"__builtin_amdgcn_wavefrontsize">,
@@ -206,7 +207,7 @@ def int_amdgcn_s_sendmsghalt : GCCBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
   [ImmArg<0>, IntrNoMem, IntrHasSideEffects]>;
 
 def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
-  Intrinsic<[], [], [IntrConvergent]>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
 
 def int_amdgcn_wave_barrier : GCCBuiltin<"__builtin_amdgcn_wave_barrier">,
   Intrinsic<[], [], [IntrConvergent]>;
@@ -1468,6 +1469,18 @@ def int_amdgcn_set_inactive :
             [LLVMMatchType<0>, // value to be copied
              LLVMMatchType<0>], // value for the inactive lanes to take
             [IntrNoMem, IntrConvergent]>;
+
+// Return if the given flat pointer points to a local memory address.
+def int_amdgcn_is_shared : GCCBuiltin<"__builtin_amdgcn_is_shared">,
+  Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+  [IntrNoMem, IntrSpeculatable, NoCapture<0>]
+>;
+
+// Return if the given flat pointer points to a prvate memory address.
+def int_amdgcn_is_private : GCCBuiltin<"__builtin_amdgcn_is_private">,
+  Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+  [IntrNoMem, IntrSpeculatable, NoCapture<0>]
+>;
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics

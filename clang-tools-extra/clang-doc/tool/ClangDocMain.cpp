@@ -172,8 +172,8 @@ llvm::Expected<llvm::SmallString<128>> getInfoOutputFile(StringRef Root,
   llvm::sys::path::native(Root, Path);
   llvm::sys::path::append(Path, RelativePath);
   if (CreateDirectory(Path))
-    return llvm::make_error<llvm::StringError>("Unable to create directory.\n",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "failed to create directory");
   llvm::sys::path::append(Path, Name + Ext);
   return Path;
 }
@@ -303,7 +303,7 @@ int main(int argc, const char **argv) {
       }
       std::error_code FileErr;
       llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr,
-                                  llvm::sys::fs::F_None);
+                                  llvm::sys::fs::OF_None);
       if (FileErr != OK) {
         llvm::errs() << "Error opening info file: " << FileErr.message()
                      << "\n";
@@ -326,8 +326,11 @@ int main(int argc, const char **argv) {
     return 1;
 
   llvm::outs() << "Generating assets for docs...\n";
-  if (!G->get()->createResources(CDCtx))
+  Err = G->get()->createResources(CDCtx);
+  if (Err) {
+    llvm::errs() << toString(std::move(Err)) << "\n";
     return 1;
+  }
 
   return 0;
 }

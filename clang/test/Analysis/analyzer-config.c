@@ -30,6 +30,8 @@
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-threshold = 100
 // CHECK-NEXT: ctu-index-name = externalDefMap.txt
+// CHECK-NEXT: deadcode.DeadStores:ShowFixIts = false
+// CHECK-NEXT: deadcode.DeadStores:WarnForDeadNestedAssignments = true
 // CHECK-NEXT: debug.AnalysisOrder:* = false
 // CHECK-NEXT: debug.AnalysisOrder:Bind = false
 // CHECK-NEXT: debug.AnalysisOrder:EndFunction = false
@@ -53,6 +55,7 @@
 // CHECK-NEXT: experimental-enable-naive-ctu-analysis = false
 // CHECK-NEXT: exploration_strategy = unexplored_first_queue
 // CHECK-NEXT: faux-bodies = true
+// CHECK-NEXT: fixits-as-remarks = false
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
@@ -73,6 +76,7 @@
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:NotesAsWarnings = false
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:Pedantic = false
 // CHECK-NEXT: optin.cplusplus.VirtualCall:PureOnly = false
+// CHECK-NEXT: optin.cplusplus.VirtualCall:ShowFixIts = false
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
@@ -87,10 +91,10 @@
 // CHECK-NEXT: suppress-c++-stdlib = true
 // CHECK-NEXT: suppress-inlined-defensive-checks = true
 // CHECK-NEXT: suppress-null-return-paths = true
-// CHECK-NEXT: track-conditions = false
+// CHECK-NEXT: track-conditions = true
 // CHECK-NEXT: track-conditions-debug = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 90
+// CHECK-NEXT: num-entries = 94

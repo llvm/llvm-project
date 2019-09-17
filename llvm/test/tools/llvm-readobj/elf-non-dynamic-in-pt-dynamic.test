@@ -6,11 +6,11 @@
 
 # RUN: yaml2obj --docnum=1 %s -o %t.o
 # RUN: llvm-readobj --dynamic-table %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=WARNING,LLVM
+# RUN:   | FileCheck %s --DFILE=%t.o --check-prefixes=WARNING,LLVM
 # RUN: llvm-readelf --dynamic-table %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=WARNING,GNU
+# RUN:   | FileCheck %s --DFILE=%t.o --check-prefixes=WARNING,GNU
 
-# WARNING:    warning: The SHT_DYNAMIC section '.dynamic' is not at the start of PT_DYNAMIC segment
+# WARNING:    warning: '[[FILE]]': The SHT_DYNAMIC section '.dynamic' is not at the start of PT_DYNAMIC segment
 
 # LLVM:      DynamicSection [ (2 entries)
 # LLVM-NEXT:   Tag                Type     Name/Value

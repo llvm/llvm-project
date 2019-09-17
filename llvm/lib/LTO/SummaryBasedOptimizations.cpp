@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-cl::opt<bool> ThinLTOSynthesizeEntryCounts(
+static cl::opt<bool> ThinLTOSynthesizeEntryCounts(
     "thinlto-synthesize-entry-counts", cl::init(false), cl::Hidden,
     cl::desc("Synthesize entry counts based on the summary"));
 

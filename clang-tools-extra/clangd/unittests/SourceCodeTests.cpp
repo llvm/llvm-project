@@ -11,9 +11,11 @@
 #include "SourceCode.h"
 #include "TestTU.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -310,6 +312,45 @@ TEST(SourceCodeTests, SourceLocationInMainFile) {
   }
 }
 
+TEST(SourceCodeTests, GetBeginningOfIdentifier) {
+  std::string Preamble = R"cpp(
+struct Bar { int func(); };
+#define MACRO(X) void f() { X; }
+Bar* bar;
+  )cpp";
+  // First ^ is the expected beginning, last is the search position.
+  for (std::string Text : std::vector<std::string>{
+           "int ^f^oo();", // inside identifier
+           "int ^foo();",  // beginning of identifier
+           "int ^foo^();", // end of identifier
+           "int foo(^);",  // non-identifier
+           "^int foo();",  // beginning of file (can't back up)
+           "int ^f0^0();", // after a digit (lexing at N-1 is wrong)
+           "int ^λλ^λ();", // UTF-8 handled properly when backing up
+
+           // identifier in macro arg
+           "MACRO(bar->^func())",  // beginning of identifier
+           "MACRO(bar->^fun^c())", // inside identifier
+           "MACRO(bar->^func^())", // end of identifier
+           "MACRO(^bar->func())",  // begin identifier
+           "MACRO(^bar^->func())", // end identifier
+           "^MACRO(bar->func())",  // beginning of macro name
+           "^MAC^RO(bar->func())", // inside macro name
+           "^MACRO^(bar->func())", // end of macro name
+       }) {
+    std::string WithPreamble = Preamble + Text;
+    Annotations TestCase(WithPreamble);
+    auto AST = TestTU::withCode(TestCase.code()).build();
+    const auto &SourceMgr = AST.getSourceManager();
+    SourceLocation Actual = getBeginningOfIdentifier(
+        TestCase.points().back(), SourceMgr, AST.getASTContext().getLangOpts());
+    Position ActualPos = offsetToPosition(
+        TestCase.code(),
+        SourceMgr.getFileOffset(SourceMgr.getSpellingLoc(Actual)));
+    EXPECT_EQ(TestCase.points().front(), ActualPos) << Text;
+  }
+}
+
 TEST(SourceCodeTests, CollectIdentifiers) {
   auto Style = format::getLLVMStyle();
   auto IDs = collectIdentifiers(R"cpp(
@@ -415,8 +456,8 @@ TEST(SourceCodeTests, GetMacros) {
    )cpp");
   TestTU TU = TestTU::withCode(Code.code());
   auto AST = TU.build();
-  auto Loc = getBeginningOfIdentifier(AST, Code.point(),
-                                      AST.getSourceManager().getMainFileID());
+  auto Loc = getBeginningOfIdentifier(Code.point(), AST.getSourceManager(),
+                                      AST.getASTContext().getLangOpts());
   auto Result = locateMacroAt(Loc, AST.getPreprocessor());
   ASSERT_TRUE(Result);
   EXPECT_THAT(*Result, MacroName("MACRO"));
@@ -503,6 +544,53 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
   CheckRange("d");
   CheckRange("e");
   CheckRange("f");
+}
+
+TEST(SourceCodeTests, HalfOpenFileRangePathologicalPreprocessor) {
+  const char *Case = R"cpp(
+#define MACRO while(1)
+    void test() {
+[[#include "Expand.inc"
+        br^eak]];
+    }
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["Expand.inc"] = "MACRO\n";
+  auto AST = TU.build();
+
+  const auto &Func = cast<FunctionDecl>(findDecl(AST, "test"));
+  const auto &Body = cast<CompoundStmt>(Func.getBody());
+  const auto &Loop = cast<WhileStmt>(*Body->child_begin());
+  llvm::Optional<SourceRange> Range = toHalfOpenFileRange(
+      AST.getSourceManager(), AST.getASTContext().getLangOpts(),
+      Loop->getSourceRange());
+  ASSERT_TRUE(Range) << "Failed to get file range";
+  EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getBegin()),
+            Test.llvm::Annotations::range().Begin);
+  EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getEnd()),
+            Test.llvm::Annotations::range().End);
+}
+
+TEST(SourceCodeTests, IncludeHashLoc) {
+  const char *Case = R"cpp(
+$foo^#include "foo.inc"
+#define HEADER "bar.inc"
+  $bar^#  include HEADER
+  )cpp";
+  Annotations Test(Case);
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo.inc"] = "int foo;\n";
+  TU.AdditionalFiles["bar.inc"] = "int bar;\n";
+  auto AST = TU.build();
+  const auto& SM = AST.getSourceManager();
+
+  FileID Foo = SM.getFileID(findDecl(AST, "foo").getLocation());
+  EXPECT_EQ(SM.getFileOffset(includeHashLoc(Foo, SM)),
+            Test.llvm::Annotations::point("foo"));
+  FileID Bar = SM.getFileID(findDecl(AST, "bar").getLocation());
+  EXPECT_EQ(SM.getFileOffset(includeHashLoc(Bar, SM)),
+            Test.llvm::Annotations::point("bar"));
 }
 
 } // namespace

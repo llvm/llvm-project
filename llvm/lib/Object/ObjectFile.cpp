@@ -67,8 +67,10 @@ Error ObjectFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
 uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }
 
 bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
-  if (Expected<StringRef> NameOrErr = getSectionName(Sec))
+  Expected<StringRef> NameOrErr = getSectionName(Sec);
+  if (NameOrErr)
     return *NameOrErr == ".llvmbc";
+  consumeError(NameOrErr.takeError());
   return false;
 }
 
@@ -126,6 +128,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type) {
   case file_magic::windows_resource:
   case file_magic::pdb:
   case file_magic::minidump:
+    return errorCodeToError(object_error::invalid_file_type);
+  case file_magic::tapi_file:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::elf:
   case file_magic::elf_relocatable:

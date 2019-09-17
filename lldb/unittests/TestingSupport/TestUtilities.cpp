@@ -8,9 +8,14 @@
 
 #include "TestUtilities.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "gtest/gtest.h"
+
+using namespace lldb_private;
 
 extern const char *TestMainArgv0;
 
@@ -21,23 +26,40 @@ std::string lldb_private::GetInputFilePath(const llvm::Twine &name) {
   return result.str();
 }
 
-llvm::Error
-lldb_private::ReadYAMLObjectFile(const llvm::Twine &yaml_name,
-                                 llvm::SmallString<128> &object_file) {
-  std::string yaml = GetInputFilePath(yaml_name);
-  llvm::StringRef args[] = {YAML2OBJ, yaml};
-  llvm::StringRef obj_ref = object_file;
-  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
-                                                       llvm::None};
-  if (llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects) != 0)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Error running yaml2obj %s.", yaml.c_str());
-  uint64_t size;
-  if (auto ec = llvm::sys::fs::file_size(object_file, size))
-    return llvm::errorCodeToError(ec);
-  if (size == 0)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Empty object file created from yaml2obj %s.", yaml.c_str());
-  return llvm::Error::success();
+llvm::Expected<TestFile> TestFile::fromYaml(llvm::StringRef Yaml) {
+  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
+  assert(Info);
+  llvm::SmallString<128> Name;
+  int FD;
+  if (std::error_code EC = llvm::sys::fs::createTemporaryFile(
+          llvm::Twine(Info->test_case_name()) + "-" + Info->name(), "test", FD,
+          Name))
+    return llvm::errorCodeToError(EC);
+  llvm::FileRemover Remover(Name);
+  {
+    llvm::raw_fd_ostream OS(FD, /*shouldClose*/ true);
+    llvm::yaml::Input YIn(Yaml);
+    if (!llvm::yaml::convertYAML(YIn, OS, [](const llvm::Twine &Msg) {}))
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "convertYAML() failed");
+  }
+  return TestFile(Name, std::move(Remover));
+}
+
+llvm::Expected<TestFile> TestFile::fromYamlFile(const llvm::Twine &Name) {
+  auto BufferOrError =
+      llvm::MemoryBuffer::getFile(GetInputFilePath(Name), /*FileSize*/ -1,
+                                  /*RequiresNullTerminator*/ false);
+  if (!BufferOrError)
+    return llvm::errorCodeToError(BufferOrError.getError());
+  return fromYaml(BufferOrError.get()->getBuffer());
+}
+
+TestFile::~TestFile() {
+  if (!Name)
+    return;
+  if (std::error_code EC =
+          llvm::sys::fs::remove(*Name, /*IgnoreNonExisting*/ false))
+    GTEST_LOG_(WARNING) << "Failed to delete `" << Name->c_str()
+                        << "`: " << EC.message();
 }

@@ -84,3 +84,62 @@ define i1 @test_negative_combined_sub_signed_overflow(i8 %x) {
   %z = icmp slt i8 %y, -1
   ret i1 %z
 }
+
+define i1 @test_sub_0_Y_eq_0(i8 %y) {
+; CHECK-LABEL: @test_sub_0_Y_eq_0(
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %s = sub i8 0, %y
+  %z = icmp eq i8 %s, 0
+  ret i1 %z
+}
+
+define i1 @test_sub_0_Y_ne_0(i8 %y) {
+; CHECK-LABEL: @test_sub_0_Y_ne_0(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %s = sub i8 0, %y
+  %z = icmp ne i8 %s, 0
+  ret i1 %z
+}
+
+define i1 @test_sub_4_Y_ne_4(i8 %y) {
+; CHECK-LABEL: @test_sub_4_Y_ne_4(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %s = sub i8 4, %y
+  %z = icmp ne i8 %s, 4
+  ret i1 %z
+}
+
+define i1 @test_sub_127_Y_eq_127(i8 %y) {
+; CHECK-LABEL: @test_sub_127_Y_eq_127(
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %s = sub i8 127, %y
+  %z = icmp eq i8 %s, 127
+  ret i1 %z
+}
+
+define i1 @test_sub_255_Y_eq_255(i8 %y) {
+; CHECK-LABEL: @test_sub_255_Y_eq_255(
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %s = sub i8 255, %y
+  %z = icmp eq i8 %s, 255
+  ret i1 %z
+}
+define <2 x i1> @test_sub_255_Y_eq_255_vec(<2 x i8> %y) {
+; CHECK-LABEL: @test_sub_255_Y_eq_255_vec(
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i8> [[Y:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[Z]]
+;
+  %s = sub <2 x i8> <i8 255, i8 255>, %y
+  %z = icmp eq <2 x i8> %s, <i8 255, i8 255>
+  ret <2 x i1> %z
+}

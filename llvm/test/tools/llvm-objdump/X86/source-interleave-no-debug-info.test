@@ -9,7 +9,7 @@
 # RUN: llvm-objdump --source %t2.o 2> %t2.e | FileCheck %s --check-prefixes=CHECK --implicit-check-not='main()'
 # RUN: FileCheck %s --input-file %t2.e --check-prefixes=WARN
 
-# WARN:        warning: failed to parse debug information for {{.*}}2.o
+# WARN:        warning: '{{.*}}2.o': failed to parse debug information
 # CHECK:       0000000000000010 main:
 # SOURCE-NEXT: ; int main() {
 # CHECK-NEXT:   10:   55                      pushq   %rbp

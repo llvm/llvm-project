@@ -6,8 +6,8 @@
 
 #include "benchmark/benchmark.h"
 
-#include "ContainerBenchmarks.hpp"
-#include "GenerateInput.hpp"
+#include "ContainerBenchmarks.h"
+#include "GenerateInput.h"
 
 using namespace ContainerBenchmarks;
 

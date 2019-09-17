@@ -251,9 +251,21 @@ enum : unsigned {
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
   WASM_OPCODE_I32_ADD = 0x6a,
+};
+
+// Opcodes used in synthetic functions.
+enum : unsigned {
+  WASM_OPCODE_IF = 0x04,
+  WASM_OPCODE_ELSE = 0x05,
+  WASM_OPCODE_DROP = 0x1a,
   WASM_OPCODE_MISC_PREFIX = 0xfc,
   WASM_OPCODE_MEMORY_INIT = 0x08,
   WASM_OPCODE_DATA_DROP = 0x09,
+  WASM_OPCODE_ATOMICS_PREFIX = 0xfe,
+  WASM_OPCODE_ATOMIC_NOTIFY = 0x00,
+  WASM_OPCODE_I32_ATOMIC_WAIT = 0x01,
+  WASM_OPCODE_I32_ATOMIC_STORE = 0x17,
+  WASM_OPCODE_I32_RMW_CMPXCHG = 0x48,
 };
 
 enum : unsigned {
@@ -318,6 +330,7 @@ const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN = 0x4;
 const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
 const unsigned WASM_SYMBOL_EXPORTED = 0x20;
 const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
+const unsigned WASM_SYMBOL_NO_STRIP = 0x80;
 
 #define WASM_RELOC(name, value) name = value,
 

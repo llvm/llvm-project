@@ -10,11 +10,12 @@
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCNACL_H
 
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
-// Log2 of the NaCl MIPS sandbox's instruction bundle size.
-static const unsigned MIPS_NACL_BUNDLE_ALIGN = 4u;
+// NaCl MIPS sandbox's instruction bundle size.
+static const llvm::Align MIPS_NACL_BUNDLE_ALIGN = llvm::Align(16);
 
 bool isBasePlusOffsetMemoryAccess(unsigned Opcode, unsigned *AddrIdx,
                                   bool *IsStore = nullptr);

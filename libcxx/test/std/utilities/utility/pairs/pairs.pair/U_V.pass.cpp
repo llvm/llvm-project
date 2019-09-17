@@ -19,8 +19,8 @@
 #include <memory>
 #include <cassert>
 
-#include "archetypes.hpp"
-#include "test_convertible.hpp"
+#include "archetypes.h"
+#include "test_convertible.h"
 
 #include "test_macros.h"
 using namespace ImplicitTypes; // Get implicitly archetypes

@@ -308,18 +308,12 @@ public:
 
   CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
 
-  // This handles command line completion. Returns: -1
-  // if the completion character should be inserted -2 if the entire command
-  // line should be deleted and replaced with matches.GetStringAtIndex(0)
-  // INT_MAX if the number of matches is > max_return_elements, but it is
-  // expensive to compute. Otherwise, returns the number of matches.
-  //
-  // FIXME: Only max_return_elements == -1 is supported at present.
-  int HandleCompletion(CompletionRequest &request);
+  // This handles command line completion.
+  void HandleCompletion(CompletionRequest &request);
 
   // This version just returns matches, and doesn't compute the substring. It
   // is here so the Help command can call it for the first argument.
-  int HandleCompletionMatches(CompletionRequest &request);
+  void HandleCompletionMatches(CompletionRequest &request);
 
   int GetCommandNamesMatchingPartialString(const char *cmd_cstr,
                                            bool include_aliases,

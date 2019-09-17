@@ -7,12 +7,14 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
-#include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Format.h"
 #include "FormattedString.h"
 #include "Headers.h"
+#include "Logger.h"
+#include "ParsedAST.h"
+#include "Preamble.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -73,20 +75,16 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (SemanticHighlighting)
       Highlightings = getSemanticHighlightings(AST);
 
-    // FIXME: We need a better way to send the maximum line number to the
-    // differ.
-    // The differ needs the information about the max number of lines
-    // to not send diffs that are outside the file.
-    const SourceManager &SM = AST.getSourceManager();
-    FileID MainFileID = SM.getMainFileID();
-    int NumLines = SM.getBufferData(MainFileID).count('\n') + 1;
-
     Publish([&]() {
       DiagConsumer.onDiagnosticsReady(Path, std::move(Diagnostics));
       if (SemanticHighlighting)
-        DiagConsumer.onHighlightingsReady(Path, std::move(Highlightings),
-                                          NumLines);
+        DiagConsumer.onHighlightingsReady(Path, std::move(Highlightings));
     });
+  }
+
+  void onFailedAST(PathRef Path, std::vector<Diag> Diags,
+                   PublishFn Publish) override {
+    Publish([&]() { DiagConsumer.onDiagnosticsReady(Path, Diags); });
   }
 
   void onFileUpdated(PathRef File, const TUStatus &Status) override {
@@ -319,7 +317,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
       return CB(Changes.takeError());
     }
     SourceLocation Loc = getBeginningOfIdentifier(
-        AST, Pos, AST.getSourceManager().getMainFileID());
+        Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
     if (auto Range = getTokenRange(AST.getSourceManager(),
                                    AST.getASTContext().getLangOpts(), Loc))
       return CB(*Range);
@@ -391,32 +389,29 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<Tweak::Effect> CB) {
-  auto Action = [File = File.str(), Sel, TweakID = TweakID.str(),
-                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
-    if (!InpAST)
-      return CB(InpAST.takeError());
-    auto Selection = tweakSelection(Sel, *InpAST);
-    if (!Selection)
-      return CB(Selection.takeError());
-    auto A = prepareTweak(TweakID, *Selection);
-    if (!A)
-      return CB(A.takeError());
-    auto Effect = (*A)->apply(*Selection);
-    if (!Effect)
-      return CB(Effect.takeError());
-    if (Effect->ApplyEdit) {
-      // FIXME: this function has I/O operations (find .clang-format file),
-      // figure out a way to cache the format style.
-      auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                         InpAST->Inputs.FS.get());
-      if (auto Formatted = cleanupAndFormat(InpAST->Inputs.Contents,
-                                            *Effect->ApplyEdit, Style))
-        Effect->ApplyEdit = std::move(*Formatted);
-      else
-        elog("Failed to format replacements: {0}", Formatted.takeError());
-    }
-    return CB(std::move(*Effect));
-  };
+  auto Action =
+      [File = File.str(), Sel, TweakID = TweakID.str(), CB = std::move(CB),
+       FS = FSProvider.getFileSystem()](Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        auto Selection = tweakSelection(Sel, *InpAST);
+        if (!Selection)
+          return CB(Selection.takeError());
+        auto A = prepareTweak(TweakID, *Selection);
+        if (!A)
+          return CB(A.takeError());
+        auto Effect = (*A)->apply(*Selection);
+        if (!Effect)
+          return CB(Effect.takeError());
+        for (auto &It : Effect->ApplyEdits) {
+          Edit &E = It.second;
+          format::FormatStyle Style =
+              getFormatStyleForFile(File, E.InitialCode, FS.get());
+          if (llvm::Error Err = reformatEdit(E, Style))
+            elog("Failed to format {0}: {1}", It.first(), std::move(Err));
+        }
+        return CB(std::move(*Effect));
+      };
   WorkScheduler.runWithAST("ApplyTweak", File, std::move(Action));
 }
 
@@ -582,11 +577,10 @@ void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 void ClangdServer::workspaceSymbols(
     llvm::StringRef Query, int Limit,
     Callback<std::vector<SymbolInformation>> CB) {
-  std::string QueryCopy = Query;
   WorkScheduler.run(
       "getWorkspaceSymbols",
-      [QueryCopy, Limit, CB = std::move(CB), this]() mutable {
-        CB(clangd::getWorkspaceSymbols(QueryCopy, Limit, Index,
+      [Query = Query.str(), Limit, CB = std::move(CB), this]() mutable {
+        CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
                                        WorkspaceRoot.getValueOr("")));
       });
 }

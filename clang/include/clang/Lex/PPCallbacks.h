@@ -57,10 +57,9 @@ public:
   /// \param FilenameTok The file name token in \#include "FileName" directive
   /// or macro expanded file name token from \#include MACRO(PARAMS) directive.
   /// Note that FilenameTok contains corresponding quotes/angles symbols.
-  virtual void FileSkipped(const FileEntry &SkippedFile,
+  virtual void FileSkipped(const FileEntryRef &SkippedFile,
                            const Token &FilenameTok,
-                           SrcMgr::CharacteristicKind FileType) {
-  }
+                           SrcMgr::CharacteristicKind FileType) {}
 
   /// Callback invoked whenever an inclusion directive results in a
   /// file-not-found error.
@@ -308,7 +307,7 @@ public:
   /// Hook called when a '__has_include' or '__has_include_next' directive is
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                          const FileEntry *File,
+                          Optional<FileEntryRef> File,
                           SrcMgr::CharacteristicKind FileType) {}
 
   /// Hook called when a source range is skipped.
@@ -390,8 +389,7 @@ public:
     Second->FileChanged(Loc, Reason, FileType, PrevFID);
   }
 
-  void FileSkipped(const FileEntry &SkippedFile,
-                   const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
     First->FileSkipped(SkippedFile, FilenameTok, FileType);
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);
@@ -491,7 +489,7 @@ public:
   }
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  const FileEntry *File,
+                  Optional<FileEntryRef> File,
                   SrcMgr::CharacteristicKind FileType) override {
     First->HasInclude(Loc, FileName, IsAngled, File, FileType);
     Second->HasInclude(Loc, FileName, IsAngled, File, FileType);

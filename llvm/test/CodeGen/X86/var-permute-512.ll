@@ -98,174 +98,176 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; NOBW-NEXT:    movq %rsp, %rbp
 ; NOBW-NEXT:    andq $-64, %rsp
 ; NOBW-NEXT:    subq $2112, %rsp # imm = 0x840
+; NOBW-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; NOBW-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; NOBW-NEXT:    vextracti128 $1, %ymm2, %xmm4
 ; NOBW-NEXT:    vmovd %xmm4, %eax
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, (%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, (%rsp)
-; NOBW-NEXT:    movzwl 1472(%rsp,%rax,2), %eax
+; NOBW-NEXT:    movzwl 1536(%rsp,%rax,2), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm0
 ; NOBW-NEXT:    vpextrw $1, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $1, 1408(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $1, 1600(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrw $2, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $2, 1344(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $2, 1664(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrw $3, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $3, 1280(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $3, 1728(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrw $4, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $4, 1216(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $4, 1792(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrw $5, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $5, 1152(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $5, 1856(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrw $6, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $6, 1088(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $6, 1920(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrw $7, %xmm4, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $7, 1024(%rsp,%rax,2), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrw $7, 1984(%rsp,%rax,2), %xmm0, %xmm0
 ; NOBW-NEXT:    vmovd %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    movzwl 1984(%rsp,%rax,2), %eax
-; NOBW-NEXT:    vmovd %eax, %xmm1
-; NOBW-NEXT:    vpextrw $1, %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $1, 1920(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrw $2, %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $2, 1856(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrw $3, %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $3, 1792(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrw $4, %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $4, 1728(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrw $5, %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $5, 1664(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrw $6, %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $6, 1600(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrw $7, %xmm2, %eax
-; NOBW-NEXT:    vextracti128 $1, %ymm3, %xmm2
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $7, 1536(%rsp,%rax,2), %xmm1, %xmm1
-; NOBW-NEXT:    vmovd %xmm2, %eax
-; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    movzwl 448(%rsp,%rax,2), %eax
+; NOBW-NEXT:    movzwl 1024(%rsp,%rax,2), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm4
 ; NOBW-NEXT:    vpextrw $1, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $1, 384(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $1, 1088(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $2, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $2, 320(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $2, 1152(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $3, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $3, 256(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $3, 1216(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $4, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $4, 192(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $4, 1280(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $5, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $5, 128(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $5, 1344(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $6, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $6, 64(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $6, 1408(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $7, %xmm2, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $7, (%rsp,%rax,2), %xmm4, %xmm2
+; NOBW-NEXT:    vpinsrw $7, 1472(%rsp,%rax,2), %xmm4, %xmm2
 ; NOBW-NEXT:    vmovd %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    movzwl 960(%rsp,%rax,2), %eax
+; NOBW-NEXT:    movzwl 512(%rsp,%rax,2), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm4
 ; NOBW-NEXT:    vpextrw $1, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $1, 896(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $1, 576(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $2, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $2, 832(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $2, 640(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $3, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $3, 768(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $3, 704(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $4, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $4, 704(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $4, 768(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $5, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $5, 640(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $5, 832(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $6, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $6, 576(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrw $6, 896(%rsp,%rax,2), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrw $7, %xmm3, %eax
 ; NOBW-NEXT:    andl $31, %eax
-; NOBW-NEXT:    vpinsrw $7, 512(%rsp,%rax,2), %xmm4, %xmm3
-; NOBW-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; NOBW-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
+; NOBW-NEXT:    vpinsrw $7, 960(%rsp,%rax,2), %xmm4, %xmm3
+; NOBW-NEXT:    vmovd %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    movzwl (%rsp,%rax,2), %eax
+; NOBW-NEXT:    vmovd %eax, %xmm4
+; NOBW-NEXT:    vpextrw $1, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $1, 64(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrw $2, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $2, 128(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrw $3, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $3, 192(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrw $4, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $4, 256(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrw $5, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $5, 320(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrw $6, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $6, 384(%rsp,%rax,2), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrw $7, %xmm1, %eax
+; NOBW-NEXT:    andl $31, %eax
+; NOBW-NEXT:    vpinsrw $7, 448(%rsp,%rax,2), %xmm4, %xmm1
+; NOBW-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; NOBW-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; NOBW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; NOBW-NEXT:    movq %rbp, %rsp
 ; NOBW-NEXT:    popq %rbp
 ; NOBW-NEXT:    retq
@@ -380,334 +382,336 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; NOBW-NEXT:    movq %rsp, %rbp
 ; NOBW-NEXT:    andq $-64, %rsp
 ; NOBW-NEXT:    subq $4160, %rsp # imm = 0x1040
+; NOBW-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; NOBW-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; NOBW-NEXT:    vextracti128 $1, %ymm2, %xmm4
 ; NOBW-NEXT:    vpextrb $0, %xmm4, %eax
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, (%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; NOBW-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
-; NOBW-NEXT:    vmovaps %ymm0, (%rsp)
-; NOBW-NEXT:    movzbl 3008(%rsp,%rax), %eax
+; NOBW-NEXT:    movzbl 3072(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm0
 ; NOBW-NEXT:    vpextrb $1, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $1, 2944(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $1, 3136(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $2, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $2, 2880(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $2, 3200(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $3, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $3, 2816(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $3, 3264(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $4, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $4, 2752(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $4, 3328(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $5, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $5, 2688(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $5, 3392(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $6, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $6, 2624(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $6, 3456(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $7, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $7, 2560(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $7, 3520(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $8, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $8, 2496(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $8, 3584(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $9, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $9, 2432(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $9, 3648(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $10, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $10, 2368(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $10, 3712(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $11, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $11, 2304(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $11, 3776(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $12, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $12, 2240(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $12, 3840(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $13, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $13, 2176(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $13, 3904(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $14, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $14, 2112(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $14, 3968(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $15, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $15, 2048(%rsp,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $15, 4032(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $0, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    movzbl 4032(%rsp,%rax), %eax
-; NOBW-NEXT:    vmovd %eax, %xmm1
-; NOBW-NEXT:    vpextrb $1, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $1, 3968(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $2, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $2, 3904(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $3, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $3, 3840(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $4, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $4, 3776(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $5, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $5, 3712(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $6, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $6, 3648(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $7, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $7, 3584(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $8, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $8, 3520(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $9, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $9, 3456(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $10, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $10, 3392(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $11, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $11, 3328(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $12, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $12, 3264(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $13, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $13, 3200(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $14, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $14, 3136(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $15, %xmm2, %eax
-; NOBW-NEXT:    vextracti128 $1, %ymm3, %xmm2
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $15, 3072(%rsp,%rax), %xmm1, %xmm1
-; NOBW-NEXT:    vpextrb $0, %xmm2, %eax
-; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    movzbl 960(%rsp,%rax), %eax
+; NOBW-NEXT:    movzbl 2048(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm4
 ; NOBW-NEXT:    vpextrb $1, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $1, 896(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $1, 2112(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $2, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $2, 832(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $2, 2176(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $3, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $3, 768(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $3, 2240(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $4, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $4, 704(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $4, 2304(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $5, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $5, 640(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $5, 2368(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $6, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $6, 576(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $6, 2432(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $7, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $7, 512(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $7, 2496(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $8, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $8, 448(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $8, 2560(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $9, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $9, 384(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $9, 2624(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $10, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $10, 320(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $10, 2688(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $11, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $11, 256(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $11, 2752(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $12, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $12, 192(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $12, 2816(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $13, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $13, 128(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $13, 2880(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $14, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $14, 64(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $14, 2944(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $15, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm4, %xmm2
+; NOBW-NEXT:    vpinsrb $15, 3008(%rsp,%rax), %xmm4, %xmm2
 ; NOBW-NEXT:    vpextrb $0, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    movzbl 1984(%rsp,%rax), %eax
+; NOBW-NEXT:    movzbl 1024(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm4
 ; NOBW-NEXT:    vpextrb $1, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $1, 1920(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $1, 1088(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $2, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $2, 1856(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $2, 1152(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $3, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $3, 1792(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $3, 1216(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $4, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $4, 1728(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $4, 1280(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $5, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $5, 1664(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $5, 1344(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $6, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $6, 1600(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $6, 1408(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $7, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $7, 1536(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $7, 1472(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $8, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $8, 1472(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $8, 1536(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $9, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $9, 1408(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $9, 1600(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $10, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $10, 1344(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $10, 1664(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $11, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $11, 1280(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $11, 1728(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $12, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $12, 1216(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $12, 1792(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $13, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $13, 1152(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $13, 1856(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $14, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $14, 1088(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $14, 1920(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $15, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    vpinsrb $15, 1024(%rsp,%rax), %xmm4, %xmm3
-; NOBW-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; NOBW-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
+; NOBW-NEXT:    vpinsrb $15, 1984(%rsp,%rax), %xmm4, %xmm3
+; NOBW-NEXT:    vpextrb $0, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    movzbl (%rsp,%rax), %eax
+; NOBW-NEXT:    vmovd %eax, %xmm4
+; NOBW-NEXT:    vpextrb $1, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $1, 64(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $2, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $2, 128(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $3, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $3, 192(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $4, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $4, 256(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $5, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $5, 320(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $6, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $6, 384(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $7, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $7, 448(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $8, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $8, 512(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $9, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $9, 576(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $10, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $10, 640(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $11, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $11, 704(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $12, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $12, 768(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $13, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $13, 832(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $14, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $14, 896(%rsp,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $15, %xmm1, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $15, 960(%rsp,%rax), %xmm4, %xmm1
+; NOBW-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; NOBW-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; NOBW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; NOBW-NEXT:    movq %rbp, %rsp
 ; NOBW-NEXT:    popq %rbp
 ; NOBW-NEXT:    retq

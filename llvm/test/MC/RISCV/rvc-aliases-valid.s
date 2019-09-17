@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+c -riscv-no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
-# RUN:     | llvm-objdump -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -riscv-no-aliases -d - \
+# RUN:     | llvm-objdump -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 
 # CHECK-EXPAND: c.lw s0, 0(s1)

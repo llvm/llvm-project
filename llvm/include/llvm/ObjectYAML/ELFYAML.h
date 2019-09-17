@@ -54,8 +54,6 @@ LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_SHF)
 LLVM_YAML_STRONG_TYPEDEF(uint16_t, ELF_SHN)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STB)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STT)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STV)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_STO)
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_ABI_FP)
@@ -77,7 +75,7 @@ struct FileHeader {
   llvm::yaml::Hex64 Entry;
 
   Optional<llvm::yaml::Hex16> SHEntSize;
-  Optional<llvm::yaml::Hex64> SHOffset;
+  Optional<llvm::yaml::Hex64> SHOff;
   Optional<llvm::yaml::Hex16> SHNum;
   Optional<llvm::yaml::Hex16> SHStrNdx;
 };
@@ -107,7 +105,7 @@ struct Symbol {
   ELF_STB Binding;
   llvm::yaml::Hex64 Value;
   llvm::yaml::Hex64 Size;
-  uint8_t Other;
+  Optional<uint8_t> Other;
 };
 
 struct SectionOrType {
@@ -141,14 +139,6 @@ struct Section {
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
 
-  // This can be used to override the sh_offset field. It does not place the
-  // section data at the offset specified. Useful for creating invalid objects.
-  Optional<llvm::yaml::Hex64> ShOffset;
-
-  // This can be used to override the sh_size field. It does not affect the
-  // content written.
-  Optional<llvm::yaml::Hex64> ShSize;
-
   // Usually sections are not created implicitly, but loaded from YAML.
   // When they are, this flag is used to signal about that.
   bool IsImplicit;
@@ -156,6 +146,21 @@ struct Section {
   Section(SectionKind Kind, bool IsImplicit = false)
       : Kind(Kind), IsImplicit(IsImplicit) {}
   virtual ~Section();
+
+  // The following members are used to override section fields which is
+  // useful for creating invalid objects.
+
+  // This can be used to override the offset stored in the sh_name field.
+  // It does not affect the name stored in the string table.
+  Optional<llvm::yaml::Hex64> ShName;
+
+  // This can be used to override the sh_offset field. It does not place the
+  // section data at the offset specified.
+  Optional<llvm::yaml::Hex64> ShOffset;
+
+  // This can be used to override the sh_size field. It does not affect the
+  // content written.
+  Optional<llvm::yaml::Hex64> ShSize;
 };
 
 struct DynamicSection : Section {
@@ -394,16 +399,6 @@ template <> struct ScalarEnumerationTraits<ELFYAML::ELF_STB> {
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_STT> {
   static void enumeration(IO &IO, ELFYAML::ELF_STT &Value);
-};
-
-template <>
-struct ScalarEnumerationTraits<ELFYAML::ELF_STV> {
-  static void enumeration(IO &IO, ELFYAML::ELF_STV &Value);
-};
-
-template <>
-struct ScalarBitSetTraits<ELFYAML::ELF_STO> {
-  static void bitset(IO &IO, ELFYAML::ELF_STO &Value);
 };
 
 template <>

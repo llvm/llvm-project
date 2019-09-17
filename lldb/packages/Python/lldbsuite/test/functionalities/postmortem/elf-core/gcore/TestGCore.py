@@ -15,7 +15,13 @@ class GCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
-    _initial_platform = lldb.DBG.GetSelectedPlatform()
+    def setUp(self):
+        super(GCoreTestCase, self).setUp()
+        self._initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def tearDown(self):
+        lldb.DBG.SetSelectedPlatform(self._initial_platform)
+        super(GCoreTestCase, self).tearDown()
 
     _i386_pid = 5586
     _x86_64_pid = 5669
@@ -47,4 +53,3 @@ class GCoreTestCase(TestBase):
             self.assertEqual(signal, 19)
 
         self.dbg.DeleteTarget(target)
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)

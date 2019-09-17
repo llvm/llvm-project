@@ -84,3 +84,60 @@ def IsSETAm_Or_SETBEm : CheckAny<[
   CheckImmOperand_s<5, "X86::COND_A">,
   CheckImmOperand_s<5, "X86::COND_BE">
 ]>;
+
+// A predicate used to check if an instruction has a LOCK prefix.
+def CheckLockPrefix : CheckFunctionPredicate<
+  "X86_MC::hasLockPrefix",
+  "X86InstrInfo::hasLockPrefix"
+>;
+
+def IsRegRegCompareAndSwap_8 : CheckOpcode<[ CMPXCHG8rr ]>;
+
+def IsRegMemCompareAndSwap_8 : CheckOpcode<[
+  LCMPXCHG8, CMPXCHG8rm
+]>;
+
+def IsRegRegCompareAndSwap_16_32_64  : CheckOpcode<[
+  CMPXCHG16rr, CMPXCHG32rr, CMPXCHG64rr
+]>;
+
+def IsRegMemCompareAndSwap_16_32_64  : CheckOpcode<[
+  CMPXCHG16rm, CMPXCHG32rm, CMPXCHG64rm,
+  LCMPXCHG16, LCMPXCHG32, LCMPXCHG64,
+  LCMPXCHG8B, LCMPXCHG16B
+]>;
+
+def IsCompareAndSwap8B  : CheckOpcode<[ CMPXCHG8B, LCMPXCHG8B ]>;
+def IsCompareAndSwap16B : CheckOpcode<[ CMPXCHG16B, LCMPXCHG16B ]>;
+
+def IsRegMemCompareAndSwap  : CheckOpcode<
+  !listconcat(
+    IsRegMemCompareAndSwap_8.ValidOpcodes,
+    IsRegMemCompareAndSwap_16_32_64.ValidOpcodes
+  )>;
+
+def IsRegRegCompareAndSwap  : CheckOpcode<
+  !listconcat(
+    IsRegRegCompareAndSwap_8.ValidOpcodes,
+    IsRegRegCompareAndSwap_16_32_64.ValidOpcodes
+  )>;
+
+def IsAtomicCompareAndSwap_8 : CheckAll<[
+  CheckLockPrefix,
+  IsRegMemCompareAndSwap_8
+]>;
+
+def IsAtomicCompareAndSwap : CheckAll<[
+  CheckLockPrefix,
+  IsRegMemCompareAndSwap
+]>;
+
+def IsAtomicCompareAndSwap8B : CheckAll<[
+  CheckLockPrefix,
+  IsCompareAndSwap8B
+]>;
+
+def IsAtomicCompareAndSwap16B : CheckAll<[
+  CheckLockPrefix,
+  IsCompareAndSwap16B
+]>;

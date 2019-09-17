@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 #if TEST_STD_VER >= 11
-#include "archetypes.hpp"
+#include "archetypes.h"
 #endif
 
 int main(int, char**)

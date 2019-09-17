@@ -55,6 +55,7 @@ OpenMPClauseKind clang::getOpenMPClauseKind(StringRef Str) {
 #define OPENMP_CLAUSE(Name, Class) .Case(#Name, OMPC_##Name)
 #include "clang/Basic/OpenMPKinds.def"
       .Case("uniform", OMPC_uniform)
+      .Case("device_type", OMPC_device_type)
       .Default(OMPC_unknown);
 }
 
@@ -71,6 +72,8 @@ const char *clang::getOpenMPClauseName(OpenMPClauseKind Kind) {
     return "uniform";
   case OMPC_threadprivate:
     return "threadprivate or thread local";
+  case OMPC_device_type:
+    return "device_type";
   }
   llvm_unreachable("Invalid OpenMP clause kind");
 }
@@ -145,6 +148,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   .Case(#Name, OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown);
+  case OMPC_device_type:
+    return llvm::StringSwitch<OpenMPDeviceType>(Str)
+#define OPENMP_DEVICE_TYPE_KIND(Name) .Case(#Name, OMPC_DEVICE_TYPE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_DEVICE_TYPE_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -328,6 +336,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
 }
     llvm_unreachable("Invalid OpenMP 'atomic_default_mem_order' clause type");
+  case OMPC_device_type:
+    switch (Type) {
+    case OMPC_DEVICE_TYPE_unknown:
+      return "unknown";
+#define OPENMP_DEVICE_TYPE_KIND(Name)                                          \
+    case OMPC_DEVICE_TYPE_##Name:                                              \
+      return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'device_type' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -588,8 +606,6 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
-  case OMPD_declare_simd:
-    break;
   case OMPD_cancel:
     switch (CKind) {
 #define OPENMP_CANCEL_CLAUSE(Name)                                             \
@@ -831,6 +847,8 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
   case OMPD_taskwait:
   case OMPD_cancellation_point:
   case OMPD_declare_reduction:
+  case OMPD_declare_simd:
+  case OMPD_declare_variant:
     break;
   }
   return false;
@@ -1060,6 +1078,7 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_requires:
+  case OMPD_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");

@@ -86,7 +86,8 @@ static FdDesc *fddesc(ThreadState *thr, uptr pc, int fd) {
     else
       user_free(thr, pc, p, false);
   }
-  return &((FdDesc*)l1)[fd % kTableSizeL2];  // NOLINT
+  FdDesc *fds = reinterpret_cast<FdDesc *>(l1);
+  return &fds[fd % kTableSizeL2];
 }
 
 // pd must be already ref'ed.

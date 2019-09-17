@@ -21,8 +21,7 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; RV64I-FPELIM-NEXT:    sd ra, 8(sp)
 ; RV64I-FPELIM-NEXT:    sd s0, 0(sp)
 ; RV64I-FPELIM-NEXT:    mv s0, a0
-; RV64I-FPELIM-NEXT:    slli a0, a1, 32
-; RV64I-FPELIM-NEXT:    srli a0, a0, 32
+; RV64I-FPELIM-NEXT:    mv a0, a1
 ; RV64I-FPELIM-NEXT:    call __fixsfdi
 ; RV64I-FPELIM-NEXT:    add a0, s0, a0
 ; RV64I-FPELIM-NEXT:    ld s0, 0(sp)
@@ -38,8 +37,7 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; RV64I-WITHFP-NEXT:    sd s1, 8(sp)
 ; RV64I-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64I-WITHFP-NEXT:    mv s1, a0
-; RV64I-WITHFP-NEXT:    slli a0, a1, 32
-; RV64I-WITHFP-NEXT:    srli a0, a0, 32
+; RV64I-WITHFP-NEXT:    mv a0, a1
 ; RV64I-WITHFP-NEXT:    call __fixsfdi
 ; RV64I-WITHFP-NEXT:    add a0, s1, a0
 ; RV64I-WITHFP-NEXT:    ld s1, 8(sp)

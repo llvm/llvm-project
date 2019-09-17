@@ -316,7 +316,7 @@ FileOptionsProvider::tryReadConfigFile(StringRef Directory) {
   return llvm::None;
 }
 
-/// \brief Parses -line-filter option and stores it to the \c Options.
+/// Parses -line-filter option and stores it to the \c Options.
 std::error_code parseLineFilter(StringRef LineFilter,
                                 clang::tidy::ClangTidyGlobalOptions &Options) {
   llvm::yaml::Input Input(LineFilter);

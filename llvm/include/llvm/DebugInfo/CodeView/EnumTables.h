@@ -37,6 +37,17 @@ ArrayRef<EnumEntry<uint8_t>> getThunkOrdinalNames();
 ArrayRef<EnumEntry<uint16_t>> getTrampolineNames();
 ArrayRef<EnumEntry<COFF::SectionCharacteristics>>
 getImageSectionCharacteristicNames();
+ArrayRef<EnumEntry<uint16_t>> getClassOptionNames();
+ArrayRef<EnumEntry<uint8_t>> getMemberAccessNames();
+ArrayRef<EnumEntry<uint16_t>> getMethodOptionNames();
+ArrayRef<EnumEntry<uint16_t>> getMemberKindNames();
+ArrayRef<EnumEntry<uint8_t>> getPtrKindNames();
+ArrayRef<EnumEntry<uint8_t>> getPtrModeNames();
+ArrayRef<EnumEntry<uint16_t>> getPtrMemberRepNames();
+ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames();
+ArrayRef<EnumEntry<uint8_t>> getCallingConventions();
+ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum();
+ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum();
 
 } // end namespace codeview
 } // end namespace llvm

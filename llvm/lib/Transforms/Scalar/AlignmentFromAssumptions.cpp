@@ -93,9 +93,7 @@ static unsigned getNewAlignmentDiff(const SCEV *DiffSCEV,
                                     const SCEV *AlignSCEV,
                                     ScalarEvolution *SE) {
   // DiffUnits = Diff % int64_t(Alignment)
-  const SCEV *DiffAlignDiv = SE->getUDivExpr(DiffSCEV, AlignSCEV);
-  const SCEV *DiffAlign = SE->getMulExpr(DiffAlignDiv, AlignSCEV);
-  const SCEV *DiffUnitsSCEV = SE->getMinusSCEV(DiffAlign, DiffSCEV);
+  const SCEV *DiffUnitsSCEV = SE->getURemExpr(DiffSCEV, AlignSCEV);
 
   LLVM_DEBUG(dbgs() << "\talignment relative to " << *AlignSCEV << " is "
                     << *DiffUnitsSCEV << " (diff: " << *DiffSCEV << ")\n");

@@ -237,3 +237,51 @@ entry:
   ret <2 x double> %1
 }
 
+define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
+; CHECK-LABEL: invalidv1i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xxswapd 0, 36
+; CHECK-NEXT:    mfvsrd 4, 36
+; CHECK-NEXT:    mfvsrd 5, 34
+; CHECK-NEXT:    mfvsrd 3, 0
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    cmpld 5, 4
+; CHECK-NEXT:    cmpd 1, 5, 4
+; CHECK-NEXT:    crandc 20, 4, 2
+; CHECK-NEXT:    mfvsrd 6, 0
+; CHECK-NEXT:    cmpld 1, 6, 3
+; CHECK-NEXT:    crand 21, 2, 4
+; CHECK-NEXT:    cror 20, 21, 20
+; CHECK-NEXT:    bc 12, 20, .LBB12_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vmr 2, 4
+; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    mfvsrd 4, 34
+; CHECK-NEXT:    mfvsrd 3, 0
+; CHECK-NEXT:    blr
+;
+; NOP8VEC-LABEL: invalidv1i128:
+; NOP8VEC:       # %bb.0:
+; NOP8VEC-NEXT:    cmpld 4, 8
+; NOP8VEC-NEXT:    cmpd 1, 4, 8
+; NOP8VEC-NEXT:    addi 5, 1, -32
+; NOP8VEC-NEXT:    crandc 20, 4, 2
+; NOP8VEC-NEXT:    cmpld 1, 3, 7
+; NOP8VEC-NEXT:    crand 21, 2, 4
+; NOP8VEC-NEXT:    cror 20, 21, 20
+; NOP8VEC-NEXT:    isel 3, 3, 7, 20
+; NOP8VEC-NEXT:    isel 4, 4, 8, 20
+; NOP8VEC-NEXT:    std 3, -32(1)
+; NOP8VEC-NEXT:    addi 3, 1, -16
+; NOP8VEC-NEXT:    std 4, -24(1)
+; NOP8VEC-NEXT:    lxvd2x 0, 0, 5
+; NOP8VEC-NEXT:    stxvd2x 0, 0, 3
+; NOP8VEC-NEXT:    ld 3, -16(1)
+; NOP8VEC-NEXT:    ld 4, -8(1)
+; NOP8VEC-NEXT:    blr
+%1 = icmp slt <2 x i128> %v1, %v2
+%2 = select <2 x i1> %1, <2 x i128> %v1, <2 x i128> %v2
+%3 = extractelement <2 x i128> %2, i32 0
+ret i128 %3
+}

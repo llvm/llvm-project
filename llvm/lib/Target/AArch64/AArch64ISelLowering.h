@@ -261,6 +261,14 @@ public:
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
 
+  MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override {
+    // Returning i64 unconditionally here (i.e. even for ILP32) means that the
+    // *DAG* representation of pointers will always be 64-bits. They will be
+    // truncated and extended when transferred to memory, but the 64-bit DAG
+    // allows us to use AArch64's addressing modes much more easily.
+    return MVT::getIntegerVT(64);
+  }
+
   bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
                                     TargetLoweringOpt &TLO) const override;
 
@@ -493,11 +501,7 @@ public:
       unsigned OldShiftOpcode, unsigned NewShiftOpcode,
       SelectionDAG &DAG) const override;
 
-  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
-    if (DAG.getMachineFunction().getFunction().hasMinSize())
-      return false;
-    return true;
-  }
+  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override {

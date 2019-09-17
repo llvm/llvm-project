@@ -30,7 +30,7 @@ struct FormatInfo {
                            // current format
 };
 
-static FormatInfo g_format_infos[] = {
+static constexpr FormatInfo g_format_infos[] = {
     {eFormatDefault, '\0', "default"},
     {eFormatBoolean, 'B', "boolean"},
     {eFormatBinary, 'b', "binary"},
@@ -69,7 +69,13 @@ static FormatInfo g_format_infos[] = {
     {eFormatAddressInfo, 'A', "address"},
     {eFormatHexFloat, '\0', "hex float"},
     {eFormatInstruction, 'i', "instruction"},
-    {eFormatVoid, 'v', "void"}};
+    {eFormatVoid, 'v', "void"},
+    {eFormatUnicode8, 'u', "unicode8"},
+};
+
+static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
+                  kNumFormats,
+              "All formats must have a corresponding info entry.");
 
 static uint32_t g_num_format_infos = llvm::array_lengthof(g_format_infos);
 
@@ -946,10 +952,7 @@ void FormatManager::LoadSystemFormatters() {
   lldb::TypeSummaryImplSP string_array_format(
       new StringSummaryFormat(string_array_flags, "${var%s}"));
 
-  lldb::RegularExpressionSP any_size_char_arr(
-      new RegularExpression(llvm::StringRef("char \\[[0-9]+\\]")));
-  lldb::RegularExpressionSP any_size_wchar_arr(
-      new RegularExpression(llvm::StringRef("wchar_t \\[[0-9]+\\]")));
+  RegularExpression any_size_char_arr(llvm::StringRef("char \\[[0-9]+\\]"));
 
   TypeCategoryImpl::SharedPointer sys_category_sp =
       GetCategory(m_system_category_name);
@@ -958,8 +961,8 @@ void FormatManager::LoadSystemFormatters() {
                                                     string_format);
   sys_category_sp->GetTypeSummariesContainer()->Add(
       ConstString("unsigned char *"), string_format);
-  sys_category_sp->GetRegexTypeSummariesContainer()->Add(any_size_char_arr,
-                                                         string_array_format);
+  sys_category_sp->GetRegexTypeSummariesContainer()->Add(
+      std::move(any_size_char_arr), string_array_format);
 
   lldb::TypeSummaryImplSP ostype_summary(
       new StringSummaryFormat(TypeSummaryImpl::Flags()

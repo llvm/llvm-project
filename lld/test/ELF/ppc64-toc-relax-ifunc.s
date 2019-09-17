@@ -13,16 +13,16 @@
 ## still perform toc-indirect to toc-relative relaxation because the distance
 ## to the address of the canonical PLT is fixed.
 
-# SEC: .text PROGBITS 0000000010010000
-# SEC: .plt  NOBITS   0000000010030000
-# SEC: 0000000010010010 0 FUNC GLOBAL DEFAULT 3 ifunc
+# SEC: .text PROGBITS 00000000100101e0
+# SEC: .plt  NOBITS   0000000010030200
+# SEC: 00000000100101f0 0 FUNC GLOBAL DEFAULT 3 ifunc
 
 ## .toc[0] stores the address of the canonical PLT.
 # HEX:      section '.toc':
-# HEX-NEXT: 0x10020000 10000110 00000000
+# HEX-NEXT: 0x100201f8 f0010110 00000000
 
 # REL:      .rela.dyn {
-# REL-NEXT:   0x10030000 R_PPC64_IRELATIVE - 0x10010008
+# REL-NEXT:   0x10030200 R_PPC64_IRELATIVE - 0x100101e8
 # REL-NEXT: }
 
 # DIS: addi 3, 3,

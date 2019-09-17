@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
 
 TEST_CONSTEXPR bool equal2 ( int i ) { return i == 2; }
 

@@ -8,6 +8,7 @@
 
 #include "SymbolFileDWARF.h"
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"
 
@@ -2484,16 +2485,17 @@ uint32_t SymbolFileDWARF::FindTypes(
   return num_die_matches;
 }
 
-size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
-                                  bool append, TypeMap &types) {
+size_t SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                                  LanguageSet languages, bool append,
+                                  TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!append)
     types.Clear();
 
-  if (context.empty())
+  if (pattern.empty())
     return 0;
 
-  ConstString name = context.back().name;
+  ConstString name = pattern.back().name;
 
   if (!name)
     return 0;
@@ -2508,9 +2510,12 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
     DWARFDIE die = GetDIE(die_ref);
 
     if (die) {
-      std::vector<CompilerContext> die_context;
+      if (!languages[die.GetCU()->GetLanguageType()])
+        continue;
+
+      llvm::SmallVector<CompilerContext, 4> die_context;
       die.GetDeclContext(die_context);
-      if (die_context != context)
+      if (!contextMatches(die_context, pattern))
         continue;
 
       Type *matching_type = ResolveType(die, true, true);
@@ -3239,15 +3244,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
                 uint32_t block_length = form_value.Unsigned();
-                location = DWARFExpression(module, debug_info_data, die.GetCU(),
-                                           block_offset, block_length);
+                location = DWARFExpression(
+                    module,
+                    DataExtractor(debug_info_data, block_offset, block_length),
+                    die.GetCU());
               } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
                 // Retrieve the value as a data expression.
                 uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
                 if (auto data_length = form_value.GetFixedSize())
-                  location =
-                      DWARFExpression(module, debug_info_data, die.GetCU(),
-                                      data_offset, *data_length);
+                  location = DWARFExpression(
+                      module,
+                      DataExtractor(debug_info_data, data_offset, *data_length),
+                      die.GetCU());
                 else {
                   const uint8_t *data_pointer = form_value.BlockData();
                   if (data_pointer) {
@@ -3263,17 +3271,21 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 if (form_value.Form() == DW_FORM_strp) {
                   uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
                   if (auto data_length = form_value.GetFixedSize())
-                    location =
-                        DWARFExpression(module, debug_info_data, die.GetCU(),
-                                        data_offset, *data_length);
+                    location = DWARFExpression(module,
+                                               DataExtractor(debug_info_data,
+                                                             data_offset,
+                                                             *data_length),
+                                               die.GetCU());
                 } else {
                   const char *str = form_value.AsCString();
                   uint32_t string_offset =
                       str - (const char *)debug_info_data.GetDataStart();
                   uint32_t string_length = strlen(str) + 1;
-                  location =
-                      DWARFExpression(module, debug_info_data, die.GetCU(),
-                                      string_offset, string_length);
+                  location = DWARFExpression(module,
+                                             DataExtractor(debug_info_data,
+                                                           string_offset,
+                                                           string_length),
+                                             die.GetCU());
                 }
               }
             }
@@ -3287,17 +3299,15 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               uint32_t block_offset =
                   form_value.BlockData() - data.GetDataStart();
               uint32_t block_length = form_value.Unsigned();
-              location = DWARFExpression(module, data, die.GetCU(),
-                                         block_offset, block_length);
+              location = DWARFExpression(
+                  module, DataExtractor(data, block_offset, block_length),
+                  die.GetCU());
             } else {
-              const DWARFDataExtractor &debug_loc_data = DebugLocData();
-              const dw_offset_t debug_loc_offset = form_value.Unsigned();
-
-              size_t loc_list_length = DWARFExpression::LocationListSize(
-                  die.GetCU(), debug_loc_data, debug_loc_offset);
-              if (loc_list_length > 0) {
-                location = DWARFExpression(module, debug_loc_data, die.GetCU(),
-                                           debug_loc_offset, loc_list_length);
+              DataExtractor data = DebugLocData();
+              const dw_offset_t offset = form_value.Unsigned();
+              if (data.ValidOffset(offset)) {
+                data = DataExtractor(data, offset, data.GetByteSize() - offset);
+                location = DWARFExpression(module, data, die.GetCU());
                 assert(func_low_pc != LLDB_INVALID_ADDRESS);
                 location.SetLocationListSlide(
                     func_low_pc -
@@ -3699,9 +3709,57 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
   return vars_added;
 }
 
+/// Collect call site parameters in a DW_TAG_call_site DIE.
+static CallSiteParameterArray
+CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
+  CallSiteParameterArray parameters;
+  for (DWARFDIE child = call_site_die.GetFirstChild(); child.IsValid();
+       child = child.GetSibling()) {
+    if (child.Tag() != DW_TAG_call_site_parameter)
+      continue;
+
+    llvm::Optional<DWARFExpression> LocationInCallee = {};
+    llvm::Optional<DWARFExpression> LocationInCaller = {};
+
+    DWARFAttributes attributes;
+    const size_t num_attributes = child.GetAttributes(attributes);
+
+    // Parse the location at index \p attr_index within this call site parameter
+    // DIE, or return None on failure.
+    auto parse_simple_location =
+        [&](int attr_index) -> llvm::Optional<DWARFExpression> {
+      DWARFFormValue form_value;
+      if (!attributes.ExtractFormValueAtIndex(attr_index, form_value))
+        return {};
+      if (!DWARFFormValue::IsBlockForm(form_value.Form()))
+        return {};
+      auto data = child.GetData();
+      uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
+      uint32_t block_length = form_value.Unsigned();
+      return DWARFExpression(module,
+                             DataExtractor(data, block_offset, block_length),
+                             child.GetCU());
+    };
+
+    for (size_t i = 0; i < num_attributes; ++i) {
+      dw_attr_t attr = attributes.AttributeAtIndex(i);
+      if (attr == DW_AT_location)
+        LocationInCallee = parse_simple_location(i);
+      if (attr == DW_AT_call_value)
+        LocationInCaller = parse_simple_location(i);
+    }
+
+    if (LocationInCallee && LocationInCaller) {
+      CallSiteParameter param = {*LocationInCallee, *LocationInCaller};
+      parameters.push_back(param);
+    }
+  }
+  return parameters;
+}
+
 /// Collect call graph edges present in a function DIE.
 static std::vector<lldb_private::CallEdge>
-CollectCallEdges(DWARFDIE function_die) {
+CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
   uint64_t has_call_edges =
@@ -3738,9 +3796,28 @@ CollectCallEdges(DWARFDIE function_die) {
     addr_t return_pc = child.GetAttributeValueAsAddress(DW_AT_call_return_pc,
                                                         LLDB_INVALID_ADDRESS);
 
+    // Extract call site parameters.
+    CallSiteParameterArray parameters =
+        CollectCallSiteParameters(module, child);
+
     LLDB_LOG(log, "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x})",
              call_origin.GetPubname(), return_pc);
-    call_edges.emplace_back(call_origin.GetMangledName(), return_pc);
+    if (log && parameters.size()) {
+      for (const CallSiteParameter &param : parameters) {
+        StreamString callee_loc_desc, caller_loc_desc;
+        param.LocationInCallee.GetDescription(&callee_loc_desc,
+                                              eDescriptionLevelBrief,
+                                              LLDB_INVALID_ADDRESS, nullptr);
+        param.LocationInCaller.GetDescription(&caller_loc_desc,
+                                              eDescriptionLevelBrief,
+                                              LLDB_INVALID_ADDRESS, nullptr);
+        LLDB_LOG(log, "CollectCallEdges: \tparam: {0} => {1}",
+                 callee_loc_desc.GetString(), caller_loc_desc.GetString());
+      }
+    }
+
+    call_edges.emplace_back(call_origin.GetMangledName(), return_pc,
+                            std::move(parameters));
   }
   return call_edges;
 }
@@ -3749,7 +3826,7 @@ std::vector<lldb_private::CallEdge>
 SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   DWARFDIE func_die = GetDIE(func_id.GetID());
   if (func_die.IsValid())
-    return CollectCallEdges(func_die);
+    return CollectCallEdges(GetObjectFile()->GetModule(), func_die);
   return {};
 }
 

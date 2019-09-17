@@ -2908,7 +2908,7 @@ def : Pat<(ctlz Int32Regs:$a), (CLZr32 Int32Regs:$a)>;
 // ctz instruction always returns a 32-bit value.  For ctlz.i64, convert the
 // ptx value to 64 bits to match the ISD node's semantics, unless we know we're
 // truncating back down to 32 bits.
-def : Pat<(ctlz Int64Regs:$a), (CVT_u64_u32 (CLZr64 Int64Regs:$a), CvtNONE)>;
+def : Pat<(i64 (ctlz Int64Regs:$a)), (CVT_u64_u32 (CLZr64 Int64Regs:$a), CvtNONE)>;
 def : Pat<(i32 (trunc (ctlz Int64Regs:$a))), (CLZr64 Int64Regs:$a)>;
 
 // For 16-bit ctlz, we zero-extend to 32-bit, perform the count, then trunc the
@@ -2925,10 +2925,10 @@ def : Pat<(i32 (trunc (ctlz Int64Regs:$a))), (CLZr64 Int64Regs:$a)>;
 // and then ctlz that value.  This way we don't have to subtract 16 from the
 // result.  Unfortunately today we don't have a way to generate
 // "mov b32reg, {b16imm, b16reg}", so we don't do this optimization.
-def : Pat<(ctlz Int16Regs:$a),
+def : Pat<(i16 (ctlz Int16Regs:$a)),
           (SUBi16ri (CVT_u16_u32
            (CLZr32 (CVT_u32_u16 Int16Regs:$a, CvtNONE)), CvtNONE), 16)>;
-def : Pat<(i32 (zext (ctlz Int16Regs:$a))),
+def : Pat<(i32 (zext (i16 (ctlz Int16Regs:$a)))),
           (SUBi32ri (CLZr32 (CVT_u32_u16 Int16Regs:$a, CvtNONE)), 16)>;
 
 // Population count
@@ -2953,7 +2953,7 @@ def : Pat<(i32 (trunc (ctpop Int64Regs:$a))), (POPCr64 Int64Regs:$a)>;
 // If we know that we're storing into an i32, we can avoid the final trunc.
 def : Pat<(ctpop Int16Regs:$a),
           (CVT_u16_u32 (POPCr32 (CVT_u32_u16 Int16Regs:$a, CvtNONE)), CvtNONE)>;
-def : Pat<(i32 (zext (ctpop Int16Regs:$a))),
+def : Pat<(i32 (zext (i16 (ctpop Int16Regs:$a)))),
           (POPCr32 (CVT_u32_u16 Int16Regs:$a, CvtNONE))>;
 
 // fpround f32 -> f16

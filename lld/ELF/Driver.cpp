@@ -48,6 +48,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
@@ -299,6 +300,9 @@ static void checkOptions() {
   if (config->fixCortexA53Errata843419 && config->emachine != EM_AARCH64)
     error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
 
+  if (config->fixCortexA8 && config->emachine != EM_ARM)
+    error("--fix-cortex-a8 is only supported on ARM targets");
+
   if (config->tocOptimize && config->emachine != EM_PPC64)
     error("--toc-optimize is only supported on the PowerPC64 target");
 
@@ -313,6 +317,9 @@ static void checkOptions() {
 
   if (!config->relocatable && !config->defineCommon)
     error("-no-define-common not supported in non relocatable output");
+
+  if (config->strip == StripPolicy::All && config->emitRelocs)
+    error("--strip-all and --emit-relocs may not be used together");
 
   if (config->zText && config->zIfuncNoplt)
     error("-z text and -z ifunc-noplt may not be used together");
@@ -383,8 +390,8 @@ static bool isKnownZFlag(StringRef s) {
          s == "noexecstack" || s == "nokeep-text-section-prefix" ||
          s == "norelro" || s == "noseparate-code" || s == "notext" ||
          s == "now" || s == "origin" || s == "relro" || s == "retpolineplt" ||
-         s == "rodynamic" || s == "text" || s == "wxneeded" ||
-         s.startswith("common-page-size") || s.startswith("max-page-size=") ||
+         s == "rodynamic" || s == "text" || s == "undefs" || s == "wxneeded" ||
+         s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
          s.startswith("stack-size=");
 }
 
@@ -514,6 +521,8 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
     case OPT_z:
       if (StringRef(arg->getValue()) == "defs")
         return errorOrWarn;
+      if (StringRef(arg->getValue()) == "undefs")
+        return UnresolvedPolicy::Ignore;
       continue;
     }
   }
@@ -830,6 +839,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->filterList = args::getStrings(args, OPT_filter);
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419);
+  config->fixCortexA8 = args.hasArg(OPT_fix_cortex_a8);
   config->forceBTI = args.hasArg(OPT_force_bti);
   config->requireCET = args.hasArg(OPT_require_cet);
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
@@ -1027,20 +1037,17 @@ static void readConfigs(opt::InputArgList &args) {
             {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
-  bool hasExportDynamic =
-      args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
-
   // Parses -dynamic-list and -export-dynamic-symbol. They make some
   // symbols private. Note that -export-dynamic takes precedence over them
   // as it says all symbols should be exported.
-  if (!hasExportDynamic) {
+  if (!config->exportDynamic) {
     for (auto *arg : args.filtered(OPT_dynamic_list))
       if (Optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readDynamicList(*buffer);
 
     for (auto *arg : args.filtered(OPT_export_dynamic_symbol))
       config->dynamicList.push_back(
-          {arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
+          {arg->getValue(), /*isExternCpp=*/false, /*hasWildcard=*/false});
   }
 
   // If --export-dynamic-symbol=foo is given and symbol foo is defined in
@@ -1666,12 +1673,6 @@ template <class ELFT> static uint32_t getAndFeatures() {
   return ret;
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -1762,7 +1763,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
   if (!bitcodeFiles.empty())
-    for (const char *s : libcallRoutineNames)
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
 
   // Return if there were name resolution errors.
@@ -1901,6 +1902,31 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   markLive<ELFT>();
   demoteSharedSymbols();
   mergeSections();
+
+  // Make copies of any input sections that need to be copied into each
+  // partition.
+  copySectionsIntoPartitions();
+
+  // Create synthesized sections such as .got and .plt. This is called before
+  // processSectionCommands() so that they can be placed by SECTIONS commands.
+  createSyntheticSections<ELFT>();
+
+  // Some input sections that are used for exception handling need to be moved
+  // into synthetic sections. Do that now so that they aren't assigned to
+  // output sections in the usual way.
+  if (!config->relocatable)
+    combineEhSections();
+
+  // Create output sections described by SECTIONS commands.
+  script->processSectionCommands();
+
+  // Linker scripts control how input sections are assigned to output sections.
+  // Input sections that were not handled by scripts are called "orphans", and
+  // they are assigned to output sections by the default rule. Process that.
+  script->addOrphanSections();
+
+  // Two input sections with different output sections should not be folded.
+  // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(args);
     doIcf<ELFT>();

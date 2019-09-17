@@ -1039,10 +1039,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
     }
     FunctionAddress = *FunctionAddressOrErr;
   } else {
-    const pe32_header *PEHeader;
-    if (COFF.getPE32Header(PEHeader))
-      return false;
-    FunctionAddress = PEHeader->ImageBase + RF.BeginAddress;
+    FunctionAddress = COFF.getPE32Header()->ImageBase + RF.BeginAddress;
   }
 
   SW.printString("Function", formatSymbol(FunctionName, FunctionAddress));

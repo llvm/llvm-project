@@ -188,6 +188,13 @@ def s_cc_out : OptionalDefOperand<OtherVT, (ops CCR), (ops (i32 CPSR))> {
   let DecoderMethod = "DecodeCCOutOperand";
 }
 
+// Transform to generate the inverse of a condition code during ISel
+def inv_cond_XFORM : SDNodeXForm<imm, [{
+  ARMCC::CondCodes CC = static_cast<ARMCC::CondCodes>(N->getZExtValue());
+  return CurDAG->getTargetConstant(ARMCC::getOppositeCondition(CC), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
 // VPT predicate
 
 def VPTPredNOperand : AsmOperandClass {
@@ -401,6 +408,8 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   // mnemonic (when not in an IT block) or preclude it (when in an IT block).
   bit thumbArithFlagSetting = 0;
 
+  bit invalidForTailPredication = 0;
+
   // If this is a pseudo instruction, mark it isCodeGenOnly.
   let isCodeGenOnly = !eq(!cast<string>(f), "Pseudo");
 
@@ -412,6 +421,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{14}    = canXformTo16Bit;
   let TSFlags{18-15} = D.Value;
   let TSFlags{19}    = thumbArithFlagSetting;
+  let TSFlags{20}    = invalidForTailPredication;
 
   let Constraints = cstr;
   let Itinerary = itin;

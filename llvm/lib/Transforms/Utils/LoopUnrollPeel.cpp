@@ -741,6 +741,12 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   fixupBranchWeights(Header, LatchBR, ExitWeight, FallThroughWeight);
 
+  // Update Metadata for count of peeled off iterations.
+  unsigned AlreadyPeeled = 0;
+  if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
+    AlreadyPeeled = *Peeled;
+  addStringMetadataToLoop(L, PeeledCountMetaData, AlreadyPeeled + PeelCount);
+
   if (Loop *ParentLoop = L->getParentLoop())
     L = ParentLoop;
 
@@ -754,12 +760,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   simplifyLoop(L, DT, LI, SE, AC, nullptr, PreserveLCSSA);
 
   NumPeeled++;
-
-  // Update Metadata for count of peeled off iterations.
-  unsigned AlreadyPeeled = 0;
-  if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
-    AlreadyPeeled = *Peeled;
-  addStringMetadataToLoop(L, PeeledCountMetaData, AlreadyPeeled + PeelCount);
 
   return true;
 }

@@ -18,7 +18,6 @@
 #include <grp.h>
 #include <limits.h>
 #include <mutex>
-#include <netdb.h>
 #include <pwd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -32,11 +31,7 @@ bool HostInfoPosix::GetHostname(std::string &s) {
   char hostname[PATH_MAX];
   hostname[sizeof(hostname) - 1] = '\0';
   if (::gethostname(hostname, sizeof(hostname) - 1) == 0) {
-    struct hostent *h = ::gethostbyname(hostname);
-    if (h)
-      s.assign(h->h_name);
-    else
-      s.assign(hostname);
+    s.assign(hostname);
     return true;
   }
   return false;

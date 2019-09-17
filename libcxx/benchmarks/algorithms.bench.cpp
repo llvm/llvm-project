@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "CartesianBenchmarks.hpp"
-#include "GenerateInput.hpp"
+#include "CartesianBenchmarks.h"
+#include "GenerateInput.h"
 #include "benchmark/benchmark.h"
 #include "test_macros.h"
 
@@ -256,7 +256,13 @@ int main(int argc, char** argv) {
     return 1;
 
   const std::vector<size_t> Quantities = {1 << 0, 1 << 2,  1 << 4,  1 << 6,
-                                          1 << 8, 1 << 10, 1 << 14, 1 << 18};
+                                          1 << 8, 1 << 10, 1 << 14,
+    // Running each benchmark in parallel consumes too much memory with MSAN
+    // and can lead to the test process being killed.
+#if !TEST_HAS_FEATURE(memory_sanitizer)
+                                          1 << 18
+#endif
+  };
   makeCartesianProductBenchmark<Sort, AllValueTypes, AllOrders>(Quantities);
   makeCartesianProductBenchmark<StableSort, AllValueTypes, AllOrders>(
       Quantities);

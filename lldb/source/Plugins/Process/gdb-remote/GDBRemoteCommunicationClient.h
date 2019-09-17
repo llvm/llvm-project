@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/StreamGDBRemote.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/StructuredData.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -247,6 +247,8 @@ public:
   bool GetDefaultThreadId(lldb::tid_t &tid);
 
   llvm::VersionTuple GetOSVersion();
+
+  llvm::VersionTuple GetMacCatalystVersion();
 
   bool GetOSBuildString(std::string &s);
 
@@ -548,6 +550,7 @@ protected:
   ArchSpec m_host_arch;
   ArchSpec m_process_arch;
   llvm::VersionTuple m_os_version;
+  llvm::VersionTuple m_maccatalyst_version;
   std::string m_os_build;
   std::string m_os_kernel;
   std::string m_hostname;

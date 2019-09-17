@@ -11,37 +11,37 @@ void f() {
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Hours(d1);
   x = static_cast<float>(absl::ToInt64Hours(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleHours(d1);
   i = static_cast<int>(absl::ToDoubleMinutes(d1));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Minutes(d1);
   x = static_cast<float>(absl::ToInt64Minutes(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleMinutes(d1);
   i = static_cast<int>(absl::ToDoubleSeconds(d1));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Seconds(d1);
   x = static_cast<float>(absl::ToInt64Seconds(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleSeconds(d1);
   i = static_cast<int>(absl::ToDoubleMilliseconds(d1));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Milliseconds(d1);
   x = static_cast<float>(absl::ToInt64Milliseconds(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleMilliseconds(d1);
   i = static_cast<int>(absl::ToDoubleMicroseconds(d1));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Microseconds(d1);
   x = static_cast<float>(absl::ToInt64Microseconds(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleMicroseconds(d1);
   i = static_cast<int>(absl::ToDoubleNanoseconds(d1));
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Nanoseconds(d1);
   x = static_cast<float>(absl::ToInt64Nanoseconds(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleNanoseconds(d1);
 
   // Functional-style casts
@@ -49,7 +49,7 @@ void f() {
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Hours(d1);
   x = float(absl::ToInt64Microseconds(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleMicroseconds(d1);
 
   // C-style casts
@@ -57,7 +57,7 @@ void f() {
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Hours(d1);
   x = (float) absl::ToInt64Microseconds(d1);
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleMicroseconds(d1);
 
   // Type aliasing
@@ -68,7 +68,7 @@ void f() {
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: duration should be converted directly to an integer rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToInt64Hours(d1);
   FancyFloat k = static_cast<FancyFloat>(absl::ToInt64Microseconds(d1));
-  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: duration should be converted directly to a floating-piont number rather than through a type cast [abseil-duration-conversion-cast]
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: duration should be converted directly to a floating-point number rather than through a type cast [abseil-duration-conversion-cast]
   // CHECK-FIXES: absl::ToDoubleMicroseconds(d1);
 
   // Macro handling

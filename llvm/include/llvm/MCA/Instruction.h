@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCRegister.h" // definition of MCPhysReg.
 #include "llvm/Support/MathExtras.h"
 
 #ifndef NDEBUG
@@ -42,7 +43,7 @@ struct WriteDescriptor {
   unsigned Latency;
   // This field is set to a value different than zero only if this
   // is an implicit definition.
-  unsigned RegisterID;
+  MCPhysReg RegisterID;
   // Instruction itineraries would set this field to the SchedClass ID.
   // Otherwise, it defaults to the WriteResourceID from the MCWriteLatencyEntry
   // element associated to this write.
@@ -70,7 +71,7 @@ struct ReadDescriptor {
   // uses always come first in the sequence of uses.
   unsigned UseIndex;
   // This field is only set if this is an implicit read.
-  unsigned RegisterID;
+  MCPhysReg RegisterID;
   // Scheduling Class Index. It is used to query the scheduling model for the
   // MCSchedClassDesc object.
   unsigned SchedClassID;
@@ -85,7 +86,7 @@ class ReadState;
 /// Field RegID is set to the invalid register for memory dependencies.
 struct CriticalDependency {
   unsigned IID;
-  unsigned RegID;
+  MCPhysReg RegID;
   unsigned Cycles;
 };
 
@@ -106,7 +107,7 @@ class WriteState {
   // to speedup queries on the register file.
   // For implicit writes, this field always matches the value of
   // field RegisterID from WD.
-  unsigned RegisterID;
+  MCPhysReg RegisterID;
 
   // Physical register file that serves register RegisterID.
   unsigned PRFID;
@@ -146,7 +147,7 @@ class WriteState {
   SmallVector<std::pair<ReadState *, int>, 4> Users;
 
 public:
-  WriteState(const WriteDescriptor &Desc, unsigned RegID,
+  WriteState(const WriteDescriptor &Desc, MCPhysReg RegID,
              bool clearsSuperRegs = false, bool writesZero = false)
       : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID), PRFID(0),
         ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
@@ -158,7 +159,7 @@ public:
 
   int getCyclesLeft() const { return CyclesLeft; }
   unsigned getWriteResourceID() const { return WD->SClassOrWriteResourceID; }
-  unsigned getRegisterID() const { return RegisterID; }
+  MCPhysReg getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
   unsigned getDependentWriteCyclesLeft() const {
@@ -200,7 +201,7 @@ public:
   }
 
   void setDependentWrite(const WriteState *Other) { DependentWrite = Other; }
-  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
+  void writeStartEvent(unsigned IID, MCPhysReg RegID, unsigned Cycles);
   void setWriteZero() { WritesZero = true; }
   void setEliminated() {
     assert(Users.empty() && "Write is in an inconsistent state.");
@@ -226,7 +227,7 @@ public:
 class ReadState {
   const ReadDescriptor *RD;
   // Physical register identified associated to this read.
-  unsigned RegisterID;
+  MCPhysReg RegisterID;
   // Physical register file that serves register RegisterID.
   unsigned PRFID;
   // Number of writes that contribute to the definition of RegisterID.
@@ -253,14 +254,14 @@ class ReadState {
   bool IndependentFromDef;
 
 public:
-  ReadState(const ReadDescriptor &Desc, unsigned RegID)
+  ReadState(const ReadDescriptor &Desc, MCPhysReg RegID)
       : RD(&Desc), RegisterID(RegID), PRFID(0), DependentWrites(0),
         CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), CRD(), IsReady(true),
         IsZero(false), IndependentFromDef(false) {}
 
   const ReadDescriptor &getDescriptor() const { return *RD; }
   unsigned getSchedClass() const { return RD->SchedClassID; }
-  unsigned getRegisterID() const { return RegisterID; }
+  MCPhysReg getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
   const CriticalDependency &getCriticalRegDep() const { return CRD; }
 
@@ -272,7 +273,7 @@ public:
   void setIndependentFromDef() { IndependentFromDef = true; }
 
   void cycleEvent();
-  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
+  void writeStartEvent(unsigned IID, MCPhysReg RegID, unsigned Cycles);
   void setDependentWrites(unsigned Writes) {
     DependentWrites = Writes;
     IsReady = !Writes;

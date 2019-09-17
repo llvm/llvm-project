@@ -51,7 +51,7 @@ IRMaterializationUnit::IRMaterializationUnit(
 StringRef IRMaterializationUnit::getName() const {
   if (TSM)
     return TSM.withModuleDo(
-        [](const Module &M) { return M.getModuleIdentifier(); });
+        [](const Module &M) -> StringRef { return M.getModuleIdentifier(); });
   return "<null module>";
 }
 

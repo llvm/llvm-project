@@ -1,7 +1,7 @@
 // REQUIRES: arm, aarch64
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-android %s -o %t.o
-// RUN: ld.lld -shared %t.o -o %t.so --pack-dyn-relocs=android -z norelro
+// RUN: ld.lld -shared %t.o -o %t.so --pack-dyn-relocs=android -z norelro -z separate-code
 // RUN: llvm-readobj -S %t.so | FileCheck %s
 
 // This test is making sure the Android packed relocation support doesn't

@@ -639,13 +639,20 @@ defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "extloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "zextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i16, "load_local">;
-defm : DSReadPat_mc <DS_READ_B32, i32, "load_local">;
+
+foreach vt = Reg32Types.types in {
+defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
+}
+
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
 let AddedComplexity = 100 in {
 
-defm : DSReadPat_mc <DS_READ_B64, v2i32, "load_align8_local">;
+foreach vt = VReg_64.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B64, vt, "load_align8_local">;
+}
+
 defm : DSReadPat_mc <DS_READ_B128, v4i32, "load_align16_local">;
 
 } // End AddedComplexity = 100
@@ -702,9 +709,13 @@ defm : DSWritePat_mc <DS_WRITE_B8, i32, "truncstorei8_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "truncstorei16_local">;
 defm : DSWritePat_mc <DS_WRITE_B8, i16, "truncstorei8_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i16, "store_local">;
-defm : DSWritePat_mc <DS_WRITE_B32, i32, "store_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local">;
-defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local">;
+
+foreach vt = VGPR_32.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B32, vt, "store_local">;
+}
+
+defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local_32">;
+defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local_64">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_local_hi16>;
@@ -739,7 +750,10 @@ def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, store_local>;
 
 let AddedComplexity = 100 in {
 
-defm : DSWritePat_mc <DS_WRITE_B64, v2i32, "store_align8_local">;
+foreach vt = VReg_64.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align8_local">;
+}
+
 defm : DSWritePat_mc <DS_WRITE_B128, v4i32, "store_align16_local">;
 
 } // End AddedComplexity = 100

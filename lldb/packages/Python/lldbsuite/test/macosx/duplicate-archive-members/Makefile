@@ -1,5 +1,3 @@
-LEVEL = ../../make
-
 C_SOURCES := main.c
 
 # Make an archive that has two object files with the same name, but
@@ -14,7 +12,7 @@ libfoo.a: a.c sub1/a.c
 	$(AR) $(ARFLAGS) $@ a.o sub1/a.o
 	rm a.o sub1/a.o
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 # Needs to come after include
 OBJECTS += libfoo.a

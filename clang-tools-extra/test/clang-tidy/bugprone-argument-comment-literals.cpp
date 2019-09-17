@@ -1,5 +1,12 @@
 // RUN: %check_clang_tidy %s bugprone-argument-comment %t -- \
-// RUN:   -config="{CheckOptions: [{key: CommentBoolLiterals, value: 1},{key: CommentIntegerLiterals, value: 1}, {key: CommentFloatLiterals, value: 1}, {key: CommentUserDefinedLiterals, value: 1}, {key: CommentStringLiterals, value: 1}, {key: CommentNullPtrs, value: 1}, {key: CommentCharacterLiterals, value: 1}]}" --
+// RUN:   -config="{CheckOptions: [ \
+// RUN:     {key: bugprone-argument-comment.CommentBoolLiterals, value: 1}, \
+// RUN:     {key: bugprone-argument-comment.CommentIntegerLiterals, value: 1}, \
+// RUN:     {key: bugprone-argument-comment.CommentFloatLiterals, value: 1}, \
+// RUN:     {key: bugprone-argument-comment.CommentUserDefinedLiterals, value: 1}, \
+// RUN:     {key: bugprone-argument-comment.CommentStringLiterals, value: 1}, \
+// RUN:     {key: bugprone-argument-comment.CommentNullPtrs, value: 1}, \
+// RUN:     {key: bugprone-argument-comment.CommentCharacterLiterals, value: 1}]}" --
 
 struct A {
   void foo(bool abc);
@@ -15,10 +22,12 @@ struct A {
 };
 
 #define FOO 1
+#define X(x) (x)
 
 void g(int a);
 void h(double b);
 void i(const char *c);
+void j(int a, int b, int c);
 
 double operator"" _km(long double);
 
@@ -67,18 +76,29 @@ void test() {
   // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'fabc' [bugprone-argument-comment]
   // CHECK-FIXES: a.foo(/*fabc=*/1.0f);
 
+  a.foo(-1.0f);
+  // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'fabc' [bugprone-argument-comment]
+  // CHECK-FIXES: a.foo(/*fabc=*/-1.0f);
+
   a.foo(1.0);
   // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'dabc' [bugprone-argument-comment]
   // CHECK-FIXES: a.foo(/*dabc=*/1.0);
 
+  a.foo(-1.0);
+  // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'dabc' [bugprone-argument-comment]
+  // CHECK-FIXES: a.foo(/*dabc=*/-1.0);
+
   int val3 = 10;
   a.foo(val3);
+  a.foo(-val3);
 
   float val4 = 10.0;
   a.foo(val4);
+  a.foo(-val4);
 
   double val5 = 10.0;
   a.foo(val5);
+  a.foo(-val5);
 
   a.foo("Hello World");
   // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'strabc' [bugprone-argument-comment]
@@ -96,15 +116,56 @@ void test() {
   // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'dabc' [bugprone-argument-comment]
   // CHECK-FIXES: a.foo(/*dabc=*/402.0_km);
 
+  a.foo(-402.0_km);
+  // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'dabc' [bugprone-argument-comment]
+  // CHECK-FIXES: a.foo(/*dabc=*/-402.0_km);
+
   a.foo('A');
   // CHECK-MESSAGES: [[@LINE-1]]:9: warning: argument comment missing for literal argument 'chabc' [bugprone-argument-comment]
   // CHECK-FIXES: a.foo(/*chabc=*/'A');
 
   g(FOO);
+  g(-FOO);
   h(1.0f);
   // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
   // CHECK-FIXES: h(/*b=*/1.0f);
+  h(-1.0f);
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-FIXES: h(/*b=*/-1.0f);
   i(__FILE__);
+
+  j(1, X(1), X(1));
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'a' [bugprone-argument-comment]
+  // CHECK-FIXES: j(/*a=*/1, X(1), X(1));
+  j(/*a=*/1, X(1), X(1));
+
+  j(X(1), 1, X(1));
+  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-FIXES: j(X(1), /*b=*/1, X(1));
+  j(X(1), /*b=*/1, X(1));
+
+  j(X(1), X(1), 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: argument comment missing for literal argument 'c' [bugprone-argument-comment]
+  // CHECK-FIXES: j(X(1), X(1), /*c=*/1);
+  j(X(1), X(1), /*c=*/1);
+
+  j(X(1), 1, 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:11: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:14: warning: argument comment missing for literal argument 'c' [bugprone-argument-comment]
+  // CHECK-FIXES: j(X(1), /*b=*/1, /*c=*/1);
+  j(X(1), /*b=*/1, /*c=*/1);
+
+  j(1, X(1), 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'a' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:14: warning: argument comment missing for literal argument 'c' [bugprone-argument-comment]
+  // CHECK-FIXES: j(/*a=*/1, X(1), /*c=*/1);
+  j(/*a=*/1, X(1), /*c=*/1);
+
+  j(1, 1, X(1));
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: argument comment missing for literal argument 'a' [bugprone-argument-comment]
+  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: argument comment missing for literal argument 'b' [bugprone-argument-comment]
+  // CHECK-FIXES: j(/*a=*/1, /*b=*/1, X(1));
+  j(/*a=*/1, /*b=*/1, X(1));
 
   // FIXME Would like the below to add argument comments.
   g((1));

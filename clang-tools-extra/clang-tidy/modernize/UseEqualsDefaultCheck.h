@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-/// \brief Replace default bodies of special member functions with '= default;'.
+/// Replace default bodies of special member functions with '= default;'.
 /// \code
 ///   struct A {
 ///     A() {}

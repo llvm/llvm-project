@@ -12,6 +12,7 @@
 #include "Plugins/ObjectFile/Breakpad/BreakpadRecords.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Symbol/LineTable.h"
+#include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 
@@ -116,8 +117,8 @@ public:
                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                      TypeMap &types) override;
 
-  size_t FindTypes(const std::vector<CompilerContext> &context, bool append,
-                   TypeMap &types) override;
+  size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                   LanguageSet languages, bool append, TypeMap &types) override;
 
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override {
@@ -204,9 +205,14 @@ private:
   void ParseCUData();
   void ParseLineTableAndSupportFiles(CompileUnit &cu, CompUnitData &data);
   void ParseUnwindData();
-  bool ParseUnwindRow(llvm::StringRef unwind_rules,
-                      const RegisterInfoResolver &resolver,
-                      UnwindPlan::Row &row);
+  llvm::ArrayRef<uint8_t> SaveAsDWARF(postfix::Node &node);
+  lldb::UnwindPlanSP ParseCFIUnwindPlan(const Bookmark &bookmark,
+                                        const RegisterInfoResolver &resolver);
+  bool ParseCFIUnwindRow(llvm::StringRef unwind_rules,
+                         const RegisterInfoResolver &resolver,
+                         UnwindPlan::Row &row);
+  lldb::UnwindPlanSP ParseWinUnwindPlan(const Bookmark &bookmark,
+                                        const RegisterInfoResolver &resolver);
 
   using CompUnitMap = RangeDataVector<lldb::addr_t, lldb::addr_t, CompUnitData>;
 
@@ -214,7 +220,11 @@ private:
   llvm::Optional<CompUnitMap> m_cu_data;
 
   using UnwindMap = RangeDataVector<lldb::addr_t, lldb::addr_t, Bookmark>;
-  llvm::Optional<UnwindMap> m_unwind_data;
+  struct UnwindData {
+    UnwindMap cfi;
+    UnwindMap win;
+  };
+  llvm::Optional<UnwindData> m_unwind_data;
   llvm::BumpPtrAllocator m_allocator;
 };
 

@@ -197,8 +197,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  // Function alignments (log2).
-  unsigned FunctionAlignment = Subtarget.hasStdExtC() ? 1 : 2;
+  // Function alignments.
+  const llvm::Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
   setPrefFunctionAlignment(FunctionAlignment);
 
@@ -1078,8 +1078,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
-MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
-                                           MachineBasicBlock *BB) {
+static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
+                                                  MachineBasicBlock *BB) {
   assert(MI.getOpcode() == RISCV::ReadCycleWide && "Unexpected instruction");
 
   // To read the 64-bit cycle CSR on a 32-bit target, we read the two halves.
@@ -1946,7 +1946,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
 
   auto &Callee = CLI.Callee;
   auto CalleeCC = CLI.CallConv;
-  auto IsVarArg = CLI.IsVarArg;
   auto &Outs = CLI.Outs;
   auto &Caller = MF.getFunction();
   auto CallerCC = Caller.getCallingConv();
@@ -1961,10 +1960,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   // TODO: The "interrupt" attribute isn't currently defined by RISC-V. This
   // should be expanded as new function attributes are introduced.
   if (Caller.hasFnAttribute("interrupt"))
-    return false;
-
-  // Do not tail call opt functions with varargs.
-  if (IsVarArg)
     return false;
 
   // Do not tail call opt if the stack is used to pass parameters.
@@ -2776,4 +2771,14 @@ unsigned RISCVTargetLowering::getExceptionPointerRegister(
 unsigned RISCVTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   return RISCV::X11;
+}
+
+bool RISCVTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
+  // Return false to suppress the unnecessary extensions if the LibCall
+  // arguments or return value is f32 type for LP64 ABI.
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  if (ABI == RISCVABI::ABI_LP64 && (Type == MVT::f32))
+    return false;
+
+  return true;
 }

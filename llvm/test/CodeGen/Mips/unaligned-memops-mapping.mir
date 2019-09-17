@@ -20,7 +20,7 @@
 ...
 ---
 name:            g
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -66,7 +66,7 @@ body:             |
 ...
 ---
 name:            g2
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

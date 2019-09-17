@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "CXXABI.h"
+#include "Interp/Context.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -781,6 +782,13 @@ CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
     return CreateMicrosoftCXXABI(*this);
   }
   llvm_unreachable("Invalid CXXABI type!");
+}
+
+interp::Context &ASTContext::getInterpContext() {
+  if (!InterpContext) {
+    InterpContext.reset(new interp::Context(*this));
+  }
+  return *InterpContext.get();
 }
 
 static const LangASMap *getAddressSpaceMap(const TargetInfo &T,
@@ -7949,6 +7957,28 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
   return false;
 }
 
+bool ASTContext::hasDirectOwnershipQualifier(QualType Ty) const {
+  while (true) {
+    // __strong id
+    if (const AttributedType *Attr = dyn_cast<AttributedType>(Ty)) {
+      if (Attr->getAttrKind() == attr::ObjCOwnership)
+        return true;
+
+      Ty = Attr->getModifiedType();
+
+    // X *__strong (...)
+    } else if (const ParenType *Paren = dyn_cast<ParenType>(Ty)) {
+      Ty = Paren->getInnerType();
+
+    // We do not want to look through typedefs, typeof(expr),
+    // typeof(type), or any other way that the type is somehow
+    // abstracted.
+    } else {
+      return false;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ObjCQualifiedIdTypesAreCompatible - Compatibility testing for qualified id's.
 //===----------------------------------------------------------------------===//
@@ -8191,9 +8221,9 @@ bool ASTContext::canAssignObjCInterfacesInBlockPointer(
   }
 
   if (LHSOPT->isObjCQualifiedIdType() || RHSOPT->isObjCQualifiedIdType())
-    return finish(ObjCQualifiedIdTypesAreCompatible(QualType(LHSOPT,0),
-                                                    QualType(RHSOPT,0),
-                                                    false));
+    return finish(ObjCQualifiedIdTypesAreCompatible(
+        QualType(BlockReturnType ? LHSOPT : RHSOPT, 0),
+        QualType(BlockReturnType ? RHSOPT : LHSOPT, 0), false));
 
   const ObjCInterfaceType* LHS = LHSOPT->getInterfaceType();
   const ObjCInterfaceType* RHS = RHSOPT->getInterfaceType();
@@ -9897,10 +9927,25 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
     return StrongLinkage;
 
   case TSK_ExplicitSpecialization:
-    return Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-                   VD->isStaticDataMember()
-               ? GVA_StrongODR
-               : StrongLinkage;
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+      // If this is a fully specialized constexpr variable template, pretend it
+      // was marked inline. MSVC 14.21.27702 headers define _Is_integral in a
+      // header this way, and we don't want to emit non-discardable definitions
+      // of these variables in every TU that includes <type_traits>. This
+      // behavior is non-conforming, since another TU could use an extern
+      // template declaration for this variable, but for constexpr variables,
+      // it's unlikely for a user to want to do that. This behavior can be
+      // removed if the headers change to explicitly mark such variable template
+      // specializations inline.
+      if (isa<VarTemplateSpecializationDecl>(VD) && VD->isConstexpr())
+        return GVA_DiscardableODR;
+
+      // Use ODR linkage for static data members of fully specialized templates
+      // to prevent duplicate definition errors with MSVC.
+      if (VD->isStaticDataMember())
+        return GVA_StrongODR;
+    }
+    return StrongLinkage;
 
   case TSK_ExplicitInstantiationDefinition:
     return GVA_StrongODR;

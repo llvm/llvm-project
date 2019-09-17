@@ -685,12 +685,6 @@ void AMDGPUPassConfig::addIRPasses() {
   // without ever running any passes on the second.
   addPass(createBarrierNoopPass());
 
-  if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
-    // TODO: May want to move later or split into an early and late one.
-
-    addPass(createAMDGPUCodeGenPreparePass());
-  }
-
   // Handle uses of OpenCL image2d_t, image3d_t and sampler_t arguments.
   if (TM.getTargetTriple().getArch() == Triple::r600)
     addPass(createR600OpenCLImageTypeLoweringPass());
@@ -716,6 +710,11 @@ void AMDGPUPassConfig::addIRPasses() {
           AAR.addAAResult(WrapperPass->getResult());
         }));
     }
+  }
+
+  if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
+    // TODO: May want to move later or split into an early and late one.
+    addPass(createAMDGPUCodeGenPreparePass());
   }
 
   TargetPassConfig::addIRPasses();

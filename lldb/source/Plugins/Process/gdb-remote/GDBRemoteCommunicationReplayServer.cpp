@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "lldb/Host/Config.h"
+#include "llvm/ADT/ScopeExit.h"
 
 #include "GDBRemoteCommunicationReplayServer.h"
 #include "ProcessGDBRemoteLog.h"
@@ -127,7 +128,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   while (!m_packet_history.empty()) {
     // Pop last packet from the history.
-    GDBRemoteCommunicationHistory::Entry entry = m_packet_history.back();
+    GDBRemotePacket entry = m_packet_history.back();
     m_packet_history.pop_back();
 
     // We've handled the handshake implicitly before. Skip the packet and move
@@ -135,7 +136,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     if (entry.packet.data == "+")
       continue;
 
-    if (entry.type == GDBRemoteCommunicationHistory::ePacketTypeSend) {
+    if (entry.type == GDBRemotePacket::ePacketTypeSend) {
       if (unexpected(entry.packet.data, packet.GetStringRef())) {
         LLDB_LOG(log,
                  "GDBRemoteCommunicationReplayServer expected packet: '{0}'",
@@ -149,14 +150,14 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
       // Ignore QEnvironment packets as they're handled earlier.
       if (entry.packet.data.find("QEnvironment") == 1) {
         assert(m_packet_history.back().type ==
-               GDBRemoteCommunicationHistory::ePacketTypeRecv);
+               GDBRemotePacket::ePacketTypeRecv);
         m_packet_history.pop_back();
       }
 
       continue;
     }
 
-    if (entry.type == GDBRemoteCommunicationHistory::ePacketTypeInvalid) {
+    if (entry.type == GDBRemotePacket::ePacketTypeInvalid) {
       LLDB_LOG(
           log,
           "GDBRemoteCommunicationReplayServer skipped invalid packet: '{0}'",
@@ -174,10 +175,6 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
 
   return packet_result;
 }
-
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(
-    std::vector<
-        lldb_private::process_gdb_remote::GDBRemoteCommunicationHistory::Entry>)
 
 llvm::Error
 GDBRemoteCommunicationReplayServer::LoadReplayHistory(const FileSpec &path) {
@@ -256,11 +253,10 @@ void GDBRemoteCommunicationReplayServer::ReceivePacket(
 thread_result_t GDBRemoteCommunicationReplayServer::AsyncThread(void *arg) {
   GDBRemoteCommunicationReplayServer *server =
       (GDBRemoteCommunicationReplayServer *)arg;
-
+  auto D = make_scope_exit([&]() { server->Disconnect(); });
   EventSP event_sp;
   bool done = false;
-
-  while (true) {
+  while (!done) {
     if (server->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&server->m_async_broadcaster)) {

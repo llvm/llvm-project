@@ -48,7 +48,10 @@ define i32 @TestComp128LT(fp128 %d1, fp128 %d2) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq __lttf2
-; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sets %cl
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -56,9 +59,9 @@ entry:
   %cmp = fcmp olt fp128 %d1, %d2
   %conv = zext i1 %cmp to i32
   ret i32 %conv
-; The 'shrl' is a special optimization in llvm to combine
-; the effect of 'fcmp olt' and 'zext'. The main purpose is
-; to test soften call to __lttf2.
+; FIXME: This used to generate a shrl to move the sign bit of eax into bit 0.
+; This no longer happens with fp128 compares being expanded by LegalizeDAG.
+; We can add a new DAG combine for X86ISD::CMP/SETCC to restore this.
 }
 
 define i32 @TestComp128LE(fp128 %d1, fp128 %d2) {

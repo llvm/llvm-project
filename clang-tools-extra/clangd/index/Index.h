@@ -24,10 +24,10 @@ namespace clang {
 namespace clangd {
 
 struct FuzzyFindRequest {
-  /// \brief A query string for the fuzzy find. This is matched against symbols'
+  /// A query string for the fuzzy find. This is matched against symbols'
   /// un-qualified identifiers and should not contain qualifiers like "::".
   std::string Query;
-  /// \brief If this is non-empty, symbols must be in at least one of the scopes
+  /// If this is non-empty, symbols must be in at least one of the scopes
   /// (e.g. namespaces) excluding nested scopes. For example, if a scope "xyz::"
   /// is provided, the matched symbols must be defined in namespace xyz but not
   /// namespace xyz::abc.
@@ -37,7 +37,7 @@ struct FuzzyFindRequest {
   /// If set to true, allow symbols from any scope. Scopes explicitly listed
   /// above will be ranked higher.
   bool AnyScope = false;
-  /// \brief The number of top candidates to return. The index may choose to
+  /// The number of top candidates to return. The index may choose to
   /// return more than this, e.g. if it doesn't know which candidates are best.
   llvm::Optional<uint32_t> Limit;
   /// If set to true, only symbols for completion support will be considered.
@@ -86,7 +86,7 @@ class SymbolIndex {
 public:
   virtual ~SymbolIndex() = default;
 
-  /// \brief Matches symbols in the index fuzzily and applies \p Callback on
+  /// Matches symbols in the index fuzzily and applies \p Callback on
   /// each matched symbol before returning.
   /// If returned Symbols are used outside Callback, they must be deep-copied!
   ///

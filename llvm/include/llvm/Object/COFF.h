@@ -969,11 +969,14 @@ public:
       return nullptr;
     return reinterpret_cast<const dos_header *>(base());
   }
-  std::error_code getCOFFHeader(const coff_file_header *&Res) const;
-  std::error_code
-  getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const;
-  std::error_code getPE32Header(const pe32_header *&Res) const;
-  std::error_code getPE32PlusHeader(const pe32plus_header *&Res) const;
+
+  const coff_file_header *getCOFFHeader() const { return COFFHeader; }
+  const coff_bigobj_file_header *getCOFFBigObjHeader() const {
+    return COFFBigObjHeader;
+  }
+  const pe32_header *getPE32Header() const { return PE32Header; }
+  const pe32plus_header *getPE32PlusHeader() const { return PE32PlusHeader; }
+
   std::error_code getDataDirectory(uint32_t index,
                                    const data_directory *&Res) const;
   std::error_code getSection(int32_t index, const coff_section *&Res) const;
@@ -1201,16 +1204,34 @@ public:
   ResourceSectionRef() = default;
   explicit ResourceSectionRef(StringRef Ref) : BBS(Ref, support::little) {}
 
+  Error load(const COFFObjectFile *O);
+  Error load(const COFFObjectFile *O, const SectionRef &S);
+
   Expected<ArrayRef<UTF16>>
   getEntryNameString(const coff_resource_dir_entry &Entry);
   Expected<const coff_resource_dir_table &>
   getEntrySubDir(const coff_resource_dir_entry &Entry);
+  Expected<const coff_resource_data_entry &>
+  getEntryData(const coff_resource_dir_entry &Entry);
   Expected<const coff_resource_dir_table &> getBaseTable();
+  Expected<const coff_resource_dir_entry &>
+  getTableEntry(const coff_resource_dir_table &Table, uint32_t Index);
+
+  Expected<StringRef> getContents(const coff_resource_data_entry &Entry);
 
 private:
   BinaryByteStream BBS;
 
+  SectionRef Section;
+  const COFFObjectFile *Obj;
+
+  std::vector<const coff_relocation *> Relocs;
+
   Expected<const coff_resource_dir_table &> getTableAtOffset(uint32_t Offset);
+  Expected<const coff_resource_dir_entry &>
+  getTableEntryAtOffset(uint32_t Offset);
+  Expected<const coff_resource_data_entry &>
+  getDataEntryAtOffset(uint32_t Offset);
   Expected<ArrayRef<UTF16>> getDirStringAtOffset(uint32_t Offset);
 };
 

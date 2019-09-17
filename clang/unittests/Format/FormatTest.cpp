@@ -1408,6 +1408,30 @@ TEST_F(FormatTest, FormatsLabels) {
                "test_label:;\n"
                "  int i = 0;\n"
                "}");
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentGotoLabels = false;
+  verifyFormat("void f() {\n"
+               "  some_code();\n"
+               "test_label:\n"
+               "  some_other_code();\n"
+               "  {\n"
+               "    some_more_code();\n"
+               "another_label:\n"
+               "    some_more_code();\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("{\n"
+               "  some_code();\n"
+               "test_label:\n"
+               "  some_other_code();\n"
+               "}",
+               Style);
+  verifyFormat("{\n"
+               "  some_code();\n"
+               "test_label:;\n"
+               "  int i = 0;\n"
+               "}");
 }
 
 //===----------------------------------------------------------------------===//
@@ -6620,8 +6644,15 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
 
   verifyFormat("A<A<int>> a;", getChromiumStyle(FormatStyle::LK_Cpp));
 
-  verifyFormat("int i = a<1> >> 1;");
+  // template closer followed by a token that starts with > or =
   verifyFormat("bool b = a<1> > 1;");
+  verifyFormat("bool b = a<1> >= 1;");
+  verifyFormat("int i = a<1> >> 1;");
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeAssignmentOperators = false;
+  verifyFormat("bool b= a<1> == 1;", Style);
+  verifyFormat("a<int> = 1;", Style);
+  verifyFormat("a<int> >>= 1;", Style);
 
   verifyFormat("test >> a >> b;");
   verifyFormat("test << a >> b;");
@@ -7827,6 +7858,16 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
       "    ffffff, ggggg,  hhhhhh, iiiiii, jjjjjj, kkkkkk,\n"
       "};",
       NoBinPacking);
+
+  NoBinPacking.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  EXPECT_EQ("static uint8 CddDp83848Reg[] = {\n"
+            "    CDDDP83848_BMCR_REGISTER,\n"
+            "    CDDDP83848_BMSR_REGISTER,\n"
+            "    CDDDP83848_RBR_REGISTER};",
+            format("static uint8 CddDp83848Reg[] = {CDDDP83848_BMCR_REGISTER,\n"
+                   "                                CDDDP83848_BMSR_REGISTER,\n"
+                   "                                CDDDP83848_RBR_REGISTER};",
+                   NoBinPacking));
 
   // FIXME: The alignment of these trailing comments might be bad. Then again,
   // this might be utterly useless in real code.
@@ -11762,6 +11803,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
   CHECK_PARSE_BOOL(IndentCaseLabels);
+  CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
@@ -12881,6 +12923,10 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  return 1; //\n"
                "};");
 
+  // Lambdas with explicit template argument lists.
+  verifyFormat(
+      "auto L = []<template <typename> class T, class U>(T<U> &&a) {};\n");
+
   // Multiple lambdas in the same parentheses change indentation rules. These
   // lambdas are forced to start on new lines.
   verifyFormat("SomeFunction(\n"
@@ -12898,8 +12944,8 @@ TEST_F(FormatTest, FormatsLambdas) {
                "    },\n"
                "    1);\n");
 
-  // A multi-line lambda passed as arg1 forces arg0 to be pushed out, just like the arg0
-  // case above.
+  // A multi-line lambda passed as arg1 forces arg0 to be pushed out, just like
+  // the arg0 case above.
   auto Style = getGoogleStyle();
   Style.BinPackArguments = false;
   verifyFormat("SomeFunction(\n"

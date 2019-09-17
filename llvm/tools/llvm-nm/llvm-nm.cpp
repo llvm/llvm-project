@@ -1082,7 +1082,7 @@ static StringRef getNMTypeName(SymbolicFile &Obj, basic_symbol_iterator I) {
 static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
                                    StringRef &SecName) {
   uint32_t Symflags = I->getFlags();
-  if (isa<ELFObjectFileBase>(&Obj)) {
+  if (ELFObjectFileBase *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
     if (Symflags & object::SymbolRef::SF_Absolute)
       SecName = "*ABS*";
     else if (Symflags & object::SymbolRef::SF_Common)
@@ -1097,9 +1097,12 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
         return '?';
       }
 
+      if (*SecIOrErr == ELFObj->section_end())
+        return '?';
+
       Expected<StringRef> NameOrErr = (*SecIOrErr)->getName();
       if (!NameOrErr) {
-        consumeError(SecIOrErr.takeError());
+        consumeError(NameOrErr.takeError());
         return '?';
       }
       SecName = *NameOrErr;

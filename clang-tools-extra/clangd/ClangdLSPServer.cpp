@@ -8,6 +8,7 @@
 
 #include "ClangdLSPServer.h"
 #include "Diagnostics.h"
+#include "DraftStore.h"
 #include "FormattedString.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
@@ -20,11 +21,15 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SHA1.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <cstddef>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -87,10 +92,39 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
 std::vector<std::vector<std::string>> buildHighlightScopeLookupTable() {
   std::vector<std::vector<std::string>> LookupTable;
   // HighlightingKind is using as the index.
-  for (int KindValue = 0; KindValue < (int)HighlightingKind::NumKinds;
+  for (int KindValue = 0; KindValue <= (int)HighlightingKind::LastKind;
        ++KindValue)
     LookupTable.push_back({toTextMateScope((HighlightingKind)(KindValue))});
   return LookupTable;
+}
+
+// Makes sure edits in \p E are applicable to latest file contents reported by
+// editor. If not generates an error message containing information about files
+// that needs to be saved.
+llvm::Error validateEdits(const DraftStore &DraftMgr, const Tweak::Effect &E) {
+  size_t InvalidFileCount = 0;
+  llvm::StringRef LastInvalidFile;
+  for (const auto &It : E.ApplyEdits) {
+    if (auto Draft = DraftMgr.getDraft(It.first())) {
+      // If the file is open in user's editor, make sure the version we
+      // saw and current version are compatible as this is the text that
+      // will be replaced by editors.
+      if (!It.second.canApplyTo(*Draft)) {
+        ++InvalidFileCount;
+        LastInvalidFile = It.first();
+      }
+    }
+  }
+  if (!InvalidFileCount)
+    return llvm::Error::success();
+  if (InvalidFileCount == 1)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "File must be saved first: " +
+                                       LastInvalidFile);
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "Files must be saved first: " + LastInvalidFile + " (and " +
+          llvm::to_string(InvalidFileCount - 1) + " others)");
 }
 
 } // namespace
@@ -464,6 +498,16 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (!Params.capabilities.RenamePrepareSupport) // Only boolean allowed per LSP
     RenameProvider = true;
 
+  // Per LSP, codeActionProvide can be either boolean or CodeActionOptions.
+  // CodeActionOptions is only valid if the client supports action literal
+  // via textDocument.codeAction.codeActionLiteralSupport.
+  llvm::json::Value CodeActionProvider = true;
+  if (Params.capabilities.CodeActionStructure)
+    CodeActionProvider = llvm::json::Object{
+        {"codeActionKinds",
+         {CodeAction::QUICKFIX_KIND, CodeAction::REFACTOR_KIND,
+          CodeAction::INFO_KIND}}};
+
   llvm::json::Object Result{
       {{"capabilities",
         llvm::json::Object{
@@ -475,7 +519,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                  {"firstTriggerCharacter", "\n"},
                  {"moreTriggerCharacter", {}},
              }},
-            {"codeActionProvider", true},
+            {"codeActionProvider", std::move(CodeActionProvider)},
             {"completionProvider",
              llvm::json::Object{
                  {"resolveProvider", false},
@@ -617,7 +661,8 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
       if (!R)
         return Reply(R.takeError());
 
-      assert(R->ShowMessage || (R->ApplyEdit && "tweak has no effect"));
+      assert(R->ShowMessage ||
+             (!R->ApplyEdits.empty() && "tweak has no effect"));
 
       if (R->ShowMessage) {
         ShowMessageParams Msg;
@@ -625,15 +670,21 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
         Msg.type = MessageType::Info;
         notify("window/showMessage", Msg);
       }
-      if (R->ApplyEdit) {
-        WorkspaceEdit WE;
-        WE.changes.emplace();
-        (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R->ApplyEdit);
-        // ApplyEdit will take care of calling Reply().
-        return ApplyEdit(std::move(WE), "Tweak applied.", std::move(Reply));
-      }
       // When no edit is specified, make sure we Reply().
-      return Reply("Tweak applied.");
+      if (R->ApplyEdits.empty())
+        return Reply("Tweak applied.");
+
+      if (auto Err = validateEdits(DraftMgr, *R))
+        return Reply(std::move(Err));
+
+      WorkspaceEdit WE;
+      WE.changes.emplace();
+      for (const auto &It : R->ApplyEdits) {
+        (*WE.changes)[URI::create(It.first()).toString()] =
+            It.second.asTextEdits();
+      }
+      // ApplyEdit will take care of calling Reply().
+      return ApplyEdit(std::move(WE), "Tweak applied.", std::move(Reply));
     };
     Server->applyTweak(Params.tweakArgs->file.file(),
                        Params.tweakArgs->selection, Params.tweakArgs->tweakID,
@@ -1185,7 +1236,7 @@ bool ClangdLSPServer::shouldRunCompletion(
 }
 
 void ClangdLSPServer::onHighlightingsReady(
-    PathRef File, std::vector<HighlightingToken> Highlightings, int NumLines) {
+    PathRef File, std::vector<HighlightingToken> Highlightings) {
   std::vector<HighlightingToken> Old;
   std::vector<HighlightingToken> HighlightingsCopy = Highlightings;
   {
@@ -1195,8 +1246,7 @@ void ClangdLSPServer::onHighlightingsReady(
   }
   // LSP allows us to send incremental edits of highlightings. Also need to diff
   // to remove highlightings from tokens that should no longer have them.
-  std::vector<LineHighlightings> Diffed =
-      diffHighlightings(Highlightings, Old, NumLines);
+  std::vector<LineHighlightings> Diffed = diffHighlightings(Highlightings, Old);
   publishSemanticHighlighting(
       {{URIForFile::canonicalize(File, /*TUPath=*/File)},
        toSemanticHighlightingInformation(Diffed)});

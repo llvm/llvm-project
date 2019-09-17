@@ -15,6 +15,9 @@ endif()
 get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
 set(dotest_args_replacement ${LLVM_BUILD_MODE})
 
+set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running tests.")
+set(LLDB_TEST_MODULE_CACHE_CLANG "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-clang" CACHE PATH "The Clang module cache used by the Clang while building tests.")
+
 if(LLDB_BUILT_STANDALONE)
   # In paths to our build-tree, replace CMAKE_CFG_INTDIR with our configuration name placeholder.
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} config_runtime_output_dir ${LLVM_RUNTIME_OUTPUT_INTDIR})
@@ -66,6 +69,7 @@ endif()
 llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
   LLVM_ENABLE_ZLIB
+  LLVM_ENABLE_SHARED_LIBS
   LLDB_IS_64_BITS)
 
 configure_lit_site_cfg(

@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
-/// \brief Implements C++ Core Guidelines Type.6.
+/// Implements C++ Core Guidelines Type.6.
 ///
 /// Checks that every user-provided constructor value-initializes all class
 /// members and base classes that would have undefined behavior otherwise. Also

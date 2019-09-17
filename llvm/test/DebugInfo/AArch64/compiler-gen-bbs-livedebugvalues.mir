@@ -54,7 +54,7 @@
 ---
 # CHECK-LABEL: name: f1
 name:            f1
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
@@ -88,6 +88,7 @@ body:             |
 
     ; CHECK: DBG_VALUE renamable $w0, $noreg, !9, !DIExpression(), debug-location !12
     ; CHECK-NEXT: STRWui killed $w0, $sp, 3 :: (store 4 into %stack.0)
+    ; CHECK-NEXT: DBG_VALUE $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
     ; CHECK-NEXT: DBG_VALUE $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
   
   bb.1.artificial-bb-1:

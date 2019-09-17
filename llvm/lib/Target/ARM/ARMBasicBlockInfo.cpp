@@ -63,7 +63,7 @@ void ARMBasicBlockUtils::computeBlockSize(MachineBasicBlock *MBB) {
   // tBR_JTr contains a .align 2 directive.
   if (!MBB->empty() && MBB->back().getOpcode() == ARM::tBR_JTr) {
     BBI.PostAlign = 2;
-    MBB->getParent()->ensureAlignment(2);
+    MBB->getParent()->ensureAlignment(llvm::Align(4));
   }
 }
 
@@ -126,7 +126,7 @@ void ARMBasicBlockUtils::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
   for(unsigned i = BBNum + 1, e = MF.getNumBlockIDs(); i < e; ++i) {
     // Get the offset and known bits at the end of the layout predecessor.
     // Include the alignment of the current block.
-    unsigned LogAlign = MF.getBlockNumbered(i)->getAlignment();
+    unsigned LogAlign = MF.getBlockNumbered(i)->getLogAlignment();
     unsigned Offset = BBInfo[i - 1].postOffset(LogAlign);
     unsigned KnownBits = BBInfo[i - 1].postKnownBits(LogAlign);
 

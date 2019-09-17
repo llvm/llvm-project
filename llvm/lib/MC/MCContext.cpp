@@ -538,6 +538,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
                                            XCOFF::StorageMappingClass SMC,
                                            XCOFF::SymbolType Type,
+                                           XCOFF::StorageClass SC,
                                            SectionKind Kind,
                                            const char *BeginSymName) {
   // Do the lookup. If we have a hit, return it.
@@ -555,7 +556,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
     Begin = createTempSymbol(BeginSymName, false);
 
   MCSectionXCOFF *Result = new (XCOFFAllocator.Allocate())
-      MCSectionXCOFF(CachedName, SMC, Type, Kind, Begin);
+      MCSectionXCOFF(CachedName, SMC, Type, SC, Kind, Begin);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

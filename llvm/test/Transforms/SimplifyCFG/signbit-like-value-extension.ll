@@ -11,14 +11,10 @@ define i32 @extend_value(i32 %storage, i32 %nbits) {
 ; CHECK-NEXT:    [[SKIPNBITS:%.*]] = sub i32 32, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = lshr i32 [[STORAGE:%.*]], [[SKIPNBITS]]
 ; CHECK-NEXT:    [[SHOULDEXTEND:%.*]] = icmp sgt i32 [[STORAGE]], -1
-; CHECK-NEXT:    br i1 [[SHOULDEXTEND]], label [[EXTEND:%.*]], label [[END:%.*]]
-; CHECK:       extend:
 ; CHECK-NEXT:    [[HIGHBITMASK:%.*]] = shl nsw i32 -1, [[NBITS]]
 ; CHECK-NEXT:    [[HIGHBITMASKPLUSONE:%.*]] = add nsw i32 [[HIGHBITMASK]], 1
 ; CHECK-NEXT:    [[EXTENDED:%.*]] = add i32 [[HIGHBITMASKPLUSONE]], [[VALUE]]
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[EXTENDED]], [[EXTEND]] ], [ [[VALUE]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[SHOULDEXTEND]], i32 [[EXTENDED]], i32 [[VALUE]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 bb:

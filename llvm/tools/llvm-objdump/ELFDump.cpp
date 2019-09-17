@@ -178,7 +178,7 @@ void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
         outs() << (Data + Dyn.d_un.d_val) << "\n";
         continue;
       }
-      warn(toString(StrTabOrErr.takeError()));
+      reportWarning(toString(StrTabOrErr.takeError()), Filename);
       consumeError(StrTabOrErr.takeError());
     }
     outs() << format(Fmt, (uint64_t)Dyn.d_un.d_val);

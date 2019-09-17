@@ -263,8 +263,10 @@ template <typename LoopPassT>
 class FunctionToLoopPassAdaptor
     : public PassInfoMixin<FunctionToLoopPassAdaptor<LoopPassT>> {
 public:
-  explicit FunctionToLoopPassAdaptor(LoopPassT Pass, bool DebugLogging = false)
-      : Pass(std::move(Pass)), LoopCanonicalizationFPM(DebugLogging) {
+  explicit FunctionToLoopPassAdaptor(LoopPassT Pass, bool UseMemorySSA = false,
+                                     bool DebugLogging = false)
+      : Pass(std::move(Pass)), LoopCanonicalizationFPM(DebugLogging),
+        UseMemorySSA(UseMemorySSA) {
     LoopCanonicalizationFPM.addPass(LoopSimplifyPass());
     LoopCanonicalizationFPM.addPass(LCSSAPass());
   }
@@ -293,7 +295,7 @@ public:
       return PA;
 
     // Get the analysis results needed by loop passes.
-    MemorySSA *MSSA = EnableMSSALoopDependency
+    MemorySSA *MSSA = UseMemorySSA
                           ? (&AM.getResult<MemorySSAAnalysis>(F).getMSSA())
                           : nullptr;
     LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
@@ -310,8 +312,10 @@ public:
     // LoopStandardAnalysisResults object. The loop analyses cached in this
     // manager have access to those analysis results and so it must invalidate
     // itself when they go away.
-    LoopAnalysisManager &LAM =
-        AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+    auto &LAMFP = AM.getResult<LoopAnalysisManagerFunctionProxy>(F);
+    if (UseMemorySSA)
+      LAMFP.markMSSAUsed();
+    LoopAnalysisManager &LAM = LAMFP.getManager();
 
     // A postorder worklist of loops to process.
     SmallPriorityWorklist<Loop *, 4> Worklist;
@@ -382,6 +386,8 @@ public:
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<ScalarEvolutionAnalysis>();
+    if (UseMemorySSA)
+      PA.preserve<MemorySSAAnalysis>();
     // FIXME: What we really want to do here is preserve an AA category, but
     // that concept doesn't exist yet.
     PA.preserve<AAManager>();
@@ -395,14 +401,18 @@ private:
   LoopPassT Pass;
 
   FunctionPassManager LoopCanonicalizationFPM;
+
+  bool UseMemorySSA = false;
 };
 
 /// A function to deduce a loop pass type and wrap it in the templated
 /// adaptor.
 template <typename LoopPassT>
 FunctionToLoopPassAdaptor<LoopPassT>
-createFunctionToLoopPassAdaptor(LoopPassT Pass, bool DebugLogging = false) {
-  return FunctionToLoopPassAdaptor<LoopPassT>(std::move(Pass), DebugLogging);
+createFunctionToLoopPassAdaptor(LoopPassT Pass, bool UseMemorySSA = false,
+                                bool DebugLogging = false) {
+  return FunctionToLoopPassAdaptor<LoopPassT>(std::move(Pass), UseMemorySSA,
+                                              DebugLogging);
 }
 
 /// Pass for printing a loop's contents as textual IR.

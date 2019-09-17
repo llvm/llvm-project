@@ -15,14 +15,14 @@
 // directory_iterator begin(directory_iterator iter) noexcept;
 // directory_iterator end(directory_iterator iter) noexcept;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <set>
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.hpp"
-#include "filesystem_test_helper.hpp"
+#include "rapid-cxx-test.h"
+#include "filesystem_test_helper.h"
 #include <iostream>
 
 using namespace fs;

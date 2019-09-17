@@ -1,23 +1,21 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-// RUN: ld.lld %t -o %tout
-// RUN: llvm-readobj -l %tout | FileCheck %s
+# REQUIRES: x86
 
-// CHECK:      Type: PT_GNU_RELRO
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: VirtualAddress:
-// CHECK-NEXT: PhysicalAddress:
-// CHECK-NEXT: FileSize: 4
-// CHECK-NEXT: MemSize: 4
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   PF_R
-// CHECK-NEXT: ]
-// CHECK-NEXT: Alignment: 1
+## PT_GNU_RELRO includes TLS sections.
 
-.global _start
-_start:
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-readobj -l %t | FileCheck %s
 
-.global d
+## Currently p_memsz of PT_GNU_RELRO is rounded up to protect the last page.
+
+# CHECK:      Type: PT_GNU_RELRO
+# CHECK:      VirtualAddress: 0x2021C8
+# CHECK:      FileSize: 4
+# CHECK-NEXT: MemSize: 3640
+# CHECK:      Alignment: 1
+
 .section .foo,"awT",@progbits
-d:
-.long 2
+.long 1
+
+.section .bar,"awT",@nobits
+.space 2

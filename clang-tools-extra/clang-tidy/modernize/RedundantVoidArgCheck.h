@@ -18,7 +18,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-/// \brief Find and remove redundant void argument lists.
+/// Find and remove redundant void argument lists.
 ///
 /// Examples:
 ///   `int f(void);`                    becomes `int f();`

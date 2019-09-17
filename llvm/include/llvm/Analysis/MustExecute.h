@@ -7,9 +7,16 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// Contains a collection of routines for determining if a given instruction is
-/// guaranteed to execute if a given point in control flow is reached.  The most
+/// guaranteed to execute if a given point in control flow is reached. The most
 /// common example is an instruction within a loop being provably executed if we
 /// branch to the header of it's containing loop.
+///
+/// There are two interfaces available to determine if an instruction is
+/// executed once a given point in the control flow is reached:
+/// 1) A loop-centric one derived from LoopSafetyInfo.
+/// 2) A "must be executed context"-based one implemented in the
+///    MustBeExecutedContextExplorer.
+/// Please refer to the class comments for more information.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -164,6 +171,280 @@ public:
   virtual ~ICFLoopSafetyInfo() {};
 };
 
-}
+struct MustBeExecutedContextExplorer;
+
+/// Must be executed iterators visit stretches of instructions that are
+/// guaranteed to be executed together, potentially with other instruction
+/// executed in-between.
+///
+/// Given the following code, and assuming all statements are single
+/// instructions which transfer execution to the successor (see
+/// isGuaranteedToTransferExecutionToSuccessor), there are two possible
+/// outcomes. If we start the iterator at A, B, or E, we will visit only A, B,
+/// and E. If we start at C or D, we will visit all instructions A-E.
+///
+/// \code
+///   A;
+///   B;
+///   if (...) {
+///     C;
+///     D;
+///   }
+///   E;
+/// \endcode
+///
+///
+/// Below is the example extneded with instructions F and G. Now we assume F
+/// might not transfer execution to it's successor G. As a result we get the
+/// following visit sets:
+///
+/// Start Instruction   | Visit Set
+/// A                   | A, B,       E, F
+///    B                | A, B,       E, F
+///       C             | A, B, C, D, E, F
+///          D          | A, B, C, D, E, F
+///             E       | A, B,       E, F
+///                F    | A, B,       E, F
+///                   G | A, B,       E, F, G
+///
+///
+/// \code
+///   A;
+///   B;
+///   if (...) {
+///     C;
+///     D;
+///   }
+///   E;
+///   F;  // Might not transfer execution to its successor G.
+///   G;
+/// \endcode
+///
+///
+/// A more complex example involving conditionals, loops, break, and continue
+/// is shown below. We again assume all instructions will transmit control to
+/// the successor and we assume we can prove the inner loop to be finite. We
+/// omit non-trivial branch conditions as the exploration is oblivious to them.
+/// Constant branches are assumed to be unconditional in the CFG. The resulting
+/// visist sets are shown in the table below.
+///
+/// \code
+///   A;
+///   while (true) {
+///     B;
+///     if (...)
+///       C;
+///     if (...)
+///       continue;
+///     D;
+///     if (...)
+///       break;
+///     do {
+///       if (...)
+///         continue;
+///       E;
+///     } while (...);
+///     F;
+///   }
+///   G;
+/// \endcode
+///
+/// Start Instruction    | Visit Set
+/// A                    | A, B
+///    B                 | A, B
+///       C              | A, B, C
+///          D           | A, B,    D
+///             E        | A, B,    D, E, F
+///                F     | A, B,    D,    F
+///                   G  | A, B,    D,       G
+///
+///
+/// Note that the examples show optimal visist sets but not necessarily the ones
+/// derived by the explorer depending on the available CFG analyses (see
+/// MustBeExecutedContextExplorer). Also note that we, depending on the options,
+/// the visit set can contain instructions from other functions.
+struct MustBeExecutedIterator {
+  /// Type declarations that make his class an input iterator.
+  ///{
+  typedef const Instruction *value_type;
+  typedef std::ptrdiff_t difference_type;
+  typedef const Instruction **pointer;
+  typedef const Instruction *&reference;
+  typedef std::input_iterator_tag iterator_category;
+  ///}
+
+  using ExplorerTy = MustBeExecutedContextExplorer;
+
+  MustBeExecutedIterator(const MustBeExecutedIterator &Other)
+      : Visited(Other.Visited), Explorer(Other.Explorer),
+        CurInst(Other.CurInst) {}
+
+  MustBeExecutedIterator(MustBeExecutedIterator &&Other)
+      : Visited(std::move(Other.Visited)), Explorer(Other.Explorer),
+        CurInst(Other.CurInst) {}
+
+  MustBeExecutedIterator &operator=(MustBeExecutedIterator &&Other) {
+    if (this != &Other) {
+      std::swap(Visited, Other.Visited);
+      std::swap(CurInst, Other.CurInst);
+    }
+    return *this;
+  }
+
+  ~MustBeExecutedIterator() {}
+
+  /// Pre- and post-increment operators.
+  ///{
+  MustBeExecutedIterator &operator++() {
+    CurInst = advance();
+    return *this;
+  }
+
+  MustBeExecutedIterator operator++(int) {
+    MustBeExecutedIterator tmp(*this);
+    operator++();
+    return tmp;
+  }
+  ///}
+
+  /// Equality and inequality operators. Note that we ignore the history here.
+  ///{
+  bool operator==(const MustBeExecutedIterator &Other) const {
+    return CurInst == Other.CurInst;
+  }
+
+  bool operator!=(const MustBeExecutedIterator &Other) const {
+    return !(*this == Other);
+  }
+  ///}
+
+  /// Return the underlying instruction.
+  const Instruction *&operator*() { return CurInst; }
+  const Instruction *getCurrentInst() const { return CurInst; }
+
+  /// Return true if \p I was encountered by this iterator already.
+  bool count(const Instruction *I) const { return Visited.count(I); }
+
+private:
+  using VisitedSetTy = DenseSet<const Instruction *>;
+
+  /// Private constructors.
+  MustBeExecutedIterator(ExplorerTy &Explorer, const Instruction *I);
+
+  /// Reset the iterator to its initial state pointing at \p I.
+  void reset(const Instruction *I);
+
+  /// Try to advance one of the underlying positions (Head or Tail).
+  ///
+  /// \return The next instruction in the must be executed context, or nullptr
+  ///         if none was found.
+  const Instruction *advance();
+
+  /// A set to track the visited instructions in order to deal with endless
+  /// loops and recursion.
+  VisitedSetTy Visited;
+
+  /// A reference to the explorer that created this iterator.
+  ExplorerTy &Explorer;
+
+  /// The instruction we are currently exposing to the user. There is always an
+  /// instruction that we know is executed with the given program point,
+  /// initially the program point itself.
+  const Instruction *CurInst;
+
+  friend struct MustBeExecutedContextExplorer;
+};
+
+/// A "must be executed context" for a given program point PP is the set of
+/// instructions, potentially before and after PP, that are executed always when
+/// PP is reached. The MustBeExecutedContextExplorer an interface to explore
+/// "must be executed contexts" in a module through the use of
+/// MustBeExecutedIterator.
+///
+/// The explorer exposes "must be executed iterators" that traverse the must be
+/// executed context. There is little information sharing between iterators as
+/// the expected use case involves few iterators for "far apart" instructions.
+/// If that changes, we should consider caching more intermediate results.
+struct MustBeExecutedContextExplorer {
+
+  /// In the description of the parameters we use PP to denote a program point
+  /// for which the must be executed context is explored, or put differently,
+  /// for which the MustBeExecutedIterator is created.
+  ///
+  /// \param ExploreInterBlock    Flag to indicate if instructions in blocks
+  ///                             other than the parent of PP should be
+  ///                             explored.
+  MustBeExecutedContextExplorer(bool ExploreInterBlock)
+      : ExploreInterBlock(ExploreInterBlock), EndIterator(*this, nullptr) {}
+
+  /// Clean up the dynamically allocated iterators.
+  ~MustBeExecutedContextExplorer() {
+    DeleteContainerSeconds(InstructionIteratorMap);
+  }
+
+  /// Iterator-based interface. \see MustBeExecutedIterator.
+  ///{
+  using iterator = MustBeExecutedIterator;
+  using const_iterator = const MustBeExecutedIterator;
+
+  /// Return an iterator to explore the context around \p PP.
+  iterator &begin(const Instruction *PP) {
+    auto *&It = InstructionIteratorMap[PP];
+    if (!It)
+      It = new iterator(*this, PP);
+    return *It;
+  }
+
+  /// Return an iterator to explore the cached context around \p PP.
+  const_iterator &begin(const Instruction *PP) const {
+    return *InstructionIteratorMap.lookup(PP);
+  }
+
+  /// Return an universal end iterator.
+  ///{
+  iterator &end() { return EndIterator; }
+  iterator &end(const Instruction *) { return EndIterator; }
+
+  const_iterator &end() const { return EndIterator; }
+  const_iterator &end(const Instruction *) const { return EndIterator; }
+  ///}
+
+  /// Return an iterator range to explore the context around \p PP.
+  llvm::iterator_range<iterator> range(const Instruction *PP) {
+    return llvm::make_range(begin(PP), end(PP));
+  }
+
+  /// Return an iterator range to explore the cached context around \p PP.
+  llvm::iterator_range<const_iterator> range(const Instruction *PP) const {
+    return llvm::make_range(begin(PP), end(PP));
+  }
+  ///}
+
+  /// Return the next instruction that is guaranteed to be executed after \p PP.
+  ///
+  /// \param It              The iterator that is used to traverse the must be
+  ///                        executed context.
+  /// \param PP              The program point for which the next instruction
+  ///                        that is guaranteed to execute is determined.
+  const Instruction *
+  getMustBeExecutedNextInstruction(MustBeExecutedIterator &It,
+                                   const Instruction *PP);
+
+  /// Parameter that limit the performed exploration. See the constructor for
+  /// their meaning.
+  ///{
+  const bool ExploreInterBlock;
+  ///}
+
+private:
+  /// Map from instructions to associated must be executed iterators.
+  DenseMap<const Instruction *, MustBeExecutedIterator *>
+      InstructionIteratorMap;
+
+  /// A unique end iterator.
+  MustBeExecutedIterator EndIterator;
+};
+
+} // namespace llvm
 
 #endif

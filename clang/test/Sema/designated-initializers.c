@@ -46,7 +46,7 @@ struct point array[10] = {
 struct point array2[10] = {
   [10].x = 2.0, // expected-error{{array designator index (10) exceeds array bounds (10)}}
   [4 ... 5].y = 2.0, // expected-note 2 {{previous initialization is here}}
-  [4 ... 6] = { .x = 3, .y = 4.0 }  // expected-warning 2 {{subobject initialization overrides initialization of other fields within its enclosing subobject}}
+  [4 ... 6] = { .x = 3, .y = 4.0 }  // expected-warning 2 {{initializer overrides prior initialization of this subobject}}
 };
 
 struct point array3[10] = {
@@ -130,10 +130,10 @@ int get8() { ++counter; return 8; }
 void test() {
   struct X xs[] = { 
     [0] = (struct X){1, 2}, // expected-note 2 {{previous initialization is here}}
-    [0].c = 3,  // expected-warning{{subobject initialization overrides initialization of other fields within its enclosing subobject}}
+    [0].c = 3,  // expected-warning{{initializer partially overrides prior initialization of this subobject}}
     (struct X) {4, 5, 6}, // expected-note{{previous initialization is here}}
-    [1].b = get8(), // expected-warning{{subobject initialization overrides initialization of other fields within its enclosing subobject}}
-    [0].b = 8   // expected-warning{{subobject initialization overrides initialization of other fields within its enclosing subobject}}
+    [1].b = get8(), // expected-warning{{initializer partially overrides prior initialization of this subobject}}
+    [0].b = 8   // expected-warning{{initializer partially overrides prior initialization of this subobject}}
   };
 }
 
@@ -331,20 +331,20 @@ struct overwrite_string_struct {
   char L[6];
   int M;
 } overwrite_string[] = {
-  { { "foo" }, 1 }, // expected-note {{previous initialization is here}}
-  [0].L[2] = 'x' // expected-warning{{subobject initialization overrides initialization of other fields}}
+  { { "foo" }, 1 }, // expected-note{{previous initialization is here}}
+  [0].L[2] = 'x' // expected-warning{{initializer partially overrides prior initialization of this subobject}}
 };
 struct overwrite_string_struct2 {
   char L[6];
   int M;
 } overwrite_string2[] = {
     { { "foo" }, 1 }, // expected-note{{previous initialization is here}}
-    [0].L[4] = 'x' // expected-warning{{subobject initialization overrides initialization of other fields}}
+    [0].L[4] = 'x' // expected-warning{{initializer partially overrides prior initialization of this subobject}}
   };
 struct overwrite_string_struct
 overwrite_string3[] = {
   "foo", 1,           // expected-note{{previous initialization is here}}
-  [0].L[4] = 'x'  // expected-warning{{subobject initialization overrides initialization of other fields}}
+  [0].L[4] = 'x'  // expected-warning{{initializer partially overrides prior initialization of this subobject}}
 };
 struct overwrite_string_struct
 overwrite_string4[] = {
@@ -364,7 +364,7 @@ struct {
   },
 
   .u1 = {
-    .a = 0,
-    .b = 0,
+    .a = 0, // expected-note {{previous initialization is here}}
+    .b = 0, // expected-warning {{initializer overrides prior initialization of this subobject}}
   },
 };

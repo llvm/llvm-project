@@ -20,9 +20,21 @@ tablegen("RISCVGenDAGISel") {
   td_file = "RISCV.td"
 }
 
+tablegen("RISCVGenGlobalISel") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [ "-gen-global-isel" ]
+  td_file = "RISCV.td"
+}
+
 tablegen("RISCVGenMCPseudoLowering") {
   visibility = [ ":LLVMRISCVCodeGen" ]
   args = [ "-gen-pseudo-lowering" ]
+  td_file = "RISCV.td"
+}
+
+tablegen("RISCVGenRegisterBank") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [ "-gen-register-bank" ]
   td_file = "RISCV.td"
 }
 
@@ -30,7 +42,9 @@ static_library("LLVMRISCVCodeGen") {
   deps = [
     ":RISCVGenCompressInstEmitter",
     ":RISCVGenDAGISel",
+    ":RISCVGenGlobalISel",
     ":RISCVGenMCPseudoLowering",
+    ":RISCVGenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
@@ -46,13 +60,17 @@ static_library("LLVMRISCVCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "RISCVAsmPrinter.cpp",
+    "RISCVCallLowering.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
     "RISCVISelLowering.cpp",
     "RISCVInstrInfo.cpp",
+    "RISCVInstructionSelector.cpp",
+    "RISCVLegalizerInfo.cpp",
     "RISCVMCInstLower.cpp",
     "RISCVMergeBaseOffset.cpp",
+    "RISCVRegisterBankInfo.cpp",
     "RISCVRegisterInfo.cpp",
     "RISCVSubtarget.cpp",
     "RISCVTargetMachine.cpp",

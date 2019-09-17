@@ -37,7 +37,7 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: bar
-; CHECK-NEXT:     Value: 0x201010
+; CHECK-NEXT:     Value:
 ; CHECK-NEXT:     Size: 8
 ; CHECK-NEXT:     Binding: Local (0x0)
 ; CHECK-NEXT:     Type: Function (0x2)
@@ -48,7 +48,7 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: foo
-; CHECK-NEXT:     Value: 0x201000
+; CHECK-NEXT:     Value:
 ; CHECK-NEXT:     Size: 8
 ; CHECK-NEXT:     Binding: Global (0x1)
 ; CHECK-NEXT:     Type: Function (0x2)
@@ -59,7 +59,7 @@
 ; CHECK-NEXT: DynamicSymbols [
 ; CHECK-NEXT: ]
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK0: U bar

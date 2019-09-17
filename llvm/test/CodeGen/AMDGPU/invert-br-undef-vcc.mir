@@ -29,7 +29,7 @@
 # CHECK: S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
 
 name:            invert_br_undef_vcc
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

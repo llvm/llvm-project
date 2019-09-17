@@ -224,7 +224,7 @@ struct BoundsCheckingLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
-    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     return addBoundsChecking(F, TLI, SE);
   }

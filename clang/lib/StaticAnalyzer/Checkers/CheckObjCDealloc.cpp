@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
@@ -36,7 +37,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -576,9 +576,8 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
     OS << " by a synthesized property but not released"
           " before '[super dealloc]'";
 
-    std::unique_ptr<BugReport> BR(
-        new BugReport(*MissingReleaseBugType, OS.str(), ErrNode));
-
+    auto BR = std::make_unique<PathSensitiveBugReport>(*MissingReleaseBugType,
+                                                       OS.str(), ErrNode);
     C.emitReport(std::move(BR));
   }
 
@@ -699,8 +698,8 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
     OS <<  " property but was released in 'dealloc'";
   }
 
-  std::unique_ptr<BugReport> BR(
-      new BugReport(*ExtraReleaseBugType, OS.str(), ErrNode));
+  auto BR = std::make_unique<PathSensitiveBugReport>(*ExtraReleaseBugType,
+                                                     OS.str(), ErrNode);
   BR->addRange(M.getOriginExpr()->getSourceRange());
 
   C.emitReport(std::move(BR));
@@ -741,8 +740,8 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
   OS << "'" << *PropImpl->getPropertyIvarDecl()
      << "' should be released rather than deallocated";
 
-  std::unique_ptr<BugReport> BR(
-      new BugReport(*MistakenDeallocBugType, OS.str(), ErrNode));
+  auto BR = std::make_unique<PathSensitiveBugReport>(*MistakenDeallocBugType,
+                                                     OS.str(), ErrNode);
   BR->addRange(M.getOriginExpr()->getSourceRange());
 
   C.emitReport(std::move(BR));

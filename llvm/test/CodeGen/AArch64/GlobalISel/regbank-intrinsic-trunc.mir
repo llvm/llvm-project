@@ -4,7 +4,7 @@
 ...
 ---
 name:            test_f32.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 frameInfo:
@@ -28,7 +28,7 @@ body:             |
 ...
 ---
 name:            test_f64.intrinsic_trunc
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 frameInfo:

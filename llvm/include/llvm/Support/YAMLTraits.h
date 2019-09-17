@@ -748,7 +748,7 @@ public:
   IO(void *Ctxt = nullptr);
   virtual ~IO();
 
-  virtual bool outputting() = 0;
+  virtual bool outputting() const = 0;
 
   virtual unsigned beginSequence() = 0;
   virtual bool preflightElement(unsigned, void *&) = 0;
@@ -842,7 +842,7 @@ public:
       Val = Val | ConstVal;
   }
 
-  void *getContext();
+  void *getContext() const;
   void setContext(void *);
 
   template <typename T> void mapRequired(const char *Key, T &Val) {
@@ -1402,7 +1402,7 @@ public:
   std::error_code error();
 
 private:
-  bool outputting() override;
+  bool outputting() const override;
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
   void endMapping() override;
@@ -1549,7 +1549,7 @@ public:
   /// anyway.
   void setWriteDefaultValues(bool Write) { WriteDefaultValues = Write; }
 
-  bool outputting() override;
+  bool outputting() const override;
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
   void endMapping() override;

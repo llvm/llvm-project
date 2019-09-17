@@ -119,18 +119,16 @@ def warn_microsoft_qualifiers_ignored : Warning<
   "qualifiers after comma in declarator list are ignored">,
   InGroup<IgnoredAttributes>;
 
-def ext_c11_generic_selection : Extension<
-  "generic selections are a C11-specific feature">, InGroup<C11>;
 def err_duplicate_default_assoc : Error<
   "duplicate default generic association">;
 def note_previous_default_assoc : Note<
   "previous default generic association is here">;
 
-def ext_c11_alignment : Extension<
-  "%0 is a C11-specific feature">, InGroup<C11>;
+def ext_c99_feature : Extension<
+  "'%0' is a C99 extension">, InGroup<C99>;
+def ext_c11_feature : Extension<
+  "'%0' is a C11 extension">, InGroup<C11>;
 
-def ext_c11_noreturn : Extension<
-  "_Noreturn functions are a C11-specific feature">, InGroup<C11>;
 def err_c11_noreturn_misplaced : Error<
   "'_Noreturn' keyword must precede function declarator">;
 
@@ -203,6 +201,7 @@ def err_invalid_token_after_declarator_suggest_equal : Error<
   "invalid %0 at end of declaration; did you mean '='?">;
 def err_expected_statement : Error<"expected statement">;
 def err_expected_lparen_after : Error<"expected '(' after '%0'">;
+def err_expected_lbrace_after : Error<"expected '{' after '%0'">;
 def err_expected_rparen_after : Error<"expected ')' after '%0'">;
 def err_expected_punc : Error<"expected ')' or ',' after '%0'">;
 def err_expected_less_after : Error<"expected '<' after '%0'">;
@@ -360,7 +359,8 @@ def err_typename_invalid_storageclass : Error<
 def err_typename_invalid_functionspec : Error<
   "type name does not allow function specifier to be specified">;
 def err_typename_invalid_constexpr : Error<
-  "type name does not allow %select{constexpr|consteval}0 specifier to be specified">;
+  "type name does not allow %sub{select_constexpr_spec_kind}0 specifier "
+  "to be specified">;
 def err_typename_identifiers_only : Error<
   "typename is allowed for identifiers only">;
 
@@ -374,8 +374,6 @@ def err_unexpected_token_in_nested_name_spec : Error<
   "'%0' cannot be a part of nested name specifier; did you mean ':'?">;
 def err_bool_redeclaration : Error<
   "redeclaration of C++ built-in type 'bool'">;
-def ext_c11_static_assert : Extension<
-  "_Static_assert is a C11-specific feature">, InGroup<C11>;
 def warn_cxx98_compat_static_assert : Warning<
   "static_assert declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -1180,8 +1178,8 @@ def err_omp_expected_identifier_for_critical : Error<
   "expected identifier specifying the name of the 'omp critical' directive">;
 def err_omp_expected_reduction_identifier : Error<
   "expected identifier or one of the following operators: '+', '-', '*', '&', '|', '^', '&&', or '||'">;
-def err_omp_decl_in_declare_simd : Error<
-  "function declaration is expected after 'declare simd' directive">;
+def err_omp_decl_in_declare_simd_variant : Error<
+  "function declaration is expected after 'declare %select{simd|variant}0' directive">;
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
 def err_omp_unknown_map_type_modifier : Error<
@@ -1195,13 +1193,22 @@ def err_omp_declare_simd_inbranch_notinbranch : Error<
 def err_expected_end_declare_target : Error<
   "expected '#pragma omp end declare target'">;
 def err_omp_declare_target_unexpected_clause: Error<
-  "unexpected '%0' clause, only 'to' or 'link' clauses expected">;
+  "unexpected '%0' clause, only %select{'to' or 'link'|'to', 'link' or 'device_type'}1 clauses expected">;
 def err_omp_expected_clause: Error<
   "expected at least one clause on '#pragma omp %0' directive">;
 def err_omp_mapper_illegal_identifier : Error<
   "illegal OpenMP user-defined mapper identifier">;
 def err_omp_mapper_expected_declarator : Error<
   "expected declarator on 'omp declare mapper' directive">;
+def err_omp_declare_variant_wrong_clause : Error<
+  "expected '%0' clause on 'omp declare variant' directive">;
+def err_omp_declare_variant_no_ctx_selector : Error<
+  "expected context selector in '%0' clause on 'omp declare variant' directive">;
+def err_omp_declare_variant_equal_expected : Error<
+  "expected '=' after '%0' context selector set name on 'omp declare variant' directive">;
+def warn_omp_more_one_device_type_clause : Warning<
+  "more than one 'device_type' clause is specified">,
+  InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

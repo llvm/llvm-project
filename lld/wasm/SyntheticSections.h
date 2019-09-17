@@ -217,15 +217,26 @@ public:
   std::vector<llvm::wasm::WasmExport> exports;
 };
 
+class StartSection : public SyntheticSection {
+public:
+  StartSection(uint32_t numSegments)
+      : SyntheticSection(llvm::wasm::WASM_SEC_START), numSegments(numSegments) {
+  }
+  bool isNeeded() const override;
+  void writeBody() override;
+
+protected:
+  uint32_t numSegments;
+};
+
 class ElemSection : public SyntheticSection {
 public:
-  ElemSection(uint32_t offset)
-      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM), elemOffset(offset) {}
+  ElemSection()
+      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
   bool isNeeded() const override { return indirectFunctions.size() > 0; };
   void writeBody() override;
   void addEntry(FunctionSymbol *sym);
   uint32_t numEntries() const { return indirectFunctions.size(); }
-  uint32_t elemOffset;
 
 protected:
   std::vector<const FunctionSymbol *> indirectFunctions;
@@ -328,6 +339,7 @@ struct OutStruct {
   GlobalSection *globalSec;
   EventSection *eventSec;
   ExportSection *exportSec;
+  StartSection *startSec;
   ElemSection *elemSec;
   DataCountSection *dataCountSec;
   LinkingSection *linkingSec;

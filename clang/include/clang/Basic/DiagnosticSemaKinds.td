@@ -12,7 +12,6 @@
 
 let Component = "Sema" in {
 let CategoryName = "Semantic Issue" in {
-
 def note_previous_decl : Note<"%0 declared here">;
 def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;
@@ -155,7 +154,7 @@ def err_variably_modified_new_type : Error<
 
 // C99 Designated Initializers
 def ext_designated_init : Extension<
-  "designated initializers are a C99 feature">, InGroup<C99>;
+  "designated initializers are a C99 feature">, InGroup<C99Designator>;
 def err_array_designator_negative : Error<
   "array designator value '%0' is negative">;
 def err_array_designator_empty_range : Error<
@@ -174,21 +173,45 @@ def err_field_designator_nonfield : Error<
 def note_field_designator_found : Note<"field designator refers here">;
 def err_designator_for_scalar_init : Error<
   "designator in initializer for scalar type %0">;
-def warn_subobject_initializer_overrides : Warning<
-  "subobject initialization overrides initialization of other fields "
-  "within its enclosing subobject">, InGroup<InitializerOverrides>;
 def warn_initializer_overrides : Warning<
-  "initializer overrides prior initialization of this subobject">,
-  InGroup<InitializerOverrides>;
+  "initializer %select{partially |}0overrides prior initialization of "
+  "this subobject">, InGroup<InitializerOverrides>;
+def ext_initializer_overrides : ExtWarn<warn_initializer_overrides.Text>,
+  InGroup<InitializerOverrides>, SFINAEFailure;
+def err_initializer_overrides_destructed : Error<
+  "initializer would partially override prior initialization of object of "
+  "type %1 with non-trivial destruction">;
 def note_previous_initializer : Note<
   "previous initialization %select{|with side effects }0is here"
-  "%select{| (side effects may not occur at run time)}0">;
+  "%select{| (side effects will not occur at run time)}0">;
 def err_designator_into_flexible_array_member : Error<
   "designator into flexible array member subobject">;
 def note_flexible_array_member : Note<
   "initialized flexible array member %0 is here">;
 def ext_flexible_array_init : Extension<
   "flexible array initialization is a GNU extension">, InGroup<GNUFlexibleArrayInitializer>;
+
+// C++20 designated initializers
+def ext_cxx_designated_init : Extension<
+  "designated initializers are a C++20 extension">, InGroup<CXX2aDesignator>;
+def warn_cxx17_compat_designated_init : Warning<
+  "designated initializers are incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompatPedantic>, DefaultIgnore;
+def ext_designated_init_mixed : ExtWarn<
+  "mixture of designated and non-designated initializers in the same "
+  "initializer list is a C99 extension">, InGroup<C99Designator>;
+def note_designated_init_mixed : Note<
+  "first non-designated initializer is here">;
+def ext_designated_init_array : ExtWarn<
+  "array designators are a C99 extension">, InGroup<C99Designator>;
+def ext_designated_init_nested : ExtWarn<
+  "nested designators are a C99 extension">, InGroup<C99Designator>;
+def ext_designated_init_reordered : ExtWarn<
+  "ISO C++ requires field designators to be specified in declaration order; "
+  "field %1 will be initialized after field %0">, InGroup<ReorderInitList>,
+  SFINAEFailure;
+def note_previous_field_init : Note<
+  "previous initialization for field %0 is here">;
 
 // Declarations.
 def ext_plain_complex : ExtWarn<
@@ -624,8 +647,23 @@ def warn_cstruct_memaccess : Warning<
   InGroup<NonTrivialMemaccess>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
-def err_nontrivial_primitive_type_in_union : Error<
-  "non-trivial C types are disallowed in union">;
+def err_non_trivial_c_union_in_invalid_context : Error<
+  "cannot %select{"
+  "use type %1 for a function/method parameter|"
+  "use type %1 for function/method return|"
+  "default-initialize an object of type %1|"
+  "declare an automatic variable of type %1|"
+  "copy-initialize an object of type %1|"
+  "assign to a variable of type %1|"
+  "construct an automatic compound literal of type %1|"
+  "capture a variable of type %1|"
+  "cannot use volatile type %1 where it causes an lvalue-to-rvalue conversion"
+  "}3 "
+  "since it %select{contains|is}2 a union that is non-trivial to "
+  "%select{default-initialize|destruct|copy}0">;
+def note_non_trivial_c_union : Note<
+  "%select{%2 has subobjects that are|%3 has type %2 that is}0 "
+  "non-trivial to %select{default-initialize|destruct|copy}1">;
 def warn_dyn_class_memaccess : Warning<
   "%select{destination for|source of|first operand of|second operand of}0 this "
   "%1 call is a pointer to %select{|class containing a }2dynamic class %3; "
@@ -2201,6 +2239,11 @@ def err_class_marked_final_used_as_base : Error<
   "base %0 is marked '%select{final|sealed}1'">;
 def warn_abstract_final_class : Warning<
   "abstract class is marked '%select{final|sealed}0'">, InGroup<AbstractFinalClass>;
+def warn_final_dtor_non_final_class : Warning<
+  "class with destructor marked '%select{final|sealed}0' cannot be inherited from">,
+  InGroup<FinalDtorNonFinalClass>;
+def note_final_dtor_non_final_class_silence : Note<
+  "mark %0 as '%select{final|sealed}1' to silence this warning">;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;
@@ -2315,18 +2358,18 @@ def warn_cxx14_compat_constexpr_not_const : Warning<
   "in C++14; add 'const' to avoid a change in behavior">,
   InGroup<DiagGroup<"constexpr-not-const">>;
 def err_invalid_constexpr : Error<
-  "%select{function parameter|typedef|non-static data member}0 "
-  "cannot be %select{constexpr|consteval}1">;
+  "%select{function parameter|typedef}0 "
+  "cannot be %sub{select_constexpr_spec_kind}1">;
 def err_invalid_constexpr_member : Error<"non-static data member cannot be "
   "constexpr%select{; did you intend to make it %select{const|static}0?|}1">;
 def err_constexpr_tag : Error<
   "%select{class|struct|interface|union|enum}0 "
-  "cannot be marked %select{constexpr|consteval}1">;
+  "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
-  "destructor cannot be marked %select{constexpr|consteval}0">;
+  "destructor cannot be marked %sub{select_constexpr_spec_kind}0">;
 def err_constexpr_wrong_decl_kind : Error<
-  "%select{constexpr|consteval}0 can only be used "
-  "in %select{variable and |}0function declarations">;
+  "%sub{select_constexpr_spec_kind}0 can only be used "
+  "in %select{|variable and function|function|variable}0 declarations">;
 def err_invalid_constexpr_var_decl : Error<
   "constexpr variable declaration must be a definition">;
 def err_constexpr_static_mem_var_requires_init : Error<
@@ -3326,6 +3369,18 @@ def warn_address_of_reference_bool_conversion : Warning<
   "code; pointer may be assumed to always convert to true">,
   InGroup<UndefinedBoolConversion>;
 
+def warn_xor_used_as_pow : Warning<
+  "result of '%0' is %1; did you mean an exponentiation?">,
+  InGroup<XorUsedAsPow>;
+def warn_xor_used_as_pow_base_extra : Warning<
+  "result of '%0' is %1; did you mean '%2' (%3)?">,
+  InGroup<XorUsedAsPow>;
+def warn_xor_used_as_pow_base : Warning<
+  "result of '%0' is %1; did you mean '%2'?">,
+  InGroup<XorUsedAsPow>;
+def note_xor_used_as_pow_silence : Note<
+  "replace expression with '%0' %select{|or use 'xor' instead of '^' }1to silence this warning">;
+
 def warn_null_pointer_compare : Warning<
     "comparison of %select{address of|function|array}0 '%1' %select{not |}2"
     "equal to a null pointer is always %select{true|false}2">,
@@ -3346,9 +3401,15 @@ def warn_address_of_reference_null_compare : Warning<
   InGroup<TautologicalUndefinedCompare>;
 def note_reference_is_return_value : Note<"%0 returns a reference">;
 
+def note_pointer_declared_here : Note<
+  "pointer %0 declared here">;
 def warn_division_sizeof_ptr : Warning<
   "'%0' will return the size of the pointer, not the array itself">,
   InGroup<DiagGroup<"sizeof-pointer-div">>;
+def warn_division_sizeof_array : Warning<
+  "expression does not compute the number of elements in this array; element "
+  "type is %0, not %1">,
+  InGroup<DiagGroup<"sizeof-array-div">>;
 
 def note_function_warning_silence : Note<
     "prefix with the address-of operator to silence this warning">;
@@ -3863,10 +3924,7 @@ def note_implicit_member_target_infer_collision : Note<
 
 def note_ambiguous_type_conversion: Note<
     "because of ambiguity in conversion %diff{of $ to $|between types}0,1">;
-def note_ovl_builtin_binary_candidate : Note<
-    "built-in candidate %0">;
-def note_ovl_builtin_unary_candidate : Note<
-    "built-in candidate %0">;
+def note_ovl_builtin_candidate : Note<"built-in candidate %0">;
 def err_ovl_no_viable_function_in_init : Error<
   "no matching constructor for initialization of %0">;
 def err_ovl_no_conversion_in_cast : Error<
@@ -3942,6 +4000,8 @@ def err_ovl_no_viable_literal_operator : Error<
 // C++ Template Declarations
 def err_template_param_shadow : Error<
   "declaration of %0 shadows template parameter">;
+def ext_template_param_shadow : ExtWarn<
+  err_template_param_shadow.Text>, InGroup<MicrosoftTemplate>;
 def note_template_param_here : Note<"template parameter is declared here">;
 def warn_template_export_unsupported : Warning<
   "exported templates are unsupported">;
@@ -7475,10 +7535,30 @@ def note_inequality_comparison_to_or_assign : Note<
 def err_incomplete_type_used_in_type_trait_expr : Error<
   "incomplete type %0 used in type trait expression">;
 
+// C++20 constinit and require_constant_initialization attribute
+def warn_cxx20_compat_constinit : Warning<
+  "'constinit' specifier is incompatible with C++ standards before C++20">,
+  InGroup<CXX2aCompat>, DefaultIgnore;
+def err_constinit_local_variable : Error<
+  "local variable cannot be declared 'constinit'">;
 def err_require_constant_init_failed : Error<
   "variable does not have a constant initializer">;
 def note_declared_required_constant_init_here : Note<
-  "required by 'require_constant_initialization' attribute here">;
+  "required by %select{'require_constant_initialization' attribute|"
+  "'constinit' specifier}0 here">;
+def ext_constinit_missing : ExtWarn<
+  "'constinit' specifier missing on initializing declaration of %0">,
+  InGroup<DiagGroup<"missing-constinit">>;
+def note_constinit_specified_here : Note<"variable declared constinit here">;
+def err_constinit_added_too_late : Error<
+  "'constinit' specifier added after initialization of variable">;
+def warn_require_const_init_added_too_late : Warning<
+  "'require_constant_initialization' attribute added after initialization "
+  "of variable">, InGroup<IgnoredAttributes>;
+def note_constinit_missing_here : Note<
+  "add the "
+  "%select{'require_constant_initialization' attribute|'constinit' specifier}0 "
+  "to the initializing declaration here">;
 
 def err_dimension_expr_not_constant_integer : Error<
   "dimension expression does not evaluate to a constant unsigned int">;
@@ -7605,7 +7685,7 @@ def err_mem_init_not_member_or_class : Error<
 def warn_initializer_out_of_order : Warning<
   "%select{field|base class}0 %1 will be initialized after "
   "%select{field|base}2 %3">,
-  InGroup<Reorder>, DefaultIgnore;
+  InGroup<ReorderCtor>, DefaultIgnore;
 def warn_abstract_vbase_init_ignored : Warning<
   "initializer for virtual base class %0 of abstract class %1 "
   "will never be used">,
@@ -7941,7 +8021,7 @@ def warn_array_index_precedes_bounds : Warning<
 def warn_array_index_exceeds_bounds : Warning<
   "array index %0 is past the end of the array (which contains %1 "
   "element%s2)">, InGroup<ArrayBounds>;
-def note_array_index_out_of_bounds : Note<
+def note_array_declared_here : Note<
   "array %0 declared here">;
 
 def warn_printf_insufficient_data_args : Warning<
@@ -8110,7 +8190,7 @@ def warn_dangling_member : Warning<
 def warn_dangling_lifetime_pointer_member : Warning<
   "initializing pointer member %0 to point to a temporary object "
   "whose lifetime is shorter than the lifetime of the constructed object">,
-  InGroup<DanglingField>;
+  InGroup<DanglingGsl>;
 def note_lifetime_extending_member_declared_here : Note<
   "%select{%select{reference|'std::initializer_list'}0 member|"
   "member with %select{reference|'std::initializer_list'}0 subobject}1 "
@@ -8132,7 +8212,7 @@ def warn_new_dangling_reference : Warning<
 def warn_dangling_lifetime_pointer : Warning<
   "object backing the pointer "
   "will be destroyed at the end of the full-expression">,
-  InGroup<Dangling>;
+  InGroup<DanglingGsl>;
 def warn_new_dangling_initializer_list : Warning<
   "array backing "
   "%select{initializer list subobject of the allocated object|"
@@ -9016,7 +9096,7 @@ def ext_omp_loop_not_canonical_init : ExtWarn<
   "('var = init' or 'T var = init')">, InGroup<OpenMPLoopForm>;
 def err_omp_loop_not_canonical_cond : Error<
   "condition of OpenMP for loop must be a relational comparison "
-  "('<', '<=', '>', or '>=') of loop variable %0">;
+	"('<', '<=', '>', %select{or '>='|'>=', or '!='}0) of loop variable %1">;
 def err_omp_loop_not_canonical_incr : Error<
   "increment clause of OpenMP for loop must perform simple addition "
   "or subtraction on loop variable %0">;
@@ -9133,10 +9213,10 @@ def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
-def err_omp_single_decl_in_declare_simd : Error<
-  "single declaration is expected after 'declare simd' directive">;
+def err_omp_single_decl_in_declare_simd_variant : Error<
+  "single declaration is expected after 'declare %select{simd|variant}0' directive">;
 def err_omp_function_expected : Error<
-  "'#pragma omp declare simd' can only be applied to functions">;
+  "'#pragma omp declare %select{simd|variant}0' can only be applied to functions">;
 def err_omp_wrong_cancel_region : Error<
   "one of 'for', 'parallel', 'sections' or 'taskgroup' is expected">;
 def err_omp_parent_cancel_region_nowait : Error<
@@ -9318,8 +9398,37 @@ def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
 def err_omp_unsupported_type : Error <
   "host requires %0 bit size %1 type support, but device '%2' does not support it">;
-def omp_lambda_capture_in_declare_target_not_to : Error<
+def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
+def err_omp_device_type_mismatch : Error<
+  "'device_type(%0)' does not match previously specified 'device_type(%1)' for the same declaration">;
+def err_omp_wrong_device_function_call : Error<
+  "function with 'device_type(%0)' is not available on %select{device|host}1">;
+def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
+def warn_omp_declare_target_after_first_use : Warning<
+  "declaration marked as declare target after first use, it may lead to incorrect results">,
+  InGroup<OpenMPTarget>;
+def err_omp_declare_variant_incompat_attributes : Error<
+  "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
+def err_omp_declare_variant_after_used : Error<
+  "'#pragma omp declare variant' cannot be applied for function after first "
+  "usage">;
+def err_omp_declare_variant_noproto : Error<
+  "function with '#pragma omp declare variant' must have a prototype">;
+def note_omp_declare_variant_specified_here : Note<
+  "'#pragma omp declare variant' for function specified here">;
+def err_omp_declare_variant_doesnt_support : Error<
+  "'#pragma omp declare variant' does not "
+  "support %select{function templates|virtual functions|"
+  "deduced return types|constructors|destructors|deleted functions|"
+  "defaulted functions|constexpr functions|consteval function}0">;
+def err_omp_declare_variant_diff : Error<
+  "function with '#pragma omp declare variant' has a different %select{calling convention"
+  "|return type|constexpr specification|inline specification|storage class|"
+  "linkage}0">;
+def err_omp_declare_variant_incompat_types : Error<
+  "variant in '#pragma omp declare variant' with type %0 is incompatible with type %1"
+  >;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

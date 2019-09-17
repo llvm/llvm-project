@@ -222,11 +222,14 @@ public:
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerFPTOUI(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
+  LegalizeResult lowerFMad(MachineInstr &MI);
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

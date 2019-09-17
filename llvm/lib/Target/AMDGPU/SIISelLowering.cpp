@@ -1230,20 +1230,11 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
   return true;
 }
 
-bool SITargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
-    bool *IsFast) const {
+bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
+    unsigned Size, unsigned AddrSpace, unsigned Align,
+    MachineMemOperand::Flags Flags, bool *IsFast) const {
   if (IsFast)
     *IsFast = false;
-
-  // TODO: I think v3i32 should allow unaligned accesses on CI with DS_READ_B96,
-  // which isn't a simple VT.
-  // Until MVT is extended to handle this, simply check for the size and
-  // rely on the condition below: allow accesses if the size is a multiple of 4.
-  if (VT == MVT::Other || (VT != MVT::Other && VT.getSizeInBits() > 1024 &&
-                           VT.getStoreSize() > 16)) {
-    return false;
-  }
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
@@ -1283,7 +1274,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
   }
 
   // Smaller than dword value must be aligned.
-  if (VT.bitsLT(MVT::i32))
+  if (Size < 32)
     return false;
 
   // 8.1.6 - For Dword or larger reads or writes, the two LSBs of the
@@ -1292,7 +1283,26 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
   if (IsFast)
     *IsFast = true;
 
-  return VT.bitsGT(MVT::i32) && Align % 4 == 0;
+  return Size >= 32 && Align >= 4;
+}
+
+bool SITargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
+    bool *IsFast) const {
+  if (IsFast)
+    *IsFast = false;
+
+  // TODO: I think v3i32 should allow unaligned accesses on CI with DS_READ_B96,
+  // which isn't a simple VT.
+  // Until MVT is extended to handle this, simply check for the size and
+  // rely on the condition below: allow accesses if the size is a multiple of 4.
+  if (VT == MVT::Other || (VT != MVT::Other && VT.getSizeInBits() > 1024 &&
+                           VT.getStoreSize() > 16)) {
+    return false;
+  }
+
+  return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                            Align, Flags, IsFast);
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
@@ -1351,9 +1361,9 @@ bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
 
 TargetLoweringBase::LegalizeTypeAction
 SITargetLowering::getPreferredVectorAction(MVT VT) const {
-  if (VT.getVectorNumElements() != 1 && VT.getScalarType().bitsLE(MVT::i16))
-    return TypeSplitVector;
-
+  int NumElts = VT.getVectorNumElements();
+  if (NumElts != 1 && VT.getScalarType().bitsLE(MVT::i16))
+    return VT.isPow2VectorType() ? TypeSplitVector : TypeWidenVector;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
@@ -1661,7 +1671,8 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
   assert(Reg != AMDGPU::NoRegister);
 
   MachineFunction &MF = CCInfo.getMachineFunction();
-  MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+  Register LiveInVReg = MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+  MF.getRegInfo().setType(LiveInVReg, LLT::scalar(32));
   return ArgDescriptor::createRegister(Reg, Mask);
 }
 
@@ -5030,11 +5041,8 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
   // small. This requires us to add 4 to the global variable offset in order to
   // compute the correct address.
-  unsigned LoFlags = GAFlags;
-  if (LoFlags == SIInstrInfo::MO_NONE)
-    LoFlags = SIInstrInfo::MO_REL32;
   SDValue PtrLo =
-      DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, LoFlags);
+      DAG.getTargetGlobalAddress(GV, DL, MVT::i32, Offset + 4, GAFlags);
   SDValue PtrHi;
   if (GAFlags == SIInstrInfo::MO_NONE) {
     PtrHi = DAG.getTargetConstant(0, DL, MVT::i32);
@@ -6062,6 +6070,19 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                             SIInstrInfo::MO_ABS32_LO);
     return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};
   }
+  case Intrinsic::amdgcn_is_shared:
+  case Intrinsic::amdgcn_is_private: {
+    SDLoc SL(Op);
+    unsigned AS = (IntrinsicID == Intrinsic::amdgcn_is_shared) ?
+      AMDGPUAS::LOCAL_ADDRESS : AMDGPUAS::PRIVATE_ADDRESS;
+    SDValue Aperture = getSegmentAperture(AS, SL, DAG);
+    SDValue SrcVec = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32,
+                                 Op.getOperand(1));
+
+    SDValue SrcHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, SrcVec,
+                                DAG.getConstant(1, SL, MVT::i32));
+    return DAG.getSetCC(SL, MVT::i1, SrcHi, Aperture, ISD::SETEQ);
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -6754,14 +6775,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isNullValue() ?
       AMDGPUISD::EXPORT : AMDGPUISD::EXPORT_DONE;
     return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
-  }
-  case Intrinsic::amdgcn_init_exec: {
-    return DAG.getNode(AMDGPUISD::INIT_EXEC, DL, MVT::Other, Chain,
-                       Op.getOperand(2));
-  }
-  case Intrinsic::amdgcn_init_exec_from_input: {
-    return DAG.getNode(AMDGPUISD::INIT_EXEC_FROM_INPUT, DL, MVT::Other, Chain,
-                       Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::amdgcn_s_barrier: {
     if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
@@ -10671,9 +10684,9 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
-unsigned SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
-  const unsigned PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
-  const unsigned CacheLineAlign = 6; // log2(64)
+llvm::Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+  const llvm::Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
+  const llvm::Align CacheLineAlign = llvm::Align(64);
 
   // Pre-GFX10 target did not benefit from loop alignment
   if (!ML || DisableLoopAlignment ||
@@ -10701,7 +10714,7 @@ unsigned SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     // If inner loop block is aligned assume in average half of the alignment
     // size to be added as nops.
     if (MBB != Header)
-      LoopSize += (1 << MBB->getAlignment()) / 2;
+      LoopSize += (1 << MBB->getLogAlignment()) / 2;
 
     for (const MachineInstr &MI : *MBB) {
       LoopSize += TII->getInstSizeInBytes(MI);

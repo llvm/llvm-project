@@ -56,7 +56,7 @@ struct S {
 #endif  // TEST_STD_VER >= 11
 
 #include "test_iterators.h"
-#include "counting_predicates.hpp"
+#include "counting_predicates.h"
 
 std::mt19937 randomness;
 

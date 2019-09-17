@@ -332,6 +332,17 @@ class Intrinsic {
   NeonEmitter &Emitter;
   std::stringstream OS;
 
+  bool isBigEndianSafe() const {
+    if (BigEndianSafe)
+      return true;
+
+    for (const auto &T : Types){
+      if (T.isVector() && T.getNumElements() > 1)
+        return false;
+    }
+    return true;
+  }
+
 public:
   Intrinsic(Record *R, StringRef Name, StringRef Proto, TypeSpec OutTS,
             TypeSpec InTS, ClassKind CK, ListInit *Body, NeonEmitter &Emitter,
@@ -1293,7 +1304,7 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
 }
 
 void Intrinsic::emitArgumentReversal() {
-  if (BigEndianSafe)
+  if (isBigEndianSafe())
     return;
 
   // Reverse all vector arguments.
@@ -1314,7 +1325,7 @@ void Intrinsic::emitArgumentReversal() {
 }
 
 void Intrinsic::emitReturnReversal() {
-  if (BigEndianSafe)
+  if (isBigEndianSafe())
     return;
   if (!getReturnType().isVector() || getReturnType().isVoid() ||
       getReturnType().getNumElements() == 1)
@@ -1578,7 +1589,10 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagCall(DagInit *DI) {
   Intr.Dependencies.insert(&Callee);
 
   // Now create the call itself.
-  std::string S = CallPrefix.str() + Callee.getMangledName(true) + "(";
+  std::string S = "";
+  if (!Callee.isBigEndianSafe())
+    S += CallPrefix.str();
+  S += Callee.getMangledName(true) + "(";
   for (unsigned I = 0; I < DI->getNumArgs() - 1; ++I) {
     if (I != 0)
       S += ", ";
@@ -1889,6 +1903,11 @@ Intrinsic::DagEmitter::emitDagArg(Init *Arg, std::string ArgName) {
 }
 
 std::string Intrinsic::generate() {
+  // Avoid duplicated code for big and little endian
+  if (isBigEndianSafe()) {
+    generateImpl(false, "", "");
+    return OS.str();
+  }
   // Little endian intrinsics are simple and don't require any argument
   // swapping.
   OS << "#ifdef __LITTLE_ENDIAN__\n";
@@ -2456,7 +2475,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::less_ptr<Intrinsic>());
+  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
@@ -2563,7 +2582,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   for (auto *I : Defs)
     I->indexBody();
 
-  llvm::stable_sort(Defs, llvm::less_ptr<Intrinsic>());
+  llvm::stable_sort(Defs, llvm::deref<std::less<>>());
 
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.

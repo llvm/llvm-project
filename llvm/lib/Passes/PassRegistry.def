@@ -24,7 +24,6 @@ MODULE_ANALYSIS("module-summary", ModuleSummaryIndexAnalysis())
 MODULE_ANALYSIS("no-op-module", NoOpModuleAnalysis())
 MODULE_ANALYSIS("profile-summary", ProfileSummaryAnalysis())
 MODULE_ANALYSIS("stack-safety", StackSafetyGlobalAnalysis())
-MODULE_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MODULE_ANALYSIS("asan-globals-md", ASanGlobalsMetadataAnalysis())
@@ -196,7 +195,6 @@ FUNCTION_PASS("lowerinvoke", LowerInvokePass())
 FUNCTION_PASS("mem2reg", PromotePass())
 FUNCTION_PASS("memcpyopt", MemCpyOptPass())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass())
-FUNCTION_PASS("mldst-motion", MergedLoadStoreMotionPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
@@ -246,7 +244,6 @@ FUNCTION_PASS("kasan", AddressSanitizerPass(true, false, false))
 FUNCTION_PASS("msan", MemorySanitizerPass({}))
 FUNCTION_PASS("kmsan", MemorySanitizerPass({0, false, /*Kernel=*/true}))
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
-FUNCTION_PASS("sancov-func", SanitizerCoveragePass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
@@ -272,6 +269,11 @@ FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
                              return LoopVectorizePass(Opts);
                            },
                            parseLoopVectorizeOptions)
+FUNCTION_PASS_WITH_PARAMS("mldst-motion",
+                           [](MergedLoadStoreMotionOptions Opts) {
+                             return MergedLoadStoreMotionPass(Opts);
+                           },
+                           parseMergedLoadStoreMotionOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS

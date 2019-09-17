@@ -9,6 +9,8 @@
 #include "refactor/Rename.h"
 #include "AST.h"
 #include "Logger.h"
+#include "ParsedAST.h"
+#include "SourceCode.h"
 #include "index/SymbolCollector.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
@@ -72,6 +74,10 @@ llvm::Optional<ReasonToReject> renamableWithinFile(const Decl &RenameDecl,
                                                    const SymbolIndex *Index) {
   if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
+  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(&RenameDecl)) {
+    if (FD->isOverloadedOperator())
+      return ReasonToReject::UnsupportedSymbol;
+  }
   auto &ASTCtx = RenameDecl.getASTContext();
   const auto &SM = ASTCtx.getSourceManager();
   bool MainFileIsHeader = ASTCtx.getLangOpts().IsHeaderFile;
@@ -151,8 +157,9 @@ findOccurrencesWithinFile(ParsedAST &AST, const NamedDecl *RenameDecl) {
 llvm::Expected<tooling::Replacements>
 renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
                  llvm::StringRef NewName, const SymbolIndex *Index) {
-  SourceLocation SourceLocationBeg = clangd::getBeginningOfIdentifier(
-      AST, Pos, AST.getSourceManager().getMainFileID());
+  const SourceManager &SM = AST.getSourceManager();
+  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
+      getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
   // FIXME: renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))

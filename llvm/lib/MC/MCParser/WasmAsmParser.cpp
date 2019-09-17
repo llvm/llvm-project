@@ -123,6 +123,7 @@ public:
                     // See use of .init_array in WasmObjectWriter and
                     // TargetLoweringObjectFileWasm
                     .StartsWith(".init_array", SectionKind::getData())
+                    .StartsWith(".debug_", SectionKind::getMetadata())
                     .Default(Optional<SectionKind>());
     if (!Kind.hasValue())
       return Parser->Error(Lexer->getLoc(), "unknown section kind: " + Name);

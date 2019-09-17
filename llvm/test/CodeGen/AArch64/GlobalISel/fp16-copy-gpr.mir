@@ -21,7 +21,7 @@
 ...
 ---
 name:            fp16_to_gpr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -73,7 +73,7 @@ body:             |
 
 ---
 name:            gpr_to_fp16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -101,7 +101,7 @@ body:             |
 ...
 ---
 name:            gpr_to_fp16_physreg
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

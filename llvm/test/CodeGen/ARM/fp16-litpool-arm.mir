@@ -33,7 +33,7 @@
 ...
 ---
 name:            ARM
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
@@ -55,16 +55,16 @@ constants:
     alignment:       2
 
 #CHECK:  B %[[BB4:bb.[0-9]]]
-#CHECK:  bb.{{.}} (align 2):
+#CHECK:  bb.{{.}} (align 4):
+#CHECK:    successors:
+#CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 4
+#CHECK:  bb.{{.}} (align 4):
 #CHECK:    successors:
 #CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 4
 #CHECK:  bb.{{.}} (align 2):
-#CHECK:    successors:
-#CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 4
-#CHECK:  bb.{{.}} (align 1):
 #CHECK:    successors:
 #CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 2
-#CHECK:  [[BB4]].entry (align 2):
+#CHECK:  [[BB4]].entry (align 4):
 
 body:             |
   bb.0.entry:

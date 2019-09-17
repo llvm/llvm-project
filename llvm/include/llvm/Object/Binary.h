@@ -42,7 +42,9 @@ protected:
     ID_Archive,
     ID_MachOUniversalBinary,
     ID_COFFImportFile,
-    ID_IR, // LLVM IR
+    ID_IR,            // LLVM IR
+    ID_TapiUniversal, // Text-based Dynamic Library Stub file.
+    ID_TapiFile,      // Text-based Dynamic Library Stub file.
 
     ID_Minidump,
 
@@ -101,15 +103,17 @@ public:
     return TypeID > ID_StartObjects && TypeID < ID_EndObjects;
   }
 
-  bool isSymbolic() const { return isIR() || isObject() || isCOFFImportFile(); }
-
-  bool isArchive() const {
-    return TypeID == ID_Archive;
+  bool isSymbolic() const {
+    return isIR() || isObject() || isCOFFImportFile() || isTapiFile();
   }
+
+  bool isArchive() const { return TypeID == ID_Archive; }
 
   bool isMachOUniversalBinary() const {
     return TypeID == ID_MachOUniversalBinary;
   }
+
+  bool isTapiUniversal() const { return TypeID == ID_TapiUniversal; }
 
   bool isELF() const {
     return TypeID >= ID_ELF32L && TypeID <= ID_ELF64B;
@@ -136,6 +140,8 @@ public:
   }
 
   bool isMinidump() const { return TypeID == ID_Minidump; }
+
+  bool isTapiFile() const { return TypeID == ID_TapiFile; }
 
   bool isLittleEndian() const {
     return !(TypeID == ID_ELF32B || TypeID == ID_ELF64B ||

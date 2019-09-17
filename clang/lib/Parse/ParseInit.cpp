@@ -39,6 +39,7 @@ bool Parser::MayBeDesignationStart() {
     // cases here, and fall back to tentative parsing if those fail.
     switch (PP.LookAhead(0).getKind()) {
     case tok::equal:
+    case tok::ellipsis:
     case tok::r_square:
       // Definitely starts a lambda expression.
       return false;
@@ -115,6 +116,8 @@ static void CheckArrayDesignatorSyntax(Parser &P, SourceLocation Loc,
 /// ParseInitializerWithPotentialDesignator - Parse the 'initializer' production
 /// checking to see if the token stream starts with a designator.
 ///
+/// C99:
+///
 ///       designation:
 ///         designator-list '='
 /// [GNU]   array-designator
@@ -131,6 +134,21 @@ static void CheckArrayDesignatorSyntax(Parser &P, SourceLocation Loc,
 ///       array-designator:
 ///         '[' constant-expression ']'
 /// [GNU]   '[' constant-expression '...' constant-expression ']'
+///
+/// C++20:
+///
+///       designated-initializer-list:
+///         designated-initializer-clause
+///         designated-initializer-list ',' designated-initializer-clause
+///
+///       designated-initializer-clause:
+///         designator brace-or-equal-initializer
+///
+///       designator:
+///         '.' identifier
+///
+/// We allow the C99 syntax extensions in C++20, but do not allow the C++20
+/// extension (a braced-init-list after the designator with no '=') in C99.
 ///
 /// NOTE: [OBC] allows '[ objc-receiver objc-message-args ]' as an
 /// initializer (because it is an expression).  We need to consider this case
@@ -362,6 +380,14 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
     SourceLocation EqualLoc = ConsumeToken();
     return Actions.ActOnDesignatedInitializer(Desig, EqualLoc, false,
                                               ParseInitializer());
+  }
+
+  // Handle a C++20 braced designated initialization, which results in
+  // direct-list-initialization of the aggregate element. We allow this as an
+  // extension from C++11 onwards (when direct-list-initialization was added).
+  if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus11) {
+    return Actions.ActOnDesignatedInitializer(Desig, SourceLocation(), false,
+                                              ParseBraceInitializer());
   }
 
   // We read some number of designators and found something that isn't an = or

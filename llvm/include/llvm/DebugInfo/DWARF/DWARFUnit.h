@@ -56,7 +56,7 @@ class DWARFUnitHeader {
 
   // For type units only.
   uint64_t TypeHash = 0;
-  uint32_t TypeOffset = 0;
+  uint64_t TypeOffset = 0;
 
   // For v5 split or skeleton compile units only.
   Optional<uint64_t> DWOId;
@@ -91,16 +91,17 @@ public:
   }
   const DWARFUnitIndex::Entry *getIndexEntry() const { return IndexEntry; }
   uint64_t getTypeHash() const { return TypeHash; }
-  uint32_t getTypeOffset() const { return TypeOffset; }
+  uint64_t getTypeOffset() const { return TypeOffset; }
   uint8_t getUnitType() const { return UnitType; }
   bool isTypeUnit() const {
     return UnitType == dwarf::DW_UT_type || UnitType == dwarf::DW_UT_split_type;
   }
   uint8_t getSize() const { return Size; }
+  uint8_t getUnitLengthFieldByteSize() const {
+    return dwarf::getUnitLengthFieldByteSize(FormParams.Format);
+  }
   uint64_t getNextUnitOffset() const {
-    return Offset + Length +
-           (FormParams.Format == llvm::dwarf::DwarfFormat::DWARF64 ? 4 : 0) +
-           FormParams.getDwarfOffsetByteSize();
+    return Offset + Length + getUnitLengthFieldByteSize();
   }
 };
 
@@ -197,7 +198,7 @@ class DWARFUnit {
   DWARFUnitHeader Header;
   const DWARFDebugAbbrev *Abbrev;
   const DWARFSection *RangeSection;
-  uint32_t RangeSectionBase;
+  uint64_t RangeSectionBase;
   /// We either keep track of the location list section or its data, depending
   /// on whether we are handling a split DWARF section or not.
   union {
@@ -285,7 +286,7 @@ public:
   uint8_t getDwarfOffsetByteSize() const {
     return Header.getDwarfOffsetByteSize();
   }
-  uint32_t getLength() const { return Header.getLength(); }
+  uint64_t getLength() const { return Header.getLength(); }
   uint8_t getUnitType() const { return Header.getUnitType(); }
   bool isTypeUnit() const { return Header.isTypeUnit(); }
   uint64_t getNextUnitOffset() const { return Header.getNextUnitOffset(); }
@@ -303,7 +304,7 @@ public:
   /// Recursively update address to Die map.
   void updateAddressDieMap(DWARFDie Die);
 
-  void setRangesSection(const DWARFSection *RS, uint32_t Base) {
+  void setRangesSection(const DWARFSection *RS, uint64_t Base) {
     RangeSection = RS;
     RangeSectionBase = Base;
   }
@@ -415,7 +416,7 @@ public:
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by
   /// DW_FORM_rnglistx.
-  Optional<uint32_t> getRnglistOffset(uint32_t Index) {
+  Optional<uint64_t> getRnglistOffset(uint32_t Index) {
     if (RngListTable)
       return RngListTable->getOffsetEntry(Index);
     return None;
@@ -501,7 +502,8 @@ public:
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {
-    return Header.getLength() + 4 - getHeaderSize();
+    return Header.getLength() + Header.getUnitLengthFieldByteSize() -
+           getHeaderSize();
   }
 
   /// extractDIEsIfNeeded - Parses a compile unit and indexes its DIEs if it

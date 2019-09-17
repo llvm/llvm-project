@@ -102,10 +102,8 @@ lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {
   return OptionValueSP(new OptionValueEnumeration(*this));
 }
 
-size_t OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
-                                            CompletionRequest &request) {
-  request.SetWordComplete(false);
-
+void OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
+                                          CompletionRequest &request) {
   const uint32_t num_enumerators = m_enumerations.GetSize();
   if (!request.GetCursorArgumentPrefix().empty()) {
     for (size_t i = 0; i < num_enumerators; ++i) {
@@ -113,10 +111,8 @@ size_t OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
       if (name.startswith(request.GetCursorArgumentPrefix()))
         request.AddCompletion(name);
     }
-  } else {
-    // only suggest "true" or "false" by default
+    return;
+  }
     for (size_t i = 0; i < num_enumerators; ++i)
       request.AddCompletion(m_enumerations.GetCStringAtIndex(i).GetStringRef());
-  }
-  return request.GetNumberOfMatches();
 }

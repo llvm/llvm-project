@@ -96,6 +96,13 @@ struct SampleProfTest : ::testing::Test {
     Profiles[FooName] = std::move(FooSamples);
     Profiles[BarName] = std::move(BarSamples);
 
+    ProfileSymbolList List;
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      List.add("zoo", true);
+      List.add("moo", true);
+    }
+    Writer->setProfileSymbolList(&List);
+
     std::error_code EC;
     EC = Writer->write(Profiles);
     ASSERT_TRUE(NoError(EC));
@@ -106,6 +113,13 @@ struct SampleProfTest : ::testing::Test {
 
     EC = Reader->read();
     ASSERT_TRUE(NoError(EC));
+
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      std::unique_ptr<ProfileSymbolList> ReaderList =
+          Reader->getProfileSymbolList();
+      ReaderList->contains("zoo");
+      ReaderList->contains("moo");
+    }
 
     if (Remap) {
       auto MemBuffer = llvm::MemoryBuffer::getMemBuffer(R"(
@@ -285,6 +299,10 @@ TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false);
 }
 
+TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false);
+}
+
 TEST_F(SampleProfTest, remap_text_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Text, true);
 }
@@ -293,11 +311,14 @@ TEST_F(SampleProfTest, remap_raw_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Binary, true);
 }
 
+TEST_F(SampleProfTest, remap_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, true);
+}
+
 TEST_F(SampleProfTest, sample_overflow_saturation) {
   const uint64_t Max = std::numeric_limits<uint64_t>::max();
   sampleprof_error Result;
 
-  StringRef FooName("_Z3fooi");
   FunctionSamples FooSamples;
   Result = FooSamples.addTotalSamples(1);
   ASSERT_EQ(Result, sampleprof_error::success);

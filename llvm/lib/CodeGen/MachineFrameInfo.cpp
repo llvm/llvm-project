@@ -28,7 +28,7 @@
 
 using namespace llvm;
 
-void MachineFrameInfo::ensureMaxAlignment(unsigned Align) {
+void MachineFrameInfo::ensureMaxAlignment(llvm::Align Align) {
   if (!StackRealignable)
     assert(Align <= StackAlignment &&
            "For targets without stack realignment, Align is out of limit!");
@@ -36,17 +36,18 @@ void MachineFrameInfo::ensureMaxAlignment(unsigned Align) {
 }
 
 /// Clamp the alignment if requested and emit a warning.
-static inline unsigned clampStackAlignment(bool ShouldClamp, unsigned Align,
-                                           unsigned StackAlign) {
+static inline llvm::Align clampStackAlignment(bool ShouldClamp,
+                                              llvm::Align Align,
+                                              llvm::Align StackAlign) {
   if (!ShouldClamp || Align <= StackAlign)
     return Align;
-  LLVM_DEBUG(dbgs() << "Warning: requested alignment " << Align
-                    << " exceeds the stack alignment " << StackAlign
+  LLVM_DEBUG(dbgs() << "Warning: requested alignment " << Align.value()
+                    << " exceeds the stack alignment " << StackAlign.value()
                     << " when stack realignment is off" << '\n');
   return StackAlign;
 }
 
-int MachineFrameInfo::CreateStackObject(uint64_t Size, unsigned Alignment,
+int MachineFrameInfo::CreateStackObject(uint64_t Size, llvm::Align Alignment,
                                         bool IsSpillSlot,
                                         const AllocaInst *Alloca,
                                         uint8_t StackID) {
@@ -62,7 +63,7 @@ int MachineFrameInfo::CreateStackObject(uint64_t Size, unsigned Alignment,
 }
 
 int MachineFrameInfo::CreateSpillStackObject(uint64_t Size,
-                                             unsigned Alignment) {
+                                             llvm::Align Alignment) {
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   CreateStackObject(Size, Alignment, true);
   int Index = (int)Objects.size() - NumFixedObjects - 1;
@@ -70,7 +71,7 @@ int MachineFrameInfo::CreateSpillStackObject(uint64_t Size,
   return Index;
 }
 
-int MachineFrameInfo::CreateVariableSizedObject(unsigned Alignment,
+int MachineFrameInfo::CreateVariableSizedObject(llvm::Align Alignment,
                                                 const AllocaInst *Alloca) {
   HasVarSizedObjects = true;
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
@@ -88,7 +89,8 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
   // object is 16-byte aligned. Note that unlike the non-fixed case, if the
   // stack needs realignment, we can't assume that the stack will in fact be
   // aligned.
-  unsigned Alignment = MinAlign(SPOffset, ForcedRealign ? 1 : StackAlignment);
+  llvm::Align Alignment =
+      commonAlignment(ForcedRealign ? llvm::Align() : StackAlignment, SPOffset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
                  StackObject(Size, Alignment, SPOffset, IsImmutable,
@@ -100,7 +102,8 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
 int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size,
                                                   int64_t SPOffset,
                                                   bool IsImmutable) {
-  unsigned Alignment = MinAlign(SPOffset, ForcedRealign ? 1 : StackAlignment);
+  llvm::Align Alignment =
+      commonAlignment(ForcedRealign ? llvm::Align() : StackAlignment, SPOffset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
                  StackObject(Size, Alignment, SPOffset, IsImmutable,
@@ -232,7 +235,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
       OS << "variable sized";
     else
       OS << "size=" << SO.Size;
-    OS << ", align=" << SO.Alignment;
+    OS << ", align=" << SO.Alignment.value();
 
     if (i < NumFixedObjects)
       OS << ", fixed";

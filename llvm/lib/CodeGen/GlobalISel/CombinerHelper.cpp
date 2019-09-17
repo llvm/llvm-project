@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -22,10 +23,19 @@
 
 using namespace llvm;
 
+// Option to allow testing of the combiner while no targets know about indexed
+// addressing.
+static cl::opt<bool>
+    ForceLegalIndexing("force-legal-indexing", cl::Hidden, cl::init(false),
+                       cl::desc("Force all indexed operations to be "
+                                "legal for the GlobalISel combiner"));
+
+
 CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
-                               MachineIRBuilder &B, GISelKnownBits *KB)
+                               MachineIRBuilder &B, GISelKnownBits *KB,
+                               MachineDominatorTree *MDT)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer),
-      KB(KB) {
+      KB(KB), MDT(MDT) {
   (void)this->KB;
 }
 
@@ -349,6 +359,208 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
+bool CombinerHelper::isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI) {
+  assert(DefMI.getParent() == UseMI.getParent());
+  if (&DefMI == &UseMI)
+    return false;
+
+  // Loop through the basic block until we find one of the instructions.
+  MachineBasicBlock::const_iterator I = DefMI.getParent()->begin();
+  for (; &*I != &DefMI && &*I != &UseMI; ++I)
+    return &*I == &DefMI;
+
+  llvm_unreachable("Block must contain instructions");
+}
+
+bool CombinerHelper::dominates(MachineInstr &DefMI, MachineInstr &UseMI) {
+  if (MDT)
+    return MDT->dominates(&DefMI, &UseMI);
+  else if (DefMI.getParent() != UseMI.getParent())
+    return false;
+
+  return isPredecessor(DefMI, UseMI);
+}
+
+bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
+                                            Register &Base, Register &Offset) {
+  auto &MF = *MI.getParent()->getParent();
+  const auto &TLI = *MF.getSubtarget().getTargetLowering();
+
+#ifndef NDEBUG
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_LOAD || Opcode == TargetOpcode::G_SEXTLOAD ||
+         Opcode == TargetOpcode::G_ZEXTLOAD || Opcode == TargetOpcode::G_STORE);
+#endif
+
+  Base = MI.getOperand(1).getReg();
+  MachineInstr *BaseDef = MRI.getUniqueVRegDef(Base);
+  if (BaseDef && BaseDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Searching for post-indexing opportunity for: " << MI);
+
+  for (auto &Use : MRI.use_instructions(Base)) {
+    if (Use.getOpcode() != TargetOpcode::G_GEP)
+      continue;
+
+    Offset = Use.getOperand(2).getReg();
+    if (!ForceLegalIndexing &&
+        !TLI.isIndexingLegal(MI, Base, Offset, /*IsPre*/ false, MRI)) {
+      LLVM_DEBUG(dbgs() << "    Ignoring candidate with illegal addrmode: "
+                        << Use);
+      continue;
+    }
+
+    // Make sure the offset calculation is before the potentially indexed op.
+    // FIXME: we really care about dependency here. The offset calculation might
+    // be movable.
+    MachineInstr *OffsetDef = MRI.getUniqueVRegDef(Offset);
+    if (!OffsetDef || !dominates(*OffsetDef, MI)) {
+      LLVM_DEBUG(dbgs() << "    Ignoring candidate with offset after mem-op: "
+                        << Use);
+      continue;
+    }
+
+    // FIXME: check whether all uses of Base are load/store with foldable
+    // addressing modes. If so, using the normal addr-modes is better than
+    // forming an indexed one.
+
+    bool MemOpDominatesAddrUses = true;
+    for (auto &GEPUse : MRI.use_instructions(Use.getOperand(0).getReg())) {
+      if (!dominates(MI, GEPUse)) {
+        MemOpDominatesAddrUses = false;
+        break;
+      }
+    }
+
+    if (!MemOpDominatesAddrUses) {
+      LLVM_DEBUG(
+          dbgs() << "    Ignoring candidate as memop does not dominate uses: "
+                 << Use);
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "    Found match: " << Use);
+    Addr = Use.getOperand(0).getReg();
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
+                                           Register &Base, Register &Offset) {
+  auto &MF = *MI.getParent()->getParent();
+  const auto &TLI = *MF.getSubtarget().getTargetLowering();
+
+#ifndef NDEBUG
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_LOAD || Opcode == TargetOpcode::G_SEXTLOAD ||
+         Opcode == TargetOpcode::G_ZEXTLOAD || Opcode == TargetOpcode::G_STORE);
+#endif
+
+  Addr = MI.getOperand(1).getReg();
+  MachineInstr *AddrDef = getOpcodeDef(TargetOpcode::G_GEP, Addr, MRI);
+  if (!AddrDef || MRI.hasOneUse(Addr))
+    return false;
+
+  Base = AddrDef->getOperand(1).getReg();
+  Offset = AddrDef->getOperand(2).getReg();
+
+  LLVM_DEBUG(dbgs() << "Found potential pre-indexed load_store: " << MI);
+
+  if (!ForceLegalIndexing &&
+      !TLI.isIndexingLegal(MI, Base, Offset, /*IsPre*/ true, MRI)) {
+    LLVM_DEBUG(dbgs() << "    Skipping, not legal for target");
+    return false;
+  }
+
+  MachineInstr *BaseDef = getDefIgnoringCopies(Base, MRI);
+  if (BaseDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+    LLVM_DEBUG(dbgs() << "    Skipping, frame index would need copy anyway.");
+    return false;
+  }
+
+  if (MI.getOpcode() == TargetOpcode::G_STORE) {
+    // Would require a copy.
+    if (Base == MI.getOperand(0).getReg()) {
+      LLVM_DEBUG(dbgs() << "    Skipping, storing base so need copy anyway.");
+      return false;
+    }
+
+    // We're expecting one use of Addr in MI, but it could also be the
+    // value stored, which isn't actually dominated by the instruction.
+    if (MI.getOperand(0).getReg() == Addr) {
+      LLVM_DEBUG(dbgs() << "    Skipping, does not dominate all addr uses");
+      return false;
+    }
+  }
+
+  // FIXME: check whether all uses of the base pointer are constant GEPs. That
+  // might allow us to end base's liveness here by adjusting the constant.
+
+  for (auto &UseMI : MRI.use_instructions(Addr)) {
+    if (!dominates(MI, UseMI)) {
+      LLVM_DEBUG(dbgs() << "    Skipping, does not dominate all addr uses.");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool CombinerHelper::tryCombineIndexedLoadStore(MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
+  if (Opcode != TargetOpcode::G_LOAD && Opcode != TargetOpcode::G_SEXTLOAD &&
+      Opcode != TargetOpcode::G_ZEXTLOAD && Opcode != TargetOpcode::G_STORE)
+    return false;
+
+  bool IsStore = Opcode == TargetOpcode::G_STORE;
+  Register Addr, Base, Offset;
+  bool IsPre = findPreIndexCandidate(MI, Addr, Base, Offset);
+  if (!IsPre && !findPostIndexCandidate(MI, Addr, Base, Offset))
+    return false;
+
+
+  unsigned NewOpcode;
+  switch (Opcode) {
+  case TargetOpcode::G_LOAD:
+    NewOpcode = TargetOpcode::G_INDEXED_LOAD;
+    break;
+  case TargetOpcode::G_SEXTLOAD:
+    NewOpcode = TargetOpcode::G_INDEXED_SEXTLOAD;
+    break;
+  case TargetOpcode::G_ZEXTLOAD:
+    NewOpcode = TargetOpcode::G_INDEXED_ZEXTLOAD;
+    break;
+  case TargetOpcode::G_STORE:
+    NewOpcode = TargetOpcode::G_INDEXED_STORE;
+    break;
+  default:
+    llvm_unreachable("Unknown load/store opcode");
+  }
+
+  MachineInstr &AddrDef = *MRI.getUniqueVRegDef(Addr);
+  MachineIRBuilder MIRBuilder(MI);
+  auto MIB = MIRBuilder.buildInstr(NewOpcode);
+  if (IsStore) {
+    MIB.addDef(Addr);
+    MIB.addUse(MI.getOperand(0).getReg());
+  } else {
+    MIB.addDef(MI.getOperand(0).getReg());
+    MIB.addDef(Addr);
+  }
+
+  MIB.addUse(Base);
+  MIB.addUse(Offset);
+  MIB.addImm(IsPre);
+  MI.eraseFromParent();
+  AddrDef.eraseFromParent();
+
+  LLVM_DEBUG(dbgs() << "    Combinined to indexed operation");
+  return true;
+}
+
 bool CombinerHelper::matchCombineBr(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_BR && "Expected a G_BR");
   // Try to match the following:
@@ -419,16 +631,6 @@ static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {
   return MF.getFunction().hasOptSize();
 }
 
-// Get a rough equivalent of an MVT for a given LLT.
-static MVT getMVTForLLT(LLT Ty) {
-  if (!Ty.isVector())
-    return MVT::getIntegerVT(Ty.getSizeInBits());
-
-  return MVT::getVectorVT(
-      MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
-      Ty.getNumElements());
-}
-
 // Returns a list of types to use for memory op lowering in MemOps. A partial
 // port of findOptimalMemOpLowering in TargetLowering.
 static bool findGISelOptimalMemOpLowering(
@@ -471,10 +673,8 @@ static bool findGISelOptimalMemOpLowering(
       // SDAGisms map cleanly to GISel concepts.
       if (NewTy.isVector())
         NewTy = NewTy.getSizeInBits() > 64 ? LLT::scalar(64) : LLT::scalar(32);
+      NewTy = LLT::scalar(PowerOf2Floor(NewTy.getSizeInBits() - 1));
       unsigned NewTySize = NewTy.getSizeInBytes();
-
-      NewTy = LLT::scalar(PowerOf2Floor(NewTy.getSizeInBits()-1));
-      NewTySize = NewTy.getSizeInBytes();
       assert(NewTySize > 0 && "Could not find appropriate type");
 
       // If the new LLT cannot cover all of the remaining bits, then consider
@@ -919,5 +1119,9 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
-  return tryCombineExtendingLoads(MI);
+  if (tryCombineExtendingLoads(MI))
+    return true;
+  if (tryCombineIndexedLoadStore(MI))
+    return true;
+  return false;
 }

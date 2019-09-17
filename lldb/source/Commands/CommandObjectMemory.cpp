@@ -96,9 +96,7 @@ public:
       break;
 
     default:
-      error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                     short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
     return error;
   }
@@ -163,6 +161,7 @@ public:
     case eFormatOctal:
     case eFormatDecimal:
     case eFormatEnum:
+    case eFormatUnicode8:
     case eFormatUnicode16:
     case eFormatUnicode32:
     case eFormatUnsigned:
@@ -594,7 +593,7 @@ protected:
     }
 
     if (argc > 0)
-      addr = OptionArgParser::ToAddress(&m_exe_ctx, command[0].ref,
+      addr = OptionArgParser::ToAddress(&m_exe_ctx, command[0].ref(),
                                         LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
@@ -606,7 +605,7 @@ protected:
 
     if (argc == 2) {
       lldb::addr_t end_addr = OptionArgParser::ToAddress(
-          &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, nullptr);
+          &m_exe_ctx, command[1].ref(), LLDB_INVALID_ADDRESS, nullptr);
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
         result.AppendError(error.AsCString());
@@ -935,9 +934,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1037,13 +1034,13 @@ protected:
 
     Status error;
     lldb::addr_t low_addr = OptionArgParser::ToAddress(
-        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
+        &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
     if (low_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid low address");
       return false;
     }
     lldb::addr_t high_addr = OptionArgParser::ToAddress(
-        &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, &error);
+        &m_exe_ctx, command[1].ref(), LLDB_INVALID_ADDRESS, &error);
     if (high_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid high address");
       return false;
@@ -1225,9 +1222,7 @@ public:
       } break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1344,7 +1339,7 @@ protected:
 
     Status error;
     lldb::addr_t addr = OptionArgParser::ToAddress(
-        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
+        &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression\n");
@@ -1411,6 +1406,7 @@ protected:
       case eFormatBytesWithASCII:
       case eFormatComplex:
       case eFormatEnum:
+      case eFormatUnicode8:
       case eFormatUnicode16:
       case eFormatUnicode32:
       case eFormatVectorOfChar:
@@ -1446,10 +1442,10 @@ protected:
         // Be careful, getAsInteger with a radix of 16 rejects "0xab" so we
         // have to special case that:
         bool success = false;
-        if (entry.ref.startswith("0x"))
-          success = !entry.ref.getAsInteger(0, uval64);
+        if (entry.ref().startswith("0x"))
+          success = !entry.ref().getAsInteger(0, uval64);
         if (!success)
-          success = !entry.ref.getAsInteger(16, uval64);
+          success = !entry.ref().getAsInteger(16, uval64);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid hex string value.\n", entry.c_str());
@@ -1467,7 +1463,7 @@ protected:
         break;
       }
       case eFormatBoolean:
-        uval64 = OptionArgParser::ToBoolean(entry.ref, false, &success);
+        uval64 = OptionArgParser::ToBoolean(entry.ref(), false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid boolean string value.\n", entry.c_str());
@@ -1478,7 +1474,7 @@ protected:
         break;
 
       case eFormatBinary:
-        if (entry.ref.getAsInteger(2, uval64)) {
+        if (entry.ref().getAsInteger(2, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid binary string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
@@ -1497,10 +1493,10 @@ protected:
       case eFormatCharArray:
       case eFormatChar:
       case eFormatCString: {
-        if (entry.ref.empty())
+        if (entry.ref().empty())
           break;
 
-        size_t len = entry.ref.size();
+        size_t len = entry.ref().size();
         // Include the NULL for C strings...
         if (m_format_options.GetFormat() == eFormatCString)
           ++len;
@@ -1517,7 +1513,7 @@ protected:
         break;
       }
       case eFormatDecimal:
-        if (entry.ref.getAsInteger(0, sval64)) {
+        if (entry.ref().getAsInteger(0, sval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid signed decimal value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
@@ -1535,7 +1531,7 @@ protected:
 
       case eFormatUnsigned:
 
-        if (!entry.ref.getAsInteger(0, uval64)) {
+        if (!entry.ref().getAsInteger(0, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid unsigned decimal string value.\n",
               entry.c_str());
@@ -1553,7 +1549,7 @@ protected:
         break;
 
       case eFormatOctal:
-        if (entry.ref.getAsInteger(8, uval64)) {
+        if (entry.ref().getAsInteger(8, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid octal string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
@@ -1639,7 +1635,7 @@ protected:
 
     Status error;
     lldb::addr_t addr = OptionArgParser::ToAddress(
-        &m_exe_ctx, command[0].ref, LLDB_INVALID_ADDRESS, &error);
+        &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression");
@@ -1704,7 +1700,7 @@ protected:
         result.SetStatus(eReturnStatusFailed);
       } else {
         if (command.GetArgumentCount() == 1) {
-          auto load_addr_str = command[0].ref;
+          auto load_addr_str = command[0].ref();
           load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
                                                  LLDB_INVALID_ADDRESS, &error);
           if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {

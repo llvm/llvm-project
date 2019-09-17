@@ -56,8 +56,12 @@ void Dumper::printEntry(const ResourceEntryRef &Ref) {
   if (Ref.checkTypeString()) {
     auto NarrowStr = stripUTF16(Ref.getTypeString());
     SW.printString("Resource type (string)", NarrowStr);
-  } else
-    SW.printNumber("Resource type (int)", Ref.getTypeID());
+  } else {
+    SmallString<20> IDStr;
+    raw_svector_ostream OS(IDStr);
+    printResourceTypeName(Ref.getTypeID(), OS);
+    SW.printString("Resource type (int)", IDStr);
+  }
 
   if (Ref.checkNameString()) {
     auto NarrowStr = stripUTF16(Ref.getNameString());

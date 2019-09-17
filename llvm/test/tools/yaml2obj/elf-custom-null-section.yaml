@@ -8,9 +8,9 @@
 # DEFAULT:      Section Headers:
 # DEFAULT-NEXT:  [Nr] Name      Type   Address          Off    Size   ES Flg Lk Inf Al
 # DEFAULT-NEXT:  [ 0]           NULL   0000000000000000 000000 000000 00 0   0  0
-# DEFAULT-NEXT:  [ 1] .symtab   SYMTAB 0000000000000000 000140 000018 18 2   1  8
-# DEFAULT-NEXT:  [ 2] .strtab   STRTAB 0000000000000000 000158 000001 00 0   0  1
-# DEFAULT-NEXT:  [ 3] .shstrtab STRTAB 0000000000000000 000159 00001b 00 0   0  1
+# DEFAULT-NEXT:  [ 1] .symtab   SYMTAB 0000000000000000 000040 000018 18 2   1  8
+# DEFAULT-NEXT:  [ 2] .strtab   STRTAB 0000000000000000 000058 000001 00 0   0  1
+# DEFAULT-NEXT:  [ 3] .shstrtab STRTAB 0000000000000000 000059 00001b 00 0   0  1
 
 --- !ELF
 FileHeader:
@@ -104,10 +104,10 @@ Sections:
 # OTHER-SECTION:      Section Headers:
 # OTHER-SECTION-NEXT:   [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
 # OTHER-SECTION-NEXT:   [ 0]           NULL     0000000000000000 000000 000000 00 0   0  0
-# OTHER-SECTION-NEXT:   [ 1] foo       PROGBITS 0000000000000000 000180 000000 00 0   0  0
-# OTHER-SECTION-NEXT:   [ 2] .symtab   SYMTAB   0000000000000000 000180 000018 18 3   1  8
-# OTHER-SECTION-NEXT:   [ 3] .strtab   STRTAB   0000000000000000 000198 000001 00 0   0  1
-# OTHER-SECTION-NEXT:   [ 4] .shstrtab STRTAB   0000000000000000 000199 00001f 00 0   0  1
+# OTHER-SECTION-NEXT:   [ 1] foo       PROGBITS 0000000000000000 000040 000000 00 0   0  0
+# OTHER-SECTION-NEXT:   [ 2] .symtab   SYMTAB   0000000000000000 000040 000018 18 3   1  8
+# OTHER-SECTION-NEXT:   [ 3] .strtab   STRTAB   0000000000000000 000058 000001 00 0   0  1
+# OTHER-SECTION-NEXT:   [ 4] .shstrtab STRTAB   0000000000000000 000059 00001f 00 0   0  1
 
 --- !ELF
 FileHeader:
@@ -130,7 +130,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=CASE4
 
-# CASE4: error: Unknown section referenced: '.foo' at YAML section ''.
+# CASE4: error: unknown section referenced: '.foo' by YAML section ''
 
 --- !ELF
 FileHeader:
@@ -164,7 +164,7 @@ Sections:
 # MULTIPLE:      Section Headers:
 # MULTIPLE-NEXT:  [Nr] Name Type Address          Off    Size   ES Flg Lk Inf Al
 # MULTIPLE-NEXT:  [ 0]      NULL 0000000000000000 000000 000000 00 0   0  0
-# MULTIPLE-NEXT:  [ 1] .foo NULL 0000000000000123 000180 000020 10 A   1  2   0
+# MULTIPLE-NEXT:  [ 1] .foo NULL 0000000000000123 000040 000020 10 A   1  2   0
 
 --- !ELF
 FileHeader:

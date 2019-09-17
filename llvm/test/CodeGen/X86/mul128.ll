@@ -119,41 +119,11 @@ define void @PR13897() nounwind {
 ;
 ; X86-LABEL: PR13897:
 ; X86:       # %bb.0: # %"0x0"
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl bbb, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl $1, %ebx
-; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    addl %esi, %ebx
-; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    adcl $0, %ebp
-; X86-NEXT:    addl %edi, %ebx
-; X86-NEXT:    adcl %esi, %ebp
-; X86-NEXT:    setb %cl
-; X86-NEXT:    addl %eax, %ebp
-; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    adcl %edx, %eax
-; X86-NEXT:    addl %edi, %ebp
-; X86-NEXT:    adcl %esi, %eax
-; X86-NEXT:    addl (%esp), %eax # 4-byte Folded Reload
-; X86-NEXT:    movl %edi, aaa
-; X86-NEXT:    movl %ebx, aaa+4
-; X86-NEXT:    movl %ebp, aaa+8
 ; X86-NEXT:    movl %eax, aaa+12
-; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movl %eax, aaa+8
+; X86-NEXT:    movl %eax, aaa+4
+; X86-NEXT:    movl %eax, aaa
 ; X86-NEXT:    retl
 "0x0":
   %0 = load i128, i128* @bbb

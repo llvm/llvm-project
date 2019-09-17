@@ -13,14 +13,14 @@
 # within the file.
 # RUN: cp %t.stripped %t.truncated1
 # RUN: %python -c "with open(r'%t.truncated1', 'r+') as f: f.truncate(0x1001)"
-# RUN: llvm-readobj %t.truncated1 --dynamic-table 2>&1 | FileCheck %s
+# RUN: llvm-readobj %t.truncated1 --dynamic-table 2>&1 | FileCheck -DFILE=%t.truncated1 %s
 
 # Test case where the offset is too large to be in the file.
 # RUN: cp %t.stripped %t.truncated2
 # RUN: %python -c "with open(r'%t.truncated2', 'r+') as f: f.truncate(0xFFF)"
-# RUN: llvm-readobj %t.truncated2 --dynamic-table 2>&1 | FileCheck %s
+# RUN: llvm-readobj %t.truncated2 --dynamic-table 2>&1 | FileCheck -DFILE=%t.truncated2 %s
 
-# CHECK: warning: PT_DYNAMIC segment offset + size exceeds the size of the file
+# CHECK: warning: '[[FILE]]': PT_DYNAMIC segment offset + size exceeds the size of the file
 
 --- !ELF
 FileHeader:

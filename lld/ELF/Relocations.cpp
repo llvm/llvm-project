@@ -691,8 +691,75 @@ struct UndefinedDiag {
 
 static std::vector<UndefinedDiag> undefs;
 
+// Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
+// the suggested symbol, which is either in the symbol table, or in the same
+// file of sym.
+static const Symbol *getAlternativeSpelling(const Undefined &sym) {
+  // Build a map of local defined symbols.
+  DenseMap<StringRef, const Symbol *> map;
+  if (sym.file && !isa<SharedFile>(sym.file)) {
+    for (const Symbol *s : sym.file->getSymbols())
+      if (s->isLocal() && s->isDefined())
+        map.try_emplace(s->getName(), s);
+  }
+
+  auto suggest = [&](StringRef newName) -> const Symbol * {
+    // If defined locally.
+    if (const Symbol *s = map.lookup(newName))
+      return s;
+
+    // If in the symbol table and not undefined.
+    if (const Symbol *s = symtab->find(newName))
+      if (!s->isUndefined())
+        return s;
+
+    return nullptr;
+  };
+
+  // This loop enumerates all strings of Levenshtein distance 1 as typo
+  // correction candidates and suggests the one that exists as a non-undefined
+  // symbol.
+  StringRef name = sym.getName();
+  for (size_t i = 0, e = name.size(); i != e + 1; ++i) {
+    // Insert a character before name[i].
+    std::string newName = (name.substr(0, i) + "0" + name.substr(i)).str();
+    for (char c = '0'; c <= 'z'; ++c) {
+      newName[i] = c;
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+    if (i == e)
+      break;
+
+    // Substitute name[i].
+    newName = name;
+    for (char c = '0'; c <= 'z'; ++c) {
+      newName[i] = c;
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+
+    // Transpose name[i] and name[i+1]. This is of edit distance 2 but it is
+    // common.
+    if (i + 1 < e) {
+      newName[i] = name[i + 1];
+      newName[i + 1] = name[i];
+      if (const Symbol *s = suggest(newName))
+        return s;
+    }
+
+    // Delete name[i].
+    newName = (name.substr(0, i) + name.substr(i + 1)).str();
+    if (const Symbol *s = suggest(newName))
+      return s;
+  }
+
+  return nullptr;
+}
+
 template <class ELFT>
-static void reportUndefinedSymbol(const UndefinedDiag &undef) {
+static void reportUndefinedSymbol(const UndefinedDiag &undef,
+                                  bool correctSpelling) {
   Symbol &sym = *undef.sym;
 
   auto visibility = [&]() -> std::string {
@@ -732,6 +799,14 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef) {
     msg += ("\n>>> referenced " + Twine(undef.locs.size() - i) + " more times")
                .str();
 
+  if (correctSpelling)
+    if (const Symbol *corrected =
+            getAlternativeSpelling(cast<Undefined>(sym))) {
+      msg += "\n>>> did you mean: " + toString(*corrected);
+      if (corrected->file)
+        msg += "\n>>> defined in: " + toString(corrected->file);
+    }
+
   if (sym.getName().startswith("_ZTV"))
     msg += "\nthe vtable symbol may be undefined because the class is missing "
            "its key function (see https://lld.llvm.org/missingkeyfunction)";
@@ -755,10 +830,10 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
       firstRef[undef.sym] = &undef;
   }
 
-  for (const UndefinedDiag &undef : undefs) {
-    if (!undef.locs.empty())
-      reportUndefinedSymbol<ELFT>(undef);
-  }
+  // Enable spell corrector for the first 2 diagnostics.
+  for (auto it : enumerate(undefs))
+    if (!it.value().locs.empty())
+      reportUndefinedSymbol<ELFT>(it.value(), it.index() < 2);
   undefs.clear();
 }
 
@@ -993,56 +1068,29 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
     }
   }
 
-  if (!canWrite && (config->isPic && !isRelExpr(expr))) {
-    error(
-        "can't create dynamic relocation " + toString(type) + " against " +
-        (sym.getName().empty() ? "local symbol" : "symbol: " + toString(sym)) +
-        " in readonly segment; recompile object files with -fPIC "
-        "or pass '-Wl,-z,notext' to allow text relocations in the output" +
-        getLocation(sec, sym, offset));
-    return;
-  }
-
-  // Copy relocations (for STT_OBJECT) and canonical PLT (for STT_FUNC) are only
-  // possible in an executable.
-  //
-  // Among R_ABS relocatoin types, symbolicRel has the same size as the word
-  // size. Others have fewer bits and may cause runtime overflow in -pie/-shared
-  // mode. Disallow them.
-  if (config->shared ||
-      (config->pie && expr == R_ABS && type != target->symbolicRel)) {
-    errorOrWarn(
-        "relocation " + toString(type) + " cannot be used against " +
-        (sym.getName().empty() ? "local symbol" : "symbol " + toString(sym)) +
-        "; recompile with -fPIC" + getLocation(sec, sym, offset));
-    return;
-  }
-
-  // If the symbol is undefined we already reported any relevant errors.
-  if (sym.isUndefined())
-    return;
-
-  if (!canDefineSymbolInExecutable(sym)) {
-    error("cannot preempt symbol: " + toString(sym) +
-          getLocation(sec, sym, offset));
-    return;
-  }
-
-  if (sym.isObject()) {
-    // Produce a copy relocation.
-    if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
-      if (!config->zCopyreloc)
-        error("unresolvable relocation " + toString(type) +
-              " against symbol '" + toString(*ss) +
-              "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-              getLocation(sec, sym, offset));
-      addCopyRelSymbol<ELFT>(*ss);
+  // When producing an executable, we can perform copy relocations (for
+  // STT_OBJECT) and canonical PLT (for STT_FUNC).
+  if (!config->shared) {
+    if (!canDefineSymbolInExecutable(sym)) {
+      errorOrWarn("cannot preempt symbol: " + toString(sym) +
+                  getLocation(sec, sym, offset));
+      return;
     }
-    sec.relocations.push_back({expr, type, offset, addend, &sym});
-    return;
-  }
 
-  if (sym.isFunc()) {
+    if (sym.isObject()) {
+      // Produce a copy relocation.
+      if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
+        if (!config->zCopyreloc)
+          error("unresolvable relocation " + toString(type) +
+                " against symbol '" + toString(*ss) +
+                "'; recompile with -fPIC or remove '-z nocopyreloc'" +
+                getLocation(sec, sym, offset));
+        addCopyRelSymbol<ELFT>(*ss);
+      }
+      sec.relocations.push_back({expr, type, offset, addend, &sym});
+      return;
+    }
+
     // This handles a non PIC program call to function in a shared library. In
     // an ideal world, we could just report an error saying the relocation can
     // overflow at runtime. In the real world with glibc, crt1.o has a
@@ -1070,18 +1118,37 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
     //   compiled without -fPIE/-fPIC and doesn't maintain ebx.
     // * If a library definition gets preempted to the executable, it will have
     //   the wrong ebx value.
-    if (config->pie && config->emachine == EM_386)
-      errorOrWarn("symbol '" + toString(sym) +
-                  "' cannot be preempted; recompile with -fPIE" +
-                  getLocation(sec, sym, offset));
-    if (!sym.isInPlt())
-      addPltEntry<ELFT>(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
-    if (!sym.isDefined())
-      replaceWithDefined(
-          sym, in.plt,
-          target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
-    sym.needsPltAddr = true;
-    sec.relocations.push_back({expr, type, offset, addend, &sym});
+    if (sym.isFunc()) {
+      if (config->pie && config->emachine == EM_386)
+        errorOrWarn("symbol '" + toString(sym) +
+                    "' cannot be preempted; recompile with -fPIE" +
+                    getLocation(sec, sym, offset));
+      if (!sym.isInPlt())
+        addPltEntry<ELFT>(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
+      if (!sym.isDefined())
+        replaceWithDefined(
+            sym, in.plt,
+            target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+      sym.needsPltAddr = true;
+      sec.relocations.push_back({expr, type, offset, addend, &sym});
+      return;
+    }
+  }
+
+  if (config->isPic) {
+    if (!canWrite && !isRelExpr(expr))
+      errorOrWarn(
+          "can't create dynamic relocation " + toString(type) + " against " +
+          (sym.getName().empty() ? "local symbol"
+                                 : "symbol: " + toString(sym)) +
+          " in readonly segment; recompile object files with -fPIC "
+          "or pass '-Wl,-z,notext' to allow text relocations in the output" +
+          getLocation(sec, sym, offset));
+    else
+      errorOrWarn(
+          "relocation " + toString(type) + " cannot be used against " +
+          (sym.getName().empty() ? "local symbol" : "symbol " + toString(sym)) +
+          "; recompile with -fPIC" + getLocation(sec, sym, offset));
     return;
   }
 
@@ -1699,11 +1766,6 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
 
   if (pass == 0 && target->getThunkSectionSpacing())
     createInitialThunkSections(outputSections);
-
-  // With Thunk Size much smaller than branch range we expect to
-  // converge quickly; if we get to 10 something has gone wrong.
-  if (pass == 10)
-    fatal("thunk creation not converged");
 
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into InputSectionDescriptions.

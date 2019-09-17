@@ -20,7 +20,7 @@
 #include <string>
 #include <memory>
 
-#include "variant_test_helpers.hpp"
+#include "variant_test_helpers.h"
 
 int main(int, char**)
 {

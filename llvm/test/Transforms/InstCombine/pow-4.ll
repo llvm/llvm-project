@@ -223,3 +223,13 @@ define <4 x float> @test_simplify_3_5(<4 x float> %x) {
   ret <4 x float> %1
 }
 
+; Make sure that -0.0 exponent is always simplified.
+
+define double @PR43233(double %x) {
+; CHECK-LABEL: @PR43233(
+; CHECK-NEXT:    ret double 1.000000e+00
+;
+  %r = call fast double @llvm.pow.f64(double %x, double -0.0)
+  ret double %r
+}
+

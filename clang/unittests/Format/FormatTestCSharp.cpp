@@ -165,6 +165,21 @@ TEST_F(FormatTestCSharp, Attributes) {
                "public string Host {\n  set;\n  get;\n}");
 }
 
+TEST_F(FormatTestCSharp, CSharpUsing) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+  verifyFormat("public void foo() {\n"
+               "  using (StreamWriter sw = new StreamWriter (filenameA)) {}\n"
+               "}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Never;
+  verifyFormat("public void foo() {\n"
+               "  using(StreamWriter sw = new StreamWriter(filenameB)) {}\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestCSharp, CSharpRegions) {
   verifyFormat("#region aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaa "
                "aaaaaaaaaaaaaaa long region");

@@ -137,6 +137,13 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   SmallString<256> MappedPathStorage;
   StringRef MappedPathStr = Path.toStringRef(MappedPathStorage);
 
+  // If use system headers while cross-compiling, emit the warning.
+  if (HasSysroot && (MappedPathStr.startswith("/usr/include") ||
+                     MappedPathStr.startswith("/usr/local/include"))) {
+    Headers.getDiags().Report(diag::warn_poison_system_directories)
+        << MappedPathStr;
+  }
+
   // Compute the DirectoryLookup type.
   SrcMgr::CharacteristicKind Type;
   if (Group == Quoted || Group == Angled || Group == IndexHeaderMap) {
@@ -148,7 +155,7 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   }
 
   // If the directory exists, add it.
-  if (auto DE = FM.getDirectory(MappedPathStr)) {
+  if (auto DE = FM.getOptionalDirectoryRef(MappedPathStr)) {
     IncludePath.push_back(
       std::make_pair(Group, DirectoryLookup(*DE, Type, isFramework)));
     return true;

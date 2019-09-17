@@ -588,6 +588,8 @@ void Sema::checkReturnsCommand(const BlockCommandComment *Command) {
   if (isObjCPropertyDecl())
     return;
   if (isFunctionDecl() || isFunctionOrBlockPointerVarLikeDecl()) {
+    assert(!ThisDeclInfo->ReturnType.isNull() &&
+           "should have a valid return type");
     if (ThisDeclInfo->ReturnType->isVoidType()) {
       unsigned DiagKind;
       switch (ThisDeclInfo->CommentDecl->getKind()) {
@@ -873,6 +875,12 @@ bool Sema::isFunctionOrBlockPointerVarLikeDecl() {
   // can be ignored.
   if (QT->getAs<TypedefType>())
     return false;
+  if (const auto *P = QT->getAs<PointerType>())
+    if (P->getPointeeType()->getAs<TypedefType>())
+      return false;
+  if (const auto *P = QT->getAs<BlockPointerType>())
+    if (P->getPointeeType()->getAs<TypedefType>())
+      return false;
   return QT->isFunctionPointerType() || QT->isBlockPointerType();
 }
 

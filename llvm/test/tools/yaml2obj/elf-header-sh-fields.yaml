@@ -6,7 +6,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readelf --file-headers %t1 | FileCheck %s --check-prefix=DEFAULT
 
-# DEFAULT:   Start of section headers:          64 (bytes into file)
+# DEFAULT:   Start of section headers:          120 (bytes into file)
 # DEFAULT:   Size of section headers:           64 (bytes)
 # DEFAULT:   Number of section headers:         4
 # DEFAULT:   Section header string table index: 3
@@ -35,7 +35,7 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
   SHEntSize: 64
-  SHOffset:  2
+  SHOff:     2
   SHNum:     3
   SHStrNdx:  4
 
@@ -56,6 +56,6 @@ FileHeader:
   Type:      ET_REL
   Machine:   EM_X86_64
   SHEntSize: 1
-  SHOffset:  2
+  SHOff:     2
   SHNum:     3
   SHStrNdx:  4

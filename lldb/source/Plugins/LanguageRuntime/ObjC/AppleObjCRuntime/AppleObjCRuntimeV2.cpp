@@ -582,9 +582,9 @@ protected:
     case 0:
       break;
     case 1: {
-      regex_up.reset(new RegularExpression());
-      if (!regex_up->Compile(llvm::StringRef::withNullAsEmpty(
-              command.GetArgumentAtIndex(0)))) {
+      regex_up.reset(new RegularExpression(
+          llvm::StringRef::withNullAsEmpty(command.GetArgumentAtIndex(0))));
+      if (!regex_up->IsValid()) {
         result.AppendError(
             "invalid argument - please provide a valid regular expression");
         result.SetStatus(lldb::eReturnStatusFailed);
@@ -1601,7 +1601,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     // use that in our jitted expression.  Else fall back to the old
     // class_getName.
     static ConstString g_class_getName_symbol_name("class_getName");
-    static ConstString g_class_getNameRaw_symbol_name("class_getNameRaw");
+    static ConstString g_class_getNameRaw_symbol_name("objc_debug_class_getNameRaw");
     ConstString class_name_getter_function_name = g_class_getName_symbol_name;
 
     ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process);

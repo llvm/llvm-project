@@ -18,7 +18,7 @@ namespace tidy {
 namespace utils {
 namespace decl_ref_expr {
 
-/// \brief Returns true if all ``DeclRefExpr`` to the variable within ``Stmt``
+/// Returns true if all ``DeclRefExpr`` to the variable within ``Stmt``
 /// do not modify it.
 ///
 /// Returns ``true`` if only const methods or operators are called on the

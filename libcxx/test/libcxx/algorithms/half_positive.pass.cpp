@@ -17,7 +17,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
-#include "user_defined_integral.hpp"
+#include "user_defined_integral.h"
 
 namespace {
 

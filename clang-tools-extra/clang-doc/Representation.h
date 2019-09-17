@@ -61,7 +61,7 @@ struct CommentInfo {
       return false;
 
     return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                      llvm::deref<llvm::equal>{});
+                      llvm::deref<std::equal_to<>>{});
   }
 
   // This operator is used to sort a vector of CommentInfos.
@@ -82,7 +82,7 @@ struct CommentInfo {
     if (FirstCI == SecondCI) {
       return std::lexicographical_compare(
           Children.begin(), Children.end(), Other.Children.begin(),
-          Other.Children.end(), llvm::deref<llvm::less>());
+          Other.Children.end(), llvm::deref<std::less<>>());
     }
 
     return false;

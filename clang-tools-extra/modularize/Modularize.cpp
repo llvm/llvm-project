@@ -233,6 +233,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -336,14 +337,13 @@ std::string CommandLine;
 
 // Helper function for finding the input file in an arguments list.
 static std::string findInputFile(const CommandLineArguments &CLArgs) {
-  std::unique_ptr<OptTable> Opts(createDriverOptTable());
   const unsigned IncludedFlagsBitmask = options::CC1Option;
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
   for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
     Argv.push_back(I->c_str());
-  InputArgList Args = Opts->ParseArgs(Argv, MissingArgIndex, MissingArgCount,
-                                      IncludedFlagsBitmask);
+  InputArgList Args = getDriverOptTable().ParseArgs(
+      Argv, MissingArgIndex, MissingArgCount, IncludedFlagsBitmask);
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   return ModularizeUtilities::getCanonicalPath(Inputs.back());
 }
@@ -721,8 +721,9 @@ public:
       : Entities(Entities), PPTracker(preprocessorTracker),
         HadErrors(HadErrors) {}
 
-  CollectEntitiesAction *create() override {
-    return new CollectEntitiesAction(Entities, PPTracker, HadErrors);
+  std::unique_ptr<FrontendAction> create() override {
+    return std::make_unique<CollectEntitiesAction>(Entities, PPTracker,
+                                                   HadErrors);
   }
 
 private:
@@ -801,8 +802,8 @@ class CompileCheckFrontendActionFactory : public FrontendActionFactory {
 public:
   CompileCheckFrontendActionFactory() {}
 
-  CompileCheckAction *create() override {
-    return new CompileCheckAction();
+  std::unique_ptr<FrontendAction> create() override {
+    return std::make_unique<CompileCheckAction>();
   }
 };
 
@@ -886,6 +887,7 @@ int main(int Argc, const char **Argv) {
       CompileCheckTool.appendArgumentsAdjuster(
         getModularizeArgumentsAdjuster(ModUtil->Dependencies));
       int CompileCheckFileErrors = 0;
+      // FIXME: use newFrontendActionFactory.
       CompileCheckFrontendActionFactory CompileCheckFactory;
       CompileCheckFileErrors |= CompileCheckTool.run(&CompileCheckFactory);
       if (CompileCheckFileErrors != 0) {

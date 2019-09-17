@@ -39,6 +39,7 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -368,23 +369,26 @@ public:
     // Write to a temporary to avoid race condition
     SmallString<128> TempFilename;
     SmallString<128> CachePath(EntryPath);
-    int TempFD;
     llvm::sys::path::remove_filename(CachePath);
     sys::path::append(TempFilename, CachePath, "Thin-%%%%%%.tmp.o");
-    std::error_code EC =
-      sys::fs::createUniqueFile(TempFilename, TempFD, TempFilename);
-    if (EC) {
-      errs() << "Error: " << EC.message() << "\n";
-      report_fatal_error("ThinLTO: Can't get a temporary file");
+
+    if (auto Err = handleErrors(
+            llvm::writeFileAtomically(TempFilename, EntryPath,
+                                      OutputBuffer.getBuffer()),
+            [](const llvm::AtomicFileWriteError &E) {
+              std::string ErrorMsgBuffer;
+              llvm::raw_string_ostream S(ErrorMsgBuffer);
+              E.log(S);
+
+              if (E.Error ==
+                  llvm::atomic_write_error::failed_to_create_uniq_file) {
+                errs() << "Error: " << ErrorMsgBuffer << "\n";
+                report_fatal_error("ThinLTO: Can't get a temporary file");
+              }
+            })) {
+      // FIXME
+      consumeError(std::move(Err));
     }
-    {
-      raw_fd_ostream OS(TempFD, /* ShouldClose */ true);
-      OS << OutputBuffer.getBuffer();
-    }
-    // Rename temp file to final destination; rename is atomic
-    EC = sys::fs::rename(TempFilename, EntryPath);
-    if (EC)
-      sys::fs::remove(TempFilename);
   }
 };
 
@@ -457,10 +461,9 @@ static void resolvePrevailingInIndex(
     ModuleSummaryIndex &Index,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
         &ResolvedODR,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
-
-  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
-  computePrevailingCopies(Index, PrevailingCopy);
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    const DenseMap<GlobalValue::GUID, const GlobalValueSummary *>
+        &PrevailingCopy) {
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     const auto &Prevailing = PrevailingCopy.find(GUID);
@@ -490,7 +493,8 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
       TMBuilder.MCpu = "core2";
     else if (TheTriple.getArch() == llvm::Triple::x86)
       TMBuilder.MCpu = "yonah";
-    else if (TheTriple.getArch() == llvm::Triple::aarch64)
+    else if (TheTriple.getArch() == llvm::Triple::aarch64 ||
+             TheTriple.getArch() == llvm::Triple::aarch64_32)
       TMBuilder.MCpu = "cyclone";
   }
   TMBuilder.TheTriple = std::move(TheTriple);
@@ -576,6 +580,8 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
 static void internalizeAndPromoteInIndex(
     const StringMap<FunctionImporter::ExportSetTy> &ExportLists,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    const DenseMap<GlobalValue::GUID, const GlobalValueSummary *>
+        &PrevailingCopy,
     ModuleSummaryIndex &Index) {
   auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
@@ -584,7 +590,15 @@ static void internalizeAndPromoteInIndex(
            GUIDPreservedSymbols.count(GUID);
   };
 
-  thinLTOInternalizeAndPromoteInIndex(Index, isExported);
+  auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
+    const auto &Prevailing = PrevailingCopy.find(GUID);
+    // Not in map means that there was only one copy, which must be prevailing.
+    if (Prevailing == PrevailingCopy.end())
+      return true;
+    return Prevailing->second == S;
+  };
+
+  thinLTOInternalizeAndPromoteInIndex(Index, isExported, isPrevailing);
 }
 
 static void computeDeadSymbolsInIndex(
@@ -629,16 +643,21 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols,
+                           PrevailingCopy);
 
   thinLTOResolvePrevailingInModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
-  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, Index);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols,
+                               PrevailingCopy, Index);
 
   promoteModule(TheModule, Index);
 }
@@ -785,13 +804,18 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   if (ExportList.empty() && GUIDPreservedSymbols.empty())
     return;
 
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(Index, PrevailingCopy);
+
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols,
+                           PrevailingCopy);
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
-  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, Index);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols,
+                               PrevailingCopy, Index);
 
   promoteModule(TheModule, Index);
 
@@ -944,14 +968,19 @@ void ThinLTOCodeGenerator::run() {
   // on the index, and nuke this map.
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
 
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+  computePrevailingCopies(*Index, PrevailingCopy);
+
   // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
-  resolvePrevailingInIndex(*Index, ResolvedODR, GUIDPreservedSymbols);
+  resolvePrevailingInIndex(*Index, ResolvedODR, GUIDPreservedSymbols,
+                           PrevailingCopy);
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).
   // Changes are made in the index, consumed in the ThinLTO backends.
-  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, *Index);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols,
+                               PrevailingCopy, *Index);
 
   // Make sure that every module has an entry in the ExportLists, ImportList,
   // GVSummary and ResolvedODR maps to enable threaded access to these maps

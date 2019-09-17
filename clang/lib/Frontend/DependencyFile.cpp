@@ -46,20 +46,20 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     // Dependency generation really does want to go all the way to the
     // file entry for a source location to find out what is depended on.
     // We do not want #line markers to affect dependency generation!
-    const FileEntry *FE =
-        SM.getFileEntryForID(SM.getFileID(SM.getExpansionLoc(Loc)));
-    if (!FE)
+    Optional<FileEntryRef> File =
+        SM.getFileEntryRefForID(SM.getFileID(SM.getExpansionLoc(Loc)));
+    if (!File)
       return;
 
     StringRef Filename =
-        llvm::sys::path::remove_leading_dotslash(FE->getName());
+        llvm::sys::path::remove_leading_dotslash(File->getName());
 
     DepCollector.maybeAddDependency(Filename, /*FromModule*/false,
                                     isSystem(FileType),
                                     /*IsModuleFile*/false, /*IsMissing*/false);
   }
 
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(SkippedFile.getName());
@@ -83,7 +83,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   }
 
   void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
-                  const FileEntry *File,
+                  Optional<FileEntryRef> File,
                   SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       return;
@@ -192,11 +192,6 @@ DependencyFileGenerator::DependencyFileGenerator(
 }
 
 void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
-  if (Targets.empty()) {
-    PP.getDiagnostics().Report(diag::err_fe_dependency_file_requires_MT);
-    return;
-  }
-
   // Disable the "file not found" diagnostic if the -MG option was given.
   if (AddMissingHeaderDeps)
     PP.SetSuppressIncludeNotFoundError(true);

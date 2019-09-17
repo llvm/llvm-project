@@ -8,23 +8,32 @@
 
 #include "Annotations.h"
 #include "SourceCode.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "TweakTesting.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
 
-using llvm::Failed;
-using llvm::Succeeded;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::StartsWith;
@@ -33,98 +42,25 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// FIXME(sammccall): migrate the rest of the tests to use TweakTesting.h and
-// remove these helpers.
-std::string markRange(llvm::StringRef Code, Range R) {
-  size_t Begin = llvm::cantFail(positionToOffset(Code, R.start));
-  size_t End = llvm::cantFail(positionToOffset(Code, R.end));
-  assert(Begin <= End);
-  if (Begin == End) // Mark a single point.
-    return (Code.substr(0, Begin) + "^" + Code.substr(Begin)).str();
-  // Mark a range.
-  return (Code.substr(0, Begin) + "[[" + Code.substr(Begin, End - Begin) +
-          "]]" + Code.substr(End))
-      .str();
-}
+TEST(FileEdits, AbsolutePath) {
+  auto RelPaths = {"a.h", "foo.cpp", "test/test.cpp"};
 
-void checkAvailable(StringRef ID, llvm::StringRef Input, bool Available) {
-  Annotations Code(Input);
-  ASSERT_TRUE(0 < Code.points().size() || 0 < Code.ranges().size())
-      << "no points of interest specified";
-  TestTU TU;
-  TU.Filename = "foo.cpp";
-  TU.Code = Code.code();
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> MemFS(
+      new llvm::vfs::InMemoryFileSystem);
+  MemFS->setCurrentWorkingDirectory(testRoot());
+  for (auto Path : RelPaths)
+    MemFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer("", Path));
+  FileManager FM(FileSystemOptions(), MemFS);
+  DiagnosticsEngine DE(new DiagnosticIDs, new DiagnosticOptions);
+  SourceManager SM(DE, FM);
 
-  ParsedAST AST = TU.build();
-
-  auto CheckOver = [&](Range Selection) {
-    unsigned Begin = cantFail(positionToOffset(Code.code(), Selection.start));
-    unsigned End = cantFail(positionToOffset(Code.code(), Selection.end));
-    auto T = prepareTweak(ID, Tweak::Selection(AST, Begin, End));
-    if (Available)
-      EXPECT_THAT_EXPECTED(T, Succeeded())
-          << "code is " << markRange(Code.code(), Selection);
-    else
-      EXPECT_THAT_EXPECTED(T, Failed())
-          << "code is " << markRange(Code.code(), Selection);
-  };
-  for (auto P : Code.points())
-    CheckOver(Range{P, P});
-  for (auto R : Code.ranges())
-    CheckOver(R);
-}
-
-/// Checks action is available at every point and range marked in \p Input.
-void checkAvailable(StringRef ID, llvm::StringRef Input) {
-  return checkAvailable(ID, Input, /*Available=*/true);
-}
-
-/// Same as checkAvailable, but checks the action is not available.
-void checkNotAvailable(StringRef ID, llvm::StringRef Input) {
-  return checkAvailable(ID, Input, /*Available=*/false);
-}
-
-llvm::Expected<Tweak::Effect> apply(StringRef ID, llvm::StringRef Input) {
-  Annotations Code(Input);
-  Range SelectionRng;
-  if (Code.points().size() != 0) {
-    assert(Code.ranges().size() == 0 &&
-           "both a cursor point and a selection range were specified");
-    SelectionRng = Range{Code.point(), Code.point()};
-  } else {
-    SelectionRng = Code.range();
+  for (auto Path : RelPaths) {
+    auto FID = SM.createFileID(*FM.getFile(Path), SourceLocation(),
+                               clang::SrcMgr::C_User);
+    auto Res = Tweak::Effect::fileEdit(SM, FID, tooling::Replacements());
+    ASSERT_THAT_EXPECTED(Res, llvm::Succeeded());
+    EXPECT_EQ(Res->first, testPath(Path));
   }
-  TestTU TU;
-  TU.Filename = "foo.cpp";
-  TU.Code = Code.code();
-
-  ParsedAST AST = TU.build();
-  unsigned Begin = cantFail(positionToOffset(Code.code(), SelectionRng.start));
-  unsigned End = cantFail(positionToOffset(Code.code(), SelectionRng.end));
-  Tweak::Selection S(AST, Begin, End);
-
-  auto T = prepareTweak(ID, S);
-  if (!T)
-    return T.takeError();
-  return (*T)->apply(S);
-}
-
-llvm::Expected<std::string> applyEdit(StringRef ID, llvm::StringRef Input) {
-  auto Effect = apply(ID, Input);
-  if (!Effect)
-    return Effect.takeError();
-  if (!Effect->ApplyEdit)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "No replacements");
-  Annotations Code(Input);
-  return applyAllReplacements(Code.code(), *Effect->ApplyEdit);
-}
-
-void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
-                    std::string Output) {
-  auto Result = applyEdit(ID, Input);
-  ASSERT_TRUE(bool(Result)) << llvm::toString(Result.takeError()) << Input;
-  EXPECT_EQ(Output, std::string(*Result)) << Input;
 }
 
 TWEAK_TEST(SwapIfBranches);
@@ -215,9 +151,9 @@ TEST_F(DumpRecordLayoutTest, Test) {
               AllOf(StartsWith("message:"), HasSubstr("0 |   int x")));
 }
 
-TEST(TweaksTest, ExtractVariable) {
-  llvm::StringLiteral ID = "ExtractVariable";
-  checkAvailable(ID, R"cpp(
+TWEAK_TEST(ExtractVariable);
+TEST_F(ExtractVariableTest, Test) {
+  const char *AvailableCases = R"cpp(
     int xyz(int a = 1) {
       struct T {
         int bar(int a = 1);
@@ -255,16 +191,19 @@ TEST(TweaksTest, ExtractVariable) {
         a = [[1]];
       while(a < [[3]]);
     }
-  )cpp");
-  // Should not crash.
-  checkNotAvailable(ID, R"cpp(
+  )cpp";
+  EXPECT_AVAILABLE(AvailableCases);
+
+  const char *NoCrashCases = R"cpp(
     template<typename T, typename ...Args>
     struct Test<T, Args...> {
     Test(const T &v) :val[[(^]]) {}
       T val;
     };
-  )cpp");
-  checkNotAvailable(ID, R"cpp(
+  )cpp";
+  EXPECT_UNAVAILABLE(NoCrashCases);
+
+  const char *UnavailableCases = R"cpp(
     int xyz(int a = [[1]]) {
       struct T {
         int bar(int a = [[1]]);
@@ -306,7 +245,9 @@ TEST(TweaksTest, ExtractVariable) {
       label:
         a = [[1]];
     }
-  )cpp");
+  )cpp";
+  EXPECT_UNAVAILABLE(UnavailableCases);
+
   // vector of pairs of input and output strings
   const std::vector<std::pair<llvm::StringLiteral, llvm::StringLiteral>>
       InputOutputs = {
@@ -482,38 +423,28 @@ TEST(TweaksTest, ExtractVariable) {
                  })cpp"},
       };
   for (const auto &IO : InputOutputs) {
-    checkTransform(ID, IO.first, IO.second);
+    EXPECT_EQ(IO.second, apply(IO.first)) << IO.first;
   }
 }
 
-TEST(TweaksTest, AnnotateHighlightings) {
-  llvm::StringLiteral ID = "AnnotateHighlightings";
-  checkAvailable(ID, "^vo^id^ ^f(^) {^}^"); // available everywhere.
-  checkAvailable(ID, "[[int a; int b;]]");
-  const char *Input = "void ^f() {}";
-  const char *Output = "/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f() {}";
-  checkTransform(ID, Input, Output);
+TWEAK_TEST(AnnotateHighlightings);
+TEST_F(AnnotateHighlightingsTest, Test) {
+  EXPECT_AVAILABLE("^vo^id^ ^f(^) {^}^"); // available everywhere.
+  EXPECT_AVAILABLE("[[int a; int b;]]");
+  EXPECT_EQ("/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f() {}",
+            apply("void ^f() {}"));
 
-  checkTransform(ID,
-  R"cpp(
-[[void f1();
-void f2();]]
-)cpp",
-  R"cpp(
-/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f1();
-/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2();
-)cpp");
+  EXPECT_EQ(apply("[[void f1(); void f2();]]"),
+            "/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f1(); "
+            "/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f2();");
 
-   checkTransform(ID,
-  R"cpp(
-void f1();
-void f2() {^};
-)cpp",
-
-  R"cpp(
-void f1();
-/* storage.type.primitive.cpp */void /* entity.name.function.cpp */f2() {};
-)cpp");
+  EXPECT_EQ(apply("void f1(); void f2() {^}"),
+            "void f1(); "
+            "/* storage.type.primitive.cpp */void "
+            "/* entity.name.function.cpp */f2() {}");
 }
 
 TWEAK_TEST(ExpandMacro);
@@ -599,6 +530,124 @@ TEST_F(ExpandAutoTypeTest, Test) {
             R"cpp(const char * x = "test")cpp");
 }
 
+TWEAK_TEST(ExtractFunction);
+TEST_F(ExtractFunctionTest, FunctionTest) {
+  Context = Function;
+
+  // Root statements should have common parent.
+  EXPECT_EQ(apply("for(;;) [[1+2; 1+2;]]"), "unavailable");
+  // Expressions aren't extracted.
+  EXPECT_EQ(apply("int x = 0; [[x++;]]"), "unavailable");
+  // We don't support extraction from lambdas.
+  EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
+
+  // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
+  // lead to break being included in the extraction zone.
+  EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
+  // FIXME: This should be unavailable since partially selected but
+  // selectionTree doesn't always work correctly for VarDecls.
+  EXPECT_THAT(apply("int [[x = 0]];"), HasSubstr("extracted"));
+  // FIXME: ExtractFunction should be unavailable inside loop construct
+  // initalizer/condition.
+  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
+  // Don't extract because needs hoisting.
+  EXPECT_THAT(apply(" [[int a = 5;]] a++; "), StartsWith("fail"));
+  // Don't extract return
+  EXPECT_THAT(apply(" if(true) [[return;]] "), StartsWith("fail"));
+  
+}
+
+TEST_F(ExtractFunctionTest, FileTest) {
+  // Check all parameters are in order
+  std::string ParameterCheckInput = R"cpp(
+struct Foo {
+  int x;
+};
+void f(int a) {
+  int b;
+  int *ptr = &a;
+  Foo foo;
+  [[a += foo.x + b;
+  *ptr++;]]
+})cpp";
+  std::string ParameterCheckOutput = R"cpp(
+struct Foo {
+  int x;
+};
+void extracted(int &a, int &b, int * &ptr, Foo &foo) {
+a += foo.x + b;
+  *ptr++;
+}
+void f(int a) {
+  int b;
+  int *ptr = &a;
+  Foo foo;
+  extracted(a, b, ptr, foo);
+})cpp";
+  EXPECT_EQ(apply(ParameterCheckInput), ParameterCheckOutput);
+
+  // Check const qualifier
+  std::string ConstCheckInput = R"cpp(
+void f(const int c) {
+  [[while(c) {}]]
+})cpp";
+  std::string ConstCheckOutput = R"cpp(
+void extracted(const int &c) {
+while(c) {}
+}
+void f(const int c) {
+  extracted(c);
+})cpp";
+  EXPECT_EQ(apply(ConstCheckInput), ConstCheckOutput);
+
+  // Don't extract when we need to make a function as a parameter.
+  EXPECT_THAT(apply("void f() { [[int a; f();]] }"), StartsWith("fail"));
+
+  // We don't extract from methods for now since they may involve multi-file
+  // edits
+  std::string MethodFailInput = R"cpp(
+    class T {
+      void f() {
+        [[int x;]]
+      }
+    };
+  )cpp";
+  EXPECT_EQ(apply(MethodFailInput), "unavailable");
+
+  // We don't extract from templated functions for now as templates are hard
+  // to deal with.
+  std::string TemplateFailInput = R"cpp(
+    template<typename T>
+    void f() {
+      [[int x;]]
+    }
+  )cpp";
+  EXPECT_EQ(apply(TemplateFailInput), "unavailable");
+
+  // FIXME: This should be extractable after selectionTree works correctly for
+  // macros (currently it doesn't select anything for the following case)
+  std::string MacroFailInput = R"cpp(
+    #define F(BODY) void f() { BODY }
+    F ([[int x = 0;]])
+  )cpp";
+  EXPECT_EQ(apply(MacroFailInput), "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, ControlFlow) {
+  Context = Function;
+  // We should be able to extract break/continue with a parent loop/switch.
+  EXPECT_THAT(apply(" [[for(;;) if(1) break;]] "), HasSubstr("extracted"));
+  EXPECT_THAT(apply(" for(;;) [[while(1) break;]] "), HasSubstr("extracted"));
+  EXPECT_THAT(apply(" [[switch(1) { break; }]]"), HasSubstr("extracted"));
+  EXPECT_THAT(apply(" [[while(1) switch(1) { continue; }]]"),
+              HasSubstr("extracted"));
+  // Don't extract break and continue without a loop/switch parent.
+  EXPECT_THAT(apply(" for(;;) [[if(1) continue;]] "), StartsWith("fail"));
+  EXPECT_THAT(apply(" while(1) [[if(1) break;]] "), StartsWith("fail"));
+  EXPECT_THAT(apply(" switch(1) { [[break;]] }"), StartsWith("fail"));
+  EXPECT_THAT(apply(" for(;;) { [[while(1) break; break;]] }"),
+              StartsWith("fail"));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

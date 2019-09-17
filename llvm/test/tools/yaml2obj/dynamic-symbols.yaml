@@ -1,9 +1,10 @@
-# Ensures that implicitly added sections can be ordered within Sections.
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=SECTION
-# RUN: llvm-nm --dynamic %t | FileCheck %s --check-prefix=SYMBOL
+## Ensures that implicitly added sections can be ordered within Sections.
 
-!ELF
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s --check-prefix=SECTION
+# RUN: llvm-nm --dynamic %t1 | FileCheck %s --check-prefix=SYMBOL
+
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
@@ -14,6 +15,10 @@ Sections:
     Type: SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_WRITE ]
 DynamicSymbols:
+  - Name: dynlocal
+    Type: STT_OBJECT
+    Section: .data
+    Binding: STB_LOCAL
   - Name: dynglobal
     Type: STT_OBJECT
     Section: .data
@@ -22,10 +27,6 @@ DynamicSymbols:
     Type: STT_OBJECT
     Section: .data
     Binding: STB_WEAK
-  - Name: dynlocal
-    Type: STT_OBJECT
-    Section: .data
-    Binding: STB_LOCAL
 
 # SECTION: Name: .dynsym
 # SECTION-NEXT: Type: SHT_DYNSYM
@@ -36,6 +37,60 @@ DynamicSymbols:
 # SECTION-NEXT: Flags
 # SECTION-NEXT: SHF_ALLOC
 
+# SYMBOL-DAG: d dynlocal
 # SYMBOL-DAG: D dynglobal
 # SYMBOL-DAG: V dynweak
-# SYMBOL-DAG: d dynlocal
+
+## Check we can use numeric values to refer to sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: not llvm-readobj --dyn-symbols %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=NUM
+
+# NUM:      Name: foo
+# NUM:      Section:
+# NUM-SAME: .data (0x1)
+
+# NUM:      Name: bar
+# NUM:      Section: 
+# NUM-SAME: .symtab (0x2)
+
+# NUM: error: '[[FILE]]': invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+DynamicSymbols:
+  - Name: foo
+    Section: 1
+  - Name: bar
+    Section: 2
+  - Name: zed
+    Section: 0xff
+
+## Check we report errors when unknown sections are referenced by dynamic symbols.
+
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=ERR
+
+# ERR: error: unknown section referenced: '.sec1' by YAML symbol 'foo'
+# ERR: error: unknown section referenced: '.sec2' by YAML symbol 'bar'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+DynamicSymbols:
+  - Name: foo
+    Section: .sec1
+  - Name: bar
+    Section: .sec2

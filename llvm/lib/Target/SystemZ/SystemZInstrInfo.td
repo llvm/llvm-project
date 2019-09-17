@@ -337,15 +337,15 @@ defm CondStore8Mux  : CondStores<GRX32, nonvolatile_truncstorei8,
 defm CondStore16Mux : CondStores<GRX32, nonvolatile_truncstorei16,
                                  nonvolatile_anyextloadi16, bdxaddr20only>,
                       Requires<[FeatureHighWord]>;
-defm CondStore32Mux : CondStores<GRX32, nonvolatile_store,
-                                 nonvolatile_load, bdxaddr20only>,
+defm CondStore32Mux : CondStores<GRX32, simple_store,
+                                 simple_load, bdxaddr20only>,
                       Requires<[FeatureLoadStoreOnCond2]>;
 defm CondStore8     : CondStores<GR32, nonvolatile_truncstorei8,
                                  nonvolatile_anyextloadi8, bdxaddr20only>;
 defm CondStore16    : CondStores<GR32, nonvolatile_truncstorei16,
                                  nonvolatile_anyextloadi16, bdxaddr20only>;
-defm CondStore32    : CondStores<GR32, nonvolatile_store,
-                                 nonvolatile_load, bdxaddr20only>;
+defm CondStore32    : CondStores<GR32, simple_store,
+                                 simple_load, bdxaddr20only>;
 
 defm : CondStores64<CondStore8, CondStore8Inv, nonvolatile_truncstorei8,
                     nonvolatile_anyextloadi8, bdxaddr20only>;
@@ -353,8 +353,8 @@ defm : CondStores64<CondStore16, CondStore16Inv, nonvolatile_truncstorei16,
                     nonvolatile_anyextloadi16, bdxaddr20only>;
 defm : CondStores64<CondStore32, CondStore32Inv, nonvolatile_truncstorei32,
                     nonvolatile_anyextloadi32, bdxaddr20only>;
-defm CondStore64 : CondStores<GR64, nonvolatile_store,
-                              nonvolatile_load, bdxaddr20only>;
+defm CondStore64 : CondStores<GR64, simple_store,
+                              simple_load, bdxaddr20only>;
 
 //===----------------------------------------------------------------------===//
 // Move instructions
@@ -531,8 +531,8 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
 
   // Load on condition.  Matched via DAG pattern.
   // Expands to LOC or LOCFH, depending on the choice of register.
-  def LOCMux : CondUnaryRSYPseudo<nonvolatile_load, GRX32, 4>;
-  defm LOCFH : CondUnaryRSYPair<"locfh", 0xEBE0, nonvolatile_load, GRH32, 4>;
+  def LOCMux : CondUnaryRSYPseudo<simple_load, GRX32, 4>;
+  defm LOCFH : CondUnaryRSYPair<"locfh", 0xEBE0, simple_load, GRH32, 4>;
 
   // Store on condition.  Expanded from CondStore* pseudos.
   // Expands to STOC or STOCFH, depending on the choice of register.
@@ -563,8 +563,8 @@ let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
   }
 
   // Load on condition.  Matched via DAG pattern.
-  defm LOC  : CondUnaryRSYPair<"loc",  0xEBF2, nonvolatile_load, GR32, 4>;
-  defm LOCG : CondUnaryRSYPair<"locg", 0xEBE2, nonvolatile_load, GR64, 8>;
+  defm LOC  : CondUnaryRSYPair<"loc",  0xEBF2, simple_load, GR32, 4>;
+  defm LOCG : CondUnaryRSYPair<"locg", 0xEBE2, simple_load, GR64, 8>;
 
   // Store on condition.  Expanded from CondStore* pseudos.
   defm STOC  : CondStoreRSYPair<"stoc",  0xEBF3, GR32, 4>;
@@ -2082,7 +2082,7 @@ let Predicates = [FeatureProcessorAssist] in {
 // cleared.  We only use the first result here.
 let Defs = [CC] in
   def FLOGR : UnaryRRE<"flogr", 0xB983, null_frag, GR128, GR64>;
-def : Pat<(ctlz GR64:$src),
+def : Pat<(i64 (ctlz GR64:$src)),
           (EXTRACT_SUBREG (FLOGR GR64:$src), subreg_h64)>;
 
 // Population count.  Counts bits set per byte or doubleword.

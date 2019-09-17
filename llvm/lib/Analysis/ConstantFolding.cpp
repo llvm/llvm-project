@@ -781,10 +781,10 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
 }
 
 /// Strip the pointer casts, but preserve the address space information.
-Constant* StripPtrCastKeepAS(Constant* Ptr, Type *&ElemTy) {
+Constant *StripPtrCastKeepAS(Constant *Ptr, Type *&ElemTy) {
   assert(Ptr->getType()->isPointerTy() && "Not a pointer type");
   auto *OldPtrTy = cast<PointerType>(Ptr->getType());
-  Ptr = cast<Constant>(Ptr->stripPointerCastsNoFollowAliases());
+  Ptr = cast<Constant>(Ptr->stripPointerCasts());
   auto *NewPtrTy = cast<PointerType>(Ptr->getType());
 
   ElemTy = NewPtrTy->getPointerElementType();
@@ -1464,40 +1464,49 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
 
   if (!F->hasName())
     return false;
-  StringRef Name = F->getName();
 
   // In these cases, the check of the length is required.  We don't want to
   // return true for a name like "cos\0blah" which strcmp would return equal to
   // "cos", but has length 8.
+  StringRef Name = F->getName();
   switch (Name[0]) {
   default:
     return false;
   case 'a':
-    return Name == "acos" || Name == "asin" || Name == "atan" ||
-           Name == "atan2" || Name == "acosf" || Name == "asinf" ||
-           Name == "atanf" || Name == "atan2f";
+    return Name == "acos" || Name == "acosf" ||
+           Name == "asin" || Name == "asinf" ||
+           Name == "atan" || Name == "atanf" ||
+           Name == "atan2" || Name == "atan2f";
   case 'c':
-    return Name == "ceil" || Name == "cos" || Name == "cosh" ||
-           Name == "ceilf" || Name == "cosf" || Name == "coshf";
+    return Name == "ceil" || Name == "ceilf" ||
+           Name == "cos" || Name == "cosf" ||
+           Name == "cosh" || Name == "coshf";
   case 'e':
-    return Name == "exp" || Name == "exp2" || Name == "expf" || Name == "exp2f";
+    return Name == "exp" || Name == "expf" ||
+           Name == "exp2" || Name == "exp2f";
   case 'f':
-    return Name == "fabs" || Name == "floor" || Name == "fmod" ||
-           Name == "fabsf" || Name == "floorf" || Name == "fmodf";
+    return Name == "fabs" || Name == "fabsf" ||
+           Name == "floor" || Name == "floorf" ||
+           Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "log10" || Name == "logf" ||
-           Name == "log10f";
+    return Name == "log" || Name == "logf" ||
+           Name == "log10" || Name == "log10f";
+  case 'n':
+    return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
     return Name == "pow" || Name == "powf";
   case 'r':
-    return Name == "round" || Name == "roundf";
+    return Name == "rint" || Name == "rintf" ||
+           Name == "round" || Name == "roundf";
   case 's':
-    return Name == "sin" || Name == "sinh" || Name == "sqrt" ||
-           Name == "sinf" || Name == "sinhf" || Name == "sqrtf";
+    return Name == "sin" || Name == "sinf" ||
+           Name == "sinh" || Name == "sinhf" ||
+           Name == "sqrt" || Name == "sqrtf";
   case 't':
-    return Name == "tan" || Name == "tanh" || Name == "tanf" || Name == "tanhf";
+    return Name == "tan" || Name == "tanf" ||
+           Name == "tanh" || Name == "tanhf" ||
+           Name == "trunc" || Name == "truncf";
   case '_':
-
     // Check for various function names that get used for the math functions
     // when the header files are preprocessed with the macro
     // __FINITE_MATH_ONLY__ enabled.
@@ -1713,40 +1722,37 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
 
-    if (IntrinsicID == Intrinsic::round) {
-      APFloat V = Op->getValueAPF();
-      V.roundToIntegral(APFloat::rmNearestTiesToAway);
-      return ConstantFP::get(Ty->getContext(), V);
+    // Use internal versions of these intrinsics.
+    APFloat U = Op->getValueAPF();
+
+    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
+      U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
-    if (IntrinsicID == Intrinsic::floor) {
-      APFloat V = Op->getValueAPF();
-      V.roundToIntegral(APFloat::rmTowardNegative);
-      return ConstantFP::get(Ty->getContext(), V);
+    if (IntrinsicID == Intrinsic::round) {
+      U.roundToIntegral(APFloat::rmNearestTiesToAway);
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
     if (IntrinsicID == Intrinsic::ceil) {
-      APFloat V = Op->getValueAPF();
-      V.roundToIntegral(APFloat::rmTowardPositive);
-      return ConstantFP::get(Ty->getContext(), V);
+      U.roundToIntegral(APFloat::rmTowardPositive);
+      return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    if (IntrinsicID == Intrinsic::floor) {
+      U.roundToIntegral(APFloat::rmTowardNegative);
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
     if (IntrinsicID == Intrinsic::trunc) {
-      APFloat V = Op->getValueAPF();
-      V.roundToIntegral(APFloat::rmTowardZero);
-      return ConstantFP::get(Ty->getContext(), V);
+      U.roundToIntegral(APFloat::rmTowardZero);
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
-    if (IntrinsicID == Intrinsic::rint) {
-      APFloat V = Op->getValueAPF();
-      V.roundToIntegral(APFloat::rmNearestTiesToEven);
-      return ConstantFP::get(Ty->getContext(), V);
-    }
-
-    if (IntrinsicID == Intrinsic::nearbyint) {
-      APFloat V = Op->getValueAPF();
-      V.roundToIntegral(APFloat::rmNearestTiesToEven);
-      return ConstantFP::get(Ty->getContext(), V);
+    if (IntrinsicID == Intrinsic::fabs) {
+      U.clearSign();
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
     /// We only fold functions with finite arguments. Folding NaN and inf is
@@ -1763,18 +1769,19 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     switch (IntrinsicID) {
       default: break;
-      case Intrinsic::fabs:
-        return ConstantFoldFP(fabs, V, Ty);
-      case Intrinsic::log2:
-        return ConstantFoldFP(Log2, V, Ty);
       case Intrinsic::log:
         return ConstantFoldFP(log, V, Ty);
+      case Intrinsic::log2:
+        // TODO: What about hosts that lack a C99 library?
+        return ConstantFoldFP(Log2, V, Ty);
       case Intrinsic::log10:
+        // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, V, Ty);
       case Intrinsic::exp:
         return ConstantFoldFP(exp, V, Ty);
       case Intrinsic::exp2:
-        return ConstantFoldFP(exp2, V, Ty);
+        // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
+        return ConstantFoldBinaryFP(pow, 2.0, V, Ty);
       case Intrinsic::sin:
         return ConstantFoldFP(sin, V, Ty);
       case Intrinsic::cos:
@@ -1786,104 +1793,142 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (!TLI)
       return nullptr;
 
-    char NameKeyChar = Name[0];
-    if (Name[0] == '_' && Name.size() > 2 && Name[1] == '_')
-      NameKeyChar = Name[2];
-
-    switch (NameKeyChar) {
-    case 'a':
-      if ((Name == "acos" && TLI->has(LibFunc_acos)) ||
-          (Name == "acosf" && TLI->has(LibFunc_acosf)) ||
-          (Name == "__acos_finite" && TLI->has(LibFunc_acos_finite)) ||
-          (Name == "__acosf_finite" && TLI->has(LibFunc_acosf_finite)))
+    LibFunc Func = NotLibFunc;
+    TLI->getLibFunc(Name, Func);
+    switch (Func) {
+    default:
+      break;
+    case LibFunc_acos:
+    case LibFunc_acosf:
+    case LibFunc_acos_finite:
+    case LibFunc_acosf_finite:
+      if (TLI->has(Func))
         return ConstantFoldFP(acos, V, Ty);
-      else if ((Name == "asin" && TLI->has(LibFunc_asin)) ||
-               (Name == "asinf" && TLI->has(LibFunc_asinf)) ||
-               (Name == "__asin_finite" && TLI->has(LibFunc_asin_finite)) ||
-               (Name == "__asinf_finite" && TLI->has(LibFunc_asinf_finite)))
+      break;
+    case LibFunc_asin:
+    case LibFunc_asinf:
+    case LibFunc_asin_finite:
+    case LibFunc_asinf_finite:
+      if (TLI->has(Func))
         return ConstantFoldFP(asin, V, Ty);
-      else if ((Name == "atan" && TLI->has(LibFunc_atan)) ||
-               (Name == "atanf" && TLI->has(LibFunc_atanf)))
+      break;
+    case LibFunc_atan:
+    case LibFunc_atanf:
+      if (TLI->has(Func))
         return ConstantFoldFP(atan, V, Ty);
       break;
-    case 'c':
-      if ((Name == "ceil" && TLI->has(LibFunc_ceil)) ||
-          (Name == "ceilf" && TLI->has(LibFunc_ceilf)))
-        return ConstantFoldFP(ceil, V, Ty);
-      else if ((Name == "cos" && TLI->has(LibFunc_cos)) ||
-               (Name == "cosf" && TLI->has(LibFunc_cosf)))
+    case LibFunc_ceil:
+    case LibFunc_ceilf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmTowardPositive);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
+      break;
+    case LibFunc_cos:
+    case LibFunc_cosf:
+      if (TLI->has(Func))
         return ConstantFoldFP(cos, V, Ty);
-      else if ((Name == "cosh" && TLI->has(LibFunc_cosh)) ||
-               (Name == "coshf" && TLI->has(LibFunc_coshf)) ||
-               (Name == "__cosh_finite" && TLI->has(LibFunc_cosh_finite)) ||
-               (Name == "__coshf_finite" && TLI->has(LibFunc_coshf_finite)))
+      break;
+    case LibFunc_cosh:
+    case LibFunc_coshf:
+    case LibFunc_cosh_finite:
+    case LibFunc_coshf_finite:
+      if (TLI->has(Func))
         return ConstantFoldFP(cosh, V, Ty);
       break;
-    case 'e':
-      if ((Name == "exp" && TLI->has(LibFunc_exp)) ||
-          (Name == "expf" && TLI->has(LibFunc_expf)) ||
-          (Name == "__exp_finite" && TLI->has(LibFunc_exp_finite)) ||
-          (Name == "__expf_finite" && TLI->has(LibFunc_expf_finite)))
+    case LibFunc_exp:
+    case LibFunc_expf:
+    case LibFunc_exp_finite:
+    case LibFunc_expf_finite:
+      if (TLI->has(Func))
         return ConstantFoldFP(exp, V, Ty);
-      if ((Name == "exp2" && TLI->has(LibFunc_exp2)) ||
-          (Name == "exp2f" && TLI->has(LibFunc_exp2f)) ||
-          (Name == "__exp2_finite" && TLI->has(LibFunc_exp2_finite)) ||
-          (Name == "__exp2f_finite" && TLI->has(LibFunc_exp2f_finite)))
-        // Constant fold exp2(x) as pow(2,x) in case the host doesn't have a
-        // C99 library.
+      break;
+    case LibFunc_exp2:
+    case LibFunc_exp2f:
+    case LibFunc_exp2_finite:
+    case LibFunc_exp2f_finite:
+      if (TLI->has(Func))
+        // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
         return ConstantFoldBinaryFP(pow, 2.0, V, Ty);
       break;
-    case 'f':
-      if ((Name == "fabs" && TLI->has(LibFunc_fabs)) ||
-          (Name == "fabsf" && TLI->has(LibFunc_fabsf)))
-        return ConstantFoldFP(fabs, V, Ty);
-      else if ((Name == "floor" && TLI->has(LibFunc_floor)) ||
-               (Name == "floorf" && TLI->has(LibFunc_floorf)))
-        return ConstantFoldFP(floor, V, Ty);
+    case LibFunc_fabs:
+    case LibFunc_fabsf:
+      if (TLI->has(Func)) {
+        U.clearSign();
+        return ConstantFP::get(Ty->getContext(), U);
+      }
       break;
-    case 'l':
-      if ((Name == "log" && V > 0 && TLI->has(LibFunc_log)) ||
-          (Name == "logf" && V > 0 && TLI->has(LibFunc_logf)) ||
-          (Name == "__log_finite" && V > 0 &&
-            TLI->has(LibFunc_log_finite)) ||
-          (Name == "__logf_finite" && V > 0 &&
-            TLI->has(LibFunc_logf_finite)))
+    case LibFunc_floor:
+    case LibFunc_floorf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmTowardNegative);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
+      break;
+    case LibFunc_log:
+    case LibFunc_logf:
+    case LibFunc_log_finite:
+    case LibFunc_logf_finite:
+      if (V > 0.0 && TLI->has(Func))
         return ConstantFoldFP(log, V, Ty);
-      else if ((Name == "log10" && V > 0 && TLI->has(LibFunc_log10)) ||
-               (Name == "log10f" && V > 0 && TLI->has(LibFunc_log10f)) ||
-               (Name == "__log10_finite" && V > 0 &&
-                 TLI->has(LibFunc_log10_finite)) ||
-               (Name == "__log10f_finite" && V > 0 &&
-                 TLI->has(LibFunc_log10f_finite)))
+      break;
+    case LibFunc_log10:
+    case LibFunc_log10f:
+    case LibFunc_log10_finite:
+    case LibFunc_log10f_finite:
+      if (V > 0.0 && TLI->has(Func))
+        // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, V, Ty);
       break;
-    case 'r':
-      if ((Name == "round" && TLI->has(LibFunc_round)) ||
-          (Name == "roundf" && TLI->has(LibFunc_roundf)))
-        return ConstantFoldFP(round, V, Ty);
+    case LibFunc_nearbyint:
+    case LibFunc_nearbyintf:
+    case LibFunc_rint:
+    case LibFunc_rintf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmNearestTiesToEven);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
       break;
-    case 's':
-      if ((Name == "sin" && TLI->has(LibFunc_sin)) ||
-          (Name == "sinf" && TLI->has(LibFunc_sinf)))
+    case LibFunc_round:
+    case LibFunc_roundf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmNearestTiesToAway);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
+      break;
+    case LibFunc_sin:
+    case LibFunc_sinf:
+      if (TLI->has(Func))
         return ConstantFoldFP(sin, V, Ty);
-      else if ((Name == "sinh" && TLI->has(LibFunc_sinh)) ||
-               (Name == "sinhf" && TLI->has(LibFunc_sinhf)) ||
-               (Name == "__sinh_finite" && TLI->has(LibFunc_sinh_finite)) ||
-               (Name == "__sinhf_finite" && TLI->has(LibFunc_sinhf_finite)))
+      break;
+    case LibFunc_sinh:
+    case LibFunc_sinhf:
+    case LibFunc_sinh_finite:
+    case LibFunc_sinhf_finite:
+      if (TLI->has(Func))
         return ConstantFoldFP(sinh, V, Ty);
-      else if ((Name == "sqrt" && V >= 0 && TLI->has(LibFunc_sqrt)) ||
-               (Name == "sqrtf" && V >= 0 && TLI->has(LibFunc_sqrtf)))
+      break;
+    case LibFunc_sqrt:
+    case LibFunc_sqrtf:
+      if (V >= 0.0 && TLI->has(Func))
         return ConstantFoldFP(sqrt, V, Ty);
       break;
-    case 't':
-      if ((Name == "tan" && TLI->has(LibFunc_tan)) ||
-          (Name == "tanf" && TLI->has(LibFunc_tanf)))
+    case LibFunc_tan:
+    case LibFunc_tanf:
+      if (TLI->has(Func))
         return ConstantFoldFP(tan, V, Ty);
-      else if ((Name == "tanh" && TLI->has(LibFunc_tanh)) ||
-               (Name == "tanhf" && TLI->has(LibFunc_tanhf)))
+      break;
+    case LibFunc_tanh:
+    case LibFunc_tanhf:
+      if (TLI->has(Func))
         return ConstantFoldFP(tanh, V, Ty);
       break;
-    default:
+    case LibFunc_trunc:
+    case LibFunc_truncf:
+      if (TLI->has(Func)) {
+        U.roundToIntegral(APFloat::rmTowardZero);
+        return ConstantFP::get(Ty->getContext(), U);
+      }
       break;
     }
     return nullptr;
@@ -2002,19 +2047,35 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
 
       if (!TLI)
         return nullptr;
-      if ((Name == "pow" && TLI->has(LibFunc_pow)) ||
-          (Name == "powf" && TLI->has(LibFunc_powf)) ||
-          (Name == "__pow_finite" && TLI->has(LibFunc_pow_finite)) ||
-          (Name == "__powf_finite" && TLI->has(LibFunc_powf_finite)))
-        return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
-      if ((Name == "fmod" && TLI->has(LibFunc_fmod)) ||
-          (Name == "fmodf" && TLI->has(LibFunc_fmodf)))
-        return ConstantFoldBinaryFP(fmod, Op1V, Op2V, Ty);
-      if ((Name == "atan2" && TLI->has(LibFunc_atan2)) ||
-          (Name == "atan2f" && TLI->has(LibFunc_atan2f)) ||
-          (Name == "__atan2_finite" && TLI->has(LibFunc_atan2_finite)) ||
-          (Name == "__atan2f_finite" && TLI->has(LibFunc_atan2f_finite)))
-        return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
+
+      LibFunc Func = NotLibFunc;
+      TLI->getLibFunc(Name, Func);
+      switch (Func) {
+      default:
+        break;
+      case LibFunc_pow:
+      case LibFunc_powf:
+      case LibFunc_pow_finite:
+      case LibFunc_powf_finite:
+        if (TLI->has(Func))
+          return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
+        break;
+      case LibFunc_fmod:
+      case LibFunc_fmodf:
+        if (TLI->has(Func)) {
+          APFloat V = Op1->getValueAPF();
+          if (APFloat::opStatus::opOK == V.mod(Op2->getValueAPF()))
+            return ConstantFP::get(Ty->getContext(), V);
+        }
+        break;
+      case LibFunc_atan2:
+      case LibFunc_atan2f:
+      case LibFunc_atan2_finite:
+      case LibFunc_atan2f_finite:
+        if (TLI->has(Func))
+          return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
+        break;
+      }
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())
         return ConstantFP::get(Ty->getContext(),
@@ -2041,20 +2102,27 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
 
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+      // X - undef -> { undef, false }
+      // undef - X -> { undef, false }
+      // X + undef -> { undef, false }
+      // undef + x -> { undef, false }
+      if (!C0 || !C1) {
+        return ConstantStruct::get(
+            cast<StructType>(Ty),
+            {UndefValue::get(Ty->getStructElementType(0)),
+             Constant::getNullValue(Ty->getStructElementType(1))});
+      }
+      LLVM_FALLTHROUGH;
     case Intrinsic::smul_with_overflow:
-    case Intrinsic::umul_with_overflow:
-      // Even if both operands are undef, we cannot fold muls to undef
-      // in the general case. For example, on i2 there are no inputs
-      // that would produce { i2 -1, i1 true } as the result.
+    case Intrinsic::umul_with_overflow: {
+      // undef * X -> { 0, false }
+      // X * undef -> { 0, false }
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
-      LLVM_FALLTHROUGH;
-    case Intrinsic::sadd_with_overflow:
-    case Intrinsic::uadd_with_overflow:
-    case Intrinsic::ssub_with_overflow:
-    case Intrinsic::usub_with_overflow: {
-      if (!C0 || !C1)
-        return UndefValue::get(Ty);
 
       APInt Res;
       bool Overflow;
@@ -2194,13 +2262,9 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
           APFloat V = Op1->getValueAPF();
-          APFloat::opStatus s = V.fusedMultiplyAdd(Op2->getValueAPF(),
-                                                   Op3->getValueAPF(),
-                                                   APFloat::rmNearestTiesToEven);
-          if (s != APFloat::opInvalidOp)
-            return ConstantFP::get(Ty->getContext(), V);
-
-          return nullptr;
+          V.fusedMultiplyAdd(Op2->getValueAPF(), Op3->getValueAPF(),
+                             APFloat::rmNearestTiesToEven);
+          return ConstantFP::get(Ty->getContext(), V);
         }
         }
       }

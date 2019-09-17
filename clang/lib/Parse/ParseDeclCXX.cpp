@@ -862,7 +862,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
          "Not a static_assert declaration");
 
   if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_static_assert);
+    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
   if (Tok.is(tok::kw_static_assert))
     Diag(Tok, diag::warn_cxx98_compat_static_assert);
 
@@ -1313,6 +1313,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
   case tok::kw_mutable:         // struct foo {...} mutable   x;
   case tok::kw_thread_local:    // struct foo {...} thread_local x;
   case tok::kw_constexpr:       // struct foo {...} constexpr x;
+  case tok::kw_consteval:       // struct foo {...} consteval x;
+  case tok::kw_constinit:       // struct foo {...} constinit x;
     // As shown above, type qualifiers and storage class specifiers absolutely
     // can occur after class specifiers according to the grammar.  However,
     // almost no one actually writes code like this.  If we see one of these,
@@ -3914,7 +3916,8 @@ IdentifierInfo *Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc) {
 
 static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
                                               IdentifierInfo *ScopeName) {
-  switch (ParsedAttr::getKind(AttrName, ScopeName, ParsedAttr::AS_CXX11)) {
+  switch (
+      ParsedAttr::getParsedKind(AttrName, ScopeName, ParsedAttr::AS_CXX11)) {
   case ParsedAttr::AT_CarriesDependency:
   case ParsedAttr::AT_Deprecated:
   case ParsedAttr::AT_FallThrough:

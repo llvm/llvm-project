@@ -19,7 +19,7 @@ namespace modernize {
 
 static const char SpecialFunction[] = "SpecialFunction";
 
-/// \brief Finds all the named non-static fields of \p Record.
+/// Finds all the named non-static fields of \p Record.
 static std::set<const FieldDecl *>
 getAllNamedFields(const CXXRecordDecl *Record) {
   std::set<const FieldDecl *> Result;
@@ -32,7 +32,7 @@ getAllNamedFields(const CXXRecordDecl *Record) {
   return Result;
 }
 
-/// \brief Returns the names of the direct bases of \p Record, both virtual and
+/// Returns the names of the direct bases of \p Record, both virtual and
 /// non-virtual.
 static std::set<const Type *> getAllDirectBases(const CXXRecordDecl *Record) {
   std::set<const Type *> Result;
@@ -44,7 +44,7 @@ static std::set<const Type *> getAllDirectBases(const CXXRecordDecl *Record) {
   return Result;
 }
 
-/// \brief Returns a matcher that matches member expressions where the base is
+/// Returns a matcher that matches member expressions where the base is
 /// the variable declared as \p Var and the accessed member is the one declared
 /// as \p Field.
 internal::Matcher<Expr> accessToFieldInVar(const FieldDecl *Field,
@@ -54,7 +54,7 @@ internal::Matcher<Expr> accessToFieldInVar(const FieldDecl *Field,
                  member(fieldDecl(equalsNode(Field)))));
 }
 
-/// \brief Check that the given constructor has copy signature and that it
+/// Check that the given constructor has copy signature and that it
 /// copy-initializes all its bases and members.
 static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
                                                const CXXConstructorDecl *Ctor) {
@@ -111,7 +111,7 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
          BasesToInit.size() + FieldsToInit.size();
 }
 
-/// \brief Checks that the given method is an overloading of the assignment
+/// Checks that the given method is an overloading of the assignment
 /// operator, has copy signature, returns a reference to "*this" and copies
 /// all its members and subobjects.
 static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
@@ -187,7 +187,7 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
   return Compound->size() == BasesToInit.size() + FieldsToInit.size() + 1;
 }
 
-/// \brief Returns false if the body has any non-whitespace character.
+/// Returns false if the body has any non-whitespace character.
 static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
   bool Invalid = false;
   StringRef Text = Lexer::getSourceText(

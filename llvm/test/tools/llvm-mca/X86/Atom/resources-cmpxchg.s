@@ -3,6 +3,8 @@
 
 cmpxchg8b  (%rax)
 cmpxchg16b (%rax)
+lock cmpxchg8b  (%rax)
+lock cmpxchg16b (%rax)
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -15,6 +17,8 @@ cmpxchg16b (%rax)
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      18    9.00    *      *            cmpxchg8b	(%rax)
 # CHECK-NEXT:  1      22    11.00   *      *            cmpxchg16b	(%rax)
+# CHECK-NEXT:  1      18    9.00    *      *            lock		cmpxchg8b	(%rax)
+# CHECK-NEXT:  1      22    11.00   *      *            lock		cmpxchg16b	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - AtomPort0
@@ -22,9 +26,11 @@ cmpxchg16b (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 20.00  20.00
+# CHECK-NEXT: 40.00  40.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
 # CHECK-NEXT: 9.00   9.00   cmpxchg8b	(%rax)
 # CHECK-NEXT: 11.00  11.00  cmpxchg16b	(%rax)
+# CHECK-NEXT: 9.00   9.00   lock		cmpxchg8b	(%rax)
+# CHECK-NEXT: 11.00  11.00  lock		cmpxchg16b	(%rax)

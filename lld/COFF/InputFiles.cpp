@@ -73,6 +73,10 @@ static void checkAndSetWeakAlias(SymbolTable *symtab, InputFile *f,
   }
 }
 
+static bool ignoredSymbolName(StringRef name) {
+  return name == "@feat.00" || name == "@comp.id";
+}
+
 ArchiveFile::ArchiveFile(MemoryBufferRef m) : InputFile(ArchiveKind, m) {}
 
 void ArchiveFile::parse() {
@@ -81,7 +85,7 @@ void ArchiveFile::parse() {
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &sym : file->symbols())
-    symtab->addLazy(this, sym);
+    symtab->addLazyArchive(this, sym);
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -114,6 +118,49 @@ std::vector<MemoryBufferRef> getArchiveMembers(Archive *file) {
     fatal(file->getFileName() +
           ": Archive::children failed: " + toString(std::move(err)));
   return v;
+}
+
+void LazyObjFile::fetch() {
+  if (mb.getBuffer().empty())
+    return;
+
+  InputFile *file;
+  if (isBitcode(mb))
+    file = make<BitcodeFile>(mb, "", 0, std::move(symbols));
+  else
+    file = make<ObjFile>(mb, std::move(symbols));
+  mb = {};
+  symtab->addFile(file);
+}
+
+void LazyObjFile::parse() {
+  if (isBitcode(this->mb)) {
+    // Bitcode file.
+    std::unique_ptr<lto::InputFile> obj =
+        CHECK(lto::InputFile::create(this->mb), this);
+    for (const lto::InputFile::Symbol &sym : obj->symbols()) {
+      if (!sym.isUndefined())
+        symtab->addLazyObject(this, sym.getName());
+    }
+    return;
+  }
+
+  // Native object file.
+  std::unique_ptr<Binary> coffObjPtr = CHECK(createBinary(mb), this);
+  COFFObjectFile *coffObj = cast<COFFObjectFile>(coffObjPtr.get());
+  uint32_t numSymbols = coffObj->getNumberOfSymbols();
+  for (uint32_t i = 0; i < numSymbols; ++i) {
+    COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
+    if (coffSym.isUndefined() || !coffSym.isExternal() ||
+        coffSym.isWeakExternal())
+      continue;
+    StringRef name;
+    coffObj->getSymbolName(coffSym, name);
+    if (coffSym.isAbsolute() && ignoredSymbolName(name))
+      continue;
+    symtab->addLazyObject(this, name);
+    i += coffSym.getNumberOfAuxSymbols();
+  }
 }
 
 void ObjFile::parse() {
@@ -206,10 +253,6 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   if (def)
     c->checksum = def->CheckSum;
 
-  // link.exe uses the presence of .rsrc$01 for LNK4078, so match that.
-  if (name == ".rsrc$01")
-    isResourceObjFile = true;
-
   // CodeView sections are stored to a different vector because they are not
   // linked in the regular manner.
   if (c->isCodeView())
@@ -226,10 +269,16 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     // relocations, in .rdata, leader symbol name matches the MSVC name mangling
     // for string literals) are subject to string tail merging.
     MergeChunk::addSection(c);
+  else if (name == ".rsrc" || name.startswith(".rsrc$"))
+    resourceChunks.push_back(c);
   else
     chunks.push_back(c);
 
   return c;
+}
+
+void ObjFile::includeResourceChunks() {
+  chunks.insert(chunks.end(), resourceChunks.begin(), resourceChunks.end());
 }
 
 void ObjFile::readAssociativeDefinition(
@@ -524,13 +573,11 @@ Optional<Symbol *> ObjFile::createDefined(
   if (sym.isAbsolute()) {
     StringRef name = getName();
 
-    // Skip special symbols.
-    if (name == "@comp.id")
-      return nullptr;
-    if (name == "@feat.00") {
+    if (name == "@feat.00")
       feat00Flags = sym.getValue();
+    // Skip special symbols.
+    if (ignoredSymbolName(name))
       return nullptr;
-    }
 
     if (sym.isExternal())
       return symtab->addAbsolute(name, sym);
@@ -780,8 +827,9 @@ void ImportFile::parse() {
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive)
-    : InputFile(BitcodeKind, mb) {
+                         uint64_t offsetInArchive,
+                         std::vector<Symbol *> &&symbols)
+    : InputFile(BitcodeKind, mb), symbols(std::move(symbols)) {
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());

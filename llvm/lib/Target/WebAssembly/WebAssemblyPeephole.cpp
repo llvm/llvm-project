@@ -120,7 +120,8 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   const WebAssemblyTargetLowering &TLI =
       *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
-  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto &LibInfo =
+      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
   bool Changed = false;
 
   for (auto &MBB : MF)

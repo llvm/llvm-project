@@ -223,7 +223,7 @@ isAsmClobberable(const MachineFunction &MF, unsigned PhysReg) const {
 
 const TargetRegisterClass *
 ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
-                                               const MachineFunction &) const {
+                                               const MachineFunction &MF) const {
   const TargetRegisterClass *Super = RC;
   TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
   do {
@@ -231,11 +231,13 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case ARM::GPRRegClassID:
     case ARM::SPRRegClassID:
     case ARM::DPRRegClassID:
+    case ARM::GPRPairRegClassID:
+      return Super;
     case ARM::QPRRegClassID:
     case ARM::QQPRRegClassID:
     case ARM::QQQQPRRegClassID:
-    case ARM::GPRPairRegClassID:
-      return Super;
+      if (MF.getSubtarget<ARMSubtarget>().hasNEON())
+        return Super;
     }
     Super = *I++;
   } while (Super);

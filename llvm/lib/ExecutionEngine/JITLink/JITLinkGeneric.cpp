@@ -238,60 +238,47 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
 
     // Calculate segment content size.
     size_t SegContentSize = 0;
+    uint32_t SegContentAlign = 1;
     for (auto &SI : SegLayout.ContentSections) {
       assert(!SI.S->atoms_empty() && "Sections in layout must not be empty");
       assert(!SI.Atoms.empty() && "Section layouts must not be empty");
 
       // Bump to section alignment before processing atoms.
       SegContentSize = alignTo(SegContentSize, SI.S->getAlignment());
+      SegContentAlign = std::max(SegContentAlign, SI.S->getAlignment());
 
       for (auto *DA : SI.Atoms) {
         SegContentSize = alignTo(SegContentSize, DA->getAlignment());
         SegContentSize += DA->getSize();
+        SegContentAlign = std::max(SegContentAlign, DA->getAlignment());
       }
-    }
-
-    // Get segment content alignment.
-    unsigned SegContentAlign = 1;
-    if (!SegLayout.ContentSections.empty()) {
-      auto &FirstContentSection = SegLayout.ContentSections.front();
-      SegContentAlign =
-          std::max(FirstContentSection.S->getAlignment(),
-                   FirstContentSection.Atoms.front()->getAlignment());
     }
 
     // Calculate segment zero-fill size.
     uint64_t SegZeroFillSize = 0;
+    uint32_t SegZeroFillAlign = 1;
+
     for (auto &SI : SegLayout.ZeroFillSections) {
       assert(!SI.S->atoms_empty() && "Sections in layout must not be empty");
       assert(!SI.Atoms.empty() && "Section layouts must not be empty");
 
       // Bump to section alignment before processing atoms.
       SegZeroFillSize = alignTo(SegZeroFillSize, SI.S->getAlignment());
+      SegZeroFillAlign = std::max(SegZeroFillAlign, SI.S->getAlignment());
 
       for (auto *DA : SI.Atoms) {
         SegZeroFillSize = alignTo(SegZeroFillSize, DA->getAlignment());
         SegZeroFillSize += DA->getSize();
+        SegZeroFillAlign = std::max(SegZeroFillAlign, SI.S->getAlignment());
       }
     }
 
-    // Calculate segment zero-fill alignment.
-    uint32_t SegZeroFillAlign = 1;
-
-    if (!SegLayout.ZeroFillSections.empty()) {
-      auto &FirstZeroFillSection = SegLayout.ZeroFillSections.front();
-      SegZeroFillAlign =
-          std::max(FirstZeroFillSection.S->getAlignment(),
-                   FirstZeroFillSection.Atoms.front()->getAlignment());
-    }
-
-    if (SegContentSize == 0)
-      SegContentAlign = SegZeroFillAlign;
-
-    if (SegContentAlign % SegZeroFillAlign != 0)
-      return make_error<JITLinkError>("First content atom alignment does not "
-                                      "accommodate first zero-fill atom "
-                                      "alignment");
+    assert(isPowerOf2_32(SegContentAlign) &&
+           "Expected content alignment to be power of 2");
+    assert(isPowerOf2_32(SegZeroFillAlign) &&
+           "Expected zero-fill alignment to be power of 2");
+    // Round content alignment up to segment alignment.
+    SegContentAlign = std::max(SegContentAlign, SegZeroFillAlign);
 
     Segments[Prot] = {SegContentSize, SegContentAlign, SegZeroFillSize,
                       SegZeroFillAlign};

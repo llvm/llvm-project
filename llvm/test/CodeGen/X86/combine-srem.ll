@@ -56,10 +56,9 @@ define i32 @combine_srem_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_srem_by_minsigned:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    leal 2147483647(%rdi), %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -431,4 +430,136 @@ define <4 x i1> @boolvec_srem(<4 x i1> %x, <4 x i1> %y) {
 ; AVX-NEXT:    retq
   %r = srem <4 x i1> %x, %y
   ret <4 x i1> %r
+}
+
+define i32 @combine_srem_two(i32 %x) {
+; CHECK-LABEL: combine_srem_two:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    addl %edi, %ecx
+; CHECK-NEXT:    andl $-2, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    retq
+  %1 = srem i32 %x, 2
+  ret i32 %1
+}
+
+define i32 @combine_srem_negtwo(i32 %x) {
+; CHECK-LABEL: combine_srem_negtwo:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    addl %edi, %ecx
+; CHECK-NEXT:    andl $-2, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    retq
+  %1 = srem i32 %x, -2
+  ret i32 %1
+}
+
+define i8 @combine_i8_srem_negpow2(i8 %x) {
+; CHECK-LABEL: combine_i8_srem_negpow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    sarb $7, %cl
+; CHECK-NEXT:    shrb $2, %cl
+; CHECK-NEXT:    addb %al, %cl
+; CHECK-NEXT:    andb $-64, %cl
+; CHECK-NEXT:    subb %cl, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %1 = srem i8 %x, -64
+  ret i8 %1
+}
+
+define i16 @combine_i16_srem_pow2(i16 %x) {
+; CHECK-LABEL: combine_i16_srem_pow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    leal 15(%rax), %ecx
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    cmovnsl %edi, %ecx
+; CHECK-NEXT:    andl $-16, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
+; CHECK-NEXT:    retq
+  %1 = srem i16 %x, 16
+  ret i16 %1
+}
+
+define i16 @combine_i16_srem_negpow2(i16 %x) {
+; CHECK-LABEL: combine_i16_srem_negpow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    leal 255(%rax), %ecx
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    cmovnsl %edi, %ecx
+; CHECK-NEXT:    andl $-256, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
+; CHECK-NEXT:    retq
+  %1 = srem i16 %x, -256
+  ret i16 %1
+}
+
+define i32 @combine_srem_pow2(i32 %x) {
+; CHECK-LABEL: combine_srem_pow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    leal 15(%rax), %ecx
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl %edi, %ecx
+; CHECK-NEXT:    andl $-16, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %1 = srem i32 %x, 16
+  ret i32 %1
+}
+
+define i32 @combine_srem_negpow2(i32 %x) {
+; CHECK-LABEL: combine_srem_negpow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    leal 255(%rax), %ecx
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl %edi, %ecx
+; CHECK-NEXT:    andl $-256, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %1 = srem i32 %x, -256
+  ret i32 %1
+}
+
+define i64 @combine_i64_srem_pow2(i64 %x) {
+; CHECK-LABEL: combine_i64_srem_pow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    leaq 15(%rdi), %rcx
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmovnsq %rdi, %rcx
+; CHECK-NEXT:    andq $-16, %rcx
+; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    retq
+  %1 = srem i64 %x, 16
+  ret i64 %1
+}
+
+define i64 @combine_i64_srem_negpow2(i64 %x) {
+; CHECK-LABEL: combine_i64_srem_negpow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    leaq 255(%rdi), %rcx
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmovnsq %rdi, %rcx
+; CHECK-NEXT:    andq $-256, %rcx
+; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    retq
+  %1 = srem i64 %x, -256
+  ret i64 %1
 }

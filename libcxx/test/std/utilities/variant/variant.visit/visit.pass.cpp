@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 #include "type_id.h"
-#include "variant_test_helpers.hpp"
+#include "variant_test_helpers.h"
 
 enum CallType : unsigned {
   CT_None,

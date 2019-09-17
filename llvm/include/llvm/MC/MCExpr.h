@@ -48,10 +48,6 @@ private:
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
                           const MCAsmLayout *Layout,
-                          const SectionAddrMap *Addrs) const;
-
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const MCAsmLayout *Layout,
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:

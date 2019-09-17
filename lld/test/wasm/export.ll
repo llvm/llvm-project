@@ -1,7 +1,14 @@
+; Test in default mode
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: not wasm-ld --export=missing -o %t.wasm %t.o 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
 ; RUN: wasm-ld --export=hidden_function -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+; Now test in Emscripten mode
+; RUN: llc -filetype=obj %s -o %t.o -mtriple=wasm32-unknown-emscripten
+; RUN: not wasm-ld --export=missing -o %t.wasm %t.o 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
+; RUN: wasm-ld --export=hidden_function -o %t.wasm %t.o
+; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=CHECK,EMSCRIPTEN
 
 @llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @used_function to i8*)], section "llvm.metadata"
 
@@ -43,9 +50,9 @@ entry:
 ; CHECK-NEXT:       - Name:            hidden_function
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            used_function
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
+; EMSCRIPTEN-NEXT:  - Name:            used_function
+; EMSCRIPTEN-NEXT:    Kind:            FUNCTION
+; EMSCRIPTEN-NEXT:    Index:           1
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           2

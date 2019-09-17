@@ -31,10 +31,10 @@ struct Configuration {
   bool exportAll;
   bool exportDynamic;
   bool exportTable;
+  bool growableTable;
   bool gcSections;
   bool importMemory;
   bool sharedMemory;
-  bool passiveSegments;
   bool importTable;
   bool mergeDataSegments;
   bool pie;
@@ -70,6 +70,12 @@ struct Configuration {
 
   // True if we are creating position-independent code.
   bool isPic;
+
+  // The table offset at which to place function addresses.  We reserve zero
+  // for the null function pointer.  This gets set to 1 for exectuables and 0
+  // for shared libraries (since they always added to a dynamic offset at
+  // runtime).
+  uint32_t tableBase = 0;
 };
 
 // The only instance of Configuration struct.

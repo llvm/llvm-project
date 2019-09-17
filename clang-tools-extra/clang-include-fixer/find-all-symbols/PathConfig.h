@@ -17,7 +17,7 @@
 namespace clang {
 namespace find_all_symbols {
 
-/// \brief This calculates the include path for \p Loc.
+/// This calculates the include path for \p Loc.
 ///
 /// \param SM SourceManager.
 /// \param Loc A SourceLocation.

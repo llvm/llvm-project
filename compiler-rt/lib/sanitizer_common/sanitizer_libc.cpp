@@ -63,10 +63,11 @@ void *internal_memmove(void *dest, const void *src, uptr n) {
     for (i = 0; i < signed_n; ++i)
       d[i] = s[i];
   } else {
-    if (d > s && signed_n > 0)
-      for (i = signed_n - 1; i >= 0 ; --i) {
+    if (d > s && signed_n > 0) {
+      for (i = signed_n - 1; i >= 0; --i) {
         d[i] = s[i];
       }
+    }
   }
   return dest;
 }
@@ -270,9 +271,9 @@ bool mem_is_zero(const char *beg, uptr size) {
   for (; aligned_beg < aligned_end; aligned_beg++)
     all |= *aligned_beg;
   // Epilogue.
-  if ((char*)aligned_end >= beg)
-    for (const char *mem = (char*)aligned_end; mem < end; mem++)
-      all |= *mem;
+  if ((char *)aligned_end >= beg) {
+    for (const char *mem = (char *)aligned_end; mem < end; mem++) all |= *mem;
+  }
   return all == 0;
 }
 

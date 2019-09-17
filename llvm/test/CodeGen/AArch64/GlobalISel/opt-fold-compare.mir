@@ -32,7 +32,7 @@
 ...
 ---
 name:            cmn_s32_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -44,10 +44,10 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVwzr:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: $wzr = ADDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVwzr]], 1, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY2]], 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -64,7 +64,7 @@ body:             |
 ...
 ---
 name:            cmn_s32_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -76,10 +76,10 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK: $wzr = ADDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 1, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY2]], 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -96,7 +96,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s32_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -108,11 +108,11 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[MOVi32imm]], [[COPY1]], implicit-def $nzcv
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY2]], [[COPY1]], implicit-def $nzcv
     ; CHECK: $wzr = SUBSWrr [[COPY]], [[SUBSWrr]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 11, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY2]], 11, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -129,7 +129,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s32_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -141,11 +141,11 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[MOVi32imm]], [[COPY]], implicit-def $nzcv
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY2]], [[COPY]], implicit-def $nzcv
     ; CHECK: $wzr = SUBSWrr [[SUBSWrr]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 11, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY2]], 11, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -162,7 +162,7 @@ body:             |
 ...
 ---
 name:            cmn_s64_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -174,10 +174,11 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
-    ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
     ; CHECK: $xzr = ADDSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 1, implicit $nzcv
+    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[SUBREG_TO_REG]], [[COPY2]], 1, implicit $nzcv
     ; CHECK: $x0 = COPY [[CSELXr]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
@@ -194,7 +195,7 @@ body:             |
 ...
 ---
 name:            cmn_s64_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -206,10 +207,11 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
-    ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
     ; CHECK: $xzr = ADDSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 1, implicit $nzcv
+    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[SUBREG_TO_REG]], [[COPY2]], 1, implicit $nzcv
     ; CHECK: $x0 = COPY [[CSELXr]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
@@ -226,7 +228,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s64_rhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -238,11 +240,12 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
-    ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
-    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[MOVi64imm]], [[COPY1]], implicit-def $nzcv
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY2]], [[COPY1]], implicit-def $nzcv
     ; CHECK: $xzr = SUBSXrr [[COPY]], [[SUBSXrr]], implicit-def $nzcv
-    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 11, implicit $nzcv
+    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[SUBREG_TO_REG]], [[COPY2]], 11, implicit $nzcv
     ; CHECK: $x0 = COPY [[CSELXr]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
@@ -259,7 +262,7 @@ body:             |
 ...
 ---
 name:            no_cmn_s64_lhs
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -271,11 +274,12 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
-    ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
-    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[MOVi64imm]], [[COPY]], implicit-def $nzcv
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY2]], [[COPY]], implicit-def $nzcv
     ; CHECK: $xzr = SUBSXrr [[SUBSXrr]], [[COPY1]], implicit-def $nzcv
-    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 11, implicit $nzcv
+    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[SUBREG_TO_REG]], [[COPY2]], 11, implicit $nzcv
     ; CHECK: $x0 = COPY [[CSELXr]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
@@ -292,7 +296,7 @@ body:             |
 ...
 ---
 name:            tst_s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -302,10 +306,10 @@ body:             |
     ; CHECK-LABEL: name: tst_s32
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: $wzr = ANDSWrr [[MOVi32imm]], [[COPY]], implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 0, implicit $nzcv
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: $wzr = ANDSWrr [[COPY1]], [[COPY]], implicit-def $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY1]], 0, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -323,7 +327,7 @@ body:             |
 ...
 ---
 name:            tst_s64
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -333,10 +337,11 @@ body:             |
     ; CHECK-LABEL: name: tst_s64
     ; CHECK: liveins: $x0, $x1
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = COPY $xzr
-    ; CHECK: [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 1
-    ; CHECK: $xzr = ANDSXrr [[MOVi64imm]], [[COPY]], implicit-def $nzcv
-    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[MOVi64imm]], 0, implicit $nzcv
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $xzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: $xzr = ANDSXrr [[COPY1]], [[COPY]], implicit-def $nzcv
+    ; CHECK: [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[SUBREG_TO_REG]], [[COPY1]], 0, implicit $nzcv
     ; CHECK: $x0 = COPY [[CSELXr]]
     ; CHECK: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
@@ -354,7 +359,7 @@ body:             |
 ...
 ---
 name:            no_tst_unsigned_compare
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -364,11 +369,11 @@ body:             |
     ; CHECK-LABEL: name: no_tst_unsigned_compare
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[MOVi32imm]], [[COPY]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[COPY1]], [[COPY]]
     ; CHECK: $wzr = SUBSWri [[ANDWrr]], 0, 0, implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 8, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY1]], 8, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -386,7 +391,7 @@ body:             |
 ...
 ---
 name:            no_tst_nonzero
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -396,11 +401,11 @@ body:             |
     ; CHECK-LABEL: name: no_tst_nonzero
     ; CHECK: liveins: $w0, $w1
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
-    ; CHECK: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[MOVi32imm]], [[COPY]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+    ; CHECK: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[COPY1]], [[COPY]]
     ; CHECK: $wzr = SUBSWri [[ANDWrr]], 42, 0, implicit-def $nzcv
-    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm1]], [[MOVi32imm]], 8, implicit $nzcv
+    ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[MOVi32imm]], [[COPY1]], 8, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
@@ -418,7 +423,7 @@ body:             |
 ...
 ---
 name:            imm_tst
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -450,7 +455,7 @@ body:             |
 ...
 ---
 name:            no_imm_tst_not_logical_imm
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -482,7 +487,7 @@ body:             |
 ...
 ---
 name:            test_physreg_copy
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -82,14 +82,14 @@ FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
   return new SIOptimizeExecMaskingPreRA();
 }
 
-static bool isEndCF(const MachineInstr &MI, const GCNSubtarget &ST,
-                    const SIRegisterInfo *TRI) {
+static bool isEndCF(const MachineInstr &MI, const SIRegisterInfo *TRI,
+                    const GCNSubtarget &ST) {
   if (ST.isWave32()) {
-    return MI.getOpcode() == AMDGPU::S_OR_B32_term &&
+    return MI.getOpcode() == AMDGPU::S_OR_B32 &&
            MI.modifiesRegister(AMDGPU::EXEC_LO, TRI);
   }
 
-  return MI.getOpcode() == AMDGPU::S_OR_B64_term &&
+  return MI.getOpcode() == AMDGPU::S_OR_B64 &&
          MI.modifiesRegister(AMDGPU::EXEC, TRI);
 }
 
@@ -379,13 +379,13 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
     // Try to collapse adjacent endifs.
     auto E = MBB.end();
-    auto Lead = MBB.getFirstTerminator();
-    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, ST, TRI))
+    auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
+    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI, ST))
       continue;
 
     MachineBasicBlock *TmpMBB = &MBB;
     auto NextLead = skipIgnoreExecInstsTrivialSucc(TmpMBB, std::next(Lead));
-    if (NextLead == TmpMBB->end() || !isEndCF(*NextLead, ST, TRI) ||
+    if (NextLead == TmpMBB->end() || !isEndCF(*NextLead, TRI, ST) ||
         !getOrExecSource(*NextLead, *TII, MRI, ST))
       continue;
 

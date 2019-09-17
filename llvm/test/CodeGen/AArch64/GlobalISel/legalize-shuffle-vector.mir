@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=aarch64 -O0 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            shuffle_v4i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1:
@@ -24,7 +24,7 @@ body:             |
 ...
 ---
 name:            shuffle_v2i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1:
@@ -46,7 +46,7 @@ body:             |
 ...
 ---
 name:            shuffle_1elt_mask
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1:

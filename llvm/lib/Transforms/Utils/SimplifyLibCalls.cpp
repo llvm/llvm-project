@@ -998,6 +998,15 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B,
   return CI->getArgOperand(0);
 }
 
+Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilder<> &B) {
+  Value *Dst = CI->getArgOperand(0);
+  Value *N = CI->getArgOperand(2);
+  // mempcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n), x + n
+  CallInst *NewCI = B.CreateMemCpy(Dst, 1, CI->getArgOperand(1), 1, N);
+  NewCI->setAttributes(CI->getAttributes());
+  return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, N);
+}
+
 Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B, bool isIntrinsic) {
   Value *Size = CI->getArgOperand(2);
   if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
@@ -1045,16 +1054,14 @@ Value *LibCallSimplifier::foldMallocMemset(CallInst *Memset, IRBuilder<> &B) {
   B.SetInsertPoint(Malloc->getParent(), ++Malloc->getIterator());
   const DataLayout &DL = Malloc->getModule()->getDataLayout();
   IntegerType *SizeType = DL.getIntPtrType(B.GetInsertBlock()->getContext());
-  Value *Calloc = emitCalloc(ConstantInt::get(SizeType, 1),
-                             Malloc->getArgOperand(0), Malloc->getAttributes(),
-                             B, *TLI);
-  if (!Calloc)
-    return nullptr;
+  if (Value *Calloc = emitCalloc(ConstantInt::get(SizeType, 1),
+                                 Malloc->getArgOperand(0),
+                                 Malloc->getAttributes(), B, *TLI)) {
+    substituteInParent(Malloc, Calloc);
+    return Calloc;
+  }
 
-  Malloc->replaceAllUsesWith(Calloc);
-  eraseFromParent(Malloc);
-
-  return Calloc;
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B,
@@ -1371,9 +1378,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
       // elimination cannot be trusted to remove it, since it may have side
       // effects (e.g., errno).  When the only consumer for the original
       // exp{,2}() is pow(), then it has to be explicitly erased.
-      BaseFn->replaceAllUsesWith(ExpFn);
-      eraseFromParent(BaseFn);
-
+      substituteInParent(BaseFn, ExpFn);
       return ExpFn;
     }
   }
@@ -1553,8 +1558,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
   if (match(Expo, m_SpecificFP(-1.0)))
     return B.CreateFDiv(ConstantFP::get(Ty, 1.0), Base, "reciprocal");
 
-  // pow(x, 0.0) -> 1.0
-  if (match(Expo, m_SpecificFP(0.0)))
+  // pow(x, +/-0.0) -> 1.0
+  if (match(Expo, m_AnyZeroFP()))
     return ConstantFP::get(Ty, 1.0);
 
   // pow(x, 1.0) -> x
@@ -2624,6 +2629,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeMemCmp(CI, Builder);
     case LibFunc_memcpy:
       return optimizeMemCpy(CI, Builder);
+    case LibFunc_mempcpy:
+      return optimizeMemPCpy(CI, Builder);
     case LibFunc_memmove:
       return optimizeMemMove(CI, Builder);
     case LibFunc_memset:
@@ -2791,8 +2798,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       IRBuilder<> TmpBuilder(SimplifiedCI);
       if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, TmpBuilder)) {
         // If we were able to further simplify, remove the now redundant call.
-        SimplifiedCI->replaceAllUsesWith(V);
-        eraseFromParent(SimplifiedCI);
+        substituteInParent(SimplifiedCI, V);
         return V;
       }
     }

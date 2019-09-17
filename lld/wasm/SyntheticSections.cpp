@@ -143,7 +143,7 @@ void ImportSection::writeBody() {
   }
 
   if (config->importTable) {
-    uint32_t tableSize = out.elemSec->elemOffset + out.elemSec->numEntries();
+    uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
     WasmImport import;
     import.Module = defaultModule;
     import.Field = functionTableName;
@@ -212,11 +212,15 @@ void FunctionSection::addFunction(InputFunction *func) {
 }
 
 void TableSection::writeBody() {
-  uint32_t tableSize = out.elemSec->elemOffset + out.elemSec->numEntries();
+  uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
 
   raw_ostream &os = bodyOutputStream;
   writeUleb128(os, 1, "table count");
-  WasmLimits limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
+  WasmLimits limits;
+  if (config->growableTable)
+    limits = {0, tableSize, 0};
+  else
+    limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
   writeTableType(os, WasmTable{WASM_TYPE_FUNCREF, limits});
 }
 
@@ -310,10 +314,19 @@ void ExportSection::writeBody() {
     writeExport(os, export_);
 }
 
+bool StartSection::isNeeded() const {
+  return !config->relocatable && numSegments && config->sharedMemory;
+}
+
+void StartSection::writeBody() {
+  raw_ostream &os = bodyOutputStream;
+  writeUleb128(os, WasmSym::initMemory->getFunctionIndex(), "function index");
+}
+
 void ElemSection::addEntry(FunctionSymbol *sym) {
   if (sym->hasTableIndex())
     return;
-  sym->setTableIndex(elemOffset + indirectFunctions.size());
+  sym->setTableIndex(config->tableBase + indirectFunctions.size());
   indirectFunctions.emplace_back(sym);
 }
 
@@ -328,12 +341,12 @@ void ElemSection::writeBody() {
     initExpr.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
     initExpr.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Value.Int32 = elemOffset;
+    initExpr.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);
   writeUleb128(os, indirectFunctions.size(), "elem count");
 
-  uint32_t tableIndex = elemOffset;
+  uint32_t tableIndex = config->tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
     assert(sym->getTableIndex() == tableIndex);
     writeUleb128(os, sym->getFunctionIndex(), "function index");
@@ -346,7 +359,7 @@ void DataCountSection::writeBody() {
 }
 
 bool DataCountSection::isNeeded() const {
-  return numSegments && config->passiveSegments;
+  return numSegments && config->sharedMemory;
 }
 
 static uint32_t getWasmFlags(const Symbol *sym) {

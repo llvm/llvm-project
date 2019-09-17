@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKBASIC %s
 // RUN: %clang_cc1 -triple armv7a-eabi -mfloat-abi hard -emit-llvm -o - %s | FileCheck -check-prefix=CHECKCC %s
 // RUN: %clang_cc1 -triple armv7a-eabi -mfloat-abi hard -S -o - %s | FileCheck -check-prefix=CHECKASM %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKGLOBALS %s
 
 int g0;
 // CHECKBASIC-DAG: @g0 = common global i32 0
@@ -88,3 +89,18 @@ void test8_zed() __attribute__((alias("test8_foo")));
 void test9_bar(void) { }
 void test9_zed(void) __attribute__((section("test")));
 void test9_zed(void) __attribute__((alias("test9_bar")));
+
+// Test that the alias gets its linkage from its declared qual type.
+// CHECKGLOBALS: @test10_foo = internal
+// CHECKGLOBALS-NOT: @test10_foo = dso_local
+int test10;
+static int test10_foo __attribute__((alias("test10")));
+// CHECKGLOBALS: @test11_foo = internal
+// CHECKGLOBALS-NOT: @test11_foo = dso_local
+void test11(void) {}
+static void test11_foo(void) __attribute__((alias("test11")));
+
+// Test that gnu_inline+alias work.
+// CHECKGLOBALS: @test12_alias = alias void (), void ()* @test12
+void test12(void) {}
+inline void test12_alias(void) __attribute__((gnu_inline, alias("test12")));

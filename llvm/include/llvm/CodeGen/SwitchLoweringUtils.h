@@ -221,7 +221,7 @@ struct BitTestBlock {
         Cases(std::move(C)), Prob(Pr) {}
 };
 
-/// Return the range of value within a range.
+/// Return the range of values within a range.
 uint64_t getJumpTableRange(const CaseClusterVector &Clusters, unsigned First,
                            unsigned Last);
 

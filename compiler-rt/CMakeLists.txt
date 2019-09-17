@@ -335,12 +335,12 @@ if (NOT MSVC)
 endif()
 
 # Determine if we should restrict stack frame sizes.
-# Stack frames on PowerPC and Mips and in debug biuld can be much larger than
+# Stack frames on PowerPC, Mips, SystemZ and in debug build can be much larger than
 # anticipated.
 # FIXME: Fix all sanitizers and add -Wframe-larger-than to
 # SANITIZER_COMMON_FLAGS
 if(COMPILER_RT_HAS_WFRAME_LARGER_THAN_FLAG AND NOT COMPILER_RT_DEBUG
-   AND NOT ${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "powerpc|mips")
+   AND NOT ${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "powerpc|mips|s390x")
   set(SANITIZER_LIMIT_FRAME_SIZE TRUE)
 else()
   set(SANITIZER_LIMIT_FRAME_SIZE FALSE)
@@ -463,24 +463,30 @@ add_subdirectory(include)
 option(COMPILER_RT_USE_LIBCXX
   "Enable compiler-rt to use libc++ from the source tree" ON)
 if(COMPILER_RT_USE_LIBCXX)
-  foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
-                        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
-                        ${LLVM_MAIN_SRC_DIR}/../libcxx
-                        ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
-    if(IS_DIRECTORY ${path})
-      set(COMPILER_RT_LIBCXX_PATH ${path})
-      break()
-    endif()
-  endforeach()
-  foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi
-                        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi
-                        ${LLVM_MAIN_SRC_DIR}/../libcxxabi
-                        ${LLVM_EXTERNAL_LIBCXXABI_SOURCE_DIR})
-    if(IS_DIRECTORY ${path})
-      set(COMPILER_RT_LIBCXXABI_PATH ${path})
-      break()
-    endif()
-  endforeach()
+  if(LLVM_ENABLE_PROJECTS_USED)
+    # Don't use libcxx if LLVM_ENABLE_PROJECTS does not enable it.
+    set(COMPILER_RT_LIBCXX_PATH ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
+    set(COMPILER_RT_LIBCXXABI_PATH ${LLVM_EXTERNAL_LIBCXXABI_SOURCE_DIR})
+  else()
+    foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
+                          ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
+                          ${LLVM_MAIN_SRC_DIR}/../libcxx
+                          ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
+      if(IS_DIRECTORY ${path})
+        set(COMPILER_RT_LIBCXX_PATH ${path})
+        break()
+      endif()
+    endforeach()
+    foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi
+                          ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi
+                          ${LLVM_MAIN_SRC_DIR}/../libcxxabi
+                          ${LLVM_EXTERNAL_LIBCXXABI_SOURCE_DIR})
+      if(IS_DIRECTORY ${path})
+        set(COMPILER_RT_LIBCXXABI_PATH ${path})
+        break()
+      endif()
+    endforeach()
+  endif()
 endif()
 
 set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
@@ -513,3 +519,5 @@ if(COMPILER_RT_INCLUDE_TESTS)
     endif()
   endif()
 endif()
+
+add_subdirectory(tools)

@@ -1,17 +1,17 @@
 //===- FunctionInfo.h -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
-#include "llvm/DebugInfo/GSYM/LineEntry.h"
+#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include <tuple>
@@ -33,8 +33,8 @@ namespace gsym {
 struct FunctionInfo {
   AddressRange Range;
   uint32_t Name; ///< String table offset in the string table.
-  std::vector<gsym::LineEntry> Lines;
-  InlineInfo Inline;
+  llvm::Optional<LineTable> OptLineTable;
+  llvm::Optional<InlineInfo> Inline;
 
   FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
       : Range(Addr, Addr + Size), Name(N) {}
@@ -44,7 +44,7 @@ struct FunctionInfo {
     /// converting information from a symbol table and from debug info, we
     /// might end up with multiple FunctionInfo objects for the same range
     /// and we need to be able to tell which one is the better object to use.
-    return !Lines.empty() || Inline.isValid();
+    return OptLineTable.hasValue() || Inline.hasValue();
   }
 
   bool isValid() const {
@@ -66,14 +66,14 @@ struct FunctionInfo {
   void clear() {
     Range = {0, 0};
     Name = 0;
-    Lines.clear();
-    Inline.clear();
+    OptLineTable = None;
+    Inline = None;
   }
 };
 
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return LHS.Range == RHS.Range && LHS.Name == RHS.Name &&
-         LHS.Lines == RHS.Lines && LHS.Inline == RHS.Inline;
+         LHS.OptLineTable == RHS.OptLineTable && LHS.Inline == RHS.Inline;
 }
 inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return !(LHS == RHS);
@@ -89,14 +89,10 @@ inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
     return LHS.Range < RHS.Range;
 
   // Then sort by inline
-  if (LHS.Inline.isValid() != RHS.Inline.isValid())
-    return RHS.Inline.isValid();
+  if (LHS.Inline.hasValue() != RHS.Inline.hasValue())
+    return RHS.Inline.hasValue();
 
-  // If the number of lines is the same, then compare line table entries
-  if (LHS.Lines.size() == RHS.Lines.size())
-    return LHS.Lines < RHS.Lines;
-  // Then sort by number of line table entries (more is better)
-  return LHS.Lines.size() < RHS.Lines.size();
+  return LHS.OptLineTable < RHS.OptLineTable;
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);

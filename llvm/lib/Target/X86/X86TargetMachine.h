@@ -30,6 +30,7 @@ class X86RegisterBankInfo;
 class X86TargetMachine final : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
+  const DataLayout DLNoAddrSpaces;
 
 public:
   X86TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -52,6 +53,8 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  bool isCompatibleDataLayout(const DataLayout &Candidate) const override;
 };
 
 } // end namespace llvm

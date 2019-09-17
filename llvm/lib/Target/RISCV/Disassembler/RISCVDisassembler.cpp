@@ -280,7 +280,79 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, unsigned Insn,
+                                       uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, unsigned Insn,
+                                         uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, unsigned Insn,
+                                            uint64_t Address,
+                                            const void *Decoder);
+
+static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, unsigned Insn,
+                                        uint64_t Address, const void *Decoder);
+
+static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const void *Decoder);
+
 #include "RISCVGenDisassemblerTables.inc"
+
+static DecodeStatus decodeRVCInstrSImm(MCInst &Inst, unsigned Insn,
+                                       uint64_t Address, const void *Decoder) {
+  uint64_t SImm6 =
+      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
+  DecodeStatus Result = decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
+  (void)Result;
+  assert(Result == MCDisassembler::Success && "Invalid immediate");
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, unsigned Insn,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  DecodeGPRRegisterClass(Inst, 0, Address, Decoder);
+  uint64_t SImm6 =
+      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
+  DecodeStatus Result = decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
+  (void)Result;
+  assert(Result == MCDisassembler::Success && "Invalid immediate");
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, unsigned Insn,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  DecodeGPRRegisterClass(Inst, 0, Address, Decoder);
+  Inst.addOperand(Inst.getOperand(0));
+  uint64_t UImm6 =
+      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
+  DecodeStatus Result = decodeUImmOperand<6>(Inst, UImm6, Address, Decoder);
+  (void)Result;
+  assert(Result == MCDisassembler::Success && "Invalid immediate");
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, unsigned Insn,
+                                        uint64_t Address, const void *Decoder) {
+  unsigned Rd = fieldFromInstruction(Insn, 7, 5);
+  unsigned Rs2 = fieldFromInstruction(Insn, 2, 5);
+  DecodeGPRRegisterClass(Inst, Rd, Address, Decoder);
+  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  unsigned Rd = fieldFromInstruction(Insn, 7, 5);
+  unsigned Rs2 = fieldFromInstruction(Insn, 2, 5);
+  DecodeGPRRegisterClass(Inst, Rd, Address, Decoder);
+  Inst.addOperand(Inst.getOperand(0));
+  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
+  return MCDisassembler::Success;
+}
 
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,

@@ -21,7 +21,7 @@ define amdgpu_cs float @ds_ordered_swap(i32 addrspace(2)* inreg %gds, i32 %value
 ; GCN: s_cbranch_execz [[BB:BB._.]]
 ; GCN: s_mov_b32 m0, s0
 ; VIGFX9-NEXT: s_nop 0
-; GCN-NEXT: ds_ordered_count v1, v0 offset:4868 gds
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v0 offset:4868 gds
 ; GCN-NEXT: [[BB]]:
 ; // Wait for expcnt(0) before modifying EXEC
 ; GCN-NEXT: s_waitcnt expcnt(0)

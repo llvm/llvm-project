@@ -180,9 +180,11 @@ multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
 
 // Instructions that have local forwarding disabled have an extra +1cy latency.
 
-// A folded store needs a cycle on the SAGU for the store data,
-// most RMW instructions don't need an extra uop.
-defm : X86WriteRes<WriteRMW, [JSAGU], 1, [1], 0>;
+// A folded store needs a cycle on the SAGU for the store data, most RMW
+// instructions don't need an extra uop.  ALU RMW operations don't seem to
+// benefit from STLF, and their observed latency is 6cy. That is the reason why
+// this write adds two extra cycles (instead of just 1cy for the store).
+defm : X86WriteRes<WriteRMW, [JSAGU], 2, [1], 0>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Arithmetic.
@@ -191,22 +193,22 @@ defm : X86WriteRes<WriteRMW, [JSAGU], 1, [1], 0>;
 defm : JWriteResIntPair<WriteALU,    [JALU01], 1>;
 defm : JWriteResIntPair<WriteADC,    [JALU01], 1, [2]>;
 
-defm : X86WriteRes<WriteBSWAP32, [JALU01], 1, [1], 1>;
-defm : X86WriteRes<WriteBSWAP64, [JALU01], 1, [1], 1>;
-defm : X86WriteRes<WriteCMPXCHG,[JALU01], 1, [1], 1>;
-defm : X86WriteRes<WriteCMPXCHGRMW,[JALU01, JSAGU, JLAGU], 4, [1, 1, 1], 2>;
-defm : X86WriteRes<WriteXCHG,        [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP32,     [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,     [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteCMPXCHG,     [JALU01], 3, [3], 5>;
+defm : X86WriteRes<WriteCMPXCHGRMW,  [JALU01, JSAGU, JLAGU], 11, [3, 1, 1], 6>;
+defm : X86WriteRes<WriteXCHG,        [JALU01], 1, [2], 2>;
 
-defm : JWriteResIntPair<WriteIMul8,     [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul16,    [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul16Imm, [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul16Reg, [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul32,    [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul32Imm, [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul32Reg, [JALU1, JMul], 3, [1, 1], 2>;
-defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;
-defm : JWriteResIntPair<WriteIMul64Imm, [JALU1, JMul], 6, [1, 4], 2>;
-defm : JWriteResIntPair<WriteIMul64Reg, [JALU1, JMul], 6, [1, 4], 2>;
+defm : JWriteResIntPair<WriteIMul8,     [JALU1, JMul], 3, [1, 1], 1>;
+defm : JWriteResIntPair<WriteIMul16,    [JALU1, JMul], 3, [1, 3], 3>;
+defm : JWriteResIntPair<WriteIMul16Imm, [JALU1, JMul], 4, [1, 2], 2>;
+defm : JWriteResIntPair<WriteIMul16Reg, [JALU1, JMul], 3, [1, 1], 1>;
+defm : JWriteResIntPair<WriteIMul32,    [JALU1, JMul], 3, [1, 2], 2>;
+defm : JWriteResIntPair<WriteIMul32Imm, [JALU1, JMul], 3, [1, 1], 1>;
+defm : JWriteResIntPair<WriteIMul32Reg, [JALU1, JMul], 3, [1, 1], 1>;
+defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;  
+defm : JWriteResIntPair<WriteIMul64Imm, [JALU1, JMul], 6, [1, 4], 1>;
+defm : JWriteResIntPair<WriteIMul64Reg, [JALU1, JMul], 6, [1, 4], 1>;
 defm : X86WriteRes<WriteIMulH,          [JALU1], 6, [4], 1>;
 
 defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;
@@ -305,6 +307,192 @@ def : WriteRes<WriteFence,  [JSAGU]>;
 // to '1' to tell the scheduler that the nop uses an ALU slot for a cycle.
 def : WriteRes<WriteNop, [JALU01]> { let Latency = 1; }
 
+def JWriteCMPXCHG8rr : SchedWriteRes<[JALU01]> {
+  let Latency = 3;
+  let ResourceCycles = [3];
+  let NumMicroOps = 3;
+}
+
+def JWriteLOCK_CMPXCHG8rm : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 16;
+  let ResourceCycles = [3,16,16];
+  let NumMicroOps = 5;
+}
+
+def JWriteLOCK_CMPXCHGrm : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 17;
+  let ResourceCycles = [3,17,17];
+  let NumMicroOps = 6;
+}
+
+def JWriteCMPXCHG8rm : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 11;
+  let ResourceCycles = [3,1,1];
+  let NumMicroOps = 5;
+}
+
+def JWriteCMPXCHG8B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 11;
+  let ResourceCycles = [3,1,1];
+  let NumMicroOps = 18;
+}
+
+def JWriteCMPXCHG16B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 32;
+  let ResourceCycles = [6,1,1];
+  let NumMicroOps = 28;
+}
+
+def JWriteLOCK_CMPXCHG8B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 19;
+  let ResourceCycles = [3,19,19];
+  let NumMicroOps = 18;
+}
+
+def JWriteLOCK_CMPXCHG16B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 38;
+  let ResourceCycles = [6,38,38];
+  let NumMicroOps = 28;
+}
+
+def JWriteCMPXCHGVariant :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<IsAtomicCompareAndSwap8B>,  [JWriteLOCK_CMPXCHG8B]>,
+  SchedVar<MCSchedPredicate<IsAtomicCompareAndSwap16B>, [JWriteLOCK_CMPXCHG16B]>,
+  SchedVar<MCSchedPredicate<IsAtomicCompareAndSwap_8>,  [JWriteLOCK_CMPXCHG8rm]>,
+  SchedVar<MCSchedPredicate<IsAtomicCompareAndSwap>,    [JWriteLOCK_CMPXCHGrm]>,
+  SchedVar<MCSchedPredicate<IsCompareAndSwap8B>,        [JWriteCMPXCHG8B]>,
+  SchedVar<MCSchedPredicate<IsCompareAndSwap16B>,       [JWriteCMPXCHG16B]>,
+  SchedVar<MCSchedPredicate<IsRegMemCompareAndSwap_8>,  [JWriteCMPXCHG8rm]>,
+  SchedVar<MCSchedPredicate<IsRegMemCompareAndSwap>,    [WriteCMPXCHGRMW]>,
+  SchedVar<MCSchedPredicate<IsRegRegCompareAndSwap_8>,  [JWriteCMPXCHG8rr]>,
+  SchedVar<NoSchedPred,                                 [WriteCMPXCHG]>
+]>;
+
+// The first five reads are contributed by the memory load operand.
+// We ignore those reads and set a read-advance for the other input operands
+// including the implicit read of RAX.
+def : InstRW<[JWriteCMPXCHGVariant,
+              ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+              ReadAfterLd, ReadAfterLd], (instrs LCMPXCHG8, LCMPXCHG16,
+                                                 LCMPXCHG32, LCMPXCHG64,
+                                                 CMPXCHG8rm, CMPXCHG16rm,
+                                                 CMPXCHG32rm, CMPXCHG64rm)>;
+
+def : InstRW<[JWriteCMPXCHGVariant], (instrs CMPXCHG8rr, CMPXCHG16rr,
+                                             CMPXCHG32rr, CMPXCHG64rr)>;
+
+def : InstRW<[JWriteCMPXCHGVariant,
+              // Ignore reads contributed by the memory operand.
+              ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+              // Add a read-advance to every implicit register read.
+              ReadAfterLd, ReadAfterLd, ReadAfterLd, ReadAfterLd], (instrs LCMPXCHG8B, LCMPXCHG16B,
+                                                                           CMPXCHG8B, CMPXCHG16B)>;
+
+def JWriteLOCK_ALURMW : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
+  let Latency = 19;
+  let ResourceCycles = [1,19,19];
+  let NumMicroOps = 1;
+}
+
+def JWriteLOCK_ALURMWVariant :  SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<CheckLockPrefix>, [JWriteLOCK_ALURMW]>,
+  SchedVar<NoSchedPred,                       [WriteALURMW]>
+]>;
+def : InstRW<[JWriteLOCK_ALURMWVariant], (instrs INC8m, INC16m, INC32m, INC64m,
+                                                 DEC8m, DEC16m, DEC32m, DEC64m,
+                                                 NOT8m, NOT16m, NOT32m, NOT64m,
+                                                 NEG8m, NEG16m, NEG32m, NEG64m)>;
+
+def JWriteXCHG8rr_XADDrr : SchedWriteRes<[JALU01]> {
+  let Latency = 2;
+  let ResourceCycles = [3];
+  let NumMicroOps = 3;
+}
+def : InstRW<[JWriteXCHG8rr_XADDrr], (instrs XCHG8rr, XADD8rr, XADD16rr,
+                                                      XADD32rr, XADD64rr)>;
+
+// This write defines the latency of the in/out register operand of a non-atomic
+// XADDrm. This is the first of a pair of writes that model non-atomic
+// XADDrm instructions (the second write definition is JWriteXADDrm_LdSt_Part).
+//
+// We need two writes because the instruction latency differs from the output
+// register operand latency. In particular, the first write describes the first
+// (and only) output register operand of the instruction.  However, the
+// instruction latency is set to the MAX of all the write latencies. That's why
+// a second write is needed in this case (see example below).
+//
+// Example:
+//     XADD %ecx, (%rsp)      ## Instruction latency: 11cy
+//                            ## ECX write Latency: 3cy
+//
+// Register ECX becomes available in 3 cycles. That is because the value of ECX
+// is exchanged with the value read from the stack pointer, and the load-to-use
+// latency is assumed to be 3cy.
+def JWriteXADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
+  let Latency = 3;  // load-to-use latency
+  let ResourceCycles = [3];
+  let NumMicroOps = 3;
+}
+
+// This write defines the latency of the in/out register operand of an atomic
+// XADDrm. This is the first of a sequence of two writes used to model atomic
+// XADD instructions. The second write of the sequence is JWriteXCHGrm_LdSt_Part.
+//
+//
+// Example:
+//    LOCK XADD %ecx, (%rsp)     ## Instruction Latency: 16cy
+//                               ## ECX write Latency: 11cy
+//
+// The value of ECX becomes available only after 11cy from the start of
+// execution. This write is used to specifically set that operand latency. 
+def JWriteLOCK_XADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
+  let Latency = 11;
+  let ResourceCycles = [3];
+  let NumMicroOps = 3;
+}
+
+// This write defines the latency of the in/out register operand of an atomic
+// XCHGrm. This write is the first of a sequence of two writes that describe
+// atomic XCHG operations. We need two writes because the instruction latency
+// differs from the output register write latency.  We want to make sure that
+// the output register operand becomes visible after 11cy. However, we want to
+// set the instruction latency to 16cy.
+def JWriteXCHGrm_XCHG_Part : SchedWriteRes<[JALU01]> {
+  let Latency = 11;
+  let ResourceCycles = [2];
+  let NumMicroOps = 2;
+}
+
+def JWriteXADDrm_LdSt_Part : SchedWriteRes<[JLAGU, JSAGU]> {
+  let Latency = 11;
+  let ResourceCycles = [1, 1];
+  let NumMicroOps = 1;
+}
+
+def JWriteXCHGrm_LdSt_Part : SchedWriteRes<[JLAGU, JSAGU]> {
+  let Latency = 16;
+  let ResourceCycles = [16, 16];
+  let NumMicroOps = 1;
+}
+
+def JWriteXADDrm_Part1 : SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<CheckLockPrefix>, [JWriteLOCK_XADDrm_XCHG_Part]>,
+  SchedVar<NoSchedPred,                       [JWriteXADDrm_XCHG_Part]>
+]>;
+
+def JWriteXADDrm_Part2 : SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<CheckLockPrefix>, [JWriteXCHGrm_LdSt_Part]>,
+  SchedVar<NoSchedPred,                       [JWriteXADDrm_LdSt_Part]>
+]>;
+
+def : InstRW<[JWriteXADDrm_Part1, JWriteXADDrm_Part2, ReadAfterLd],
+                 (instrs XADD8rm, XADD16rm, XADD32rm, XADD64rm,
+                         LXADD8, LXADD16, LXADD32, LXADD64)>;
+
+def : InstRW<[JWriteXCHGrm_XCHG_Part, JWriteXCHGrm_LdSt_Part, ReadAfterLd],
+                 (instrs XCHG8rm, XCHG16rm, XCHG32rm, XCHG64rm)>;
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Floating point. This covers both scalar and vector operations.
 ////////////////////////////////////////////////////////////////////////////////
@@ -324,8 +512,11 @@ defm : X86WriteRes<WriteFStoreY,       [JSAGU, JFPU1,  JSTC], 1, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [JSAGU, JFPU1,  JSTC], 3, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [JSAGU, JFPU1,  JSTC], 3, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [JSAGU, JFPU1,  JSTC], 3, [2, 2, 2], 1>;
-defm : X86WriteRes<WriteFMaskedStore,  [JSAGU, JFPU01, JFPX], 6, [1, 1, 4], 1>;
-defm : X86WriteRes<WriteFMaskedStoreY, [JSAGU, JFPU01, JFPX], 6, [2, 2, 4], 2>;
+
+defm : X86WriteRes<WriteFMaskedStore32,  [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 16, [1,1, 5, 5,4,4,4], 19>;
+defm : X86WriteRes<WriteFMaskedStore64,  [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 13, [1,1, 2, 2,2,2,2], 10>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 22, [1,1,10,10,8,8,8], 36>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01], 16, [1,1, 4, 4,4,4,4], 18>;
 
 defm : X86WriteRes<WriteFMove,         [JFPU01, JFPX], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [JFPU01, JFPX], 1, [1, 1], 1>;
@@ -629,6 +820,18 @@ def JWriteJVZEROUPPER: SchedWriteRes<[]> {
   let NumMicroOps = 37;
 }
 def : InstRW<[JWriteJVZEROUPPER], (instrs VZEROUPPER)>;
+
+///////////////////////////////////////////////////////////////////////////////
+//  SSE2/AVX Store Selected Bytes of Double Quadword - (V)MASKMOVDQ
+///////////////////////////////////////////////////////////////////////////////
+
+def JWriteMASKMOVDQU: SchedWriteRes<[JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01]> {
+  let Latency = 34;
+  let ResourceCycles = [1, 1, 2, 2, 2, 16, 42];
+  let NumMicroOps = 63;
+}
+def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64,
+                                         VMASKMOVDQU, VMASKMOVDQU64)>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  SchedWriteVariant definitions.

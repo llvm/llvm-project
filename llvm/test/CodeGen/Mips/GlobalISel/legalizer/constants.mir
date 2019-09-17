@@ -14,7 +14,7 @@
 ...
 ---
 name:            any_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -33,7 +33,7 @@ body:             |
 ...
 ---
 name:            any_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -48,7 +48,7 @@ body:             |
 ...
 ---
 name:            signed_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            signed_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -88,7 +88,7 @@ body:             |
 ...
 ---
 name:            unsigned_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -107,7 +107,7 @@ body:             |
 ...
 ---
 name:            unsigned_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -126,7 +126,7 @@ body:             |
 ...
 ---
 name:            i1_true
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -145,7 +145,7 @@ body:             |
 ...
 ---
 name:            i1_false
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

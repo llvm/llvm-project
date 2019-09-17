@@ -1898,20 +1898,19 @@ SDValue SelectionDAG::expandVAArg(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   SDValue Tmp1 = Node->getOperand(0);
   SDValue Tmp2 = Node->getOperand(1);
-  unsigned Align = Node->getConstantOperandVal(3);
+  const llvm::MaybeAlign MA(Node->getConstantOperandVal(3));
 
   SDValue VAListLoad = getLoad(TLI.getPointerTy(getDataLayout()), dl, Tmp1,
                                Tmp2, MachinePointerInfo(V));
   SDValue VAList = VAListLoad;
 
-  if (Align > TLI.getMinStackArgumentAlignment()) {
-    assert(((Align & (Align-1)) == 0) && "Expected Align to be a power of 2");
-
+  if (MA && *MA > TLI.getMinStackArgumentAlignment()) {
     VAList = getNode(ISD::ADD, dl, VAList.getValueType(), VAList,
-                     getConstant(Align - 1, dl, VAList.getValueType()));
+                     getConstant(MA->value() - 1, dl, VAList.getValueType()));
 
-    VAList = getNode(ISD::AND, dl, VAList.getValueType(), VAList,
-                     getConstant(-(int64_t)Align, dl, VAList.getValueType()));
+    VAList =
+        getNode(ISD::AND, dl, VAList.getValueType(), VAList,
+                getConstant(-(int64_t)MA->value(), dl, VAList.getValueType()));
   }
 
   // Increment the pointer, VAList, to the next vaarg
@@ -3715,6 +3714,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
     if (Tmp == 1) return 1;  // Early out.
     return std::min(Tmp, Tmp2)-1;
+  case ISD::MUL: {
+    // The output of the Mul can be at most twice the valid bits in the inputs.
+    unsigned SignBitsOp0 = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (SignBitsOp0 == 1)
+      break;
+    unsigned SignBitsOp1 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    if (SignBitsOp1 == 1)
+      break;
+    unsigned OutValidBits =
+        (VTBits - SignBitsOp0 + 1) + (VTBits - SignBitsOp1 + 1);
+    return OutValidBits > VTBits ? 1 : VTBits - OutValidBits + 1;
+  }
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
@@ -5142,22 +5153,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N2C && N2C->isNullValue())
       return N1;
     break;
-  case ISD::FP_ROUND_INREG: {
-    EVT EVT = cast<VTSDNode>(N2)->getVT();
-    assert(VT == N1.getValueType() && "Not an inreg round!");
-    assert(VT.isFloatingPoint() && EVT.isFloatingPoint() &&
-           "Cannot FP_ROUND_INREG integer types");
-    assert(EVT.isVector() == VT.isVector() &&
-           "FP_ROUND_INREG type should be vector iff the operand "
-           "type is vector!");
-    assert((!EVT.isVector() ||
-            EVT.getVectorNumElements() == VT.getVectorNumElements()) &&
-           "Vector element counts must match in FP_ROUND_INREG");
-    assert(EVT.bitsLE(VT) && "Not rounding down!");
-    (void)EVT;
-    if (cast<VTSDNode>(N2)->getVT() == VT) return N1;  // Not actually rounding.
-    break;
-  }
   case ISD::FP_ROUND:
     assert(VT.isFloatingPoint() &&
            N1.getValueType().isFloatingPoint() &&
@@ -5368,7 +5363,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
-      case ISD::FP_ROUND_INREG:
       case ISD::SIGN_EXTEND_INREG:
       case ISD::SUB:
         return getUNDEF(VT);     // fold op(undef, arg2) -> undef
@@ -7766,6 +7760,8 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
   case ISD::STRICT_FTRUNC:     NewOpc = ISD::FTRUNC;     break;
   case ISD::STRICT_FP_ROUND:   NewOpc = ISD::FP_ROUND;   break;
   case ISD::STRICT_FP_EXTEND:  NewOpc = ISD::FP_EXTEND;  break;
+  case ISD::STRICT_FP_TO_SINT: NewOpc = ISD::FP_TO_SINT; break;
+  case ISD::STRICT_FP_TO_UINT: NewOpc = ISD::FP_TO_UINT; break;
   }
 
   assert(Node->getNumValues() == 2 && "Unexpected number of results!");
@@ -7915,6 +7911,7 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &DL,
     CSEMap.InsertNode(N, IP);
 
   InsertNode(N);
+  NewSDValueDbgMsg(SDValue(N, 0), "Creating new machine node: ", this);
   return N;
 }
 
@@ -8976,7 +8973,7 @@ bool SDValue::reachesChainWithoutSideEffects(SDValue Dest,
 
   // Loads don't have side effects, look through them.
   if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(*this)) {
-    if (!Ld->isVolatile())
+    if (Ld->isUnordered())
       return Ld->getChain().reachesChainWithoutSideEffects(Dest, Depth-1);
   }
   return false;
@@ -9142,8 +9139,7 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
                                getShiftAmountOperand(Operands[0].getValueType(),
                                                      Operands[1])));
       break;
-    case ISD::SIGN_EXTEND_INREG:
-    case ISD::FP_ROUND_INREG: {
+    case ISD::SIGN_EXTEND_INREG: {
       EVT ExtVT = cast<VTSDNode>(Operands[1])->getVT().getVectorElementType();
       Scalars.push_back(getNode(N->getOpcode(), dl, EltVT,
                                 Operands[0],
@@ -9214,6 +9210,9 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
                                                   unsigned Bytes,
                                                   int Dist) const {
   if (LD->isVolatile() || Base->isVolatile())
+    return false;
+  // TODO: probably too restrictive for atomics, revisit
+  if (!LD->isSimple())
     return false;
   if (LD->isIndexed() || Base->isIndexed())
     return false;

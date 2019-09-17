@@ -2,27 +2,13 @@
 Test that variables of integer basic types are displayed correctly.
 """
 
-from __future__ import print_function
-
 import AbstractBase
 
-import lldb
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-
 
 class IntegerTypesTestCase(AbstractBase.GenericTester):
 
     mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        AbstractBase.GenericTester.setUp(self)
-        # disable "There is a running process, kill it and restart?" prompt
-        self.runCmd("settings set auto-confirm true")
-        self.addTearDownHook(
-            lambda: self.runCmd("settings clear auto-confirm"))
 
     def test_char_type(self):
         """Test that char-type variables are displayed correctly."""

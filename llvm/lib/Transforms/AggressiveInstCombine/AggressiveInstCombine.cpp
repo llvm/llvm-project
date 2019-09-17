@@ -303,7 +303,7 @@ void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
 }
 
 bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return runImpl(F, TLI, DT);
 }

@@ -495,12 +495,26 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       }
     } else {
       // Small codemodel expand into ADRP + LDR.
+      MachineFunction &MF = *MI.getParent()->getParent();
+      DebugLoc DL = MI.getDebugLoc();
       MachineInstrBuilder MIB1 =
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg);
-      MachineInstrBuilder MIB2 =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRXui))
-              .add(MI.getOperand(0))
-              .addReg(DstReg);
+
+      MachineInstrBuilder MIB2;
+      if (MF.getSubtarget<AArch64Subtarget>().isTargetILP32()) {
+        auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+        unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
+        unsigned DstFlags = MI.getOperand(0).getTargetFlags();
+        MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRWui))
+                   .addDef(Reg32)
+                   .addReg(DstReg, RegState::Kill)
+                   .addReg(DstReg, DstFlags | RegState::Implicit);
+      } else {
+        unsigned DstReg = MI.getOperand(0).getReg();
+        MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+                   .add(MI.getOperand(0))
+                   .addUse(DstReg, RegState::Kill);
+      }
 
       if (MO1.isGlobal()) {
         MIB1.addGlobalAddress(MO1.getGlobal(), 0, Flags | AArch64II::MO_PAGE);

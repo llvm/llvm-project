@@ -1,0 +1,22 @@
+## Check that llvm-objdump dumps OpenBSD program headers correctly.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -p %t | FileCheck %s
+
+# CHECK:      OPENBSD_RANDOMIZE off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**0
+# CHECK-NEXT:      filesz 0x0000000000000000 memsz 0x0000000000000000 flags ---
+# CHECK-NEXT: OPENBSD_WXNEEDED off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**0
+# CHECK-NEXT:      filesz 0x0000000000000000 memsz 0x0000000000000000 flags ---
+# CHECK-NEXT: OPENBSD_BOOTDATA off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**0
+# CHECK-NEXT:      filesz 0x0000000000000000 memsz 0x0000000000000000 flags ---
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type: 0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
+  - Type: 0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
+  - Type: 0x65a41be6 ## PT_OPENBSD_BOOTDATA

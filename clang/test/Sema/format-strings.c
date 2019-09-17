@@ -277,8 +277,8 @@ typedef unsigned char uint8_t;
 
 void should_understand_small_integers() {
   printf("%hhu", (short) 10); // expected-warning{{format specifies type 'unsigned char' but the argument has type 'short'}}
-  printf("%hu\n", (unsigned char) 1); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'unsigned char'}}
-  printf("%hu\n", (uint8_t)1); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'uint8_t'}}
+  printf("%hu\n", (unsigned char)1); // warning with -Wformat-pedantic only
+  printf("%hu\n", (uint8_t)1);       // warning with -Wformat-pedantic only
 }
 
 void test11(void *p, char *s) {

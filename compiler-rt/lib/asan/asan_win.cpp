@@ -29,7 +29,7 @@
 #include "sanitizer_common/sanitizer_win.h"
 #include "sanitizer_common/sanitizer_win_defs.h"
 
-using namespace __asan;  // NOLINT
+using namespace __asan;
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -106,7 +106,7 @@ INTERCEPTOR_WINAPI(void, RaiseException, void *a, void *b, void *c, void *d) {
 
 INTERCEPTOR_WINAPI(EXCEPTION_DISPOSITION, __C_specific_handler,
                    _EXCEPTION_RECORD *a, void *b, _CONTEXT *c,
-                   _DISPATCHER_CONTEXT *d) {  // NOLINT
+                   _DISPATCHER_CONTEXT *d) {
   CHECK(REAL(__C_specific_handler));
   __asan_handle_no_return();
   return REAL(__C_specific_handler)(a, b, c, d);
@@ -362,7 +362,7 @@ bool HandleDlopenInit() {
 // beginning of C++ initialization. We set our priority to XCAB to run
 // immediately after the CRT runs. This way, our exception filter is called
 // first and we can delegate to their filter if appropriate.
-#pragma section(".CRT$XCAB", long, read)  // NOLINT
+#pragma section(".CRT$XCAB", long, read)
 __declspec(allocate(".CRT$XCAB")) int (*__intercept_seh)() =
     __asan_set_seh_filter;
 
@@ -375,7 +375,7 @@ static void NTAPI asan_thread_init(void *module, DWORD reason, void *reserved) {
     __asan_init();
 }
 
-#pragma section(".CRT$XLAB", long, read)  // NOLINT
+#pragma section(".CRT$XLAB", long, read)
 __declspec(allocate(".CRT$XLAB")) void(NTAPI *__asan_tls_init)(
     void *, unsigned long, void *) = asan_thread_init;
 #endif
@@ -389,7 +389,7 @@ static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
   }
 }
 
-#pragma section(".CRT$XLY", long, read)  // NOLINT
+#pragma section(".CRT$XLY", long, read)
 __declspec(allocate(".CRT$XLY")) void(NTAPI *__asan_tls_exit)(
     void *, unsigned long, void *) = asan_thread_exit;
 

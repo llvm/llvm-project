@@ -25,10 +25,11 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SplitDWO.empty() || !Config.SymbolsPrefix.empty() ||
       !Config.AllocSectionsPrefix.empty() || !Config.AddSection.empty() ||
       !Config.DumpSection.empty() || !Config.KeepSection.empty() ||
-      !Config.OnlySection.empty() || !Config.SymbolsToGlobalize.empty() ||
-      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
-      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SymbolsToRename.empty() ||
+      Config.NewSymbolVisibility || !Config.OnlySection.empty() ||
+      !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
+      !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
+      !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
+      !Config.SymbolsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
       !Config.SetSectionFlags.empty() || !Config.ToRemove.empty() ||
       Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
@@ -57,7 +58,11 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   if (Error E = handleArgs(Config, *O))
     return createFileError(Config.InputFilename, std::move(E));
 
-  MachOWriter Writer(*O, In.is64Bit(), In.isLittleEndian(), Out);
+  // TODO: Support 16KB pages which are employed in iOS arm64 binaries:
+  //       https://github.com/llvm/llvm-project/commit/1bebb2832ee312d3b0316dacff457a7a29435edb
+  const uint64_t PageSize = 4096;
+
+  MachOWriter Writer(*O, In.is64Bit(), In.isLittleEndian(), PageSize, Out);
   if (auto E = Writer.finalize())
     return E;
   return Writer.write();

@@ -221,7 +221,7 @@
 ...
 ---
 name:            _Z4bz_8Dv16_a
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -338,7 +338,7 @@ body:             |
 ...
 ---
 name:            _Z5bz_16Dv8_s
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -452,7 +452,7 @@ body:             |
 ...
 ---
 name:            _Z5bz_32Dv4_i
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -566,7 +566,7 @@ body:             |
 ...
 ---
 name:            _Z5bz_64Dv2_x
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -677,7 +677,7 @@ body:             |
 ...
 ---
 name:            _Z5bz_64_vDv2_x
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -788,7 +788,7 @@ body:             |
 ...
 ---
 name:            _Z5bnz_8Dv16_a
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -905,7 +905,7 @@ body:             |
 ...
 ---
 name:            _Z6bnz_16Dv8_s
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1019,7 +1019,7 @@ body:             |
 ...
 ---
 name:            _Z6bnz_32Dv4_i
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1133,7 +1133,7 @@ body:             |
 ...
 ---
 name:            _Z6bnz_64Dv2_x
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1244,7 +1244,7 @@ body:             |
 ...
 ---
 name:            _Z6bnz_64_vDv2_x
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

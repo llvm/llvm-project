@@ -43,15 +43,15 @@
 // iterator end() const;
 
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <vector>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "count_new.hpp"
-#include "filesystem_test_helper.hpp"
+#include "count_new.h"
+#include "filesystem_test_helper.h"
 #include "assert_checkpoint.h"
 #include "verbose_assert.h"
 

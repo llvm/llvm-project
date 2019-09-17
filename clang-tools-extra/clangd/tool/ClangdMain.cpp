@@ -122,8 +122,7 @@ opt<bool> ShowOrigins{
 opt<bool> EnableBackgroundIndex{
     "background-index",
     cat(Features),
-    desc("Index project code in the background and persist index on disk. "
-         "Experimental"),
+    desc("Index project code in the background and persist index on disk."),
     init(true),
 };
 
@@ -374,7 +373,7 @@ opt<bool> PrettyPrint{
     init(false),
 };
 
-/// \brief Supports a test URI scheme with relaxed constraints for lit tests.
+/// Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
 /// directory to form an absolute path. For example, test:///a.cpp is resolved
 /// C:\clangd-test\a.cpp on Windows and /clangd-test/a.cpp on Unix.

@@ -242,19 +242,21 @@ class Value;
   /// This is a wrapper around Value::stripAndAccumulateConstantOffsets that
   /// creates and later unpacks the required APInt.
   inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
-                                                 const DataLayout &DL) {
+                                                 const DataLayout &DL,
+                                                 bool AllowNonInbounds = true) {
     APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
     Value *Base =
-        Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt,
-                                               /* AllowNonInbounds */ true);
+        Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt, AllowNonInbounds);
+
     Offset = OffsetAPInt.getSExtValue();
     return Base;
   }
-  inline const Value *GetPointerBaseWithConstantOffset(const Value *Ptr,
-                                                       int64_t &Offset,
-                                                       const DataLayout &DL) {
-    return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset,
-                                            DL);
+  inline const Value *
+  GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
+                                   const DataLayout &DL,
+                                   bool AllowNonInbounds = true) {
+    return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset, DL,
+                                            AllowNonInbounds);
   }
 
   /// Returns true if the GEP is based on a pointer to a string (array of
@@ -381,6 +383,13 @@ class Value;
 
   /// Return true if the only users of this pointer are lifetime markers.
   bool onlyUsedByLifetimeMarkers(const Value *V);
+
+  /// Return true if speculation of the given load must be suppressed to avoid
+  /// ordering or interfering with an active sanitizer.  If not suppressed,
+  /// dereferenceability and alignment must be proven separately.  Note: This
+  /// is only needed for raw reasoning; if you use the interface below
+  /// (isSafeToSpeculativelyExecute), this is handled internally.
+  bool mustSuppressSpeculation(const LoadInst &LI);
 
   /// Return true if the instruction does not have any effects besides
   /// calculating the result and does not have undefined behavior.
@@ -661,11 +670,11 @@ class Value;
                                          const Instruction *ContextI,
                                          const DataLayout &DL);
 
-  /// Return true if Ptr1 is provably equal to Ptr2 plus a constant offset, and
-  /// return that constant offset. For example, Ptr1 might be &A[42], and Ptr2
-  /// might be &A[40]. In this case offset would be -8.
-  bool isPointerOffset(Value *Ptr1, Value *Ptr2, int64_t &Offset,
-                       const DataLayout &DL);
+  /// If Ptr1 is provably equal to Ptr2 plus a constant offset, return that
+  /// offset. For example, Ptr1 might be &A[42], and Ptr2 might be &A[40]. In
+  /// this case offset would be -8.
+  Optional<int64_t> isPointerOffset(const Value *Ptr1, const Value *Ptr2,
+                                    const DataLayout &DL);
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

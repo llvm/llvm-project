@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-/// \@brief Checks for member expressions that access static members through
+/// Checks for member expressions that access static members through
 /// instances and replaces them with uses of the appropriate qualified-id.
 ///
 /// For the user-facing documentation see:

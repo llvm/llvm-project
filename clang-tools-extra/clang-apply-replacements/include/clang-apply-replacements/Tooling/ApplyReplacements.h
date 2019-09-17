@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief This file provides the interface for deduplicating, detecting
+/// This file provides the interface for deduplicating, detecting
 /// conflicts in, and applying collections of Replacements.
 ///
 //===----------------------------------------------------------------------===//
@@ -31,21 +31,21 @@ class Rewriter;
 
 namespace replace {
 
-/// \brief Collection of TranslationUnitReplacements.
+/// Collection of TranslationUnitReplacements.
 typedef std::vector<clang::tooling::TranslationUnitReplacements> TUReplacements;
 
-/// \brief Collection of TranslationUnitReplacement files.
+/// Collection of TranslationUnitReplacement files.
 typedef std::vector<std::string> TUReplacementFiles;
 
-/// \brief Collection of TranslationUniDiagnostics.
+/// Collection of TranslationUniDiagnostics.
 typedef std::vector<clang::tooling::TranslationUnitDiagnostics> TUDiagnostics;
 
-/// \brief Map mapping file name to a set of AtomicChange targeting that file.
+/// Map mapping file name to a set of AtomicChange targeting that file.
 typedef llvm::DenseMap<const clang::FileEntry *,
                        std::vector<tooling::AtomicChange>>
     FileToChangesMap;
 
-/// \brief Recursively descends through a directory structure rooted at \p
+/// Recursively descends through a directory structure rooted at \p
 /// Directory and attempts to deserialize *.yaml files as
 /// TranslationUnitReplacements. All docs that successfully deserialize are
 /// added to \p TUs.
@@ -70,7 +70,7 @@ std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUDiagnostics &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics);
 
-/// \brief Deduplicate, check for conflicts, and extract all Replacements stored
+/// Deduplicate, check for conflicts, and extract all Replacements stored
 /// in \c TUs. Conflicting replacements are skipped.
 ///
 /// \post For all (key,value) in FileChanges, value[i].getOffset() <=
@@ -90,7 +90,7 @@ bool mergeAndDeduplicate(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                          FileToChangesMap &FileChanges,
                          clang::SourceManager &SM);
 
-/// \brief Apply \c AtomicChange on File and rewrite it.
+/// Apply \c AtomicChange on File and rewrite it.
 ///
 /// \param[in] File Path of the file where to apply AtomicChange.
 /// \param[in] Changes to apply.
@@ -104,7 +104,7 @@ applyChanges(StringRef File, const std::vector<tooling::AtomicChange> &Changes,
              const tooling::ApplyChangesSpec &Spec,
              DiagnosticsEngine &Diagnostics);
 
-/// \brief Delete the replacement files.
+/// Delete the replacement files.
 ///
 /// \param[in] Files Replacement files to delete.
 /// \param[in] Diagnostics DiagnosticsEngine used for error output.

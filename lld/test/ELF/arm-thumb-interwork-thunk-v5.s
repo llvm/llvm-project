@@ -1,11 +1,9 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d %t2 -triple=armv5-none-linux-gnueabi | FileCheck -check-prefix=CHECK-ARM %s
-// RUN: llvm-objdump -d %t2 -triple=thumbv5-none-linux-gnueabi | FileCheck -check-prefix=CHECK-THUMB %s
+// RUN: llvm-objdump -d %t2 -triple=armv5-none-linux-gnueabi | FileCheck %s
 // RUN: ld.lld %t -o %t3 --shared
-// RUN: llvm-objdump -d %t3 -triple=armv5-none-linux-gnueabi | FileCheck -check-prefix=CHECK-ARM-PI %s
-// RUN: llvm-objdump -d %t3 -triple=thumbv5-none-linux-gnueabi | FileCheck -check-prefix=CHECK-THUMB-PI %s
+// RUN: llvm-objdump -d %t3 -triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
 
 // Test ARM Thumb Interworking on older Arm architectures using Thunks that do
 // not use MOVT/MOVW instructions.
@@ -28,35 +26,35 @@ _start:
         blx thumb_func
         bx lr
 
-// CHECK-ARM: _start:
-// CHECK-ARM-NEXT: 11000: 03 00 00 ea     b       #12 <__ARMv5ABSLongThunk_thumb_func>
-// CHECK-ARM-NEXT: 11004: 01 00 00 fa     blx     #4 <thumb_func>
-// CHECK-ARM-NEXT: 11008: 00 00 00 fa     blx     #0 <thumb_func>
-// CHECK-ARM-NEXT: 1100c: 1e ff 2f e1     bx      lr
+// CHECK: _start:
+// CHECK-NEXT: 12000: 03 00 00 ea     b       #12 <__ARMv5ABSLongThunk_thumb_func>
+// CHECK-NEXT: 12004: 01 00 00 fa     blx     #4 <thumb_func>
+// CHECK-NEXT: 12008: 00 00 00 fa     blx     #0 <thumb_func>
+// CHECK-NEXT: 1200c: 1e ff 2f e1     bx      lr
 
-// CHECK-THUMB: thumb_func:
-// CHECK-THUMB-NEXT: 11010: 70 47   bx      lr
+// CHECK: thumb_func:
+// CHECK-NEXT: 12010: 70 47   bx      lr
 
-// CHECK-ARM: __ARMv5ABSLongThunk_thumb_func:
-// CHECK-ARM-NEXT: 11014: 04 f0 1f e5     ldr     pc, [pc, #-4]
-// CHECK-ARM: $d:
-// CHECK-ARM-NEXT: 11018: 11 10 01 00     .word   0x00011011
+// CHECK: __ARMv5ABSLongThunk_thumb_func:
+// CHECK-NEXT: 12014: 04 f0 1f e5     ldr     pc, [pc, #-4]
+// CHECK: $d:
+// CHECK-NEXT: 12018: 11 20 01 00     .word   0x00012011
 
-// CHECK-ARM-PI: _start:
-// CHECK-ARM-PI-NEXT: 1000: 03 00 00 ea     b       #12 <__ARMV5PILongThunk_thumb_func>
-// CHECK-ARM-PI-NEXT: 1004: 01 00 00 fa     blx     #4 <thumb_func>
-// CHECK-ARM-PI-NEXT: 1008: 00 00 00 fa     blx     #0 <thumb_func>
-// CHECK-ARM-PI-NEXT: 100c: 1e ff 2f e1     bx      lr
+// CHECK-PI: _start:
+// CHECK-PI-NEXT: 2000: 03 00 00 ea     b       #12 <__ARMV5PILongThunk_thumb_func>
+// CHECK-PI-NEXT: 2004: 01 00 00 fa     blx     #4 <thumb_func>
+// CHECK-PI-NEXT: 2008: 00 00 00 fa     blx     #0 <thumb_func>
+// CHECK-PI-NEXT: 200c: 1e ff 2f e1     bx      lr
 
-// CHECK-THUMB-PI: thumb_func:
-// CHECK-THUMB-PI-NEXT: 1010: 70 47   bx      lr
+// CHECK-PI: thumb_func:
+// CHECK-PI-NEXT: 2010: 70 47   bx      lr
 
-// CHECK-ARM-PI: __ARMV5PILongThunk_thumb_func:
-// CHECK-ARM-PI-NEXT: 1014: 04 c0 9f e5     ldr     r12, [pc, #4]
-// CHECK-ARM-PI-NEXT: 1018: 0c c0 8f e0     add     r12, pc, r12
-// CHECK-ARM-PI-NEXT: 101c: 1c ff 2f e1     bx      r12
-// CHECK-ARM-PI: $d:
-// CHECK-ARM-PI-NEXT: 1020: f1 ff ff ff     .word   0xfffffff1
+// CHECK-PI: __ARMV5PILongThunk_thumb_func:
+// CHECK-PI-NEXT: 2014: 04 c0 9f e5     ldr     r12, [pc, #4]
+// CHECK-PI-NEXT: 2018: 0c c0 8f e0     add     r12, pc, r12
+// CHECK-PI-NEXT: 201c: 1c ff 2f e1     bx      r12
+// CHECK-PI: $d:
+// CHECK-PI-NEXT: 2020: f1 ff ff ff     .word   0xfffffff1
 
         .section .text.1, "ax", %progbits
         .thumb

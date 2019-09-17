@@ -427,6 +427,41 @@ X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
   }
 }
 
+// Replace TAILJMP opcodes with their equivalent opcodes that have encoding
+// information.
+static unsigned convertTailJumpOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::TAILJMPr:
+    Opcode = X86::JMP32r;
+    break;
+  case X86::TAILJMPm:
+    Opcode = X86::JMP32m;
+    break;
+  case X86::TAILJMPr64:
+    Opcode = X86::JMP64r;
+    break;
+  case X86::TAILJMPm64:
+    Opcode = X86::JMP64m;
+    break;
+  case X86::TAILJMPr64_REX:
+    Opcode = X86::JMP64r_REX;
+    break;
+  case X86::TAILJMPm64_REX:
+    Opcode = X86::JMP64m_REX;
+    break;
+  case X86::TAILJMPd:
+  case X86::TAILJMPd64:
+    Opcode = X86::JMP_1;
+    break;
+  case X86::TAILJMPd_CC:
+  case X86::TAILJMPd64_CC:
+    Opcode = X86::JCC_1;
+    break;
+  }
+
+  return Opcode;
+}
+
 void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
@@ -500,20 +535,14 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
   }
 
-  // TAILJMPr64, CALL64r, CALL64pcrel32 - These instructions have register
-  // inputs modeled as normal uses instead of implicit uses.  As such, truncate
-  // off all but the first operand (the callee).  FIXME: Change isel.
-  case X86::TAILJMPr64:
-  case X86::TAILJMPr64_REX:
+  // CALL64r, CALL64pcrel32 - These instructions used to have
+  // register inputs modeled as normal uses instead of implicit uses.  As such,
+  // they we used to truncate off all but the first operand (the callee). This
+  // issue seems to have been fixed at some point. This assert verifies that.
   case X86::CALL64r:
-  case X86::CALL64pcrel32: {
-    unsigned Opcode = OutMI.getOpcode();
-    MCOperand Saved = OutMI.getOperand(0);
-    OutMI = MCInst();
-    OutMI.setOpcode(Opcode);
-    OutMI.addOperand(Saved);
+  case X86::CALL64pcrel32:
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     break;
-  }
 
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
@@ -539,36 +568,30 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
   }
 
-    // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump
-    // instruction.
-    {
-      unsigned Opcode;
-    case X86::TAILJMPr:
-      Opcode = X86::JMP32r;
-      goto SetTailJmpOpcode;
-    case X86::TAILJMPd:
-    case X86::TAILJMPd64:
-      Opcode = X86::JMP_1;
-      goto SetTailJmpOpcode;
-
-    SetTailJmpOpcode:
-      MCOperand Saved = OutMI.getOperand(0);
-      OutMI = MCInst();
-      OutMI.setOpcode(Opcode);
-      OutMI.addOperand(Saved);
-      break;
-    }
+  // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump
+  // instruction.
+  case X86::TAILJMPr:
+  case X86::TAILJMPr64:
+  case X86::TAILJMPr64_REX:
+  case X86::TAILJMPd:
+  case X86::TAILJMPd64:
+    assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
+    break;
 
   case X86::TAILJMPd_CC:
-  case X86::TAILJMPd64_CC: {
-    MCOperand Saved = OutMI.getOperand(0);
-    MCOperand Saved2 = OutMI.getOperand(1);
-    OutMI = MCInst();
-    OutMI.setOpcode(X86::JCC_1);
-    OutMI.addOperand(Saved);
-    OutMI.addOperand(Saved2);
+  case X86::TAILJMPd64_CC:
+    assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-  }
+
+  case X86::TAILJMPm:
+  case X86::TAILJMPm64:
+  case X86::TAILJMPm64_REX:
+    assert(OutMI.getNumOperands() == X86::AddrNumOperands &&
+           "Unexpected number of operands!");
+    OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
+    break;
 
   case X86::DEC16r:
   case X86::DEC32r:
@@ -1369,6 +1392,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   recordSled(CurSled, MI, SledKind::TAIL_CALL);
 
   unsigned OpCode = MI.getOperand(0).getImm();
+  OpCode = convertTailJumpOpcode(OpCode);
   MCInst TC;
   TC.setOpcode(OpCode);
 
@@ -1538,8 +1562,6 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
   assert(getSubtarget().isOSWindows() && "SEH_ instruction Windows only");
-  const X86RegisterInfo *RI =
-      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
   if (EmitFPOData) {
@@ -1577,17 +1599,16 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   // Otherwise, use the .seh_ directives for all other Windows platforms.
   switch (MI->getOpcode()) {
   case X86::SEH_PushReg:
-    OutStreamer->EmitWinCFIPushReg(
-        RI->getSEHRegNum(MI->getOperand(0).getImm()));
+    OutStreamer->EmitWinCFIPushReg(MI->getOperand(0).getImm());
     break;
 
   case X86::SEH_SaveReg:
-    OutStreamer->EmitWinCFISaveReg(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+    OutStreamer->EmitWinCFISaveReg(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_SaveXMM:
-    OutStreamer->EmitWinCFISaveXMM(RI->getSEHRegNum(MI->getOperand(0).getImm()),
+    OutStreamer->EmitWinCFISaveXMM(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     break;
 
@@ -1596,9 +1617,8 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     break;
 
   case X86::SEH_SetFrame:
-    OutStreamer->EmitWinCFISetFrame(
-        RI->getSEHRegNum(MI->getOperand(0).getImm()),
-        MI->getOperand(1).getImm());
+    OutStreamer->EmitWinCFISetFrame(MI->getOperand(0).getImm(),
+                                    MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_PushFrame:
@@ -1697,8 +1717,6 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::MASKPAIR16LOAD: {
     int64_t Disp = MI->getOperand(1 + X86::AddrDisp).getImm();
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
-    const X86RegisterInfo *RI =
-      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
     Register Reg = MI->getOperand(0).getReg();
     Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);
@@ -1730,8 +1748,6 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::MASKPAIR16STORE: {
     int64_t Disp = MI->getOperand(X86::AddrDisp).getImm();
     assert(Disp >= 0 && Disp <= INT32_MAX - 2 && "Unexpected displacement");
-    const X86RegisterInfo *RI =
-      MF->getSubtarget<X86Subtarget>().getRegisterInfo();
     Register Reg = MI->getOperand(X86::AddrNumOperands).getReg();
     Register Reg0 = RI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = RI->getSubReg(Reg, X86::sub_mask_1);

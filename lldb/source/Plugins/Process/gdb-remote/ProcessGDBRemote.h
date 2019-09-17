@@ -24,8 +24,8 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/StringList.h"
@@ -199,6 +199,7 @@ public:
                            const llvm::Triple &triple) override;
 
   llvm::VersionTuple GetHostOSVersion() override;
+  llvm::VersionTuple GetHostMacCatalystVersion() override;
 
   llvm::Error LoadModules() override;
 

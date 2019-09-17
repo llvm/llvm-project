@@ -48,6 +48,7 @@
 #include "regex2.h"
 
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 
 /* character-class table */
 static struct cclass {
@@ -537,7 +538,7 @@ p_ere_exp(struct parse *p)
 		break;
 	case '{':		/* okay as ordinary except if digit follows */
 		REQUIRE(!MORE() || !isdigit((uch)PEEK()), REG_BADRPT);
-		/* FALLTHROUGH */
+		LLVM_FALLTHROUGH;
 	default:
 		ordinary(p, c);
 		break;
@@ -733,7 +734,7 @@ p_simp_re(struct parse *p,
 		break;
 	case '*':
 		REQUIRE(starordinary, REG_BADRPT);
-		/* FALLTHROUGH */
+		LLVM_FALLTHROUGH;
 	default:
 		ordinary(p, (char)c);
 		break;
@@ -1635,7 +1636,7 @@ findmust(struct parse *p, struct re_guts *g)
 					return;
 				}
 			} while (OP(s) != O_QUEST && OP(s) != O_CH);
-			/* fallthrough */
+			LLVM_FALLTHROUGH;
 		default:		/* things that break a sequence */
 			if (newlen > g->mlen) {		/* ends one */
 				start = newstart;

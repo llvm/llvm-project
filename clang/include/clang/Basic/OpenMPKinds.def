@@ -191,6 +191,9 @@
 #ifndef OPENMP_ALLOCATE_CLAUSE
 # define OPENMP_ALLOCATE_CLAUSE(Name)
 #endif
+#ifndef OPENMP_DEVICE_TYPE_KIND
+#define OPENMP_DEVICE_TYPE_KIND(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -248,6 +251,7 @@ OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for, "target teams distrib
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for_simd, "target teams distribute parallel for simd")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_simd, "target teams distribute simd")
 OPENMP_DIRECTIVE(allocate)
+OPENMP_DIRECTIVE_EXT(declare_variant, "declare variant")
 
 // OpenMP clauses.
 OPENMP_CLAUSE(allocator, OMPAllocatorClause)
@@ -950,6 +954,12 @@ OPENMP_TASKGROUP_CLAUSE(allocate)
 // Clauses allowed for OpenMP directive 'declare mapper'.
 OPENMP_DECLARE_MAPPER_CLAUSE(map)
 
+// Device types for 'device_type' clause.
+OPENMP_DEVICE_TYPE_KIND(host)
+OPENMP_DEVICE_TYPE_KIND(nohost)
+OPENMP_DEVICE_TYPE_KIND(any)
+
+#undef OPENMP_DEVICE_TYPE_KIND
 #undef OPENMP_ALLOCATE_CLAUSE
 #undef OPENMP_DECLARE_MAPPER_CLAUSE
 #undef OPENMP_TASKGROUP_CLAUSE

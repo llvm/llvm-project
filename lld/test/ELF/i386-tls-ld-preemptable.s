@@ -3,7 +3,7 @@
 # RUN: ld.lld %t.o -shared -o %t.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
 
-# CHECK: 100b:       movl    (%eax), %eax
+# CHECK: 11ef:       movl    (%eax), %eax
 
 # We used to error on R_386_TLS_LDO_32 to preemptable symbols.
 # i is STB_GLOBAL and preemptable.

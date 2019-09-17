@@ -8,14 +8,10 @@ define i32 @test1(i32 %a, i32 %b, i32 %c) nounwind  {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[B:%.*]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB3:%.*]]
-; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[C:%.*]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[TMP3_A:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[A]]
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[TMP3_A]], [[BB1]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[A]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i32 [[SPEC_SELECT]], i32 [[B]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], 1
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
@@ -97,8 +93,8 @@ define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1,
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[C:%.*]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[PTR3:%.*]]
-; CHECK-NEXT:    [[TMP3_PTR2:%.*]] = select i1 [[TMP2]], i32* [[TMP3]], i32* [[PTR2:%.*]]
-; CHECK-NEXT:    ret i32* [[TMP3_PTR2]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP2]], i32* [[TMP3]], i32* [[PTR2:%.*]]
+; CHECK-NEXT:    ret i32* [[SPEC_SELECT]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32* [[PTR1:%.*]]
 ;

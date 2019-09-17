@@ -99,7 +99,7 @@ public:
   /// load a
   /// Where a mayalias b, *does* require RenameUses be set to true.
   void insertDef(MemoryDef *Def, bool RenameUses = false);
-  void insertUse(MemoryUse *Use);
+  void insertUse(MemoryUse *Use, bool RenameUses = false);
   /// Update the MemoryPhi in `To` following an edge deletion between `From` and
   /// `To`. If `To` becomes unreachable, a call to removeBlocks should be made.
   void removeEdge(BasicBlock *From, BasicBlock *To);
@@ -275,6 +275,7 @@ private:
   getPreviousDefRecursive(BasicBlock *,
                           DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
   MemoryAccess *recursePhi(MemoryAccess *Phi);
+  MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
   void tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs);

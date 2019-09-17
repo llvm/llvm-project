@@ -338,7 +338,9 @@ public:
       return Err;
 
     // Close the response message.
-    return C.endSendMessage();
+    if (auto Err = C.endSendMessage())
+      return Err;
+    return C.send();
   }
 
   template <typename ChannelT, typename FunctionIdT, typename SequenceNumberT>
@@ -350,7 +352,9 @@ public:
       return Err2;
     if (auto Err2 = serializeSeq(C, std::move(Err)))
       return Err2;
-    return C.endSendMessage();
+    if (auto Err2 = C.endSendMessage())
+      return Err2;
+    return C.send();
   }
 
 };
@@ -378,8 +382,11 @@ public:
                                                                C, *ResultOrErr))
       return Err;
 
-    // Close the response message.
-    return C.endSendMessage();
+    // End the response message.
+    if (auto Err = C.endSendMessage())
+      return Err;
+
+    return C.send();
   }
 
   template <typename ChannelT, typename FunctionIdT, typename SequenceNumberT>
@@ -389,7 +396,9 @@ public:
       return Err;
     if (auto Err2 = C.startSendMessage(ResponseId, SeqNo))
       return Err2;
-    return C.endSendMessage();
+    if (auto Err2 = C.endSendMessage())
+      return Err2;
+    return C.send();
   }
 
 };
@@ -740,11 +749,15 @@ public:
   // to the user defined handler.
   Error handleResponse(ChannelT &C) override {
     Error Result = Error::success();
-    if (auto Err =
-            SerializationTraits<ChannelT, Error, Error>::deserialize(C, Result))
+    if (auto Err = SerializationTraits<ChannelT, Error, Error>::deserialize(
+            C, Result)) {
+      consumeError(std::move(Result));
       return Err;
-    if (auto Err = C.endReceiveMessage())
+    }
+    if (auto Err = C.endReceiveMessage()) {
+      consumeError(std::move(Result));
       return Err;
+    }
     return Handler(std::move(Result));
   }
 
@@ -1400,14 +1413,12 @@ public:
     using ErrorReturn = typename RTraits::ErrorReturnType;
     using ErrorReturnPromise = typename RTraits::ReturnPromiseType;
 
-    // FIXME: Stack allocate and move this into the handler once LLVM builds
-    //        with C++14.
-    auto Promise = std::make_shared<ErrorReturnPromise>();
-    auto FutureResult = Promise->get_future();
+    ErrorReturnPromise Promise;
+    auto FutureResult = Promise.get_future();
 
     if (auto Err = this->template appendCallAsync<Func>(
-            [Promise](ErrorReturn RetOrErr) {
-              Promise->set_value(std::move(RetOrErr));
+            [Promise = std::move(Promise)](ErrorReturn RetOrErr) {
+              Promise.set_value(std::move(RetOrErr));
               return Error::success();
             },
             Args...)) {
@@ -1520,6 +1531,12 @@ public:
       return std::move(Err);
     }
 
+    if (auto Err = this->C.send()) {
+      detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
+          std::move(Result));
+      return std::move(Err);
+    }
+
     while (!ReceivedResponse) {
       if (auto Err = this->handleOne()) {
         detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
@@ -1579,8 +1596,7 @@ public:
     // outstanding calls count, then poke the condition variable.
     using ArgType = typename detail::ResponseHandlerArg<
         typename detail::HandlerTraits<HandlerT>::Type>::ArgType;
-    // FIXME: Move handler into wrapped handler once we have C++14.
-    auto WrappedHandler = [this, Handler](ArgType Arg) {
+    auto WrappedHandler = [this, Handler = std::move(Handler)](ArgType Arg) {
       auto Err = Handler(std::move(Arg));
       std::unique_lock<std::mutex> Lock(M);
       --NumOutstandingCalls;

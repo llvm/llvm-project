@@ -18,7 +18,7 @@ __attribute__((noinline)) void fn3(int *first, int second) {
 
 int main() {
   int d = b && c;
-  int e[a]; // NOLINT
+  int e[a];
   assert(!(reinterpret_cast<uintptr_t>(e) & 31L));
   int f;
   if (d)

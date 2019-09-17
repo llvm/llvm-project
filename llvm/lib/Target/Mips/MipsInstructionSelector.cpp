@@ -338,6 +338,11 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case G_BRINDIRECT: {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoIndirectBranch))
+             .add(I.getOperand(0));
+    break;
+  }
   case G_PHI: {
     const Register DestReg = I.getOperand(0).getReg();
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
@@ -434,6 +439,18 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
              .add(I.getOperand(2))
              .add(I.getOperand(1))
              .add(I.getOperand(3));
+    break;
+  }
+  case G_IMPLICIT_DEF: {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::IMPLICIT_DEF))
+             .add(I.getOperand(0));
+
+    // Set class based on register bank, there can be fpr and gpr implicit def.
+    MRI.setRegClass(MI->getOperand(0).getReg(),
+                    getRegClassForTypeOnBank(
+                        MRI.getType(I.getOperand(0).getReg()).getSizeInBits(),
+                        *RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI),
+                        RBI));
     break;
   }
   case G_CONSTANT: {
@@ -751,6 +768,10 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
 
     I.eraseFromParent();
     return true;
+  }
+  case G_FENCE: {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::SYNC)).addImm(0);
+    break;
   }
   default:
     return false;

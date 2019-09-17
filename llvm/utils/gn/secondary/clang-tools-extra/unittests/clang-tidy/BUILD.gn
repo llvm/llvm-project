@@ -25,6 +25,7 @@ unittest("ClangTidyTests") {
   sources = [
     "ClangTidyDiagnosticConsumerTest.cpp",
     "ClangTidyOptionsTest.cpp",
+    "GlobListTest.cpp",
     "GoogleModuleTest.cpp",
     "IncludeInserterTest.cpp",
     "LLVMModuleTest.cpp",

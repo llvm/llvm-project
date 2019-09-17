@@ -15,12 +15,12 @@
 
 // const value_type* c_str() const noexcept;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "filesystem_test_helper.hpp"
+#include "filesystem_test_helper.h"
 
 
 int main(int, char**)

@@ -47,8 +47,8 @@ MCSymbol *X86_64MachoTargetObjectFile::getCFIPersonalitySymbol(
 }
 
 const MCExpr *X86_64MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
-    const MCSymbol *Sym, const MCValue &MV, int64_t Offset,
-    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   // On Darwin/X86-64, we need to use foo@GOTPCREL+4 to access the got entry
   // from a data section. In case there's an additional offset, then use
   // foo@GOTPCREL+4+<offset>.

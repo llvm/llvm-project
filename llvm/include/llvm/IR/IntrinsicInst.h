@@ -259,6 +259,8 @@ namespace llvm {
       case Intrinsic::experimental_constrained_fdiv:
       case Intrinsic::experimental_constrained_frem:
       case Intrinsic::experimental_constrained_fma:
+      case Intrinsic::experimental_constrained_fptosi:
+      case Intrinsic::experimental_constrained_fptoui:
       case Intrinsic::experimental_constrained_fptrunc:
       case Intrinsic::experimental_constrained_fpext:
       case Intrinsic::experimental_constrained_sqrt:

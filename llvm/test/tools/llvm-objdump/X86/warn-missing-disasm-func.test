@@ -13,9 +13,9 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 
-# CHECK: warning: failed to disassemble missing function foo
+# CHECK: warning: {{.*}}: failed to disassemble missing function foo
 
 # MULTI: file format ELF64-x86-64
-# MULTI: warning: failed to disassemble missing function foo
+# MULTI: warning: {{.*}}: failed to disassemble missing function foo
 # MULTI: file format ELF64-x86-64
-# MULTI: warning: failed to disassemble missing function foo
+# MULTI: warning: {{.*}}: failed to disassemble missing function foo

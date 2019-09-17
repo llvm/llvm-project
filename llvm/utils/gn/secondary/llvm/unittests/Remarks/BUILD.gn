@@ -8,7 +8,9 @@ unittest("RemarksTests") {
   ]
   sources = [
     "BitstreamRemarksFormatTest.cpp",
+    "BitstreamRemarksParsingTest.cpp",
     "BitstreamRemarksSerializerTest.cpp",
+    "RemarksAPITest.cpp",
     "RemarksStrTabParsingTest.cpp",
     "YAMLRemarksParsingTest.cpp",
     "YAMLRemarksSerializerTest.cpp",

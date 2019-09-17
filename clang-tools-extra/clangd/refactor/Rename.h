@@ -9,12 +9,14 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_RENAME_H
 
-#include "ClangdUnit.h"
+#include "Protocol.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
 namespace clangd {
+class ParsedAST;
+class SymbolIndex;
 
 /// Renames all occurrences of the symbol at \p Pos to \p NewName.
 /// Occurrences outside the current file are not modified.

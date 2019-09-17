@@ -56,8 +56,8 @@ addl tls1@gotntpoff(%ebx),%eax
 # CHECK-NEXT:   SHF_ALLOC
 # CHECK-NEXT:   SHF_WRITE
 # CHECK-NEXT: ]
-# CHECK-NEXT: Address: 0x2078
-# CHECK-NEXT: Offset: 0x2078
+# CHECK-NEXT: Address: 0x2358
+# CHECK-NEXT: Offset: 0x358
 # CHECK-NEXT: Size: 32
 # CHECK-NEXT: Link: 0
 # CHECK-NEXT: Info: 0
@@ -66,35 +66,35 @@ addl tls1@gotntpoff(%ebx),%eax
 
 # CHECK: Relocations [
 # CHECK:      Section ({{.+}}) .rel.dyn {
-# CHECK-NEXT: 0x2088 R_386_TLS_DTPMOD32 - 0x0
-# CHECK-NEXT: 0x2078 R_386_TLS_DTPMOD32 tls0 0x0
-# CHECK-NEXT: 0x207C R_386_TLS_DTPOFF32 tls0 0x0
-# CHECK-NEXT: 0x2090 R_386_TLS_TPOFF tls0 0x0
-# CHECK-NEXT: 0x2080 R_386_TLS_DTPMOD32 tls1 0x0
-# CHECK-NEXT: 0x2084 R_386_TLS_DTPOFF32 tls1 0x0
-# CHECK-NEXT: 0x2094 R_386_TLS_TPOFF tls1 0x0
+# CHECK-NEXT: 0x2368 R_386_TLS_DTPMOD32 - 0x0
+# CHECK-NEXT: 0x2358 R_386_TLS_DTPMOD32 tls0 0x0
+# CHECK-NEXT: 0x235C R_386_TLS_DTPOFF32 tls0 0x0
+# CHECK-NEXT: 0x2370 R_386_TLS_TPOFF tls0 0x0
+# CHECK-NEXT: 0x2360 R_386_TLS_DTPMOD32 tls1 0x0
+# CHECK-NEXT: 0x2364 R_386_TLS_DTPOFF32 tls1 0x0
+# CHECK-NEXT: 0x2374 R_386_TLS_TPOFF tls1 0x0
 # CHECK-NEXT: }
 
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
 # DIS-NEXT: _start:
 ## General dynamic model:
-## -3976 and -3968 are first and second GOT entries offsets.
+## -4128 and -4120 are first and second GOT entries offsets.
 ## Each one is a pair of records.
-# DIS-NEXT: 1000:       leal -3976(,%ebx), %eax
-# DIS-NEXT: 1007:       calll 100
-# DIS-NEXT: 100c:       leal -3968(,%ebx), %eax
-# DIS-NEXT: 1013:       calll 88
+# DIS-NEXT: 1260:       leal -4128(,%ebx), %eax
+# DIS-NEXT: 1267:       calll 100
+# DIS-NEXT: 126c:       leal -4120(,%ebx), %eax
+# DIS-NEXT: 1273:       calll 88
 ## Local dynamic model:
 ## -16 is a local module tls index offset.
-# DIS-NEXT: 1018:       leal -3960(%ebx), %eax
-# DIS-NEXT: 101e:       calll 77
-# DIS-NEXT: 1023:       leal 8(%eax), %edx
-# DIS-NEXT: 1029:       leal -3960(%ebx), %eax
-# DIS-NEXT: 102f:       calll 60
-# DIS-NEXT: 1034:       leal 12(%eax), %edx
+# DIS-NEXT: 1278:       leal -4112(%ebx), %eax
+# DIS-NEXT: 127e:       calll 77
+# DIS-NEXT: 1283:       leal 8(%eax), %edx
+# DIS-NEXT: 1289:       leal -4112(%ebx), %eax
+# DIS-NEXT: 128f:       calll 60
+# DIS-NEXT: 1294:       leal 12(%eax), %edx
 ## Initial exec model:
-# DIS-NEXT: 103a:       movl %gs:0, %eax
-# DIS-NEXT: 1040:       addl -3952(%ebx), %eax
-# DIS-NEXT: 1046:       movl %gs:0, %eax
-# DIS-NEXT: 104c:       addl -3948(%ebx), %eax
+# DIS-NEXT: 129a:       movl %gs:0, %eax
+# DIS-NEXT: 12a0:       addl -4104(%ebx), %eax
+# DIS-NEXT: 12a6:       movl %gs:0, %eax
+# DIS-NEXT: 12ac:       addl -4100(%ebx), %eax

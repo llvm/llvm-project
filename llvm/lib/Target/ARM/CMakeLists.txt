@@ -52,6 +52,8 @@ add_llvm_target(ARMCodeGen
   ARMTargetObjectFile.cpp
   ARMTargetTransformInfo.cpp
   MLxExpansionPass.cpp
+  MVETailPredication.cpp
+  MVEVPTBlockPass.cpp
   Thumb1FrameLowering.cpp
   Thumb1InstrInfo.cpp
   ThumbRegisterInfo.cpp

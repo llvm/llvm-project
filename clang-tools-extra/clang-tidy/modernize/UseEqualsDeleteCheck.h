@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-/// \brief Mark unimplemented private special member functions with '= delete'.
+/// Mark unimplemented private special member functions with '= delete'.
 /// \code
 ///   struct A {
 ///   private:

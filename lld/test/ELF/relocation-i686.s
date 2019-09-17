@@ -28,7 +28,7 @@ R_386_PC32_2:
 // CHECK: Disassembly of section .R_386_32:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_32:
-// CHECK-NEXT:   movl $4198401, %edx
+// CHECK-NEXT:   movl $4198829, %edx
 
 // CHECK: Disassembly of section .R_386_PC32:
 // CHECK-EMPTY:
@@ -47,8 +47,8 @@ movl bar@GOT, %eax
 // ADDR-NEXT:   SHF_ALLOC
 // ADDR-NEXT:   SHF_EXECINSTR
 // ADDR-NEXT: ]
-// ADDR-NEXT: Address: 0x401040
-// ADDR-NEXT: Offset: 0x1040
+// ADDR-NEXT: Address: 0x4011E0
+// ADDR-NEXT: Offset: 0x1E0
 // ADDR-NEXT: Size: 32
 
 // ADDR:      Name: .got.plt (
@@ -57,7 +57,7 @@ movl bar@GOT, %eax
 // ADDR-NEXT:   SHF_ALLOC
 // ADDR-NEXT:   SHF_WRITE
 // ADDR-NEXT: ]
-// ADDR-NEXT: Address: 0x403000
+// ADDR-NEXT: Address: 0x403280
 // ADDR-NEXT: Offset:
 // ADDR-NEXT: Size:
 
@@ -65,20 +65,19 @@ movl bar@GOT, %eax
 R_386_GOTPC:
  movl $_GLOBAL_OFFSET_TABLE_, %eax
 
-// 0x403000 (.got.plt) - 0x401014 = 8300
-
+// .got.plt - 0x4011c0 = 0x403280 - 0x4011c0 = 8384
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_GOTPC:
-// CHECK-NEXT:   movl  $8172, %eax
+// CHECK-NEXT:   4011c0:       movl  $8384, %eax
 
 .section .dynamic_reloc, "ax",@progbits
  call bar
-// addr(.plt) + 16 - (0x401019 + 5) = 50
+// .plt + 16 - (0x4011c5 + 5) = 0x4011e0 + 16 - 0x4011ca = 38
 // CHECK:      Disassembly of section .dynamic_reloc:
 // CHECK-EMPTY:
 // CHECK-NEXT: .dynamic_reloc:
-// CHECK-NEXT:   401019:       calll 50
+// CHECK-NEXT:   4011c5:       calll 38 <bar@plt>
 
 .section .R_386_GOT32,"ax",@progbits
 .global R_386_GOT32
@@ -88,12 +87,13 @@ R_386_GOT32:
  movl bar+8@GOT, %eax
  movl zed+4@GOT, %eax
 
-// 4294963320 = 0xfffff078 = got[0](0x402078) - .got.plt(0x403000)
-// 4294963324 = 0xfffff07c = got[1](0x40207c) - .got(0x403000)
+// &.got[0] - .got.plt = 0x402278 - 0x403280 = 4294963192
+// &.got[1] - .got.plt = 0x402278 + 4 - 0x403280 = 4294963196
+// &.got[2] - .got.plt = 0x402278 + 8 - 0x403280 = 4294963200
 // CHECK:      Disassembly of section .R_386_GOT32:
 // CHECK-EMPTY:
 // CHECK-NEXT: R_386_GOT32:
-// CHECK-NEXT: 40101e:       movl 4294963320, %eax
-// CHECK-NEXT: 401023:       movl 4294963324, %eax
-// CHECK-NEXT: 401028:       movl 4294963328, %eax
-// CHECK-NEXT: 40102d:       movl 4294963328, %eax
+// CHECK-NEXT: 4011ca:       movl 4294963192, %eax
+// CHECK-NEXT:               movl 4294963196, %eax
+// CHECK-NEXT:               movl 4294963200, %eax
+// CHECK-NEXT:               movl 4294963200, %eax

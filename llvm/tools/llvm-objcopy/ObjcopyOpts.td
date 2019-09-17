@@ -1,8 +1,7 @@
 include "CommonOpts.td"
 
 defm binary_architecture
-    : Eq<"binary-architecture", "Used when transforming an architecture-less "
-                                "format (such as binary) to another format">;
+    : Eq<"binary-architecture", "Ignored for compatibility">;
 def B : JoinedOrSeparate<["-"], "B">,
         Alias<binary_architecture>,
         HelpText<"Alias for --binary-architecture">;
@@ -24,6 +23,11 @@ defm output_target : Eq<"output-target", "Format of the output file">,
 def O : JoinedOrSeparate<["-"], "O">,
         Alias<output_target>,
         HelpText<"Alias for --output-target">;
+
+defm new_symbol_visibility : Eq<"new-symbol-visibility", "Visibility of "
+                                "symbols generated for binary input or added"
+                                " with --add-symbol unless otherwise"
+                                " specified. The default value is 'default'.">;
 
 def compress_debug_sections : Flag<["--"], "compress-debug-sections">;
 def compress_debug_sections_eq

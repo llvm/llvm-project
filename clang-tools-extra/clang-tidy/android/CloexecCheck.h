@@ -21,7 +21,7 @@ namespace clang {
 namespace tidy {
 namespace android {
 
-/// \brief The base class for all close-on-exec checks in Android module.
+/// The base class for all close-on-exec checks in Android module.
 /// To be specific, there are some functions that need the close-on-exec flag to
 /// prevent the file descriptor leakage on fork+exec and this class provides
 /// utilities to identify and fix these C functions.

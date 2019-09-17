@@ -90,6 +90,61 @@ for.end:                                          ; preds = %for.body
 ; CHECK: ret i32 %add.lcssa
 }
 
+; test D66575
+; def hoo2(a, id, num):
+;   for i0 in range(id*64, 4096, num*64):
+;     for i1 in range(0, 4096, 32):
+;       for i2 in range(0, 4096, 32):
+;         load(a, i0+i1+i2+32)
+define void @hoo2(i32* nocapture %a, i64 %id, i64 %num) nounwind uwtable readonly {
+entry:
+  %ptrint = ptrtoint i32* %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
+  %id.mul = shl nsw i64 %id, 6
+  %num.mul = shl nsw i64 %num, 6
+  br label %for0.body
+
+for0.body:
+  %i0 = phi i64 [ %id.mul, %entry ], [ %i0.next, %for0.end ]
+  br label %for1.body
+
+for1.body:
+  %i1 = phi i64 [ 0, %for0.body ], [ %i1.next, %for1.end ]
+  br label %for2.body
+
+for2.body:
+  %i2 = phi i64 [ 0, %for1.body ], [ %i2.next, %for2.body ]
+
+  %t1 = add nuw nsw i64 %i0, %i1
+  %t2 = add nuw nsw i64 %t1, %i2
+  %t3 = add nuw nsw i64 %t2, 32
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %t3
+  %x = load i32, i32* %arrayidx, align 4
+
+  %i2.next = add nuw nsw i64 %i2, 32
+  %cmp2 = icmp ult i64 %i2.next, 4096
+  br i1 %cmp2, label %for2.body, label %for1.end
+
+for1.end:
+  %i1.next = add nuw nsw i64 %i1, 32
+  %cmp1 = icmp ult i64 %i1.next, 4096
+  br i1 %cmp1, label %for1.body, label %for0.end
+
+for0.end:
+  %i0.next = add nuw nsw i64 %i0, %num.mul
+  %cmp0 = icmp ult i64 %i0.next, 4096
+  br i1 %cmp0, label %for0.body, label %return
+
+return:
+  ret void
+
+; CHECK-LABEL: @hoo2
+; CHECK: load i32, i32* %arrayidx, align 32
+; CHECK: ret void
+}
+
 define i32 @joo(i32* nocapture %a) nounwind uwtable readonly {
 entry:
   %ptrint = ptrtoint i32* %a to i64

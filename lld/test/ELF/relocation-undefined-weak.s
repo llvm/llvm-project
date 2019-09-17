@@ -1,10 +1,12 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-// RUN: ld.lld %t -o %tout
-// RUN: llvm-readobj --sections %tout | FileCheck %s
-// RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix DISASM
+# REQUIRES: x86
 
-// Check that undefined weak symbols are treated as having a VA of 0.
+## On some targets (e.g. ARM, AArch64, and PPC), PC relative relocations to
+## weak undefined symbols resolve to special positions. On many others
+## the target symbols as treated as VA 0.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
 
 .global _start
 _start:
@@ -12,16 +14,4 @@ _start:
 
 .weak sym1
 
-// CHECK:      Name: .text
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x201000
-
-// Unfortunately FileCheck can't do math, so we have to check for explicit
-// values:
-// R_86_64_PC32 = 0 + (-8 - (0x201000 + 2)) = -2101258
-
-// DISASM: movl    $1, -2101258(%rip)
+# CHECK: 201120: movl $0x1, -0x20112a(%rip)

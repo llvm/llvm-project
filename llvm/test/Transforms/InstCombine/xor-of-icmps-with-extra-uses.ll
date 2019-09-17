@@ -7,8 +7,8 @@
 ; %cond0 is extra-used in select, which is freely invertible.
 define i1 @v0_select_of_consts(i32 %X, i32* %selected) {
 ; CHECK-LABEL: @v0_select_of_consts(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 -32768, i32 32767
+; CHECK-NEXT:    [[COND0_INV:%.*]] = icmp sgt i32 [[X:%.*]], 32767
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0_INV]], i32 32767, i32 -32768
 ; CHECK-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
 ; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535
@@ -39,8 +39,8 @@ define i1 @v1_select_of_var_and_const(i32 %X, i32 %Y, i32* %selected) {
 }
 define i1 @v2_select_of_const_and_var(i32 %X, i32 %Y, i32* %selected) {
 ; CHECK-LABEL: @v2_select_of_const_and_var(
-; CHECK-NEXT:    [[COND0:%.*]] = icmp slt i32 [[X:%.*]], 32768
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0]], i32 [[Y:%.*]], i32 32767
+; CHECK-NEXT:    [[COND0_INV:%.*]] = icmp sgt i32 [[X:%.*]], 32767
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND0_INV]], i32 32767, i32 [[Y:%.*]]
 ; CHECK-NEXT:    store i32 [[SELECT]], i32* [[SELECTED:%.*]], align 4
 ; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X]], 32767
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_OFF]], 65535

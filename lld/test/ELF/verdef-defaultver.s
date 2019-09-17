@@ -18,7 +18,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: a@@V1
-# DSO-NEXT:      Value: 0x1000
+# DSO-NEXT:      Value: 0x12E8
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -27,7 +27,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: b@@V2
-# DSO-NEXT:      Value: 0x1002
+# DSO-NEXT:      Value: 0x12EA
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -36,7 +36,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: b@V1
-# DSO-NEXT:      Value: 0x1001
+# DSO-NEXT:      Value: 0x12E9
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -45,7 +45,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Name: c@@V2
-# DSO-NEXT:      Value: 0x1003
+# DSO-NEXT:      Value: 0x12EB
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -122,7 +122,7 @@
 # EXE-NEXT:    }
 # EXE-NEXT:    Symbol {
 # EXE-NEXT:      Name: a@V1
-# EXE-NEXT:      Value: 0x201020
+# EXE-NEXT:      Value: 0x201340
 # EXE-NEXT:      Size: 0
 # EXE-NEXT:      Binding: Global
 # EXE-NEXT:      Type: Function
@@ -131,7 +131,7 @@
 # EXE-NEXT:    }
 # EXE-NEXT:    Symbol {
 # EXE-NEXT:      Name: b@V2
-# EXE-NEXT:      Value: 0x201030
+# EXE-NEXT:      Value: 0x201350
 # EXE-NEXT:      Size: 0
 # EXE-NEXT:      Binding: Global
 # EXE-NEXT:      Type: Function
@@ -140,7 +140,7 @@
 # EXE-NEXT:    }
 # EXE-NEXT:    Symbol {
 # EXE-NEXT:      Name: c@V2
-# EXE-NEXT:      Value: 0x201040
+# EXE-NEXT:      Value: 0x201360
 # EXE-NEXT:      Size: 0
 # EXE-NEXT:      Binding: Global
 # EXE-NEXT:      Type: Function

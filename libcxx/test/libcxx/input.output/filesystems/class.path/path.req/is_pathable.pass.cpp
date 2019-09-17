@@ -20,14 +20,14 @@
 // * A character array, which points to a NTCTS after array-to-pointer decay.
 
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
-#include "constexpr_char_traits.hpp"
+#include "constexpr_char_traits.h"
 
 using fs::__is_pathable;
 

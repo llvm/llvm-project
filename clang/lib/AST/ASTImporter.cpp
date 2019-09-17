@@ -80,6 +80,7 @@ namespace clang {
   using ExpectedExpr = llvm::Expected<Expr *>;
   using ExpectedDecl = llvm::Expected<Decl *>;
   using ExpectedSLoc = llvm::Expected<SourceLocation>;
+  using ExpectedName = llvm::Expected<DeclarationName>;
 
   std::string ImportError::toString() const {
     // FIXME: Improve error texts.
@@ -638,7 +639,8 @@ namespace clang {
       return ImportArrayChecked(InContainer.begin(), InContainer.end(), Obegin);
     }
 
-    void ImportOverrides(CXXMethodDecl *ToMethod, CXXMethodDecl *FromMethod);
+    Error ImportOverriddenMethods(CXXMethodDecl *ToMethod,
+                                  CXXMethodDecl *FromMethod);
 
     Expected<FunctionDecl *> FindFunctionTemplateSpecialization(
         FunctionDecl *FromFD);
@@ -928,6 +930,27 @@ Expected<LambdaCapture> ASTNodeImporter::import(const LambdaCapture &From) {
   return LambdaCapture(
       *LocationOrErr, From.isImplicit(), From.getCaptureKind(), Var,
       EllipsisLoc);
+}
+
+template <typename T>
+bool ASTNodeImporter::hasSameVisibilityContext(T *Found, T *From) {
+  if (From->hasExternalFormalLinkage())
+    return Found->hasExternalFormalLinkage();
+  if (Importer.GetFromTU(Found) != From->getTranslationUnitDecl())
+    return false;
+  if (From->isInAnonymousNamespace())
+    return Found->isInAnonymousNamespace();
+  else
+    return !Found->isInAnonymousNamespace() &&
+           !Found->hasExternalFormalLinkage();
+}
+
+template <>
+bool ASTNodeImporter::hasSameVisibilityContext(TypedefNameDecl *Found,
+                                               TypedefNameDecl *From) {
+  if (From->isInAnonymousNamespace() && Found->isInAnonymousNamespace())
+    return Importer.GetFromTU(Found) == From->getTranslationUnitDecl();
+  return From->isInAnonymousNamespace() == Found->isInAnonymousNamespace();
 }
 
 } // namespace clang
@@ -1700,7 +1723,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
   // Remove all declarations, which may be in wrong order in the
   // lexical DeclContext and then add them in the proper order.
   for (auto *D : FromRD->decls()) {
-    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
+    if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D) || isa<FriendDecl>(D)) {
       assert(D && "DC contains a null decl");
       Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
       // Remove only the decls which we successfully imported.
@@ -2247,11 +2270,13 @@ ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, Decl::IDNS_Namespace,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, Decl::IDNS_Namespace, ConflictingDecls.data(),
+          ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -2340,6 +2365,9 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
   // If this typedef is not in block scope, determine whether we've
   // seen a typedef with the same name (that we can merge with) or any
   // other entity by that name (which name lookup could conflict with).
+  // Note: Repeated typedefs are not valid in C99:
+  // 'typedef int T; typedef int T;' is invalid
+  // We do not care about this now.
   if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     unsigned IDNS = Decl::IDNS_Ordinary;
@@ -2348,6 +2376,9 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
       if (!FoundDecl->isInIdentifierNamespace(IDNS))
         continue;
       if (auto *FoundTypedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
+        if (!hasSameVisibilityContext(FoundTypedef, D))
+          continue;
+
         QualType FromUT = D->getUnderlyingType();
         QualType FoundUT = FoundTypedef->getUnderlyingType();
         if (Importer.IsStructurallyEquivalent(FromUT, FoundUT)) {
@@ -2355,21 +2386,21 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
           // already have a complete underlying type then return with that.
           if (!FromUT->isIncompleteType() && !FoundUT->isIncompleteType())
             return Importer.MapImported(D, FoundTypedef);
+          // FIXME Handle redecl chain. When you do that make consistent changes
+          // in ASTImporterLookupTable too.
+        } else {
+          ConflictingDecls.push_back(FoundDecl);
         }
-        // FIXME Handle redecl chain. When you do that make consistent changes
-        // in ASTImporterLookupTable too.
-        break;
       }
-
-      ConflictingDecls.push_back(FoundDecl);
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, IDNS, ConflictingDecls.data(), ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -2442,11 +2473,12 @@ ASTNodeImporter::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, IDNS, ConflictingDecls.data(), ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -2550,17 +2582,18 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
           continue;
         if (IsStructuralMatch(D, FoundEnum))
           return Importer.MapImported(D, FoundEnum);
+        ConflictingDecls.push_back(FoundDecl);
       }
-
-      ConflictingDecls.push_back(FoundDecl);
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(SearchName, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          SearchName, DC, IDNS, ConflictingDecls.data(),
+          ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -2627,7 +2660,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
 
   // We may already have a record of the same name; try to find and match it.
   RecordDecl *PrevDecl = nullptr;
-  if (!DC->isFunctionOrMethod()) {
+  if (!DC->isFunctionOrMethod() && !D->isLambda()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls =
         Importer.findDeclsInToCtx(DC, SearchName);
@@ -2685,17 +2718,18 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           PrevDecl = FoundRecord->getMostRecentDecl();
           break;
         }
-      }
-
-      ConflictingDecls.push_back(FoundDecl);
+        ConflictingDecls.push_back(FoundDecl);
+      } // kind is RecordDecl
     } // for
 
     if (!ConflictingDecls.empty() && SearchName) {
-      Name = Importer.HandleNameConflict(SearchName, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          SearchName, DC, IDNS, ConflictingDecls.data(),
+          ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -2854,17 +2888,17 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
       if (auto *FoundEnumConstant = dyn_cast<EnumConstantDecl>(FoundDecl)) {
         if (IsStructuralMatch(D, FoundEnumConstant))
           return Importer.MapImported(D, FoundEnumConstant);
+        ConflictingDecls.push_back(FoundDecl);
       }
-
-      ConflictingDecls.push_back(FoundDecl);
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, IDNS, ConflictingDecls.data(), ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -3015,19 +3049,6 @@ Error ASTNodeImporter::ImportFunctionDeclBody(FunctionDecl *FromFD,
   return Error::success();
 }
 
-template <typename T>
-bool ASTNodeImporter::hasSameVisibilityContext(T *Found, T *From) {
-  if (From->hasExternalFormalLinkage())
-    return Found->hasExternalFormalLinkage();
-  if (Importer.GetFromTU(Found) != From->getTranslationUnitDecl())
-    return false;
-  if (From->isInAnonymousNamespace())
-    return Found->isInAnonymousNamespace();
-  else
-    return !Found->isInAnonymousNamespace() &&
-           !Found->hasExternalFormalLinkage();
-}
-
 ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   SmallVector<Decl *, 2> Redecls = getCanonicalForwardRedeclChain(D);
@@ -3102,17 +3123,17 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
             << Name << D->getType() << FoundFunction->getType();
         Importer.ToDiag(FoundFunction->getLocation(), diag::note_odr_value_here)
             << FoundFunction->getType();
+        ConflictingDecls.push_back(FoundDecl);
       }
-
-      ConflictingDecls.push_back(FoundDecl);
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, IDNS, ConflictingDecls.data(), ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -3364,7 +3385,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
-    ImportOverrides(cast<CXXMethodDecl>(ToFunction), FromCXXMethod);
+    if (Error Err = ImportOverriddenMethods(cast<CXXMethodDecl>(ToFunction),
+                                            FromCXXMethod))
+      return std::move(Err);
 
   // Import the rest of the chain. I.e. import all subsequent declarations.
   for (++RedeclIt; RedeclIt != Redecls.end(); ++RedeclIt) {
@@ -3758,17 +3781,17 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
           << Name << D->getType() << FoundVar->getType();
         Importer.ToDiag(FoundVar->getLocation(), diag::note_odr_value_here)
           << FoundVar->getType();
+        ConflictingDecls.push_back(FoundDecl);
       }
-
-      ConflictingDecls.push_back(FoundDecl);
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
-      if (!Name)
-        return make_error<ImportError>(ImportError::NameConflict);
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, IDNS, ConflictingDecls.data(), ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
   }
 
@@ -5106,19 +5129,19 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
           // see ASTTests test ImportExistingFriendClassTemplateDef.
           continue;
         }
+        ConflictingDecls.push_back(FoundDecl);
       }
-
-      ConflictingDecls.push_back(FoundDecl);
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, Decl::IDNS_Ordinary,
-                                         ConflictingDecls.data(),
-                                         ConflictingDecls.size());
+      ExpectedName NameOrErr = Importer.HandleNameConflict(
+          Name, DC, Decl::IDNS_Ordinary, ConflictingDecls.data(),
+          ConflictingDecls.size());
+      if (NameOrErr)
+        Name = NameOrErr.get();
+      else
+        return NameOrErr.takeError();
     }
-
-    if (!Name)
-      return make_error<ImportError>(ImportError::NameConflict);
   }
 
   CXXRecordDecl *FromTemplated = D->getTemplatedDecl();
@@ -5391,21 +5414,19 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateDecl(VarTemplateDecl *D) {
                              FoundTemplate->getTemplatedDecl());
         return Importer.MapImported(D, FoundTemplate);
       }
+      ConflictingDecls.push_back(FoundDecl);
     }
-
-    ConflictingDecls.push_back(FoundDecl);
   }
 
   if (!ConflictingDecls.empty()) {
-    Name = Importer.HandleNameConflict(Name, DC, Decl::IDNS_Ordinary,
-                                       ConflictingDecls.data(),
-                                       ConflictingDecls.size());
+    ExpectedName NameOrErr = Importer.HandleNameConflict(
+        Name, DC, Decl::IDNS_Ordinary, ConflictingDecls.data(),
+        ConflictingDecls.size());
+    if (NameOrErr)
+      Name = NameOrErr.get();
+    else
+      return NameOrErr.takeError();
   }
-
-  if (!Name)
-    // FIXME: Is it possible to get other error than name conflict?
-    // (Put this `if` into the previous `if`?)
-    return make_error<ImportError>(ImportError::NameConflict);
 
   VarDecl *DTemplated = D->getTemplatedDecl();
 
@@ -5617,17 +5638,16 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
         continue;
 
       if (auto *FoundTemplate = dyn_cast<FunctionTemplateDecl>(FoundDecl)) {
-        if (FoundTemplate->hasExternalFormalLinkage() &&
-            D->hasExternalFormalLinkage()) {
-          if (IsStructuralMatch(D, FoundTemplate)) {
-            FunctionTemplateDecl *TemplateWithDef =
-                getTemplateDefinition(FoundTemplate);
-            if (D->isThisDeclarationADefinition() && TemplateWithDef) {
-              return Importer.MapImported(D, TemplateWithDef);
-            }
-            FoundByLookup = FoundTemplate;
-            break;
-          }
+        if (!hasSameVisibilityContext(FoundTemplate, D))
+          continue;
+        if (IsStructuralMatch(D, FoundTemplate)) {
+          FunctionTemplateDecl *TemplateWithDef =
+              getTemplateDefinition(FoundTemplate);
+          if (D->isThisDeclarationADefinition() && TemplateWithDef)
+            return Importer.MapImported(D, TemplateWithDef);
+
+          FoundByLookup = FoundTemplate;
+          break;
           // TODO: handle conflicting names
         }
       }
@@ -7800,15 +7820,18 @@ ExpectedStmt ASTNodeImporter::VisitCXXTypeidExpr(CXXTypeidExpr *E) {
       *ToTypeOrErr, *ToExprOperandOrErr, *ToSourceRangeOrErr);
 }
 
-void ASTNodeImporter::ImportOverrides(CXXMethodDecl *ToMethod,
-                                      CXXMethodDecl *FromMethod) {
+Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
+                                               CXXMethodDecl *FromMethod) {
+  Error ImportErrors = Error::success();
   for (auto *FromOverriddenMethod : FromMethod->overridden_methods()) {
     if (auto ImportedOrErr = import(FromOverriddenMethod))
       ToMethod->getCanonicalDecl()->addOverriddenMethod(cast<CXXMethodDecl>(
           (*ImportedOrErr)->getCanonicalDecl()));
     else
-      consumeError(ImportedOrErr.takeError());
+      ImportErrors =
+          joinErrors(std::move(ImportErrors), ImportedOrErr.takeError());
   }
+  return ImportErrors;
 }
 
 ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
@@ -7817,7 +7840,7 @@ ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
                          std::shared_ptr<ASTImporterSharedState> SharedState)
     : SharedState(SharedState), ToContext(ToContext), FromContext(FromContext),
       ToFileManager(ToFileManager), FromFileManager(FromFileManager),
-      Minimal(MinimalImport) {
+      Minimal(MinimalImport), ODRHandling(ODRHandlingType::Conservative) {
 
   // Create a default state without the lookup table: LLDB case.
   if (!SharedState) {
@@ -8503,8 +8526,9 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
     if (ToID.isInvalid() || IsBuiltin) {
       // FIXME: We want to re-use the existing MemoryBuffer!
       bool Invalid = true;
-      const llvm::MemoryBuffer *FromBuf = Cache->getBuffer(
-          FromContext.getDiagnostics(), FromSM, SourceLocation{}, &Invalid);
+      const llvm::MemoryBuffer *FromBuf =
+          Cache->getBuffer(FromContext.getDiagnostics(),
+                           FromSM.getFileManager(), SourceLocation{}, &Invalid);
       if (!FromBuf || Invalid)
         // FIXME: Use a new error kind?
         return llvm::make_error<ImportError>(ImportError::Unknown);
@@ -8743,12 +8767,17 @@ Expected<Selector> ASTImporter::Import(Selector FromSel) {
   return ToContext.Selectors.getSelector(FromSel.getNumArgs(), Idents.data());
 }
 
-DeclarationName ASTImporter::HandleNameConflict(DeclarationName Name,
-                                                DeclContext *DC,
-                                                unsigned IDNS,
-                                                NamedDecl **Decls,
-                                                unsigned NumDecls) {
-  return Name;
+Expected<DeclarationName> ASTImporter::HandleNameConflict(DeclarationName Name,
+                                                          DeclContext *DC,
+                                                          unsigned IDNS,
+                                                          NamedDecl **Decls,
+                                                          unsigned NumDecls) {
+  if (ODRHandling == ODRHandlingType::Conservative)
+    // Report error at any name conflict.
+    return make_error<ImportError>(ImportError::NameConflict);
+  else
+    // Allow to create the new Decl with the same name.
+    return Name;
 }
 
 DiagnosticBuilder ASTImporter::ToDiag(SourceLocation Loc, unsigned DiagID) {

@@ -204,7 +204,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
   // relocation entry in the low 16 bits of r_address field.
   unsigned ThumbBit = 0;
   unsigned MovtBit = 0;
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getTargetKind()) {
   default: break;
   case ARM::fixup_arm_movt_hi16:
     MovtBit = 1;
@@ -480,7 +480,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     // PAIR. I.e. it's correct that we insert the high bits of the addend in the
     // MOVW case here.  relocation entries.
     uint32_t Value = 0;
-    switch ((unsigned)Fixup.getKind()) {
+    switch (Fixup.getTargetKind()) {
     default: break;
     case ARM::fixup_arm_movw_lo16:
     case ARM::fixup_t2_movw_lo16:

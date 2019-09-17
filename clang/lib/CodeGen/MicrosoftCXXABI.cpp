@@ -386,7 +386,9 @@ public:
       ArrayRef<llvm::Function *> CXXThreadLocalInits,
       ArrayRef<const VarDecl *> CXXThreadLocalInitVars) override;
 
-  bool usesThreadWrapperFunction() const override { return false; }
+  bool usesThreadWrapperFunction(const VarDecl *VD) const override {
+    return false;
+  }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
                                       QualType LValType) override;
 

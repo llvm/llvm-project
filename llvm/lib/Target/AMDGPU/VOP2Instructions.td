@@ -519,7 +519,7 @@ def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE,
 } // End isConvergent = 1
 
 defm V_BFM_B32 : VOP2Inst <"v_bfm_b32", VOP_NO_EXT<VOP_I32_I32_I32>>;
-defm V_BCNT_U32_B32 : VOP2Inst <"v_bcnt_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>>;
+defm V_BCNT_U32_B32 : VOP2Inst <"v_bcnt_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>, add_ctpop>;
 defm V_MBCNT_LO_U32_B32 : VOP2Inst <"v_mbcnt_lo_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>, int_amdgcn_mbcnt_lo>;
 defm V_MBCNT_HI_U32_B32 : VOP2Inst <"v_mbcnt_hi_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>, int_amdgcn_mbcnt_hi>;
 defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_NO_EXT<VOP_F32_F32_I32>, AMDGPUldexp>;
@@ -539,9 +539,9 @@ defm V_MAX_LEGACY_F32 : VOP2Inst <"v_max_legacy_f32", VOP_F32_F32_F32, AMDGPUfma
 let SubtargetPredicate = isGFX6GFX7GFX10 in {
 let isCommutable = 1 in {
 defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_F32_F32_F32>;
-defm V_LSHR_B32 : VOP2Inst <"v_lshr_b32", VOP_I32_I32_I32>;
-defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_I32_I32_I32>;
-defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_I32_I32_I32>;
+defm V_LSHR_B32 : VOP2Inst <"v_lshr_b32", VOP_I32_I32_I32, srl>;
+defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_I32_I32_I32, sra>;
+defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_I32_I32_I32, shl>;
 } // End isCommutable = 1
 } // End SubtargetPredicate = isGFX6GFX7GFX10
 
@@ -798,17 +798,17 @@ defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e64,   1>;
 
 def : GCNPat <
   (and i16:$src0, i16:$src1),
-  (V_AND_B32_e64 $src0, $src1)
+  (V_AND_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 def : GCNPat <
   (or i16:$src0, i16:$src1),
-  (V_OR_B32_e64 $src0, $src1)
+  (V_OR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 def : GCNPat <
   (xor i16:$src0, i16:$src1),
-  (V_XOR_B32_e64 $src0, $src1)
+  (V_XOR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {

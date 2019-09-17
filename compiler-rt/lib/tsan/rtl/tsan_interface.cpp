@@ -17,7 +17,7 @@
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 typedef u16 uint16_t;
 typedef u32 uint32_t;

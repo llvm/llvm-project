@@ -9,7 +9,7 @@
 ...
 ---
 name:            test_gep_i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false

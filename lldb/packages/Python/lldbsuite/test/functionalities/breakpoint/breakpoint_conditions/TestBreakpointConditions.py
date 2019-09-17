@@ -15,30 +15,22 @@ class BreakpointConditionsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # Requires EE to support COFF on Windows (http://llvm.org/pr22232)
-    @skipIfWindows
     def test_breakpoint_condition_and_run_command(self):
         """Exercise breakpoint condition with 'breakpoint modify -c <expr> id'."""
         self.build()
         self.breakpoint_conditions()
 
-    # Requires EE to support COFF on Windows (http://llvm.org/pr22232)
-    @skipIfWindows
     def test_breakpoint_condition_inline_and_run_command(self):
         """Exercise breakpoint condition inline with 'breakpoint set'."""
         self.build()
         self.breakpoint_conditions(inline=True)
 
-    # Requires EE to support COFF on Windows (http://llvm.org/pr22232)
-    @skipIfWindows
     @add_test_categories(['pyapi'])
     def test_breakpoint_condition_and_python_api(self):
         """Use Python APIs to set breakpoint conditions."""
         self.build()
         self.breakpoint_conditions_python()
 
-    # Requires EE to support COFF on Windows (http://llvm.org/pr22232)
-    @skipIfWindows
     @add_test_categories(['pyapi'])
     def test_breakpoint_invalid_condition_and_python_api(self):
         """Use Python APIs to set breakpoint conditions."""

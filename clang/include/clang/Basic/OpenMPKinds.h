@@ -35,6 +35,7 @@ enum OpenMPClauseKind {
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_threadprivate,
   OMPC_uniform,
+  OMPC_device_type,
   OMPC_unknown
 };
 
@@ -150,6 +151,14 @@ enum OpenMPAtomicDefaultMemOrderClauseKind {
   OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown
+};
+
+/// OpenMP device type for 'device_type' clause.
+enum OpenMPDeviceType {
+#define OPENMP_DEVICE_TYPE_KIND(Name) \
+  OMPC_DEVICE_TYPE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEVICE_TYPE_unknown
 };
 
 /// Scheduling data for loop-based OpenMP directives.

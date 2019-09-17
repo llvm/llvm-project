@@ -9,6 +9,19 @@
 // expected-no-diagnostics
 #endif // DIAGS
 
+void foo(int r, ...) {
+#ifdef IMMEDIATE
+// expected-error@+4 {{CUDA device code does not support va_arg}}
+#endif // IMMEDIATE
+  __builtin_va_list list;
+  __builtin_va_start(list, r);
+  (void)__builtin_va_arg(list, int);
+  __builtin_va_end(list);
+}
+#ifdef IMMEDIATE
+#pragma omp declare target to(foo)
+#endif //IMMEDIATE
+
 #ifdef IMMEDIATE
 #pragma omp declare target
 #endif //IMMEDIATE

@@ -10,7 +10,7 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x201000
+// CHECK-NEXT: Address: 0x202160
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 36
 // CHECK-NEXT: Link: 0
@@ -18,7 +18,7 @@
 // CHECK-NEXT: AddressAlignment: 16
 
 // CHECK:      Name: sym1
-// CHECK-NEXT: Value: 0x201000
+// CHECK-NEXT: Value: 0x202160
 // CHECK-NEXT: Size: 8
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Object
@@ -26,7 +26,7 @@
 // CHECK-NEXT: Section: .bss
 
 // CHECK:      Name: sym2
-// CHECK-NEXT: Value: 0x201008
+// CHECK-NEXT: Value: 0x202168
 // CHECK-NEXT: Size: 8
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Object
@@ -34,7 +34,7 @@
 // CHECK-NEXT: Section: .bss
 
 // CHECK:      Name: sym3
-// CHECK-NEXT: Value: 0x201010
+// CHECK-NEXT: Value: 0x202170
 // CHECK-NEXT: Size: 2
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Object
@@ -42,7 +42,7 @@
 // CHECK-NEXT: Section: .bss
 
 // CHECK:      Name: sym4
-// CHECK-NEXT: Value: 0x201020
+// CHECK-NEXT: Value: 0x202180
 // CHECK-NEXT: Size: 4
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Object

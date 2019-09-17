@@ -11,7 +11,6 @@
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
 // XFAIL: android
-// XFAIL: i386-netbsd
 
 #include <stdio.h>
 #include <stdlib.h>

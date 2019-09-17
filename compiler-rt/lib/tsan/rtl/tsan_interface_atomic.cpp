@@ -25,7 +25,7 @@
 #include "tsan_interface.h"
 #include "tsan_rtl.h"
 
-using namespace __tsan;  // NOLINT
+using namespace __tsan;
 
 #if !SANITIZER_GO && __TSAN_HAS_INT128
 // Protects emulation of 128-bit atomic operations.

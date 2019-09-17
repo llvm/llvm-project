@@ -93,9 +93,9 @@ static cl::opt<bool> OnlyNonNestedMemmove("only-nonnested-memmove-idiom",
   cl::Hidden, cl::init(true),
   cl::desc("Only enable generating memmove in non-nested loops"));
 
-cl::opt<bool> HexagonVolatileMemcpy("disable-hexagon-volatile-memcpy",
-  cl::Hidden, cl::init(false),
-  cl::desc("Enable Hexagon-specific memcpy for volatile destination."));
+static cl::opt<bool> HexagonVolatileMemcpy(
+    "disable-hexagon-volatile-memcpy", cl::Hidden, cl::init(false),
+    cl::desc("Enable Hexagon-specific memcpy for volatile destination."));
 
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
@@ -2426,7 +2426,8 @@ bool HexagonLoopIdiomRecognize::runOnLoop(Loop *L, LPPassManager &LPM) {
   DL = &L->getHeader()->getModule()->getDataLayout();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LF = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+      *L->getHeader()->getParent());
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
   HasMemcpy = TLI->has(LibFunc_memcpy);

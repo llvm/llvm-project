@@ -36,6 +36,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
@@ -336,7 +337,7 @@ public:
 } // end anonymous namespace
 
 void ELFWriter::align(unsigned Alignment) {
-  uint64_t Padding = OffsetToAlignment(W.OS.tell(), Alignment);
+  uint64_t Padding = offsetToAlignment(W.OS.tell(), llvm::Align(Alignment));
   W.OS.write_zeros(Padding);
 }
 
@@ -511,6 +512,19 @@ static uint8_t mergeTypeForSet(uint8_t origType, uint8_t newType) {
   return Type;
 }
 
+static bool isIFunc(const MCSymbolELF *Symbol) {
+  while (Symbol->getType() != ELF::STT_GNU_IFUNC) {
+    const MCSymbolRefExpr *Value;
+    if (!Symbol->isVariable() ||
+        !(Value = dyn_cast<MCSymbolRefExpr>(Symbol->getVariableValue())) ||
+        Value->getKind() != MCSymbolRefExpr::VK_None ||
+        mergeTypeForSet(Symbol->getType(), ELF::STT_GNU_IFUNC) != ELF::STT_GNU_IFUNC)
+      return false;
+    Symbol = &cast<MCSymbolELF>(Value->getSymbol());
+  }
+  return true;
+}
+
 void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                             ELFSymbolData &MSD, const MCAsmLayout &Layout) {
   const auto &Symbol = cast<MCSymbolELF>(*MSD.Symbol);
@@ -524,6 +538,8 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   // Binding and Type share the same byte as upper and lower nibbles
   uint8_t Binding = Symbol.getBinding();
   uint8_t Type = Symbol.getType();
+  if (isIFunc(&Symbol))
+    Type = ELF::STT_GNU_IFUNC;
   if (Base) {
     Type = mergeTypeForSet(Type, Base->getType());
   }
@@ -622,7 +638,7 @@ void ELFWriter::computeSymbolTable(
   unsigned EntrySize = is64Bit() ? ELF::SYMENTRY_SIZE64 : ELF::SYMENTRY_SIZE32;
   MCSectionELF *SymtabSection =
       Ctx.getELFSection(".symtab", ELF::SHT_SYMTAB, 0, EntrySize, "");
-  SymtabSection->setAlignment(is64Bit() ? 8 : 4);
+  SymtabSection->setAlignment(is64Bit() ? llvm::Align(8) : llvm::Align(4));
   SymbolTableIndex = addToSectionTable(SymtabSection);
 
   align(SymtabSection->getAlignment());
@@ -720,7 +736,7 @@ void ELFWriter::computeSymbolTable(
     MCSectionELF *SymtabShndxSection =
         Ctx.getELFSection(".symtab_shndx", ELF::SHT_SYMTAB_SHNDX, 0, 4, "");
     SymtabShndxSectionIndex = addToSectionTable(SymtabShndxSection);
-    SymtabShndxSection->setAlignment(4);
+    SymtabShndxSection->setAlignment(llvm::Align(4));
   }
 
   ArrayRef<std::string> FileNames = Asm.getFileNames();
@@ -808,7 +824,7 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
   MCSectionELF *RelaSection = Ctx.createELFRelSection(
       RelaSectionName, hasRelocationAddend() ? ELF::SHT_RELA : ELF::SHT_REL,
       Flags, EntrySize, Sec.getGroup(), &Sec);
-  RelaSection->setAlignment(is64Bit() ? 8 : 4);
+  RelaSection->setAlignment(is64Bit() ? llvm::Align(8) : llvm::Align(4));
   return RelaSection;
 }
 
@@ -895,7 +911,7 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     Section.setFlags(Section.getFlags() | ELF::SHF_COMPRESSED);
     // Alignment field should reflect the requirements of
     // the compressed section header.
-    Section.setAlignment(is64Bit() ? 8 : 4);
+    Section.setAlignment(is64Bit() ? llvm::Align(8) : llvm::Align(4));
   } else {
     // Add "z" prefix to section name. This is zlib-gnu style.
     MC.renameELFSection(&Section, (".z" + SectionName.drop_front(1)).str());
@@ -1119,7 +1135,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
       if (!GroupIdx) {
         MCSectionELF *Group = Ctx.createELFGroupSection(SignatureSymbol);
         GroupIdx = addToSectionTable(Group);
-        Group->setAlignment(4);
+        Group->setAlignment(llvm::Align(4));
         Groups.push_back(Group);
       }
       std::vector<const MCSectionELF *> &Members =
@@ -1437,22 +1453,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    // Let A, B and C being the components of Target and R be the location of
-    // the fixup. If the fixup is not pcrel, we want to compute (A - B + C).
-    // If it is pcrel, we want to compute (A - B + C - R).
-
-    // In general, ELF has no relocations for -B. It can only represent (A + C)
-    // or (A + C - R). If B = R + K and the relocation is not pcrel, we can
-    // replace B to implement it: (A - R - K + C)
-    if (IsPCRel) {
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "No relocation available to represent this relative expression");
-      return;
-    }
-
     const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
-
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
@@ -1468,10 +1469,9 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
 
-    uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
-    uint64_t K = SymBOffset - FixupOffset;
+    assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
-    C -= K;
+    C += FixupOffset - Layout.getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -1489,38 +1489,35 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     }
   }
 
-  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
-  uint64_t OriginalC = C;
-  bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
-  if (!RelocateWithSymbol && SymA && !SymA->isUndefined())
-    C += Layout.getSymbolOffset(*SymA);
-
-  uint64_t Addend = 0;
-  if (hasRelocationAddend()) {
-    Addend = C;
-    C = 0;
-  }
-
-  FixedValue = C;
-
   const MCSectionELF *SecA = (SymA && SymA->isInSection())
                                  ? cast<MCSectionELF>(&SymA->getSection())
                                  : nullptr;
   if (!checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
     return;
 
+  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
+  bool RelocateWithSymbol = shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type);
+  uint64_t Addend = 0;
+
+  FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
+                   ? C + Layout.getSymbolOffset(*SymA)
+                   : C;
+  if (hasRelocationAddend()) {
+    Addend = FixedValue;
+    FixedValue = 0;
+  }
+
   if (!RelocateWithSymbol) {
     const auto *SectionSymbol =
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
     if (SectionSymbol)
       SectionSymbol->setUsedInReloc();
-    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA,
-                           OriginalC);
+    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend, SymA, C);
     Relocations[&FixupSection].push_back(Rec);
     return;
   }
 
-  const auto *RenamedSymA = SymA;
+  const MCSymbolELF *RenamedSymA = SymA;
   if (SymA) {
     if (const MCSymbolELF *R = Renames.lookup(SymA))
       RenamedSymA = R;
@@ -1530,8 +1527,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     else
       RenamedSymA->setUsedInReloc();
   }
-  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA,
-                         OriginalC);
+  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA, C);
   Relocations[&FixupSection].push_back(Rec);
 }
 

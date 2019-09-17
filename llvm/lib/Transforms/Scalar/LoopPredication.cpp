@@ -543,7 +543,7 @@ bool LoopPredication::isLoopInvariantValue(const SCEV* S) {
     if (const auto *LI = dyn_cast<LoadInst>(U->getValue()))
       if (LI->isUnordered() && L->hasLoopInvariantOperands(LI))
         if (AA->pointsToConstantMemory(LI->getOperand(0)) ||
-            LI->getMetadata(LLVMContext::MD_invariant_load) != nullptr)
+            LI->hasMetadata(LLVMContext::MD_invariant_load))
           return true;
   return false;
 }

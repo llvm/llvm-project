@@ -26,9 +26,9 @@
 // CHECK-NEXT:   Type: Executable (0x2)
 // CHECK-NEXT:   Machine: EM_PPC (0x14)
 // CHECK-NEXT:   Version: 1
-// CHECK-NEXT:   Entry: 0x10010000
+// CHECK-NEXT:   Entry: 0x100100B4
 // CHECK-NEXT:   ProgramHeaderOffset: 0x34
-// CHECK-NEXT:   SectionHeaderOffset: 0x10050
+// CHECK-NEXT:   SectionHeaderOffset: 0x104
 // CHECK-NEXT:   Flags [ (0x0)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
@@ -63,8 +63,8 @@
 // CHECK-NEXT:       SHF_ALLOC (0x2)
 // CHECK-NEXT:       SHF_EXECINSTR (0x4)
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x10010000
-// CHECK-NEXT:     Offset: 0x10000
+// CHECK-NEXT:     Address: 0x100100B4
+// CHECK-NEXT:     Offset: 0xB4
 // CHECK-NEXT:     Size: 12
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -83,7 +83,7 @@
 // CHECK-NEXT:       SHF_STRINGS (0x20)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x1000C
+// CHECK-NEXT:     Offset: 0xC0
 // CHECK-NEXT:     Size: 8
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -97,7 +97,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x10014
+// CHECK-NEXT:     Offset: 0xC8
 // CHECK-NEXT:     Size: 16
 // CHECK-NEXT:     Link: 5
 // CHECK-NEXT:     Info: 1
@@ -114,7 +114,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x10024
+// CHECK-NEXT:     Offset: 0xD8
 // CHECK-NEXT:     Size: 42
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -128,7 +128,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x1004E
+// CHECK-NEXT:     Offset: 0x102
 // CHECK-NEXT:     Size: 1
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -166,9 +166,9 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_LOAD (0x1)
-// CHECK-NEXT:     Offset: 0x1000
-// CHECK-NEXT:     VirtualAddress: 0x10010000
-// CHECK-NEXT:     PhysicalAddress: 0x10010000
+// CHECK-NEXT:     Offset: 0xB4
+// CHECK-NEXT:     VirtualAddress: 0x100100B4
+// CHECK-NEXT:     PhysicalAddress: 0x100100B4
 // CHECK-NEXT:     FileSize: 12
 // CHECK-NEXT:     MemSize: 12
 // CHECK-NEXT:     Flags [ (0x5)

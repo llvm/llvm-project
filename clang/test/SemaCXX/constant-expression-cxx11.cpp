@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -fsyntax-only -fcxx-exceptions -verify -std=c++11 -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fsyntax-only -fcxx-exceptions -verify -std=c++11 -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
 namespace StaticAssertFoldTest {
 
@@ -566,7 +566,7 @@ static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, "
 expected-error {{static_assert expression is not an integral constant expression}} \
 expected-note {{in call to 'fail(zs[1][0][1][0])'}}
 
-constexpr int arr[40] = { 1, 2, 3, [8] = 4 }; // expected-warning {{C99 feature}}
+constexpr int arr[40] = { 1, 2, 3, [8] = 4 };
 constexpr int SumNonzero(const int *p) {
   return *p + (*p ? SumNonzero(p+1) : 0);
 }
@@ -979,7 +979,7 @@ union U {
   int b;
 };
 
-constexpr U u[4] = { { .a = 0 }, { .b = 1 }, { .a = 2 }, { .b = 3 } }; // expected-warning 4{{C99 feature}}
+constexpr U u[4] = { { .a = 0 }, { .b = 1 }, { .a = 2 }, { .b = 3 } };
 static_assert(u[0].a == 0, "");
 static_assert(u[0].b, ""); // expected-error {{constant expression}} expected-note {{read of member 'b' of union with active member 'a'}}
 static_assert(u[1].b == 1, "");
@@ -1287,13 +1287,13 @@ namespace ExternConstexpr {
 }
 
 namespace ComplexConstexpr {
-  constexpr _Complex float test1 = {};
-  constexpr _Complex float test2 = {1};
-  constexpr _Complex double test3 = {1,2};
-  constexpr _Complex int test4 = {4};
-  constexpr _Complex int test5 = 4;
-  constexpr _Complex int test6 = {5,6};
-  typedef _Complex float fcomplex;
+  constexpr _Complex float test1 = {}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex float test2 = {1}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex double test3 = {1,2}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex int test4 = {4}; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex int test5 = 4; // expected-warning {{'_Complex' is a C99 extension}}
+  constexpr _Complex int test6 = {5,6}; // expected-warning {{'_Complex' is a C99 extension}}
+  typedef _Complex float fcomplex; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr fcomplex test7 = fcomplex();
 
   constexpr const double &t2r = __real test3;
@@ -1307,10 +1307,10 @@ namespace ComplexConstexpr {
   static_assert(t2p[1] == 2.0, "");
   static_assert(t2p[2] == 0.0, ""); // expected-error {{constant expr}} expected-note {{one-past-the-end pointer}}
   static_assert(t2p[3] == 0.0, ""); // expected-error {{constant expr}} expected-note {{cannot refer to element 3 of array of 2 elements}}
-  constexpr _Complex float *p = 0;
+  constexpr _Complex float *p = 0; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{cannot access real component of null}}
   constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of null}}
-  constexpr const _Complex double *q = &test3 + 1;
+  constexpr const _Complex double *q = &test3 + 1; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr double qr = __real *q; // expected-error {{constant expr}} expected-note {{cannot access real component of pointer past the end}}
   constexpr double qi = __imag *q; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of pointer past the end}}
 
@@ -1322,21 +1322,21 @@ namespace ComplexConstexpr {
 // _Atomic(T) is exactly like T for the purposes of constant expression
 // evaluation..
 namespace Atomic {
-  constexpr _Atomic int n = 3;
+  constexpr _Atomic int n = 3; // expected-warning {{'_Atomic' is a C11 extension}}
 
-  struct S { _Atomic(double) d; };
+  struct S { _Atomic(double) d; }; // expected-warning {{'_Atomic' is a C11 extension}}
   constexpr S s = { 0.5 };
   constexpr double d1 = s.d;
   constexpr double d2 = n;
-  constexpr _Atomic double d3 = n;
+  constexpr _Atomic double d3 = n; // expected-warning {{'_Atomic' is a C11 extension}}
 
-  constexpr _Atomic(int) n2 = d3;
+  constexpr _Atomic(int) n2 = d3; // expected-warning {{'_Atomic' is a C11 extension}}
   static_assert(d1 == 0.5, "");
   static_assert(d3 == 3.0, "");
 
   namespace PR16056 {
     struct TestVar {
-      _Atomic(int) value;
+      _Atomic(int) value; // expected-warning {{'_Atomic' is a C11 extension}}
       constexpr TestVar(int value) : value(value) {}
     };
     constexpr TestVar testVar{-1};
@@ -1345,11 +1345,11 @@ namespace Atomic {
 
   namespace PR32034 {
     struct A {};
-    struct B { _Atomic(A) a; };
+    struct B { _Atomic(A) a; }; // expected-warning {{'_Atomic' is a C11 extension}}
     constexpr int n = (B(), B(), 0);
 
     struct C { constexpr C() {} void *self = this; };
-    constexpr _Atomic(C) c = C();
+    constexpr _Atomic(C) c = C(); // expected-warning {{'_Atomic' is a C11 extension}}
   }
 }
 

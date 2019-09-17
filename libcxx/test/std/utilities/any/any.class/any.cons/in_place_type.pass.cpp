@@ -27,9 +27,9 @@
 #include <cassert>
 
 #include "any_helpers.h"
-#include "count_new.hpp"
+#include "count_new.h"
 #include "test_macros.h"
-#include "test_convertible.hpp"
+#include "test_convertible.h"
 
 using std::any;
 using std::any_cast;

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_FILESYSTEM_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
@@ -55,6 +56,9 @@ public:
   /// \returns True if the entry is valid.
   bool isValid() const { return !MaybeStat || MaybeStat->isStatusKnown(); }
 
+  /// \returns True if the current entry points to a directory.
+  bool isDirectory() const { return MaybeStat && MaybeStat->isDirectory(); }
+
   /// \returns The error or the file's contents.
   llvm::ErrorOr<StringRef> getContents() const {
     if (!MaybeStat)
@@ -76,6 +80,12 @@ public:
     return MaybeStat->getName();
   }
 
+  /// Return the mapping between location -> distance that is used to speed up
+  /// the block skipping in the preprocessor.
+  const PreprocessorSkippedRangeMapping &getPPSkippedRangeMapping() const {
+    return PPSkippedRangeMapping;
+  }
+
   CachedFileSystemEntry(CachedFileSystemEntry &&) = default;
   CachedFileSystemEntry &operator=(CachedFileSystemEntry &&) = default;
 
@@ -89,6 +99,7 @@ private:
   // Note: small size of 1 allows us to store an empty string with an implicit
   // null terminator without any allocations.
   llvm::SmallString<1> Contents;
+  PreprocessorSkippedRangeMapping PPSkippedRangeMapping;
 };
 
 /// This class is a shared cache, that caches the 'stat' and 'open' calls to the
@@ -133,8 +144,10 @@ class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
 public:
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-      : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache) {}
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+      ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings)
+      : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache),
+        PPSkipMappings(PPSkipMappings) {}
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
@@ -159,6 +172,10 @@ private:
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator> Cache;
+  /// The optional mapping structure which records information about the
+  /// excluded conditional directive skip mappings that are used by the
+  /// currently active preprocessor.
+  ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
 };
 
 } // end namespace dependencies

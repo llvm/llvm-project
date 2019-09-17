@@ -57,8 +57,8 @@ public:
       : Sections(Secs) {}
   SectionTableRef(const SectionTableRef &) = default;
 
-  iterator begin() { return iterator(Sections.data()); }
-  iterator end() { return iterator(Sections.data() + Sections.size()); }
+  iterator begin() const { return iterator(Sections.data()); }
+  iterator end() const { return iterator(Sections.data() + Sections.size()); }
   size_t size() const { return Sections.size(); }
 
   SectionBase *getSection(uint32_t Index, Twine ErrMsg);
@@ -873,7 +873,6 @@ using object::OwningBinary;
 
 class BasicELFBuilder {
 protected:
-  uint16_t EMachine;
   std::unique_ptr<Object> Obj;
 
   void initFileHeader();
@@ -883,17 +882,18 @@ protected:
   void initSections();
 
 public:
-  BasicELFBuilder(uint16_t EM)
-      : EMachine(EM), Obj(std::make_unique<Object>()) {}
+  BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
 };
 
 class BinaryELFBuilder : public BasicELFBuilder {
   MemoryBuffer *MemBuf;
+  uint8_t NewSymbolVisibility;
   void addData(SymbolTableSection *SymTab);
 
 public:
-  BinaryELFBuilder(uint16_t EM, MemoryBuffer *MB)
-      : BasicELFBuilder(EM), MemBuf(MB) {}
+  BinaryELFBuilder(MemoryBuffer *MB, uint8_t NewSymbolVisibility)
+      : BasicELFBuilder(), MemBuf(MB),
+        NewSymbolVisibility(NewSymbolVisibility) {}
 
   std::unique_ptr<Object> build();
 };
@@ -905,7 +905,7 @@ class IHexELFBuilder : public BasicELFBuilder {
 
 public:
   IHexELFBuilder(const std::vector<IHexRecord> &Records)
-      : BasicELFBuilder(ELF::EM_386), Records(Records) {}
+      : BasicELFBuilder(), Records(Records) {}
 
   std::unique_ptr<Object> build();
 };
@@ -940,12 +940,12 @@ public:
 };
 
 class BinaryReader : public Reader {
-  const MachineInfo &MInfo;
   MemoryBuffer *MemBuf;
+  uint8_t NewSymbolVisibility;
 
 public:
-  BinaryReader(const MachineInfo &MI, MemoryBuffer *MB)
-      : MInfo(MI), MemBuf(MB) {}
+  BinaryReader(MemoryBuffer *MB, const uint8_t NewSymbolVisibility)
+      : MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
   std::unique_ptr<Object> create() const override;
 };
 
@@ -990,6 +990,10 @@ private:
   std::vector<SegPtr> Segments;
   std::vector<SecPtr> RemovedSections;
 
+  static bool sectionIsAlloc(const SectionBase &Sec) {
+    return Sec.Flags & ELF::SHF_ALLOC;
+  };
+
 public:
   template <class T>
   using Range = iterator_range<
@@ -1011,7 +1015,7 @@ public:
   uint8_t OSABI;
   uint8_t ABIVersion;
   uint64_t Entry;
-  uint64_t SHOffset;
+  uint64_t SHOff;
   uint32_t Type;
   uint32_t Machine;
   uint32_t Version;
@@ -1028,6 +1032,13 @@ public:
   ConstRange<SectionBase> sections() const {
     return make_pointee_range(Sections);
   }
+  iterator_range<
+      filter_iterator<pointee_iterator<std::vector<SecPtr>::const_iterator>,
+                      decltype(&sectionIsAlloc)>>
+  allocSections() const {
+    return make_filter_range(make_pointee_range(Sections), sectionIsAlloc);
+  }
+
   SectionBase *findSection(StringRef Name) {
     auto SecIt =
         find_if(Sections, [&](const SecPtr &Sec) { return Sec->Name == Name; });

@@ -17,15 +17,15 @@
 # SECTIONS: .rodata PROGBITS 00000000100001c8
 
 # HEX-LE:      section '.toc':
-# HEX-LE-NEXT: 10020008 c8010010 00000000
+# HEX-LE-NEXT: 10020228 c8010010 00000000
 
 # HEX-BE:      section '.toc':
-# HEX-BE-NEXT: 10020008 00000000 100001c8
+# HEX-BE-NEXT: 10020228 00000000 100001c8
 
 # CHECK-LABEL: _start
 # CHECK:       clrldi  3, 3, 62
-# CHECK-NEXT:  addis 4, 2, -2
-# CHECK-NEXT:  addi  4, 4, -32312
+# CHECK-NEXT:  addis 4, 2, -3
+# CHECK-NEXT:  addi  4, 4, 32680
 # CHECK-NEXT:  sldi  3, 3, 2
 
     .text

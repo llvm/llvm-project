@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
-#include "ClangdUnit.h"
 #include "Logger.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -17,8 +16,10 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
@@ -205,6 +206,11 @@ public:
   bool dataTraverseStmtPre(Stmt *X) {
     if (!X)
       return false;
+    // Implicit this in a MemberExpr is not filtered out by RecursiveASTVisitor.
+    // It would be nice if RAV handled this (!shouldTRaverseImplicitCode()).
+    if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(X))
+      if (CTI->isImplicit())
+        return false;
     auto N = DynTypedNode::create(*X);
     if (canSafelySkipNode(N))
       return false;
@@ -227,6 +233,16 @@ public:
   // Uninteresting parts of the AST that don't have locations within them.
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
   bool TraverseType(QualType) { return true; }
+
+  // The DeclStmt for the loop variable claims to cover the whole range
+  // inside the parens, this causes the range-init expression to not be hit.
+  // Traverse the loop VarDecl instead, which has the right source range.
+  bool TraverseCXXForRangeStmt(CXXForRangeStmt *S) {
+    return traverseNode(S, [&] {
+      return TraverseStmt(S->getInit()) && TraverseDecl(S->getLoopVariable()) &&
+             TraverseStmt(S->getRangeInit()) && TraverseStmt(S->getBody());
+    });
+  }
 
 private:
   using Base = RecursiveASTVisitor<SelectionVisitor>;

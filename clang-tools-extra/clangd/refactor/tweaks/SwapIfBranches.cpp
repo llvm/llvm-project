@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "ClangdUnit.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTContext.h"
@@ -90,7 +90,7 @@ Expected<Tweak::Effect> SwapIfBranches::apply(const Selection &Inputs) {
                                                  ElseRng->getBegin(),
                                                  ElseCode.size(), ThenCode)))
     return std::move(Err);
-  return Effect::applyEdit(Result);
+  return Effect::mainFileEdit(SrcMgr, std::move(Result));
 }
 
 } // namespace

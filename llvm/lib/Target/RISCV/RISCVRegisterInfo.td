@@ -101,6 +101,12 @@ def GPR : RegisterClass<"RISCV", [XLenVT], 32, (add
       [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>]>;
 }
 
+def GPRX0 : RegisterClass<"RISCV", [XLenVT], 32, (add X0)> {
+  let RegInfos = RegInfoByHwMode<
+      [RV32,              RV64,              DefaultMode],
+      [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>]>;
+}
+
 // The order of registers represents the preferred allocation sequence.
 // Registers are listed in the order caller-save, callee-save, specials.
 def GPRNoX0 : RegisterClass<"RISCV", [XLenVT], 32, (add

@@ -14,13 +14,15 @@ la $5, symbol($6)     # CHECK: lw $5, %got(symbol)($gp)    # encoding: [0x8f,0x8
 la $6, symbol($6)     # CHECK: lw $1, %got(symbol)($gp)    # encoding: [0x8f,0x81,A,A]
                       # CHECK:                             #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
                       # CHECK: addu $6, $1, $6             # encoding: [0x00,0x26,0x30,0x21]
-la $5, symbol+8       # CHECK: lw $5, %got(symbol+8)($gp)  # encoding: [0x8f,0x85,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
-la $5, symbol+8($6)   # CHECK: lw $5, %got(symbol+8)($gp)  # encoding: [0x8f,0x85,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
+la $5, symbol+8       # CHECK: lw $5, %got(symbol)($gp)    # encoding: [0x8f,0x85,A,A]
+                      # CHECK:                             #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+                      # CHECK: addiu $5, $5, 8             # encoding: [0x24,0xa5,0x00,0x08]
+la $5, symbol+8($6)   # CHECK: lw $5, %got(symbol)($gp)    # encoding: [0x8f,0x85,A,A]
+                      # CHECK:                             #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+                      # CHECK: addiu $5, $5, 8             # encoding: [0x24,0xa5,0x00,0x08]
                       # CHECK: addu $5, $5, $6             # encoding: [0x00,0xa6,0x28,0x21]
-la $6, symbol+8($6)   # CHECK: lw $1, %got(symbol+8)($gp)  # encoding: [0x8f,0x81,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
+la $6, symbol+8($6)   # CHECK: lw $1, %got(symbol)($gp)    # encoding: [0x8f,0x81,A,A]
+                      # CHECK:                             #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
                       # CHECK: addiu $1, $1, 8             # encoding: [0x24,0x21,0x00,0x08]
                       # CHECK: addu $6, $1, $6             # encoding: [0x00,0x26,0x30,0x21]
 la $5, 1f             # CHECK: lw $5, %got($tmp0)($gp)     # encoding: [0x8f,0x85,A,A]
@@ -38,13 +40,15 @@ la $25, symbol($6)    # CHECK: lw $25, %got(symbol)($gp)    # encoding: [0x8f,0x
 la $25, symbol($25)   # CHECK: lw $1, %got(symbol)($gp)     # encoding: [0x8f,0x81,A,A]
                       # CHECK:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
                       # CHECK: addu $25, $1, $25            # encoding: [0x00,0x39,0xc8,0x21]
-la $25, symbol+8      # CHECK: lw $25, %got(symbol+8)($gp)  # encoding: [0x8f,0x99,A,A]
-                      # CHECK:                              #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
-la $25, symbol+8($6)  # CHECK: lw $25, %got(symbol+8)($gp)  # encoding: [0x8f,0x99,A,A]
-                      # CHECK:                              #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
+la $25, symbol+8      # CHECK: lw $25, %got(symbol)($gp)    # encoding: [0x8f,0x99,A,A]
+                      # CHECK:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+                      # CHECK: addiu $25, $25, 8            # encoding: [0x27,0x39,0x00,0x08]
+la $25, symbol+8($6)  # CHECK: lw $25, %got(symbol)($gp)    # encoding: [0x8f,0x99,A,A]
+                      # CHECK:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+                      # CHECK: addiu $25, $25, 8            # encoding: [0x27,0x39,0x00,0x08]
                       # CHECK: addu $25, $25, $6            # encoding: [0x03,0x26,0xc8,0x21]
-la $25, symbol+8($25) # CHECK: lw $1, %got(symbol+8)($gp)   # encoding: [0x8f,0x81,A,A]
-                      # CHECK:                              #   fixup A - offset: 0, value: %got(symbol+8), kind: fixup_Mips_GOT
+la $25, symbol+8($25) # CHECK: lw $1, %got(symbol)($gp)     # encoding: [0x8f,0x81,A,A]
+                      # CHECK:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
                       # CHECK: addiu $1, $1, 8              # encoding: [0x24,0x21,0x00,0x08]
                       # CHECK: addu $25, $1, $25            # encoding: [0x00,0x39,0xc8,0x21]
 la $25, 1f            # CHECK: lw $25, %got($tmp1)($gp)     # encoding: [0x8f,0x99,A,A]

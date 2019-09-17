@@ -3,7 +3,7 @@
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 
 ; GCN-LABEL: {{^}}test_32_agprs:
-; GCN: v_mfma_f32_32x32x1f32 a[0:31], {{v[0-9]+}}, {{v[0-9]+}}, 0
+; GCN: v_mfma_f32_32x32x1f32 a[0:31], {{v[0-9]+}}, {{v[0-9]+}},
 ; GCN-NOT: v28
 ; GCN: NumVgprs: 32
 ; GCN: VGPRBlocks: 7

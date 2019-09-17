@@ -15,7 +15,7 @@ define i32 @main() uwtable optsize ssp personality i8* bitcast (i32 (...)* @__gx
 
 ; MINGW64: .seh_proc
 ; MINGW64: .seh_handler __gxx_personality_v0
-; MINGW64: .seh_setframe 5, 32
+; MINGW64: .seh_setframe %rbp, 32
 ; MINGW64: callq _Unwind_Resume
 ; MINGW64: .seh_handlerdata
 ; MINGW64: .seh_endproc

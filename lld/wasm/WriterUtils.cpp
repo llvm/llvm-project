@@ -73,6 +73,21 @@ void wasm::writeSig(raw_ostream &os, const WasmSignature &sig) {
   }
 }
 
+void wasm::writeI32Const(raw_ostream &os, int32_t number, const Twine &msg) {
+  writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
+  writeSleb128(os, number, msg);
+}
+
+void wasm::writeI64Const(raw_ostream &os, int32_t number, const Twine &msg) {
+  writeU8(os, WASM_OPCODE_I64_CONST, "i64.const");
+  writeSleb128(os, number, msg);
+}
+
+void wasm::writeMemArg(raw_ostream &os, uint32_t alignment, uint32_t offset) {
+  writeUleb128(os, alignment, "alignment");
+  writeUleb128(os, offset, "offset");
+}
+
 void wasm::writeInitExpr(raw_ostream &os, const WasmInitExpr &initExpr) {
   writeU8(os, initExpr.Opcode, "opcode");
   switch (initExpr.Opcode) {

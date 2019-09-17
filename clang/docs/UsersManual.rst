@@ -2408,8 +2408,8 @@ Compiling to bitcode can be done as follows:
 This will produce a generic test.bc file that can be used in vendor toolchains
 to perform machine code generation.
 
-Clang currently supports OpenCL C language standards up to v2.0. Starting from Clang9
-C++ mode is available for OpenCL (see :ref:`C++ for OpenCL <opencl_cpp>`).
+Clang currently supports OpenCL C language standards up to v2.0. Starting from
+clang 9 a C++ mode is available for OpenCL (see :ref:`C++ for OpenCL <opencl_cpp>`).
 
 OpenCL Specific Options
 -----------------------
@@ -2773,21 +2773,22 @@ There are some standard OpenCL functions that are implemented as Clang builtins:
 C++ for OpenCL
 --------------
 
-Starting from Clang9 kernel code can contain C++17 features: classes, templates,
+Starting from clang 9 kernel code can contain C++17 features: classes, templates,
 function overloading, type deduction, etc. Please note that this is not an
 implementation of `OpenCL C++
 <https://www.khronos.org/registry/OpenCL/specs/2.2/pdf/OpenCL_Cxx.pdf>`_ and
 there is no plan to support it in clang in any new releases in the near future.
 
-There are only a few restrictions on allowed C++ features. For detailed information
-please refer to documentation on Extensions (:doc:`LanguageExtensions`).
+For detailed information about restrictions to allowed C++ features please
+refer to :doc:`LanguageExtensions`.
 
 Since C++ features are to be used on top of OpenCL C functionality, all existing
 restrictions from OpenCL C v2.0 will inherently apply. All OpenCL C builtin types
-and function libraries are supported and can be used in the new mode.
+and function libraries are supported and can be used in this mode.
 
-To enable the new mode pass the following command line option when compiling ``.cl``
-file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or ``-std=CLC++``.
+To enable the C++ for OpenCL mode, pass one of following command line options when
+compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or
+``-std=CLC++``.
 
    .. code-block:: c++
 

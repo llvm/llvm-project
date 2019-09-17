@@ -7,7 +7,7 @@
 # CHECK:      Version symbols {
 # CHECK-NEXT:   Section Name: .gnu.version
 # CHECK-NEXT:   Address: 0x200210
-# CHECK-NEXT:   Offset: 0x240
+# CHECK-NEXT:   Offset: 0x40
 # CHECK-NEXT:   Link: 6
 # CHECK-NEXT:   Symbols [
 # CHECK-NEXT:     Symbol {
@@ -97,7 +97,7 @@ DynamicSymbols:
 
 # ENTSIZE: Section Headers:
 # ENTSIZE:   [Nr] Name         Type   Address          Off    Size   ES
-# ENTSIZE:   [ 1] .gnu.version VERSYM 0000000000000000 000180 000000 03
+# ENTSIZE:   [ 1] .gnu.version VERSYM 0000000000000000 000040 000000 03
 
 --- !ELF
 FileHeader:

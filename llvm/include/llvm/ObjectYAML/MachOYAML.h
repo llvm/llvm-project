@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <string>
@@ -39,6 +40,7 @@ struct Section {
   llvm::yaml::Hex32 reserved1;
   llvm::yaml::Hex32 reserved2;
   llvm::yaml::Hex32 reserved3;
+  Optional<llvm::yaml::BinaryRef> content;
 };
 
 struct FileHeader {
@@ -198,6 +200,7 @@ template <> struct MappingTraits<MachOYAML::ExportEntry> {
 
 template <> struct MappingTraits<MachOYAML::Section> {
   static void mapping(IO &IO, MachOYAML::Section &Section);
+  static StringRef validate(IO &io, MachOYAML::Section &Section);
 };
 
 template <> struct MappingTraits<MachOYAML::NListEntry> {

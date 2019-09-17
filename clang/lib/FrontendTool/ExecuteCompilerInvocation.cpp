@@ -64,10 +64,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case GenerateHeaderModule:
     return std::make_unique<GenerateHeaderModuleAction>();
   case GeneratePCH:            return std::make_unique<GeneratePCHAction>();
-  case GenerateInterfaceYAMLExpV1:
-    return std::make_unique<GenerateInterfaceYAMLExpV1Action>();
-  case GenerateInterfaceTBEExpV1:
-    return std::make_unique<GenerateInterfaceTBEExpV1Action>();
+  case GenerateInterfaceIfsExpV1:
+    return std::make_unique<GenerateInterfaceIfsExpV1Action>();
   case InitOnly:               return std::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
@@ -187,11 +185,11 @@ CreateFrontendAction(CompilerInstance &CI) {
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
-    std::unique_ptr<OptTable> Opts = driver::createDriverOptTable();
-    Opts->PrintHelp(llvm::outs(), "clang -cc1 [options] file...",
-                    "LLVM 'Clang' Compiler: http://clang.llvm.org",
-                    /*Include=*/driver::options::CC1Option,
-                    /*Exclude=*/0, /*ShowAllAliases=*/false);
+    driver::getDriverOptTable().PrintHelp(
+        llvm::outs(), "clang -cc1 [options] file...",
+        "LLVM 'Clang' Compiler: http://clang.llvm.org",
+        /*Include=*/driver::options::CC1Option,
+        /*Exclude=*/0, /*ShowAllAliases=*/false);
     return true;
   }
 
@@ -272,6 +270,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
                                   AnOpts,
                                   Clang->getDiagnostics(),
                                   Clang->getLangOpts());
+    return true;
   }
 
   // Honor -analyzer-config-help.

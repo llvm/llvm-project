@@ -11,13 +11,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#if LLVM_ENABLE_THREADS
+#include <thread>
+#endif
+#if LLVM_ON_UNIX
+#include <unistd.h>
+#endif
+#if _WIN32
+#include <windows.h>
+#endif
 
 using namespace llvm;
+
+#define ASSERT_NO_ERROR(x)                                                     \
+  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return errc::success.\n"                          \
+            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
+            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  } else {                                                                     \
+  }
+
+#define ASSERT_ERROR(x)                                                        \
+  if (!x) {                                                                    \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return a failure error code.\n";                  \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  }
 
 namespace {
 
@@ -65,6 +94,37 @@ TEST_F(MemoryBufferTest, get) {
   EXPECT_EQ("this is some data", data);
 }
 
+TEST_F(MemoryBufferTest, getOpenFile) {
+  int FD;
+  SmallString<64> TestPath;
+  ASSERT_EQ(sys::fs::createTemporaryFile("MemoryBufferTest_getOpenFile", "temp",
+                                         FD, TestPath),
+            std::error_code());
+
+  FileRemover Cleanup(TestPath);
+  raw_fd_ostream OF(FD, /*shouldClose*/ true);
+  OF << "12345678";
+  OF.close();
+
+  {
+    Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
+    ASSERT_THAT_EXPECTED(File, Succeeded());
+    auto OnExit =
+        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    ErrorOr<OwningBuffer> MB = MemoryBuffer::getOpenFile(*File, TestPath, 6);
+    ASSERT_NO_ERROR(MB.getError());
+    EXPECT_EQ("123456", MB.get()->getBuffer());
+  }
+  {
+    Expected<sys::fs::file_t> File = sys::fs::openNativeFileForWrite(
+        TestPath, sys::fs::CD_OpenExisting, sys::fs::OF_None);
+    ASSERT_THAT_EXPECTED(File, Succeeded());
+    auto OnExit =
+        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    ASSERT_ERROR(MemoryBuffer::getOpenFile(*File, TestPath, 6).getError());
+  }
+}
+
 TEST_F(MemoryBufferTest, NullTerminator4K) {
   // Test that a file with size that is a multiple of the page size can be null
   // terminated correctly by MemoryBuffer.
@@ -100,6 +160,38 @@ TEST_F(MemoryBufferTest, copy) {
   // verify the two copies do not point to the same place
   EXPECT_NE(MBC1->getBufferStart(), MBC2->getBufferStart());
 }
+
+#if LLVM_ENABLE_THREADS
+TEST_F(MemoryBufferTest, createFromPipe) {
+  sys::fs::file_t pipes[2];
+#if LLVM_ON_UNIX
+  ASSERT_EQ(::pipe(pipes), 0) << strerror(errno);
+#else
+  ASSERT_TRUE(::CreatePipe(&pipes[0], &pipes[1], nullptr, 0))
+      << ::GetLastError();
+#endif
+  auto ReadCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[0]); });
+  std::thread Writer([&] {
+    auto WriteCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[1]); });
+    for (unsigned i = 0; i < 5; ++i) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#if LLVM_ON_UNIX
+      ASSERT_EQ(::write(pipes[1], "foo", 3), 3) << strerror(errno);
+#else
+      DWORD Written;
+      ASSERT_TRUE(::WriteFile(pipes[1], "foo", 3, &Written, nullptr))
+          << ::GetLastError();
+      ASSERT_EQ(Written, 3u);
+#endif
+    }
+  });
+  ErrorOr<OwningBuffer> MB =
+      MemoryBuffer::getOpenFile(pipes[0], "pipe", /*FileSize*/ -1);
+  Writer.join();
+  ASSERT_NO_ERROR(MB.getError());
+  EXPECT_EQ(MB.get()->getBuffer(), "foofoofoofoofoo");
+}
+#endif
 
 TEST_F(MemoryBufferTest, make_new) {
   // 0-sized buffer

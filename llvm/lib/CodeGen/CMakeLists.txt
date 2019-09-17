@@ -94,6 +94,7 @@ add_llvm_library(LLVMCodeGen
   MachineSSAUpdater.cpp
   MachineTraceMetrics.cpp
   MachineVerifier.cpp
+  ModuloSchedule.cpp
   PatchableFunction.cpp
   MIRPrinter.cpp
   MIRPrintingPass.cpp
@@ -120,6 +121,8 @@ add_llvm_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   RenameIndependentSubregs.cpp
+  MIRVRegNamerUtils.cpp
+  MIRNamerPass.cpp
   MIRCanonicalizerPass.cpp
   RegisterUsageInfo.cpp
   RegUsageInfoCollector.cpp

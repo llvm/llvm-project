@@ -351,7 +351,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   if (SendPacketAndWaitForResponse(packet.GetString(), response,
                                    /*send_async=*/false) ==
       PacketResult::Success) {
-    const char *response_cstr = response.GetStringRef().c_str();
+    const char *response_cstr = response.GetStringRef().data();
 
     // Hang on to the qSupported packet, so that platforms can do custom
     // configuration of the transport before attaching/launching the process.
@@ -465,7 +465,7 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response, false) ==
         PacketResult::Success) {
-      const char *response_cstr = response.GetStringRef().c_str();
+      const char *response_cstr = response.GetStringRef().data();
       if (::strstr(response_cstr, ";c"))
         m_supports_vCont_c = eLazyBoolYes;
 
@@ -931,6 +931,11 @@ llvm::VersionTuple GDBRemoteCommunicationClient::GetOSVersion() {
   return m_os_version;
 }
 
+llvm::VersionTuple GDBRemoteCommunicationClient::GetMacCatalystVersion() {
+  GetHostInfo();
+  return m_maccatalyst_version;
+}
+
 bool GDBRemoteCommunicationClient::GetOSBuildString(std::string &s) {
   if (GetHostInfo()) {
     if (!m_os_build.empty()) {
@@ -1133,6 +1138,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
         uint32_t sub = 0;
         std::string arch_name;
         std::string os_name;
+        std::string environment;
         std::string vendor_name;
         std::string triple;
         std::string distribution_id;
@@ -1172,7 +1178,11 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             extractor.GetHexByteString(m_os_kernel);
             ++num_keys_decoded;
           } else if (name.equals("ostype")) {
-            os_name = value;
+            if (value.equals("maccatalyst")) {
+              os_name = "ios";
+              environment = "macabi";
+            } else
+              os_name = value;
             ++num_keys_decoded;
           } else if (name.equals("vendor")) {
             vendor_name = value;
@@ -1195,6 +1205,9 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                                      // "os_version"...
           {
             if (!m_os_version.tryParse(value))
+              ++num_keys_decoded;
+          } else if (name.equals("maccatalyst_version")) {
+            if (!m_maccatalyst_version.tryParse(value))
               ++num_keys_decoded;
           } else if (name.equals("watchpoint_exceptions_received")) {
             m_watchpoints_trigger_after_instruction =
@@ -1233,6 +1246,8 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                     llvm::StringRef(vendor_name));
               if (!os_name.empty())
                 m_host_arch.GetTriple().setOSName(llvm::StringRef(os_name));
+              if (!environment.empty())
+                m_host_arch.GetTriple().setEnvironmentName(environment);
             }
           } else {
             std::string triple;
@@ -1985,6 +2000,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       uint32_t sub = 0;
       std::string arch_name;
       std::string os_name;
+      std::string environment;
       std::string vendor_name;
       std::string triple;
       std::string elf_abi;
@@ -2005,7 +2021,11 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           extractor.GetHexByteString(triple);
           ++num_keys_decoded;
         } else if (name.equals("ostype")) {
-          os_name = value;
+          if (value.equals("maccatalyst")) {
+            os_name = "ios";
+            environment = "macabi";
+          } else
+            os_name = value;
           ++num_keys_decoded;
         } else if (name.equals("vendor")) {
           vendor_name = value;
@@ -2046,6 +2066,8 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       } else if (cpu != LLDB_INVALID_CPUTYPE && !os_name.empty() &&
                  !vendor_name.empty()) {
         llvm::Triple triple(llvm::Twine("-") + vendor_name + "-" + os_name);
+        if (!environment.empty())
+            triple.setEnvironmentName(environment);
 
         assert(triple.getObjectFormat() != llvm::Triple::UnknownObjectFormat);
         assert(triple.getObjectFormat() != llvm::Triple::Wasm);
@@ -2077,8 +2099,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         }
         m_process_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
         m_process_arch.GetTriple().setOSName(llvm::StringRef(os_name));
+        m_process_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
         m_host_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
         m_host_arch.GetTriple().setOSName(llvm::StringRef(os_name));
+        m_host_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
       }
       return true;
     }
@@ -2174,8 +2198,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
         if (!DecodeProcessInfoResponse(response, process_info))
           break;
         process_infos.Append(process_info);
-        response.GetStringRef().clear();
-        response.SetFilePos(0);
+        response = StringExtractorGDBRemote();
       } while (SendPacketAndWaitForResponse("qsProcessInfo", response, false) ==
                PacketResult::Success);
     } else {
@@ -3897,7 +3920,7 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
                   "GDBRemoteCommunicationClient::%s(): "
                   "QSupportedAsyncJSONPackets returned invalid "
                   "result: %s",
-                  __FUNCTION__, response.GetStringRef().c_str());
+                  __FUNCTION__, response.GetStringRef().data());
         m_supported_async_json_packets_sp.reset();
       }
     } else {
@@ -3975,14 +3998,14 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
       SendPacketAndWaitForResponse(stream.GetString(), response, send_async);
   if (result == PacketResult::Success) {
     // We failed if the config result comes back other than OK.
-    if (strcmp(response.GetStringRef().c_str(), "OK") == 0) {
+    if (strcmp(response.GetStringRef().data(), "OK") == 0) {
       // Okay!
       error.Clear();
     } else {
       error.SetErrorStringWithFormat("configuring StructuredData feature "
                                      "%s failed with error %s",
                                      type_name.AsCString(),
-                                     response.GetStringRef().c_str());
+                                     response.GetStringRef().data());
     }
   } else {
     // Can we get more data here on the failure?

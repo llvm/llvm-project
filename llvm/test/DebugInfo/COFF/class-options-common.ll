@@ -1,5 +1,6 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc < %s | FileCheck %s --check-prefix=ASM-INLINE-COMMENTS
 ;
 ; Command to generate function-options.ll
 ; $ clang++ class-options-common.cpp -S -emit-llvm -g -gcodeview -o class-options-common.ll
@@ -650,6 +651,17 @@
 ; CHECK:     LinkageName: .?AUBar@@
 ; CHECK:   }
 ; CHECK: ]
+
+; ASM-INLINE-COMMENTS: # MethodOverloadList (0x1088)
+; ASM-INLINE-COMMENTS: .short	0x12                    # Record length
+; ASM-INLINE-COMMENTS: .short	0x1206                  # Record kind: LF_METHODLIST
+; ASM-INLINE-COMMENTS: .short	0x3                     # Method
+; ASM-INLINE-COMMENTS:                                       # Attrs: Public
+; ASM-INLINE-COMMENTS: .short	0x0
+; ASM-INLINE-COMMENTS: .long	0x1083                  # Type: void Foo::()
+; ASM-INLINE-COMMENTS: .short	0x3                     # Attrs: Public
+; ASM-INLINE-COMMENTS: .short	0x0
+; ASM-INLINE-COMMENTS: .long	0x1087                  # Type: void Foo::(const Foo&)
 
 
 ; ModuleID = 'class-options-common.cpp'

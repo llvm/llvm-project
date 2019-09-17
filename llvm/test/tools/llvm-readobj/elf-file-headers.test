@@ -20,12 +20,12 @@
 # I386-NEXT:  Machine: EM_386 (0x3)
 # I386-NEXT:  Version: 1
 # I386-NEXT:  Entry: 0x0
-# I386-NEXT:  ProgramHeaderOffset: 0x34
-# I386-NEXT:  SectionHeaderOffset: 0x34
+# I386-NEXT:  ProgramHeaderOffset: 0x0
+# I386-NEXT:  SectionHeaderOffset: 0x64
 # I386-NEXT:  Flags [ (0x0)
 # I386-NEXT:  ]
 # I386-NEXT:  HeaderSize: 52
-# I386-NEXT:  ProgramHeaderEntrySize: 32
+# I386-NEXT:  ProgramHeaderEntrySize: 0
 # I386-NEXT:  ProgramHeaderCount: 0
 # I386-NEXT:  SectionHeaderEntrySize: 40
 # I386-NEXT:  SectionHeaderCount: 4
@@ -64,12 +64,12 @@ FileHeader:
 # X86-64-NEXT:  Machine: EM_X86_64 (0x3E)
 # X86-64-NEXT:  Version: 1
 # X86-64-NEXT:  Entry: 0x0
-# X86-64-NEXT:  ProgramHeaderOffset: 0x40
-# X86-64-NEXT:  SectionHeaderOffset: 0x40
+# X86-64-NEXT:  ProgramHeaderOffset: 0x0
+# X86-64-NEXT:  SectionHeaderOffset: 0x78
 # X86-64-NEXT:  Flags [ (0x0)
 # X86-64-NEXT:  ]
 # X86-64-NEXT:  HeaderSize: 64
-# X86-64-NEXT:  ProgramHeaderEntrySize: 56
+# X86-64-NEXT:  ProgramHeaderEntrySize: 0
 # X86-64-NEXT:  ProgramHeaderCount: 0
 # X86-64-NEXT:  SectionHeaderEntrySize: 64
 # X86-64-NEXT:  SectionHeaderCount: 4
@@ -115,12 +115,12 @@ FileHeader:
 # LANAI-NEXT:  Machine: EM_LANAI (0xF4)
 # LANAI-NEXT:  Version: 1
 # LANAI-NEXT:  Entry: 0x0
-# LANAI-NEXT:  ProgramHeaderOffset: 0x34
-# LANAI-NEXT:  SectionHeaderOffset: 0x34
+# LANAI-NEXT:  ProgramHeaderOffset: 0x0
+# LANAI-NEXT:  SectionHeaderOffset: 0x64
 # LANAI-NEXT:  Flags [ (0x0)
 # LANAI-NEXT:  ]
 # LANAI-NEXT:  HeaderSize: 52
-# LANAI-NEXT:  ProgramHeaderEntrySize: 32
+# LANAI-NEXT:  ProgramHeaderEntrySize: 0
 # LANAI-NEXT:  ProgramHeaderCount: 0
 # LANAI-NEXT:  SectionHeaderEntrySize: 40
 # LANAI-NEXT:  SectionHeaderCount: 4

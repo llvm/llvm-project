@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: ld.lld --no-toc-optimize -shared %t.o -o %t
+# RUN: ld.lld --no-toc-optimize -shared -z separate-code %t.o -o %t
 # RUN: llvm-objdump -d -start-address=0x10000 -stop-address=0x10018  %t | FileCheck %s -check-prefix=CALLEE_DUMP
 # RUN: llvm-objdump -d -start-address=0x2010020 -stop-address=0x2010070  %t | FileCheck %s -check-prefix=CALLER_DUMP
 # RUN: llvm-readelf --sections %t | FileCheck %s -check-prefix=SECTIONS
@@ -92,11 +92,10 @@ b:
 # CALLER_DUMP:   2010020:  {{.*}}  addis 2, 12, 2
 # CALLER_DUMP:   2010038:  {{.*}}  bl .+56
 
-# Verify the thunks contents: TOC-pointer + offset = .branch_lt[0]
-#                             0x20280F0   + 32560  = 0x2030020
+## .branch_lt[0] - .TOC. = 
 # CALLER_DUMP: __long_branch_callee:
-# CALLER_DUMP:   2010060:  {{.*}}  addis 12, 2, 0
-# CALLER_DUMP:   2010064:  {{.*}}  ld 12, 32560(12)
+# CALLER_DUMP:   2010060:  {{.*}}  addis 12, 2, 1
+# CALLER_DUMP:   2010064:  {{.*}}  ld 12, -32712(12)
 # CALLER_DUMP:   2010068:  {{.*}}  mtctr 12
 # CALLER_DUMP:   201006c:  {{.*}}  bctr
 
@@ -104,11 +103,11 @@ b:
 # .plt section has a 2 entry header and a single entry for the long branch.
 #            [Nr] Name        Type            Address          Off     Size
 # SECTIONS:  [10] .got        PROGBITS        00000000020200f0 20200f0 000008
-# SECTIONS:  [13] .plt        NOBITS          0000000002030008 2030008 000018
-# SECTIONS:  [14] .branch_lt  NOBITS          0000000002030020 2030008 000008
+# SECTIONS:  [13] .plt        NOBITS          0000000002030110 2020110 000018
+# SECTIONS:  [14] .branch_lt  NOBITS          0000000002030128 2020110 000008
 
 # There is a relative dynamic relocation for (.plt + 16 bytes), with a base
 # address equal to callees local entry point (0x10000 + 8).
 # DYNRELOC: Relocation section '.rela.dyn' at offset 0x{{[0-9a-f]+}} contains 3 entries:
 # DYNRELOC:    Offset             Info             Type               Symbol's Value
-# DYNRELOC:    0000000002030020   0000000000000016 R_PPC64_RELATIVE   10008
+# DYNRELOC:    0000000002030128   0000000000000016 R_PPC64_RELATIVE   10008

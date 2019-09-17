@@ -13,6 +13,7 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_MAC
 #include "sanitizer_mac.h"
+#include "interception/interception.h"
 
 // Use 64-bit inodes in file operations. ASan does not support OS X 10.5, so
 // the clients will most certainly use 64-bit ones as well.
@@ -267,20 +268,38 @@ static fd_t internal_spawn_impl(const char *argv[], pid_t *pid) {
   slave_fd = internal_open(slave_pty_name, O_RDWR);
   if (slave_fd == kInvalidFd) return kInvalidFd;
 
+  // File descriptor actions
   posix_spawn_file_actions_t acts;
   res = posix_spawn_file_actions_init(&acts);
   if (res != 0) return kInvalidFd;
 
-  auto fa_cleanup = at_scope_exit([&] {
+  auto acts_cleanup = at_scope_exit([&] {
     posix_spawn_file_actions_destroy(&acts);
   });
 
-  char **env = GetEnviron();
   res = posix_spawn_file_actions_adddup2(&acts, slave_fd, STDIN_FILENO) ||
         posix_spawn_file_actions_adddup2(&acts, slave_fd, STDOUT_FILENO) ||
-        posix_spawn_file_actions_addclose(&acts, slave_fd) ||
-        posix_spawn_file_actions_addclose(&acts, master_fd) ||
-        posix_spawn(pid, argv[0], &acts, NULL, const_cast<char **>(argv), env);
+        posix_spawn_file_actions_addclose(&acts, slave_fd);
+  if (res != 0) return kInvalidFd;
+
+  // Spawn attributes
+  posix_spawnattr_t attrs;
+  res = posix_spawnattr_init(&attrs);
+  if (res != 0) return kInvalidFd;
+
+  auto attrs_cleanup  = at_scope_exit([&] {
+    posix_spawnattr_destroy(&attrs);
+  });
+
+  // In the spawned process, close all file descriptors that are not explicitly
+  // described by the file actions object. This is Darwin-specific extension.
+  res = posix_spawnattr_setflags(&attrs, POSIX_SPAWN_CLOEXEC_DEFAULT);
+  if (res != 0) return kInvalidFd;
+
+  // posix_spawn
+  char **argv_casted = const_cast<char **>(argv);
+  char **env = GetEnviron();
+  res = posix_spawn(pid, argv[0], &acts, &attrs, argv_casted, env);
   if (res != 0) return kInvalidFd;
 
   // Disable echo in the new terminal, disable CR.
@@ -1181,7 +1200,7 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
   if (!buffer || !length || length > 256)
     return false;
   // arc4random never fails.
-  arc4random_buf(buffer, length);
+  REAL(arc4random_buf)(buffer, length);
   return true;
 }
 

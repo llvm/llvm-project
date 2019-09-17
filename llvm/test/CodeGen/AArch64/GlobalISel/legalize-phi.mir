@@ -40,10 +40,15 @@
     ret i32 0
   }
 
+  define i32 @legalize_phi_check_insertpt(i64 %a) {
+  entry:
+    ret i32 0
+  }
+
 ...
 ---
 name:            legalize_phi
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -130,7 +135,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_ptr
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -184,7 +189,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_empty
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -270,7 +275,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_loop
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -338,7 +343,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_cycle
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -395,7 +400,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_same_bb
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -496,7 +501,7 @@ body:             |
 ...
 ---
 name:            legalize_phi_diff_bb
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -594,5 +599,49 @@ body:             |
     %14(s32) = G_ZEXT %13(s8)
     $w0 = COPY %14(s32)
     RET_ReallyLR implicit $w0
+
+...
+---
+name:            legalize_phi_check_insertpt
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+body:             |
+  ; Check that the G_MERGE here gets inserted after all the PHIs.
+  ; CHECK-LABEL: name: legalize_phi_check_insertpt
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $x0, $x1
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK:   G_BR %bb.1
+  ; CHECK: bb.1:
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[DEF]](s64), %bb.0
+  ; CHECK:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[DEF1]](s64), %bb.0
+  ; CHECK:   [[PHI2:%[0-9]+]]:_(s64) = G_PHI [[COPY]](s64), %bb.0
+  ; CHECK:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[PHI]](s64), [[PHI1]](s64)
+  ; CHECK:   G_STORE [[MV]](s128), [[COPY1]](p0) :: (store 16)
+  ; CHECK:   G_STORE [[PHI2]](s64), [[COPY1]](p0) :: (store 8)
+  ; CHECK:   RET_ReallyLR
+  bb.0:
+    successors: %bb.1(0x40000000)
+    liveins: $x0, $x1
+
+    %0:_(s64) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(s128) = G_IMPLICIT_DEF
+    G_BR %bb.1
+
+  bb.1:
+    %3:_(s128) = G_PHI %2(s128), %bb.0
+    %4:_(s64) = G_PHI %0(s64), %bb.0
+    G_STORE %3(s128), %1(p0) :: (store 16)
+    G_STORE %4(s64), %1(p0) :: (store 8)
+    RET_ReallyLR
 
 ...

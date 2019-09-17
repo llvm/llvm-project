@@ -72,6 +72,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/MisExpect.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -192,7 +193,7 @@ class GUIDToFuncNameMapper {
 public:
   GUIDToFuncNameMapper(Module &M, SampleProfileReader &Reader,
                         DenseMap<uint64_t, StringRef> &GUIDToFuncNameMap)
-      : CurrentReader(Reader), CurrentModule(M), 
+      : CurrentReader(Reader), CurrentModule(M),
       CurrentGUIDToFuncNameMap(GUIDToFuncNameMap) {
     if (CurrentReader.getFormat() != SPF_Compact_Binary)
       return;
@@ -378,6 +379,10 @@ protected:
 
   /// Profile Summary Info computed from sample profile.
   ProfileSummaryInfo *PSI = nullptr;
+
+  /// Profle Symbol list tells whether a function name appears in the binary
+  /// used to generate the current profile.
+  std::unique_ptr<ProfileSymbolList> PSL;
 
   /// Total number of samples collected in this profile.
   ///
@@ -1292,17 +1297,12 @@ void SampleProfileLoader::buildEdges(Function &F) {
 }
 
 /// Returns the sorted CallTargetMap \p M by count in descending order.
-static SmallVector<InstrProfValueData, 2> SortCallTargets(
-    const SampleRecord::CallTargetMap &M) {
+static SmallVector<InstrProfValueData, 2> GetSortedValueDataFromCallTargets(
+    const SampleRecord::CallTargetMap & M) {
   SmallVector<InstrProfValueData, 2> R;
-  for (auto I = M.begin(); I != M.end(); ++I)
-    R.push_back({FunctionSamples::getGUID(I->getKey()), I->getValue()});
-  llvm::sort(R, [](const InstrProfValueData &L, const InstrProfValueData &R) {
-    if (L.Count == R.Count)
-      return L.Value > R.Value;
-    else
-      return L.Count > R.Count;
-  });
+  for (const auto &I : SampleRecord::SortCallTargets(M)) {
+    R.emplace_back(InstrProfValueData{FunctionSamples::getGUID(I.first), I.second});
+  }
   return R;
 }
 
@@ -1397,7 +1397,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           if (!T || T.get().empty())
             continue;
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
-              SortCallTargets(T.get());
+              GetSortedValueDataFromCallTargets(T.get());
           uint64_t Sum;
           findIndirectCallFunctionSamples(I, Sum);
           annotateValueSite(*I.getParent()->getParent()->getParent(), I,
@@ -1446,6 +1446,8 @@ void SampleProfileLoader::propagateWeights(Function &F) {
         }
       }
     }
+
+    misexpect::verifyMisExpect(TI, Weights, TI->getContext());
 
     uint64_t TempWeight;
     // Only set weights if there is at least one non-zero weight.
@@ -1639,6 +1641,7 @@ bool SampleProfileLoader::doInitialization(Module &M) {
   Reader = std::move(ReaderOrErr.get());
   Reader->collectFuncsToUse(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
+  PSL = Reader->getProfileSymbolList();
 
   if (!RemappingFilename.empty()) {
     // Apply profile remappings to the loaded profile data if requested.
@@ -1724,17 +1727,21 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
-  
+
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is
   // to avoid newly added code to be treated as cold. If we have samples
   // this will be overwritten in emitAnnotations.
+  //
+  // PSL -- profile symbol list include all the symbols in sampled binary.
   // If ProfileSampleAccurate is true or F has profile-sample-accurate
-  // attribute, initialize the entry count to 0 so callsites or functions
-  // unsampled will be treated as cold.
+  // attribute, and if there is no profile symbol list read in, initialize
+  // all the function entry counts to 0; if there is profile symbol list, only
+  // initialize the entry count to 0 when current function is in the list.
   uint64_t initialEntryCount =
-      (ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate"))
+      ((ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate")) &&
+       (!PSL || PSL->contains(F.getName())))
           ? 0
           : -1;
   F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));

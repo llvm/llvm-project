@@ -146,23 +146,37 @@ protected:
           const lldb_private::DataExtractor &data,
           lldb::offset_t lc_offset); // Offset to the first load command
 
-  static lldb_private::ArchSpec
-  GetArchitecture(const llvm::MachO::mach_header &header,
-                  const lldb_private::DataExtractor &data,
-                  lldb::offset_t lc_offset);
+  static lldb_private::ArchSpec GetArchitecture(
+      lldb::ModuleSP module_sp, const llvm::MachO::mach_header &header,
+      const lldb_private::DataExtractor &data, lldb::offset_t lc_offset);
 
-  // Intended for same-host arm device debugging where lldb needs to
-  // detect libraries in the shared cache and augment the nlist entries
-  // with an on-disk dyld_shared_cache file.  The process will record
-  // the shared cache UUID so the on-disk cache can be matched or rejected
-  // correctly.
-  void GetProcessSharedCacheUUID(lldb_private::Process *, lldb::addr_t &base_addr, lldb_private::UUID &uuid);
+  /// Enumerate all ArchSpecs supported by this Mach-O file.
+  ///
+  /// On macOS one Mach-O slice can contain multiple load commands:
+  /// One load command for being loaded into a macOS process and one
+  /// load command for being loaded into a macCatalyst process. In
+  /// contrast to ObjectContainerUniversalMachO, this is the same
+  /// binary that can be loaded into different contexts.
+  static void GetAllArchSpecs(const llvm::MachO::mach_header &header,
+                              const lldb_private::DataExtractor &data,
+                              lldb::offset_t lc_offset,
+                              lldb_private::ModuleSpec &base_spec,
+                              lldb_private::ModuleSpecList &all_specs);
 
-  // Intended for same-host arm device debugging where lldb will read
-  // shared cache libraries out of its own memory instead of the remote
-  // process' memory as an optimization.  If lldb's shared cache UUID
-  // does not match the process' shared cache UUID, this optimization
-  // should not be used.
+  /// Intended for same-host arm device debugging where lldb needs to
+  /// detect libraries in the shared cache and augment the nlist entries
+  /// with an on-disk dyld_shared_cache file.  The process will record
+  /// the shared cache UUID so the on-disk cache can be matched or rejected
+  /// correctly.
+  void GetProcessSharedCacheUUID(lldb_private::Process *,
+                                 lldb::addr_t &base_addr,
+                                 lldb_private::UUID &uuid);
+
+  /// Intended for same-host arm device debugging where lldb will read
+  /// shared cache libraries out of its own memory instead of the remote
+  /// process' memory as an optimization.  If lldb's shared cache UUID
+  /// does not match the process' shared cache UUID, this optimization
+  /// should not be used.
   void GetLLDBSharedCacheUUID(lldb::addr_t &base_addir, lldb_private::UUID &uuid);
 
   lldb_private::Section *GetMachHeaderSection();

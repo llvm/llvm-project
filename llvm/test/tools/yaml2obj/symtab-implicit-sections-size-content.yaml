@@ -28,7 +28,7 @@ Symbols:
 ## Specifying both `Size` and symbols at the same time is not allowed.
 # RUN: not yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=CASE2
 
-# CASE2: error: Cannot specify both `Size` and `Symbols` for symbol table section '.symtab'.
+# CASE2: error: cannot specify both `Size` and `Symbols` for symbol table section '.symtab'
 
 --- !ELF
 FileHeader:
@@ -46,7 +46,7 @@ Symbols:
 ## Specifying both `Content` and symbols at the same time is not allowed.
 # RUN: not yaml2obj --docnum=3 %s -o %t3 2>&1 | FileCheck %s --check-prefix=CASE3
 
-# CASE3: error: Cannot specify both `Content` and `Symbols` for symbol table section '.symtab'.
+# CASE3: error: cannot specify both `Content` and `Symbols` for symbol table section '.symtab'
 
 --- !ELF
 FileHeader:
@@ -70,7 +70,7 @@ Symbols:
 # CASE4-NEXT: Flags [ (0x0)
 # CASE4-NEXT: ]
 # CASE4-NEXT: Address: 0x0
-# CASE4-NEXT: Offset: 0x140
+# CASE4-NEXT: Offset: 0x40
 # CASE4-NEXT: Size: 2
 # CASE4-NEXT: Link: 2
 # CASE4-NEXT: Info: 1
@@ -101,7 +101,7 @@ Sections:
 # CASE5-NEXT: Flags [ (0x0)
 # CASE5-NEXT: ]
 # CASE5-NEXT: Address: 0x0
-# CASE5-NEXT: Offset: 0x140
+# CASE5-NEXT: Offset: 0x40
 # CASE5-NEXT: Size: 5
 # CASE5-NEXT: Link: 2
 # CASE5-NEXT: Info: 1
@@ -134,7 +134,7 @@ Sections:
 # CASE6-NEXT: Flags [
 # CASE6-NEXT: ]
 # CASE6-NEXT: Address: 0x0
-# CASE6-NEXT: Offset: 0x140
+# CASE6-NEXT: Offset: 0x40
 # CASE6-NEXT: Size: 4
 # CASE6-NEXT: Link: 2
 # CASE6-NEXT: Info: 1
@@ -167,7 +167,7 @@ Sections:
 # CASE7-NEXT:  Flags [
 # CASE7-NEXT:  ]
 # CASE7-NEXT:  Address: 0x0
-# CASE7-NEXT:  Offset: 0x140
+# CASE7-NEXT:  Offset: 0x40
 # CASE7-NEXT:  Size: 2
 # CASE7-NEXT:  Link: 2
 # CASE7-NEXT:  Info: 1

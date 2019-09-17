@@ -7,6 +7,7 @@ clangd
 
    Installation
    Features
+   Configuration
 
 What is clangd?
 ===============

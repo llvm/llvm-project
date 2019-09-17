@@ -1,0 +1,24 @@
+# Modifying the interpreter settings is tricky because they don't take effect
+# until we create a new command interpreter, which should be merely an
+# implementation detail. This leads to confusing and unexpected scenarios.
+#
+# Below are a few scenarios that we should fix.
+
+# CONTINUE: 123456789
+# STOP-NOT: 111111111
+# STOP-NOT: 123456789
+
+# FIXME: Should stop
+# RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %S/Inputs/StopCommandSource.in | FileCheck %s --check-prefix CONTINUE
+
+# FIXME: Should continue
+# RUN: %lldb -b -s %S/Inputs/DontStopCommandSource.in -o 'bogus' -o 'print 111100000 + 11111' | FileCheck %s --check-prefix STOP
+
+# FIXME: Should continue
+# RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -o 'bogus' -o 'print 123400000 + 56789'  | FileCheck %s --check-prefix STOP
+
+# FIXME: Should continue
+# RUN: %lldb -b -s %S/Inputs/DontStopCommandSource.in | FileCheck %s --check-prefix STOP
+
+# FIXME: Should continue
+# RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error true' -s %S/Inputs/DontStopCommandSource.in | FileCheck %s --check-prefix STOP

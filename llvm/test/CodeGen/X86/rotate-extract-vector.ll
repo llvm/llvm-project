@@ -280,3 +280,45 @@ define <2 x i64> @no_extract_udiv(<2 x i64> %i) nounwind {
   %out = or <2 x i64> %lhs_shift, %rhs_div
   ret <2 x i64> %out
 }
+
+; DAGCombiner transforms shl X, 1 into add X, X.
+define <4 x i32> @extract_add_1(<4 x i32> %i) nounwind {
+; CHECK-LABEL: extract_add_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vprold $1, %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ii = add <4 x i32> %i, %i
+  %rhs = lshr <4 x i32> %i, <i32 31, i32 31, i32 31, i32 31>
+  %out = or <4 x i32> %ii, %rhs
+  ret <4 x i32> %out
+}
+
+define <4 x i32> @extract_add_1_comut(<4 x i32> %i) nounwind {
+; CHECK-LABEL: extract_add_1_comut:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vprold $1, %zmm0, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ii = add <4 x i32> %i, %i
+  %lhs = lshr <4 x i32> %i, <i32 31, i32 31, i32 31, i32 31>
+  %out = or <4 x i32> %lhs, %ii
+  ret <4 x i32> %out
+}
+
+define <4 x i32> @no_extract_add_1(<4 x i32> %i) nounwind {
+; CHECK-LABEL: no_extract_add_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddd %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrld $27, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ii = add <4 x i32> %i, %i
+  %rhs = lshr <4 x i32> %i, <i32 27, i32 27, i32 27, i32 27>
+  %out = or <4 x i32> %ii, %rhs
+  ret <4 x i32> %out
+}

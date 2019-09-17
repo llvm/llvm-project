@@ -1,15 +1,20 @@
 # REQUIRES: mips
 # Check PLT entries generation in case of R6 ABI version.
 
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x10000; .text ALIGN(0x10000) : { *(.text) } \
+# RUN:         . = 0x30000; .data                : { *(.data) } \
+# RUN:       }" > %t.script
+
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mcpu=mips32r6 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mcpu=mips32r6 %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t2.o -shared -soname=t.so -o %t.so
-# RUN: ld.lld %t1.o %t.so -o %t.exe
+# RUN: ld.lld %t1.o %t.so -script %t.script -o %t.exe
 # RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefixes=DEFAULT,CHECK
 # RUN: ld.lld %t2.o -shared -soname=t.so -o %t.so -z hazardplt
-# RUN: ld.lld %t1.o %t.so -o %t.exe -z hazardplt
+# RUN: ld.lld %t1.o %t.so -script %t.script -o %t.exe -z hazardplt
 # RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefixes=HAZARDPLT,CHECK
 
 # CHECK:      Disassembly of section .text:

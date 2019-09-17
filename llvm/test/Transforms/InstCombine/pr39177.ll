@@ -30,7 +30,7 @@ define void @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load %struct._IO_FILE*, %struct._IO_FILE** @stderr, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @__fwrite_alias(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0), i64 7, i64 1, %struct._IO_FILE* [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @fwrite(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0), i64 7, i64 1, %struct._IO_FILE* [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

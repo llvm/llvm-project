@@ -12,7 +12,7 @@ In particular, it requires both Clang and LLVM itself in order to build. Due to
 this tight integration the Getting Started guides for both of these projects
 come as prerequisite reading:
 
-* `LLVM <http://llvm.org/docs/GettingStarted.html>`_
+* `LLVM <https://llvm.org/docs/GettingStarted.html>`_
 * `Clang <http://clang.llvm.org/get_started.html>`_
 
 The following requirements are shared on all platforms.
@@ -93,7 +93,7 @@ CMake is a cross-platform build-generator tool. CMake does not build the
 project, it generates the files needed by your build tool. The recommended
 build tool for LLVM is Ninja, but other generators like Xcode or Visual Studio
 may be used as well. Please also read `Building LLVM with CMake
-<http://llvm.org/docs/CMake.html>`_.
+<https://llvm.org/docs/CMake.html>`_.
 
 Regular in-tree builds
 **********************
@@ -185,8 +185,6 @@ suite.
 ::
 
   > cmake -G Ninja \
-      -DLLDB_TEST_USE_CUSTOM_C_COMPILER=On \
-      -DLLDB_TEST_USE_CUSTOM_CXX_COMPILER=On \
       -DLLDB_TEST_C_COMPILER=<path to C compiler> \
       -DLLDB_TEST_CXX_COMPILER=<path to C++ compiler> \
       <path to root of llvm source tree>
@@ -228,7 +226,6 @@ Sample command line:
   > cmake -G Ninja^
       -DLLDB_TEST_DEBUG_TEST_CRASHES=1^
       -DPYTHON_HOME=C:\Python35^
-      -DLLDB_TEST_USE_CUSTOM_C_COMPILER=ON^
       -DLLDB_TEST_C_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
       <path to root of llvm source tree>
 
@@ -281,7 +278,7 @@ CMake caches
 
 CMake caches allow to store common sets of configuration options in the form of
 CMake scripts and can be useful to reproduce builds for particular use-cases
-(see by analogy `usage in LLVM and Clang <http://llvm.org/docs/AdvancedBuilds.html>`_).
+(see by analogy `usage in LLVM and Clang <https://llvm.org/docs/AdvancedBuilds.html>`_).
 A cache is passed to CMake with the ``-C`` flag, following the absolute path to
 the file on disk. Subsequent ``-D`` options are still allowed. Please find the
 currently available caches in the `lldb/cmake/caches/
@@ -293,7 +290,7 @@ Common configurations on macOS
 
 Build, test and install a distribution of LLDB from the `monorepo
 <https://github.com/llvm/llvm-project>`_ (see also `Building a Distribution of
-LLVM <http://llvm.org/docs/BuildingADistribution.html>`_):
+LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
 
 ::
 

@@ -1,7 +1,7 @@
 ; RUN: llvm-rc /C 65001 /FO %t.utf8.res -- %p/Inputs/utf8.rc
 ; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
 
-; UTF8:      Resource type (int): 6
+; UTF8:      Resource type (int): STRINGTABLE (ID 6)
 ; UTF8-NEXT: Resource name (int): 1
 ; UTF8-NEXT: Data version: 0
 ; UTF8-NEXT: Memory flags: 0x1030
@@ -25,7 +25,7 @@
 ; RUN: llvm-rc /C 1252 /FO %t.cp1252.res -- %p/Inputs/cp1252.rc
 ; RUN: llvm-readobj %t.cp1252.res | FileCheck %s --check-prefix=CP1252
 
-; CP1252:      Resource type (int): 6
+; CP1252:      Resource type (int): STRINGTABLE (ID 6)
 ; CP1252-NEXT: Resource name (int): 1
 ; CP1252-NEXT: Data version: 0
 ; CP1252-NEXT: Memory flags: 0x1030

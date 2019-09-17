@@ -14,7 +14,7 @@
 ...
 ---
 name:            g
-alignment:       1
+alignment:       2
 tracksRegLiveness: true
 body:             |
   bb.0:

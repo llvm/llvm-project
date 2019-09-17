@@ -16,7 +16,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "count_new.hpp"
+#include "count_new.h"
 
 void test_default_does_not_allocate() {
   DisableAllocationGuard g;

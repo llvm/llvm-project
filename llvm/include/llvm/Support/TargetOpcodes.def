@@ -294,8 +294,20 @@ HANDLE_TARGET_OPCODE(G_SEXTLOAD)
 /// Generic zeroext load
 HANDLE_TARGET_OPCODE(G_ZEXTLOAD)
 
+/// Generic indexed load (including anyext load)
+HANDLE_TARGET_OPCODE(G_INDEXED_LOAD)
+
+/// Generic indexed signext load
+HANDLE_TARGET_OPCODE(G_INDEXED_SEXTLOAD)
+
+/// Generic indexed zeroext load
+HANDLE_TARGET_OPCODE(G_INDEXED_ZEXTLOAD)
+
 /// Generic store.
 HANDLE_TARGET_OPCODE(G_STORE)
+
+/// Generic indexed store.
+HANDLE_TARGET_OPCODE(G_INDEXED_STORE)
 
 /// Generic atomic cmpxchg with internal success check.
 HANDLE_TARGET_OPCODE(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
@@ -439,6 +451,9 @@ HANDLE_TARGET_OPCODE(G_FMUL)
 /// Generic FMA multiplication. Behaves like llvm fma intrinsic
 HANDLE_TARGET_OPCODE(G_FMA)
 
+/// Generic FP multiply and add. Behaves as separate fmul and fadd.
+HANDLE_TARGET_OPCODE(G_FMAD)
+
 /// Generic FP division.
 HANDLE_TARGET_OPCODE(G_FDIV)
 
@@ -560,6 +575,9 @@ HANDLE_TARGET_OPCODE(G_CTPOP)
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
 
+/// Generic bit reverse.
+HANDLE_TARGET_OPCODE(G_BITREVERSE)
+
 /// Floating point ceil.
 HANDLE_TARGET_OPCODE(G_FCEIL)
 
@@ -590,12 +608,15 @@ HANDLE_TARGET_OPCODE(G_BLOCK_ADDR)
 /// Generic jump table address
 HANDLE_TARGET_OPCODE(G_JUMP_TABLE)
 
+/// Generic dynamic stack allocation.
+HANDLE_TARGET_OPCODE(G_DYN_STACKALLOC)
+
 // TODO: Add more generic opcodes as we move along.
 
 /// Marker for the end of the generic opcode.
 /// This is used to check if an opcode is in the range of the
 /// generic opcodes.
-HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_JUMP_TABLE)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_DYN_STACKALLOC)
 
 /// BUILTIN_OP_END - This must be the last enum value in this list.
 /// The target-specific post-isel opcode values start here.

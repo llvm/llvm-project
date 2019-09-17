@@ -46,8 +46,7 @@ OptionGroupArchitecture::SetOptionValue(uint32_t option_idx,
     break;
 
   default:
-    error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
-    break;
+    llvm_unreachable("Unimplemented option");
   }
 
   return error;

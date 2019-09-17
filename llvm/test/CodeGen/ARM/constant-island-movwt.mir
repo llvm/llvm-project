@@ -315,7 +315,7 @@
 ...
 ---
 name:            func
-alignment:       1
+alignment:       2
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -892,12 +892,12 @@ body:             |
 # CHECK-NEXT:     renamable $q12 = VDUP32q killed renamable $r5, 14, $noreg
 # CHECK-NEXT:     t2B %bb.2, 14, $noreg
 # CHECK-NEXT: {{^  $}}
-# CHECK-NEXT:   bb.1 (align 2):
+# CHECK-NEXT:   bb.1 (align 4):
 # CHECK-NEXT:     successors:{{ }}
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:    CONSTPOOL_ENTRY 1, %const.0, 4
 # CHECK-NEXT: {{^  $}}
-# CHECK-NEXT:   bb.2.entry (align 1):
+# CHECK-NEXT:   bb.2.entry (align 2):
 # CHECK-NEXT:   liveins: $d13, $s27, $r10, $r9, $r8, $s26, $d12, $s25, $s24,
 # CHECK-SAME:            $d15, $s30, $s31, $d14, $s28, $s29, $lr, $r0, $d21,
 # CHECK-SAME:            $r3, $q10, $d20, $d17, $r2, $d25, $q11, $d22, $d23,

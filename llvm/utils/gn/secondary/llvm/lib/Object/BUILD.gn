@@ -9,6 +9,7 @@ static_library("Object") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
+    "//llvm/lib/TextAPI",
   ]
 
   sources = [
@@ -34,6 +35,8 @@ static_library("Object") {
     "RelocationResolver.cpp",
     "SymbolSize.cpp",
     "SymbolicFile.cpp",
+    "TapiFile.cpp",
+    "TapiUniversal.cpp",
     "WasmObjectFile.cpp",
     "WindowsMachineFlag.cpp",
     "WindowsResource.cpp",

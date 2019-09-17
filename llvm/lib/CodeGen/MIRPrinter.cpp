@@ -197,7 +197,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
 
   yaml::MachineFunction YamlMF;
   YamlMF.Name = MF.getName();
-  YamlMF.Alignment = MF.getAlignment();
+  YamlMF.Alignment = MF.getAlignment().value();
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
   YamlMF.HasWinCFI = MF.hasWinCFI();
 
@@ -473,10 +473,11 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
     yaml::CallSiteInfo::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
-    CallLocation.Offset = std::distance(CallI->getParent()->begin(), CallI);
+    CallLocation.Offset =
+        std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
     // Construct call arguments and theirs forwarding register info.
     for (auto ArgReg : CSInfo.second) {
@@ -628,9 +629,10 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "landing-pad";
     HasAttributes = true;
   }
-  if (MBB.getAlignment()) {
+  if (MBB.getLogAlignment()) {
     OS << (HasAttributes ? ", " : " (");
-    OS << "align " << MBB.getAlignment();
+    OS << "align "
+       << (1UL << MBB.getLogAlignment());
     HasAttributes = true;
   }
   if (HasAttributes)

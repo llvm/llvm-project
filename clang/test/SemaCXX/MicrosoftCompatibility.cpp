@@ -322,3 +322,65 @@ size_t ConfuseLookup<T>::m_val::ms_test
 void instantiate() { ConfuseLookup<int>::m_val::ms_test = 1; }
 }
 
+
+// Microsoft doesn't validate exception specification.
+namespace microsoft_exception_spec {
+
+void foo(); // expected-note {{previous declaration}}
+void foo() throw(); // expected-warning {{exception specification in declaration does not match previous declaration}}
+
+void r6() throw(...); // expected-note {{previous declaration}}
+void r6() throw(int); // expected-warning {{exception specification in declaration does not match previous declaration}}
+
+struct Base {
+  virtual void f2();
+  virtual void f3() throw(...);
+};
+
+struct Derived : Base {
+  virtual void f2() throw(...);
+  virtual void f3();
+};
+
+class A {
+  virtual ~A() throw();
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{overridden virtual function is here}}
+#endif
+};
+
+class B : public A {
+  virtual ~B();
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{exception specification of overriding function is more lax than base version}}
+#endif
+};
+
+}
+
+namespace PR25265 {
+struct S {
+  int fn() throw(); // expected-note {{previous declaration is here}}
+};
+
+int S::fn() { return 0; } // expected-warning {{is missing exception specification}}
+}
+
+namespace PR43265 {
+template <int N> // expected-note {{template parameter is declared here}}
+struct Foo {
+  static const int N = 42; // expected-warning {{declaration of 'N' shadows template parameter}}
+};
+}
+
+namespace Inner_Outer_same_template_param_name {
+template <typename T> // expected-note {{template parameter is declared here}}
+struct Outmost {
+  template <typename T> // expected-warning {{declaration of 'T' shadows template parameter}}
+  struct Inner {
+    void f() {
+      T *var;
+    }
+  };
+};
+}

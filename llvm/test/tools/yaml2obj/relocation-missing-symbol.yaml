@@ -1,9 +1,12 @@
-# Show that yaml2obj rejects a symbol reference from a relocation if the symbol
-# does not exist.
+## Show that yaml2obj rejects a symbol reference from a relocation if the symbol
+## does not exist.
 
 # RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
 
-# CHECK: Unknown symbol referenced: 'does_not_exist' at YAML section '.rela.text'
+## Check we are able to report multiple errors.
+
+# CHECK: error: unknown symbol referenced: 'does_not_exist1' by YAML section '.rela.text'
+# CHECK: error: unknown symbol referenced: 'does_not_exist2' by YAML section '.rela.text'
 
 --- !ELF
 FileHeader:
@@ -21,4 +24,7 @@ Sections:
     Relocations:
       - Type: R_X86_64_PC32
         Offset: 0
-        Symbol: does_not_exist
+        Symbol: does_not_exist1
+      - Type: R_X86_64_PC32
+        Offset: 0
+        Symbol: does_not_exist2

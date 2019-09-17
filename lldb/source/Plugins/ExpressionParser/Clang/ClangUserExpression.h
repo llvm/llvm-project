@@ -105,6 +105,9 @@ public:
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
   ///
+  /// \param[in] options
+  ///     Additional options for the expression.
+  ///
   /// \param[in] ctx_obj
   ///     The object (if any) in which context the expression
   ///     must be evaluated. For details see the comment to
@@ -206,7 +209,7 @@ private:
   /// The language type of the current expression.
   lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
   /// The include directories that should be used when parsing the expression.
-  std::vector<ConstString> m_include_directories;
+  std::vector<std::string> m_include_directories;
 
   /// The absolute character position in the transformed source code where the
   /// user code (as typed by the user) starts. If the variable is empty, then we
@@ -220,6 +223,23 @@ private:
 
   /// True iff this expression explicitly imported C++ modules.
   bool m_imported_cpp_modules = false;
+
+  /// True if the expression parser should enforce the presence of a valid class
+  /// pointer in order to generate the expression as a method.
+  bool m_enforce_valid_object = true;
+  /// True if the expression is compiled as a C++ member function (true if it
+  /// was parsed when exe_ctx was in a C++ method).
+  bool m_in_cplusplus_method = false;
+  /// True if the expression is compiled as an Objective-C method (true if it
+  /// was parsed when exe_ctx was in an Objective-C method).
+  bool m_in_objectivec_method = false;
+  /// True if the expression is compiled as a static (or class) method
+  /// (currently true if it was parsed when exe_ctx was in an Objective-C class
+  /// method).
+  bool m_in_static_method = false;
+  /// True if "this" or "self" must be looked up and passed in.  False if the
+  /// expression doesn't really use them and they can be NULL.
+  bool m_needs_object_ptr = false;
 };
 
 } // namespace lldb_private

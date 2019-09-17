@@ -230,15 +230,12 @@ define x86_fp80 @u32_to_x(i32 %a) nounwind {
 ; AVX512_32-NEXT:    popl %ebp
 ; AVX512_32-NEXT:    retl
 ;
-; AVX512_64-LABEL: u32_to_x:
-; AVX512_64:       # %bb.0:
-; AVX512_64-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512_64-NEXT:    vmovd %edi, %xmm1
-; AVX512_64-NEXT:    vpor %xmm0, %xmm1, %xmm1
-; AVX512_64-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
-; AVX512_64-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512_64-NEXT:    fldl -{{[0-9]+}}(%rsp)
-; AVX512_64-NEXT:    retq
+; CHECK64-LABEL: u32_to_x:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; CHECK64-NEXT:    retq
 ;
 ; SSE2_32-LABEL: u32_to_x:
 ; SSE2_32:       # %bb.0:
@@ -255,13 +252,6 @@ define x86_fp80 @u32_to_x(i32 %a) nounwind {
 ; SSE2_32-NEXT:    movl %ebp, %esp
 ; SSE2_32-NEXT:    popl %ebp
 ; SSE2_32-NEXT:    retl
-;
-; SSE2_64-LABEL: u32_to_x:
-; SSE2_64:       # %bb.0:
-; SSE2_64-NEXT:    movl %edi, %eax
-; SSE2_64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; SSE2_64-NEXT:    fildll -{{[0-9]+}}(%rsp)
-; SSE2_64-NEXT:    retq
 ;
 ; X87-LABEL: u32_to_x:
 ; X87:       # %bb.0:

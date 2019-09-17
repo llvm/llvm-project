@@ -9,7 +9,9 @@
 #ifndef LLVM_CLANG_INDEX_INDEXINGACTION_H
 #define LLVM_CLANG_INDEX_INDEXINGACTION_H
 
+#include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -17,6 +19,7 @@
 
 namespace clang {
   class ASTContext;
+  class ASTConsumer;
   class ASTReader;
   class ASTUnit;
   class Decl;
@@ -29,32 +32,24 @@ namespace serialization {
 namespace index {
   class IndexDataConsumer;
 
-struct IndexingOptions {
-  enum class SystemSymbolFilterKind {
-    None,
-    DeclarationsOnly,
-    All,
-  };
+/// Creates an ASTConsumer that indexes all symbols (macros and AST decls).
+std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
+    std::shared_ptr<IndexDataConsumer> DataConsumer,
+    const IndexingOptions &Opts, std::shared_ptr<Preprocessor> PP,
+    std::function<bool(const Decl *)> ShouldSkipFunctionBody);
 
-  SystemSymbolFilterKind SystemSymbolFilter
-    = SystemSymbolFilterKind::DeclarationsOnly;
-  bool IndexFunctionLocals = false;
-  bool IndexImplicitInstantiation = false;
-  // Whether to index macro definitions in the Preprocesor when preprocessor
-  // callback is not available (e.g. after parsing has finished). Note that
-  // macro references are not available in Proprocessor.
-  bool IndexMacrosInPreprocessor = false;
-  // Has no effect if IndexFunctionLocals are false.
-  bool IndexParametersInDeclarations = false;
-  bool IndexTemplateParameters = false;
-};
+inline std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
+    std::shared_ptr<IndexDataConsumer> DataConsumer,
+    const IndexingOptions &Opts, std::shared_ptr<Preprocessor> PP) {
+  return createIndexingASTConsumer(
+      std::move(DataConsumer), Opts, std::move(PP),
+      /*ShouldSkipFunctionBody=*/[](const Decl *) { return false; });
+}
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).
-/// \param WrappedAction another frontend action to wrap over or null.
 std::unique_ptr<FrontendAction>
 createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
-                     IndexingOptions Opts,
-                     std::unique_ptr<FrontendAction> WrappedAction);
+                     const IndexingOptions &Opts);
 
 /// Recursively indexes all decls in the AST.
 void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,

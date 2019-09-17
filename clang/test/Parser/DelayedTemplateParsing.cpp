@@ -48,22 +48,6 @@ template <class T> void foo5() {} // expected-error {{redefinition of 'foo5'}}
 
               
 
-namespace Inner_Outer_same_template_param_name {              
-
-template <class T>
-class Outmost {
-public:
-    template <class T>
-    class Inner {
-    public:
-        void f() {
-            T* var;
-        }
-   };
-};
-
-}
-
 
 namespace PR11931 {
 

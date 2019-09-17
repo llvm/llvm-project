@@ -2,12 +2,44 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
 // RUN: %clang_cc1 -verify -DDIAGS -DIMMEDIATE -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
 // RUN: %clang_cc1 -verify -DDIAGS -DDELAYED -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -fopenmp -x c -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-version=50 -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-version=50 %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -DDIAGS -DOMP5 -DIMMEDIATE -fopenmp -fopenmp-version=50 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -DDIAGS -DOMP5 -DDELAYED -fopenmp -fopenmp-version=50 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
 #ifndef DIAGS
 // expected-no-diagnostics
 #endif // DIAGS
+
+#ifdef OMP5
+void bar(int r) {
+#ifdef IMMEDIATE
+// omp5-error@+4 {{invalid input constraint 'mx' in asm}}
+#endif // IMMEDIATE
+  __asm__("PR3908 %[lf] %[xx] %[li] %[r]"
+          : [ r ] "+r"(r)
+          : [ lf ] "mx"(0), [ li ] "mr"(0), [ xx ] "x"((double)(0)));
+}
+#ifdef IMMEDIATE
+#pragma omp declare target to(bar) device_type(nohost)
+#else
+#pragma omp declare target to(bar) device_type(host)
+#endif // IMMEDIATE
+#endif // OMP5
+
+void foo(int r) {
+#ifdef IMMEDIATE
+// expected-error@+4 {{invalid input constraint 'mx' in asm}}
+#endif // IMMEDIATE
+  __asm__("PR3908 %[lf] %[xx] %[li] %[r]"
+          : [ r ] "+r"(r)
+          : [ lf ] "mx"(0), [ li ] "mr"(0), [ xx ] "x"((double)(0)));
+}
+#ifdef IMMEDIATE
+#pragma omp declare target to(foo)
+#endif //IMMEDIATE
 
 #ifdef IMMEDIATE
 #pragma omp declare target

@@ -17,7 +17,7 @@ namespace clang {
 namespace tidy {
 namespace utils {
 
-/// \brief canonicalize a path by removing ./ and ../ components.
+/// canonicalize a path by removing ./ and ../ components.
 static std::string cleanPath(StringRef Path) {
   SmallString<256> Result = Path;
   llvm::sys::path::remove_dots(Result, true);
@@ -159,7 +159,7 @@ public:
            (EndIfStr != "/* " + HeaderGuard.str() + " */");
   }
 
-  /// \brief Look for header guards that don't match the preferred style. Emit
+  /// Look for header guards that don't match the preferred style. Emit
   /// fix-its and return the suggested header guard (or the original if no
   /// change was made.
   std::string checkHeaderGuardDefinition(SourceLocation Ifndef,
@@ -189,7 +189,7 @@ public:
     return CurHeaderGuard;
   }
 
-  /// \brief Checks the comment after the #endif of a header guard and fixes it
+  /// Checks the comment after the #endif of a header guard and fixes it
   /// if it doesn't match \c HeaderGuard.
   void checkEndifComment(StringRef FileName, SourceLocation EndIf,
                          StringRef HeaderGuard,
@@ -203,7 +203,7 @@ public:
     }
   }
 
-  /// \brief Looks for files that were visited but didn't have a header guard.
+  /// Looks for files that were visited but didn't have a header guard.
   /// Emits a warning with fixits suggesting adding one.
   void checkGuardlessHeaders() {
     // Look for header files that didn't have a header guard. Emit a warning and

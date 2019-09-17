@@ -126,31 +126,44 @@ body: |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
-  ; CHECK:   [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT]], [[ANYEXT1]]
-  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
-  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT2]], [[ANYEXT3]]
-  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-  ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
-  ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT4]], [[ANYEXT5]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD2]](s32)
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[TRUNC]](<3 x s16>), 0
+  ; CHECK:   [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+  ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; CHECK:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C1]](s32)
+  ; CHECK:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+  ; CHECK:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+  ; CHECK:   [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT]](<3 x s16>), 0
+  ; CHECK:   [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT2]](<4 x s16>)
+  ; CHECK:   [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
+  ; CHECK:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
+  ; CHECK:   [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
+  ; CHECK:   [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR2]](s32)
+  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY5]]
+  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+  ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[BITCAST3]](s32)
+  ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY6]], [[COPY7]]
+  ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[COPY9:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
+  ; CHECK:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[ADD2]](s32)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
+  ; CHECK:   [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[TRUNC]](<3 x s16>), 0
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT1]](<4 x s16>), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT3]](<4 x s16>), %bb.1
   ; CHECK:   [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[PHI]](<4 x s16>), 0
-  ; CHECK:   [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
-  ; CHECK:   $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
+  ; CHECK:   [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF4]], [[EXTRACT1]](<3 x s16>), 0
+  ; CHECK:   $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
     successors: %bb.1, %bb.2
@@ -627,10 +640,9 @@ body: |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
   ; CHECK:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV]], [[UV2]], [[C1]]
-  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV3]], [[UADDE1]]
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE]](s32), [[UADDE2]](s32)
+  ; CHECK:   [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[UV]], [[UV2]]
+  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV3]], [[UADDO1]]
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO]](s32), [[UADDE]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY]](s64), %bb.0, [[MV]](s64), %bb.1
@@ -680,16 +692,14 @@ body: |
   ; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
   ; CHECK:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
   ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV2]](s64)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s1) = COPY [[C1]](s1)
-  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV4]], [[UV6]], [[COPY2]]
-  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV5]], [[UV7]], [[UADDE1]]
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE]](s32), [[UADDE2]](s32)
+  ; CHECK:   [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[UV4]], [[UV6]]
+  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV5]], [[UV7]], [[UADDO1]]
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO]](s32), [[UADDE]](s32)
   ; CHECK:   [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
   ; CHECK:   [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV3]](s64)
-  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV8]], [[UV10]], [[C1]]
-  ; CHECK:   [[UADDE6:%[0-9]+]]:_(s32), [[UADDE7:%[0-9]+]]:_(s1) = G_UADDE [[UV9]], [[UV11]], [[UADDE5]]
-  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE4]](s32), [[UADDE6]](s32)
+  ; CHECK:   [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(s1) = G_UADDO [[UV8]], [[UV10]]
+  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV9]], [[UV11]], [[UADDO3]]
+  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO2]](s32), [[UADDE2]](s32)
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
@@ -741,22 +751,19 @@ body: |
   ; CHECK:   [[UV3:%[0-9]+]]:_(s64), [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s64>)
   ; CHECK:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
   ; CHECK:   [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV3]](s64)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s1) = COPY [[C1]](s1)
-  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV6]], [[UV8]], [[COPY2]]
-  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV7]], [[UV9]], [[UADDE1]]
-  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE]](s32), [[UADDE2]](s32)
+  ; CHECK:   [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[UV6]], [[UV8]]
+  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV7]], [[UV9]], [[UADDO1]]
+  ; CHECK:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO]](s32), [[UADDE]](s32)
   ; CHECK:   [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
   ; CHECK:   [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV4]](s64)
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s1) = COPY [[C1]](s1)
-  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV10]], [[UV12]], [[COPY3]]
-  ; CHECK:   [[UADDE6:%[0-9]+]]:_(s32), [[UADDE7:%[0-9]+]]:_(s1) = G_UADDE [[UV11]], [[UV13]], [[UADDE5]]
-  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE4]](s32), [[UADDE6]](s32)
+  ; CHECK:   [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(s1) = G_UADDO [[UV10]], [[UV12]]
+  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV11]], [[UV13]], [[UADDO3]]
+  ; CHECK:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO2]](s32), [[UADDE2]](s32)
   ; CHECK:   [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV2]](s64)
   ; CHECK:   [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV5]](s64)
-  ; CHECK:   [[UADDE8:%[0-9]+]]:_(s32), [[UADDE9:%[0-9]+]]:_(s1) = G_UADDE [[UV14]], [[UV16]], [[C1]]
-  ; CHECK:   [[UADDE10:%[0-9]+]]:_(s32), [[UADDE11:%[0-9]+]]:_(s1) = G_UADDE [[UV15]], [[UV17]], [[UADDE9]]
-  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDE8]](s32), [[UADDE10]](s32)
+  ; CHECK:   [[UADDO4:%[0-9]+]]:_(s32), [[UADDO5:%[0-9]+]]:_(s1) = G_UADDO [[UV14]], [[UV16]]
+  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV15]], [[UV17]], [[UADDO5]]
+  ; CHECK:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO4]](s32), [[UADDE4]](s32)
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
@@ -1252,13 +1259,12 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY2]](s32), %bb.0, [[COPY3]](s32), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY2]](s32), %bb.0, [[DEF]](s32), %bb.1
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[PHI]](s32)
-  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[PHI]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C1]]
   ; CHECK:   $vgpr0 = COPY [[AND]](s32)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
@@ -1305,12 +1311,11 @@ body: |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s128)
   ; CHECK:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s128)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV]], [[UV4]], [[C1]]
-  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV5]], [[UADDE1]]
-  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV2]], [[UV6]], [[UADDE3]]
-  ; CHECK:   [[UADDE6:%[0-9]+]]:_(s32), [[UADDE7:%[0-9]+]]:_(s1) = G_UADDE [[UV3]], [[UV7]], [[UADDE5]]
-  ; CHECK:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UADDE]](s32), [[UADDE2]](s32), [[UADDE4]](s32), [[UADDE6]](s32)
+  ; CHECK:   [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[UV]], [[UV4]]
+  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV5]], [[UADDO1]]
+  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV2]], [[UV6]], [[UADDE1]]
+  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV3]], [[UV7]], [[UADDE3]]
+  ; CHECK:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UADDO]](s32), [[UADDE]](s32), [[UADDE2]](s32), [[UADDE4]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(s128) = G_PHI [[COPY]](s128), %bb.0, [[MV]](s128), %bb.1
@@ -1358,16 +1363,15 @@ body: |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s256)
   ; CHECK:   [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s256)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV]], [[UV8]], [[C1]]
-  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV9]], [[UADDE1]]
-  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV2]], [[UV10]], [[UADDE3]]
-  ; CHECK:   [[UADDE6:%[0-9]+]]:_(s32), [[UADDE7:%[0-9]+]]:_(s1) = G_UADDE [[UV3]], [[UV11]], [[UADDE5]]
-  ; CHECK:   [[UADDE8:%[0-9]+]]:_(s32), [[UADDE9:%[0-9]+]]:_(s1) = G_UADDE [[UV4]], [[UV12]], [[UADDE7]]
-  ; CHECK:   [[UADDE10:%[0-9]+]]:_(s32), [[UADDE11:%[0-9]+]]:_(s1) = G_UADDE [[UV5]], [[UV13]], [[UADDE9]]
-  ; CHECK:   [[UADDE12:%[0-9]+]]:_(s32), [[UADDE13:%[0-9]+]]:_(s1) = G_UADDE [[UV6]], [[UV14]], [[UADDE11]]
-  ; CHECK:   [[UADDE14:%[0-9]+]]:_(s32), [[UADDE15:%[0-9]+]]:_(s1) = G_UADDE [[UV7]], [[UV15]], [[UADDE13]]
-  ; CHECK:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UADDE]](s32), [[UADDE2]](s32), [[UADDE4]](s32), [[UADDE6]](s32), [[UADDE8]](s32), [[UADDE10]](s32), [[UADDE12]](s32), [[UADDE14]](s32)
+  ; CHECK:   [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[UV]], [[UV8]]
+  ; CHECK:   [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[UV1]], [[UV9]], [[UADDO1]]
+  ; CHECK:   [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[UV2]], [[UV10]], [[UADDE1]]
+  ; CHECK:   [[UADDE4:%[0-9]+]]:_(s32), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[UV3]], [[UV11]], [[UADDE3]]
+  ; CHECK:   [[UADDE6:%[0-9]+]]:_(s32), [[UADDE7:%[0-9]+]]:_(s1) = G_UADDE [[UV4]], [[UV12]], [[UADDE5]]
+  ; CHECK:   [[UADDE8:%[0-9]+]]:_(s32), [[UADDE9:%[0-9]+]]:_(s1) = G_UADDE [[UV5]], [[UV13]], [[UADDE7]]
+  ; CHECK:   [[UADDE10:%[0-9]+]]:_(s32), [[UADDE11:%[0-9]+]]:_(s1) = G_UADDE [[UV6]], [[UV14]], [[UADDE9]]
+  ; CHECK:   [[UADDE12:%[0-9]+]]:_(s32), [[UADDE13:%[0-9]+]]:_(s1) = G_UADDE [[UV7]], [[UV15]], [[UADDE11]]
+  ; CHECK:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[UADDO]](s32), [[UADDE]](s32), [[UADDE2]](s32), [[UADDE4]](s32), [[UADDE6]](s32), [[UADDE8]](s32), [[UADDE10]](s32), [[UADDE12]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(s256) = G_PHI [[COPY]](s256), %bb.0, [[MV]](s256), %bb.1

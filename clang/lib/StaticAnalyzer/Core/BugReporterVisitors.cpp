@@ -26,6 +26,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -34,7 +35,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
@@ -180,21 +180,60 @@ static bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
     RLCV->getStore() == RightNode->getState()->getStore();
 }
 
-static Optional<const llvm::APSInt *>
-getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
+static Optional<SVal> getSValForVar(const Expr *CondVarExpr,
+                                    const ExplodedNode *N) {
   ProgramStateRef State = N->getState();
   const LocationContext *LCtx = N->getLocationContext();
 
-  // The declaration of the value may rely on a pointer so take its l-value.
-  if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(CondVarExpr)) {
-    if (const auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-      SVal DeclSVal = State->getSVal(State->getLValue(VD, LCtx));
-      if (auto DeclCI = DeclSVal.getAs<nonloc::ConcreteInt>())
-        return &DeclCI->getValue();
-    }
-  }
+  assert(CondVarExpr);
+  CondVarExpr = CondVarExpr->IgnoreImpCasts();
 
-  return {};
+  // The declaration of the value may rely on a pointer so take its l-value.
+  // FIXME: As seen in VisitCommonDeclRefExpr, sometimes DeclRefExpr may
+  // evaluate to a FieldRegion when it refers to a declaration of a lambda
+  // capture variable. We most likely need to duplicate that logic here.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CondVarExpr))
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      return State->getSVal(State->getLValue(VD, LCtx));
+
+  if (const auto *ME = dyn_cast<MemberExpr>(CondVarExpr))
+    if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      if (auto FieldL = State->getSVal(ME, LCtx).getAs<Loc>())
+        return State->getRawSVal(*FieldL, FD->getType());
+
+  return None;
+}
+
+static Optional<const llvm::APSInt *>
+getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
+
+  if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
+    if (auto CI = V->getAs<nonloc::ConcreteInt>())
+      return &CI->getValue();
+  return None;
+}
+
+static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
+                                        const ExplodedNode *N,
+                                        const PathSensitiveBugReport *B) {
+  // Even if this condition is marked as interesting, it isn't *that*
+  // interesting if it didn't happen in a nested stackframe, the user could just
+  // follow the arrows.
+  if (!B->getErrorNode()->getStackFrame()->isParentOf(N->getStackFrame()))
+    return false;
+
+  if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
+    if (Optional<bugreporter::TrackingKind> K = B->getInterestingnessKind(*V))
+      return *K == bugreporter::TrackingKind::Condition;
+
+  return false;
+}
+
+static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
+                              const PathSensitiveBugReport *B) {
+  if (Optional<SVal> V = getSValForVar(E, N))
+    return B->getInterestingnessKind(*V).hasValue();
+  return false;
 }
 
 /// \return name of the macro inside the location \p Loc.
@@ -257,20 +296,19 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
 
 PathDiagnosticPieceRef BugReporterVisitor::getEndPath(BugReporterContext &,
                                                       const ExplodedNode *,
-                                                      BugReport &) {
+                                                      PathSensitiveBugReport &) {
   return nullptr;
 }
 
 void BugReporterVisitor::finalizeVisitor(BugReporterContext &,
-                                         const ExplodedNode *, BugReport &) {}
+                                         const ExplodedNode *,
+                                         PathSensitiveBugReport &) {}
 
 PathDiagnosticPieceRef
 BugReporterVisitor::getDefaultEndPath(const BugReporterContext &BRC,
                                       const ExplodedNode *EndPathNode,
-                                      const BugReport &BR) {
-  PathDiagnosticLocation L = PathDiagnosticLocation::createEndOfPath(
-      EndPathNode, BRC.getSourceManager());
-
+                                      const PathSensitiveBugReport &BR) {
+  PathDiagnosticLocation L = BR.getLocation();
   const auto &Ranges = BR.getRanges();
 
   // Only add the statement itself as a range if we didn't specify any
@@ -298,6 +336,7 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   MemRegionManager &MmrMgr;
   const SourceManager &SM;
   const PrintingPolicy &PP;
+  bugreporter::TrackingKind TKind;
 
   /// Recursion limit for dereferencing fields when looking for the
   /// region of interest.
@@ -318,10 +357,10 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
   using RegionVector = SmallVector<const MemRegion *, 5>;
 
 public:
-  NoStoreFuncVisitor(const SubRegion *R)
+  NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
       : RegionOfInterest(R), MmrMgr(*R->getMemRegionManager()),
         SM(MmrMgr.getContext().getSourceManager()),
-        PP(MmrMgr.getContext().getPrintingPolicy()) {}
+        PP(MmrMgr.getContext().getPrintingPolicy()), TKind(TKind) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -336,7 +375,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BR,
-                                   BugReport &R) override;
+                                   PathSensitiveBugReport &R) override;
 
 private:
   /// Attempts to find the region of interest in a given record decl,
@@ -370,10 +409,10 @@ private:
   /// \return Diagnostics piece for region not modified in the current function,
   /// if it decides to emit one.
   PathDiagnosticPieceRef
-  maybeEmitNote(BugReport &R, const CallEvent &Call, const ExplodedNode *N,
-                const RegionVector &FieldChain, const MemRegion *MatchedRegion,
-                StringRef FirstElement, bool FirstIsReferenceType,
-                unsigned IndirectionLevel);
+  maybeEmitNote(PathSensitiveBugReport &R, const CallEvent &Call,
+                const ExplodedNode *N, const RegionVector &FieldChain,
+                const MemRegion *MatchedRegion, StringRef FirstElement,
+                bool FirstIsReferenceType, unsigned IndirectionLevel);
 
   /// Pretty-print region \p MatchedRegion to \p os.
   /// \return Whether printing succeeded.
@@ -502,9 +541,9 @@ NoStoreFuncVisitor::findRegionOfInterestInRecord(
   return None;
 }
 
-PathDiagnosticPieceRef NoStoreFuncVisitor::VisitNode(const ExplodedNode *N,
-                                                     BugReporterContext &BR,
-                                                     BugReport &R) {
+PathDiagnosticPieceRef
+NoStoreFuncVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BR,
+                              PathSensitiveBugReport &R) {
 
   const LocationContext *Ctx = N->getLocationContext();
   const StackFrameContext *SCtx = Ctx->getStackFrame();
@@ -612,8 +651,11 @@ void NoStoreFuncVisitor::findModifyingFrames(const ExplodedNode *N) {
   } while (N);
 }
 
+static llvm::StringLiteral WillBeUsedForACondition =
+    ", which participates in a condition later";
+
 PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
-    BugReport &R, const CallEvent &Call, const ExplodedNode *N,
+    PathSensitiveBugReport &R, const CallEvent &Call, const ExplodedNode *N,
     const RegionVector &FieldChain, const MemRegion *MatchedRegion,
     StringRef FirstElement, bool FirstIsReferenceType,
     unsigned IndirectionLevel) {
@@ -658,6 +700,8 @@ PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
     return nullptr;
 
   os << "'";
+  if (TKind == bugreporter::TrackingKind::Condition)
+    os << WillBeUsedForACondition;
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
@@ -758,7 +802,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override {
+                                   PathSensitiveBugReport &BR) override {
     if (WasModified)
       return nullptr;
 
@@ -784,7 +828,7 @@ public:
 
   static void addMacroVisitorIfNecessary(
         const ExplodedNode *N, const MemRegion *R,
-        bool EnableNullFPSuppression, BugReport &BR,
+        bool EnableNullFPSuppression, PathSensitiveBugReport &BR,
         const SVal V) {
     AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
     if (EnableNullFPSuppression &&
@@ -806,7 +850,7 @@ private:
   /// \return Source location of right hand side of an assignment
   /// into \c RegionOfInterest, empty optional if none found.
   Optional<SourceLocation> matchAssignment(const ExplodedNode *N) {
-    const Stmt *S = PathDiagnosticLocation::getStmt(N);
+    const Stmt *S = N->getStmtForDiagnostics();
     ProgramStateRef State = N->getState();
     auto *LCtx = N->getLocationContext();
     if (!S)
@@ -878,7 +922,7 @@ public:
   /// the statement is a call that was inlined, we add the visitor to the
   /// bug report, so it can print a note later.
   static void addVisitorIfNecessary(const ExplodedNode *Node, const Stmt *S,
-                                    BugReport &BR,
+                                    PathSensitiveBugReport &BR,
                                     bool InEnableNullFPSuppression,
                                     bugreporter::TrackingKind TKind) {
     if (!CallEvent::isCallStmt(S))
@@ -958,7 +1002,7 @@ public:
 
   PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
                                           BugReporterContext &BRC,
-                                          BugReport &BR) {
+                                          PathSensitiveBugReport &BR) {
     // Only print a message at the interesting return statement.
     if (N->getLocationContext() != CalleeSFC)
       return nullptr;
@@ -1068,6 +1112,9 @@ public:
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
+    if (TKind == bugreporter::TrackingKind::Condition)
+      Out << WillBeUsedForACondition;
+
     auto EventPiece = std::make_shared<PathDiagnosticEventPiece>(L, Out.str());
 
     // If we determined that the note is meaningless, make it prunable, and
@@ -1082,10 +1129,8 @@ public:
 
   PathDiagnosticPieceRef visitNodeMaybeUnsuppress(const ExplodedNode *N,
                                                   BugReporterContext &BRC,
-                                                  BugReport &BR) {
-#ifndef NDEBUG
+                                                  PathSensitiveBugReport &BR) {
     assert(Options.ShouldAvoidSuppressingNullArgumentPaths);
-#endif
 
     // Are we at the entry node for this call?
     Optional<CallEnter> CE = N->getLocationAs<CallEnter>();
@@ -1131,7 +1176,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override {
+                                   PathSensitiveBugReport &BR) override {
     switch (Mode) {
     case Initial:
       return visitNodeInitial(N, BRC, BR);
@@ -1145,7 +1190,7 @@ public:
   }
 
   void finalizeVisitor(BugReporterContext &, const ExplodedNode *,
-                       BugReport &BR) override {
+                       PathSensitiveBugReport &BR) override {
     if (EnableNullFPSuppression && ShouldInvalidate)
       BR.markInvalid(ReturnVisitor::getTag(), CalleeSFC);
   }
@@ -1164,41 +1209,6 @@ void FindLastStoreBRVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.Add(V);
   ID.AddInteger(static_cast<int>(TKind));
   ID.AddBoolean(EnableNullFPSuppression);
-}
-
-void FindLastStoreBRVisitor::registerStatementVarDecls(
-    BugReport &BR, const Stmt *S, bool EnableNullFPSuppression,
-    TrackingKind TKind) {
-
-  const ExplodedNode *N = BR.getErrorNode();
-  std::deque<const Stmt *> WorkList;
-  WorkList.push_back(S);
-
-  while (!WorkList.empty()) {
-    const Stmt *Head = WorkList.front();
-    WorkList.pop_front();
-
-    ProgramStateManager &StateMgr = N->getState()->getStateManager();
-
-    if (const auto *DR = dyn_cast<DeclRefExpr>(Head)) {
-      if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-        const VarRegion *R =
-        StateMgr.getRegionManager().getVarRegion(VD, N->getLocationContext());
-
-        // What did we load?
-        SVal V = N->getSVal(S);
-
-        if (V.getAs<loc::ConcreteInt>() || V.getAs<nonloc::ConcreteInt>()) {
-          // Register a new visitor with the BugReport.
-          BR.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
-              V.castAs<KnownSVal>(), R, EnableNullFPSuppression, TKind));
-        }
-      }
-    }
-
-    for (const Stmt *SubStmt : Head->children())
-      WorkList.push_back(SubStmt);
-  }
 }
 
 /// Returns true if \p N represents the DeclStmt declaring and initializing
@@ -1303,9 +1313,8 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream& os,
 }
 
 /// Show default diagnostics for storing bad region.
-static void showBRDefaultDiagnostics(llvm::raw_svector_ostream& os,
-    const MemRegion *R,
-    SVal V) {
+static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &os,
+                                     const MemRegion *R, SVal V) {
   if (V.getAs<loc::ConcreteInt>()) {
     bool b = false;
     if (R->isBoundable()) {
@@ -1350,7 +1359,8 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream& os,
 
 PathDiagnosticPieceRef
 FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                  BugReporterContext &BRC, BugReport &BR) {
+                                  BugReporterContext &BRC,
+                                  PathSensitiveBugReport &BR) {
   if (Satisfied)
     return nullptr;
 
@@ -1485,6 +1495,9 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
   if (os.str().empty())
     showBRDefaultDiagnostics(os, R, V);
 
+  if (TKind == bugreporter::TrackingKind::Condition)
+    os << WillBeUsedForACondition;
+
   // Construct a new PathDiagnosticPiece.
   ProgramPoint P = StoreSite->getLocation();
   PathDiagnosticLocation L;
@@ -1524,9 +1537,8 @@ bool TrackConstraintBRVisitor::isUnderconstrained(const ExplodedNode *N) const {
   return (bool)N->getState()->assume(Constraint, !Assumption);
 }
 
-PathDiagnosticPieceRef
-TrackConstraintBRVisitor::VisitNode(const ExplodedNode *N,
-                                    BugReporterContext &BRC, BugReport &) {
+PathDiagnosticPieceRef TrackConstraintBRVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC, PathSensitiveBugReport &) {
   const ExplodedNode *PrevN = N->getFirstPred();
   if (IsSatisfied)
     return nullptr;
@@ -1604,8 +1616,10 @@ const char *SuppressInlineDefensiveChecksVisitor::getTag() {
   return "IDCVisitor";
 }
 
-PathDiagnosticPieceRef SuppressInlineDefensiveChecksVisitor::VisitNode(
-    const ExplodedNode *Succ, BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef
+SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
+                                                BugReporterContext &BRC,
+                                                PathSensitiveBugReport &BR) {
   const ExplodedNode *Pred = Succ->getFirstPred();
   if (IsSatisfied)
     return nullptr;
@@ -1706,7 +1720,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 };
 } // end of anonymous namespace
 
@@ -1755,16 +1769,17 @@ static bool isAssertlikeBlock(const CFGBlock *B, ASTContext &Context) {
   // B1, 'A && B' for B2, and 'A && B || C' for B3. Let's check whether we
   // reached the end of the condition!
   if (const Stmt *ElseCond = Else->getTerminatorCondition())
-    if (isa<BinaryOperator>(ElseCond)) {
-      assert(cast<BinaryOperator>(ElseCond)->isLogicalOp());
-      return isAssertlikeBlock(Else, Context);
-    }
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(ElseCond))
+      if (BinOp->isLogicalOp())
+        return isAssertlikeBlock(Else, Context);
 
   return false;
 }
 
-PathDiagnosticPieceRef TrackControlDependencyCondBRVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef
+TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
+                                               BugReporterContext &BRC,
+                                               PathSensitiveBugReport &BR) {
   // We can only reason about control dependencies within the same stack frame.
   if (Origin->getStackFrame() != N->getStackFrame())
     return nullptr;
@@ -1785,6 +1800,11 @@ PathDiagnosticPieceRef TrackControlDependencyCondBRVisitor::VisitNode(
     return nullptr;
 
   if (ControlDeps.isControlDependent(OriginB, NB)) {
+    // We don't really want to explain for range loops. Evidence suggests that
+    // the only thing that leads to is the addition of calls to operator!=.
+    if (isa<CXXForRangeStmt>(NB->getTerminator()))
+      return nullptr;
+
     if (const Expr *Condition = NB->getLastCondition()) {
       // Keeping track of the already tracked conditions on a visitor level
       // isn't sufficient, because a new visitor is created for each tracked
@@ -1897,7 +1917,7 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
 static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
                                                  const Expr *Inner) {
   while (N) {
-    if (PathDiagnosticLocation::getStmt(N) == Inner)
+    if (N->getStmtForDiagnostics() == Inner)
       return N;
     N = N->getFirstPred();
   }
@@ -1905,7 +1925,8 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
 }
 
 bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
-                                       const Expr *E, BugReport &report,
+                                       const Expr *E,
+                                       PathSensitiveBugReport &report,
                                        bugreporter::TrackingKind TKind,
                                        bool EnableNullFPSuppression) {
 
@@ -1969,17 +1990,18 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
       report.addVisitor(
-          std::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
+          std::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R), TKind));
 
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
           LVNode, R, EnableNullFPSuppression, report, V);
 
-      report.markInteresting(V);
+      report.markInteresting(V, TKind);
       report.addVisitor(std::make_unique<UndefOrNullArgVisitor>(R));
 
-      // If the contents are symbolic, find out when they became null.
-      if (V.getAsLocSymbol(/*IncludeBaseRegions*/ true))
-        report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
+      // If the contents are symbolic and null, find out when they became null.
+      if (V.getAsLocSymbol(/*IncludeBaseRegions=*/true))
+        if (LVState->isNull(V).isConstrainedTrue())
+          report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
               V.castAs<DefinedSVal>(), false));
 
       // Add visitor, which will suppress inline defensive checks.
@@ -2035,7 +2057,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
-      report.markInteresting(RegionRVal);
+      report.markInteresting(RegionRVal, TKind);
       report.addVisitor(std::make_unique<TrackConstraintBRVisitor>(
             loc::MemRegionVal(RegionRVal), /*assumption=*/false));
     }
@@ -2061,9 +2083,9 @@ const Expr *NilReceiverBRVisitor::getNilReceiver(const Stmt *S,
   return nullptr;
 }
 
-PathDiagnosticPieceRef NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
-                                                       BugReporterContext &BRC,
-                                                       BugReport &BR) {
+PathDiagnosticPieceRef
+NilReceiverBRVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                                PathSensitiveBugReport &BR) {
   Optional<PreStmt> P = N->getLocationAs<PreStmt>();
   if (!P)
     return nullptr;
@@ -2106,9 +2128,9 @@ PathDiagnosticPieceRef NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
 /// to make all PathDiagnosticPieces created by this visitor.
 const char *ConditionBRVisitor::getTag() { return "ConditionBRVisitor"; }
 
-PathDiagnosticPieceRef ConditionBRVisitor::VisitNode(const ExplodedNode *N,
-                                                     BugReporterContext &BRC,
-                                                     BugReport &BR) {
+PathDiagnosticPieceRef
+ConditionBRVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                              PathSensitiveBugReport &BR) {
   auto piece = VisitNodeImpl(N, BRC, BR);
   if (piece) {
     piece->setTag(getTag());
@@ -2120,7 +2142,8 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitNode(const ExplodedNode *N,
 
 PathDiagnosticPieceRef
 ConditionBRVisitor::VisitNodeImpl(const ExplodedNode *N,
-                                  BugReporterContext &BRC, BugReport &BR) {
+                                  BugReporterContext &BRC,
+                                  PathSensitiveBugReport &BR) {
   ProgramPoint ProgPoint = N->getLocation();
   const std::pair<const ProgramPointTag *, const ProgramPointTag *> &Tags =
       ExprEngine::geteagerlyAssumeBinOpBifurcationTags();
@@ -2158,7 +2181,8 @@ ConditionBRVisitor::VisitNodeImpl(const ExplodedNode *N,
 
 PathDiagnosticPieceRef ConditionBRVisitor::VisitTerminator(
     const Stmt *Term, const ExplodedNode *N, const CFGBlock *srcBlk,
-    const CFGBlock *dstBlk, BugReport &R, BugReporterContext &BRC) {
+    const CFGBlock *dstBlk, PathSensitiveBugReport &R,
+    BugReporterContext &BRC) {
   const Expr *Cond = nullptr;
 
   // In the code below, Term is a CFG terminator and Cond is a branch condition
@@ -2215,8 +2239,8 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTerminator(
 
 PathDiagnosticPieceRef
 ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
-                                  BugReport &R, const ExplodedNode *N,
-                                  bool TookTrue) {
+                                  PathSensitiveBugReport &R,
+                                  const ExplodedNode *N, bool TookTrue) {
   ProgramStateRef CurrentState = N->getState();
   ProgramStateRef PrevState = N->getFirstPred()->getState();
   const LocationContext *LCtx = N->getLocationContext();
@@ -2286,7 +2310,7 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
                                       const Expr *ParentEx,
                                       raw_ostream &Out,
                                       BugReporterContext &BRC,
-                                      BugReport &report,
+                                      PathSensitiveBugReport &report,
                                       const ExplodedNode *N,
                                       Optional<bool> &prunable,
                                       bool IsSameFieldName) {
@@ -2371,7 +2395,8 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex,
 
 PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     const Expr *Cond, const BinaryOperator *BExpr, BugReporterContext &BRC,
-    BugReport &R, const ExplodedNode *N, bool TookTrue, bool IsAssuming) {
+    PathSensitiveBugReport &R, const ExplodedNode *N, bool TookTrue,
+    bool IsAssuming) {
   bool shouldInvert = false;
   Optional<bool> shouldPrune;
 
@@ -2455,6 +2480,10 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   const LocationContext *LCtx = N->getLocationContext();
   const SourceManager &SM = BRC.getSourceManager();
 
+  if (isVarAnInterestingCondition(BExpr->getLHS(), N, &R) ||
+      isVarAnInterestingCondition(BExpr->getRHS(), N, &R))
+    Out << WillBeUsedForACondition;
+
   // Convert 'field ...' to 'Field ...' if it is a MemberExpr.
   std::string Message = Out.str();
   Message[0] = toupper(Message[0]);
@@ -2486,7 +2515,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
 PathDiagnosticPieceRef ConditionBRVisitor::VisitConditionVariable(
     StringRef LhsString, const Expr *CondVarExpr, BugReporterContext &BRC,
-    BugReport &report, const ExplodedNode *N, bool TookTrue) {
+    PathSensitiveBugReport &report, const ExplodedNode *N, bool TookTrue) {
   // FIXME: If there's already a constraint tracker for this variable,
   // we shouldn't emit anything here (c.f. the double note in
   // test/Analysis/inlining/path-notes.c)
@@ -2499,24 +2528,22 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitConditionVariable(
 
   const LocationContext *LCtx = N->getLocationContext();
   PathDiagnosticLocation Loc(CondVarExpr, BRC.getSourceManager(), LCtx);
+
+  if (isVarAnInterestingCondition(CondVarExpr, N, &report))
+    Out << WillBeUsedForACondition;
+
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
 
-  if (const auto *DR = dyn_cast<DeclRefExpr>(CondVarExpr)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-      const ProgramState *state = N->getState().get();
-      if (const MemRegion *R = state->getLValue(VD, LCtx).getAsRegion()) {
-        if (report.isInteresting(R))
-          event->setPrunable(false);
-      }
-    }
-  }
+  if (isInterestingExpr(CondVarExpr, N, &report))
+    event->setPrunable(false);
 
   return event;
 }
 
 PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     const Expr *Cond, const DeclRefExpr *DRE, BugReporterContext &BRC,
-    BugReport &report, const ExplodedNode *N, bool TookTrue, bool IsAssuming) {
+    PathSensitiveBugReport &report, const ExplodedNode *N, bool TookTrue,
+    bool IsAssuming) {
   const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
   if (!VD)
     return nullptr;
@@ -2531,6 +2558,9 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
   const LocationContext *LCtx = N->getLocationContext();
 
+  if (isVarAnInterestingCondition(DRE, N, &report))
+    Out << WillBeUsedForACondition;
+
   // If we know the value create a pop-up note to the 'DRE'.
   if (!IsAssuming) {
     PathDiagnosticLocation Loc(DRE, BRC.getSourceManager(), LCtx);
@@ -2539,22 +2569,17 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
 
   PathDiagnosticLocation Loc(Cond, BRC.getSourceManager(), LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
-  const ProgramState *state = N->getState().get();
-  if (const MemRegion *R = state->getLValue(VD, LCtx).getAsRegion()) {
-    if (report.isInteresting(R))
-      event->setPrunable(false);
-    else {
-      SVal V = state->getSVal(R);
-      if (report.isInteresting(V))
-        event->setPrunable(false);
-    }
-  }
+
+  if (isInterestingExpr(DRE, N, &report))
+    event->setPrunable(false);
+
   return std::move(event);
 }
 
 PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
     const Expr *Cond, const MemberExpr *ME, BugReporterContext &BRC,
-    BugReport &report, const ExplodedNode *N, bool TookTrue, bool IsAssuming) {
+    PathSensitiveBugReport &report, const ExplodedNode *N, bool TookTrue,
+    bool IsAssuming) {
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
 
@@ -2576,10 +2601,17 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   if (!Loc.isValid() || !Loc.asLocation().isValid())
     return nullptr;
 
+  if (isVarAnInterestingCondition(ME, N, &report))
+    Out << WillBeUsedForACondition;
+
+  // If we know the value create a pop-up note.
   if (!IsAssuming)
     return std::make_shared<PathDiagnosticPopUpPiece>(Loc, Out.str());
 
-  return std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
+  auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Out.str());
+  if (isInterestingExpr(ME, N, &report))
+    event->setPrunable(false);
+  return event;
 }
 
 bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
@@ -2619,10 +2651,8 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   return true;
 }
 
-const char *const ConditionBRVisitor::GenericTrueMessage =
-    "Assuming the condition is true";
-const char *const ConditionBRVisitor::GenericFalseMessage =
-    "Assuming the condition is false";
+constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
+constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {
@@ -2635,7 +2665,8 @@ bool ConditionBRVisitor::isPieceMessageGeneric(
 //===----------------------------------------------------------------------===//
 
 void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
-    BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR) {
+    BugReporterContext &BRC, const ExplodedNode *N,
+    PathSensitiveBugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
   const AnalyzerOptions &Options = BRC.getAnalyzerOptions();
@@ -2706,7 +2737,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   // Skip reports within the sys/queue.h macros as we do not have the ability to
   // reason about data structure shapes.
   const SourceManager &SM = BRC.getSourceManager();
-  FullSourceLoc Loc = BR.getLocation(SM).asLocation();
+  FullSourceLoc Loc = BR.getLocation().asLocation();
   while (Loc.isMacroID()) {
     Loc = Loc.getSpellingLoc();
     if (SM.getFilename(Loc).endswith("sys/queue.h")) {
@@ -2720,9 +2751,9 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
 // Implementation of UndefOrNullArgVisitor.
 //===----------------------------------------------------------------------===//
 
-PathDiagnosticPieceRef UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
-                                                        BugReporterContext &BRC,
-                                                        BugReport &BR) {
+PathDiagnosticPieceRef
+UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                                 PathSensitiveBugReport &BR) {
   ProgramStateRef State = N->getState();
   ProgramPoint ProgLoc = N->getLocation();
 
@@ -2778,7 +2809,8 @@ FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
     : Constraints(ConstraintRangeTy::Factory().getEmptyMap()) {}
 
 void FalsePositiveRefutationBRVisitor::finalizeVisitor(
-    BugReporterContext &BRC, const ExplodedNode *EndPathNode, BugReport &BR) {
+    BugReporterContext &BRC, const ExplodedNode *EndPathNode,
+    PathSensitiveBugReport &BR) {
   // Collect new constraints
   VisitNode(EndPathNode, BRC, BR);
 
@@ -2813,9 +2845,8 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 
-PathDiagnosticPieceRef
-FalsePositiveRefutationBRVisitor::VisitNode(const ExplodedNode *N,
-                                            BugReporterContext &, BugReport &) {
+PathDiagnosticPieceRef FalsePositiveRefutationBRVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &, PathSensitiveBugReport &) {
   // Collect new constraints
   const ConstraintRangeTy &NewCs = N->getState()->get<ConstraintRange>();
   ConstraintRangeTy::Factory &CF =
@@ -2851,7 +2882,7 @@ void TagVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
 
 PathDiagnosticPieceRef TagVisitor::VisitNode(const ExplodedNode *N,
                                              BugReporterContext &BRC,
-                                             BugReport &R) {
+                                             PathSensitiveBugReport &R) {
   ProgramPoint PP = N->getLocation();
   const NoteTag *T = dyn_cast_or_null<NoteTag>(PP.getTag());
   if (!T)

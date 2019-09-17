@@ -318,8 +318,25 @@ bool SIInstrInfo::getMemOperandWithOffset(const MachineInstr &LdSt,
 
   if (isMUBUF(LdSt) || isMTBUF(LdSt)) {
     const MachineOperand *SOffset = getNamedOperand(LdSt, AMDGPU::OpName::soffset);
-    if (SOffset && SOffset->isReg())
-      return false;
+    if (SOffset && SOffset->isReg()) {
+      // We can only handle this if it's a stack access, as any other resource
+      // would require reporting multiple base registers.
+      const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+      if (AddrReg && !AddrReg->isFI())
+        return false;
+
+      const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
+      const SIMachineFunctionInfo *MFI
+        = LdSt.getParent()->getParent()->getInfo<SIMachineFunctionInfo>();
+      if (RSrc->getReg() != MFI->getScratchRSrcReg())
+        return false;
+
+      const MachineOperand *OffsetImm =
+        getNamedOperand(LdSt, AMDGPU::OpName::offset);
+      BaseOp = SOffset;
+      Offset = OffsetImm->getImm();
+      return true;
+    }
 
     const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (!AddrReg)
@@ -1397,12 +1414,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_OR_B32));
     break;
 
-  case AMDGPU::S_OR_B64_term:
-    // This is only a terminator to get the correct spill code placement during
-    // register allocation.
-    MI.setDesc(get(AMDGPU::S_OR_B64));
-    break;
-
   case AMDGPU::S_ANDN2_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -1895,7 +1906,6 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::SI_MASK_BRANCH:
     case AMDGPU::S_MOV_B64_term:
     case AMDGPU::S_XOR_B64_term:
-    case AMDGPU::S_OR_B64_term:
     case AMDGPU::S_ANDN2_B64_term:
     case AMDGPU::S_MOV_B32_term:
     case AMDGPU::S_XOR_B32_term:
@@ -2873,8 +2883,16 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   if (OpInfo.RegClass < 0)
     return false;
 
-  if (MO.isImm() && isInlineConstant(MO, OpInfo))
+  const MachineFunction *MF = MI.getParent()->getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+
+  if (MO.isImm() && isInlineConstant(MO, OpInfo)) {
+    if (isMAI(MI) && ST.hasMFMAInlineLiteralBug() &&
+        OpNo ==(unsigned)AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                    AMDGPU::OpName::src2))
+      return false;
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
+  }
 
   if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
     return false;
@@ -2882,8 +2900,6 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   if (!isVOP3(MI) || !AMDGPU::isSISrcOperand(InstDesc, OpNo))
     return true;
 
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   return ST.hasVOP3Literal();
 }
 
@@ -4207,6 +4223,15 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
   // Try to eliminate the copy if it is copying an immediate value.
   if (Def->isMoveImmediate())
     FoldImmediate(*Copy, *Def, OpReg, &MRI);
+
+  bool ImpDef = Def->isImplicitDef();
+  while (!ImpDef && Def && Def->isCopy()) {
+    Def = MRI.getUniqueVRegDef(Def->getOperand(1).getReg());
+    ImpDef = Def && Def->isImplicitDef();
+  }
+  if (!RI.isSGPRClass(DstRC) && !Copy->readsRegister(AMDGPU::EXEC, &RI) &&
+      !ImpDef)
+    Copy->addOperand(MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
 }
 
 // Emit the actual waterfall loop, executing the wrapped instruction for each
@@ -6074,6 +6099,23 @@ SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   Register UnusedCarry = MRI.createVirtualRegister(RI.getBoolRC());
   MRI.setRegAllocationHint(UnusedCarry, 0, RI.getVCC());
+
+  return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_I32_e64), DestReg)
+           .addReg(UnusedCarry, RegState::Define | RegState::Dead);
+}
+
+MachineInstrBuilder SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
+                                               MachineBasicBlock::iterator I,
+                                               const DebugLoc &DL,
+                                               Register DestReg,
+                                               RegScavenger &RS) const {
+  if (ST.hasAddNoCarry())
+    return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_U32_e32), DestReg);
+
+  Register UnusedCarry = RS.scavengeRegister(RI.getBoolRC(), I, 0, false);
+  // TODO: Users need to deal with this.
+  if (!UnusedCarry.isValid())
+    return MachineInstrBuilder();
 
   return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_I32_e64), DestReg)
            .addReg(UnusedCarry, RegState::Define | RegState::Dead);

@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceGlobalVars.h"
+#include <set>
+
+using namespace llvm;
 
 /// Removes all the Initialized GVs that aren't inside the desired Chunks.
-/// @returns the Module stripped of out-of-chunk GVs
 static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
                                  Module *Program) {
   // Get GVs inside desired chunks

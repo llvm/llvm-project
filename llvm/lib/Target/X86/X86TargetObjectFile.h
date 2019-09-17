@@ -30,7 +30,8 @@ namespace llvm {
                                       const TargetMachine &TM,
                                       MachineModuleInfo *MMI) const override;
 
-    const MCExpr *getIndirectSymViaGOTPCRel(const MCSymbol *Sym,
+    const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                            const MCSymbol *Sym,
                                             const MCValue &MV, int64_t Offset,
                                             MachineModuleInfo *MMI,
                                             MCStreamer &Streamer) const override;

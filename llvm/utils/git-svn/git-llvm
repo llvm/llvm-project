@@ -53,6 +53,7 @@ LLVM_MONOREPO_SVN_MAPPING = {
         'debuginfo-tests',
         'dragonegg',
         'klee',
+        'libc',
         'libclc',
         'libcxx',
         'libcxxabi',
@@ -190,16 +191,16 @@ def program_exists(cmd):
 
 
 def get_default_rev_range():
-    # Get the branch tracked by the current branch, as set by
-    # git branch --set-upstream-to  See http://serverfault.com/a/352236/38694.
-    cur_branch = git('rev-parse', '--symbolic-full-name', 'HEAD')
-    upstream_branch = git('for-each-ref', '--format=%(upstream:short)',
-                          cur_branch)
-    if not upstream_branch:
-        upstream_branch = 'origin/master'
-
     # Get the newest common ancestor between HEAD and our upstream branch.
-    upstream_rev = git('merge-base', 'HEAD', upstream_branch)
+    upstream_rev = git('merge-base', 'HEAD', '@{upstream}', ignore_errors=True)
+    if not upstream_rev:
+        eprint("Warning: git-llvm assumes that origin/master is the upstream "
+               "branch but git does not.")
+        eprint("To make this warning go away: git branch -u origin/master")
+        eprint("To avoid this warning when creating branches: "
+               "git checkout -b MyBranchName origin/master")
+        upstream_rev = git('merge-base', 'HEAD', 'origin/master')
+
     return '%s..' % upstream_rev
 
 
@@ -209,11 +210,8 @@ def get_revs_to_push(rev_range):
     # Use git show rather than some plumbing command to figure out which revs
     # are in rev_range because it handles single revs (HEAD^) and ranges
     # (foo..bar) like we want.
-    revs = git('show', '--reverse', '--quiet',
+    return git('show', '--reverse', '--quiet',
                '--pretty=%h', rev_range).splitlines()
-    if not revs:
-        die('Nothing to push: No revs in range %s.' % rev_range)
-    return revs
 
 
 def clean_svn(svn_repo):
@@ -462,6 +460,10 @@ def cmd_push(args):
     rev_range = args.rev_range
     dry_run = args.dry_run
     revs = get_revs_to_push(rev_range)
+
+    if not args.force and not revs:
+        die('Nothing to push: No revs in range %s.' % rev_range)
+
     log('%sPushing %d %s commit%s:\n%s' %
         ('[DryRun] ' if dry_run else '', len(revs),
          'split-repo (%s)' % split_repo_path
@@ -471,7 +473,7 @@ def cmd_push(args):
                    for c in revs)))
 
     # Ask confirmation if multiple commits are about to be pushed
-    if len(revs) != 1:
+    if not args.force and len(revs) > 1:
         if not ask_confirm("Are you sure you want to create %d commits?" % len(revs)):
             die("Aborting")
 
@@ -626,6 +628,11 @@ if __name__ == '__main__':
         help='Do everything other than commit to svn.  Leaves junk in the svn '
         'repo, so probably will not work well if you try to commit more '
         'than one rev.')
+    parser_push.add_argument(
+        '-f',
+        '--force',
+        action='store_true',
+        help='Do not ask for confirmation when pushing multiple commits.')
     parser_push.add_argument(
         'rev_range',
         metavar='GIT_REVS',

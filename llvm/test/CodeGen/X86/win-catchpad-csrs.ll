@@ -87,17 +87,17 @@ handler1:
 
 ; X64-LABEL: try_catch_catch:
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: pushq %rsi
-; X64: .seh_pushreg 6
+; X64: .seh_pushreg %rsi
 ; X64: pushq %rdi
-; X64: .seh_pushreg 7
+; X64: .seh_pushreg %rdi
 ; X64: pushq %rbx
-; X64: .seh_pushreg 3
+; X64: .seh_pushreg %rbx
 ; X64: subq $40, %rsp
 ; X64: .seh_stackalloc 40
 ; X64: leaq 32(%rsp), %rbp
-; X64: .seh_setframe 5, 32
+; X64: .seh_setframe %rbp, 32
 ; X64: .seh_endprologue
 ; X64: movq $-2, (%rbp)
 ; X64: callq getint
@@ -117,13 +117,13 @@ handler1:
 ; X64: LBB0_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: pushq %rsi
-; X64: .seh_pushreg 6
+; X64: .seh_pushreg %rsi
 ; X64: pushq %rdi
-; X64: .seh_pushreg 7
+; X64: .seh_pushreg %rdi
 ; X64: pushq %rbx
-; X64: .seh_pushreg 3
+; X64: .seh_pushreg %rbx
 ; X64: subq $40, %rsp
 ; X64: .seh_stackalloc 40
 ; X64: leaq 32(%rdx), %rbp
@@ -166,14 +166,14 @@ try.cont:
 
 ; X64-LABEL: try_one_csr:
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: pushq %rsi
-; X64: .seh_pushreg 6
+; X64: .seh_pushreg %rsi
 ; X64-NOT: pushq
 ; X64: subq $40, %rsp
 ; X64: .seh_stackalloc 40
 ; X64: leaq 32(%rsp), %rbp
-; X64: .seh_setframe 5, 32
+; X64: .seh_setframe %rbp, 32
 ; X64: .seh_endprologue
 ; X64: callq getint
 ; X64: callq getint
@@ -192,9 +192,9 @@ try.cont:
 ; X64: LBB1_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: pushq %rsi
-; X64: .seh_pushreg 6
+; X64: .seh_pushreg %rsi
 ; X64: subq $40, %rsp
 ; X64: .seh_stackalloc 40
 ; X64: leaq 32(%rdx), %rbp
@@ -230,12 +230,12 @@ try.cont:
 
 ; X64-LABEL: try_no_csr:
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64-NOT: pushq
 ; X64: subq $48, %rsp
 ; X64: .seh_stackalloc 48
 ; X64: leaq 48(%rsp), %rbp
-; X64: .seh_setframe 5, 48
+; X64: .seh_setframe %rbp, 48
 ; X64: .seh_endprologue
 ; X64: movl $1, %ecx
 ; X64: callq f
@@ -250,7 +250,7 @@ try.cont:
 ; X64: LBB2_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
-; X64: .seh_pushreg 5
+; X64: .seh_pushreg %rbp
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
 ; X64: leaq 48(%rdx), %rbp

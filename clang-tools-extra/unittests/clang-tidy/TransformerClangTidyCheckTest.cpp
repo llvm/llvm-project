@@ -18,18 +18,18 @@ namespace clang {
 namespace tidy {
 namespace utils {
 namespace {
+using namespace ::clang::ast_matchers;
+
 using tooling::change;
 using tooling::IncludeFormat;
+using tooling::node;
 using tooling::RewriteRule;
+using tooling::statement;
 using tooling::text;
 using tooling::stencil::cat;
 
 // Invert the code of an if-statement, while maintaining its semantics.
 RewriteRule invertIf() {
-  using namespace ::clang::ast_matchers;
-  using tooling::node;
-  using tooling::statement;
-
   StringRef C = "C", T = "T", E = "E";
   RewriteRule Rule = tooling::makeRule(
       ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
@@ -65,6 +65,56 @@ TEST(TransformerClangTidyCheckTest, Basic) {
     }
   )";
   EXPECT_EQ(Expected, test::runCheckOnCode<IfInverterCheck>(Input));
+}
+
+class IntLitCheck : public TransformerClangTidyCheck {
+public:
+  IntLitCheck(StringRef Name, ClangTidyContext *Context)
+      : TransformerClangTidyCheck(tooling::makeRule(integerLiteral(),
+                                                    change(text("LIT")),
+                                                    text("no message")),
+                                  Name, Context) {}
+};
+
+// Tests that two changes in a single macro expansion do not lead to conflicts
+// in applying the changes.
+TEST(TransformerClangTidyCheckTest, TwoChangesInOneMacroExpansion) {
+  const std::string Input = R"cc(
+#define PLUS(a,b) (a) + (b)
+    int f() { return PLUS(3, 4); }
+  )cc";
+  const std::string Expected = R"cc(
+#define PLUS(a,b) (a) + (b)
+    int f() { return PLUS(LIT, LIT); }
+  )cc";
+
+  EXPECT_EQ(Expected, test::runCheckOnCode<IntLitCheck>(Input));
+}
+
+class BinOpCheck : public TransformerClangTidyCheck {
+public:
+  BinOpCheck(StringRef Name, ClangTidyContext *Context)
+      : TransformerClangTidyCheck(
+            tooling::makeRule(
+                binaryOperator(hasOperatorName("+"), hasRHS(expr().bind("r"))),
+                change(node("r"), text("RIGHT")), text("no message")),
+            Name, Context) {}
+};
+
+// Tests case where the rule's match spans both source from the macro and its
+// argument, while the change spans only the argument AND there are two such
+// matches. We verify that both replacements succeed.
+TEST(TransformerClangTidyCheckTest, TwoMatchesInMacroExpansion) {
+  const std::string Input = R"cc(
+#define M(a,b) (1 + a) * (1 + b)
+    int f() { return M(3, 4); }
+  )cc";
+  const std::string Expected = R"cc(
+#define M(a,b) (1 + a) * (1 + b)
+    int f() { return M(RIGHT, RIGHT); }
+  )cc";
+
+  EXPECT_EQ(Expected, test::runCheckOnCode<BinOpCheck>(Input));
 }
 
 // A trivial rewrite-rule generator that requires Objective-C code.
@@ -124,8 +174,9 @@ TEST(TransformerClangTidyCheckTest, DisableByConfig) {
 
 RewriteRule replaceCall(IncludeFormat Format) {
   using namespace ::clang::ast_matchers;
-  RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
-                              change(text("other()")), text("no message"));
+  RewriteRule Rule =
+      tooling::makeRule(callExpr(callee(functionDecl(hasName("f")))),
+                        change(text("other()")), text("no message"));
   addInclude(Rule, "clang/OtherLib.h", Format);
   return Rule;
 }

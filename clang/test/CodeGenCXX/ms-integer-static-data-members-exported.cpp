@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple=i386-pc-win32 -fms-compatibility %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple=i386-pc-win32 -fms-extensions %s -o - | FileCheck %s
 
 enum Enum { zero, one, two };
 

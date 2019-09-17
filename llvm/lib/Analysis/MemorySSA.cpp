@@ -84,7 +84,7 @@ bool llvm::VerifyMemorySSA = false;
 #endif
 /// Enables memory ssa as a dependency for loop passes in legacy pass manager.
 cl::opt<bool> llvm::EnableMSSALoopDependency(
-    "enable-mssa-loop-dependency", cl::Hidden, cl::init(false),
+    "enable-mssa-loop-dependency", cl::Hidden, cl::init(true),
     cl::desc("Enable MemorySSA dependency for loop pass manager"));
 
 static cl::opt<bool, true>
@@ -285,6 +285,11 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
       return {false, NoAlias};
+    case Intrinsic::dbg_addr:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_label:
+    case Intrinsic::dbg_value:
+      llvm_unreachable("debuginfo shouldn't have associated defs!");
     default:
       break;
     }
@@ -370,7 +375,7 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
-  return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
+  return isa<LoadInst>(I) && (I->hasMetadata(LLVMContext::MD_invariant_load) ||
                               AA.pointsToConstantMemory(MemoryLocation(
                                   cast<LoadInst>(I)->getPointerOperand())));
 }
@@ -1088,9 +1093,14 @@ void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
     AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
     if (RenameAllUses) {
-      int PhiIndex = Phi->getBasicBlockIndex(BB);
-      assert(PhiIndex != -1 && "Incomplete phi during partial rename");
-      Phi->setIncomingValue(PhiIndex, IncomingVal);
+      bool ReplacementDone = false;
+      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+        if (Phi->getIncomingBlock(I) == BB) {
+          Phi->setIncomingValue(I, IncomingVal);
+          ReplacementDone = true;
+        }
+      (void) ReplacementDone;
+      assert(ReplacementDone && "Incomplete phi during partial rename");
     } else
       Phi->addIncoming(IncomingVal, BB);
   }
@@ -1720,11 +1730,13 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
                                            AliasAnalysisType *AAP,
                                            const MemoryUseOrDef *Template) {
   // The assume intrinsic has a control dependency which we model by claiming
-  // that it writes arbitrarily. Ignore that fake memory dependency here.
+  // that it writes arbitrarily. Debuginfo intrinsics may be considered
+  // clobbers when we have a nonstandard AA pipeline. Ignore these fake memory
+  // dependencies here.
   // FIXME: Replace this special casing with a more accurate modelling of
   // assume's control dependency.
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::assume)
+    if (II->getIntrinsicID() == Intrinsic::assume || isa<DbgInfoIntrinsic>(II))
       return nullptr;
 
   bool Def, Use;
@@ -1867,7 +1879,7 @@ void MemorySSA::verifyMemorySSA() const {
 }
 
 void MemorySSA::verifyPrevDefInPhis(Function &F) const {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   for (const BasicBlock &BB : F) {
     if (MemoryPhi *Phi = getMemoryAccess(&BB)) {
       for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
@@ -1875,7 +1887,7 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
         auto *IncAcc = Phi->getIncomingValue(I);
         // If Pred has no unreachable predecessors, get last def looking at
         // IDoms. If, while walkings IDoms, any of these has an unreachable
-        // predecessor, then the expected incoming def is LoE.
+        // predecessor, then the incoming def can be any access.
         if (auto *DTNode = DT->getNode(Pred)) {
           while (DTNode) {
             if (auto *DefList = getBlockDefs(DTNode->getBlock())) {
@@ -1886,16 +1898,13 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
             }
             DTNode = DTNode->getIDom();
           }
-        } else if (auto *DefList = getBlockDefs(Pred)) {
+        } else {
           // If Pred has unreachable predecessors, but has at least a Def, the
           // incoming access can be the last Def in Pred, or it could have been
-          // optimized to LoE.
-          auto *LastAcc = &*(--DefList->end());
-          assert((LastAcc == IncAcc || IncAcc == getLiveOnEntryDef()) &&
-                 "Incorrect incoming access into phi.");
-        } else {
+          // optimized to LoE. After an update, though, the LoE may have been
+          // replaced by another access, so IncAcc may be any access.
           // If Pred has unreachable predecessors and no Defs, incoming access
-          // should be LoE; In practice, after an update, it may be any access.
+          // should be LoE; However, after an update, it may be any access.
         }
       }
     }
@@ -2046,7 +2055,7 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
 /// accesses and verifying that, for each use, it appears in the
 /// appropriate def's use list
 void MemorySSA::verifyDefUses(Function &F) const {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   for (BasicBlock &B : F) {
     // Phi nodes are attached to basic blocks
     if (MemoryPhi *Phi = getMemoryAccess(&B)) {

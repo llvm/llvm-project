@@ -3,9 +3,10 @@
 //
 // RUN: { env ASAN_OPTIONS=verbosity=1 %t.out %t.so || : ; } 2>&1 | FileCheck %s
 //
-// CHECK: {{.*}}AddressSanitizer: failed to intercept '__cxa_{{.*}}throw{{.*}}'
+// CHECK: AddressSanitizer: failed to intercept '__cxa_throw'
 //
-// REQUIRES: x86_64-target-arch && !android
+// This tests assumes static linking of the asan runtime.
+// UNSUPPORTED: asan-dynamic-runtime
 
 #ifdef __cplusplus
 

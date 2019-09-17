@@ -199,7 +199,7 @@ char *FindPathToBinary(const char *name) {
 
 } // namespace __sanitizer
 
-using namespace __sanitizer;  // NOLINT
+using namespace __sanitizer;
 
 extern "C" {
 void __sanitizer_set_report_path(const char *path) {

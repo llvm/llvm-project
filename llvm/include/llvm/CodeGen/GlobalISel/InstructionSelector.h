@@ -31,6 +31,7 @@ namespace llvm {
 
 class APInt;
 class APFloat;
+class GISelKnownBits;
 class MachineInstr;
 class MachineInstrBuilder;
 class MachineFunction;
@@ -208,6 +209,12 @@ enum {
   /// - Expected Intrinsic ID
   GIM_CheckIntrinsicID,
 
+  /// Check the operand is a specific predicate
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - Expected predicate
+  GIM_CheckCmpPredicate,
+
   /// Check the specified operand is an MBB
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
@@ -375,11 +382,15 @@ public:
   virtual bool select(MachineInstr &I) = 0;
 
   CodeGenCoverage *CoverageInfo = nullptr;
+  GISelKnownBits *KnownBits = nullptr;
   MachineFunction *MF = nullptr;
 
   /// Setup per-MF selector state.
-  virtual void setupMF(MachineFunction &mf, CodeGenCoverage &covinfo) {
+  virtual void setupMF(MachineFunction &mf,
+                       GISelKnownBits &KB,
+                       CodeGenCoverage &covinfo) {
     CoverageInfo = &covinfo;
+    KnownBits = &KB;
     MF = &mf;
   }
 

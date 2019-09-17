@@ -776,6 +776,7 @@ TEST_F(CGSCCCallbacksTest, InstrumentedPasses) {
   CallbacksHandle.registerPassInstrumentation();
   // Non-mock instrumentation not specifically mentioned below can be ignored.
   CallbacksHandle.ignoreNonMockPassInstrumentation("<string>");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("foo");
   CallbacksHandle.ignoreNonMockPassInstrumentation("(foo)");
 
   EXPECT_CALL(AnalysisHandle, run(HasName("(foo)"), _, _));
@@ -815,6 +816,7 @@ TEST_F(CGSCCCallbacksTest, InstrumentedInvalidatingPasses) {
   CallbacksHandle.registerPassInstrumentation();
   // Non-mock instrumentation not specifically mentioned below can be ignored.
   CallbacksHandle.ignoreNonMockPassInstrumentation("<string>");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("foo");
   CallbacksHandle.ignoreNonMockPassInstrumentation("(foo)");
 
   EXPECT_CALL(AnalysisHandle, run(HasName("(foo)"), _, _));
@@ -858,6 +860,7 @@ TEST_F(CGSCCCallbacksTest, InstrumentedSkippedPasses) {
   CallbacksHandle.registerPassInstrumentation();
   // Non-mock instrumentation run here can safely be ignored.
   CallbacksHandle.ignoreNonMockPassInstrumentation("<string>");
+  CallbacksHandle.ignoreNonMockPassInstrumentation("foo");
   CallbacksHandle.ignoreNonMockPassInstrumentation("(foo)");
 
   // Skip the pass by returning false.

@@ -57,7 +57,7 @@
 ...
 ---
 name:            mod4_0_to_11
-alignment:       2
+alignment:       4
 legalized:       true
 tracksRegLiveness: true
 jumpTable:

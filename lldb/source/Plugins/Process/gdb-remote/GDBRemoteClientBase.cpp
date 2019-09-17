@@ -72,7 +72,7 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
 
     const char stop_type = response.GetChar();
     LLDB_LOGF(log, "GDBRemoteClientBase::%s () got packet: %s", __FUNCTION__,
-              response.GetStringRef().c_str());
+              response.GetStringRef().data());
 
     switch (stop_type) {
     case 'W':
@@ -214,7 +214,7 @@ GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
     LLDB_LOGF(
         log,
         "error: packet with payload \"%.*s\" got invalid response \"%s\": %s",
-        int(payload.size()), payload.data(), response.GetStringRef().c_str(),
+        int(payload.size()), payload.data(), response.GetStringRef().data(),
         (i == (max_response_retries - 1))
             ? "using invalid response and giving up"
             : "ignoring response and waiting for another");

@@ -2220,6 +2220,22 @@ Stmt **VarDecl::getInitAddress() {
   return Init.getAddrOfPtr1();
 }
 
+VarDecl *VarDecl::getInitializingDeclaration() {
+  VarDecl *Def = nullptr;
+  for (auto I : redecls()) {
+    if (I->hasInit())
+      return I;
+
+    if (I->isThisDeclarationADefinition()) {
+      if (isStaticDataMember())
+        return I;
+      else
+        Def = I;
+    }
+  }
+  return Def;
+}
+
 bool VarDecl::isOutOfLine() const {
   if (Decl::isOutOfLine())
     return true;
@@ -3332,7 +3348,8 @@ SourceRange FunctionDecl::getExceptionSpecSourceRange() const {
 /// an externally visible symbol, but "extern inline" will not create an
 /// externally visible symbol.
 bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
-  assert((doesThisDeclarationHaveABody() || willHaveBody()) &&
+  assert((doesThisDeclarationHaveABody() || willHaveBody() ||
+          hasAttr<AliasAttr>()) &&
          "Must be a function definition");
   assert(isInlined() && "Function must be inline");
   ASTContext &Context = getASTContext();
@@ -4252,6 +4269,9 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setNonTrivialToPrimitiveDefaultInitialize(false);
   setNonTrivialToPrimitiveCopy(false);
   setNonTrivialToPrimitiveDestroy(false);
+  setHasNonTrivialToPrimitiveDefaultInitializeCUnion(false);
+  setHasNonTrivialToPrimitiveDestructCUnion(false);
+  setHasNonTrivialToPrimitiveCopyCUnion(false);
   setParamDestroyedInCallee(false);
   setArgPassingRestrictions(APK_CanPassInRegs);
 }

@@ -9,7 +9,7 @@
 ...
 ---
 name:            load_store_i8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -34,7 +34,7 @@ body:             |
 ...
 ---
 name:            load_store_i16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -59,7 +59,7 @@ body:             |
 ...
 ---
 name:            load_store_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

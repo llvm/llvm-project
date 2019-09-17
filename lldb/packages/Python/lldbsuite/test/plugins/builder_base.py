@@ -75,6 +75,7 @@ def getMake(test_subdir, test_name):
             "VPATH="+src_dir,
             "-C", build_dir,
             "-I", src_dir,
+            "-I", os.path.join(lldb_test, "make"),
             "-f", makefile]
 
 
@@ -116,7 +117,7 @@ def getCmdLine(d):
     pattern = '%s="%s"' if "win32" in sys.platform else "%s='%s'"
 
     def setOrAppendVariable(k, v):
-        append_vars = ["CFLAGS_EXTRAS", "LD_EXTRAS"]
+        append_vars = ["CFLAGS", "CFLAGS_EXTRAS", "LD_EXTRAS"]
         if k in append_vars and k in os.environ:
             v = os.environ[k] + " " + v
         return pattern % (k, v)

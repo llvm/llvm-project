@@ -236,6 +236,16 @@ public:
   ///        #pragma, etc.
   llvm::ArrayRef<syntax::Token> spelledTokens(FileID FID) const;
 
+  /// Get all tokens that expand a macro in \p FID. For the following input
+  ///     #define FOO B
+  ///     #define FOO2(X) int X
+  ///     FOO2(XY)
+  ///     int B;
+  ///     FOO;
+  /// macroExpansions() returns {"FOO2", "FOO"} (from line 3 and 5
+  /// respecitvely).
+  std::vector<const syntax::Token *> macroExpansions(FileID FID) const;
+
   const SourceManager &sourceManager() const { return *SourceMgr; }
 
   std::string dumpForTests() const;

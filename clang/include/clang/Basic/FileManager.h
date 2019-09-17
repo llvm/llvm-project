@@ -45,10 +45,29 @@ class FileSystemStatCache;
 class DirectoryEntry {
   friend class FileManager;
 
+  // FIXME: We should not be storing a directory entry name here.
   StringRef Name; // Name of the directory.
 
 public:
   StringRef getName() const { return Name; }
+};
+
+/// A reference to a \c DirectoryEntry  that includes the name of the directory
+/// as it was accessed by the FileManager's client.
+class DirectoryEntryRef {
+public:
+  const DirectoryEntry &getDirEntry() const { return *Entry->getValue(); }
+
+  StringRef getName() const { return Entry->getKey(); }
+
+private:
+  friend class FileManager;
+
+  DirectoryEntryRef(
+      llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry)
+      : Entry(Entry) {}
+
+  const llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry;
 };
 
 /// Cached information about one file (either on disk
@@ -106,6 +125,42 @@ public:
   bool isOpenForTests() const { return File != nullptr; }
 };
 
+/// A reference to a \c FileEntry that includes the name of the file as it was
+/// accessed by the FileManager's client.
+class FileEntryRef {
+public:
+  FileEntryRef() = delete;
+  FileEntryRef(StringRef Name, const FileEntry &Entry)
+      : Name(Name), Entry(&Entry) {}
+
+  const StringRef getName() const { return Name; }
+
+  bool isValid() const { return Entry->isValid(); }
+
+  const FileEntry &getFileEntry() const { return *Entry; }
+
+  off_t getSize() const { return Entry->getSize(); }
+
+  unsigned getUID() const { return Entry->getUID(); }
+
+  const llvm::sys::fs::UniqueID &getUniqueID() const {
+    return Entry->getUniqueID();
+  }
+
+  time_t getModificationTime() const { return Entry->getModificationTime(); }
+
+  friend bool operator==(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return LHS.Entry == RHS.Entry && LHS.Name == RHS.Name;
+  }
+  friend bool operator!=(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return !(LHS == RHS);
+  }
+
+private:
+  StringRef Name;
+  const FileEntry *Entry;
+};
+
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
 ///
@@ -131,6 +186,10 @@ class FileManager : public RefCountedBase<FileManager> {
   /// The virtual files that we have allocated.
   SmallVector<std::unique_ptr<FileEntry>, 4> VirtualFileEntries;
 
+  /// A set of files that bypass the maps and uniquing.  They can have
+  /// conflicting filenames.
+  SmallVector<std::unique_ptr<FileEntry>, 0> BypassFileEntries;
+
   /// A cache that maps paths to directory entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
   /// the directory.
@@ -143,13 +202,25 @@ class FileManager : public RefCountedBase<FileManager> {
   llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
   SeenDirEntries;
 
+  /// A reference to the file entry that is associated with a particular
+  /// filename, or a reference to another filename that should be looked up
+  /// instead of the accessed filename.
+  ///
+  /// The reference to another filename is specifically useful for Redirecting
+  /// VFSs that use external names. In that case, the \c FileEntryRef returned
+  /// by the \c FileManager will have the external name, and not the name that
+  /// was used to lookup the file.
+  using SeenFileEntryOrRedirect =
+      llvm::PointerUnion<FileEntry *, const StringRef *>;
+
   /// A cache that maps paths to file entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
   /// the file.
   ///
   /// \see SeenDirEntries
-  llvm::StringMap<llvm::ErrorOr<FileEntry &>, llvm::BumpPtrAllocator>
-  SeenFileEntries;
+  llvm::StringMap<llvm::ErrorOr<SeenFileEntryOrRedirect>,
+                  llvm::BumpPtrAllocator>
+      SeenFileEntries;
 
   /// The canonical names of directories.
   llvm::DenseMap<const DirectoryEntry *, llvm::StringRef> CanonicalDirNames;
@@ -200,8 +271,34 @@ public:
   /// Removes the FileSystemStatCache object from the manager.
   void clearStatCache();
 
+  /// Returns the number of unique real file entries cached by the file manager.
+  size_t getNumUniqueRealFiles() const { return UniqueRealFiles.size(); }
+
   /// Lookup, cache, and verify the specified directory (real or
   /// virtual).
+  ///
+  /// This returns a \c std::error_code if there was an error reading the
+  /// directory. On success, returns the reference to the directory entry
+  /// together with the exact path that was used to access a file by a
+  /// particular call to getDirectoryRef.
+  ///
+  /// \param CacheFailure If true and the file does not exist, we'll cache
+  /// the failure to find this file.
+  llvm::Expected<DirectoryEntryRef> getDirectoryRef(StringRef DirName,
+                                                    bool CacheFailure = true);
+
+  /// Get a \c DirectoryEntryRef if it exists, without doing anything on error.
+  llvm::Optional<DirectoryEntryRef>
+  getOptionalDirectoryRef(StringRef DirName, bool CacheFailure = true) {
+    return llvm::expectedToOptional(getDirectoryRef(DirName, CacheFailure));
+  }
+
+  /// Lookup, cache, and verify the specified directory (real or
+  /// virtual).
+  ///
+  /// This function is deprecated and will be removed at some point in the
+  /// future, new clients should use
+  ///  \c getDirectoryRef.
   ///
   /// This returns a \c std::error_code if there was an error reading the
   /// directory. If there is no error, the DirectoryEntry is guaranteed to be
@@ -215,6 +312,10 @@ public:
   /// Lookup, cache, and verify the specified file (real or
   /// virtual).
   ///
+  /// This function is deprecated and will be removed at some point in the
+  /// future, new clients should use
+  ///  \c getFileRef.
+  ///
   /// This returns a \c std::error_code if there was an error loading the file.
   /// If there is no error, the FileEntry is guaranteed to be non-NULL.
   ///
@@ -224,6 +325,32 @@ public:
   /// the failure to find this file.
   llvm::ErrorOr<const FileEntry *>
   getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
+
+  /// Lookup, cache, and verify the specified file (real or virtual). Return the
+  /// reference to the file entry together with the exact path that was used to
+  /// access a file by a particular call to getFileRef. If the underlying VFS is
+  /// a redirecting VFS that uses external file names, the returned FileEntryRef
+  /// will use the external name instead of the filename that was passed to this
+  /// method.
+  ///
+  /// This returns a \c std::error_code if there was an error loading the file,
+  /// or a \c FileEntryRef otherwise.
+  ///
+  /// \param OpenFile if true and the file exists, it will be opened.
+  ///
+  /// \param CacheFailure If true and the file does not exist, we'll cache
+  /// the failure to find this file.
+  llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
+                                          bool OpenFile = false,
+                                          bool CacheFailure = true);
+
+  /// Get a FileEntryRef if it exists, without doing anything on error.
+  llvm::Optional<FileEntryRef> getOptionalFileRef(StringRef Filename,
+                                                  bool OpenFile = false,
+                                                  bool CacheFailure = true) {
+    return llvm::expectedToOptional(
+        getFileRef(Filename, OpenFile, CacheFailure));
+  }
 
   /// Returns the current file system options
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
@@ -242,14 +369,30 @@ public:
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 
+  /// Retrieve a FileEntry that bypasses VFE, which is expected to be a virtual
+  /// file entry, to access the real file.  The returned FileEntry will have
+  /// the same filename as FE but a different identity and its own stat.
+  ///
+  /// This should be used only for rare error recovery paths because it
+  /// bypasses all mapping and uniquing, blindly creating a new FileEntry.
+  /// There is no attempt to deduplicate these; if you bypass the same file
+  /// twice, you get two new file entries.
+  llvm::Optional<FileEntryRef> getBypassFile(FileEntryRef VFE);
+
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
-                   bool ShouldCloseOpenFile = true);
+  getBufferForFile(const FileEntry *Entry, bool isVolatile = false);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(StringRef Filename, bool isVolatile = false);
+  getBufferForFile(StringRef Filename, bool isVolatile = false) {
+    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile);
+  }
 
+private:
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile);
+
+public:
   /// Get the 'stat' information for the given \p Path.
   ///
   /// If the path is relative, it will be resolved against the WorkingDir of the
@@ -258,9 +401,6 @@ public:
   /// \returns a \c std::error_code describing an error, if there was one
   std::error_code getNoncachedStatValue(StringRef Path,
                                         llvm::vfs::Status &Result);
-
-  /// Remove the real file \p Entry from the cache.
-  void invalidateCache(const FileEntry *Entry);
 
   /// If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given
@@ -277,11 +417,6 @@ public:
   /// file to the corresponding FileEntry pointer.
   void GetUniqueIDMapping(
                     SmallVectorImpl<const FileEntry *> &UIDToFiles) const;
-
-  /// Modifies the size and modification time of a previously created
-  /// FileEntry. Use with caution.
-  static void modifyFileEntry(FileEntry *File, off_t Size,
-                              time_t ModificationTime);
 
   /// Retrieve the canonical name for a given directory.
   ///

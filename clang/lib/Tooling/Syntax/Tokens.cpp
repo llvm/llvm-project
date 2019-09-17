@@ -232,6 +232,21 @@ TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
   return E;
 }
 
+std::vector<const syntax::Token *>
+TokenBuffer::macroExpansions(FileID FID) const {
+  auto FileIt = Files.find(FID);
+  assert(FileIt != Files.end() && "file not tracked by token buffer");
+  auto &File = FileIt->second;
+  std::vector<const syntax::Token *> Expansions;
+  auto &Spelled = File.SpelledTokens;
+  for (auto Mapping : File.Mappings) {
+    const syntax::Token *Token = &Spelled[Mapping.BeginSpelled];
+    if (Token->kind() == tok::TokenKind::identifier)
+      Expansions.push_back(Token);
+  }
+  return Expansions;
+}
+
 std::vector<syntax::Token> syntax::tokenize(FileID FID, const SourceManager &SM,
                                             const LangOptions &LO) {
   std::vector<syntax::Token> Tokens;

@@ -453,41 +453,34 @@ void MCTargetExpr::anchor() {}
 /* *** */
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res) const {
-  return evaluateAsAbsolute(Res, nullptr, nullptr, nullptr);
+  return evaluateAsAbsolute(Res, nullptr, nullptr, nullptr, false);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res,
                                 const MCAsmLayout &Layout) const {
-  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr);
+  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr, false);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res,
                                 const MCAsmLayout &Layout,
                                 const SectionAddrMap &Addrs) const {
-  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, &Addrs);
+  // Setting InSet causes us to absolutize differences across sections and that
+  // is what the MachO writer uses Addrs for.
+  return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, &Addrs, true);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const {
-  return evaluateAsAbsolute(Res, &Asm, nullptr, nullptr);
+  return evaluateAsAbsolute(Res, &Asm, nullptr, nullptr, false);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const {
-  return evaluateAsAbsolute(Res, Asm, nullptr, nullptr);
+  return evaluateAsAbsolute(Res, Asm, nullptr, nullptr, false);
 }
 
 bool MCExpr::evaluateKnownAbsolute(int64_t &Res,
                                    const MCAsmLayout &Layout) const {
   return evaluateAsAbsolute(Res, &Layout.getAssembler(), &Layout, nullptr,
                             true);
-}
-
-bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                                const MCAsmLayout *Layout,
-                                const SectionAddrMap *Addrs) const {
-  // FIXME: The use if InSet = Addrs is a hack. Setting InSet causes us
-  // absolutize differences across sections and that is what the MachO writer
-  // uses Addrs for.
-  return evaluateAsAbsolute(Res, Asm, Layout, Addrs, Addrs);
 }
 
 bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,

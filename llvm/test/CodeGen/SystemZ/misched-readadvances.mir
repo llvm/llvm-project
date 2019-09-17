@@ -16,7 +16,7 @@
 
 ---
 name:            Perl_do_sv_dump
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 body:             |
     bb.0 :

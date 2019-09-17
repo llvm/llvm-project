@@ -32,7 +32,7 @@ public:
   // It can be overwritten by any of the inherited generators.
   // If the override method wants to run this it should call
   // Generator::createResources(CDCtx);
-  virtual bool createResources(ClangDocContext &CDCtx);
+  virtual llvm::Error createResources(ClangDocContext &CDCtx);
 
   static void addInfoToIndex(Index &Idx, const doc::Info *Info);
 };

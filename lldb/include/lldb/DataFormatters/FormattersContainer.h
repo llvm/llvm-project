@@ -47,7 +47,7 @@ static inline ConstString GetValidTypeName_Impl(ConstString type) {
     return type;
 
   std::string type_cstr(type.AsCString());
-  lldb_utility::StringLexer type_lexer(type_cstr);
+  StringLexer type_lexer(type_cstr);
 
   type_lexer.AdvanceIf("class ");
   type_lexer.AdvanceIf("enum ");
@@ -67,7 +67,7 @@ public:
   typedef typename ValueType::SharedPointer ValueSP;
   typedef std::map<KeyType, ValueSP> MapType;
   typedef typename MapType::iterator MapIterator;
-  typedef std::function<bool(KeyType, const ValueSP &)> ForEachCallback;
+  typedef std::function<bool(const KeyType &, const ValueSP &)> ForEachCallback;
 
   FormatMap(IFormatChangeListener *lst)
       : m_map(), m_map_mutex(), listener(lst) {}
@@ -79,17 +79,17 @@ public:
       entry->GetRevision() = 0;
 
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    m_map[name] = entry;
+    m_map[std::move(name)] = entry;
     if (listener)
       listener->Changed();
   }
 
-  bool Delete(KeyType name) {
+  bool Delete(const KeyType &name) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     MapIterator iter = m_map.find(name);
     if (iter == m_map.end())
       return false;
-    m_map.erase(name);
+    m_map.erase(iter);
     if (listener)
       listener->Changed();
     return true;
@@ -102,7 +102,7 @@ public:
       listener->Changed();
   }
 
-  bool Get(KeyType name, ValueSP &entry) {
+  bool Get(const KeyType &name, ValueSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     MapIterator iter = m_map.find(name);
     if (iter == m_map.end())
@@ -114,10 +114,9 @@ public:
   void ForEach(ForEachCallback callback) {
     if (callback) {
       std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-      MapIterator pos, end = m_map.end();
-      for (pos = m_map.begin(); pos != end; pos++) {
-        KeyType type = pos->first;
-        if (!callback(type, pos->second))
+      for (const auto &pos : m_map) {
+        const KeyType &type = pos.first;
+        if (!callback(type, pos.second))
           break;
       }
     }
@@ -138,6 +137,7 @@ public:
     return iter->second;
   }
 
+  // If caller holds the mutex we could return a reference without copy ctor.
   KeyType GetKeyAtIndex(size_t index) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     MapIterator iter = m_map.begin();
@@ -182,8 +182,8 @@ public:
   FormattersContainer(std::string name, IFormatChangeListener *lst)
       : m_format_map(lst), m_name(name) {}
 
-  void Add(const MapKeyType &type, const MapValueType &entry) {
-    Add_Impl(type, entry, static_cast<KeyType *>(nullptr));
+  void Add(MapKeyType type, const MapValueType &entry) {
+    Add_Impl(std::move(type), entry, static_cast<KeyType *>(nullptr));
   }
 
   bool Delete(ConstString type) {
@@ -233,9 +233,9 @@ protected:
 
   DISALLOW_COPY_AND_ASSIGN(FormattersContainer);
 
-  void Add_Impl(const MapKeyType &type, const MapValueType &entry,
-                lldb::RegularExpressionSP *dummy) {
-    m_format_map.Add(type, entry);
+  void Add_Impl(MapKeyType type, const MapValueType &entry,
+                RegularExpression *dummy) {
+    m_format_map.Add(std::move(type), entry);
   }
 
   void Add_Impl(ConstString type, const MapValueType &entry,
@@ -247,12 +247,12 @@ protected:
     return m_format_map.Delete(type);
   }
 
-  bool Delete_Impl(ConstString type, lldb::RegularExpressionSP *dummy) {
+  bool Delete_Impl(ConstString type, RegularExpression *dummy) {
     std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
     MapIterator pos, end = m_format_map.map().end();
     for (pos = m_format_map.map().begin(); pos != end; pos++) {
-      lldb::RegularExpressionSP regex = pos->first;
-      if (type.GetStringRef() == regex->GetText()) {
+      const RegularExpression &regex = pos->first;
+      if (type.GetStringRef() == regex.GetText()) {
         m_format_map.map().erase(pos);
         if (m_format_map.listener)
           m_format_map.listener->Changed();
@@ -282,24 +282,22 @@ protected:
   }
 
   lldb::TypeNameSpecifierImplSP
-  GetTypeNameSpecifierAtIndex_Impl(size_t index,
-                                   lldb::RegularExpressionSP *dummy) {
-    lldb::RegularExpressionSP regex = m_format_map.GetKeyAtIndex(index);
-    if (regex.get() == nullptr)
+  GetTypeNameSpecifierAtIndex_Impl(size_t index, RegularExpression *dummy) {
+    RegularExpression regex = m_format_map.GetKeyAtIndex(index);
+    if (regex == RegularExpression())
       return lldb::TypeNameSpecifierImplSP();
     return lldb::TypeNameSpecifierImplSP(
-        new TypeNameSpecifierImpl(regex->GetText().str().c_str(), true));
+        new TypeNameSpecifierImpl(regex.GetText().str().c_str(), true));
   }
 
   bool Get_Impl(ConstString key, MapValueType &value,
-                lldb::RegularExpressionSP *dummy) {
+                RegularExpression *dummy) {
     llvm::StringRef key_str = key.GetStringRef();
     std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    MapIterator pos, end = m_format_map.map().end();
-    for (pos = m_format_map.map().begin(); pos != end; pos++) {
-      lldb::RegularExpressionSP regex = pos->first;
-      if (regex->Execute(key_str)) {
-        value = pos->second;
+    for (const auto &pos : m_format_map.map()) {
+      const RegularExpression &regex = pos.first;
+      if (regex.Execute(key_str)) {
+        value = pos.second;
         return true;
       }
     }
@@ -307,13 +305,12 @@ protected:
   }
 
   bool GetExact_Impl(ConstString key, MapValueType &value,
-                     lldb::RegularExpressionSP *dummy) {
+                     RegularExpression *dummy) {
     std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    MapIterator pos, end = m_format_map.map().end();
-    for (pos = m_format_map.map().begin(); pos != end; pos++) {
-      lldb::RegularExpressionSP regex = pos->first;
-      if (regex->GetText() == key.GetStringRef()) {
-        value = pos->second;
+    for (const auto &pos : m_format_map.map()) {
+      const RegularExpression &regex = pos.first;
+      if (regex.GetText() == key.GetStringRef()) {
+        value = pos.second;
         return true;
       }
     }

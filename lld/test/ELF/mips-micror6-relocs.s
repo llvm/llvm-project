@@ -2,32 +2,31 @@
 
 # Check handling of microMIPS R6 relocations.
 
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x20000;  .text ALIGN(0x100) : { *(.text) } \
+# RUN:       }" > %t.script
+
 # RUN: llvm-mc -filetype=obj -triple=mips -mcpu=mips32r6 \
 # RUN:         %S/Inputs/mips-micro.s -o %t1eb.o
 # RUN: llvm-mc -filetype=obj -triple=mips -mcpu=mips32r6 %s -o %t2eb.o
-# RUN: ld.lld -o %teb.exe %t1eb.o %t2eb.o
-# RUN: llvm-objdump -d -t -mattr=micromips %teb.exe \
-# RUN:   | FileCheck --check-prefixes=EB,SYM %s
+# RUN: ld.lld -o %teb.exe -script %t.script %t1eb.o %t2eb.o
+# RUN: llvm-objdump -d -t -mattr=micromips --no-show-raw-insn %teb.exe \
+# RUN:   | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel -mcpu=mips32r6 \
 # RUN:         %S/Inputs/mips-micro.s -o %t1el.o
 # RUN: llvm-mc -filetype=obj -triple=mipsel -mcpu=mips32r6 %s -o %t2el.o
-# RUN: ld.lld -o %tel.exe %t1el.o %t2el.o
-# RUN: llvm-objdump -d -t -mattr=micromips %tel.exe \
-# RUN:   | FileCheck --check-prefixes=EL,SYM %s
+# RUN: ld.lld -o %tel.exe -script %t.script %t1el.o %t2el.o
+# RUN: llvm-objdump -d -t -mattr=micromips --no-show-raw-insn %tel.exe \
+# RUN:   | FileCheck %s
 
-# EB:      __start:
-# EB-NEXT:    20010:  78 47 ff fd  lapc   $2, -12
-# EB-NEXT:    20014:  80 7f ff f6  beqzc  $3, -36
-# EB-NEXT:    20018:  b7 ff ff f4  balc   -24 <foo>
+# CHECK:      __start:
+# CHECK-NEXT:    20110:  lapc   $2, -12
+# CHECK-NEXT:            beqzc  $3, -36
+# CHECK-NEXT:            balc   -24 <foo>
 
-# EL:      __start:
-# EL-NEXT:    20010:  47 78 fd ff  lapc   $2, -12
-# EL-NEXT:    20014:  7f 80 f6 ff  beqzc  $3, -36
-# EL-NEXT:    20018:  ff b7 f4 ff  balc   -24 <foo>
-
-# SYM: 00020000 g F     .text  00000000 0x80 foo
-# SYM: 00020010         .text  00000000 0x80 __start
+# CHECK: 00020100 g F     .text  00000000 0x80 foo
+# CHECK: 00020110         .text  00000000 0x80 __start
 
   .text
   .set micromips

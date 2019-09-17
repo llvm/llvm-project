@@ -110,6 +110,7 @@ static cl::opt<bool>
                            cl::Hidden, cl::init(false), cl::ZeroOrMore);
 #endif
 
+namespace {
 /// This class is used to represent a candidate for loop fusion. When it is
 /// constructed, it checks the conditions for loop fusion to ensure that it
 /// represents a valid candidate. It caches several parts of a loop that are
@@ -293,16 +294,6 @@ private:
   }
 };
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidate &FC) {
-  if (FC.isValid())
-    OS << FC.Preheader->getName();
-  else
-    OS << "<Invalid>";
-
-  return OS;
-}
-
 struct FusionCandidateCompare {
   /// Comparison functor to sort two Control Flow Equivalent fusion candidates
   /// into dominance order.
@@ -338,7 +329,6 @@ struct FusionCandidateCompare {
   }
 };
 
-namespace {
 using LoopVector = SmallVector<Loop *, 4>;
 
 // Set of Control Flow Equivalent (CFE) Fusion Candidates, sorted in dominance
@@ -353,17 +343,26 @@ using LoopVector = SmallVector<Loop *, 4>;
 // keeps the FusionCandidateSet sorted will also simplify the implementation.
 using FusionCandidateSet = std::set<FusionCandidate, FusionCandidateCompare>;
 using FusionCandidateCollection = SmallVector<FusionCandidateSet, 4>;
-} // namespace
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidateSet &CandSet) {
-  for (auto IT : CandSet)
-    OS << IT << "\n";
+#if !defined(NDEBUG)
+static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const FusionCandidate &FC) {
+  if (FC.isValid())
+    OS << FC.Preheader->getName();
+  else
+    OS << "<Invalid>";
 
   return OS;
 }
 
-#if !defined(NDEBUG)
+static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const FusionCandidateSet &CandSet) {
+  for (const FusionCandidate &FC : CandSet)
+    OS << FC << '\n';
+
+  return OS;
+}
+
 static void
 printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
   dbgs() << "Fusion Candidates: \n";
@@ -1211,6 +1210,7 @@ struct LoopFuseLegacy : public FunctionPass {
     return LF.fuseLoops(F);
   }
 };
+} // namespace
 
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);

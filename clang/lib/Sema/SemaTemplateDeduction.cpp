@@ -3702,6 +3702,12 @@ static Sema::TemplateDeductionResult DeduceFromInitializerList(
     return Sema::TDK_Success;
   }
 
+  // Resolving a core issue: a braced-init-list containing any designators is
+  // a non-deduced context.
+  for (Expr *E : ILE->inits())
+    if (isa<DesignatedInitExpr>(E))
+      return Sema::TDK_Success;
+
   // Deduction only needs to be done for dependent types.
   if (ElTy->isDependentType()) {
     for (Expr *E : ILE->inits()) {
@@ -4509,6 +4515,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
     if (!Type.getType().getNonReferenceType()->getAs<AutoType>())
       return DAR_Failed;
 
+    // Resolving a core issue: a braced-init-list containing any designators is
+    // a non-deduced context.
+    for (Expr *E : InitList->inits())
+      if (isa<DesignatedInitExpr>(E))
+        return DAR_Failed;
+
     SourceRange DeducedFromInitRange;
     for (unsigned i = 0, e = InitList->getNumInits(); i < e; ++i) {
       Expr *Init = InitList->getInit(i);
@@ -4632,8 +4644,11 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
 
       // We might need to deduce the return type by instantiating the definition
       // of the operator() function.
-      if (CallOp->getReturnType()->isUndeducedType())
-        InstantiateFunctionDefinition(Loc, CallOp);
+      if (CallOp->getReturnType()->isUndeducedType()) {
+        runWithSufficientStackSpace(Loc, [&] {
+          InstantiateFunctionDefinition(Loc, CallOp);
+        });
+      }
     }
 
     if (CallOp->isInvalidDecl())
@@ -4654,8 +4669,11 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
     return false;
   }
 
-  if (FD->getTemplateInstantiationPattern())
-    InstantiateFunctionDefinition(Loc, FD);
+  if (FD->getTemplateInstantiationPattern()) {
+    runWithSufficientStackSpace(Loc, [&] {
+      InstantiateFunctionDefinition(Loc, FD);
+    });
+  }
 
   bool StillUndeduced = FD->getReturnType()->isUndeducedType();
   if (StillUndeduced && Diagnose && !FD->isInvalidDecl()) {

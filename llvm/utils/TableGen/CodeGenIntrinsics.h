@@ -155,6 +155,13 @@ struct CodeGenIntrinsic {
     return Properties & (1 << Prop);
   }
 
+  /// Returns true if the parameter at \p ParamIdx is a pointer type. Returns
+  /// false if the parameter is not a pointer, or \p ParamIdx is greater than
+  /// the size of \p IS.ParamVTs.
+  ///
+  /// Note that this requires that \p IS.ParamVTs is available.
+  bool isParamAPointer(unsigned ParamIdx) const;
+
   CodeGenIntrinsic(Record *R);
 };
 

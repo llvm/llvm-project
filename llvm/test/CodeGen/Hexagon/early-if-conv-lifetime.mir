@@ -40,7 +40,7 @@
 ...
 ---
 name:            f0
-alignment:       4
+alignment:       16
 registers:
   - { id: 0, class: intregs, preferred-register: '' }
   - { id: 1, class: intregs, preferred-register: '' }

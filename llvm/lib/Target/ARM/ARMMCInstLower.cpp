@@ -74,8 +74,8 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
   switch (MO.getType()) {
   default: llvm_unreachable("unknown operand type");
   case MachineOperand::MO_Register:
-    // Ignore all non-CPSR implicit register operands.
-    if (MO.isImplicit() && MO.getReg() != ARM::CPSR)
+    // Ignore all implicit register operands.
+    if (MO.isImplicit())
       return false;
     assert(!MO.getSubReg() && "Subregs should be eliminated!");
     MCOp = MCOperand::createReg(MO.getReg());

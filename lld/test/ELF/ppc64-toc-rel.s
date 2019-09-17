@@ -61,17 +61,16 @@ _start:
 
 # The .TOC. symbol represents the TOC base address: .got + 0x8000 = 0x10028000,
 # which is stored in the first entry of .got
-# NM: 0000000010028000 d .TOC.
-# NM: 0000000010030000 D global_a
+# NM: 00000000100281e8 d .TOC.
+# NM: 00000000100301f0 D global_a
 # HEX-LE:     section '.got':
-# HEX-LE-NEXT: 0x10020000 00800210 00000000
+# HEX-LE-NEXT: 0x100201e8 e8810210 00000000
 # HEX-BE:     section '.got':
-# HEX-BE-NEXT: 0x10020000 00000000 10028000
+# HEX-BE-NEXT: 0x100201e8 00000000 100281e8
 
 # r2 stores the TOC base address. To access global_a with r3, it
 # computes the address with TOC plus an offset.
-# The offset global_a - .TOC. = 0x10030000 - 0x10028000 = 0x8000
-# gets materialized as (1 << 16) - 32768.
+# global_a - .TOC. = 0x100301f0 - 0x100281e8 = (1 << 16) - 32760
 # CHECK:      _start:
-# CHECK:      10010008:       addis 3, 2, 1
-# CHECK-NEXT: 1001000c:       addi 3, 3, -32768
+# CHECK:      100101d0:       addis 3, 2, 1
+# CHECK-NEXT: 100101d4:       addi 3, 3, -32760

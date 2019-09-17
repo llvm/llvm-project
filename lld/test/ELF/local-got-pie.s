@@ -13,13 +13,13 @@ _start:
 foo:
  nop
 
-// 0x20B0 - 1001 - 5 = 4266
+// 0x22C8 - 0x1210 - 5 = 4275
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: _start:
-// DISASM-NEXT:   1000: {{.*}} callq 4267
+// DISASM-NEXT:   1210: {{.*}} callq 4275
 // DISASM:      foo:
-// DISASM-NEXT:   1005: {{.*}} nop
+// DISASM-NEXT:   1215: {{.*}} nop
 
 // CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS
@@ -27,13 +27,13 @@ foo:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x20B0
+// CHECK-NEXT: Address: 0x22C8
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 8
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x20B0 R_X86_64_RELATIVE - 0x1005
+// CHECK-NEXT:     0x22C8 R_X86_64_RELATIVE - 0x1215
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:      0x000000006FFFFFF9 RELACOUNT            1

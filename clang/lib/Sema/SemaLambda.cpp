@@ -407,6 +407,8 @@ CXXMethodDecl *Sema::startLambdaDefinition(
       MethodType, MethodTypeInfo, SC_None,
       /*isInline=*/true, ConstexprKind, EndLoc);
   Method->setAccess(AS_public);
+  if (!TemplateParams)
+    Class->addDecl(Method);
 
   // Temporarily set the lexical declaration context to the current
   // context, so that the Scope stack matches the lexical nesting.
@@ -418,9 +420,10 @@ CXXMethodDecl *Sema::startLambdaDefinition(
                                          TemplateParams,
                                          Method) : nullptr;
   if (TemplateMethod) {
-    TemplateMethod->setLexicalDeclContext(CurContext);
     TemplateMethod->setAccess(AS_public);
     Method->setDescribedFunctionTemplate(TemplateMethod);
+    Class->addDecl(TemplateMethod);
+    TemplateMethod->setLexicalDeclContext(CurContext);
   }
 
   // Add parameters.
@@ -839,6 +842,8 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
   NewVD->setInitStyle(static_cast<VarDecl::InitializationStyle>(InitStyle));
   NewVD->markUsed(Context);
   NewVD->setInit(Init);
+  if (NewVD->isParameterPack())
+    getCurLambda()->LocalPacks.push_back(NewVD);
   return NewVD;
 }
 
@@ -928,12 +933,12 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
     // Check for unexpanded parameter packs in the method type.
     if (MethodTyInfo->getType()->containsUnexpandedParameterPack())
-      ContainsUnexpandedParameterPack = true;
+      DiagnoseUnexpandedParameterPack(Intro.Range.getBegin(), MethodTyInfo,
+                                      UPPC_DeclarationType);
   }
 
   CXXRecordDecl *Class = createLambdaClosureType(Intro.Range, MethodTyInfo,
                                                  KnownDependent, Intro.Default);
-
   CXXMethodDecl *Method =
       startLambdaDefinition(Class, Intro.Range, MethodTyInfo, EndLoc, Params,
                             ParamInfo.getDeclSpec().getConstexprSpecifier());
@@ -1053,7 +1058,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
       if (C->Init.get()->containsUnexpandedParameterPack() &&
           !C->InitCaptureType.get()->getAs<PackExpansionType>())
-        ContainsUnexpandedParameterPack = true;
+        DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
 
       unsigned InitStyle;
       switch (C->InitKind) {
@@ -1184,7 +1189,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   }
   finishLambdaExplicitCaptures(LSI);
 
-  LSI->ContainsUnexpandedParameterPack = ContainsUnexpandedParameterPack;
+  LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
 
   // Add lambda parameters into scope.
   addLambdaParameters(Intro.Captures, Method, CurScope);
@@ -1639,8 +1644,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
         ? CallOperator->getDescribedFunctionTemplate()
         : cast<Decl>(CallOperator);
 
+    // FIXME: Is this really the best choice? Keeping the lexical decl context
+    // set as CurContext seems more faithful to the source.
     TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
-    Class->addDecl(TemplateOrNonTemplateCallOperatorDecl);
 
     PopExpressionEvaluationContext();
 

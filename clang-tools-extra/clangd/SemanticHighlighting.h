@@ -17,26 +17,34 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 
-#include "ClangdUnit.h"
 #include "Protocol.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace clangd {
+class ParsedAST;
 
 enum class HighlightingKind {
   Variable = 0,
+  LocalVariable,
+  Parameter,
   Function,
   Method,
+  StaticMethod,
   Field,
+  StaticField,
   Class,
   Enum,
   EnumConstant,
+  Typedef,
   Namespace,
   TemplateParameter,
   Primitive,
+  Macro,
 
-  NumKinds,
+  LastKind = Macro
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K);
 
 // Contains all information needed for the highlighting a token.
 struct HighlightingToken {
@@ -70,15 +78,15 @@ toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens);
 /// Return a line-by-line diff between two highlightings.
 ///  - if the tokens on a line are the same in both hightlightings, this line is
 ///  omitted.
-///  - if a line exists in New but not in Old the tokens on this line are
+///  - if a line exists in New but not in Old, the tokens on this line are
 ///  emitted.
-///  - if a line does not exists in New but exists in Old an empty line is
+///  - if a line does not exist in New but exists in Old, an empty line is
 ///  emitted (to tell client to clear the previous highlightings on this line).
-/// \p NewMaxLine is the maximum line number from the new file.
+///
 /// REQUIRED: Old and New are sorted.
 std::vector<LineHighlightings>
 diffHighlightings(ArrayRef<HighlightingToken> New,
-                  ArrayRef<HighlightingToken> Old, int NewMaxLine);
+                  ArrayRef<HighlightingToken> Old);
 
 } // namespace clangd
 } // namespace clang

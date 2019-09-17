@@ -171,6 +171,12 @@ def G_BSWAP : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_BITREVERSE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 def G_ADDRSPACE_CAST : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
@@ -187,6 +193,12 @@ def G_JUMP_TABLE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$jti);
   let hasSideEffects = 0;
+}
+
+def G_DYN_STACKALLOC : GenericInstruction {
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins type1:$size, i32imm:$align);
+  let hasSideEffects = 1;
 }
 
 //------------------------------------------------------------------------------
@@ -612,6 +624,15 @@ def G_FMA : GenericInstruction {
   let isCommutable = 0;
 }
 
+/// Generic FP multiply and add. Perform a * b + c, while getting the
+/// same result as the separately rounded operations, unlike G_FMA.
+def G_FMAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 // Generic FP division.
 def G_FDIV : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -767,10 +788,45 @@ def G_ZEXTLOAD : GenericInstruction {
   let mayLoad = 1;
 }
 
+// Generic indexed load. Combines a GEP with a load. $newaddr is set to $base + $offset.
+// If $am is 0 (post-indexed), then the value is loaded from $base; if $am is 1 (pre-indexed)
+//  then the value is loaded from $newaddr.
+def G_INDEXED_LOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
+  let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+// Same as G_INDEXED_LOAD except that the load performed is sign-extending, as with G_SEXTLOAD.
+def G_INDEXED_SEXTLOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
+  let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+// Same as G_INDEXED_LOAD except that the load performed is zero-extending, as with G_ZEXTLOAD.
+def G_INDEXED_ZEXTLOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
+  let InOperandList = (ins ptype1:$base, type2:$offset, unknown:$am);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
 // Generic store. Expects a MachineMemOperand in addition to explicit operands.
 def G_STORE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, ptype1:$addr);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+// Combines a store with a GEP. See description of G_INDEXED_LOAD for indexing behaviour.
+def G_INDEXED_STORE : GenericInstruction {
+  let OutOperandList = (outs ptype0:$newaddr);
+  let InOperandList = (ins type1:$src, ptype0:$base, ptype2:$offset,
+                           unknown:$am);
   let hasSideEffects = 0;
   let mayStore = 1;
 }

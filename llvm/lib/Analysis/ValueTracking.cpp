@@ -3877,6 +3877,18 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
   return true;
 }
 
+bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
+  if (!LI.isUnordered())
+    return true;
+  const Function &F = *LI.getFunction();
+  // Speculative load may create a race that did not exist in the source.
+  return F.hasFnAttribute(Attribute::SanitizeThread) ||
+    // Speculative load may load data from dirty regions.
+    F.hasFnAttribute(Attribute::SanitizeAddress) ||
+    F.hasFnAttribute(Attribute::SanitizeHWAddress);
+}
+
+
 bool llvm::isSafeToSpeculativelyExecute(const Value *V,
                                         const Instruction *CtxI,
                                         const DominatorTree *DT) {
@@ -3921,12 +3933,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   }
   case Instruction::Load: {
     const LoadInst *LI = cast<LoadInst>(Inst);
-    if (!LI->isUnordered() ||
-        // Speculative load may create a race that did not exist in the source.
-        LI->getFunction()->hasFnAttribute(Attribute::SanitizeThread) ||
-        // Speculative load may load data from dirty regions.
-        LI->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
-        LI->getFunction()->hasFnAttribute(Attribute::SanitizeHWAddress))
+    if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
     return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
@@ -5702,9 +5709,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo) {
   return CR;
 }
 
-static int64_t getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx,
-                                  bool &VariableIdxFound,
-                                  const DataLayout &DL) {
+static Optional<int64_t>
+getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
   // Skip over the first indices.
   gep_type_iterator GTI = gep_type_begin(GEP);
   for (unsigned i = 1; i != Idx; ++i, ++GTI)
@@ -5715,7 +5721,7 @@ static int64_t getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx,
   for (unsigned i = Idx, e = GEP->getNumOperands(); i != e; ++i, ++GTI) {
     ConstantInt *OpC = dyn_cast<ConstantInt>(GEP->getOperand(i));
     if (!OpC)
-      return VariableIdxFound = true;
+      return None;
     if (OpC->isZero())
       continue; // No offset.
 
@@ -5734,32 +5740,30 @@ static int64_t getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx,
   return Offset;
 }
 
-bool llvm::isPointerOffset(Value *Ptr1, Value *Ptr2, int64_t &Offset,
-                           const DataLayout &DL) {
+Optional<int64_t> llvm::isPointerOffset(const Value *Ptr1, const Value *Ptr2,
+                                        const DataLayout &DL) {
   Ptr1 = Ptr1->stripPointerCasts();
   Ptr2 = Ptr2->stripPointerCasts();
 
   // Handle the trivial case first.
   if (Ptr1 == Ptr2) {
-    Offset = 0;
-    return true;
+    return 0;
   }
 
-  GEPOperator *GEP1 = dyn_cast<GEPOperator>(Ptr1);
-  GEPOperator *GEP2 = dyn_cast<GEPOperator>(Ptr2);
-
-  bool VariableIdxFound = false;
+  const GEPOperator *GEP1 = dyn_cast<GEPOperator>(Ptr1);
+  const GEPOperator *GEP2 = dyn_cast<GEPOperator>(Ptr2);
 
   // If one pointer is a GEP and the other isn't, then see if the GEP is a
   // constant offset from the base, as in "P" and "gep P, 1".
   if (GEP1 && !GEP2 && GEP1->getOperand(0)->stripPointerCasts() == Ptr2) {
-    Offset = -getOffsetFromIndex(GEP1, 1, VariableIdxFound, DL);
-    return !VariableIdxFound;
+    auto Offset = getOffsetFromIndex(GEP1, 1, DL);
+    if (!Offset)
+      return None;
+    return -*Offset;
   }
 
   if (GEP2 && !GEP1 && GEP2->getOperand(0)->stripPointerCasts() == Ptr1) {
-    Offset = getOffsetFromIndex(GEP2, 1, VariableIdxFound, DL);
-    return !VariableIdxFound;
+    return getOffsetFromIndex(GEP2, 1, DL);
   }
 
   // Right now we handle the case when Ptr1/Ptr2 are both GEPs with an identical
@@ -5768,7 +5772,7 @@ bool llvm::isPointerOffset(Value *Ptr1, Value *Ptr2, int64_t &Offset,
   // offset, which determines their offset from each other.  At this point, we
   // handle no other case.
   if (!GEP1 || !GEP2 || GEP1->getOperand(0) != GEP2->getOperand(0))
-    return false;
+    return None;
 
   // Skip any common indices and track the GEP types.
   unsigned Idx = 1;
@@ -5776,11 +5780,9 @@ bool llvm::isPointerOffset(Value *Ptr1, Value *Ptr2, int64_t &Offset,
     if (GEP1->getOperand(Idx) != GEP2->getOperand(Idx))
       break;
 
-  int64_t Offset1 = getOffsetFromIndex(GEP1, Idx, VariableIdxFound, DL);
-  int64_t Offset2 = getOffsetFromIndex(GEP2, Idx, VariableIdxFound, DL);
-  if (VariableIdxFound)
-    return false;
-
-  Offset = Offset2 - Offset1;
-  return true;
+  auto Offset1 = getOffsetFromIndex(GEP1, Idx, DL);
+  auto Offset2 = getOffsetFromIndex(GEP2, Idx, DL);
+  if (!Offset1 || !Offset2)
+    return None;
+  return *Offset2 - *Offset1;
 }

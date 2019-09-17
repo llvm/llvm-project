@@ -32,6 +32,7 @@ DefinedData *WasmSym::dsoHandle;
 DefinedData *WasmSym::dataEnd;
 DefinedData *WasmSym::globalBase;
 DefinedData *WasmSym::heapBase;
+DefinedData *WasmSym::initMemoryFlag;
 GlobalSymbol *WasmSym::stackPointer;
 GlobalSymbol *WasmSym::tlsBase;
 GlobalSymbol *WasmSym::tlsSize;
@@ -153,6 +154,10 @@ bool Symbol::isExported() const {
     return true;
 
   return flags & WASM_SYMBOL_EXPORTED;
+}
+
+bool Symbol::isNoStrip() const {
+  return flags & WASM_SYMBOL_NO_STRIP;
 }
 
 uint32_t FunctionSymbol::getFunctionIndex() const {

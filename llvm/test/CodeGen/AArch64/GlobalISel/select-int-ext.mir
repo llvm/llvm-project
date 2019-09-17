@@ -41,9 +41,10 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: anyext_s64_from_s32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: $x0 = COPY [[SUBREG_TO_REG]]
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64all = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
+    ; CHECK: $x0 = COPY [[INSERT_SUBREG]]
     %0(s32) = COPY $w0
     %1(s64) = G_ANYEXT %0
     $x0 = COPY %1(s64)
@@ -64,8 +65,8 @@ body:             |
 
     ; CHECK-LABEL: name: anyext_s32_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
+    ; CHECK: $w0 = COPY [[COPY1]]
     %2:gpr(s32) = COPY $w0
     %0(s8) = G_TRUNC %2
     %1(s32) = G_ANYEXT %0
@@ -74,7 +75,7 @@ body:             |
 
 ---
 name:            anyext_v8s16_from_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -100,7 +101,7 @@ body:             |
 
 ---
 name:            anyext_v4s32_from_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -126,7 +127,7 @@ body:             |
 
 ---
 name:            anyext_v2s64_from_v2s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 legalized:       true
 regBankSelected: true
@@ -236,8 +237,8 @@ body:             |
     ; CHECK-LABEL: name: zext_s16_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 7
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[UBFMWri]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[UBFMWri]]
+    ; CHECK: $w0 = COPY [[COPY1]]
     %2:gpr(s32) = COPY $w0
     %0(s8) = G_TRUNC %2
     %1(s16) = G_ZEXT %0
@@ -247,7 +248,7 @@ body:             |
 
 ---
 name:            zext_v8s16_from_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -274,7 +275,7 @@ body:             |
 
 ---
 name:            zext_v4s32_from_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -300,7 +301,7 @@ body:             |
 
 ---
 name:            zext_v2s64_from_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -339,8 +340,9 @@ body:             |
 
     ; CHECK-LABEL: name: sext_s64_from_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[SUBREG_TO_REG]], 0, 31
+    ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
+    ; CHECK: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[INSERT_SUBREG]], 0, 31
     ; CHECK: $x0 = COPY [[SBFMXri]]
     %0(s32) = COPY $w0
     %1(s64) = G_SEXT %0
@@ -409,8 +411,8 @@ body:             |
     ; CHECK-LABEL: name: sext_s16_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 7
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[SBFMWri]]
-    ; CHECK: $w0 = COPY [[COPY2]]
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SBFMWri]]
+    ; CHECK: $w0 = COPY [[COPY1]]
     %2:gpr(s32) = COPY $w0
     %0(s8) = G_TRUNC %2
     %1(s16) = G_SEXT %0
@@ -420,7 +422,7 @@ body:             |
 
 ---
 name:            sext_v8s16_from_v8s8
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -447,7 +449,7 @@ body:             |
 
 ---
 name:            sext_v4s32_from_v4s16
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -473,7 +475,7 @@ body:             |
 
 ---
 name:            sext_v2s64_from_v2s32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

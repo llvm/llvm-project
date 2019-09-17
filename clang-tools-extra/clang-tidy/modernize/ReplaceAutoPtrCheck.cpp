@@ -24,7 +24,7 @@ namespace {
 static const char AutoPtrTokenId[] = "AutoPrTokenId";
 static const char AutoPtrOwnershipTransferId[] = "AutoPtrOwnershipTransferId";
 
-/// \brief Matches expressions that are lvalues.
+/// Matches expressions that are lvalues.
 ///
 /// In the following example, a[0] matches expr(isLValue()):
 /// \code

@@ -917,7 +917,8 @@ static void stripValuesNotDefiningMask(unsigned Reg, LiveInterval::SubRange &SR,
   for (VNInfo *VNI : ToBeRemoved)
     SR.removeValNo(VNI);
 
-  assert(!SR.empty() && "At least one value should be defined by this mask");
+  // If the subrange is empty at this point, the MIR is invalid. Do not assert
+  // and let the verifier catch this case.
 }
 
 void LiveInterval::refineSubRanges(

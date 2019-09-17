@@ -29,6 +29,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -84,7 +86,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 ErrorSuccess reportWarning(Error E) {
   assert(E);
-  WithColor::warning(errs(), ToolName) << toString(std::move(E));
+  WithColor::warning(errs(), ToolName) << toString(std::move(E)) << '\n';
   return Error::success();
 }
 
@@ -310,9 +312,25 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
   bool IsStrip = sys::path::stem(ToolName).contains("strip");
+
+  // Expand response files.
+  // TODO: Move these lines, which are copied from lib/Support/CommandLine.cpp,
+  // into a separate function in the CommandLine library and call that function
+  // here. This is duplicated code.
+  SmallVector<const char *, 20> NewArgv(argv, argv + argc);
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  cl::ExpandResponseFiles(Saver,
+                          Triple(sys::getProcessTriple()).isOSWindows()
+                              ? cl::TokenizeWindowsCommandLine
+                              : cl::TokenizeGNUCommandLine,
+                          NewArgv);
+
+  auto Args = makeArrayRef(NewArgv).drop_front();
+
   Expected<DriverConfig> DriverConfig =
-      IsStrip ? parseStripOptions(makeArrayRef(argv + 1, argc), reportWarning)
-              : parseObjcopyOptions(makeArrayRef(argv + 1, argc));
+      IsStrip ? parseStripOptions(Args, reportWarning)
+              : parseObjcopyOptions(Args);
   if (!DriverConfig) {
     logAllUnhandledErrors(DriverConfig.takeError(),
                           WithColor::error(errs(), ToolName));

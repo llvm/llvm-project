@@ -9,56 +9,56 @@
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
 // CHECK-NEXT: .plt:
-// CHECK-NEXT: 401010:       pushl   4206596
-// CHECK-NEXT: 401016:       pushl   %eax
-// CHECK-NEXT: 401017:       movl    4206600, %eax
-// CHECK-NEXT: 40101c:       calll   15 <.plt+0x20>
-// CHECK-NEXT: 401021:       pause
-// CHECK-NEXT: 401023:       lfence
-// CHECK-NEXT: 401026:       jmp     -7 <.plt+0x11>
-// CHECK-NEXT: 401028:       int3
-// CHECK-NEXT: 401029:       int3
-// CHECK-NEXT: 40102a:       int3
-// CHECK-NEXT: 40102b:       int3
-// CHECK-NEXT: 40102c:       int3
-// CHECK-NEXT: 40102d:       int3
-// CHECK-NEXT: 40102e:       int3
-// CHECK-NEXT: 40102f:       int3
-// CHECK-NEXT: 401030:       movl    %ecx, (%esp)
-// CHECK-NEXT: 401033:       movl    4(%esp), %ecx
-// CHECK-NEXT: 401037:       movl    %eax, 4(%esp)
-// CHECK-NEXT: 40103b:       movl    %ecx, %eax
-// CHECK-NEXT: 40103d:       popl    %ecx
-// CHECK-NEXT: 40103e:       retl
-// CHECK-NEXT: 40103f:       int3
-// CHECK-NEXT: 401040:       pushl   %eax
-// CHECK-NEXT: 401041:       movl    4206604, %eax
-// CHECK-NEXT: 401046:       calll   -27 <.plt+0x20>
-// CHECK-NEXT: 40104b:       jmp     -47 <.plt+0x11>
-// CHECK-NEXT: 401050:       pushl   $0
-// CHECK-NEXT: 401055:       jmp     -74 <.plt>
-// CHECK-NEXT: 40105a:       int3
-// CHECK-NEXT: 40105b:       int3
-// CHECK-NEXT: 40105c:       int3
-// CHECK-NEXT: 40105d:       int3
-// CHECK-NEXT: 40105e:       int3
-// CHECK-NEXT: 40105f:       int3
-// CHECK-NEXT: 401060:       pushl   %eax
-// CHECK-NEXT: 401061:       movl    4206608, %eax
-// CHECK-NEXT: 401066:       calll   -59 <.plt+0x20>
-// CHECK-NEXT: 40106b:       jmp     -79 <.plt+0x11>
-// CHECK-NEXT: 401070:       pushl   $8
-// CHECK-NEXT: 401075:       jmp     -106 <.plt>
-// CHECK-NEXT: 40107a:       int3
-// CHECK-NEXT: 40107b:       int3
-// CHECK-NEXT: 40107c:       int3
-// CHECK-NEXT: 40107d:       int3
-// CHECK-NEXT: 40107e:       int3
-// CHECK-NEXT: 40107f:       int3
+// CHECK-NEXT: 4011d0:       pushl   4207276
+// CHECK-NEXT: 4011d6:       pushl   %eax
+// CHECK-NEXT: 4011d7:       movl    4207280, %eax
+// CHECK-NEXT: 4011dc:       calll   15 <.plt+0x20>
+// CHECK-NEXT: 4011e1:       pause
+// CHECK-NEXT: 4011e3:       lfence
+// CHECK-NEXT: 4011e6:       jmp     -7 <.plt+0x11>
+// CHECK-NEXT: 4011e8:       int3
+// CHECK-NEXT: 4011e9:       int3
+// CHECK-NEXT: 4011ea:       int3
+// CHECK-NEXT: 4011eb:       int3
+// CHECK-NEXT: 4011ec:       int3
+// CHECK-NEXT: 4011ed:       int3
+// CHECK-NEXT: 4011ee:       int3
+// CHECK-NEXT: 4011ef:       int3
+// CHECK-NEXT: 4011f0:       movl    %ecx, (%esp)
+// CHECK-NEXT: 4011f3:       movl    4(%esp), %ecx
+// CHECK-NEXT: 4011f7:       movl    %eax, 4(%esp)
+// CHECK-NEXT: 4011fb:       movl    %ecx, %eax
+// CHECK-NEXT: 4011fd:       popl    %ecx
+// CHECK-NEXT: 4011fe:       retl
+// CHECK-NEXT: 4011ff:       int3
+// CHECK-NEXT: 401200:       pushl   %eax
+// CHECK-NEXT: 401201:       movl    4207284, %eax
+// CHECK-NEXT: 401206:       calll   -27 <.plt+0x20>
+// CHECK-NEXT: 40120b:       jmp     -47 <.plt+0x11>
+// CHECK-NEXT: 401210:       pushl   $0
+// CHECK-NEXT: 401215:       jmp     -74 <.plt>
+// CHECK-NEXT: 40121a:       int3
+// CHECK-NEXT: 40121b:       int3
+// CHECK-NEXT: 40121c:       int3
+// CHECK-NEXT: 40121d:       int3
+// CHECK-NEXT: 40121e:       int3
+// CHECK-NEXT: 40121f:       int3
+// CHECK-NEXT: 401220:       pushl   %eax
+// CHECK-NEXT: 401221:       movl    4207288, %eax
+// CHECK-NEXT: 401226:       calll   -59 <.plt+0x20>
+// CHECK-NEXT: 40122b:       jmp     -79 <.plt+0x11>
+// CHECK-NEXT: 401230:       pushl   $8
+// CHECK-NEXT: 401235:       jmp     -106 <.plt>
+// CHECK-NEXT: 40123a:       int3
+// CHECK-NEXT: 40123b:       int3
+// CHECK-NEXT: 40123c:       int3
+// CHECK-NEXT: 40123d:       int3
+// CHECK-NEXT: 40123e:       int3
+// CHECK-NEXT: 40123f:       int3
 
 // CHECK:      Contents of section .got.plt:
-// CHECK-NEXT: 00204000 00000000 00000000 50104000
-// CHECK-NEXT: 70104000
+// CHECK-NEXT: 40224000 00000000 00000000 10124000
+// CHECK-NEXT: 30124000
 
 .global _start
 _start:

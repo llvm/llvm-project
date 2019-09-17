@@ -219,7 +219,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.
-  unsigned Kind = (unsigned)Fixup.getKind();
+  unsigned Kind = Fixup.getTargetKind();
 
   switch (Kind) {
   case FK_NONE:

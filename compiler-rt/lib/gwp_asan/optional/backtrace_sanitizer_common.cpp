@@ -13,6 +13,9 @@
 
 #include "gwp_asan/optional/backtrace.h"
 #include "gwp_asan/options.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
@@ -58,7 +61,18 @@ static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
 
 namespace gwp_asan {
 namespace options {
-Backtrace_t getBacktraceFunction() { return Backtrace; }
+// This function is thread-compatible. It must be synchronised in respect to any
+// other calls to getBacktraceFunction(), calls to getPrintBacktraceFunction(),
+// and calls to either of the functions that they return. Furthermore, this may
+// require synchronisation with any calls to sanitizer_common that use flags.
+// Generally, this function will be called during the initialisation of the
+// allocator, which is done in a thread-compatible manner.
+Backtrace_t getBacktraceFunction() {
+  // The unwinder requires the default flags to be set.
+  __sanitizer::SetCommonFlagsDefaults();
+  __sanitizer::InitializeCommonFlags();
+  return Backtrace;
+}
 PrintBacktrace_t getPrintBacktraceFunction() { return PrintBacktrace; }
 } // namespace options
 } // namespace gwp_asan

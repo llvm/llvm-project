@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 
@@ -4762,6 +4762,12 @@ unsigned test_mm_cvtsd_u32(__m128d __A) {
   return _mm_cvtsd_u32(__A); 
 }
 
+int test_mm512_cvtsi512_si32(__m512i a) {
+  // CHECK-LABEL: test_mm512_cvtsi512_si32
+  // CHECK: %{{.*}} = extractelement <16 x i32> %{{.*}}, i32 0
+  return _mm512_cvtsi512_si32(a);
+}
+
 #ifdef __x86_64__
 unsigned long long test_mm_cvt_roundsd_u64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_u64
@@ -8569,6 +8575,12 @@ void test_mm512_stream_si512(__m512i * __P, __m512i __A) {
   _mm512_stream_si512(__P, __A); 
 }
 
+void test_mm512_stream_si512_2(void * __P, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_stream_si512
+  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  _mm512_stream_si512(__P, __A); 
+}
+
 __m512i test_mm512_stream_load_si512(void *__P) {
   // CHECK-LABEL: @test_mm512_stream_load_si512
   // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal
@@ -8587,12 +8599,23 @@ void test_mm512_stream_pd(double *__P, __m512d __A) {
   return _mm512_stream_pd(__P, __A); 
 }
 
+void test_mm512_stream_pd_2(void *__P, __m512d __A) {
+  // CHECK-LABEL: @test_mm512_stream_pd
+  // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal
+  return _mm512_stream_pd(__P, __A); 
+}
+
 void test_mm512_stream_ps(float *__P, __m512 __A) {
   // CHECK-LABEL: @test_mm512_stream_ps
   // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal
   _mm512_stream_ps(__P, __A); 
 }
 
+void test_mm512_stream_ps_2(void *__P, __m512 __A) {
+  // CHECK-LABEL: @test_mm512_stream_ps
+  // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal
+  _mm512_stream_ps(__P, __A); 
+}
 __m512d test_mm512_mask_compress_pd(__m512d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_compress_pd
   // CHECK: @llvm.x86.avx512.mask.compress
@@ -9445,7 +9468,7 @@ __m256 test_mm512_mask_cvtpd_ps (__m256 __W, __mmask8 __U, __m512d __A)
   return _mm512_mask_cvtpd_ps (__W,__U,__A);
 }
 
-__m512d test_mm512_cvtpd_pslo(__m512 __A) 
+__m512 test_mm512_cvtpd_pslo(__m512d __A)
 {
   // CHECK-LABEL: @test_mm512_cvtpd_pslo
   // CHECK: @llvm.x86.avx512.mask.cvtpd2ps.512
@@ -9454,7 +9477,7 @@ __m512d test_mm512_cvtpd_pslo(__m512 __A)
   return _mm512_cvtpd_pslo(__A);
 }
 
-__m512d test_mm512_mask_cvtpd_pslo(__m512 __W, __mmask8 __U, __m512d __A) {
+__m512 test_mm512_mask_cvtpd_pslo(__m512 __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtpd_pslo
   // CHECK: @llvm.x86.avx512.mask.cvtpd2ps.512
   // CHECK: zeroinitializer
@@ -10636,7 +10659,7 @@ __m512i test_mm512_setzero_epi32()
   return _mm512_setzero_epi32();
 }
 
-__m512i test_mm512_setzero()
+__m512 test_mm512_setzero()
 {
   // CHECK-LABEL: @test_mm512_setzero
   // CHECK: zeroinitializer
@@ -10650,7 +10673,7 @@ __m512i test_mm512_setzero_si512()
   return _mm512_setzero_si512();
 }
 
-__m512i test_mm512_setzero_ps()
+__m512 test_mm512_setzero_ps()
 {
   // CHECK-LABEL: @test_mm512_setzero_ps
   // CHECK: zeroinitializer

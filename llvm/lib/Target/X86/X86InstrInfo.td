@@ -940,7 +940,6 @@ def HasMOVDIR64B : Predicate<"Subtarget->hasMOVDIR64B()">;
 def HasPTWRITE   : Predicate<"Subtarget->hasPTWRITE()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
-def HasMPX       : Predicate<"Subtarget->hasMPX()">;
 def HasSHSTK     : Predicate<"Subtarget->hasSHSTK()">;
 def HasCLFLUSHOPT : Predicate<"Subtarget->hasCLFLUSHOPT()">;
 def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
@@ -1118,7 +1117,7 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 2 && !LD->isVolatile();
+    return LD->getAlignment() >= 2 && LD->isSimple();
   return false;
 }]>;
 
@@ -1128,7 +1127,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 4 && !LD->isVolatile();
+    return LD->getAlignment() >= 4 && LD->isSimple();
   return false;
 }]>;
 
@@ -1185,7 +1184,7 @@ def extloadi64i32  : PatFrag<(ops node:$ptr), (i64 (unindexedload node:$ptr)), [
   if (LD->getMemoryVT() == MVT::i32)
     return true;
 
-  return LD->getAlignment() >= 4 && !LD->isVolatile();
+  return LD->getAlignment() >= 4 && LD->isSimple();
 }]>;
 
 

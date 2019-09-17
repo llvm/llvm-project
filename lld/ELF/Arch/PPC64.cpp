@@ -573,6 +573,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
     return R_PPC64_CALL_PLT;
   case R_PPC64_REL16_LO:
   case R_PPC64_REL16_HA:
+  case R_PPC64_REL16_HI:
   case R_PPC64_REL32:
   case R_PPC64_REL64:
     return R_PC;

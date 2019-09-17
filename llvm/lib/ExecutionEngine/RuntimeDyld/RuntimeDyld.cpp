@@ -17,6 +17,7 @@
 #include "RuntimeDyldMachO.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
@@ -737,7 +738,8 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
       return NameOrErr.takeError();
     if (Align) {
       // This symbol has an alignment requirement.
-      uint64_t AlignOffset = OffsetToAlignment((uint64_t)Addr, Align);
+      uint64_t AlignOffset =
+          offsetToAlignment((uint64_t)Addr, llvm::Align(Align));
       Addr += AlignOffset;
       Offset += AlignOffset;
     }
@@ -919,7 +921,8 @@ void RuntimeDyldImpl::addRelocationForSymbol(const RelocationEntry &RE,
 
 uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
                                              unsigned AbiVariant) {
-  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be) {
+  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be ||
+      Arch == Triple::aarch64_32) {
     // This stub has to be able to access the full address space,
     // since symbol lookup won't necessarily find a handy, in-range,
     // PLT stub for functions which could be anywhere.
@@ -1177,17 +1180,15 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 }
 
 void RuntimeDyldImpl::finalizeAsync(
-    std::unique_ptr<RuntimeDyldImpl> This, std::function<void(Error)> OnEmitted,
+    std::unique_ptr<RuntimeDyldImpl> This,
+    unique_function<void(Error)> OnEmitted,
     std::unique_ptr<MemoryBuffer> UnderlyingBuffer) {
 
-  // FIXME: Move-capture OnRelocsApplied and UnderlyingBuffer once we have
-  // c++14.
-  auto SharedUnderlyingBuffer =
-      std::shared_ptr<MemoryBuffer>(std::move(UnderlyingBuffer));
   auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
   auto PostResolveContinuation =
-      [SharedThis, OnEmitted, SharedUnderlyingBuffer](
-          Expected<JITSymbolResolver::LookupResult> Result) {
+      [SharedThis, OnEmitted = std::move(OnEmitted),
+       UnderlyingBuffer = std::move(UnderlyingBuffer)](
+          Expected<JITSymbolResolver::LookupResult> Result) mutable {
         if (!Result) {
           OnEmitted(Result.takeError());
           return;
@@ -1221,7 +1222,7 @@ void RuntimeDyldImpl::finalizeAsync(
   }
 
   if (!Symbols.empty()) {
-    SharedThis->Resolver.lookup(Symbols, PostResolveContinuation);
+    SharedThis->Resolver.lookup(Symbols, std::move(PostResolveContinuation));
   } else
     PostResolveContinuation(std::map<StringRef, JITEvaluatedSymbol>());
 }
@@ -1397,11 +1398,11 @@ void jitLinkForORC(object::ObjectFile &Obj,
                    std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
                    RuntimeDyld::MemoryManager &MemMgr,
                    JITSymbolResolver &Resolver, bool ProcessAllSections,
-                   std::function<Error(
+                   unique_function<Error(
                        std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
                        std::map<StringRef, JITEvaluatedSymbol>)>
                        OnLoaded,
-                   std::function<void(Error)> OnEmitted) {
+                   unique_function<void(Error)> OnEmitted) {
 
   RuntimeDyld RTDyld(MemMgr, Resolver);
   RTDyld.setProcessAllSections(ProcessAllSections);

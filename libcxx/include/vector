@@ -297,7 +297,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <bool>
-class __vector_base_common
+class _LIBCPP_TEMPLATE_VIS __vector_base_common
 {
 protected:
     _LIBCPP_INLINE_VISIBILITY __vector_base_common() {}
@@ -947,8 +947,10 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v)
 {
+
     __annotate_delete();
-    __alloc_traits::__construct_backward(this->__alloc(), this->__begin_, this->__end_, __v.__begin_);
+    __alloc_traits::__construct_backward_with_exception_guarantees(
+        this->__alloc(), this->__begin_, this->__end_, __v.__begin_);
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -963,8 +965,10 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 {
     __annotate_delete();
     pointer __r = __v.__begin_;
-    __alloc_traits::__construct_backward(this->__alloc(), this->__begin_, __p, __v.__begin_);
-    __alloc_traits::__construct_forward(this->__alloc(), __p, this->__end_, __v.__end_);
+    __alloc_traits::__construct_backward_with_exception_guarantees(
+        this->__alloc(), this->__begin_, __p, __v.__begin_);
+    __alloc_traits::__construct_forward_with_exception_guarantees(
+        this->__alloc(), __p, this->__end_, __v.__end_);
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());

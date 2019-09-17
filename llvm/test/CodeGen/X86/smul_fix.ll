@@ -374,26 +374,25 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    addl %ebx, %ebp
+; X86-NEXT:    addl %edx, %ebx
 ; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    imull {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    movl %edx, %ebp
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %ebp, %eax
+; X86-NEXT:    addl %ebx, %eax
 ; X86-NEXT:    adcl %edi, %edx
-; X86-NEXT:    adcl $0, %ebx
+; X86-NEXT:    adcl $0, %ebp
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    adcl $0, %ebx
+; X86-NEXT:    adcl $0, %ebp
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    sbbl $0, %esi
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    cmovnsl %ebx, %esi
+; X86-NEXT:    cmovnsl %ebp, %esi
 ; X86-NEXT:    cmovnsl %edx, %ecx
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi

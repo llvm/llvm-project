@@ -444,6 +444,7 @@ namespace DPP {
 
 enum DppCtrl : unsigned {
   QUAD_PERM_FIRST   = 0,
+  QUAD_PERM_ID      = 0xE4, // identity permutation
   QUAD_PERM_LAST    = 0xFF,
   DPP_UNUSED1       = 0x100,
   ROW_SHL0          = 0x100,

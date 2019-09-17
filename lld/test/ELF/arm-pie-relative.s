@@ -1,8 +1,8 @@
 // REQUIRES: arm
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld --hash-style=sysv %t --pie -o %t2
-// RUN: llvm-readobj -r %t2 | FileCheck %s
-// RUN: llvm-objdump -s %t2 | FileCheck %s --check-prefix=GOT
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
+// RUN: ld.lld %t.o --pie -o %t
+// RUN: llvm-readobj -r %t | FileCheck %s
+// RUN: llvm-readelf -x .got %t | FileCheck %s --check-prefix=GOT
 
 // Test that a R_ARM_GOT_BREL relocation with PIE results in a R_ARM_RELATIVE
 // dynamic relocation
@@ -18,8 +18,8 @@ sym:
  .word 0
 
 // CHECK:      Relocations [
-// CHECK-NEXT:   Section (4) .rel.dyn {
-// CHECK-NEXT:     0x2058 R_ARM_RELATIVE
+// CHECK-NEXT:   Section (5) .rel.dyn {
+// CHECK-NEXT:     0x21DC R_ARM_RELATIVE
 
-// GOT: Contents of section .got:
-// GOT-NEXT:  2058 00300000
+// GOT:      section '.got':
+// GOT-NEXT: 0x000021dc e0310000

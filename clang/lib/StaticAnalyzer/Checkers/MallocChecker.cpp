@@ -208,7 +208,7 @@ public:
   DefaultBool IsOptimistic;
 
   DefaultBool ChecksEnabled[CK_NumCheckKinds];
-  CheckName CheckNames[CK_NumCheckKinds];
+  CheckerNameRef CheckNames[CK_NumCheckKinds];
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostStmt(const CallExpr *CE, CheckerContext &C) const;
@@ -524,17 +524,15 @@ private:
 
     PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                      BugReporterContext &BRC,
-                                     BugReport &BR) override;
+                                     PathSensitiveBugReport &BR) override;
 
     PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                       const ExplodedNode *EndPathNode,
-                                      BugReport &BR) override {
+                                      PathSensitiveBugReport &BR) override {
       if (!IsLeak)
         return nullptr;
 
-      PathDiagnosticLocation L =
-        PathDiagnosticLocation::createEndOfPath(EndPathNode,
-                                                BRC.getSourceManager());
+      PathDiagnosticLocation L = BR.getLocation();
       // Do not add the statement itself as a range in case of leak.
       return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
@@ -1132,14 +1130,13 @@ ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
     // Store the extent size for the (symbolic)region
     // containing the elements.
     Region = Target.getAsRegion()
-                 ->getAs<SubRegion>()
+                 ->castAs<SubRegion>()
                  ->StripCasts()
-                 ->getAs<SubRegion>();
+                 ->castAs<SubRegion>();
   } else {
     ElementCount = svalBuilder.makeIntVal(1, true);
-    Region = Target.getAsRegion()->getAs<SubRegion>();
+    Region = Target.getAsRegion()->castAs<SubRegion>();
   }
-  assert(Region);
 
   // Set the region's extent equal to the Size in Bytes.
   QualType ElementType = NE->getAllocatedType();
@@ -1823,7 +1820,8 @@ void MallocChecker::ReportBadFree(CheckerContext &C, SVal ArgVal,
 
     printExpectedAllocName(os, C, DeallocExpr);
 
-    auto R = std::make_unique<BugReport>(*BT_BadFree[*CheckKind], os.str(), N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_BadFree[*CheckKind],
+                                                      os.str(), N);
     R->markInteresting(MR);
     R->addRange(Range);
     C.emitReport(std::move(R));
@@ -1847,7 +1845,7 @@ void MallocChecker::ReportFreeAlloca(CheckerContext &C, SVal ArgVal,
       BT_FreeAlloca[*CheckKind].reset(new BugType(
           CheckNames[*CheckKind], "Free alloca()", categories::MemoryError));
 
-    auto R = std::make_unique<BugReport>(
+    auto R = std::make_unique<PathSensitiveBugReport>(
         *BT_FreeAlloca[*CheckKind],
         "Memory allocated by alloca() should not be deallocated", N);
     R->markInteresting(ArgVal.getAsRegion());
@@ -1903,7 +1901,8 @@ void MallocChecker::ReportMismatchedDealloc(CheckerContext &C,
         os << ", not " << DeallocOs.str();
     }
 
-    auto R = std::make_unique<BugReport>(*BT_MismatchedDealloc, os.str(), N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_MismatchedDealloc,
+                                                      os.str(), N);
     R->markInteresting(Sym);
     R->addRange(Range);
     R->addVisitor(std::make_unique<MallocBugVisitor>(Sym));
@@ -1962,7 +1961,8 @@ void MallocChecker::ReportOffsetFree(CheckerContext &C, SVal ArgVal,
   else
     os << "allocated memory";
 
-  auto R = std::make_unique<BugReport>(*BT_OffsetFree[*CheckKind], os.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT_OffsetFree[*CheckKind],
+                                                    os.str(), N);
   R->markInteresting(MR->getBaseRegion());
   R->addRange(Range);
   C.emitReport(std::move(R));
@@ -1988,10 +1988,11 @@ void MallocChecker::ReportUseAfterFree(CheckerContext &C, SourceRange Range,
     AllocationFamily AF =
         C.getState()->get<RegionState>(Sym)->getAllocationFamily();
 
-    auto R = std::make_unique<BugReport>(*BT_UseFree[*CheckKind],
+    auto R = std::make_unique<PathSensitiveBugReport>(
+        *BT_UseFree[*CheckKind],
         AF == AF_InnerBuffer
-              ? "Inner pointer of container used after re/deallocation"
-              : "Use of memory after it is freed",
+            ? "Inner pointer of container used after re/deallocation"
+            : "Use of memory after it is freed",
         N);
 
     R->markInteresting(Sym);
@@ -2022,7 +2023,7 @@ void MallocChecker::ReportDoubleFree(CheckerContext &C, SourceRange Range,
       BT_DoubleFree[*CheckKind].reset(new BugType(
           CheckNames[*CheckKind], "Double free", categories::MemoryError));
 
-    auto R = std::make_unique<BugReport>(
+    auto R = std::make_unique<PathSensitiveBugReport>(
         *BT_DoubleFree[*CheckKind],
         (Released ? "Attempt to free released memory"
                   : "Attempt to free non-owned memory"),
@@ -2051,7 +2052,7 @@ void MallocChecker::ReportDoubleDelete(CheckerContext &C, SymbolRef Sym) const {
                                         "Double delete",
                                         categories::MemoryError));
 
-    auto R = std::make_unique<BugReport>(
+    auto R = std::make_unique<PathSensitiveBugReport>(
         *BT_DoubleDelete, "Attempt to delete released memory", N);
 
     R->markInteresting(Sym);
@@ -2079,8 +2080,8 @@ void MallocChecker::ReportUseZeroAllocated(CheckerContext &C,
           new BugType(CheckNames[*CheckKind], "Use of zero allocated",
                       categories::MemoryError));
 
-    auto R = std::make_unique<BugReport>(*BT_UseZerroAllocated[*CheckKind],
-                                         "Use of zero-allocated memory", N);
+    auto R = std::make_unique<PathSensitiveBugReport>(
+        *BT_UseZerroAllocated[*CheckKind], "Use of zero-allocated memory", N);
 
     R->addRange(Range);
     if (Sym) {
@@ -2119,7 +2120,8 @@ void MallocChecker::ReportFunctionPointerFree(CheckerContext &C, SVal ArgVal,
 
     Os << " is a function pointer";
 
-    auto R = std::make_unique<BugReport>(*BT_BadFree[*CheckKind], Os.str(), N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_BadFree[*CheckKind],
+                                                      Os.str(), N);
     R->markInteresting(MR);
     R->addRange(Range);
     C.emitReport(std::move(R));
@@ -2329,7 +2331,7 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
   const MemRegion *Region = nullptr;
   std::tie(AllocNode, Region) = getAllocationSite(N, Sym, C);
 
-  const Stmt *AllocationStmt = PathDiagnosticLocation::getStmt(AllocNode);
+  const Stmt *AllocationStmt = AllocNode->getStmtForDiagnostics();
   if (AllocationStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
                                               C.getSourceManager(),
@@ -2344,7 +2346,7 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
     os << "Potential memory leak";
   }
 
-  auto R = std::make_unique<BugReport>(
+  auto R = std::make_unique<PathSensitiveBugReport>(
       *BT_Leak[*CheckKind], os.str(), N, LocUsedForUniqueing,
       AllocNode->getLocationContext()->getDecl());
   R->markInteresting(Sym);
@@ -2906,8 +2908,10 @@ static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
   return false;
 }
 
-PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef
+MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
+                                           BugReporterContext &BRC,
+                                           PathSensitiveBugReport &BR) {
 
   ProgramStateRef state = N->getState();
   ProgramStateRef statePrev = N->getFirstPred()->getState();
@@ -2915,7 +2919,7 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
   const RefState *RS = state->get<RegionState>(Sym);
   const RefState *RSPrev = statePrev->get<RegionState>(Sym);
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   // When dealing with containers, we sometimes want to give a note
   // even if the statement is missing.
   if (!S && (!RS || RS->getAllocationFamily() != AF_InnerBuffer))
@@ -2948,15 +2952,15 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
 
   // Find out if this is an interesting point and what is the kind.
   StringRef Msg;
-  StackHintGeneratorForSymbol *StackHint = nullptr;
+  std::unique_ptr<StackHintGeneratorForSymbol> StackHint = nullptr;
   SmallString<256> Buf;
   llvm::raw_svector_ostream OS(Buf);
 
   if (Mode == Normal) {
     if (isAllocated(RS, RSPrev, S)) {
       Msg = "Memory is allocated";
-      StackHint = new StackHintGeneratorForSymbol(Sym,
-                                                  "Returned allocated memory");
+      StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+          Sym, "Returned allocated memory");
     } else if (isReleased(RS, RSPrev, S)) {
       const auto Family = RS->getAllocationFamily();
       switch (Family) {
@@ -2966,8 +2970,8 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
         case AF_CXXNewArray:
         case AF_IfNameIndex:
           Msg = "Memory is released";
-          StackHint = new StackHintGeneratorForSymbol(Sym,
-                                              "Returning; memory was released");
+          StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+              Sym, "Returning; memory was released");
           break;
         case AF_InnerBuffer: {
           const MemRegion *ObjRegion =
@@ -2978,8 +2982,8 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
 
           if (N->getLocation().getKind() == ProgramPoint::PostImplicitCallKind) {
             OS << "deallocated by call to destructor";
-            StackHint = new StackHintGeneratorForSymbol(Sym,
-                                      "Returning; inner buffer was deallocated");
+            StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+                Sym, "Returning; inner buffer was deallocated");
           } else {
             OS << "reallocated by call to '";
             const Stmt *S = RS->getStmt();
@@ -2994,8 +2998,8 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
               OS << (D ? D->getNameAsString() : "unknown");
             }
             OS << "'";
-            StackHint = new StackHintGeneratorForSymbol(Sym,
-                                      "Returning; inner buffer was reallocated");
+            StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+                Sym, "Returning; inner buffer was reallocated");
           }
           Msg = OS.str();
           break;
@@ -3035,12 +3039,12 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
       }
     } else if (isRelinquished(RS, RSPrev, S)) {
       Msg = "Memory ownership is transferred";
-      StackHint = new StackHintGeneratorForSymbol(Sym, "");
+      StackHint = std::make_unique<StackHintGeneratorForSymbol>(Sym, "");
     } else if (isReallocFailedCheck(RS, RSPrev, S)) {
       Mode = ReallocationFailed;
       Msg = "Reallocation failed";
-      StackHint = new StackHintGeneratorForReallocationFailed(Sym,
-                                                       "Reallocation failed");
+      StackHint = std::make_unique<StackHintGeneratorForReallocationFailed>(
+          Sym, "Reallocation failed");
 
       if (SymbolRef sym = findFailedReallocSymbol(state, statePrev)) {
         // Is it possible to fail two reallocs WITHOUT testing in between?
@@ -3059,15 +3063,18 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
     if (!statePrev->get<RegionState>(FailedReallocSymbol)) {
       // We're at the reallocation point.
       Msg = "Attempt to reallocate memory";
-      StackHint = new StackHintGeneratorForSymbol(Sym,
-                                                 "Returned reallocated memory");
+      StackHint = std::make_unique<StackHintGeneratorForSymbol>(
+          Sym, "Returned reallocated memory");
       FailedReallocSymbol = nullptr;
       Mode = Normal;
     }
   }
 
-  if (Msg.empty())
+  if (Msg.empty()) {
+    assert(!StackHint);
     return nullptr;
+  }
+
   assert(StackHint);
 
   // Generate the extra diagnostic.
@@ -3084,7 +3091,9 @@ PathDiagnosticPieceRef MallocChecker::MallocBugVisitor::VisitNode(
                                  N->getLocationContext());
   }
 
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true, StackHint);
+  auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
+  BR.addCallStackHint(P, std::move(StackHint));
+  return P;
 }
 
 void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
@@ -3131,7 +3140,7 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
   MallocChecker *checker = mgr.getChecker<MallocChecker>();
   checker->ChecksEnabled[MallocChecker::CK_InnerPointerChecker] = true;
   checker->CheckNames[MallocChecker::CK_InnerPointerChecker] =
-      mgr.getCurrentCheckName();
+      mgr.getCurrentCheckerName();
 }
 
 void ento::registerDynamicMemoryModeling(CheckerManager &mgr) {
@@ -3148,12 +3157,11 @@ bool ento::shouldRegisterDynamicMemoryModeling(const LangOptions &LO) {
   void ento::register##name(CheckerManager &mgr) {                             \
     MallocChecker *checker = mgr.getChecker<MallocChecker>();                  \
     checker->ChecksEnabled[MallocChecker::CK_##name] = true;                   \
-    checker->CheckNames[MallocChecker::CK_##name] = mgr.getCurrentCheckName(); \
+    checker->CheckNames[MallocChecker::CK_##name] =                            \
+        mgr.getCurrentCheckerName();                                           \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
 REGISTER_CHECKER(MallocChecker)
 REGISTER_CHECKER(NewDeleteChecker)

@@ -257,14 +257,14 @@ void CommandObject::Cleanup() {
     m_api_locker.unlock();
 }
 
-int CommandObject::HandleCompletion(CompletionRequest &request) {
+void CommandObject::HandleCompletion(CompletionRequest &request) {
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
   // completion should override WantsCompletion() to return true, instead.
   if (WantsRawCommandString() && !WantsCompletion()) {
     // FIXME: Abstract telling the completion to insert the completion
     // character.
-    return -1;
+    return;
   } else {
     // Can we do anything generic with the options?
     Options *cur_options = GetOptions();
@@ -278,11 +278,11 @@ int CommandObject::HandleCompletion(CompletionRequest &request) {
       bool handled_by_options = cur_options->HandleOptionCompletion(
           request, opt_element_vector, GetCommandInterpreter());
       if (handled_by_options)
-        return request.GetNumberOfMatches();
+        return;
     }
 
     // If we got here, the last word is not an option or an option argument.
-    return HandleArgumentCompletion(request, opt_element_vector);
+    HandleArgumentCompletion(request, opt_element_vector);
   }
 }
 
@@ -917,12 +917,21 @@ const char *CommandObject::GetArgumentDescriptionAsCString(
   return g_arguments_data[arg_type].help_text;
 }
 
-Target *CommandObject::GetDummyTarget() {
-  return m_interpreter.GetDebugger().GetDummyTarget();
+Target &CommandObject::GetDummyTarget() {
+  return *m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target *CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
+  return *m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+}
+
+Target &CommandObject::GetSelectedTarget() {
+  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
+                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
+                        eCommandRequiresThread | eCommandRequiresProcess |
+                        eCommandRequiresRegContext) &&
+         "GetSelectedTarget called from object that may have no target");
+  return *m_interpreter.GetDebugger().GetSelectedTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {
@@ -958,7 +967,7 @@ bool CommandObjectParsed::Execute(const char *args_string,
   }
   if (!handled) {
     for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!entry.value().ref.empty() && entry.value().ref.front() == '`') {
+      if (!entry.value().ref().empty() && entry.value().ref().front() == '`') {
         cmd_args.ReplaceArgumentAtIndex(
             entry.index(),
             m_interpreter.ProcessEmbeddedScriptCommands(entry.value().c_str()));

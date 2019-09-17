@@ -74,13 +74,6 @@ static MachineTypes getEmulation(StringRef S) {
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
-static std::string getImplibPath(StringRef Path) {
-  SmallString<128> Out = StringRef("lib");
-  Out.append(Path);
-  sys::path::replace_extension(Out, ".a");
-  return Out.str();
-}
-
 int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   DllOptTable Table;
   unsigned MissingIndex;
@@ -154,8 +147,18 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   std::string Path = Args.getLastArgValue(OPT_l);
-  if (Path.empty())
-    Path = getImplibPath(Def->OutputFile);
+
+  // If ExtName is set (if the "ExtName = Name" syntax was used), overwrite
+  // Name with ExtName and clear ExtName. When only creating an import
+  // library and not linking, the internal name is irrelevant. This avoids
+  // cases where writeImportLibrary tries to transplant decoration from
+  // symbol decoration onto ExtName.
+  for (COFFShortExport& E : Def->Exports) {
+    if (!E.ExtName.empty()) {
+      E.Name = E.ExtName;
+      E.ExtName.clear();
+    }
+  }
 
   if (Machine == IMAGE_FILE_MACHINE_I386 && Args.getLastArg(OPT_k)) {
     for (COFFShortExport& E : Def->Exports) {
@@ -174,7 +177,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
+  if (!Path.empty() &&
+      writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
     return 1;
   return 0;
 }

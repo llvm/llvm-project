@@ -9,5 +9,5 @@ char c4 _Alignas(32); // expected-error {{expected ';' after top level declarato
 
 char _Alignas(_Alignof(int)) c5;
 
-// CHECK-EXT: _Alignas is a C11-specific feature
-// CHECK-EXT: _Alignof is a C11-specific feature
+// CHECK-EXT: '_Alignas' is a C11 extension
+// CHECK-EXT: '_Alignof' is a C11 extension

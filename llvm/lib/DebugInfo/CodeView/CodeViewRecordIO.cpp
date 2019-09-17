@@ -126,7 +126,11 @@ Error CodeViewRecordIO::mapByteVectorTail(std::vector<uint8_t> &Bytes,
 
 Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd, const Twine &Comment) {
   if (isStreaming()) {
-    emitComment(Comment);
+    std::string TypeNameStr = Streamer->getTypeName(TypeInd);
+    if (!TypeNameStr.empty())
+      emitComment(Comment + ": " + TypeNameStr);
+    else
+      emitComment(Comment);
     Streamer->EmitIntValue(TypeInd.getIndex(), sizeof(TypeInd.getIndex()));
     incrStreamedLen(sizeof(TypeInd.getIndex()));
   } else if (isWriting()) {

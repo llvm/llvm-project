@@ -34,9 +34,14 @@ enum class ScanningMode {
 /// the invidual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(ScanningMode Mode);
+  DependencyScanningService(ScanningMode Mode, bool ReuseFileManager = true,
+                            bool SkipExcludedPPRanges = true);
 
   ScanningMode getMode() const { return Mode; }
+
+  bool canReuseFileManager() const { return ReuseFileManager; }
+
+  bool canSkipExcludedPPRanges() const { return SkipExcludedPPRanges; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
@@ -44,6 +49,11 @@ public:
 
 private:
   const ScanningMode Mode;
+  const bool ReuseFileManager;
+  /// Set to true to use the preprocessor optimization that skips excluded PP
+  /// ranges by bumping the buffer pointer in the lexer instead of lexing the
+  /// tokens in the range until reaching the corresponding directive.
+  const bool SkipExcludedPPRanges;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
 };

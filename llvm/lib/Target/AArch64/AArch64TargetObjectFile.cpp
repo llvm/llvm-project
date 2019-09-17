@@ -59,8 +59,8 @@ MCSymbol *AArch64_MachoTargetObjectFile::getCFIPersonalitySymbol(
 }
 
 const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
-    const MCSymbol *Sym, const MCValue &MV, int64_t Offset,
-    MachineModuleInfo *MMI, MCStreamer &Streamer) const {
+    const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
+    int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   assert((Offset+MV.getConstant() == 0) &&
          "Arch64 does not support GOT PC rel with extra offset");
   // On ARM64 Darwin, we can reference symbols with foo@GOT-., which

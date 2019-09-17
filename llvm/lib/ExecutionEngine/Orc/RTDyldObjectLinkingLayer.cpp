@@ -27,9 +27,9 @@ public:
 
     // Build an OnResolve callback to unwrap the interned strings and pass them
     // to the OnResolved callback.
-    // FIXME: Switch to move capture of OnResolved once we have c++14.
     auto OnResolvedWithUnwrap =
-        [OnResolved](Expected<SymbolMap> InternedResult) {
+        [OnResolved = std::move(OnResolved)](
+            Expected<SymbolMap> InternedResult) mutable {
           if (!InternedResult) {
             OnResolved(InternedResult.takeError());
             return;
@@ -50,7 +50,7 @@ public:
     MR.getTargetJITDylib().withSearchOrderDo(
         [&](const JITDylibSearchList &JDs) { SearchOrder = JDs; });
     ES.lookup(SearchOrder, InternedSymbols, SymbolState::Resolved,
-              OnResolvedWithUnwrap, RegisterDependencies);
+              std::move(OnResolvedWithUnwrap), RegisterDependencies);
   }
 
   Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) {
@@ -133,8 +133,6 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
 
   JITDylibSearchOrderResolver Resolver(*SharedR);
 
-  // FIXME: Switch to move-capture for the 'O' buffer once we have c++14.
-  MemoryBuffer *UnownedObjBuffer = O.release();
   jitLinkForORC(
       **Obj, std::move(O), *MemMgr, Resolver, ProcessAllSections,
       [this, K, SharedR, &Obj, InternalSymbols](
@@ -143,9 +141,8 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
         return onObjLoad(K, *SharedR, **Obj, std::move(LoadedObjInfo),
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, K, SharedR, UnownedObjBuffer](Error Err) {
-        std::unique_ptr<MemoryBuffer> ObjBuffer(UnownedObjBuffer);
-        onObjEmit(K, std::move(ObjBuffer), *SharedR, std::move(Err));
+      [this, K, SharedR, O = std::move(O)](Error Err) mutable {
+        onObjEmit(K, std::move(O), *SharedR, std::move(Err));
       });
 }
 
@@ -184,7 +181,10 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     if (auto Err = R.defineMaterializing(ExtraSymbolsToClaim))
       return Err;
 
-  R.notifyResolved(Symbols);
+  if (auto Err = R.notifyResolved(Symbols)) {
+    R.failMaterialization();
+    return Err;
+  }
 
   if (NotifyLoaded)
     NotifyLoaded(K, Obj, *LoadedObjInfo);
@@ -201,7 +201,11 @@ void RTDyldObjectLinkingLayer::onObjEmit(
     return;
   }
 
-  R.notifyEmitted();
+  if (auto Err = R.notifyEmitted()) {
+    getExecutionSession().reportError(std::move(Err));
+    R.failMaterialization();
+    return;
+  }
 
   if (NotifyEmitted)
     NotifyEmitted(K, std::move(ObjBuffer));

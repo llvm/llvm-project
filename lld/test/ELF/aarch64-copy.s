@@ -22,7 +22,7 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x230000
+// CHECK-NEXT:     Address: 0x2303F0
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 24
 // CHECK-NEXT:     Link:
@@ -31,29 +31,29 @@ _start:
 
 // CHECK: Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x230000 R_AARCH64_COPY x 0x0
-// CHECK-NEXT:     0x230010 R_AARCH64_COPY y 0x0
-// CHECK-NEXT:     0x230014 R_AARCH64_COPY z 0x0
+// CHECK-NEXT:     0x2303F0 R_AARCH64_COPY x 0x0
+// CHECK-NEXT:     0x230400 R_AARCH64_COPY y 0x0
+// CHECK-NEXT:     0x230404 R_AARCH64_COPY z 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 // CHECK: Symbols [
 // CHECK:     Name: x
-// CHECK-NEXT:     Value: 0x230000
+// CHECK-NEXT:     Value: 0x2303F0
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
 // CHECK-NEXT:     Other:
 // CHECK-NEXT:     Section: .bss
 // CHECK:     Name: y
-// CHECK-NEXT:     Value: 0x230010
+// CHECK-NEXT:     Value: 0x230400
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
 // CHECK-NEXT:     Other:
 // CHECK-NEXT:     Section: .bss
 // CHECK:     Name: z
-// CHECK-NEXT:     Value: 0x230014
+// CHECK-NEXT:     Value: 0x230404
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
@@ -64,16 +64,13 @@ _start:
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
 // CODE-NEXT: _start:
-// S(x) = 0x230000, A = 0, P = 0x210000
-// S + A - P = 0x20000 = 131072
-// CODE-NEXT:  210000: adr  x1, #131072
-// S(y) = 0x230010, A = 0, P = 0x210004
-// Page(S + A) - Page(P) = 0x230000 - 0x210000 = 0x20000 = 131072
-// CODE-NEXT:  210004: adrp x2, #131072
-// S(y) = 0x230010, A = 0
-// (S + A) & 0xFFF = 0x10 = 16
-// CODE-NEXT:  210008: add  x2, x2, #16
+// S + A - P = 0x2303f0 + 0 - 0x21031c = 131284
+// CODE-NEXT:  21031c: adr  x1, #131284
+// Page(S + A) - Page(P) = Page(0x230400) - Page(0x210320) = 131072
+// CODE-NEXT:  210320: adrp x2, #131072
+// (S + A) & 0xFFF = (0x230400 + 0) & 0xFFF = 1024
+// CODE-NEXT:  210324: add  x2, x2, #1024
 
 // RODATA: Contents of section .rodata:
-// S(z) = 0x230014
-// RODATA-NEXT:  200318 14002300
+// S(z) = 0x230404
+// RODATA-NEXT:  200318 04042300

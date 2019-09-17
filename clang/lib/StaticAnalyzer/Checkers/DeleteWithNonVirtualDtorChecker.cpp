@@ -27,7 +27,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
@@ -47,7 +47,7 @@ class DeleteWithNonVirtualDtorChecker
     }
     PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                      BugReporterContext &BRC,
-                                     BugReport &BR) override;
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     bool Satisfied;
@@ -92,7 +92,7 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
                          "Logic error"));
 
   ExplodedNode *N = C.generateNonFatalErrorNode();
-  auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
@@ -102,12 +102,13 @@ void DeleteWithNonVirtualDtorChecker::checkPreStmt(const CXXDeleteExpr *DE,
 
 PathDiagnosticPieceRef
 DeleteWithNonVirtualDtorChecker::DeleteBugVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC,
+    PathSensitiveBugReport &BR) {
   // Stop traversal after the first conversion was found on a path.
   if (Satisfied)
     return nullptr;
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 
@@ -139,8 +140,7 @@ DeleteWithNonVirtualDtorChecker::DeleteBugVisitor::VisitNode(
   OS << "Conversion from derived to base happened here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true,
-                                                    nullptr);
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 
 void ento::registerDeleteWithNonVirtualDtorChecker(CheckerManager &mgr) {

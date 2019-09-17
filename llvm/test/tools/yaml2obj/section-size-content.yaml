@@ -31,7 +31,7 @@ Sections:
 # CASE2-NEXT: Flags [
 # CASE2-NEXT: ]
 # CASE2-NEXT: Address: 0x0
-# CASE2-NEXT: Offset: 0x180
+# CASE2-NEXT: Offset: 0x40
 # CASE2-NEXT: Size: 1
 # CASE2-NEXT: Link: 0
 # CASE2-NEXT: Info: 0
@@ -79,7 +79,7 @@ Sections:
 # CASE3-NEXT: Flags [
 # CASE3-NEXT: ]
 # CASE3-NEXT: Address: 0x0
-# CASE3-NEXT: Offset: 0x180
+# CASE3-NEXT: Offset: 0x40
 # CASE3-NEXT: Size: 1
 # CASE3-NEXT: Link: 0
 # CASE3-NEXT: Info: 0
@@ -112,7 +112,7 @@ Sections:
 # CASE4-NEXT: Flags [
 # CASE4-NEXT: ]
 # CASE4-NEXT: Address: 0x0
-# CASE4-NEXT: Offset: 0x180
+# CASE4-NEXT: Offset: 0x40
 # CASE4-NEXT: Size: 3
 # CASE4-NEXT: Link: 0
 # CASE4-NEXT: Info: 0
@@ -144,7 +144,7 @@ Sections:
 # CASE5-NEXT: Flags [
 # CASE5-NEXT: ]
 # CASE5-NEXT: Address: 0x0
-# CASE5-NEXT: Offset: 0x180
+# CASE5-NEXT: Offset: 0x40
 # CASE5-NEXT: Size: 0
 
 --- !ELF
@@ -175,4 +175,4 @@ Sections:
 # ERR2:      error: Section size must be greater than or equal to the content size
 # ERR2-NEXT: - Name: .data
 # ERR2-NEXT:   ^
-# ERR2-NEXT: error: Failed to parse YAML input!
+# ERR2-NEXT: error: failed to parse YAML input

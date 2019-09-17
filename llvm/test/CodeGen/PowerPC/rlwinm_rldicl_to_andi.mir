@@ -74,7 +74,7 @@
 name:            testRLWINMSingleUseDef
 # CHECK: testRLWINMSingleUseDef
 # CHECK-LATE: testRLWINMSingleUseDef
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -134,7 +134,7 @@ body:             |
 ...
 ---
 name:            testRLWINMNoGPRUseZero
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -194,7 +194,7 @@ body:             |
 ...
 ---
 name:            testRLWINMNoGPRUseNonZero
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -254,7 +254,7 @@ body:             |
 ...
 ---
 name:            testRLDICLSingleUseDef
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -308,7 +308,7 @@ body:             |
 ...
 ---
 name:            testRLDICLNoGPRUseZero
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -362,7 +362,7 @@ body:             |
 ...
 ---
 name:            testRLDICLNoGPRUseNonZero
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

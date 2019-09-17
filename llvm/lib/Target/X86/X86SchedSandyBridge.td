@@ -208,8 +208,12 @@ defm : X86WriteRes<WriteFStoreY,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [SBPort23,SBPort4], 1, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteFMaskedStoreY, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+
+defm : X86WriteRes<WriteFMaskedStore32,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+
 defm : X86WriteRes<WriteFMove,         [SBPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [SBPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveY,        [SBPort5], 1, [1], 1>;

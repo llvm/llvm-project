@@ -13,20 +13,20 @@
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x2000
-# CHECK-NEXT:   Offset: 0x2000
+# CHECK-NEXT:   Address: 0x2004
+# CHECK-NEXT:   Offset: 0x1004
 # CHECK-NEXT:   Size: 20
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 4
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 011B033B 10000000 01000000 34F2FFFF
+# CHECK-NEXT:     0000: 011B033B 10000000 01000000 30F2FFFF
 # CHECK-NEXT:     0010: 24000000
 # Header (always 4 bytes): 011B033B
-#    10000000 = .eh_frame(0x2014) - .eh_frame_hdr(0x2000) - 4
+#    10000000 = .eh_frame(0x2018) - .eh_frame_hdr(0x2004) - 4
 #    01000000 = 1 = the number of FDE pointers in the table.
-# 34F2FFFF = foo(0x1000) - 0x234(addend) - .eh_frame_hdr(0x2000)
+# 30F2FFFF = foo(0x1000) - 0x234(addend) - .eh_frame_hdr(0x2004)
   
 # CHECK:      Section {
 # CHECK:        Index:
@@ -35,8 +35,8 @@
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x2014
-# CHECK-NEXT:   Offset: 0x2014
+# CHECK-NEXT:   Address: 0x2018
+# CHECK-NEXT:   Offset: 0x1018
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Link:
 # CHECK-NEXT:   Info:

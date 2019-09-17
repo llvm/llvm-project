@@ -137,8 +137,11 @@ def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
 def SDTFPTernaryOp : SDTypeProfile<1, 3, [  // fmadd, fnmsub, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>
 ]>;
-def SDTIntUnaryOp : SDTypeProfile<1, 1, [   // ctlz, cttz
+def SDTIntUnaryOp : SDTypeProfile<1, 1, [ // bitreverse
   SDTCisSameAs<0, 1>, SDTCisInt<0>
+]>;
+def SDTIntBitCountUnaryOp : SDTypeProfile<1, 1, [   // ctlz, cttz
+  SDTCisInt<0>, SDTCisInt<1>
 ]>;
 def SDTIntExtendOp : SDTypeProfile<1, 1, [  // sext, zext, anyext
   SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
@@ -238,6 +241,9 @@ def SDTVecExtract : SDTypeProfile<1, 2, [   // vector extract
 ]>;
 def SDTVecInsert : SDTypeProfile<1, 3, [    // vector insert
   SDTCisEltOfVec<2, 1>, SDTCisSameAs<0, 1>, SDTCisPtrTy<3>
+]>;
+def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
+  SDTCisInt<0>, SDTCisVec<1>
 ]>;
 
 def SDTSubVecExtract : SDTypeProfile<1, 2, [// subvector extract
@@ -393,6 +399,7 @@ def usubsat    : SDNode<"ISD::USUBSAT"   , SDTIntBinOp>;
 def smulfix    : SDNode<"ISD::SMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
 def smulfixsat : SDNode<"ISD::SMULFIXSAT", SDTIntScaledBinOp, [SDNPCommutative]>;
 def umulfix    : SDNode<"ISD::UMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
+def umulfixsat : SDNode<"ISD::UMULFIXSAT", SDTIntScaledBinOp, [SDNPCommutative]>;
 
 def sext_inreg : SDNode<"ISD::SIGN_EXTEND_INREG", SDTExtInreg>;
 def sext_invec : SDNode<"ISD::SIGN_EXTEND_VECTOR_INREG", SDTExtInvec>;
@@ -401,11 +408,11 @@ def zext_invec : SDNode<"ISD::ZERO_EXTEND_VECTOR_INREG", SDTExtInvec>;
 def abs        : SDNode<"ISD::ABS"        , SDTIntUnaryOp>;
 def bitreverse : SDNode<"ISD::BITREVERSE" , SDTIntUnaryOp>;
 def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
-def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntUnaryOp>;
-def cttz       : SDNode<"ISD::CTTZ"       , SDTIntUnaryOp>;
-def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntUnaryOp>;
-def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntUnaryOp>;
-def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntUnaryOp>;
+def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
+def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;
+def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntBitCountUnaryOp>;
+def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
+def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
 def zext       : SDNode<"ISD::ZERO_EXTEND", SDTIntExtendOp>;
 def anyext     : SDNode<"ISD::ANY_EXTEND" , SDTIntExtendOp>;
@@ -414,6 +421,12 @@ def bitconvert : SDNode<"ISD::BITCAST"    , SDTUnaryOp>;
 def addrspacecast : SDNode<"ISD::ADDRSPACECAST", SDTUnaryOp>;
 def extractelt : SDNode<"ISD::EXTRACT_VECTOR_ELT", SDTVecExtract>;
 def insertelt  : SDNode<"ISD::INSERT_VECTOR_ELT", SDTVecInsert>;
+
+def vecreduce_add  : SDNode<"ISD::VECREDUCE_ADD", SDTVecReduce>;
+def vecreduce_smax  : SDNode<"ISD::VECREDUCE_SMAX", SDTVecReduce>;
+def vecreduce_umax  : SDNode<"ISD::VECREDUCE_UMAX", SDTVecReduce>;
+def vecreduce_smin  : SDNode<"ISD::VECREDUCE_SMIN", SDTVecReduce>;
+def vecreduce_umin  : SDNode<"ISD::VECREDUCE_UMIN", SDTVecReduce>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -513,6 +526,10 @@ def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
                                SDTFPRoundOp, [SDNPHasChain]>;
 def strict_fpextend   : SDNode<"ISD::STRICT_FP_EXTEND",
                                SDTFPExtendOp, [SDNPHasChain]>;
+def strict_fp_to_sint : SDNode<"ISD::STRICT_FP_TO_SINT",
+                               SDTFPToIntOp, [SDNPHasChain]>;
+def strict_fp_to_uint : SDNode<"ISD::STRICT_FP_TO_UINT",
+                               SDTFPToIntOp, [SDNPHasChain]>;
 
 def setcc      : SDNode<"ISD::SETCC"      , SDTSetCC>;
 def select     : SDNode<"ISD::SELECT"     , SDTSelect>;
@@ -638,16 +655,32 @@ def assertzext : SDNode<"ISD::AssertZext", SDT_assertext>;
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes
 
-class CondCode; // ISD::CondCode enums
-def SETOEQ : CondCode; def SETOGT : CondCode;
-def SETOGE : CondCode; def SETOLT : CondCode; def SETOLE : CondCode;
-def SETONE : CondCode; def SETO   : CondCode; def SETUO  : CondCode;
-def SETUEQ : CondCode; def SETUGT : CondCode; def SETUGE : CondCode;
-def SETULT : CondCode; def SETULE : CondCode; def SETUNE : CondCode;
+class CondCode<string fcmpName = "", string icmpName = ""> {
+  string ICmpPredicate = icmpName;
+  string FCmpPredicate = fcmpName;
+}
 
-def SETEQ : CondCode; def SETGT : CondCode; def SETGE : CondCode;
-def SETLT : CondCode; def SETLE : CondCode; def SETNE : CondCode;
-
+// ISD::CondCode enums, and mapping to CmpInst::Predicate names
+def SETOEQ : CondCode<"FCMP_OEQ">;
+def SETOGT : CondCode<"FCMP_OGT">;
+def SETOGE : CondCode<"FCMP_OGE">;
+def SETOLT : CondCode<"FCMP_OLT">;
+def SETOLE : CondCode<"FCMP_OLE">;
+def SETONE : CondCode<"FCMP_ONE">;
+def SETO   : CondCode<"FCMP_ORD">;
+def SETUO  : CondCode<"FCMP_UNO">;
+def SETUEQ : CondCode<"FCMP_UEQ">;
+def SETUGT : CondCode<"FCMP_UGT", "ICMP_UGT">;
+def SETUGE : CondCode<"FCMP_UGE", "ICMP_UGE">;
+def SETULT : CondCode<"FCMP_ULT", "ICMP_ULT">;
+def SETULE : CondCode<"FCMP_ULE", "ICMP_ULE">;
+def SETUNE : CondCode<"FCMP_UNE">;
+def SETEQ : CondCode<"", "ICMP_EQ">;
+def SETGT : CondCode<"", "ICMP_SGT">;
+def SETGE : CondCode<"", "ICMP_SGE">;
+def SETLT : CondCode<"", "ICMP_SLT">;
+def SETLE : CondCode<"", "ICMP_SLE">;
+def SETNE : CondCode<"", "ICMP_NE">;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Node Transformation Functions.
@@ -1171,13 +1204,15 @@ def post_truncstvi16 : PatFrag<(ops node:$val, node:$base, node:$offset),
   let ScalarMemoryVT = i16;
 }
 
-def nonvolatile_load : PatFrag<(ops node:$ptr),
-                               (load node:$ptr), [{
-  return !cast<LoadSDNode>(N)->isVolatile();
+// TODO: Split these into volatile and unordered flavors to enable
+// selectively legal optimizations for each.  (See D66309)
+def simple_load : PatFrag<(ops node:$ptr),
+                          (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->isSimple();
 }]>;
-def nonvolatile_store : PatFrag<(ops node:$val, node:$ptr),
-                                (store node:$val, node:$ptr), [{
-  return !cast<StoreSDNode>(N)->isVolatile();
+def simple_store : PatFrag<(ops node:$val, node:$ptr),
+                           (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->isSimple();
 }]>;
 
 // nontemporal store fragments.
@@ -1332,6 +1367,12 @@ def any_extloadf32 : PatFrags<(ops node:$ptr),
 def any_extloadf64 : PatFrags<(ops node:$ptr),
                               [(strict_extloadf64 node:$ptr),
                                (extloadf64 node:$ptr)]>;
+def any_fp_to_sint : PatFrags<(ops node:$src),
+                              [(strict_fp_to_sint node:$src),
+                               (fp_to_sint node:$src)]>;
+def any_fp_to_uint : PatFrags<(ops node:$src),
+                              [(strict_fp_to_uint node:$src),
+                               (fp_to_uint node:$src)]>;
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
   def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

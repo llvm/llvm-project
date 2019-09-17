@@ -39,7 +39,7 @@
 ---
 # CHECK-LABEL: name: test1
 name:            test1
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
@@ -61,7 +61,7 @@ body:             |
 ---
 # CHECK-LABEL: name: test2
 name:            test2
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
@@ -82,7 +82,7 @@ body:             |
 ---
 # CHECK-LABEL: name: test3
 name:            test3
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
@@ -116,7 +116,7 @@ body:             |
 ---
 # CHECK-LABEL: name: test4
 name:            test4
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$r9d' }
@@ -136,7 +136,7 @@ body:             |
 ---
 # CHECK-LABEL: name: test5
 name:            test5
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 liveins:
   - { reg: '$ch', reg: '$bl' }

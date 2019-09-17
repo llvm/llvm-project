@@ -20,7 +20,7 @@
 #include <new>
 #include <cassert>
 
-#include "count_new.hpp"
+#include "count_new.h"
 #include "platform_support.h" // locale name macros
 
 #include "test_macros.h"

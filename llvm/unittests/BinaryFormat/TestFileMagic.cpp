@@ -82,6 +82,8 @@ const char macho_dynamically_linked_shared_lib_stub[] =
 const char ms_dos_stub_broken[] = "\x4d\x5a\x20\x20";
 const char pdb[] = "Microsoft C/C++ MSF 7.00\r\n\x1a"
                    "DS\x00\x00\x00";
+const char tapi_file[] = "--- !tapi-tbd-v1\n";
+const char tapi_file_tbd_v1[] = "---\narchs: [";
 
 TEST_F(MagicTest, Magic) {
   struct type {
@@ -114,6 +116,9 @@ TEST_F(MagicTest, Magic) {
       DEFINE(pdb),
       {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),
        file_magic::unknown},
+      DEFINE(tapi_file),
+      {"tapi_file_tbd_v1", tapi_file_tbd_v1, sizeof(tapi_file_tbd_v1),
+       file_magic::tapi_file},
 #undef DEFINE
   };
 

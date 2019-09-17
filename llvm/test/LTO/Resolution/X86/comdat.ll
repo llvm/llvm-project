@@ -22,7 +22,7 @@
 ; RUN:  -r=%t2.o,a25,px
 ; RUN: llvm-dis %t3.o.0.2.internalize.bc -o - | FileCheck %s
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 $c1 = comdat any

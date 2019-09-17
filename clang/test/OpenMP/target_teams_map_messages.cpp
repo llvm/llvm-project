@@ -1,7 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -DCCODE -verify=expected,le45 -fopenmp -ferror-limit 200 -x c %s -Wno-openmp-target -Wuninitialized
 #ifdef CCODE
 void foo(int arg) {
   const int n = 0;
@@ -18,6 +21,14 @@ void foo(int arg) {
   {}
 }
 #else
+
+void xxx(int argc) {
+  int map; // expected-note {{initialize the variable 'map' to silence this warning}}
+#pragma omp target teams map(tofrom: map) // expected-warning {{variable 'map' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
 template <typename T, int I>
 struct SA {
   static int ss;
@@ -536,10 +547,10 @@ int main(int argc, char **argv) {
 #pragma omp target teams map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
 
-#pragma omp target teams private(j) map(j) // expected-error {{private variable cannot be in a map clause in '#pragma omp target teams' directive}}  expected-note {{defined as private}}
+#pragma omp target teams private(j) map(j) // le45-error {{private variable cannot be in a map clause in '#pragma omp target teams' directive}}  le45-note {{defined as private}}
   {}
 
-#pragma omp target teams firstprivate(j) map(j)  // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams' directive}} expected-note {{defined as firstprivate}}
+#pragma omp target teams firstprivate(j) map(j) // le45-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams' directive}} le45-note {{defined as firstprivate}}
   {}
 
 #pragma omp target teams map(m)

@@ -763,12 +763,6 @@ unsigned DataLayout::getPrefTypeAlignment(Type *Ty) const {
   return getAlignment(Ty, false);
 }
 
-unsigned DataLayout::getPreferredTypeAlignmentShift(Type *Ty) const {
-  unsigned Align = getPrefTypeAlignment(Ty);
-  assert(!(Align & (Align-1)) && "Alignment is not a power of two!");
-  return Log2_32(Align);
-}
-
 IntegerType *DataLayout::getIntPtrType(LLVMContext &C,
                                        unsigned AddressSpace) const {
   return IntegerType::get(C, getIndexSizeInBits(AddressSpace));

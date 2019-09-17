@@ -56,8 +56,12 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
-
+- For X86 target, -march=skylake-avx512, -march=icelake-client,
+  -march=icelake-server, -march=cascadelake, -march=cooperlake will default to
+  not using 512-bit zmm registers in vectorized code unless 512-bit intrinsics
+  are used in the source code. 512-bit operations are known to cause the CPUs
+  to run at a lower frequency which can impact performance. This behavior can be
+  changed by passing -mprefer-vector-width=512 on the command line.
 
 New Compiler Flags
 ------------------
@@ -69,6 +73,10 @@ Deprecated Compiler Flags
 
 The following options are deprecated and ignored. They will be removed in
 future versions of Clang.
+
+- -mmpx used to enable the __MPX__ preprocessor define for the Intel MPX
+  instructions. There were no MPX intrinsics.
+- -mno-mpx used to disable -mmpx and is the default behavior.
 
 - ...
 
@@ -125,7 +133,10 @@ OpenCL C Language Changes in Clang
 ABI Changes in Clang
 --------------------
 
-- ...
+- gcc passes vectors of __int128 in memory on X86-64. Clang historically
+  broke the vectors into multiple scalars using two 64-bit values for each
+  element. Clang now matches the gcc behavior on Linux and NetBSD. You can
+  switch back to old API behavior with flag: -fclang-abi-compat=9.0.
 
 OpenMP Support in Clang
 -----------------------
@@ -143,6 +154,12 @@ Internal API Changes
 These are major API changes that have happened since the 9.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
+
+- libTooling APIs that transfer ownership of `FrontendAction` objects now pass
+  them by `unique_ptr`, making the ownership transfer obvious in the type
+  system. `FrontendActionFactory::create()` now returns a
+  `unique_ptr<FrontendAction>`. `runToolOnCode`, `runToolOnCodeWithArgs`,
+  `ToolInvocation::ToolInvocation()` now take a `unique_ptr<FrontendAction>`.
 
 Build System Changes
 --------------------

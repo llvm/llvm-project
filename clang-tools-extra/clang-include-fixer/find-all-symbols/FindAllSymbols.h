@@ -19,7 +19,7 @@ namespace find_all_symbols {
 
 class HeaderMapCollector;
 
-/// \brief FindAllSymbols collects all classes, free standing functions and
+/// FindAllSymbols collects all classes, free standing functions and
 /// global variables with some extra information such as the path of the header
 /// file, the namespaces they are contained in, the type of variables and the
 /// parameter types of functions.

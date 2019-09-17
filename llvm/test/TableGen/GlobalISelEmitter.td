@@ -96,9 +96,9 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  computeAvailableModuleFeatures(const MyTargetSubtarget *Subtarget) const {
 // CHECK-NEXT:    PredicateBitset Features;
 // CHECK-NEXT:    if (Subtarget->hasA())
-// CHECK-NEXT:      Features[Feature_HasABit] = 1;
+// CHECK-NEXT:      Features.set(Feature_HasABit);
 // CHECK-NEXT:    if (Subtarget->hasB())
-// CHECK-NEXT:      Features[Feature_HasBBit] = 1;
+// CHECK-NEXT:      Features.set(Feature_HasBBit);
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 
@@ -106,7 +106,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  computeAvailableFunctionFeatures(const MyTargetSubtarget *Subtarget, const MachineFunction *MF) const {
 // CHECK-NEXT:    PredicateBitset Features;
 // CHECK-NEXT:    if (Subtarget->hasC())
-// CHECK-NEXT:      Features[Feature_HasCBit] = 1;
+// CHECK-NEXT:      Features.set(Feature_HasCBit);
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64 %s -verify -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64 %s -verify -emit-llvm -o - -Wno-c99-designator | FileCheck %s
 // expected-no-diagnostics
 
 // Make sure we don't enter an infinite loop (rdar://21942503)

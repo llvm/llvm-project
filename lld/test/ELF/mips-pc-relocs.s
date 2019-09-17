@@ -5,8 +5,13 @@
 # RUN:         -mcpu=mips32r6 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mcpu=mips32r6 %S/Inputs/mips-dynamic.s -o %t2.o
-# RUN: ld.lld %t1.o %t2.o -o %t.exe
-# RUN: llvm-objdump -mcpu=mips32r6 -d -t -s --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x10000; .text ALIGN(0x10000) : { *(.text) } \
+# RUN:         . = 0x30000; .data                : { *(.data) } \
+# RUN:       }" > %t.script
+# RUN: ld.lld %t1.o %t2.o -script %t.script -o %t.exe
+# RUN: llvm-objdump -mcpu=mips32r6 -d -t -s --no-show-raw-insn %t.exe \
+# RUN:   | FileCheck %s
 
   .text
   .globl  __start
@@ -25,17 +30,17 @@ __start:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:    20000:       lwpc    $6, 32
-#                                      ^-- (0x20020-0x20000)>>2
+#                                         ^-- (0x20020-0x20000)>>2
 # CHECK-NEXT:    20004:       beqc    $5, $6, 28
-#                                      ^-- (0x20020-4-0x20004)>>2
+#                                             ^-- (0x20020-4-0x20004)>>2
 # CHECK-NEXT:    20008:       beqzc   $9, 24
-#                                      ^-- (0x20020-4-0x20008)>>2
+#                                         ^-- (0x20020-4-0x20008)>>2
 # CHECK-NEXT:    2000c:       bc      20
-#                                      ^-- (0x20020-4-0x2000c)>>2
+#                                     ^-- (0x20020-4-0x2000c)>>2
 # CHECK-NEXT:    20010:       aluipc  $2, 0
-#                                      ^-- %hi(0x20020-0x20010)
+#                                         ^-- %hi(0x20020-0x20010)
 # CHECK-NEXT:    20014:       addiu   $2, $2, 12
-#                                      ^-- %lo(0x20020-0x20014)
+#                                             ^-- %lo(0x20020-0x20014)
 
 # CHECK: Contents of section .data:
 # CHECK-NEXT: 30000 ffff0028 00000000 00000000 00000000

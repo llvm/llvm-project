@@ -912,6 +912,12 @@ void IfConverter::AnalyzeBranches(BBInfo &BBI) {
   BBI.BrCond.clear();
   BBI.IsBrAnalyzable =
       !TII->analyzeBranch(*BBI.BB, BBI.TrueBB, BBI.FalseBB, BBI.BrCond);
+  if (!BBI.IsBrAnalyzable) {
+    BBI.TrueBB = nullptr;
+    BBI.FalseBB = nullptr;
+    BBI.BrCond.clear();
+  }
+
   SmallVector<MachineOperand, 4> RevCond(BBI.BrCond.begin(), BBI.BrCond.end());
   BBI.IsBrReversible = (RevCond.size() == 0) ||
       !TII->reverseBranchCondition(RevCond);
@@ -1758,9 +1764,15 @@ bool IfConverter::IfConvertDiamondCommon(
   if (!BBI1->IsBrAnalyzable)
     verifySameBranchInstructions(&MBB1, &MBB2);
 #endif
-  BBI1->NonPredSize -= TII->removeBranch(*BBI1->BB);
-  // Remove duplicated instructions.
+  // Remove duplicated instructions from the tail of MBB1: any branch
+  // instructions, and the common instructions counted by NumDups2.
   DI1 = MBB1.end();
+  while (DI1 != MBB1.begin()) {
+    MachineBasicBlock::iterator Prev = std::prev(DI1);
+    if (!Prev->isBranch() && !Prev->isDebugInstr())
+      break;
+    DI1 = Prev;
+  }
   for (unsigned i = 0; i != NumDups2; ) {
     // NumDups2 only counted non-dbg_value instructions, so this won't
     // run off the head of the list.

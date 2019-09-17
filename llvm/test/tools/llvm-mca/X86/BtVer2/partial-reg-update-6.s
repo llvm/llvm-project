@@ -13,11 +13,11 @@ lzcnt 2(%rsp), %cx
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      4500
-# CHECK-NEXT: Total Cycles:      7504
-# CHECK-NEXT: Total uOps:        6000
+# CHECK-NEXT: Total Cycles:      7503
+# CHECK-NEXT: Total uOps:        4500
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.80
+# CHECK-NEXT: uOps Per Cycle:    0.60
 # CHECK-NEXT: IPC:               0.60
 # CHECK-NEXT: Block RThroughput: 2.0
 
@@ -30,7 +30,7 @@ lzcnt 2(%rsp), %cx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      3     1.00                        imull	%edx, %ecx
+# CHECK-NEXT:  1      3     1.00                        imull	%edx, %ecx
 # CHECK-NEXT:  1      4     1.00    *                   lzcntw	(%rsp), %cx
 # CHECK-NEXT:  1      4     1.00    *                   lzcntw	2(%rsp), %cx
 
@@ -61,18 +61,18 @@ lzcnt 2(%rsp), %cx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -      -      -     lzcntw	2(%rsp), %cx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    .    .  .   imull	%edx, %ecx
-# CHECK-NEXT: [0,1]     .DeeeeER  .    .  .   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [0,2]     .D=eeeeER .    .  .   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [1,0]     . D====eeeER   .  .   imull	%edx, %ecx
-# CHECK-NEXT: [1,1]     .  D===eeeeER  .  .   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [1,2]     .  D====eeeeER .  .   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [2,0]     .   D=======eeeER .   imull	%edx, %ecx
-# CHECK-NEXT: [2,1]     .    D======eeeeER.   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [2,2]     .    D=======eeeeER   lzcntw	2(%rsp), %cx
+# CHECK:      [0,0]     DeeeER    .    . .   imull	%edx, %ecx
+# CHECK-NEXT: [0,1]     DeeeeER   .    . .   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [0,2]     .DeeeeER  .    . .   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [1,0]     .D====eeeER    . .   imull	%edx, %ecx
+# CHECK-NEXT: [1,1]     . D===eeeeER   . .   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [1,2]     . D====eeeeER  . .   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [2,0]     .  D=======eeeER .   imull	%edx, %ecx
+# CHECK-NEXT: [2,1]     .  D=======eeeeER.   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [2,2]     .   D=======eeeeER   lzcntw	2(%rsp), %cx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -82,5 +82,5 @@ lzcnt 2(%rsp), %cx
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     4.7    0.3    0.0       imull	%edx, %ecx
-# CHECK-NEXT: 1.     3     4.0    0.3    0.0       lzcntw	(%rsp), %cx
-# CHECK-NEXT: 2.     3     5.0    0.0    0.0       lzcntw	2(%rsp), %cx
+# CHECK-NEXT: 1.     3     4.3    0.0    0.0       lzcntw	(%rsp), %cx
+# CHECK-NEXT: 2.     3     4.7    0.0    0.0       lzcntw	2(%rsp), %cx

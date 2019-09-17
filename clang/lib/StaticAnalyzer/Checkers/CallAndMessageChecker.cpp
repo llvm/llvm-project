@@ -49,7 +49,7 @@ class CallAndMessageChecker
 
 public:
   DefaultBool Check_CallAndMessageUnInitRefArg;
-  CheckName CheckName_CallAndMessageUnInitRefArg;
+  CheckerNameRef CheckName_CallAndMessageUnInitRefArg;
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
   void checkPreStmt(const CXXDeleteExpr *DE, CheckerContext &C) const;
@@ -95,7 +95,7 @@ void CallAndMessageChecker::emitBadCall(BugType *BT, CheckerContext &C,
   if (!N)
     return;
 
-  auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
   if (BadE) {
     R->addRange(BadE->getSourceRange());
     if (BadE->isGLValue())
@@ -175,7 +175,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     if (PSV.isUndef()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         LazyInit_BT(BD, BT);
-        auto R = std::make_unique<BugReport>(*BT, Os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(*BT, Os.str(), N);
         R->addRange(ArgRange);
         if (ArgEx)
           bugreporter::trackExpressionValue(N, ArgEx, *R);
@@ -252,7 +252,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
       SmallString<200> Buf;
       llvm::raw_svector_ostream Os(Buf);
       describeUninitializedArgumentInCall(Call, ArgumentNumber, Os);
-      auto R = std::make_unique<BugReport>(*BT, Os.str(), N);
+      auto R = std::make_unique<PathSensitiveBugReport>(*BT, Os.str(), N);
 
       R->addRange(ArgRange);
       if (ArgEx)
@@ -295,7 +295,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
         }
 
         // Generate a report for this bug.
-        auto R = std::make_unique<BugReport>(*BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
         R->addRange(ArgRange);
 
         if (ArgEx)
@@ -358,7 +358,7 @@ void CallAndMessageChecker::checkPreStmt(const CXXDeleteExpr *DE,
     else
       Desc = "Argument to 'delete' is uninitialized";
     BugType *BT = BT_cxx_delete_undef.get();
-    auto R = std::make_unique<BugReport>(*BT, Desc, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Desc, N);
     bugreporter::trackExpressionValue(N, DE, *R);
     C.emitReport(std::move(R));
     return;
@@ -420,8 +420,8 @@ void CallAndMessageChecker::checkPreCall(const CallEvent &Call,
          << (Params == 1 ? "" : "s") << " is called with fewer ("
          << Call.getNumArgs() << ")";
 
-      C.emitReport(
-          std::make_unique<BugReport>(*BT_call_few_args, os.str(), N));
+      C.emitReport(std::make_unique<PathSensitiveBugReport>(*BT_call_few_args,
+                                                            os.str(), N));
     }
   }
 
@@ -482,7 +482,7 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       }
       assert(BT && "Unknown message kind.");
 
-      auto R = std::make_unique<BugReport>(*BT, BT->getName(), N);
+      auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
       const ObjCMessageExpr *ME = msg.getOriginExpr();
       R->addRange(ME->getReceiverRange());
 
@@ -525,7 +525,8 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
     os << "' that will be garbage";
   }
 
-  auto report = std::make_unique<BugReport>(*BT_msg_ret, os.str(), N);
+  auto report =
+      std::make_unique<PathSensitiveBugReport>(*BT_msg_ret, os.str(), N);
   report->addRange(ME->getReceiverRange());
   // FIXME: This won't track "self" in messages to super.
   if (const Expr *receiver = ME->getInstanceReceiver()) {
@@ -611,7 +612,7 @@ bool ento::shouldRegisterCallAndMessageChecker(const LangOptions &LO) {
 void ento::registerCallAndMessageUnInitRefArg(CheckerManager &mgr) {
   CallAndMessageChecker *Checker = mgr.getChecker<CallAndMessageChecker>();
   Checker->Check_CallAndMessageUnInitRefArg = true;
-  Checker->CheckName_CallAndMessageUnInitRefArg = mgr.getCurrentCheckName();
+  Checker->CheckName_CallAndMessageUnInitRefArg = mgr.getCurrentCheckerName();
 }
 
 bool ento::shouldRegisterCallAndMessageUnInitRefArg(const LangOptions &LO) {

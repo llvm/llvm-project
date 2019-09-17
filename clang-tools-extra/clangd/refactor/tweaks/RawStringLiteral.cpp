@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "ClangdUnit.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTContext.h"
@@ -88,10 +88,12 @@ bool RawStringLiteral::prepare(const Selection &Inputs) {
 }
 
 Expected<Tweak::Effect> RawStringLiteral::apply(const Selection &Inputs) {
-  return Effect::applyEdit(tooling::Replacements(
+  auto &SM = Inputs.AST.getSourceManager();
+  auto Reps = tooling::Replacements(
       tooling::Replacement(Inputs.AST.getSourceManager(), Str,
                            ("R\"(" + Str->getBytes() + ")\"").str(),
-                           Inputs.AST.getASTContext().getLangOpts())));
+                           Inputs.AST.getASTContext().getLangOpts()));
+  return Effect::mainFileEdit(SM, std::move(Reps));
 }
 
 } // namespace

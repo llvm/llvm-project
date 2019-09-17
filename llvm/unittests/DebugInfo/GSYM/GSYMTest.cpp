@@ -8,12 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
+#include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
-#include "llvm/Testing/Support/Error.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Endian.h"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -71,7 +74,8 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_EQ(FI.size(), Size);
   const uint32_t FileIdx = 1;
   const uint32_t Line = 12;
-  FI.Lines.push_back(LineEntry(StartAddr, FileIdx, Line));
+  FI.OptLineTable = LineTable();
+  FI.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line));
   EXPECT_TRUE(FI.hasRichInfo());
   FI.clear();
   EXPECT_FALSE(FI.isValid());
@@ -106,13 +110,15 @@ TEST(GSYMTest, TestFunctionInfo) {
   // best version of a function info.
   FunctionInfo FISymtab(StartAddr, Size, NameOffset);
   FunctionInfo FIWithLines(StartAddr, Size, NameOffset);
-  FIWithLines.Lines.push_back(LineEntry(StartAddr, FileIdx, Line));
+  FIWithLines.OptLineTable = LineTable();
+  FIWithLines.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line));
   // Test that a FunctionInfo with just a name and size is less than one
   // that has name, size and any number of line table entries
   EXPECT_LT(FISymtab, FIWithLines);
 
   FunctionInfo FIWithLinesAndInline = FIWithLines;
-  FIWithLinesAndInline.Inline.Ranges.insert(
+  FIWithLinesAndInline.Inline = InlineInfo();
+  FIWithLinesAndInline.Inline->Ranges.insert(
       AddressRange(StartAddr, StartAddr + 0x10));
   // Test that a FunctionInfo with name, size, and line entries is less than
   // the same one with valid inline info
@@ -121,14 +127,75 @@ TEST(GSYMTest, TestFunctionInfo) {
   // Test if we have an entry with lines and one with more lines for the same
   // range, the ones with more lines is greater than the one with less.
   FunctionInfo FIWithMoreLines = FIWithLines;
-  FIWithMoreLines.Lines.push_back(LineEntry(StartAddr, FileIdx, Line + 5));
+  FIWithMoreLines.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line+5));
   EXPECT_LT(FIWithLines, FIWithMoreLines);
 
   // Test that if we have the same number of lines we compare the line entries
-  // in the FunctionInfo.Lines vector.
+  // in the FunctionInfo.OptLineTable.Lines vector.
   FunctionInfo FIWithLinesWithHigherAddress = FIWithLines;
-  FIWithLinesWithHigherAddress.Lines[0].Addr += 0x10;
+  FIWithLinesWithHigherAddress.OptLineTable->get(0).Addr += 0x10;
   EXPECT_LT(FIWithLines, FIWithLinesWithHigherAddress);
+}
+
+void checkError(ArrayRef<std::string> ExpectedMsgs, Error Err) {
+  ASSERT_TRUE(Err.operator bool());
+  size_t WhichMsg = 0;
+  Error Remaining =
+      handleErrors(std::move(Err), [&](const ErrorInfoBase &Actual) {
+        ASSERT_LT(WhichMsg, ExpectedMsgs.size());
+        // Use .str(), because googletest doesn't visualise a StringRef
+        // properly.
+        EXPECT_EQ(Actual.message(), ExpectedMsgs[WhichMsg++]);
+      });
+  EXPECT_EQ(WhichMsg, ExpectedMsgs.size());
+  EXPECT_FALSE(Remaining);
+}
+
+void checkError(std::string ExpectedMsg, Error Err) {
+  checkError(ArrayRef<std::string>{ExpectedMsg}, std::move(Err));
+}
+
+static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
+                                       const InlineInfo &Inline) {
+  // Test encoding and decoding InlineInfo objects
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = Inline.Ranges[0].Start;
+  llvm::Error Err = Inline.encode(FW, BaseAddr);
+  ASSERT_FALSE(Err);
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
+  // Make sure decoding succeeded.
+  ASSERT_TRUE((bool)Decoded);
+  // Make sure decoded object is the same as the one we encoded.
+  EXPECT_EQ(Inline, Decoded.get());
+}
+
+static void TestInlineInfoDecodeError(llvm::support::endianness ByteOrder,
+                                      std::string Bytes,
+                                      const uint64_t BaseAddr,
+                                      std::string ExpectedErrorMsg) {
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  llvm::Expected<InlineInfo> Decoded = InlineInfo::decode(Data, BaseAddr);
+  // Make sure decoding fails.
+  ASSERT_FALSE((bool)Decoded);
+  // Make sure decoded object is the same as the one we encoded.
+  checkError(ExpectedErrorMsg, Decoded.takeError());
+}
+
+static void TestInlineInfoEncodeError(llvm::support::endianness ByteOrder,
+                                      const InlineInfo &Inline,
+                                      std::string ExpectedErrorMsg) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = Inline.Ranges.empty() ? 0 : Inline.Ranges[0].Start;
+  llvm::Error Err = Inline.encode(FW, BaseAddr);
+  checkError(ExpectedErrorMsg, std::move(Err));
 }
 
 TEST(GSYMTest, TestInlineInfo) {
@@ -223,6 +290,69 @@ TEST(GSYMTest, TestInlineInfo) {
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub2);
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
+
+  // Test encoding and decoding InlineInfo objects
+  TestInlineInfoEncodeDecode(llvm::support::little, Root);
+  TestInlineInfoEncodeDecode(llvm::support::big, Root);
+}
+
+TEST(GSYMTest, TestInlineInfoEncodeErrors) {
+  // Test InlineInfo encoding errors.
+
+  // Test that we get an error when trying to encode an InlineInfo object
+  // that has no ranges.
+  InlineInfo Empty;
+  std::string EmptyErr("attempted to encode invalid InlineInfo object");
+  TestInlineInfoEncodeError(llvm::support::little, Empty, EmptyErr);
+  TestInlineInfoEncodeError(llvm::support::big, Empty, EmptyErr);
+
+  // Verify that we get an error trying to encode an InlineInfo object that has
+  // a child InlineInfo that has no ranges.
+  InlineInfo ContainsEmpty;
+  ContainsEmpty.Ranges.insert({0x100,200});
+  ContainsEmpty.Children.push_back(Empty);
+  TestInlineInfoEncodeError(llvm::support::little, ContainsEmpty, EmptyErr);
+  TestInlineInfoEncodeError(llvm::support::big, ContainsEmpty, EmptyErr);
+
+  // Verify that we get an error trying to encode an InlineInfo object that has
+  // a child whose address range is not contained in the parent address range.
+  InlineInfo ChildNotContained;
+  std::string ChildNotContainedErr("child range not contained in parent");
+  ChildNotContained.Ranges.insert({0x100,200});
+  InlineInfo ChildNotContainedChild;
+  ChildNotContainedChild.Ranges.insert({0x200,300});
+  ChildNotContained.Children.push_back(ChildNotContainedChild);
+  TestInlineInfoEncodeError(llvm::support::little, ChildNotContained,
+                            ChildNotContainedErr);
+  TestInlineInfoEncodeError(llvm::support::big, ChildNotContained,
+                            ChildNotContainedErr);
+
+}
+
+TEST(GSYMTest, TestInlineInfoDecodeErrors) {
+  // Test decoding InlineInfo objects that ensure we report an appropriate
+  // error message.
+  const llvm::support::endianness ByteOrder = llvm::support::little;
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = 0x100;
+  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000000: missing InlineInfo address ranges data");
+  AddressRanges Ranges;
+  Ranges.insert({BaseAddr, BaseAddr+0x100});
+  Ranges.encode(FW, BaseAddr);
+  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000004: missing InlineInfo uint8_t indicating children");
+  FW.writeU8(0);
+  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000005: missing InlineInfo uint32_t for name");
+  FW.writeU32(0);
+  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000009: missing ULEB128 for InlineInfo call file");
+  FW.writeU8(0);
+  TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x0000000a: missing ULEB128 for InlineInfo call line");
 }
 
 TEST(GSYMTest, TestLineEntry) {
@@ -331,6 +461,18 @@ TEST(GSYMTest, TestRanges) {
   EXPECT_FALSE(Ranges.contains(0x5000 + 1));
   EXPECT_FALSE(Ranges.contains(UINT64_MAX));
 
+  EXPECT_FALSE(Ranges.contains(AddressRange()));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000-1, 0x1000)));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000, 0x1000)));
+  EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x1000+1)));
+  EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x2000)));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000, 0x2001)));
+  EXPECT_TRUE(Ranges.contains(AddressRange(0x2000, 0x3000)));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x2000, 0x3001)));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x3000, 0x3001)));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x1500, 0x4500)));
+  EXPECT_FALSE(Ranges.contains(AddressRange(0x5000, 0x5001)));
+
   // Verify that intersecting ranges get combined
   Ranges.clear();
   Ranges.insert(AddressRange(0x1100, 0x1F00));
@@ -378,4 +520,272 @@ TEST(GSYMTest, TestStringTable) {
   EXPECT_EQ(StrTab.getString(12), "");
   // Test pointing to past end gets empty string.
   EXPECT_EQ(StrTab.getString(13), "");
+}
+
+static void TestFileWriterHelper(llvm::support::endianness ByteOrder) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const int64_t MinSLEB = INT64_MIN;
+  const int64_t MaxSLEB = INT64_MAX;
+  const uint64_t MinULEB = 0;
+  const uint64_t MaxULEB = UINT64_MAX;
+  const uint8_t U8 = 0x10;
+  const uint16_t U16 = 0x1122;
+  const uint32_t U32 = 0x12345678;
+  const uint64_t U64 = 0x33445566778899aa;
+  const char *Hello = "hello";
+  FW.writeU8(U8);
+  FW.writeU16(U16);
+  FW.writeU32(U32);
+  FW.writeU64(U64);
+  FW.alignTo(16);
+  const off_t FixupOffset = FW.tell();
+  FW.writeU32(0);
+  FW.writeSLEB(MinSLEB);
+  FW.writeSLEB(MaxSLEB);
+  FW.writeULEB(MinULEB);
+  FW.writeULEB(MaxULEB);
+  FW.writeNullTerminated(Hello);
+  // Test Seek, Tell using Fixup32.
+  FW.fixup32(U32, FixupOffset);
+
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  uint64_t Offset = 0;
+  EXPECT_EQ(Data.getU8(&Offset), U8);
+  EXPECT_EQ(Data.getU16(&Offset), U16);
+  EXPECT_EQ(Data.getU32(&Offset), U32);
+  EXPECT_EQ(Data.getU64(&Offset), U64);
+  Offset = alignTo(Offset, 16);
+  EXPECT_EQ(Data.getU32(&Offset), U32);
+  EXPECT_EQ(Data.getSLEB128(&Offset), MinSLEB);
+  EXPECT_EQ(Data.getSLEB128(&Offset), MaxSLEB);
+  EXPECT_EQ(Data.getULEB128(&Offset), MinULEB);
+  EXPECT_EQ(Data.getULEB128(&Offset), MaxULEB);
+  EXPECT_EQ(Data.getCStrRef(&Offset), StringRef(Hello));
+}
+
+TEST(GSYMTest, TestFileWriter) {
+  TestFileWriterHelper(llvm::support::little);
+  TestFileWriterHelper(llvm::support::big);
+}
+
+TEST(GSYMTest, TestAddressRangeEncodeDecode) {
+  // Test encoding and decoding AddressRange objects. AddressRange objects
+  // are always stored as offsets from the a base address. The base address
+  // is the FunctionInfo's base address for function level ranges, and is
+  // the base address of the parent range for subranges.
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = 0x1000;
+  const AddressRange Range1(0x1000, 0x1010);
+  const AddressRange Range2(0x1020, 0x1030);
+  Range1.encode(FW, BaseAddr);
+  Range2.encode(FW, BaseAddr);
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+
+  AddressRange DecodedRange1, DecodedRange2;
+  uint64_t Offset = 0;
+  DecodedRange1.decode(Data, BaseAddr, Offset);
+  DecodedRange2.decode(Data, BaseAddr, Offset);
+  EXPECT_EQ(Range1, DecodedRange1);
+  EXPECT_EQ(Range2, DecodedRange2);
+}
+
+static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
+                                               const uint64_t BaseAddr) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  Ranges.encode(FW, BaseAddr);
+
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+
+  AddressRanges DecodedRanges;
+  uint64_t Offset = 0;
+  DecodedRanges.decode(Data, BaseAddr, Offset);
+  EXPECT_EQ(Ranges, DecodedRanges);
+}
+
+TEST(GSYMTest, TestAddressRangesEncodeDecode) {
+  // Test encoding and decoding AddressRanges. AddressRanges objects contain
+  // ranges that are stored as offsets from the a base address. The base address
+  // is the FunctionInfo's base address for function level ranges, and is the
+  // base address of the parent range for subranges.
+  const uint64_t BaseAddr = 0x1000;
+
+  // Test encoding and decoding with no ranges.
+  AddressRanges Ranges;
+  TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
+
+  // Test encoding and decoding with 1 range.
+  Ranges.insert(AddressRange(0x1000, 0x1010));
+  TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
+
+  // Test encoding and decoding with multiple ranges.
+  Ranges.insert(AddressRange(0x1020, 0x1030));
+  Ranges.insert(AddressRange(0x1050, 0x1070));
+  TestAddressRangeEncodeDecodeHelper(Ranges, BaseAddr);
+}
+
+static void TestLineTableHelper(llvm::support::endianness ByteOrder,
+                                const LineTable &LT) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = LT[0].Addr;
+  llvm::Error Err = LT.encode(FW, BaseAddr);
+  ASSERT_FALSE(Err);
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
+  // Make sure decoding succeeded.
+  ASSERT_TRUE((bool)Decoded);
+  // Make sure decoded object is the same as the one we encoded.
+  EXPECT_EQ(LT, Decoded.get());
+}
+
+TEST(GSYMTest, TestLineTable) {
+  const uint64_t StartAddr = 0x1000;
+  const uint32_t FileIdx = 1;
+  LineTable LT;
+  LineEntry Line0(StartAddr+0x000, FileIdx, 10);
+  LineEntry Line1(StartAddr+0x010, FileIdx, 11);
+  LineEntry Line2(StartAddr+0x100, FileIdx, 1000);
+  ASSERT_TRUE(LT.empty());
+  ASSERT_EQ(LT.size(), (size_t)0);
+  LT.push(Line0);
+  ASSERT_EQ(LT.size(), (size_t)1);
+  LT.push(Line1);
+  LT.push(Line2);
+  LT.push(LineEntry(StartAddr+0x120, FileIdx, 900));
+  LT.push(LineEntry(StartAddr+0x120, FileIdx, 2000));
+  LT.push(LineEntry(StartAddr+0x121, FileIdx, 2001));
+  LT.push(LineEntry(StartAddr+0x122, FileIdx, 2002));
+  LT.push(LineEntry(StartAddr+0x123, FileIdx, 2003));
+  ASSERT_FALSE(LT.empty());
+  ASSERT_EQ(LT.size(), (size_t)8);
+  // Test operator[].
+  ASSERT_EQ(LT[0], Line0);
+  ASSERT_EQ(LT[1], Line1);
+  ASSERT_EQ(LT[2], Line2);
+
+  // Test encoding and decoding line tables.
+  TestLineTableHelper(llvm::support::little, LT);
+  TestLineTableHelper(llvm::support::big, LT);
+
+  // Verify the clear method works as expected.
+  LT.clear();
+  ASSERT_TRUE(LT.empty());
+  ASSERT_EQ(LT.size(), (size_t)0);
+
+  LineTable LT1;
+  LineTable LT2;
+
+  // Test that two empty line tables are equal and neither are less than
+  // each other.
+  ASSERT_EQ(LT1, LT2);
+  ASSERT_FALSE(LT1 < LT2);
+  ASSERT_FALSE(LT2 < LT2);
+
+  // Test that a line table with less number of line entries is less than a
+  // line table with more line entries and that they are not equal.
+  LT2.push(Line0);
+  ASSERT_LT(LT1, LT2);
+  ASSERT_NE(LT1, LT2);
+
+  // Test that two line tables with the same entries are equal.
+  LT1.push(Line0);
+  ASSERT_EQ(LT1, LT2);
+  ASSERT_FALSE(LT1 < LT2);
+  ASSERT_FALSE(LT2 < LT2);
+}
+
+static void TestLineTableDecodeError(llvm::support::endianness ByteOrder,
+                                     std::string Bytes,
+                                     const uint64_t BaseAddr,
+                                     std::string ExpectedErrorMsg) {
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  llvm::Expected<LineTable> Decoded = LineTable::decode(Data, BaseAddr);
+  // Make sure decoding fails.
+  ASSERT_FALSE((bool)Decoded);
+  // Make sure decoded object is the same as the one we encoded.
+  checkError(ExpectedErrorMsg, Decoded.takeError());
+}
+
+TEST(GSYMTest, TestLineTableDecodeErrors) {
+  // Test decoding InlineInfo objects that ensure we report an appropriate
+  // error message.
+  const llvm::support::endianness ByteOrder = llvm::support::little;
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = 0x100;
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000000: missing LineTable MinDelta");
+  FW.writeU8(1); // MinDelta (ULEB)
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000001: missing LineTable MaxDelta");
+  FW.writeU8(10); // MaxDelta (ULEB)
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000002: missing LineTable FirstLine");
+  FW.writeU8(20); // FirstLine (ULEB)
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000003: EOF found before EndSequence");
+  // Test a SetFile with the argument missing from the stream
+  FW.writeU8(1); // SetFile opcode (uint8_t)
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000004: EOF found before SetFile value");
+  FW.writeU8(5); // SetFile value as index (ULEB)
+  // Test a AdvancePC with the argument missing from the stream
+  FW.writeU8(2); // AdvancePC opcode (uint8_t)
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000006: EOF found before AdvancePC value");
+  FW.writeU8(20); // AdvancePC value as offset (ULEB)
+  // Test a AdvancePC with the argument missing from the stream
+  FW.writeU8(3); // AdvanceLine opcode (uint8_t)
+  TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000008: EOF found before AdvanceLine value");
+  FW.writeU8(20); // AdvanceLine value as offset (LLEB)
+}
+
+TEST(GSYMTest, TestLineTableEncodeErrors) {
+  const uint64_t BaseAddr = 0x1000;
+  const uint32_t FileIdx = 1;
+  const llvm::support::endianness ByteOrder = llvm::support::little;
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  LineTable LT;
+  checkError("attempted to encode invalid LineTable object",
+             LT.encode(FW, BaseAddr));
+
+  // Try to encode a line table where a line entry has an address that is less
+  // than BaseAddr and verify we get an appropriate error.
+  LineEntry Line0(BaseAddr+0x000, FileIdx, 10);
+  LineEntry Line1(BaseAddr+0x010, FileIdx, 11);
+  LT.push(Line0);
+  LT.push(Line1);
+  checkError("LineEntry has address 0x1000 which is less than the function "
+             "start address 0x1010", LT.encode(FW, BaseAddr+0x10));
+  LT.clear();
+
+  // Try to encode a line table where a line entries  has an address that is less
+  // than BaseAddr and verify we get an appropriate error.
+  LT.push(Line1);
+  LT.push(Line0);
+  checkError("LineEntry in LineTable not in ascending order",
+             LT.encode(FW, BaseAddr));
+  LT.clear();
 }

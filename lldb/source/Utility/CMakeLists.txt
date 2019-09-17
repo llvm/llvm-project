@@ -15,9 +15,9 @@ add_lldb_library(lldbUtility
   Args.cpp
   Baton.cpp
   Broadcaster.cpp
+  CompletionRequest.cpp
   Connection.cpp
   ConstString.cpp
-  CompletionRequest.cpp
   DataBufferHeap.cpp
   DataBufferLLVM.cpp
   DataEncoder.cpp
@@ -25,6 +25,7 @@ add_lldb_library(lldbUtility
   Environment.cpp
   Event.cpp
   FileSpec.cpp
+  GDBRemote.cpp
   IOObject.cpp
   JSON.cpp
   LLDBAssert.cpp
@@ -44,7 +45,6 @@ add_lldb_library(lldbUtility
   Status.cpp
   Stream.cpp
   StreamCallback.cpp
-  StreamGDBRemote.cpp
   StreamString.cpp
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
@@ -53,10 +53,10 @@ add_lldb_library(lldbUtility
   StructuredData.cpp
   TildeExpressionResolver.cpp
   Timer.cpp
+  UUID.cpp
+  UriParser.cpp
   UserID.cpp
   UserIDResolver.cpp
-  UriParser.cpp
-  UUID.cpp
   VASprintf.cpp
   VMRange.cpp
 

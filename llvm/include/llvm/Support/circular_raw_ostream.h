@@ -122,6 +122,10 @@ namespace llvm {
       delete[] BufferArray;
     }
 
+    bool is_displayed() const override {
+      return TheStream->is_displayed();
+    }
+
     /// setStream - Tell the circular_raw_ostream to output a
     /// different stream.  "Owns" tells circular_raw_ostream whether
     /// it should take responsibility for managing the underlying

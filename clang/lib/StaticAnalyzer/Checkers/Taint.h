@@ -91,7 +91,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 };
 
 } // namespace taint

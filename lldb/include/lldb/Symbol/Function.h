@@ -246,10 +246,22 @@ private:
 
 class Function;
 
+/// \class CallSiteParameter Function.h "lldb/Symbol/Function.h"
+///
+/// Represent the locations of a parameter at a call site, both in the caller
+/// and in the callee.
+struct CallSiteParameter {
+  DWARFExpression LocationInCallee;
+  DWARFExpression LocationInCaller;
+};
+
+/// A vector of \c CallSiteParameter.
+using CallSiteParameterArray = llvm::SmallVector<CallSiteParameter, 0>;
+
 /// \class CallEdge Function.h "lldb/Symbol/Function.h"
 ///
 /// Represent a call made within a Function. This can be used to find a path
-/// in the call graph between two functions.
+/// in the call graph between two functions, or to evaluate DW_OP_entry_value.
 class CallEdge {
 public:
   /// Construct a call edge using a symbol name to identify the calling
@@ -259,7 +271,8 @@ public:
   /// TODO: A symbol name may not be globally unique. To disambiguate ODR
   /// conflicts, it's necessary to determine the \c Target a call edge is
   /// associated with before resolving it.
-  CallEdge(const char *symbol_name, lldb::addr_t return_pc);
+  CallEdge(const char *symbol_name, lldb::addr_t return_pc,
+           CallSiteParameterArray parameters);
 
   CallEdge(CallEdge &&) = default;
   CallEdge &operator=(CallEdge &&) = default;
@@ -279,6 +292,9 @@ public:
   /// offset.
   lldb::addr_t GetUnresolvedReturnPCAddress() const { return return_pc; }
 
+  /// Get the call site parameters available at this call edge.
+  llvm::ArrayRef<CallSiteParameter> GetCallSiteParameters() const;
+
 private:
   void ParseSymbolFileAndResolve(ModuleList &images);
 
@@ -293,6 +309,8 @@ private:
   /// PC offset. Adding this PC offset to the function's base load address
   /// gives the return PC for the call.
   lldb::addr_t return_pc;
+
+  CallSiteParameterArray parameters;
 
   /// Whether or not an attempt was made to find the callee's definition.
   bool resolved;
@@ -401,6 +419,11 @@ public:
   /// Get the outgoing tail-calling edges from this function. If none exist,
   /// return None.
   llvm::MutableArrayRef<CallEdge> GetTailCallingEdges();
+
+  /// Get the outgoing call edge from this function which has the given return
+  /// address \p return_pc, or return nullptr. Note that this will not return a
+  /// tail-calling edge.
+  CallEdge *GetCallEdgeForReturnAddress(lldb::addr_t return_pc, Target &target);
 
   /// Get accessor for the block list.
   ///
@@ -564,6 +587,8 @@ protected:
   uint32_t
       m_prologue_byte_size; ///< Compute the prologue size once and cache it
 
+  // TODO: Use a layer of indirection to point to call edges, to save space
+  // when call info hasn't been parsed.
   bool m_call_edges_resolved = false; ///< Whether call site info has been
                                       ///  parsed.
   std::vector<CallEdge> m_call_edges; ///< Outgoing call edges.

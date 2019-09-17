@@ -137,17 +137,12 @@ protected:
                              RemoteSymbolId Id)
       : C(C), Id(Id) {}
 
-    RemoteSymbolMaterializer(const RemoteSymbolMaterializer &Other)
-      : C(Other.C), Id(Other.Id) {
-      // FIXME: This is a horrible, auto_ptr-style, copy-as-move operation.
-      //        It should be removed as soon as LLVM has C++14's generalized
-      //        lambda capture (at which point the materializer can be moved
-      //        into the lambda in remoteToJITSymbol below).
-      const_cast<RemoteSymbolMaterializer&>(Other).Id = 0;
+    RemoteSymbolMaterializer(RemoteSymbolMaterializer &&Other)
+        : C(Other.C), Id(Other.Id) {
+      Other.Id = 0;
     }
 
-    RemoteSymbolMaterializer&
-    operator=(const RemoteSymbolMaterializer&) = delete;
+    RemoteSymbolMaterializer &operator=(RemoteSymbolMaterializer &&) = delete;
 
     /// Release the remote symbol.
     ~RemoteSymbolMaterializer() {
@@ -218,9 +213,9 @@ protected:
         return nullptr;
       // else...
       RemoteSymbolMaterializer RSM(*this, RemoteSym.first);
-      auto Sym =
-        JITSymbol([RSM]() mutable { return RSM.materialize(); },
-                  RemoteSym.second);
+      auto Sym = JITSymbol(
+          [RSM = std::move(RSM)]() mutable { return RSM.materialize(); },
+          RemoteSym.second);
       return Sym;
     } else
       return RemoteSymOrErr.takeError();

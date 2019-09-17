@@ -29,6 +29,11 @@ ELF Improvements
 COFF Improvements
 -----------------
 
+* /linkrepro: now takes the filename of the tar archive it writes, instead
+  of the name of a directory that a file called "repro.tar" is created in,
+  matching the behavior of ELF lld.
+* The new `/lldignoreenv` flag makes lld-link ignore environment variables
+  like `%LIB%`.
 * ...
 
 MinGW Improvements
@@ -44,4 +49,7 @@ MachO Improvements
 WebAssembly Improvements
 ------------------------
 
-* ...
+* `__data_end` and `__heap_base` are no longer exported by default,
+  as it's best to keep them internal when possible. They can be
+  explicitly exported with `--export=__data_end` and
+  `--export=__heap_base`, respectively.

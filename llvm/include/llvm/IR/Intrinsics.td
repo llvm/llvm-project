@@ -622,6 +622,14 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
 
+  def int_experimental_constrained_fptosi : Intrinsic<[ llvm_anyint_ty ],
+                                                    [ llvm_anyfloat_ty,
+                                                      llvm_metadata_ty ]>;
+
+  def int_experimental_constrained_fptoui : Intrinsic<[ llvm_anyint_ty ],
+                                                    [ llvm_anyfloat_ty,
+                                                      llvm_metadata_ty ]>;
+
   def int_experimental_constrained_fptrunc : Intrinsic<[ llvm_anyfloat_ty ],
                                                        [ llvm_anyfloat_ty,
                                                          llvm_metadata_ty,
@@ -712,7 +720,8 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
 }
-// FIXME: Add intrinsics for fcmp, fptoui and fptosi.
+// FIXME: Add intrinsic for fcmp.
+// FIXME: Consider maybe adding intrinsics for sitofp, uitofp.
 
 //===------------------------- Expect Intrinsics --------------------------===//
 //
@@ -884,6 +893,9 @@ def int_umul_fix : Intrinsic<[llvm_anyint_ty],
 //===------------------- Fixed Point Saturation Arithmetic Intrinsics ----------------===//
 //
 def int_smul_fix_sat : Intrinsic<[llvm_anyint_ty],
+                                 [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                                 [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, ImmArg<2>]>;
+def int_umul_fix_sat : Intrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                                  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, ImmArg<2>]>;
 

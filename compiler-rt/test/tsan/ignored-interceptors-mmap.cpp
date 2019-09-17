@@ -1,7 +1,6 @@
 // RUN: %clangxx_tsan -O0 %s -o %t
 // RUN: not %run %t        2>&1 | FileCheck %s --check-prefix=CHECK-RACE
 // RUN:     %run %t ignore 2>&1 | FileCheck %s --check-prefix=CHECK-IGNORE
-// XFAIL: netbsd
 
 #include <sys/mman.h>
 #include <string.h>
@@ -9,13 +8,6 @@
 #include <atomic>
 
 #include "test.h"
-
-extern "C" {
-void AnnotateIgnoreReadsBegin(const char *f, int l);
-void AnnotateIgnoreReadsEnd(const char *f, int l);
-void AnnotateIgnoreWritesBegin(const char *f, int l);
-void AnnotateIgnoreWritesEnd(const char *f, int l);
-}
 
 // Use atomic to ensure we do not have a race for the pointer value itself.  We
 // only want to check races in the mmap'd memory to isolate the test that mmap

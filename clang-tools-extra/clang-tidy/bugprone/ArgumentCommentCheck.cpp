@@ -24,23 +24,20 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.getLocalOrGlobal("StrictMode", 0) != 0),
-      CommentBoolLiterals(Options.getLocalOrGlobal("CommentBoolLiterals", 0) !=
-                          0),
-      CommentIntegerLiterals(
-          Options.getLocalOrGlobal("CommentIntegerLiterals", 0) != 0),
-      CommentFloatLiterals(
-          Options.getLocalOrGlobal("CommentFloatLiterals", 0) != 0),
-      CommentStringLiterals(
-          Options.getLocalOrGlobal("CommentStringLiterals", 0) != 0),
-      CommentUserDefinedLiterals(
-          Options.getLocalOrGlobal("CommentUserDefinedLiterals", 0) != 0),
-      CommentCharacterLiterals(
-          Options.getLocalOrGlobal("CommentCharacterLiterals", 0) != 0),
-      CommentNullPtrs(Options.getLocalOrGlobal("CommentNullPtrs", 0) != 0),
+      IgnoreSingleArgument(Options.get("IgnoreSingleArgument", 0) != 0),
+      CommentBoolLiterals(Options.get("CommentBoolLiterals", 0) != 0),
+      CommentIntegerLiterals(Options.get("CommentIntegerLiterals", 0) != 0),
+      CommentFloatLiterals(Options.get("CommentFloatLiterals", 0) != 0),
+      CommentStringLiterals(Options.get("CommentStringLiterals", 0) != 0),
+      CommentUserDefinedLiterals(Options.get("CommentUserDefinedLiterals", 0) !=
+                                 0),
+      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", 0) != 0),
+      CommentNullPtrs(Options.get("CommentNullPtrs", 0) != 0),
       IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreSingleArgument", IgnoreSingleArgument);
   Options.store(Opts, "CommentBoolLiterals", CommentBoolLiterals);
   Options.store(Opts, "CommentIntegerLiterals", CommentIntegerLiterals);
   Options.store(Opts, "CommentFloatLiterals", CommentFloatLiterals);
@@ -230,9 +227,11 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
 // Given the argument type and the options determine if we should
 // be adding an argument comment.
 bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
+  Arg = Arg->IgnoreImpCasts();
+  if (isa<UnaryOperator>(Arg))
+    Arg = cast<UnaryOperator>(Arg)->getSubExpr();
   if (Arg->getExprLoc().isMacroID())
     return false;
-  Arg = Arg->IgnoreImpCasts();
   return (CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
          (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
          (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
@@ -252,7 +251,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
   Callee = Callee->getFirstDecl();
   unsigned NumArgs = std::min<unsigned>(Args.size(), Callee->getNumParams());
-  if (NumArgs == 0)
+  if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
   auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
@@ -286,8 +285,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       Comments = getCommentsInRange(Ctx, BeforeArgument);
     } else {
       // Fall back to parsing back from the start of the argument.
-      CharSourceRange ArgsRange = MakeFileCharRange(
-          Args[I]->getBeginLoc(), Args[NumArgs - 1]->getEndLoc());
+      CharSourceRange ArgsRange =
+          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getEndLoc());
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 

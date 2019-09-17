@@ -243,11 +243,9 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     IndexEntry = Index->getFromOffset(*offset_ptr);
   Length = debug_info.getRelocatedValue(4, offset_ptr);
   FormParams.Format = DWARF32;
-  unsigned SizeOfLength = 4;
   if (Length == dwarf::DW_LENGTH_DWARF64) {
     Length = debug_info.getU64(offset_ptr);
     FormParams.Format = DWARF64;
-    SizeOfLength = 8;
   }
   FormParams.Version = debug_info.getU16(offset_ptr);
   if (FormParams.Version >= 5) {
@@ -277,7 +275,8 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   }
   if (isTypeUnit()) {
     TypeHash = debug_info.getU64(offset_ptr);
-    TypeOffset = debug_info.getU32(offset_ptr);
+    TypeOffset =
+        debug_info.getUnsigned(offset_ptr, FormParams.getDwarfOffsetByteSize());
   } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
     DWOId = debug_info.getU64(offset_ptr);
 
@@ -290,7 +289,8 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   bool TypeOffsetOK =
       !isTypeUnit()
           ? true
-          : TypeOffset >= Size && TypeOffset < getLength() + SizeOfLength;
+          : TypeOffset >= Size &&
+                TypeOffset < getLength() + getUnitLengthFieldByteSize();
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
   bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;
@@ -306,16 +306,18 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
 // Parse the rangelist table header, including the optional array of offsets
 // following it (DWARF v5 and later).
 static Expected<DWARFDebugRnglistTable>
-parseRngListTableHeader(DWARFDataExtractor &DA, uint64_t Offset) {
-  // TODO: Support DWARF64
+parseRngListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
+                        DwarfFormat Format) {
   // We are expected to be called with Offset 0 or pointing just past the table
-  // header, which is 12 bytes long for DWARF32.
+  // header. Correct Offset in the latter case so that it points to the start
+  // of the header.
   if (Offset > 0) {
-    if (Offset < 12U)
+    uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Format);
+    if (Offset < HeaderSize)
       return createStringError(errc::invalid_argument, "Did not detect a valid"
-                               " range list table with base = 0x%" PRIx64,
+                               " range list table with base = 0x%" PRIx64 "\n",
                                Offset);
-    Offset -= 12U;
+    Offset -= HeaderSize;
   }
   llvm::DWARFDebugRnglistTable Table;
   if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
@@ -469,8 +471,8 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
       // extracted lazily.
       DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                                   isLittleEndian, 0);
-      auto TableOrError =
-              parseRngListTableHeader(RangesDA, RangeSectionBase);
+      auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase,
+                                                  Header.getFormat());
       if (!TableOrError)
         return createStringError(errc::invalid_argument,
                                  "parsing a range list table: " +
@@ -525,7 +527,8 @@ bool DWARFUnit::parseDWO() {
     DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
     DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                                 isLittleEndian, 0);
-    if (auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase))
+    if (auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase,
+                                                    Header.getFormat()))
       DWO->RngListTable = TableOrError.get();
     else
       WithColor::error() << "parsing a range list table: "

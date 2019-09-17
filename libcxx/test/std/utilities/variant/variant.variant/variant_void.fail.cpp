@@ -20,8 +20,8 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "variant_test_helpers.hpp"
-#include "test_convertible.hpp"
+#include "variant_test_helpers.h"
+#include "test_convertible.h"
 
 int main(int, char**)
 {

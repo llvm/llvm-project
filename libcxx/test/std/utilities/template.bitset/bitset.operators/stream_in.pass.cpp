@@ -25,6 +25,18 @@ int main(int, char**)
         in >> b;
         assert(b.to_ulong() == 0x5A);
     }
+    {
+        // Make sure that input-streaming an empty bitset does not cause the
+        // failbit to be set (LWG 3199).
+        std::istringstream in("01011010");
+        std::bitset<0> b;
+        in >> b;
+        assert(b.to_string() == "");
+        assert(!in.bad());
+        assert(!in.fail());
+        assert(!in.eof());
+        assert(in.good());
+    }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::stringbuf sb;

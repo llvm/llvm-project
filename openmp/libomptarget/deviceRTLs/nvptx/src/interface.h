@@ -423,6 +423,8 @@ EXTERN void __kmpc_flush(kmp_Ident *loc);
 
 // vote
 EXTERN int32_t __kmpc_warp_active_thread_mask();
+// syncwarp
+EXTERN void __kmpc_syncwarp(int32_t);
 
 // tasks
 EXTERN kmp_TaskDescr *__kmpc_omp_task_alloc(kmp_Ident *loc,

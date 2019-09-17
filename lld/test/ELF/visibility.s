@@ -1,116 +1,21 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/visibility.s -o %t2
-// RUN: ld.lld -shared %t %t2 -o %t3
-// RUN: llvm-readobj --symbols --dyn-syms %t3 | FileCheck %s
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/visibility.s -o %t2.o
+# RUN: ld.lld -shared %t.o %t2.o -o %t.so
+# RUN: llvm-readelf -s %t.so | FileCheck %s
 
-// CHECK:      Symbols [
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name:
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: hidden
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [ (0x2)
-// CHECK-NEXT:       STV_HIDDEN
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: internal
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [ (0x1)
-// CHECK-NEXT:       STV_INTERNAL
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: protected_with_hidden
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [ (0x2)
-// CHECK-NEXT:       STV_HIDDEN
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: _DYNAMIC
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [ (0x2)
-// CHECK-NEXT:       STV_HIDDEN
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .dynamic
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: default
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: protected
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [ (0x3)
-// CHECK-NEXT:       STV_PROTECTED
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
+## Check the most constraining visibility attribute is propagated to the symbol tables.
 
-// CHECK:      DynamicSymbols [
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name:
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: default
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: protected
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [ (0x3)
-// CHECK-NEXT:       STV_PROTECTED
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
+# CHECK:      Symbol table '.dynsym' contains 3 entries:
+# CHECK:      GLOBAL DEFAULT   6 default
+# CHECK-NEXT: GLOBAL PROTECTED 6 protected
+
+# CHECK:      Symbol table '.symtab' contains 7 entries:
+# CHECK:      LOCAL  HIDDEN    6 hidden
+# CHECK-NEXT: LOCAL  INTERNAL  6 internal
+# CHECK-NEXT: LOCAL  HIDDEN    6 protected_with_hidden
+# CHECK:      GLOBAL DEFAULT   6 default
+# CHECK-NEXT: GLOBAL PROTECTED 6 protected
 
 .global default
 default:

@@ -177,7 +177,7 @@
 ...
 ---
 name:            _Z3bari
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 frameInfo:       
   stackSize:       8
@@ -212,7 +212,7 @@ body:             |
 ...
 ---
 name:            _Z3baz1A
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 frameInfo:       
   stackSize:       28

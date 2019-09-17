@@ -92,7 +92,7 @@
 ...
 ---
 name:            test_zext_i1toi8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -126,7 +126,7 @@ body:             |
 ...
 ---
 name:            test_zext_i1toi16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -159,7 +159,7 @@ body:             |
 ...
 ---
 name:            test_zext_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -193,7 +193,7 @@ body:             |
 ...
 ---
 name:            test_zext_i8toi16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -221,7 +221,7 @@ body:             |
 ...
 ---
 name:            test_zext_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -249,7 +249,7 @@ body:             |
 ...
 ---
 name:            test_zext_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -277,7 +277,7 @@ body:             |
 ...
 ---
 name:            test_sext_i1toi8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -303,7 +303,7 @@ body:             |
 ...
 ---
 name:            test_sext_i1toi16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -329,7 +329,7 @@ body:             |
 ...
 ---
 name:            test_sext_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -356,7 +356,7 @@ body:             |
 ...
 ---
 name:            test_sext_i8toi16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -384,7 +384,7 @@ body:             |
 ...
 ---
 name:            test_sext_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -412,7 +412,7 @@ body:             |
 ...
 ---
 name:            test_sext_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -440,7 +440,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i1toi8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -470,7 +470,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i1toi16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -500,7 +500,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i1
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -530,7 +530,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i8toi16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -558,7 +558,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i8
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:
@@ -586,7 +586,7 @@ body:             |
 ...
 ---
 name:            test_anyext_i16
-alignment:       4
+alignment:       16
 legalized:       false
 regBankSelected: false
 registers:

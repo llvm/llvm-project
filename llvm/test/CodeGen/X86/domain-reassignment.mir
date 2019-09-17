@@ -49,7 +49,7 @@
 ...
 ---
 name:            test_fcmp_storefloat
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -202,7 +202,7 @@ body:             |
 ...
 ---
 name:            test_8bitops
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -323,7 +323,7 @@ body:             |
 ...
 ---
 name:            test_16bitops
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -441,7 +441,7 @@ body:             |
 ...
 ---
 name:            test_32bitops
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -544,7 +544,7 @@ body:             |
 ...
 ---
 name:            test_64bitops
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -647,7 +647,7 @@ body:             |
 ...
 ---
 name:            test_16bitext
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -716,7 +716,7 @@ body:             |
 ...
 ---
 name:            test_32bitext
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -789,7 +789,7 @@ body:             |
 ...
 ---
 name:            test_64bitext
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

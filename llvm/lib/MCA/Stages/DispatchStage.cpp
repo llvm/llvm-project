@@ -44,7 +44,7 @@ void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
 }
 
 bool DispatchStage::checkPRF(const InstRef &IR) const {
-  SmallVector<unsigned, 4> RegDefs;
+  SmallVector<MCPhysReg, 4> RegDefs;
   for (const WriteState &RegDef : IR.getInstruction()->getDefs())
     RegDefs.emplace_back(RegDef.getRegisterID());
 

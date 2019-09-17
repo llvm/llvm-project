@@ -134,6 +134,9 @@ def export_all: F<"export-all">,
 def export_table: F<"export-table">,
   HelpText<"Export function table to the environment">;
 
+def growable_table: F<"growable-table">,
+  HelpText<"Remove maximum size from function table, allowing table to grow">;
+
 def global_base: J<"global-base=">,
   HelpText<"Where to start to place global data">;
 
@@ -142,12 +145,6 @@ def import_memory: F<"import-memory">,
 
 def shared_memory: F<"shared-memory">,
   HelpText<"Use shared linear memory">;
-
-def active_segments: F<"active-segments">,
-  HelpText<"Force segments to be active (default with unshared memory)">;
-
-def passive_segments: F<"passive-segments">,
-  HelpText<"Force segments to be passive (default with shared memory)">;
 
 def import_table: F<"import-table">,
   HelpText<"Import function table from the environment">;

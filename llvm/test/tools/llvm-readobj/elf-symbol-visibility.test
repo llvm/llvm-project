@@ -1,11 +1,12 @@
-# Show that llvm-readobj prints the symbol visibility where recognised, or
-# something sensible when not, for both GNU and LLVM output.
+## Show that llvm-readobj prints the symbol visibility where recognised, or
+## something sensible when not, for both GNU and LLVM output.
 
-# Use --dyn-symbols because it is only possible to hand-craft symbols with
-# non-standard st_other values for .dynsym.
-# RUN: yaml2obj %s > %t
-# RUN: llvm-readobj --symbols --dyn-symbols %t | FileCheck %s --check-prefix=LLVM
-# RUN: llvm-readelf --symbols --dyn-symbols %t | FileCheck %s --check-prefix=GNU
+## Check how we dump symbols when they have only STV_* bits set for st_other.
+## (This is the most common case).
+
+# RUN: yaml2obj --docnum=1 %s > %t1.o
+# RUN: llvm-readobj --symbols %t1.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols %t1.o | FileCheck %s --strict-whitespace --check-prefix=GNU
 
 # LLVM:      Name: default
 # LLVM:      Other: 0
@@ -21,46 +22,66 @@
 # LLVM:      Other [ (0x3)
 # LLVM-NEXT:   STV_PROTECTED (0x3)
 # LLVM-NEXT: ]
-# LLVM:      Name: other
-# LLVM:      Other [ (0x4)
-# LLVM-NEXT: ]
 
-# FIXME - the "other" symbol should print something indicating its non-zero st_other value.
-# See https://bugs.llvm.org/show_bug.cgi?id=40785.
-# GNU:      DEFAULT   {{.*}} other
-# GNU:      DEFAULT   {{.*}} default
-# GNU-NEXT: INTERNAL  {{.*}} internal
-# GNU-NEXT: HIDDEN    {{.*}} hidden
-# GNU-NEXT: PROTECTED {{.*}} protected
+# GNU:      Vis       Ndx Name
+# GNU-NEXT: DEFAULT   UND
+# GNU-NEXT: DEFAULT   UND default
+# GNU-NEXT: INTERNAL  UND internal
+# GNU-NEXT: HIDDEN    UND hidden
+# GNU-NEXT: PROTECTED UND protected
 
-!ELF
+--- !ELF
 FileHeader:
   Class:   ELFCLASS32
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_386
-Sections:
-  - Name: .dynstr
-    Type: SHT_STRTAB
-    #\0other\0
-    Content: "006f7468657200"
-  - Name: .dynsym
-    Type: SHT_DYNSYM
-    Link: .dynstr
-    EntSize: 16
-    # Null symbol
-    # Symbol with st_name = 1, st_other = 0x4
-    Content: "0000000000000000000000000000000001000000000000000000000000040000"
 Symbols:
   - Name: default
-    Visibility: STV_DEFAULT
+    Other: [ STV_DEFAULT ]
     Binding: STB_GLOBAL
   - Name: internal
-    Visibility: STV_INTERNAL
+    Other: [ STV_INTERNAL ]
     Binding: STB_GLOBAL
   - Name: hidden
-    Visibility: STV_HIDDEN
+    Other: [ STV_HIDDEN ]
     Binding: STB_GLOBAL
   - Name: protected
-    Visibility: STV_PROTECTED
+    Other: [ STV_PROTECTED ]
     Binding: STB_GLOBAL
+
+## Check the output when we have non-visibility bits set for at least one of the symbols.
+
+# RUN: yaml2obj --docnum=2 %s > %t2.o
+# RUN: llvm-readobj --symbols %t2.o | FileCheck %s --check-prefixes=LLVM,LLVM-OTHER
+# RUN: llvm-readelf --symbols %t2.o | FileCheck %s --strict-whitespace --check-prefix=GNU-OTHER
+
+# LLVM-OTHER:      Name: other
+# LLVM-OTHER:      Other [ (0x4)
+# LLVM-OTHER-NEXT: ]
+
+#      GNU-OTHER: Vis                    Ndx Name
+# GNU-OTHER-NEXT: DEFAULT                UND
+# GNU-OTHER-NEXT: DEFAULT                UND default
+# GNU-OTHER-NEXT: INTERNAL               UND internal
+# GNU-OTHER-NEXT: HIDDEN                 UND hidden
+# GNU-OTHER-NEXT: PROTECTED              UND protected
+# GNU-OTHER-NEXT: DEFAULT [<other: 0x4>] UND other
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Symbols:
+  - Name: default
+    Other: [ STV_DEFAULT ]
+  - Name: internal
+    Other: [ STV_INTERNAL ]
+  - Name: hidden
+    Other: [ STV_HIDDEN ]
+  - Name: protected
+    Other: [ STV_PROTECTED ]
+  - Name: other
+    Other: [ 4 ]

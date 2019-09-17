@@ -327,6 +327,7 @@ addMSAIntType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, Ty, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, Ty, Legal);
   setOperationAction(ISD::BUILD_VECTOR, Ty, Custom);
+  setOperationAction(ISD::UNDEF, Ty, Legal);
 
   setOperationAction(ISD::ADD, Ty, Legal);
   setOperationAction(ISD::AND, Ty, Legal);

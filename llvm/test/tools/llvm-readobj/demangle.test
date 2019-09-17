@@ -139,9 +139,7 @@ Sections:
     EntSize:      0x18
     Relocations:
       - Offset: 0x10
-        ## FIXME: This should be a lookup in the corresponding symbol table, not necessarily the static symbol table.
-        ## See https://bugs.llvm.org/show_bug.cgi?id=40337.
-        Symbol: _Z3fooc
+        Symbol: _Z3fooi
         Type:   R_X86_64_PC32
         Addend: 0x4
   - Name:            .dynamic

@@ -1,13 +1,20 @@
-// REQUIRES: x86
+// REQUIRES: aarch64, x86
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
+// RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections -z max-page-size=65536
+// RUN: llvm-readelf -S -s %t | FileCheck %s
+
+// RUN: llvm-mc %s -o %t.o -filetype=obj --triple=aarch64
 // RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 
 // This is basically lld/docs/partitions.dot in object file form.
 // Test that the sections are correctly allocated to partitions.
+// part1 and part2 should be aligned to a maximum page size boundary.
 
 // CHECK: [[MAIN:[0-9]+]]] .text
+// CHECK: part1 LLVM_PART_EHDR {{[0-9a-f]+}}0000 {{[0-9a-f]+}}0000
 // CHECK: [[P1:[0-9]+]]] .text
+// CHECK: part2 LLVM_PART_EHDR {{[0-9a-f]+}}0000 {{[0-9a-f]+}}0000
 // CHECK: [[P2:[0-9]+]]] .text
 
 // CHECK: Symbol table '.symtab'
@@ -30,21 +37,21 @@
 .section .text._start,"ax",@progbits
 .globl _start
 _start:
-call f3
+.quad f3
 
 .section .text.f1,"ax",@progbits
 .globl f1
 f1:
-call f3
-call f4
-call f5
+.quad f3
+.quad f4
+.quad f5
 
 .section .text.f2,"ax",@progbits
 .globl f2
 f2:
-call f3
-call f5
-call f6
+.quad f3
+.quad f5
+.quad f6
 
 .section .text.f3,"ax",@progbits
 f3:

@@ -280,7 +280,7 @@ class LoadUnloadTestCase(TestBase):
             "process load %s --install=%s" % (localDylibPath, remoteDylibPath),
             "%s loaded correctly" % dylibName,
             patterns=[
-                'Loading "%s".*ok' % localDylibPath,
+                'Loading "%s".*ok' % re.escape(localDylibPath),
                 'Image [0-9]+ loaded'])
 
         # Search for and match the "Image ([0-9]+) loaded" pattern.

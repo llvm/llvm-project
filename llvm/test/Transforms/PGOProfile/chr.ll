@@ -468,15 +468,14 @@ define i32 @test_chr_5(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[SUM2_NONCHR:%.*]] = select i1 [[TMP11]], i32 [[SUM1_NONCHR]], i32 [[TMP12]], !prof !16
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[TMP14]], label [[BB3]], label [[BB1_NONCHR:%.*]], !prof !16
-; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[TMP15:%.*]] = and i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 0
-; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[TMP16]], i32 44, i32 88, !prof !16
+; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[TMP16]], i32 44, i32 88
 ; CHECK-NEXT:    [[SUM4_NONCHR:%.*]] = add i32 [[SUM2_NONCHR]], [[SUM4_NONCHR_V]]
+; CHECK-NEXT:    [[SUM5_NONCHR:%.*]] = select i1 [[TMP14]], i32 [[SUM2_NONCHR]], i32 [[SUM4_NONCHR]], !prof !16
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[TMP4]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM2_NONCHR]], [[BB0_NONCHR]] ], [ [[SUM4_NONCHR]], [[BB1_NONCHR]] ]
+; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[TMP4]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM5_NONCHR]], [[BB0_NONCHR]] ]
 ; CHECK-NEXT:    ret i32 [[SUM6]]
 ;
 entry:
@@ -569,15 +568,14 @@ define i32 @test_chr_5_1(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[SUM2_NONCHR:%.*]] = select i1 [[TMP14]], i32 [[SUM1_NONCHR]], i32 [[TMP15]], !prof !16
 ; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[SUM0]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP16]], 0
-; CHECK-NEXT:    br i1 [[TMP17]], label [[BB3]], label [[BB1_NONCHR:%.*]], !prof !16
-; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[TMP18]], 0
-; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[TMP19]], i32 44, i32 88, !prof !16
+; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[TMP19]], i32 44, i32 88
 ; CHECK-NEXT:    [[SUM4_NONCHR:%.*]] = add i32 [[SUM2_NONCHR]], [[SUM4_NONCHR_V]]
+; CHECK-NEXT:    [[SUM5_NONCHR:%.*]] = select i1 [[TMP17]], i32 [[SUM2_NONCHR]], i32 [[SUM4_NONCHR]], !prof !16
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[TMP7]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM2_NONCHR]], [[BB0_NONCHR]] ], [ [[SUM4_NONCHR]], [[BB1_NONCHR]] ]
+; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[TMP7]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM5_NONCHR]], [[BB0_NONCHR]] ]
 ; CHECK-NEXT:    ret i32 [[SUM6]]
 ;
 entry:
@@ -667,15 +665,14 @@ define i32 @test_chr_6(i32* %i, i32* %j, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[SUM2_NONCHR:%.*]] = select i1 [[V4_NONCHR]], i32 [[SUM0]], i32 [[V8_NONCHR]], !prof !16
 ; CHECK-NEXT:    [[V9_NONCHR:%.*]] = and i32 [[J0]], 4
 ; CHECK-NEXT:    [[V10_NONCHR:%.*]] = icmp eq i32 [[V9_NONCHR]], 0
-; CHECK-NEXT:    br i1 [[V10_NONCHR]], label [[BB3]], label [[BB1_NONCHR:%.*]], !prof !16
-; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[V11_NONCHR:%.*]] = and i32 [[I0]], 8
 ; CHECK-NEXT:    [[V12_NONCHR:%.*]] = icmp eq i32 [[V11_NONCHR]], 0
-; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[V12_NONCHR]], i32 44, i32 88, !prof !16
+; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[V12_NONCHR]], i32 44, i32 88
 ; CHECK-NEXT:    [[SUM4_NONCHR:%.*]] = add i32 [[SUM2_NONCHR]], [[SUM4_NONCHR_V]]
+; CHECK-NEXT:    [[SUM5_NONCHR:%.*]] = select i1 [[V10_NONCHR]], i32 [[SUM2_NONCHR]], i32 [[SUM4_NONCHR]], !prof !16
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[V13]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM2_NONCHR]], [[BB0_NONCHR]] ], [ [[SUM4_NONCHR]], [[BB1_NONCHR]] ]
+; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[V13]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM5_NONCHR]], [[BB0_NONCHR]] ]
 ; CHECK-NEXT:    ret i32 [[SUM6]]
 ;
 entry:
@@ -1754,15 +1751,14 @@ define i32 @test_chr_19(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[SUM0]], 85
 ; CHECK-NEXT:    [[SUM2_NONCHR:%.*]] = select i1 [[TMP8]], i32 [[SUM0]], i32 [[TMP9]], !prof !16
-; CHECK-NEXT:    br i1 [[TMP8]], label [[BB3]], label [[BB1_NONCHR:%.*]], !prof !16
-; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 0
-; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[TMP11]], i32 44, i32 88, !prof !16
+; CHECK-NEXT:    [[SUM4_NONCHR_V:%.*]] = select i1 [[TMP11]], i32 44, i32 88
 ; CHECK-NEXT:    [[SUM4_NONCHR:%.*]] = add i32 [[SUM2_NONCHR]], [[SUM4_NONCHR_V]]
+; CHECK-NEXT:    [[SUM5_NONCHR:%.*]] = select i1 [[TMP8]], i32 [[SUM2_NONCHR]], i32 [[SUM4_NONCHR]], !prof !16
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[TMP4]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM2_NONCHR]], [[BB0_NONCHR]] ], [ [[SUM4_NONCHR]], [[BB1_NONCHR]] ]
+; CHECK-NEXT:    [[SUM6:%.*]] = phi i32 [ [[TMP4]], [[BB0]] ], [ [[SUM0]], [[ENTRY_SPLIT_NONCHR]] ], [ [[SUM5_NONCHR]], [[BB0_NONCHR]] ]
 ; CHECK-NEXT:    ret i32 [[SUM6]]
 ;
 entry:
@@ -2313,6 +2309,157 @@ bb0:
   %v301 = icmp eq i64 %v300, 100
   %v302 = select i1 %v301, i64 %v298, i64 %v299, !prof !15
   store i64 %v302, i64* %j
+  ret i64 99
+}
+
+; Test a case with a really long use-def chains. This test checks that it's not
+; really slow and doesn't appear to be hanging. This is different from
+; test_chr_22 in that it has nested control structures (multiple scopes) and
+; covers additional code.
+define i64 @test_chr_23(i64 %v0) !prof !14 {
+entry:
+  %v1 = add i64 %v0, 3
+  %v2 = add i64 %v1, %v1
+  %v3 = add i64 %v2, %v1
+  %v4 = add i64 %v2, %v3
+  %v5 = add i64 %v4, %v2
+  %v6 = add i64 %v5, %v4
+  %v7 = add i64 %v6, %v5
+  %v8 = add i64 %v7, %v6
+  %v9 = add i64 %v8, %v7
+  %v10 = icmp eq i64 %v9, 100
+  br i1 %v10, label %body, label %end, !prof !15
+
+body:
+  %v1_0 = add i64 %v9, 3
+  %v2_0 = add i64 %v1_0, %v1_0
+  %v3_0 = add i64 %v2_0, %v1_0
+  %v4_0 = add i64 %v2_0, %v3_0
+  %v5_0 = add i64 %v4_0, %v2_0
+  %v6_0 = add i64 %v5_0, %v4_0
+  %v7_0 = add i64 %v6_0, %v5_0
+  %v8_0 = add i64 %v7_0, %v6_0
+  %v9_0 = add i64 %v8_0, %v7_0
+  %v10_0 = icmp eq i64 %v9_0, 100
+  br i1 %v10_0, label %body.1, label %end, !prof !15
+
+body.1:
+  %v1_1 = add i64 %v9_0, 3
+  %v2_1 = add i64 %v1_1, %v1_1
+  %v3_1 = add i64 %v2_1, %v1_1
+  %v4_1 = add i64 %v2_1, %v3_1
+  %v5_1 = add i64 %v4_1, %v2_1
+  %v6_1 = add i64 %v5_1, %v4_1
+  %v7_1 = add i64 %v6_1, %v5_1
+  %v8_1 = add i64 %v7_1, %v6_1
+  %v9_1 = add i64 %v8_1, %v7_1
+  %v10_1 = icmp eq i64 %v9_1, 100
+  br i1 %v10_1, label %body.2, label %end, !prof !15
+
+body.2:
+  %v1_2 = add i64 %v9_1, 3
+  %v2_2 = add i64 %v1_2, %v1_2
+  %v3_2 = add i64 %v2_2, %v1_2
+  %v4_2 = add i64 %v2_2, %v3_2
+  %v5_2 = add i64 %v4_2, %v2_2
+  %v6_2 = add i64 %v5_2, %v4_2
+  %v7_2 = add i64 %v6_2, %v5_2
+  %v8_2 = add i64 %v7_2, %v6_2
+  %v9_2 = add i64 %v8_2, %v7_2
+  %v10_2 = icmp eq i64 %v9_2, 100
+  br i1 %v10_2, label %body.3, label %end, !prof !15
+
+body.3:
+  %v1_3 = add i64 %v9_2, 3
+  %v2_3 = add i64 %v1_3, %v1_3
+  %v3_3 = add i64 %v2_3, %v1_3
+  %v4_3 = add i64 %v2_3, %v3_3
+  %v5_3 = add i64 %v4_3, %v2_3
+  %v6_3 = add i64 %v5_3, %v4_3
+  %v7_3 = add i64 %v6_3, %v5_3
+  %v8_3 = add i64 %v7_3, %v6_3
+  %v9_3 = add i64 %v8_3, %v7_3
+  %v10_3 = icmp eq i64 %v9_3, 100
+  br i1 %v10_3, label %body.4, label %end, !prof !15
+
+body.4:
+  %v1_4 = add i64 %v9_3, 3
+  %v2_4 = add i64 %v1_4, %v1_4
+  %v3_4 = add i64 %v2_4, %v1_4
+  %v4_4 = add i64 %v2_4, %v3_4
+  %v5_4 = add i64 %v4_4, %v2_4
+  %v6_4 = add i64 %v5_4, %v4_4
+  %v7_4 = add i64 %v6_4, %v5_4
+  %v8_4 = add i64 %v7_4, %v6_4
+  %v9_4 = add i64 %v8_4, %v7_4
+  %v10_4 = icmp eq i64 %v9_4, 100
+  br i1 %v10_4, label %body.5, label %end, !prof !15
+
+body.5:
+  %v1_5 = add i64 %v9_4, 3
+  %v2_5 = add i64 %v1_5, %v1_5
+  %v3_5 = add i64 %v2_5, %v1_5
+  %v4_5 = add i64 %v2_5, %v3_5
+  %v5_5 = add i64 %v4_5, %v2_5
+  %v6_5 = add i64 %v5_5, %v4_5
+  %v7_5 = add i64 %v6_5, %v5_5
+  %v8_5 = add i64 %v7_5, %v6_5
+  %v9_5 = add i64 %v8_5, %v7_5
+  %v10_5 = icmp eq i64 %v9_5, 100
+  br i1 %v10_5, label %body.6, label %end, !prof !15
+
+body.6:
+  %v1_6 = add i64 %v9_5, 3
+  %v2_6 = add i64 %v1_6, %v1_6
+  %v3_6 = add i64 %v2_6, %v1_6
+  %v4_6 = add i64 %v2_6, %v3_6
+  %v5_6 = add i64 %v4_6, %v2_6
+  %v6_6 = add i64 %v5_6, %v4_6
+  %v7_6 = add i64 %v6_6, %v5_6
+  %v8_6 = add i64 %v7_6, %v6_6
+  %v9_6 = add i64 %v8_6, %v7_6
+  %v10_6 = icmp eq i64 %v9_6, 100
+  br i1 %v10_6, label %body.7, label %end, !prof !15
+
+body.7:
+  %v1_7 = add i64 %v9_6, 3
+  %v2_7 = add i64 %v1_7, %v1_7
+  %v3_7 = add i64 %v2_7, %v1_7
+  %v4_7 = add i64 %v2_7, %v3_7
+  %v5_7 = add i64 %v4_7, %v2_7
+  %v6_7 = add i64 %v5_7, %v4_7
+  %v7_7 = add i64 %v6_7, %v5_7
+  %v8_7 = add i64 %v7_7, %v6_7
+  %v9_7 = add i64 %v8_7, %v7_7
+  %v10_7 = icmp eq i64 %v9_7, 100
+  br i1 %v10_7, label %body.8, label %end, !prof !15
+
+body.8:
+  %v1_8 = add i64 %v9_7, 3
+  %v2_8 = add i64 %v1_8, %v1_8
+  %v3_8 = add i64 %v2_8, %v1_8
+  %v4_8 = add i64 %v2_8, %v3_8
+  %v5_8 = add i64 %v4_8, %v2_8
+  %v6_8 = add i64 %v5_8, %v4_8
+  %v7_8 = add i64 %v6_8, %v5_8
+  %v8_8 = add i64 %v7_8, %v6_8
+  %v9_8 = add i64 %v8_8, %v7_8
+  %v10_8 = icmp eq i64 %v9_8, 100
+  br i1 %v10_8, label %body.9, label %end, !prof !15
+
+body.9:
+  %v1_9 = add i64 %v9_8, 3
+  %v2_9 = add i64 %v1_9, %v1_9
+  %v3_9 = add i64 %v2_9, %v1_9
+  %v4_9 = add i64 %v2_9, %v3_9
+  %v5_9 = add i64 %v4_9, %v2_9
+  %v6_9 = add i64 %v5_9, %v4_9
+  %v7_9 = add i64 %v6_9, %v5_9
+  %v8_9 = add i64 %v7_9, %v6_9
+  %v9_9 = add i64 %v8_9, %v7_9
+  br label %end
+
+end:
   ret i64 99
 }
 

@@ -604,7 +604,7 @@ GlobalVariable *llvm::collectUsedGlobalVariables(
 
   const ConstantArray *Init = cast<ConstantArray>(GV->getInitializer());
   for (Value *Op : Init->operands()) {
-    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
+    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCasts());
     Set.insert(G);
   }
   return GV;

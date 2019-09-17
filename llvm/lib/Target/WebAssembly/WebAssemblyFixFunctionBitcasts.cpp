@@ -70,6 +70,8 @@ static void findUses(Value *V, Function &F,
   for (Use &U : V->uses()) {
     if (auto *BC = dyn_cast<BitCastOperator>(U.getUser()))
       findUses(BC, F, Uses, ConstantBCs);
+    else if (auto *A = dyn_cast<GlobalAlias>(U.getUser()))
+      findUses(A, F, Uses, ConstantBCs);
     else if (U.get()->getType() != F.getType()) {
       CallSite CS(U.getUser());
       if (!CS)

@@ -64,20 +64,20 @@ public:
     std::string Suffix;
   };
 
-  /// \brief Holds an identifier name check failure, tracking the kind of the
+  /// Holds an identifier name check failure, tracking the kind of the
   /// identifer, its possible fixup and the starting locations of all the
   /// identifier usages.
   struct NamingCheckFailure {
     std::string KindName;
     std::string Fixup;
 
-    /// \brief Whether the failure should be fixed or not.
+    /// Whether the failure should be fixed or not.
     ///
     /// ie: if the identifier was used or declared within a macro we won't offer
     /// a fixup for safety reasons.
     bool ShouldFix;
 
-    /// \brief A set of all the identifier usages starting SourceLocation, in
+    /// A set of all the identifier usages starting SourceLocation, in
     /// their encoded form.
     llvm::DenseSet<unsigned> RawUsageLocs;
 

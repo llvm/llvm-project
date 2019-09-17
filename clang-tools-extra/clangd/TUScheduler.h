@@ -9,19 +9,22 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 
-#include "ClangdUnit.h"
+#include "Compiler.h"
+#include "Diagnostics.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
+#include "Path.h"
 #include "Threading.h"
 #include "index/CanonicalIncludes.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include <future>
 
 namespace clang {
 namespace clangd {
+class ParsedAST;
+struct PreambleData;
 
 /// Returns a number of a default async threads to use for TUScheduler.
 /// Returned value is always >= 1 (i.e. will not cause requests to be processed
@@ -124,6 +127,11 @@ public:
   /// the file is concurrently closed and/or reopened. (The lambda passed to
   /// Publish() may never run in this case).
   virtual void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) {}
+
+  /// Called whenever the AST fails to build. \p Diags will have the diagnostics
+  /// that led to failure.
+  virtual void onFailedAST(PathRef Path, std::vector<Diag> Diags,
+                           PublishFn Publish) {}
 
   /// Called whenever the TU status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
@@ -249,19 +257,6 @@ private:
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
   std::chrono::steady_clock::duration UpdateDebounce;
 };
-
-/// Runs \p Action asynchronously with a new std::thread. The context will be
-/// propagated.
-template <typename T>
-std::future<T> runAsync(llvm::unique_function<T()> Action) {
-  return std::async(
-      std::launch::async,
-      [](llvm::unique_function<T()> &&Action, Context Ctx) {
-        WithContext WithCtx(std::move(Ctx));
-        return Action();
-      },
-      std::move(Action), Context::current().clone());
-}
 
 } // namespace clangd
 } // namespace clang

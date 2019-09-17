@@ -644,7 +644,8 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
           if (isa<SCEVCouldNotCompute>(ExitCount))
             continue;
           if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
-            ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
+            if (AddRec->getLoop() == L)
+              ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
           if (isa<SCEVCouldNotCompute>(ExitValue) ||
               !SE->isLoopInvariant(ExitValue, L) ||
               !isSafeToExpand(ExitValue, *SE))
@@ -2943,7 +2944,7 @@ struct IndVarSimplifyLegacyPass : public LoopPass {
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    auto *TLI = TLIP ? &TLIP->getTLI() : nullptr;
+    auto *TLI = TLIP ? &TLIP->getTLI(*L->getHeader()->getParent()) : nullptr;
     auto *TTIP = getAnalysisIfAvailable<TargetTransformInfoWrapperPass>();
     auto *TTI = TTIP ? &TTIP->getTTI(*L->getHeader()->getParent()) : nullptr;
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();

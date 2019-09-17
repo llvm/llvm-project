@@ -744,7 +744,7 @@ public:
 // Return the matching FPR64 register for the given FPR32.
 // FIXME: Ideally this function could be removed in favour of using
 // information from TableGen.
-Register convertFPR32ToFPR64(Register Reg) {
+static Register convertFPR32ToFPR64(Register Reg) {
   switch (Reg) {
   default:
     llvm_unreachable("Not a recognised FPR32 register");
@@ -864,6 +864,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
+  case Match_InvalidImmZero: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "immediate must be zero");
+  }
   case Match_InvalidUImmLog2XLen:
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);

@@ -1,7 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-fast | FileCheck %s
-# RUN: llc -march=amdgcn -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
-
-# REQUIRES: global-isel
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-fast | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
 
 --- |
   define amdgpu_kernel void @load_global_v8i32_non_uniform(<8 x i32> addrspace(1)* %in) {
@@ -56,16 +54,27 @@
     %tmp2 = load <8 x i64>, <8 x i64> addrspace(4)* %constant.not.uniform.v8i64
     ret void
   }
+
   define amdgpu_kernel void @load_constant_v8i32_uniform() {ret void}
   define amdgpu_kernel void @load_constant_v4i64_uniform() {ret void}
   define amdgpu_kernel void @load_constant_v16i32_uniform() {ret void}
   define amdgpu_kernel void @load_constant_v8i64_uniform() {ret void}
+  define amdgpu_kernel void @load_local_uniform() { ret void }
+  define amdgpu_kernel void @load_region_uniform() { ret void }
+  define amdgpu_kernel void @extload_constant_i8_to_i32_uniform() { ret void }
+  define amdgpu_kernel void @extload_global_i8_to_i32_uniform() { ret void }
+  define amdgpu_kernel void @extload_constant_i16_to_i32_uniform() { ret void }
+  define amdgpu_kernel void @extload_global_i16_to_i32_uniform() { ret void }
+  define amdgpu_kernel void @load_constant_i32_uniform_align4() {ret void}
+  define amdgpu_kernel void @load_constant_i32_uniform_align2() {ret void}
+  define amdgpu_kernel void @load_constant_i32_uniform_align1() {ret void}
+
   declare i32 @llvm.amdgcn.workitem.id.x() #0
   attributes #0 = { nounwind readnone }
 ...
 
 ---
-name : load_global_v8i32_non_uniform
+name: load_global_v8i32_non_uniform
 legalized: true
 
 body: |
@@ -100,7 +109,7 @@ body: |
 ...
 
 ---
-name : load_global_v4i64_non_uniform
+name: load_global_v4i64_non_uniform
 legalized: true
 
 body: |
@@ -127,7 +136,7 @@ body: |
 ...
 
 ---
-name : load_global_v16i32_non_uniform
+name: load_global_v16i32_non_uniform
 legalized: true
 
 body: |
@@ -183,7 +192,7 @@ body: |
     %1:_(<16 x s32>) = G_LOAD %0 :: (load 64 from %ir.global.not.uniform.v16i32)
 ...
 
-name : load_global_v8i64_non_uniform
+name: load_global_v8i64_non_uniform
 legalized: true
 
 body: |
@@ -224,7 +233,7 @@ body: |
 ...
 
 ---
-name : load_global_v8i32_uniform
+name: load_global_v8i32_uniform
 legalized: true
 
 body: |
@@ -237,7 +246,7 @@ body: |
 ...
 
 ---
-name : load_global_v4i64_uniform
+name: load_global_v4i64_uniform
 legalized: true
 
 body: |
@@ -250,7 +259,7 @@ body: |
 ...
 
 ---
-name : load_global_v16i32_uniform
+name: load_global_v16i32_uniform
 legalized: true
 
 body: |
@@ -263,7 +272,7 @@ body: |
 ...
 
 ---
-name : load_global_v8i64_uniform
+name: load_global_v8i64_uniform
 legalized: true
 
 body: |
@@ -276,7 +285,7 @@ body: |
 ...
 
 ---
-name : load_constant_v8i32_non_uniform
+name: load_constant_v8i32_non_uniform
 legalized: true
 
 body: |
@@ -311,7 +320,7 @@ body: |
 ...
 
 ---
-name : load_constant_v4i64_non_uniform
+name: load_constant_v4i64_non_uniform
 legalized: true
 
 body: |
@@ -338,7 +347,7 @@ body: |
 ...
 
 ---
-name : load_constant_v16i32_non_uniform
+name: load_constant_v16i32_non_uniform
 legalized: true
 
 body: |
@@ -395,7 +404,7 @@ body: |
 ...
 
 ---
-name : load_constant_v8i64_non_uniform
+name: load_constant_v8i64_non_uniform
 legalized: true
 
 body: |
@@ -436,7 +445,7 @@ body: |
 ...
 
 ---
-name : load_constant_v8i32_uniform
+name: load_constant_v8i32_uniform
 legalized: true
 
 body: |
@@ -449,7 +458,7 @@ body: |
 ...
 
 ---
-name : load_constant_v4i64_uniform
+name: load_constant_v4i64_uniform
 legalized: true
 
 body: |
@@ -462,7 +471,7 @@ body: |
 ...
 
 ---
-name : load_constant_v16i32_uniform
+name: load_constant_v16i32_uniform
 legalized: true
 
 body: |
@@ -475,7 +484,7 @@ body: |
 ...
 
 ---
-name : load_constant_v8i64_uniform
+name: load_constant_v8i64_uniform
 legalized: true
 
 body: |
@@ -485,4 +494,144 @@ body: |
     ; CHECK (<8 x s64>) = G_LOAD %0 :: (load 64, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<8 x s64>) = G_LOAD %0 :: (load 64, addrspace 4)
+...
+
+---
+name: load_local_uniform
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: load_local_uniform
+    ; CHECK: %0:sgpr(p3) = COPY $sgpr0
+    ; CHECK: %2:vgpr(p3) = COPY %0(p3)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p3) :: (load 4, addrspace 3)
+
+    %0:_(p3) = COPY $sgpr0
+    %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 3)
+
+...
+---
+name: load_region_uniform
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: load_region_uniform
+    ; CHECK: %0:sgpr(p3) = COPY $sgpr0
+    ; CHECK: %2:vgpr(p3) = COPY %0(p3)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p3) :: (load 4, addrspace 5)
+
+    %0:_(p3) = COPY $sgpr0
+    %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 5)
+
+...
+
+---
+name: extload_constant_i8_to_i32_uniform
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: extload_constant_i8_to_i32_uniform
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %2:vgpr(p4) = COPY %0(p4)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 1, addrspace 4)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 1, addrspace 4, align 1)
+...
+
+---
+name: extload_global_i8_to_i32_uniform
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: extload_global_i8_to_i32_uniform{{$}}
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %2:vgpr(p4) = COPY %0(p4)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 1, addrspace 1)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 1, addrspace 1, align 1)
+...
+
+---
+name: extload_constant_i16_to_i32_uniform
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: extload_constant_i16_to_i32_uniform
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %2:vgpr(p4) = COPY %0(p4)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 2, addrspace 4)
+
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 2, addrspace 4, align 2)
+...
+
+---
+name: extload_global_i16_to_i32_uniform
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: extload_global_i16_to_i32_uniform
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %2:vgpr(p4) = COPY %0(p4)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 2, addrspace 1)
+
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 2, addrspace 1, align 2)
+...
+
+---
+name: load_constant_i32_uniform_align4
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: load_constant_i32_uniform_align4
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %1:sgpr(s32) = G_LOAD %0(p4) :: (load 4, addrspace 4)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 4, align 4)
+...
+
+---
+name: load_constant_i32_uniform_align2
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: load_constant_i32_uniform_align2
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %2:vgpr(p4) = COPY %0(p4)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 4, align 2, addrspace 4)
+
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 4, align 2)
+...
+
+---
+name: load_constant_i32_uniform_align1
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: load_constant_i32_uniform_align1
+    ; CHECK: %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: %2:vgpr(p4) = COPY %0(p4)
+    ; CHECK: %1:vgpr(s32) = G_LOAD %2(p4) :: (load 4, align 1, addrspace 4)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 4, addrspace 4, align 1)
 ...

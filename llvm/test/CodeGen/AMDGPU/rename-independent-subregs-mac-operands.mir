@@ -5,7 +5,7 @@
 # GCN: undef %18.sub0:vreg_128 = V_MAC_F32_e32 undef %3:vgpr_32, undef %9:vgpr_32, undef %18.sub0, implicit $exec
 
 name:            mac_invalid_operands
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -91,7 +91,7 @@ body:             |
 # GCN: BUFFER_STORE_DWORD_OFFEN %8.sub1, %0,
 # GCN: BUFFER_STORE_DWORD_OFFEN %7.sub0, %0,
 name:            vreg_does_not_dominate
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

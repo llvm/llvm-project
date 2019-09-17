@@ -1,4 +1,4 @@
-set(EXCLUDE_FROM_ALL ON)
+set_property(DIRECTORY PROPERTY EXCLUDE_FROM_ALL ON)
 add_lldb_library(lldbUtilityHelpers
   MockTildeExpressionResolver.cpp
   TestUtilities.cpp
@@ -8,7 +8,6 @@ add_lldb_library(lldbUtilityHelpers
 
   LINK_COMPONENTS
     Support
+    ObjectYAML
   )
-
-add_dependencies(lldbUtilityHelpers yaml2obj)
-add_definitions(-DYAML2OBJ="$<TARGET_FILE:yaml2obj>")
+include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)

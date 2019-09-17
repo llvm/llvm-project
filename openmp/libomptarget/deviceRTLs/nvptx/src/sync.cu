@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP Ordered calls
@@ -74,8 +75,7 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
 // parallel region and that all worker threads participate.
 EXTERN void __kmpc_barrier_simple_spmd(kmp_Ident *loc_ref, int32_t tid) {
   PRINT0(LD_SYNC, "call kmpc_barrier_simple_spmd\n");
-  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
-  __SYNCTHREADS();
+  __kmpc_impl_syncthreads();
   PRINT0(LD_SYNC, "completed kmpc_barrier_simple_spmd\n");
 }
 
@@ -142,5 +142,14 @@ EXTERN void __kmpc_flush(kmp_Ident *loc) {
 
 EXTERN int32_t __kmpc_warp_active_thread_mask() {
   PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask\n");
-  return __ACTIVEMASK();
+  return __kmpc_impl_activemask();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Syncwarp
+////////////////////////////////////////////////////////////////////////////////
+
+EXTERN void __kmpc_syncwarp(int32_t Mask) {
+  PRINT0(LD_IO, "call __kmpc_syncwarp\n");
+  __kmpc_impl_syncwarp(Mask);
 }

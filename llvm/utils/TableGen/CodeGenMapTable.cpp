@@ -168,7 +168,7 @@ public:
     return ValueCols;
   }
 };
-} // End anonymous namespace.
+} // end anonymous namespace
 
 
 //===----------------------------------------------------------------------===//
@@ -226,7 +226,7 @@ public:
   void emitMapFuncBody(raw_ostream &OS, unsigned TableSize);
 
 };
-} // End anonymous namespace.
+} // end anonymous namespace
 
 
 //===----------------------------------------------------------------------===//
@@ -604,8 +604,8 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
     // Emit map tables and the functions to query them.
     IMap.emitTablesWithFunc(OS);
   }
-  OS << "} // End " << NameSpace << " namespace\n";
-  OS << "} // End llvm namespace\n";
+  OS << "} // end namespace " << NameSpace << "\n";
+  OS << "} // end namespace llvm\n";
   OS << "#endif // GET_INSTRMAP_INFO\n\n";
 }
 

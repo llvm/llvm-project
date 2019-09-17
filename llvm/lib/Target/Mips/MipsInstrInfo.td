@@ -211,9 +211,9 @@ def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
                       AssemblerPredicate<"!FeatureCnMips">;
-def IsSym32     :     Predicate<"Subtarget->HasSym32()">,
+def IsSym32     :     Predicate<"Subtarget->hasSym32()">,
                       AssemblerPredicate<"FeatureSym32">;
-def IsSym64     :     Predicate<"!Subtarget->HasSym32()">,
+def IsSym64     :     Predicate<"!Subtarget->hasSym32()">,
                       AssemblerPredicate<"!FeatureSym32">;
 def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
@@ -3142,25 +3142,31 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
   def : MipsPat<(MipsHi tconstpool:$in), (Lui tconstpool:$in)>;
   def : MipsPat<(MipsHi texternalsym:$in), (Lui texternalsym:$in)>;
 
-  def : MipsPat<(MipsLo tglobaladdr:$in), (Addiu ZeroReg, tglobaladdr:$in)>;
+  def : MipsPat<(MipsLo tglobaladdr:$in),
+                (Addiu ZeroReg, tglobaladdr:$in)>;
   def : MipsPat<(MipsLo tblockaddress:$in),
                 (Addiu ZeroReg, tblockaddress:$in)>;
-  def : MipsPat<(MipsLo tjumptable:$in), (Addiu ZeroReg, tjumptable:$in)>;
-  def : MipsPat<(MipsLo tconstpool:$in), (Addiu ZeroReg, tconstpool:$in)>;
+  def : MipsPat<(MipsLo tjumptable:$in),
+                (Addiu ZeroReg, tjumptable:$in)>;
+  def : MipsPat<(MipsLo tconstpool:$in),
+                (Addiu ZeroReg, tconstpool:$in)>;
   def : MipsPat<(MipsLo tglobaltlsaddr:$in),
                 (Addiu ZeroReg, tglobaltlsaddr:$in)>;
-  def : MipsPat<(MipsLo texternalsym:$in), (Addiu ZeroReg, texternalsym:$in)>;
+  def : MipsPat<(MipsLo texternalsym:$in),
+                (Addiu ZeroReg, texternalsym:$in)>;
 
   def : MipsPat<(add GPROpnd:$hi, (MipsLo tglobaladdr:$lo)),
-              (Addiu GPROpnd:$hi, tglobaladdr:$lo)>;
+                (Addiu GPROpnd:$hi, tglobaladdr:$lo)>;
   def : MipsPat<(add GPROpnd:$hi, (MipsLo tblockaddress:$lo)),
-              (Addiu GPROpnd:$hi, tblockaddress:$lo)>;
+                (Addiu GPROpnd:$hi, tblockaddress:$lo)>;
   def : MipsPat<(add GPROpnd:$hi, (MipsLo tjumptable:$lo)),
-              (Addiu GPROpnd:$hi, tjumptable:$lo)>;
+                (Addiu GPROpnd:$hi, tjumptable:$lo)>;
   def : MipsPat<(add GPROpnd:$hi, (MipsLo tconstpool:$lo)),
-              (Addiu GPROpnd:$hi, tconstpool:$lo)>;
+                (Addiu GPROpnd:$hi, tconstpool:$lo)>;
   def : MipsPat<(add GPROpnd:$hi, (MipsLo tglobaltlsaddr:$lo)),
-              (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
+                (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo texternalsym:$lo)),
+                (Addiu GPROpnd:$hi, texternalsym:$lo)>;
 }
 
 // wrapper_pic

@@ -130,8 +130,8 @@ static void RegisterMsanFlags(FlagParser *parser, Flags *f) {
 #include "msan_flags.inc"
 #undef MSAN_FLAG
 
-  FlagHandlerKeepGoing *fh_keep_going = new (FlagParser::Alloc)  // NOLINT
-      FlagHandlerKeepGoing(&f->halt_on_error);
+  FlagHandlerKeepGoing *fh_keep_going =
+      new (FlagParser::Alloc) FlagHandlerKeepGoing(&f->halt_on_error);
   parser->RegisterHandler("keep_going", fh_keep_going,
                           "deprecated, use halt_on_error");
 }
@@ -403,7 +403,6 @@ void __msan_init() {
   AvoidCVE_2016_2143();
 
   CacheBinaryName();
-  CheckASLR();
   InitializeFlags();
 
   // Install tool-specific callbacks in sanitizer_common.
@@ -412,6 +411,7 @@ void __msan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializeInterceptors();
+  CheckASLR();
   InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.

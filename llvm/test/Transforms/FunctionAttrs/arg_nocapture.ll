@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=10 -S < %s | FileCheck %s
 ;
 ; Test cases specifically designed for the "no-capture" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.
@@ -90,7 +90,7 @@ entry:
 define i32* @srec16(i32* %a) #0 {
 entry:
   %call = call i32* @srec16(i32* %a)
-; CHECK:      %call = call i32* @srec16(i32* %a)
+; CHECK:      %call
 ; CHECK-NEXT: unreachable
   %call1 = call i32* @srec16(i32* %call)
   %call2 = call i32* @srec16(i32* %call1)
@@ -112,15 +112,12 @@ entry:
 
 ; TEST SCC with various calls, casts, and comparisons agains NULL
 ;
-; FIXME: no-capture missing for %a
-; CHECK: define float* @scc_A(i32* readnone returned %a)
+; CHECK: define dereferenceable_or_null(4) float* @scc_A(i32* readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" %a)
 ;
-; FIXME: no-capture missing for %a
-; CHECK: define i64* @scc_B(double* readnone returned %a)
+; CHECK: define dereferenceable_or_null(8) i64* @scc_B(double* readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" %a)
 ;
 ; FIXME: readnone missing for %s
-; FIXME: no-capture missing for %a
-; CHECK: define i8* @scc_C(i16* returned %a)
+; CHECK: define dereferenceable_or_null(2) i8* @scc_C(i16* returned dereferenceable_or_null(2) "no-capture-maybe-returned" %a)
 ;
 ; float *scc_A(int *a) {
 ;   return (float*)(a ? (int*)scc_A((int*)scc_B((double*)scc_C((short*)a))) : a);
@@ -133,7 +130,7 @@ entry:
 ; void *scc_C(short *a) {
 ;   return scc_A((int*)(scc_A(a) ? scc_B((double*)a) : scc_C(a)));
 ; }
-define float* @scc_A(i32* %a) {
+define float* @scc_A(i32* dereferenceable_or_null(4) %a) {
 entry:
   %tobool = icmp ne i32* %a, null
   br i1 %tobool, label %cond.true, label %cond.false
@@ -157,7 +154,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
   ret float* %4
 }
 
-define i64* @scc_B(double* %a) {
+define i64* @scc_B(double* dereferenceable_or_null(8) %a) {
 entry:
   %tobool = icmp ne double* %a, null
   br i1 %tobool, label %cond.true, label %cond.false
@@ -181,7 +178,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
   ret i64* %4
 }
 
-define i8* @scc_C(i16* %a) {
+define i8* @scc_C(i16* dereferenceable_or_null(2) %a) {
 entry:
   %bc = bitcast i16* %a to i32*
   %call = call float* @scc_A(i32* %bc)
@@ -248,7 +245,7 @@ declare i32 @printf(i8* nocapture, ...)
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @not_captured_but_returned_0(i64* returned %a)
+; CHECK: define i64* @not_captured_but_returned_0(i64* returned "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
 entry:
   store i64 0, i64* %a, align 8
@@ -263,7 +260,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull i64* @not_captured_but_returned_1(i64* %a)
+; CHECK: define nonnull i64* @not_captured_but_returned_1(i64* "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1
@@ -279,7 +276,7 @@ entry:
 ; }
 ;
 ; FIXME: no-capture missing for %a
-; CHECK: define void @test_not_captured_but_returned_calls(i64* %a)
+; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture %a)
 define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -294,7 +291,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* returned %a)
+; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* returned "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -324,7 +321,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull i64* @negative_test_not_captured_but_returned_call_1a(i64* %a)
+; CHECK: define nonnull i64* @negative_test_not_captured_but_returned_call_1a(i64* "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)

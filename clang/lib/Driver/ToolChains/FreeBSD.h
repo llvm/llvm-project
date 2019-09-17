@@ -69,7 +69,7 @@ public:
       const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault() const override;
   SanitizerMask getSupportedSanitizers() const override;
-  unsigned GetDefaultDwarfVersion() const override { return 2; }
+  unsigned GetDefaultDwarfVersion() const override;
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }

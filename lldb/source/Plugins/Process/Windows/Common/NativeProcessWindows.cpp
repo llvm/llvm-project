@@ -430,7 +430,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
 
   ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionCode()) {
-  case STATUS_SINGLE_STEP:
+  case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP:
     StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
     SetState(eStateStopped, true);
@@ -438,7 +438,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     // Continue the debugger.
     return ExceptionResult::MaskException;
 
-  case STATUS_BREAKPOINT:
+  case DWORD(STATUS_BREAKPOINT):
   case STATUS_WX86_BREAKPOINT:
     if (FindSoftwareBreakpoint(record.GetExceptionAddress())) {
       LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",

@@ -20,6 +20,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
@@ -734,9 +735,13 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                 SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
                                 const TemplateArgumentListInfo *TemplateArgs) {
+  // DependentScopeDeclRefExpr::Create requires a valid QualifierLoc
+  NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
+  if (!QualifierLoc)
+    return ExprError();
+
   return DependentScopeDeclRefExpr::Create(
-      Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
-      TemplateArgs);
+      Context, QualifierLoc, TemplateKWLoc, NameInfo, TemplateArgs);
 }
 
 
@@ -844,15 +849,14 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
 void Sema::DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl) {
   assert(PrevDecl->isTemplateParameter() && "Not a template parameter");
 
-  // Microsoft Visual C++ permits template parameters to be shadowed.
-  if (getLangOpts().MicrosoftExt)
-    return;
-
   // C++ [temp.local]p4:
   //   A template-parameter shall not be redeclared within its
   //   scope (including nested scopes).
-  Diag(Loc, diag::err_template_param_shadow)
-    << cast<NamedDecl>(PrevDecl)->getDeclName();
+  //
+  // Make this a warning when MSVC compatibility is requested.
+  unsigned DiagId = getLangOpts().MSVCCompat ? diag::ext_template_param_shadow
+                                             : diag::err_template_param_shadow;
+  Diag(Loc, DiagId) << cast<NamedDecl>(PrevDecl)->getDeclName();
   Diag(PrevDecl->getLocation(), diag::note_template_param_here);
 }
 
@@ -1011,6 +1015,10 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
                                    KeyLoc, Loc, Depth, Position, ParamName,
                                    Typename, IsParameterPack);
   Param->setAccess(AS_public);
+
+  if (Param->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(Param);
 
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, ParamNameLoc, ParamName);
@@ -1210,6 +1218,10 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   if (Invalid)
     Param->setInvalidDecl();
 
+  if (Param->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(Param);
+
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, D.getIdentifierLoc(),
                                          ParamName);
@@ -1272,6 +1284,10 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(Scope* S,
                                      Depth, Position, IsParameterPack,
                                      Name, Params);
   Param->setAccess(AS_public);
+
+  if (Param->isParameterPack())
+    if (auto *LSI = getEnclosingLambda())
+      LSI->LocalPacks.push_back(Param);
 
   // If the template template parameter has a name, then link the identifier
   // into the scope and lookup mechanisms.
@@ -4693,6 +4709,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
     TemplateArgLists.addOuterTemplateArguments(None);
 
+  Sema::ContextRAII SavedContext(SemaRef, Template->getDeclContext());
   EnterExpressionEvaluationContext ConstantEvaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   return SemaRef.SubstExpr(Param->getDefaultArgument(), TemplateArgLists);

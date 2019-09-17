@@ -58,7 +58,7 @@ internal:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x201000
+// CHECK-NEXT: Address: 0x201160
 
 // CHECK:      Name: .bss
 // CHECK-NEXT: Type: SHT_NOBITS
@@ -66,7 +66,7 @@ internal:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x202000
+// CHECK-NEXT: Address: 0x202164
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 4
 
@@ -104,7 +104,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _start
-// CHECK-NEXT:     Value: 0x201000
+// CHECK-NEXT:     Value: 0x201160
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global (0x1)
 // CHECK-NEXT:     Type: Function
@@ -131,7 +131,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: common
-// CHECK-NEXT:     Value: 0x202000
+// CHECK-NEXT:     Value: 0x202164
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
@@ -140,7 +140,7 @@ internal:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: foo
-// CHECK-NEXT:     Value: 0x201000
+// CHECK-NEXT:     Value: 0x201160
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Weak (0x2)
 // CHECK-NEXT:     Type: Object

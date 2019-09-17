@@ -831,10 +831,6 @@ bool ScopBuilder::buildDomains(
   auto *S =
       isl_set_universe(isl_space_set_alloc(scop->getIslCtx().get(), 0, LD + 1));
 
-  while (LD-- >= 0) {
-    L = L->getParentLoop();
-  }
-
   InvalidDomainMap[EntryBB] = isl::manage(isl_set_empty(isl_set_get_space(S)));
   isl::noexceptions::set Domain = isl::manage(S);
   scop->setDomain(EntryBB, Domain);
@@ -2031,6 +2027,10 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
       continue;
 
     Instruction *Leader = UnionFind.getLeaderValue(Inst);
+    // Since previous iterations might have merged sets, some items in
+    // SeenLeaders are not leaders anymore. However, The new leader of
+    // previously merged instructions must be one of the former leaders of
+    // these merged instructions.
     bool Inserted = SeenLeaders.insert(Leader);
     if (Inserted)
       continue;
@@ -2040,10 +2040,12 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
     // see the pattern "A B A". This function joins all statements until the
     // only seen occurrence of A.
     for (Instruction *Prev : reverse(SeenLeaders)) {
-      // Items added to 'SeenLeaders' are leaders, but may have lost their
-      // leadership status when merged into another statement.
-      Instruction *PrevLeader = UnionFind.getLeaderValue(SeenLeaders.back());
-      if (PrevLeader == Leader)
+      // We are backtracking from the last element until we see Inst's leader
+      // in SeenLeaders and merge all into one set. Although leaders of
+      // instructions change during the execution of this loop, it's irrelevant
+      // as we are just searching for the element that we already confirmed is
+      // in the list.
+      if (Prev == Leader)
         break;
       UnionFind.unionSets(Prev, Leader);
     }
@@ -2095,7 +2097,7 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // shouldModelInst() repeatedly.
   SmallVector<Instruction *, 32> ModeledInsts;
   EquivalenceClasses<Instruction *> UnionFind;
-  Instruction *MainInst = nullptr;
+  Instruction *MainInst = nullptr, *MainLeader = nullptr;
   for (Instruction &Inst : *BB) {
     if (!shouldModelInst(&Inst, L))
       continue;
@@ -2129,6 +2131,8 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
     if (LeaderIt == UnionFind.member_end())
       continue;
 
+    if (&Inst == MainInst)
+      MainLeader = *LeaderIt;
     std::vector<Instruction *> &InstList = LeaderToInstList[*LeaderIt];
     InstList.push_back(&Inst);
   }
@@ -2136,19 +2140,11 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // Finally build the statements.
   int Count = 0;
   long BBIdx = scop->getNextStmtIdx();
-  bool MainFound = false;
   for (auto &Instructions : reverse(LeaderToInstList)) {
     std::vector<Instruction *> &InstList = Instructions.second;
 
     // If there is no main instruction, make the first statement the main.
-    bool IsMain;
-    if (MainInst)
-      IsMain = std::find(InstList.begin(), InstList.end(), MainInst) !=
-               InstList.end();
-    else
-      IsMain = (Count == 0);
-    if (IsMain)
-      MainFound = true;
+    bool IsMain = (MainInst ? MainLeader == Instructions.first : Count == 0);
 
     std::reverse(InstList.begin(), InstList.end());
     std::string Name = makeStmtName(BB, BBIdx, Count, IsMain);
@@ -2159,8 +2155,10 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // Unconditionally add an epilogue (last statement). It contains no
   // instructions, but holds the PHI write accesses for successor basic blocks,
   // if the incoming value is not defined in another statement if the same BB.
+  // The epilogue becomes the main statement only if there is no other
+  // statement that could become main.
   // The epilogue will be removed if no PHIWrite is added to it.
-  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, !MainFound, true);
+  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, Count == 0, true);
   scop->addScopStmt(BB, EpilogueName, L, {});
 }
 

@@ -15,7 +15,6 @@
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,24 +33,24 @@ public:
     memset(reinterpret_cast<void *>(&Header), 0, sizeof(MachO::mach_header_64));
   }
 
-  Error writeMachO(raw_ostream &OS);
+  void writeMachO(raw_ostream &OS);
 
 private:
-  Error writeHeader(raw_ostream &OS);
-  Error writeLoadCommands(raw_ostream &OS);
-  Error writeSectionData(raw_ostream &OS);
-  Error writeLinkEditData(raw_ostream &OS);
+  void writeHeader(raw_ostream &OS);
+  void writeLoadCommands(raw_ostream &OS);
+  void writeSectionData(raw_ostream &OS);
+  void writeLinkEditData(raw_ostream &OS);
 
   void writeBindOpcodes(raw_ostream &OS,
                         std::vector<MachOYAML::BindOpcode> &BindOpcodes);
   // LinkEdit writers
-  Error writeRebaseOpcodes(raw_ostream &OS);
-  Error writeBasicBindOpcodes(raw_ostream &OS);
-  Error writeWeakBindOpcodes(raw_ostream &OS);
-  Error writeLazyBindOpcodes(raw_ostream &OS);
-  Error writeNameList(raw_ostream &OS);
-  Error writeStringTable(raw_ostream &OS);
-  Error writeExportTrie(raw_ostream &OS);
+  void writeRebaseOpcodes(raw_ostream &OS);
+  void writeBasicBindOpcodes(raw_ostream &OS);
+  void writeWeakBindOpcodes(raw_ostream &OS);
+  void writeLazyBindOpcodes(raw_ostream &OS);
+  void writeNameList(raw_ostream &OS);
+  void writeStringTable(raw_ostream &OS);
+  void writeExportTrie(raw_ostream &OS);
 
   void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
   void ZeroToOffset(raw_ostream &OS, size_t offset);
@@ -63,18 +62,14 @@ private:
   MachO::mach_header_64 Header;
 };
 
-Error MachOWriter::writeMachO(raw_ostream &OS) {
+void MachOWriter::writeMachO(raw_ostream &OS) {
   fileStart = OS.tell();
-  if (auto Err = writeHeader(OS))
-    return Err;
-  if (auto Err = writeLoadCommands(OS))
-    return Err;
-  if (auto Err = writeSectionData(OS))
-    return Err;
-  return Error::success();
+  writeHeader(OS);
+  writeLoadCommands(OS);
+  writeSectionData(OS);
 }
 
-Error MachOWriter::writeHeader(raw_ostream &OS) {
+void MachOWriter::writeHeader(raw_ostream &OS) {
   Header.magic = Obj.Header.magic;
   Header.cputype = Obj.Header.cputype;
   Header.cpusubtype = Obj.Header.cpusubtype;
@@ -90,8 +85,6 @@ Error MachOWriter::writeHeader(raw_ostream &OS) {
   auto header_size =
       is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
   OS.write((const char *)&Header, header_size);
-
-  return Error::success();
 }
 
 template <typename SectionType>
@@ -212,7 +205,7 @@ void MachOWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
     ZeroFillBytes(OS, Offset - currOffset);
 }
 
-Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
+void MachOWriter::writeLoadCommands(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
     size_t BytesWritten = 0;
     llvm::MachO::macho_load_command Data = LC.Data;
@@ -259,15 +252,9 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
       ZeroFillBytes(OS, BytesRemaining);
     }
   }
-  return Error::success();
 }
 
-static bool isVirtualSection(uint8_t type) {
-  return (type == MachO::S_ZEROFILL || type == MachO::S_GB_ZEROFILL ||
-          type == MachO::S_THREAD_LOCAL_ZEROFILL);
-}
-
-Error MachOWriter::writeSectionData(raw_ostream &OS) {
+void MachOWriter::writeSectionData(raw_ostream &OS) {
   bool FoundLinkEditSeg = false;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
@@ -278,8 +265,7 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
       if (0 ==
           strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
         FoundLinkEditSeg = true;
-        if (auto Err = writeLinkEditData(OS))
-          return Err;
+        writeLinkEditData(OS);
       }
       for (auto &Sec : LC.Sections) {
         ZeroToOffset(OS, Sec.offset);
@@ -311,11 +297,17 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
         }
 
         // Skip if it's a virtual section.
-        if (isVirtualSection(Sec.flags & MachO::SECTION_TYPE))
+        if (MachO::isVirtualSection(Sec.flags & MachO::SECTION_TYPE))
           continue;
 
-        // Fill section data with 0xDEADBEEF
-        Fill(OS, Sec.size, 0xDEADBEEFu);
+        if (Sec.content) {
+          yaml::BinaryRef Content = *Sec.content;
+          Content.writeAsBinary(OS);
+          ZeroFillBytes(OS, Sec.size - Content.binary_size());
+        } else {
+          // Fill section data with 0xDEADBEEF.
+          Fill(OS, Sec.size, 0xDEADBEEFu);
+        }
       }
       uint64_t segSize = is64Bit ? LC.Data.segment_command_64_data.filesize
                                  : LC.Data.segment_command_data.filesize;
@@ -325,11 +317,8 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
   }
   // Old PPC Object Files didn't have __LINKEDIT segments, the data was just
   // stuck at the end of the file.
-  if (!FoundLinkEditSeg) {
-    if (auto Err = writeLinkEditData(OS))
-      return Err;
-  }
-  return Error::success();
+  if (!FoundLinkEditSeg)
+    writeLinkEditData(OS);
 }
 
 void MachOWriter::writeBindOpcodes(
@@ -376,9 +365,8 @@ void MachOWriter::dumpExportEntry(raw_ostream &OS,
     dumpExportEntry(OS, EE);
 }
 
-Error MachOWriter::writeExportTrie(raw_ostream &OS) {
+void MachOWriter::writeExportTrie(raw_ostream &OS) {
   dumpExportEntry(OS, Obj.LinkEdit.ExportTrie);
-  return Error::success();
 }
 
 template <typename NListType>
@@ -396,8 +384,8 @@ void writeNListEntry(MachOYAML::NListEntry &NLE, raw_ostream &OS,
   OS.write(reinterpret_cast<const char *>(&ListEntry), sizeof(NListType));
 }
 
-Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
-  typedef Error (MachOWriter::*writeHandler)(raw_ostream &);
+void MachOWriter::writeLinkEditData(raw_ostream &OS) {
+  typedef void (MachOWriter::*writeHandler)(raw_ostream &);
   typedef std::pair<uint64_t, writeHandler> writeOperation;
   std::vector<writeOperation> WriteQueue;
 
@@ -434,57 +422,47 @@ Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
 
   for (auto writeOp : WriteQueue) {
     ZeroToOffset(OS, writeOp.first);
-    if (auto Err = (this->*writeOp.second)(OS))
-      return Err;
+    (this->*writeOp.second)(OS);
   }
-
-  return Error::success();
 }
 
-Error MachOWriter::writeRebaseOpcodes(raw_ostream &OS) {
+void MachOWriter::writeRebaseOpcodes(raw_ostream &OS) {
   MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
 
   for (auto Opcode : LinkEdit.RebaseOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
     OS.write(reinterpret_cast<char *>(&OpByte), 1);
-    for (auto Data : Opcode.ExtraData) {
+    for (auto Data : Opcode.ExtraData)
       encodeULEB128(Data, OS);
-    }
   }
-  return Error::success();
 }
 
-Error MachOWriter::writeBasicBindOpcodes(raw_ostream &OS) {
+void MachOWriter::writeBasicBindOpcodes(raw_ostream &OS) {
   writeBindOpcodes(OS, Obj.LinkEdit.BindOpcodes);
-  return Error::success();
 }
 
-Error MachOWriter::writeWeakBindOpcodes(raw_ostream &OS) {
+void MachOWriter::writeWeakBindOpcodes(raw_ostream &OS) {
   writeBindOpcodes(OS, Obj.LinkEdit.WeakBindOpcodes);
-  return Error::success();
 }
 
-Error MachOWriter::writeLazyBindOpcodes(raw_ostream &OS) {
+void MachOWriter::writeLazyBindOpcodes(raw_ostream &OS) {
   writeBindOpcodes(OS, Obj.LinkEdit.LazyBindOpcodes);
-  return Error::success();
 }
 
-Error MachOWriter::writeNameList(raw_ostream &OS) {
+void MachOWriter::writeNameList(raw_ostream &OS) {
   for (auto NLE : Obj.LinkEdit.NameList) {
     if (is64Bit)
       writeNListEntry<MachO::nlist_64>(NLE, OS, Obj.IsLittleEndian);
     else
       writeNListEntry<MachO::nlist>(NLE, OS, Obj.IsLittleEndian);
   }
-  return Error::success();
 }
 
-Error MachOWriter::writeStringTable(raw_ostream &OS) {
+void MachOWriter::writeStringTable(raw_ostream &OS) {
   for (auto Str : Obj.LinkEdit.StringTable) {
     OS.write(Str.data(), Str.size());
     OS.write('\0');
   }
-  return Error::success();
 }
 
 class UniversalWriter {
@@ -492,11 +470,11 @@ public:
   UniversalWriter(yaml::YamlObjectFile &ObjectFile)
       : ObjectFile(ObjectFile), fileStart(0) {}
 
-  Error writeMachO(raw_ostream &OS);
+  void writeMachO(raw_ostream &OS);
 
 private:
-  Error writeFatHeader(raw_ostream &OS);
-  Error writeFatArchs(raw_ostream &OS);
+  void writeFatHeader(raw_ostream &OS);
+  void writeFatArchs(raw_ostream &OS);
 
   void ZeroToOffset(raw_ostream &OS, size_t offset);
 
@@ -504,30 +482,30 @@ private:
   uint64_t fileStart;
 };
 
-Error UniversalWriter::writeMachO(raw_ostream &OS) {
+void UniversalWriter::writeMachO(raw_ostream &OS) {
   fileStart = OS.tell();
   if (ObjectFile.MachO) {
     MachOWriter Writer(*ObjectFile.MachO);
-    return Writer.writeMachO(OS);
+    Writer.writeMachO(OS);
+    return;
   }
-  if (auto Err = writeFatHeader(OS))
-    return Err;
-  if (auto Err = writeFatArchs(OS))
-    return Err;
+
+  writeFatHeader(OS);
+  writeFatArchs(OS);
+
   auto &FatFile = *ObjectFile.FatMachO;
   assert(FatFile.FatArchs.size() == FatFile.Slices.size());
   for (size_t i = 0; i < FatFile.Slices.size(); i++) {
     ZeroToOffset(OS, FatFile.FatArchs[i].offset);
     MachOWriter Writer(FatFile.Slices[i]);
-    if (auto Err = Writer.writeMachO(OS))
-      return Err;
+    Writer.writeMachO(OS);
+
     auto SliceEnd = FatFile.FatArchs[i].offset + FatFile.FatArchs[i].size;
     ZeroToOffset(OS, SliceEnd);
   }
-  return Error::success();
 }
 
-Error UniversalWriter::writeFatHeader(raw_ostream &OS) {
+void UniversalWriter::writeFatHeader(raw_ostream &OS) {
   auto &FatFile = *ObjectFile.FatMachO;
   MachO::fat_header header;
   header.magic = FatFile.Header.magic;
@@ -535,7 +513,6 @@ Error UniversalWriter::writeFatHeader(raw_ostream &OS) {
   if (sys::IsLittleEndianHost)
     swapStruct(header);
   OS.write(reinterpret_cast<const char *>(&header), sizeof(MachO::fat_header));
-  return Error::success();
 }
 
 template <typename FatArchType>
@@ -571,7 +548,7 @@ void writeFatArch<MachO::fat_arch_64>(MachOYAML::FatArch &Arch,
            sizeof(MachO::fat_arch_64));
 }
 
-Error UniversalWriter::writeFatArchs(raw_ostream &OS) {
+void UniversalWriter::writeFatArchs(raw_ostream &OS) {
   auto &FatFile = *ObjectFile.FatMachO;
   bool is64Bit = FatFile.Header.magic == MachO::FAT_MAGIC_64;
   for (auto Arch : FatFile.FatArchs) {
@@ -580,8 +557,6 @@ Error UniversalWriter::writeFatArchs(raw_ostream &OS) {
     else
       writeFatArch<MachO::fat_arch>(Arch, OS);
   }
-
-  return Error::success();
 }
 
 void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
@@ -595,13 +570,10 @@ void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 namespace llvm {
 namespace yaml {
 
-int yaml2macho(YamlObjectFile &Doc, raw_ostream &Out) {
+bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler /*EH*/) {
   UniversalWriter Writer(Doc);
-  if (auto Err = Writer.writeMachO(Out)) {
-    errs() << toString(std::move(Err));
-    return 1;
-  }
-  return 0;
+  Writer.writeMachO(Out);
+  return true;
 }
 
 } // namespace yaml

@@ -5,14 +5,10 @@
 %0 = type { double, double, double, i32, i32 }
 declare i8* @malloc() local_unnamed_addr
 
-define void @phi3(i32*) local_unnamed_addr {
+define void @phi3(i32*) nounwind {
 ; CHECK-LABEL: phi3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r29, -24
-; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 0, 16(1)

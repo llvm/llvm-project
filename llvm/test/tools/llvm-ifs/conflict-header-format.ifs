@@ -1,0 +1,14 @@
+# RUN: not llvm-ifs -action write-ifs -o - %s %S/object.ifs 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# CHECK-IFS: error: Interface Stub: ObjectFileFormat Mismatch.
+# CHECK-IFS-NEXT: Filenames:
+# CHECK-IFS-NEXT: ObjectFileFormat Values: TBD ELF
+
+--- !experimental-ifs-v1
+IfsVersion:      1.0
+Triple:          x86_64-apple-unknown
+ObjectFileFormat: TBD
+Symbols:
+  a:               { Type: Func }
+...

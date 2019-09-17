@@ -44,17 +44,22 @@ namespace yaml {
 class Input;
 struct YamlObjectFile;
 
-int yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out);
-int yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out);
-int yaml2macho(YamlObjectFile &Doc, raw_ostream &Out);
-int yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out);
-int yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out);
+using ErrorHandler = llvm::function_ref<void(const Twine &Msg)>;
 
-Error convertYAML(Input &YIn, raw_ostream &Out, unsigned DocNum = 1);
+bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH);
+bool yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out,
+                   ErrorHandler EH);
+bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+
+bool convertYAML(Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
+                 unsigned DocNum = 1);
 
 /// Convenience function for tests.
-Expected<std::unique_ptr<object::ObjectFile>>
-yaml2ObjectFile(SmallVectorImpl<char> &Storage, StringRef Yaml);
+std::unique_ptr<object::ObjectFile>
+yaml2ObjectFile(SmallVectorImpl<char> &Storage, StringRef Yaml,
+                ErrorHandler ErrHandler);
 
 } // namespace yaml
 } // namespace llvm

@@ -17,15 +17,15 @@
 // basic_string<ECharT, Traits, Allocator>
 // string(const Allocator& a = Allocator()) const;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "count_new.hpp"
+#include "count_new.h"
 #include "min_allocator.h"
-#include "filesystem_test_helper.hpp"
+#include "filesystem_test_helper.h"
 
 
 // the SSO is always triggered for strings of size 2.

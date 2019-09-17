@@ -581,6 +581,11 @@ struct section_64 {
   uint32_t reserved3;
 };
 
+inline bool isVirtualSection(uint8_t type) {
+  return (type == MachO::S_ZEROFILL || type == MachO::S_GB_ZEROFILL ||
+          type == MachO::S_THREAD_LOCAL_ZEROFILL);
+}
+
 struct fvmlib {
   uint32_t name;
   uint32_t minor_version;

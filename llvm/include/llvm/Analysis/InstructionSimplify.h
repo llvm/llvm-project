@@ -31,6 +31,7 @@
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
@@ -261,12 +262,14 @@ Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
 /// This first performs a normal RAUW of I with SimpleV. It then recursively
 /// attempts to simplify those users updated by the operation. The 'I'
 /// instruction must not be equal to the simplified value 'SimpleV'.
+/// If UnsimplifiedUsers is provided, instructions that could not be simplified
+/// are added to it.
 ///
 /// The function returns true if any simplifications were performed.
-bool replaceAndRecursivelySimplify(Instruction *I, Value *SimpleV,
-                                   const TargetLibraryInfo *TLI = nullptr,
-                                   const DominatorTree *DT = nullptr,
-                                   AssumptionCache *AC = nullptr);
+bool replaceAndRecursivelySimplify(
+    Instruction *I, Value *SimpleV, const TargetLibraryInfo *TLI = nullptr,
+    const DominatorTree *DT = nullptr, AssumptionCache *AC = nullptr,
+    SmallSetVector<Instruction *, 8> *UnsimplifiedUsers = nullptr);
 
 /// Recursively attempt to simplify an instruction.
 ///

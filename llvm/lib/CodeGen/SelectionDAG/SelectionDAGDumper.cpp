@@ -305,6 +305,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SMULFIX:                    return "smulfix";
   case ISD::SMULFIXSAT:                 return "smulfixsat";
   case ISD::UMULFIX:                    return "umulfix";
+  case ISD::UMULFIXSAT:                 return "umulfixsat";
 
   // Conversion operators.
   case ISD::SIGN_EXTEND:                return "sign_extend";
@@ -318,14 +319,15 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_ROUND:                   return "fp_round";
   case ISD::STRICT_FP_ROUND:            return "strict_fp_round";
   case ISD::FLT_ROUNDS_:                return "flt_rounds";
-  case ISD::FP_ROUND_INREG:             return "fp_round_inreg";
   case ISD::FP_EXTEND:                  return "fp_extend";
   case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
 
   case ISD::SINT_TO_FP:                 return "sint_to_fp";
   case ISD::UINT_TO_FP:                 return "uint_to_fp";
   case ISD::FP_TO_SINT:                 return "fp_to_sint";
+  case ISD::STRICT_FP_TO_SINT:          return "strict_fp_to_sint";
   case ISD::FP_TO_UINT:                 return "fp_to_uint";
+  case ISD::STRICT_FP_TO_UINT:          return "strict_fp_to_uint";
   case ISD::BITCAST:                    return "bitcast";
   case ISD::ADDRSPACECAST:              return "addrspacecast";
   case ISD::FP16_TO_FP:                 return "fp16_to_fp";

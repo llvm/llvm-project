@@ -4,10 +4,12 @@
 declare i32 @llvm.smul.fix.i32(i32, i32, i32 immarg)
 declare i32 @llvm.umul.fix.i32(i32, i32, i32 immarg)
 declare i32 @llvm.smul.fix.sat.i32(i32, i32, i32 immarg)
+declare i32 @llvm.umul.fix.sat.i32(i32, i32, i32 immarg)
 
 declare <4 x i32> @llvm.smul.fix.v4i32(<4 x i32>, <4 x i32>, i32 immarg)
 declare <4 x i32> @llvm.umul.fix.v4i32(<4 x i32>, <4 x i32>, i32 immarg)
 declare <4 x i32> @llvm.smul.fix.sat.v4i32(<4 x i32>, <4 x i32>, i32 immarg)
+declare <4 x i32> @llvm.umul.fix.sat.v4i32(<4 x i32>, <4 x i32>, i32 immarg)
 
 define i32 @smulfix_undef(i32 %y) nounwind {
 ; CHECK-LABEL: smulfix_undef:
@@ -63,6 +65,24 @@ define i32 @smulfixsat_zero(i32 %y) nounwind {
   ret i32 %tmp
 }
 
+define i32 @umulfixsat_undef(i32 %y) nounwind {
+; CHECK-LABEL: umulfixsat_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %tmp = call i32 @llvm.umul.fix.sat.i32(i32 undef, i32 %y, i32 2)
+  ret i32 %tmp
+}
+
+define i32 @umulfixsat_zero(i32 %y) nounwind {
+; CHECK-LABEL: umulfixsat_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %tmp = call i32 @llvm.umul.fix.sat.i32(i32 0, i32 %y, i32 2)
+  ret i32 %tmp
+}
+
 define <4 x i32> @vec_smulfix_undef(<4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec_smulfix_undef:
 ; CHECK:       # %bb.0:
@@ -114,5 +134,23 @@ define <4 x i32> @vec_smulfixsat_zero(<4 x i32> %y) nounwind {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %tmp = call <4 x i32> @llvm.smul.fix.sat.v4i32(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> %y, i32 2)
+  ret <4 x i32> %tmp
+}
+
+define <4 x i32> @vec_umulfixsat_undef(<4 x i32> %y) nounwind {
+; CHECK-LABEL: vec_umulfixsat_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %tmp = call <4 x i32> @llvm.umul.fix.sat.v4i32(<4 x i32> undef, <4 x i32> %y, i32 2)
+  ret <4 x i32> %tmp
+}
+
+define <4 x i32> @vec_umulfixsat_zero(<4 x i32> %y) nounwind {
+; CHECK-LABEL: vec_umulfixsat_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %tmp = call <4 x i32> @llvm.umul.fix.sat.v4i32(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> %y, i32 2)
   ret <4 x i32> %tmp
 }

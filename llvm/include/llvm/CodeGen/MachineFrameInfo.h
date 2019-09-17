@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEFRAMEINFO_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <vector>
@@ -129,7 +130,7 @@ private:
     uint64_t Size;
 
     // The required alignment of this stack slot.
-    unsigned Alignment;
+    Align Alignment;
 
     // If true, the value of the stack object is set before
     // entering the function and is not modified inside the function. By
@@ -180,17 +181,16 @@ private:
 
     uint8_t SSPLayout;
 
-    StackObject(uint64_t Size, unsigned Alignment, int64_t SPOffset,
+    StackObject(uint64_t Size, llvm::Align Alignment, int64_t SPOffset,
                 bool IsImmutable, bool IsSpillSlot, const AllocaInst *Alloca,
                 bool IsAliased, uint8_t StackID = 0)
-      : SPOffset(SPOffset), Size(Size), Alignment(Alignment),
-        isImmutable(IsImmutable), isSpillSlot(IsSpillSlot),
-        StackID(StackID), Alloca(Alloca), isAliased(IsAliased),
-        SSPLayout(SSPLK_None) {}
+        : SPOffset(SPOffset), Size(Size), Alignment(Alignment),
+          isImmutable(IsImmutable), isSpillSlot(IsSpillSlot), StackID(StackID),
+          Alloca(Alloca), isAliased(IsAliased), SSPLayout(SSPLK_None) {}
   };
 
   /// The alignment of the stack.
-  unsigned StackAlignment;
+  Align StackAlignment;
 
   /// Can the stack be realigned. This can be false if the target does not
   /// support stack realignment, or if the user asks us not to realign the
@@ -260,7 +260,7 @@ private:
   /// native alignment maintained by the compiler, dynamic alignment code will
   /// be needed.
   ///
-  unsigned MaxAlignment = 0;
+  Align MaxAlignment;
 
   /// Set to true if this function adjusts the stack -- e.g.,
   /// when calling another function. This is only valid during and after
@@ -304,7 +304,7 @@ private:
 
   /// Required alignment of the local object blob, which is the strictest
   /// alignment of any object in it.
-  unsigned LocalFrameMaxAlign = 0;
+  Align LocalFrameMaxAlign;
 
   /// Whether the local object blob needs to be allocated together. If not,
   /// PEI should ignore the isPreAllocated flags on the stack objects and
@@ -338,8 +338,8 @@ private:
 public:
   explicit MachineFrameInfo(unsigned StackAlignment, bool StackRealignable,
                             bool ForcedRealign)
-      : StackAlignment(StackAlignment), StackRealignable(StackRealignable),
-        ForcedRealign(ForcedRealign) {}
+      : StackAlignment(assumeAligned(StackAlignment)),
+        StackRealignable(StackRealignable), ForcedRealign(ForcedRealign) {}
 
   /// Return true if there are any stack objects in this function.
   bool hasStackObjects() const { return !Objects.empty(); }
@@ -419,10 +419,10 @@ public:
 
   /// Required alignment of the local object blob,
   /// which is the strictest alignment of any object in it.
-  void setLocalFrameMaxAlign(unsigned Align) { LocalFrameMaxAlign = Align; }
+  void setLocalFrameMaxAlign(Align Align) { LocalFrameMaxAlign = Align; }
 
   /// Return the required alignment of the local object blob.
-  unsigned getLocalFrameMaxAlign() const { return LocalFrameMaxAlign; }
+  Align getLocalFrameMaxAlign() const { return LocalFrameMaxAlign; }
 
   /// Get whether the local allocation blob should be allocated together or
   /// let PEI allocate the locals in it directly.
@@ -462,14 +462,14 @@ public:
   unsigned getObjectAlignment(int ObjectIdx) const {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
-    return Objects[ObjectIdx+NumFixedObjects].Alignment;
+    return Objects[ObjectIdx + NumFixedObjects].Alignment.value();
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.
   void setObjectAlignment(int ObjectIdx, unsigned Align) {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
-    Objects[ObjectIdx+NumFixedObjects].Alignment = Align;
+    Objects[ObjectIdx + NumFixedObjects].Alignment = assumeAligned(Align);
 
     // Only ensure max alignment for the default stack.
     if (getStackID(ObjectIdx) == 0)
@@ -561,10 +561,14 @@ public:
 
   /// Return the alignment in bytes that this function must be aligned to,
   /// which is greater than the default stack alignment provided by the target.
-  unsigned getMaxAlignment() const { return MaxAlignment; }
+  unsigned getMaxAlignment() const { return MaxAlignment.value(); }
 
   /// Make sure the function is at least Align bytes aligned.
-  void ensureMaxAlignment(unsigned Align);
+  void ensureMaxAlignment(llvm::Align Align);
+  /// FIXME: Remove this once transition to Align is over.
+  inline void ensureMaxAlignment(unsigned Align) {
+    ensureMaxAlignment(assumeAligned(Align));
+  }
 
   /// Return true if this function adjusts the stack -- e.g.,
   /// when calling another function. This is only valid during and after
@@ -728,12 +732,24 @@ public:
 
   /// Create a new statically sized stack object, returning
   /// a nonnegative identifier to represent it.
-  int CreateStackObject(uint64_t Size, unsigned Alignment, bool isSpillSlot,
+  int CreateStackObject(uint64_t Size, llvm::Align Alignment, bool isSpillSlot,
                         const AllocaInst *Alloca = nullptr, uint8_t ID = 0);
+  /// FIXME: Remove this function when transition to llvm::Align is over.
+  inline int CreateStackObject(uint64_t Size, unsigned Alignment,
+                               bool isSpillSlot,
+                               const AllocaInst *Alloca = nullptr,
+                               uint8_t ID = 0) {
+    return CreateStackObject(Size, assumeAligned(Alignment), isSpillSlot,
+                             Alloca, ID);
+  }
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
-  int CreateSpillStackObject(uint64_t Size, unsigned Alignment);
+  int CreateSpillStackObject(uint64_t Size, llvm::Align Alignment);
+  /// FIXME: Remove this function when transition to llvm::Align is over.
+  inline int CreateSpillStackObject(uint64_t Size, unsigned Alignment) {
+    return CreateSpillStackObject(Size, assumeAligned(Alignment));
+  }
 
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {
@@ -744,7 +760,12 @@ public:
   /// Notify the MachineFrameInfo object that a variable sized object has been
   /// created.  This must be created whenever a variable sized object is
   /// created, whether or not the index returned is actually used.
-  int CreateVariableSizedObject(unsigned Alignment, const AllocaInst *Alloca);
+  int CreateVariableSizedObject(llvm::Align Alignment,
+                                const AllocaInst *Alloca);
+  /// FIXME: Remove this function when transition to llvm::Align is over.
+  int CreateVariableSizedObject(unsigned Alignment, const AllocaInst *Alloca) {
+    return CreateVariableSizedObject(assumeAligned(Alignment), Alloca);
+  }
 
   /// Returns a reference to call saved info vector for the current function.
   const std::vector<CalleeSavedInfo> &getCalleeSavedInfo() const {

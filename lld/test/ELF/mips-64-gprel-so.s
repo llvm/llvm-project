@@ -2,22 +2,15 @@
 # Check setup of GP relative offsets in a function's prologue.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-objdump -d -t %t.so | FileCheck %s
+# RUN: echo "SECTIONS { foo = 0x2000; _gp = 0x3000; }" > %t.script
+# RUN: ld.lld %t.o --script %t.script -shared -o %t.so
+# RUN: llvm-objdump -d -t --print-imm-hex --no-show-raw-insn %t.so | FileCheck %s
 
-# CHECK:      Disassembly of section .text:
-# CHECK-EMPTY:
-# CHECK-NEXT: foo:
-# CHECK-NEXT:    10000:    3c 1c 00 01    lui     $gp, 1
-# CHECK-NEXT:    10004:    03 99 e0 2d    daddu   $gp, $gp, $25
-# CHECK-NEXT:    10008:    67 9c 7f f0    daddiu  $gp, $gp, 32752
-
-# CHECK: 0000000000027ff0   .got    00000000 .hidden _gp
-# CHECK: 0000000000010000   .text   00000000 foo
+# CHECK:      {{.*}}  lui     $gp, 0x0
+# CHECK-NEXT: {{.*}}  daddu   $gp, $gp, $25
+# CHECK-NEXT: {{.*}}  daddiu  $gp, $gp, 0x1000
 
   .text
-  .global foo
-foo:
   lui     $gp,%hi(%neg(%gp_rel(foo)))
   daddu   $gp,$gp,$t9
   daddiu  $gp,$gp,%lo(%neg(%gp_rel(foo)))

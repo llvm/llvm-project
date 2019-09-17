@@ -19,6 +19,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -176,7 +177,7 @@ printBSDMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
                      unsigned UID, unsigned GID, unsigned Perms, uint64_t Size) {
   uint64_t PosAfterHeader = Pos + 60 + Name.size();
   // Pad so that even 64 bit object files are aligned.
-  unsigned Pad = OffsetToAlignment(PosAfterHeader, 8);
+  unsigned Pad = offsetToAlignment(PosAfterHeader, llvm::Align(8));
   unsigned NameWithPadding = Name.size() + Pad;
   printWithSpacePadding(Out, Twine("#1/") + Twine(NameWithPadding), 16);
   printRestOfMemberHeader(Out, ModTime, UID, GID, Perms,
@@ -243,7 +244,7 @@ struct MemberData {
 
 static MemberData computeStringTable(StringRef Names) {
   unsigned Size = Names.size();
-  unsigned Pad = OffsetToAlignment(Size, 2);
+  unsigned Pad = offsetToAlignment(Size, llvm::Align(2));
   std::string Header;
   raw_string_ostream Out(Header);
   printWithSpacePadding(Out, "//", 48);
@@ -307,8 +308,8 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
   // uniformly.
   // We do this for all bsd formats because it simplifies aligning members.
-  unsigned Alignment = isBSDLike(Kind) ? 8 : 2;
-  unsigned Pad = OffsetToAlignment(Size, Alignment);
+  const llvm::Align Alignment(isBSDLike(Kind) ? 8 : 2);
+  unsigned Pad = offsetToAlignment(Size, Alignment);
   Size += Pad;
 
   if (isBSDLike(Kind)) {
@@ -464,8 +465,9 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     // uniformly.  This matches the behaviour with cctools and ensures that ld64
     // is happy with archives that we generate.
     unsigned MemberPadding =
-        isDarwin(Kind) ? OffsetToAlignment(Data.size(), 8) : 0;
-    unsigned TailPadding = OffsetToAlignment(Data.size() + MemberPadding, 2);
+        isDarwin(Kind) ? offsetToAlignment(Data.size(), llvm::Align(8)) : 0;
+    unsigned TailPadding =
+        offsetToAlignment(Data.size() + MemberPadding, llvm::Align(2));
     StringRef Padding = StringRef(PaddingData, MemberPadding + TailPadding);
 
     sys::TimePoint<std::chrono::seconds> ModTime;

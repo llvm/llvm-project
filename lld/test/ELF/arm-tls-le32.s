@@ -52,7 +52,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT:  ]
-// SEC-NEXT: Address: 0x12000
+// SEC-NEXT: Address: 0x12120
 // SEC:      Size: 4
 // SEC:      Name: .tbss
 // SEC-NEXT: Type: SHT_NOBITS
@@ -61,7 +61,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x12004
+// SEC-NEXT: Address: 0x12124
 // SEC:      Size: 8
 
 // SEC: Dynamic Relocations {
@@ -71,8 +71,8 @@ x:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
 // offset of x from Thread pointer = (TcbSize + 0x0 = 0x8)
-// CHECK-NEXT:   11000:         08 00 00 00
+// CHECK-NEXT:   11114:         08 00 00 00
 // offset of z from Thread pointer = (TcbSize + 0x8 = 0x10)
-// CHECK-NEXT:   11004:         10 00 00 00
+// CHECK-NEXT:   11118:         10 00 00 00
 // offset of y from Thread pointer = (TcbSize + 0x4 = 0xc)
-// CHECK-NEXT:   11008:         0c 00 00 00
+// CHECK-NEXT:   1111c:         0c 00 00 00

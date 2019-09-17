@@ -73,7 +73,7 @@ define i32 @t0(i32 %a) {
   ret i32 %x
 }
 
-; Text indirect local symbols.
+; Test indirect local symbols.
 ; CHECK-LABEL: _localindirect
 ; CHECK: .long 65603
 @localindirect = internal constant i32  65603
@@ -85,11 +85,38 @@ define i32 @t0(i32 %a) {
   i32 sub (i32 ptrtoint (i32** @got.localindirect to i32),
            i32 ptrtoint (i32* @localindirectuser to i32))
 
+; Test internal indirect local symbols where the user doesn't see the
+; definition of the other symbols yet.
+
+; We used to check if the symbol is defined and not external to guess if it has
+; local linkage, but that doesn't work if the symbol is defined after. The code
+; should check if the GlobalValue itself has local linkage.
+
+; CHECK-LABEL: _undeflocalindirectuser:
+; CHECK: .long L_undeflocalindirect$non_lazy_ptr-_undeflocalindirectuser
+@undeflocalindirectuser = internal constant
+  i32 sub (i32 ptrtoint (i32** @got.undeflocalindirect to i32),
+           i32 ptrtoint (i32* @undeflocalindirectuser to i32)),
+  section "__TEXT,__const"
+
+; CHECK-LABEL: _undeflocalindirect:
+; CHECK: .long 65603
+@undeflocalindirect = internal constant i32  65603
+@got.undeflocalindirect = private unnamed_addr constant i32* @undeflocalindirect
+
+; CHECK-LABEL: .section __IMPORT,__pointers
+
+; CHECK-LABEL: L_localfoo$non_lazy_ptr:
+; CHECK: .indirect_symbol _localfoo
+; CHECK-NOT: .long _localfoo
+; CHECK-NEXT: .long 0
+
 ; CHECK-LABEL: L_localindirect$non_lazy_ptr:
 ; CHECK: .indirect_symbol _localindirect
 ; CHECK-NOT: .long 0
 ; CHECK-NEXT: .long _localindirect
-define i8* @testRelativeIndirectSymbol() {
-  %1 = bitcast i32* @localindirectuser to i8*
-  ret i8* %1
-}
+
+; CHECK-LABEL: L_undeflocalindirect$non_lazy_ptr:
+; CHECK: .indirect_symbol _undeflocalindirect
+; CHECK-NOT: .long 0
+; CHECK-NEXT: .long _undeflocalindirect

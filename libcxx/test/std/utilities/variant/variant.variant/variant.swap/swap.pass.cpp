@@ -22,9 +22,9 @@
 #include <type_traits>
 #include <variant>
 
-#include "test_convertible.hpp"
+#include "test_convertible.h"
 #include "test_macros.h"
-#include "variant_test_helpers.hpp"
+#include "variant_test_helpers.h"
 
 struct NotSwappable {};
 void swap(NotSwappable &, NotSwappable &) = delete;

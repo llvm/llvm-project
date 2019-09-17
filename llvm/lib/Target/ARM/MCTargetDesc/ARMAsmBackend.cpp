@@ -233,7 +233,7 @@ static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
 
 const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
                                                     uint64_t Value) const {
-  switch ((unsigned)Fixup.getKind()) {
+  switch (Fixup.getTargetKind()) {
   case ARM::fixup_arm_thumb_br: {
     // Relaxing tB to t2B. tB has a signed 12-bit displacement with the
     // low bit being an implied zero. There's an implied +4 offset for the
@@ -870,7 +870,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCValue &Target) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
-  const unsigned FixupKind = Fixup.getKind() ;
+  const unsigned FixupKind = Fixup.getKind();
   if (FixupKind == FK_NONE)
     return true;
   if (FixupKind == ARM::fixup_arm_thumb_bl) {

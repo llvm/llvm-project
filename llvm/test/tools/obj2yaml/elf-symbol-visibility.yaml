@@ -10,12 +10,12 @@
 # CHECK-NEXT:   Machine: EM_X86_64
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - Name: default
-# CHECK-NEXT:   - Name:       internal
-# CHECK-NEXT:     Visibility: STV_INTERNAL
-# CHECK-NEXT:   - Name:       hidden
-# CHECK-NEXT:     Visibility: STV_HIDDEN
-# CHECK-NEXT:   - Name:       protected
-# CHECK-NEXT:     Visibility: STV_PROTECTED
+# CHECK-NEXT:   - Name: internal
+# CHECK-NEXT:     Other: [ STV_INTERNAL ]
+# CHECK-NEXT:   - Name: hidden
+# CHECK-NEXT:     Other: [ STV_HIDDEN ]
+# CHECK-NEXT:   - Name: protected
+# CHECK-NEXT:     Other: [ STV_PROTECTED ]
 # CHECK-NEXT: ...
 
 --- !ELF
@@ -25,11 +25,11 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Symbols:
-  - Name:       default
-    Visibility: STV_DEFAULT
-  - Name:       internal
-    Visibility: STV_INTERNAL
-  - Name:       hidden
-    Visibility: STV_HIDDEN
-  - Name:       protected
-    Visibility: STV_PROTECTED
+  - Name:  default
+    Other: [ STV_DEFAULT ]
+  - Name:  internal
+    Other: [ STV_INTERNAL ]
+  - Name:  hidden
+    Other: [ STV_HIDDEN ]
+  - Name:  protected
+    Other: [ STV_PROTECTED ]

@@ -31,7 +31,7 @@
 ---
 name:            test_copy
 # ALL-LABEL: name:  test_copy
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -57,7 +57,7 @@ body:             |
 ---
 name:            test_copy2
 # ALL-LABEL: name:  test_copy2
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -83,7 +83,7 @@ body:             |
 ---
 name:            test_copy3
 # ALL-LABEL: name:  test_copy3
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -113,7 +113,7 @@ body:             |
 ---
 name:            test_copy4
 # ALL-LABEL: name:  test_copy4
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -143,7 +143,7 @@ body:             |
 ---
 name:            test_copy5
 # ALL-LABEL: name:  test_copy5
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -173,22 +173,24 @@ body:             |
 ---
 name:            test_copy6
 # ALL-LABEL: name:  test_copy6
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
 # ALL-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: low32_addr_access_rbp, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: low32_addr_access_rbp, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
   - { id: 2, class: gpr, preferred-register: '' }
-# ALL           %0:gr32 = COPY $edx
-# ALL-NEXT      %1:gr16 = COPY %0.sub_16bit
-# ALL-NEXT      %2:gr32 = SUBREG_TO_REG 0, %1, %subreg.sub_16bit
-# ALL-NEXT      $eax = COPY %2
-# ALL-NEXT      RET 0, implicit $eax
+# ALL:         %0:gr32 = COPY $edx
+# ALL-NEXT:    %1:gr16 = COPY %0.sub_16bit
+# ALL-NEXT:    %3:low32_addr_access_rbp = IMPLICIT_DEF
+# ALL-NEXT:    %2:low32_addr_access_rbp = INSERT_SUBREG %3, %1, %subreg.sub_16bit
+# ALL-NEXT:    $eax = COPY %2
+# ALL-NEXT:    RET 0, implicit $eax
 body:             |
   bb.1 (%ir-block.0):
     liveins: $eax,$edx
@@ -200,4 +202,3 @@ body:             |
     RET 0, implicit $eax
 
 ...
-

@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s
 
 # CHECK:      Name: .rela.text
 # CHECK-NEXT: Type: SHT_RELA
@@ -22,4 +22,31 @@ Sections:
     Type:            SHT_RELA
     Link:            .symtab
     Info:            12345
+    Relocations:
+
+## Check we report an error when a relocation section references an unknown section via its Info field.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=ERR
+
+# ERR: error: unknown section referenced: '.unknown1' by YAML section '.foo'
+# ERR: error: unknown section referenced: '.unknown2' by YAML section '.bar'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_RELA
+    Info: .unknown1
+    Relocations:
+  - Name: .bar
+    Type: SHT_RELA
+    Info: .unknown2
+    Relocations:
+  - Name: .zed
+    Type: SHT_RELA
+    Info: 0xFF
     Relocations:

@@ -26,15 +26,15 @@
 // passes.
 // XFAIL: *
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <sstream>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "count_new.hpp"
-#include "filesystem_test_helper.hpp"
+#include "count_new.h"
+#include "filesystem_test_helper.h"
 
 MultiStringType InStr =  MKSTR("abcdefg/\"hijklmnop\"/qrstuvwxyz/123456789");
 MultiStringType OutStr = MKSTR("\"abcdefg/\\\"hijklmnop\\\"/qrstuvwxyz/123456789\"");

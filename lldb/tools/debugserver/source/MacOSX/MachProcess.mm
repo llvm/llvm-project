@@ -762,12 +762,16 @@ bool MachProcess::GetMachOInformationFromMemory(
     uint32_t major_version, minor_version, patch_version;
     if (const char *lc_platform = GetDeploymentInfo(
             lc, load_cmds_p, major_version, minor_version, patch_version)) {
-      // APPLE INTERNAL: macCatalyst support
+      // macCatalyst support.
+      //
       // This handles two special cases:
-      // 1. Zippered frameworks have two deployment info load commands.
-      //    Make sure to select the requested one.
-      // 2. The xctest binary is a pure macOS binary but is launched with
-      //    DYLD_FORCE_PLATFORM=6.
+      //
+      // 1. Frameworks that have both a PLATFORM_MACOS and a
+      //    PLATFORM_MACCATALYST load command.  Make sure to select
+      //    the requested one.
+      //
+      // 2. The xctest binary is a pure macOS binary but is launched
+      //    with DYLD_FORCE_PLATFORM=6.
       if (dyld_platform == PLATFORM_MACCATALYST &&
           inf.mach_header.filetype == MH_EXECUTE &&
           inf.min_version_os_name.empty() &&
@@ -782,10 +786,12 @@ bool MachProcess::GetMachOInformationFromMemory(
         inf.min_version_os_version = GetMacCatalystVersionString();
       } else if (dyld_platform != PLATFORM_MACCATALYST &&
                  inf.min_version_os_name == "macosx") {
-        // This is a zippered binary and the process is not running as
-        // PLATFORM_MACCATALYST. Stick with the macosx load command
-        // that we've already processed, ignore this one, which is
-        // presumed to be a PLATFORM_MACCATALYST one.
+        // This is a binary with both PLATFORM_MACOS and
+        // PLATFORM_MACCATALYST load commands and the process is not
+        // running as PLATFORM_MACCATALYST. Stick with the
+        // "macosx" load command that we've already processed,
+        // ignore this one, which is presumed to be a
+        // PLATFORM_MACCATALYST one.
       } else {
         inf.min_version_os_name = lc_platform;
         inf.min_version_os_version = "";

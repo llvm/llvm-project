@@ -16,15 +16,15 @@
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -global-isel \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix NOFALLBACK
+; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix NOFALLBACK --check-prefix ENABLED-O1
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -global-isel -global-isel-abort=2 \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix FALLBACK
+; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix FALLBACK  --check-prefix ENABLED-O1
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -O1 -aarch64-enable-global-isel-at-O=3 \
-; RUN:   | FileCheck %s --check-prefix ENABLED
+; RUN:   | FileCheck %s --check-prefix ENABLED  --check-prefix ENABLED-O1
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -O1 -aarch64-enable-global-isel-at-O=0 \
@@ -44,6 +44,7 @@
 ; ENABLED:       IRTranslator
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-NEXT:  PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Analysis containing CSE Info
@@ -51,8 +52,9 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  RegBankSelect
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-O0-NEXT:  Localizer
+; ENABLED-NEXT:  Localizer
 ; VERIFY-O0-NEXT:   Verify generated machine code
+; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-NEXT:  InstructionSelect
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  ResetMachineFunction

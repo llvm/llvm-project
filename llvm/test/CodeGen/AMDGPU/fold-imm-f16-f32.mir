@@ -114,7 +114,7 @@
 # CHECK: %13:vgpr_32 = V_ADD_F16_e32  1065353216, killed %11, implicit $exec
 
 name:            add_f32_1.0_one_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -176,7 +176,7 @@ body:             |
 
 
 name:            add_f32_1.0_multi_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -242,7 +242,7 @@ body:             |
 # CHECK: %16:vgpr_32 = V_ADD_F32_e32 1065353216, killed %13, implicit $exec
 
 name:            add_f32_1.0_one_f32_use_one_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -312,7 +312,7 @@ body:             |
 # CHECK: %17:vgpr_32 = V_ADD_F32_e32 1065353216, killed %13, implicit $exec
 
 name:            add_f32_1.0_one_f32_use_multi_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -381,7 +381,7 @@ body:             |
 
 
 name:            add_i32_1_multi_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -446,7 +446,7 @@ body:             |
 # CHECK: %17:vgpr_32 = V_ADD_F32_e32 -2, killed %13, implicit $exec
 
 name:            add_i32_m2_one_f32_use_multi_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -518,7 +518,7 @@ body:             |
 # CHECK: %15:vgpr_32 = V_ADD_F32_e32 %12, %13, implicit $exec
 
 name:            add_f16_1.0_multi_f32_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -585,7 +585,7 @@ body:             |
 # CHECK: %15:vgpr_32 = V_ADD_F16_e32 %12, %13, implicit $exec
 
 name:            add_f16_1.0_other_high_bits_multi_f16_use
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -651,7 +651,7 @@ body:             |
 # CHECK: %14:vgpr_32 = V_ADD_F32_e32 %11, %13, implicit $exec
 # CHECK: %15:vgpr_32 = V_ADD_F16_e32 %12, %13, implicit $exec
 name:            add_f16_1.0_other_high_bits_use_f16_f32
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

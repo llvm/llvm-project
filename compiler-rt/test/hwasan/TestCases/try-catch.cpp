@@ -1,5 +1,7 @@
 // RUN: %clangxx_hwasan %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=GOOD
-// RUN: %clangxx_hwasan %s -mllvm -hwasan-instrument-landing-pads=0 -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=BAD
+// RUN: %clangxx_hwasan -DNO_SANITIZE_F %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=GOOD
+// RUN: %clangxx_hwasan_oldrt %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=GOOD
+// RUN: %clangxx_hwasan_oldrt %s -mllvm -hwasan-instrument-landing-pads=0 -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=BAD
 
 // C++ tests on x86_64 require instrumented libc++/libstdc++.
 // REQUIRES: aarch64-target-arch
@@ -40,6 +42,9 @@ __attribute__((noinline, no_sanitize("hwaddress"))) void after_catch() {
 
 
 __attribute__((noinline))
+#ifdef NO_SANITIZE_F
+__attribute__((no_sanitize("hwaddress")))
+#endif
 void f() {
   char x[1000];
   try {

@@ -157,6 +157,8 @@ extern "C" void LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
   RegisterTargetMachine<AArch64beTargetMachine> Y(getTheAArch64beTarget());
   RegisterTargetMachine<AArch64leTargetMachine> Z(getTheARM64Target());
+  RegisterTargetMachine<AArch64leTargetMachine> W(getTheARM64_32Target());
+  RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
   auto PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeAArch64A53Fix835769Pass(*PR);
@@ -180,6 +182,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(*PR);
   initializeAArch64SpeculationHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
+  initializeAArch64StackTaggingPreRAPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -200,8 +203,11 @@ static std::string computeDataLayout(const Triple &TT,
                                      bool LittleEndian) {
   if (Options.getABIName() == "ilp32")
     return "e-m:e-p:32:32-i8:8-i16:16-i64:64-S128";
-  if (TT.isOSBinFormatMachO())
+  if (TT.isOSBinFormatMachO()) {
+    if (TT.getArch() == Triple::aarch64_32)
+      return "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128";
     return "e-m:o-i64:64-i128:128-n32:64-S128";
+  }
   if (TT.isOSBinFormatCOFF())
     return "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128";
   if (LittleEndian)
@@ -278,7 +284,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   }
 
   // Enable GlobalISel at or below EnableGlobalISelAt0.
-  if (getOptLevel() <= EnableGlobalISelAtO) {
+  if (getOptLevel() <= EnableGlobalISelAtO &&
+      TT.getArch() != Triple::aarch64_32) {
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
@@ -448,7 +455,8 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createLICMPass());
   }
 
-  addPass(createAArch64StackTaggingPass());
+  addPass(createAArch64StackTaggingPass(/* MergeInit = */ TM->getOptLevel() !=
+                                        CodeGenOpt::None));
 }
 
 // Pass Pipeline Configuration
@@ -502,7 +510,8 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  addPass(createAArch64PreLegalizeCombiner());
+  bool IsOptNone = getOptLevel() == CodeGenOpt::None;
+  addPass(createAArch64PreLegalizeCombiner(IsOptNone));
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
@@ -516,9 +525,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 }
 
 void AArch64PassConfig::addPreGlobalInstructionSelect() {
-  // Workaround the deficiency of the fast register allocator.
-  if (TM->getOptLevel() == CodeGenOpt::None)
-    addPass(new Localizer());
+  addPass(new Localizer());
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
@@ -540,6 +547,8 @@ bool AArch64PassConfig::addILPOpts() {
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createAArch64StackTaggingPreRAPass());
   return true;
 }
 

@@ -50,7 +50,8 @@ def execute_command(cmd, cwd=None):
         'stdin': subprocess.PIPE,
         'stdout': subprocess.PIPE,
         'stderr': subprocess.PIPE,
-        'cwd': cwd
+        'cwd': cwd,
+        'universal_newlines': True
     }
     p = subprocess.Popen(cmd, **kwargs)
     out, err = p.communicate()

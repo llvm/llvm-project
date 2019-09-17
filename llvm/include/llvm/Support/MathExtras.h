@@ -704,32 +704,12 @@ inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return alignTo(Numerator, Denominator) / Denominator;
 }
 
-/// \c alignTo for contexts where a constant expression is required.
-/// \sa alignTo
-///
-/// \todo FIXME: remove when \c constexpr becomes really \c constexpr
-template <uint64_t Align>
-struct AlignTo {
-  static_assert(Align != 0u, "Align must be non-zero");
-  template <uint64_t Value>
-  struct from_value {
-    static const uint64_t value = (Value + Align - 1) / Align * Align;
-  };
-};
-
 /// Returns the largest uint64_t less than or equal to \p Value and is
 /// \p Skew mod \p Align. \p Align must be non-zero
 inline uint64_t alignDown(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
   assert(Align != 0u && "Align can't be 0.");
   Skew %= Align;
   return (Value - Skew) / Align * Align + Skew;
-}
-
-/// Returns the offset to the next integer (mod 2**64) that is greater than
-/// or equal to \p Value and is a multiple of \p Align. \p Align must be
-/// non-zero.
-inline uint64_t OffsetToAlignment(uint64_t Value, uint64_t Align) {
-  return alignTo(Value, Align) - Value;
 }
 
 /// Sign-extend the number in the bottom B bits of X to a 32-bit integer.
@@ -915,9 +895,6 @@ SubOverflow(T X, T Y, T &Result) {
 template <typename T>
 typename std::enable_if<std::is_signed<T>::value, T>::type
 MulOverflow(T X, T Y, T &Result) {
-#if __has_builtin(__builtin_mul_overflow)
-  return __builtin_mul_overflow(X, Y, &Result);
-#else
   // Perform the unsigned multiplication on absolute values.
   using U = typename std::make_unsigned<T>::type;
   const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
@@ -939,7 +916,6 @@ MulOverflow(T X, T Y, T &Result) {
     return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
   else
     return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
-#endif
 }
 
 } // End llvm namespace

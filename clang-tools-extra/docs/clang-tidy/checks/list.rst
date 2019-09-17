@@ -44,6 +44,7 @@ Clang-Tidy Checks
    bugprone-branch-clone
    bugprone-copy-constructor-init
    bugprone-dangling-handle
+   bugprone-dynamic-static-initializers
    bugprone-exception-escape
    bugprone-fold-init-type
    bugprone-forward-declaration-namespace
@@ -274,6 +275,7 @@ Clang-Tidy Checks
    llvm-include-order
    llvm-namespace-comment
    llvm-prefer-isa-or-dyn-cast-in-conditionals
+   llvm-prefer-register-over-unsigned
    llvm-twine-local
    misc-definitions-in-headers
    misc-misplaced-const

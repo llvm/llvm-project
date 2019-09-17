@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 // RUN: ld.lld -static %t.o -o %tout
-// RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r --symbols --sections %tout | FileCheck %s
 
 // CHECK:      Sections [
@@ -22,8 +22,8 @@
 // CHECK-NEXT: }
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x220000 R_AARCH64_IRELATIVE
-// CHECK-NEXT:     0x220008 R_AARCH64_IRELATIVE
+// CHECK-NEXT:     0x2201C0 R_AARCH64_IRELATIVE
+// CHECK-NEXT:     0x2201C8 R_AARCH64_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:      Symbols [
@@ -38,7 +38,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: $x.0
-// CHECK-NEXT:    Value: 0x210000
+// CHECK-NEXT:    Value: 0x210188
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Local
 // CHECK-NEXT:    Type: None
@@ -69,7 +69,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x210008
+// CHECK-NEXT:    Value: 0x210190
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: None
@@ -78,7 +78,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: bar
-// CHECK-NEXT:    Value: 0x210004
+// CHECK-NEXT:    Value: 0x21018C
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -87,7 +87,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: foo
-// CHECK-NEXT:    Value: 0x210000
+// CHECK-NEXT:    Value: 0x210188
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -102,26 +102,26 @@
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:  210000: c0 03 5f d6 ret
+// DISASM-NEXT:  210188: ret
 // DISASM: bar:
-// DISASM-NEXT:  210004: c0 03 5f d6 ret
+// DISASM-NEXT:  21018c: ret
 // DISASM:      _start:
-// DISASM-NEXT:  210008: 06 00 00 94 bl #24
-// DISASM-NEXT:  21000c: 09 00 00 94     bl      #36
-// DISASM-NEXT:  210010: 42 60 05 91     add     x2, x2, #344
-// DISASM-NEXT:  210014: 42 20 06 91     add     x2, x2, #392
+// DISASM-NEXT:  210190: bl  #16
+// DISASM-NEXT:  210194: bl  #28
+// DISASM-NEXT:  210198: add x2, x2, #344
+// DISASM-NEXT:  21019c: add x2, x2, #392
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:  210020: 90 00 00 90 adrp x16, #65536
-// DISASM-NEXT:  210024: 11 02 40 f9 ldr x17, [x16]
-// DISASM-NEXT:  210028: 10 02 00 91 add x16, x16, #0
-// DISASM-NEXT:  21002c: 20 02 1f d6 br x17
-// DISASM-NEXT:  210030: 90 00 00 90 adrp x16, #65536
-// DISASM-NEXT:  210034: 11 06 40 f9 ldr x17, [x16, #8]
-// DISASM-NEXT:  210038: 10 22 00 91 add x16, x16, #8
-// DISASM-NEXT:  21003c: 20 02 1f d6 br x17
+// DISASM-NEXT:  2101a0: adrp x16, #65536
+// DISASM-NEXT:  2101a4: ldr x17, [x16, #448]
+// DISASM-NEXT:  2101a8: add x16, x16, #448
+// DISASM-NEXT:  2101ac: br x17
+// DISASM-NEXT:  2101b0: adrp x16, #65536
+// DISASM-NEXT:  2101b4: ldr x17, [x16, #456]
+// DISASM-NEXT:  2101b8: add x16, x16, #456
+// DISASM-NEXT:  2101bc: br x17
 
 .text
 .type foo STT_GNU_IFUNC

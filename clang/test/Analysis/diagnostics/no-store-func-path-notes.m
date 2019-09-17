@@ -16,6 +16,7 @@ extern int coin();
     return 0;
   }
   return 1; // expected-note{{Returning without writing to '*var'}}
+  // expected-note@-1{{Returning the value 1, which participates in a condition later}}
 }
 @end
 

@@ -88,7 +88,19 @@ void MCWinCOFFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
 }
 
 void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
-  llvm_unreachable("not implemented");
+  // Let the target do whatever target specific stuff it needs to do.
+  getAssembler().getBackend().handleAssemblerFlag(Flag);
+
+  switch (Flag) {
+  // None of these require COFF specific handling.
+  case MCAF_SyntaxUnified:
+  case MCAF_Code16:
+  case MCAF_Code32:
+  case MCAF_Code64:
+    break;
+  case MCAF_SubsectionsViaSymbols:
+    llvm_unreachable("COFF doesn't support .subsections_via_symbols");
+  }
 }
 
 void MCWinCOFFStreamer::EmitThumbFunc(MCSymbol *Func) {
@@ -180,7 +192,7 @@ void MCWinCOFFStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
   MCSection *SXData = getContext().getObjectFileInfo()->getSXDataSection();
   getAssembler().registerSection(*SXData);
   if (SXData->getAlignment() < 4)
-    SXData->setAlignment(4);
+    SXData->setAlignment(llvm::Align(4));
 
   new MCSymbolIdFragment(Symbol, SXData);
 
@@ -197,7 +209,7 @@ void MCWinCOFFStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {
   MCSection *Sec = getCurrentSectionOnly();
   getAssembler().registerSection(*Sec);
   if (Sec->getAlignment() < 4)
-    Sec->setAlignment(4);
+    Sec->setAlignment(llvm::Align(4));
 
   new MCSymbolIdFragment(Symbol, getCurrentSectionOnly());
 

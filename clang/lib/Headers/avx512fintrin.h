@@ -7658,13 +7658,13 @@ _mm512_maskz_getexp_ps (__mmask16 __U, __m512 __A)
 #define _mm512_i32gather_ps(index, addr, scale) \
   (__m512)__builtin_ia32_gathersiv16sf((__v16sf)_mm512_undefined_ps(), \
                                        (void const *)(addr), \
-                                       (__v16sf)(__m512)(index), \
+                                       (__v16si)(__m512)(index), \
                                        (__mmask16)-1, (int)(scale))
 
 #define _mm512_mask_i32gather_ps(v1_old, mask, index, addr, scale) \
   (__m512)__builtin_ia32_gathersiv16sf((__v16sf)(__m512)(v1_old), \
                                        (void const *)(addr), \
-                                       (__v16sf)(__m512)(index), \
+                                       (__v16si)(__m512)(index), \
                                        (__mmask16)(mask), (int)(scale))
 
 #define _mm512_i32gather_epi32(index, addr, scale) \
@@ -8436,7 +8436,7 @@ _store_mask16(__mmask16 *__A, __mmask16 __B) {
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS512
-_mm512_stream_si512 (__m512i * __P, __m512i __A)
+_mm512_stream_si512 (void * __P, __m512i __A)
 {
   typedef __v8di __v8di_aligned __attribute__((aligned(64)));
   __builtin_nontemporal_store((__v8di_aligned)__A, (__v8di_aligned*)__P);
@@ -8450,14 +8450,14 @@ _mm512_stream_load_si512 (void const *__P)
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS512
-_mm512_stream_pd (double *__P, __m512d __A)
+_mm512_stream_pd (void *__P, __m512d __A)
 {
   typedef __v8df __v8df_aligned __attribute__((aligned(64)));
   __builtin_nontemporal_store((__v8df_aligned)__A, (__v8df_aligned*)__P);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS512
-_mm512_stream_ps (float *__P, __m512 __A)
+_mm512_stream_ps (void *__P, __m512 __A)
 {
   typedef __v16sf __v16sf_aligned __attribute__((aligned(64)));
   __builtin_nontemporal_store((__v16sf_aligned)__A, (__v16sf_aligned*)__P);
@@ -9658,6 +9658,23 @@ _mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __V) {
   _mm512_mask_reduce_operator(min_ps);
 }
 #undef _mm512_mask_reduce_operator
+
+/// Moves the least significant 32 bits of a vector of [16 x i32] to a
+///    32-bit signed integer value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction.
+///
+/// \param __A
+///    A vector of [16 x i32]. The least significant 32 bits are moved to the
+///    destination.
+/// \returns A 32-bit signed integer containing the moved value.
+static __inline__ int __DEFAULT_FN_ATTRS512
+_mm512_cvtsi512_si32(__m512i __A) {
+  __v16si __b = (__v16si)__A;
+  return __b[0];
+}
 
 #undef __DEFAULT_FN_ATTRS512
 #undef __DEFAULT_FN_ATTRS128

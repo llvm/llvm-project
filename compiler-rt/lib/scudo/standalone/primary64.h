@@ -36,7 +36,7 @@ namespace scudo {
 // freelist to the thread specific freelist, and back.
 //
 // The memory used by this allocator is never unmapped, but can be partially
-// released it the platform allows for it.
+// released if the platform allows for it.
 
 template <class SizeClassMapT, uptr RegionSizeLog> class SizeClassAllocator64 {
 public:
@@ -135,7 +135,9 @@ public:
   }
 
   template <typename F> void iterateOverBlocks(F Callback) const {
-    for (uptr I = 1; I < NumClasses; I++) {
+    for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
       const RegionInfo *Region = getRegionInfo(I);
       const uptr BlockSize = getSizeByClassId(I);
       const uptr From = Region->RegionBeg;

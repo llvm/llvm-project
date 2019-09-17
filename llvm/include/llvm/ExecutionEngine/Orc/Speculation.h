@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Debug.h"
 
 #include <mutex>
 #include <type_traits>
@@ -81,29 +82,41 @@ private:
     {
       std::lock_guard<std::mutex> Lockit(ConcurrentAccess);
       auto It = GlobalSpecMap.find(FAddr);
-      // Kill this when jump on first call instrumentation is in place;
-      auto Iv = AlreadyExecuted.insert(FAddr);
-      if (It == GlobalSpecMap.end() || Iv.second == false)
+      if (It == GlobalSpecMap.end())
         return;
-      else
-        CandidateSet = It->getSecond();
+      CandidateSet = It->getSecond();
     }
 
-    // Try to distinguish pre-compiled symbols!
+    SymbolDependenceMap SpeculativeLookUpImpls;
+
     for (auto &Callee : CandidateSet) {
       auto ImplSymbol = AliaseeImplTable.getImplFor(Callee);
+      // try to distinguish already compiled & library symbols
       if (!ImplSymbol.hasValue())
         continue;
       const auto &ImplSymbolName = ImplSymbol.getPointer()->first;
-      auto *ImplJD = ImplSymbol.getPointer()->second;
-      ES.lookup(JITDylibSearchList({{ImplJD, true}}),
-                SymbolNameSet({ImplSymbolName}), SymbolState::Ready,
+      JITDylib *ImplJD = ImplSymbol.getPointer()->second;
+      auto &SymbolsInJD = SpeculativeLookUpImpls[ImplJD];
+      SymbolsInJD.insert(ImplSymbolName);
+    }
+
+    DEBUG_WITH_TYPE("orc", for (auto &I
+                                : SpeculativeLookUpImpls) {
+      llvm::dbgs() << "\n In " << I.first->getName() << " JITDylib ";
+      for (auto &N : I.second)
+        llvm::dbgs() << "\n Likely Symbol : " << N;
+    });
+
+    // for a given symbol, there may be no symbol qualified for speculatively
+    // compile try to fix this before jumping to this code if possible.
+    for (auto &LookupPair : SpeculativeLookUpImpls)
+      ES.lookup(JITDylibSearchList({{LookupPair.first, true}}),
+                LookupPair.second, SymbolState::Ready,
                 [this](Expected<SymbolMap> Result) {
                   if (auto Err = Result.takeError())
                     ES.reportError(std::move(Err));
                 },
                 NoDependenciesToRegister);
-    }
   }
 
 public:
@@ -113,7 +126,11 @@ public:
   Speculator(Speculator &&) = delete;
   Speculator &operator=(const Speculator &) = delete;
   Speculator &operator=(Speculator &&) = delete;
-  ~Speculator() {}
+
+  /// Define symbols for this Speculator object (__orc_speculator) and the
+  /// speculation runtime entry point symbol (__orc_speculate_for) in the
+  /// given JITDylib.
+  Error addSpeculationRuntime(JITDylib &JD, MangleAndInterner &Mangle);
 
   // Speculatively compile likely functions for the given Stub Address.
   // destination of __orc_speculate_for jump
@@ -142,34 +159,24 @@ public:
   ExecutionSession &getES() { return ES; }
 
 private:
+  static void speculateForEntryPoint(Speculator *Ptr, uint64_t StubId);
   std::mutex ConcurrentAccess;
   ImplSymbolMap &AliaseeImplTable;
   ExecutionSession &ES;
-  DenseSet<TargetFAddr> AlreadyExecuted;
   StubAddrLikelies GlobalSpecMap;
 };
-// replace DenseMap with Pair
+
 class IRSpeculationLayer : public IRLayer {
 public:
   using IRlikiesStrRef = Optional<DenseMap<StringRef, DenseSet<StringRef>>>;
-  using ResultEval =
-      std::function<IRlikiesStrRef(Function &, FunctionAnalysisManager &)>;
+  using ResultEval = std::function<IRlikiesStrRef(Function &)>;
   using TargetAndLikelies = DenseMap<SymbolStringPtr, SymbolNameSet>;
 
   IRSpeculationLayer(ExecutionSession &ES, IRCompileLayer &BaseLayer,
-                     Speculator &Spec, ResultEval Interpreter)
-      : IRLayer(ES), NextLayer(BaseLayer), S(Spec), QueryAnalysis(Interpreter) {
-    PB.registerFunctionAnalyses(FAM);
-  }
-
-  template <
-      typename AnalysisTy,
-      typename std::enable_if<
-          std::is_base_of<AnalysisInfoMixin<AnalysisTy>, AnalysisTy>::value,
-          bool>::type = true>
-  void registerAnalysis() {
-    FAM.registerPass([]() { return AnalysisTy(); });
-  }
+                     Speculator &Spec, MangleAndInterner &Mangle,
+                     ResultEval Interpreter)
+      : IRLayer(ES), NextLayer(BaseLayer), S(Spec), Mangle(Mangle),
+        QueryAnalysis(Interpreter) {}
 
   void emit(MaterializationResponsibility R, ThreadSafeModule TSM);
 
@@ -179,28 +186,20 @@ private:
     assert(!IRNames.empty() && "No IRNames received to Intern?");
     TargetAndLikelies InternedNames;
     DenseSet<SymbolStringPtr> TargetJITNames;
-    ExecutionSession &Es = getExecutionSession();
     for (auto &NamePair : IRNames) {
       for (auto &TargetNames : NamePair.second)
-        TargetJITNames.insert(Es.intern(TargetNames));
+        TargetJITNames.insert(Mangle(TargetNames));
 
-      InternedNames.insert(
-          {Es.intern(NamePair.first), std::move(TargetJITNames)});
+      InternedNames[Mangle(NamePair.first)] = std::move(TargetJITNames);
     }
     return InternedNames;
   }
 
   IRCompileLayer &NextLayer;
   Speculator &S;
-  PassBuilder PB;
-  FunctionAnalysisManager FAM;
+  MangleAndInterner &Mangle;
   ResultEval QueryAnalysis;
 };
-
-// Runtime Function Interface
-extern "C" {
-void __orc_speculate_for(Speculator *, uint64_t stub_id);
-}
 
 } // namespace orc
 } // namespace llvm

@@ -122,10 +122,56 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_FALSE(II->hasNoNaNs());
 }
 
+TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
+  IRBuilder<> Builder(BB);
+  CallInst *Call;
+  FunctionType *FTy;
+
+  // Test scalable flag isn't dropped for intrinsic that is explicitly defined
+  // with scalable vectors, e.g. LLVMType<nxv4i32>.
+  Type *SrcVecTy = VectorType::get(Builder.getHalfTy(), 8, true);
+  Type *DstVecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  Type *PredTy = VectorType::get(Builder.getInt1Ty(), 16, true);
+
+  SmallVector<Value*, 3> ArgTys;
+  ArgTys.push_back(UndefValue::get(DstVecTy));
+  ArgTys.push_back(UndefValue::get(PredTy));
+  ArgTys.push_back(UndefValue::get(SrcVecTy));
+
+  Call = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fcvtzs_i32f16, {},
+                                 ArgTys, nullptr, "aarch64.sve.fcvtzs.i32f16");
+  FTy = Call->getFunctionType();
+  EXPECT_EQ(FTy->getReturnType(), DstVecTy);
+  for (unsigned i = 0; i != ArgTys.size(); ++i)
+    EXPECT_EQ(FTy->getParamType(i), ArgTys[i]->getType());
+
+  // Test scalable flag isn't dropped for intrinsic defined with
+  // LLVMScalarOrSameVectorWidth.
+
+  Type *VecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  Type *PtrToVecTy = VecTy->getPointerTo();
+  PredTy = VectorType::get(Builder.getInt1Ty(), 4, true);
+
+  ArgTys.clear();
+  ArgTys.push_back(UndefValue::get(PtrToVecTy));
+  ArgTys.push_back(UndefValue::get(Builder.getInt32Ty()));
+  ArgTys.push_back(UndefValue::get(PredTy));
+  ArgTys.push_back(UndefValue::get(VecTy));
+
+  Call = Builder.CreateIntrinsic(Intrinsic::masked_load,
+                                 {VecTy, PtrToVecTy}, ArgTys,
+                                 nullptr, "masked.load");
+  FTy = Call->getFunctionType();
+  EXPECT_EQ(FTy->getReturnType(), VecTy);
+  for (unsigned i = 0; i != ArgTys.size(); ++i)
+    EXPECT_EQ(FTy->getParamType(i), ArgTys[i]->getType());
+}
+
 TEST_F(IRBuilderTest, ConstrainedFP) {
   IRBuilder<> Builder(BB);
   Value *V;
   Value *VDouble;
+  Value *VInt;
   CallInst *Call;
   IntrinsicInst *II;
   GlobalVariable *GVDouble = new GlobalVariable(*M, Type::getDoubleTy(Ctx),
@@ -162,6 +208,16 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
+
+  VInt = Builder.CreateFPToUI(VDouble, Builder.getInt32Ty());
+  ASSERT_TRUE(isa<IntrinsicInst>(VInt));
+  II = cast<IntrinsicInst>(VInt);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fptoui);
+
+  VInt = Builder.CreateFPToSI(VDouble, Builder.getInt32Ty());
+  ASSERT_TRUE(isa<IntrinsicInst>(VInt));
+  II = cast<IntrinsicInst>(VInt);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fptosi);
 
   V = Builder.CreateFPTrunc(VDouble, Type::getFloatTy(Ctx));
   ASSERT_TRUE(isa<IntrinsicInst>(V));

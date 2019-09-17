@@ -341,3 +341,68 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # "exitCommands" that were run after the second breakpoint was hit
         output = self.get_console(timeout=1.0)
         self.verify_commands('exitCommands', output, exitCommands)
+
+    @skipIfWindows
+    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @no_debug_info_test
+    def test_extra_launch_commands(self):
+        '''
+            Tests the "luanchCommands" with extra launching settings
+        '''
+        self.build_and_create_debug_adaptor()
+        program = self.getBuildArtifact("a.out")
+
+        source = 'main.c'
+        first_line = line_number(source, '// breakpoint 1')
+        second_line = line_number(source, '// breakpoint 2')
+        # Set target binary and 2 breakoints
+        # then we can varify the "launchCommands" get run
+        # also we can verify that "stopCommands" get run as the
+        # breakpoints get hit
+        launchCommands = [
+            'target create "%s"' % (program),
+            'br s -f main.c -l %d' % first_line,
+            'br s -f main.c -l %d' % second_line,
+            'run'
+        ]
+
+        initCommands = ['target list', 'platform list']
+        preRunCommands = ['image list a.out', 'image dump sections a.out']
+        stopCommands = ['frame variable', 'bt']
+        exitCommands = ['expr 2+3', 'expr 3+4']
+        self.launch(program,
+                    initCommands=initCommands,
+                    preRunCommands=preRunCommands,
+                    stopCommands=stopCommands,
+                    exitCommands=exitCommands,
+                    launchCommands=launchCommands)
+
+        # Get output from the console. This should contain both the
+        # "initCommands" and the "preRunCommands".
+        output = self.get_console()
+        # Verify all "initCommands" were found in console output
+        self.verify_commands('initCommands', output, initCommands)
+        # Verify all "preRunCommands" were found in console output
+        self.verify_commands('preRunCommands', output, preRunCommands)
+
+        # Verify all "launchCommands" were founc in console output
+        # After execution, program should launch
+        self.verify_commands('launchCommands', output, launchCommands)
+        # Verify the "stopCommands" here
+        self.continue_to_next_stop()
+        output = self.get_console(timeout=1.0)
+        self.verify_commands('stopCommands', output, stopCommands)
+
+        # Continue and hit the second breakpoint.
+        # Get output from the console. This should contain both the
+        # "stopCommands" that were run after the first breakpoint was hit
+        self.continue_to_next_stop()
+        output = self.get_console(timeout=1.0)
+        self.verify_commands('stopCommands', output, stopCommands)
+
+        # Continue until the program exits
+        self.continue_to_exit()
+        # Get output from the console. This should contain both the
+        # "exitCommands" that were run after the second breakpoint was hit
+        output = self.get_console(timeout=1.0)
+        self.verify_commands('exitCommands', output, exitCommands)

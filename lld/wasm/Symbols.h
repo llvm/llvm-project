@@ -107,6 +107,10 @@ public:
   WasmSymbolType getWasmType() const;
   bool isExported() const;
 
+  // Indicates that the symbol is used in an __attribute__((used)) directive
+  // or similar.
+  bool isNoStrip() const;
+
   const WasmSignature* getSignature() const;
 
   bool isInGOT() const { return gotIndex != INVALID_INDEX; }
@@ -449,13 +453,17 @@ struct WasmSym {
   // therefore be used as a backing store for brk()/malloc() implementations.
   static DefinedData *heapBase;
 
+  // __wasm_init_memory_flag
+  // Symbol whose contents are nonzero iff memory has already been initialized.
+  static DefinedData *initMemoryFlag;
+
+  // __wasm_init_memory
+  // Function that initializes passive data segments during instantiation.
+  static DefinedFunction *initMemory;
+
   // __wasm_call_ctors
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *callCtors;
-
-  // __wasm_init_memory
-  // Function that initializes passive data segments post-instantiation.
-  static DefinedFunction *initMemory;
 
   // __wasm_apply_relocs
   // Function that applies relocations to data segment post-instantiation.

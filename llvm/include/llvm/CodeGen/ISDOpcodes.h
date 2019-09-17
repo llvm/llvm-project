@@ -281,7 +281,7 @@ namespace ISD {
     /// Same as the corresponding unsaturated fixed point instructions, but the
     /// result is clamped between the min and max values representable by the
     /// bits of the first 2 operands.
-    SMULFIXSAT,
+    SMULFIXSAT, UMULFIXSAT,
 
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
@@ -301,6 +301,13 @@ namespace ISD {
     STRICT_FEXP, STRICT_FEXP2, STRICT_FLOG, STRICT_FLOG10, STRICT_FLOG2,
     STRICT_FRINT, STRICT_FNEARBYINT, STRICT_FMAXNUM, STRICT_FMINNUM,
     STRICT_FCEIL, STRICT_FFLOOR, STRICT_FROUND, STRICT_FTRUNC,
+
+    /// STRICT_FP_TO_[US]INT - Convert a floating point value to a signed or
+    /// unsigned integer. These have the same semantics as fptosi and fptoui 
+    /// in IR.
+    /// They are used to limit optimizations while the DAG is being optimized.
+    STRICT_FP_TO_SINT,
+    STRICT_FP_TO_UINT,
 
     /// X = STRICT_FP_ROUND(Y, TRUNC) - Rounding 'Y' from a larger floating 
     /// point type down to the precision of the destination VT.  TRUNC is a 
@@ -568,13 +575,6 @@ namespace ISD {
     ///  2 Round to +inf
     ///  3 Round to -inf
     FLT_ROUNDS_,
-
-    /// X = FP_ROUND_INREG(Y, VT) - This operator takes an FP register, and
-    /// rounds it to a floating point value.  It then promotes it and returns it
-    /// in a register of the same size.  This operation effectively just
-    /// discards excess precision.  The type to round down to is specified by
-    /// the VT operand, a VTSDNode.
-    FP_ROUND_INREG,
 
     /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
     FP_EXTEND,

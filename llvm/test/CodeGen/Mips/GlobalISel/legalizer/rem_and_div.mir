@@ -22,7 +22,7 @@
 ...
 ---
 name:            sdiv_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -57,7 +57,7 @@ body:             |
 ...
 ---
 name:            sdiv_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -92,7 +92,7 @@ body:             |
 ...
 ---
 name:            sdiv_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -114,7 +114,7 @@ body:             |
 ...
 ---
 name:            sdiv_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -153,7 +153,7 @@ body:             |
 ...
 ---
 name:            srem_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -188,7 +188,7 @@ body:             |
 ...
 ---
 name:            srem_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -223,7 +223,7 @@ body:             |
 ...
 ---
 name:            srem_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -245,7 +245,7 @@ body:             |
 ...
 ---
 name:            srem_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -284,7 +284,7 @@ body:             |
 ...
 ---
 name:            udiv_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -318,7 +318,7 @@ body:             |
 ...
 ---
 name:            udiv_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -352,7 +352,7 @@ body:             |
 ...
 ---
 name:            udiv_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -374,7 +374,7 @@ body:             |
 ...
 ---
 name:            udiv_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -413,7 +413,7 @@ body:             |
 ...
 ---
 name:            urem_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -447,7 +447,7 @@ body:             |
 ...
 ---
 name:            urem_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -481,7 +481,7 @@ body:             |
 ...
 ---
 name:            urem_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -503,7 +503,7 @@ body:             |
 ...
 ---
 name:            urem_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

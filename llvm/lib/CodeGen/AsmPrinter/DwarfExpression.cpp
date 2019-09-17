@@ -280,19 +280,27 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // Pattern-match combinations for which more efficient representations exist.
   // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].
   if (Op && (Op->getOp() == dwarf::DW_OP_plus_uconst)) {
-    SignedOffset = Op->getArg(0);
-    ExprCursor.take();
+    uint64_t Offset = Op->getArg(0);
+    uint64_t IntMax = static_cast<uint64_t>(std::numeric_limits<int>::max());
+    if (Offset <= IntMax) {
+      SignedOffset = Offset;
+      ExprCursor.take();
+    }
   }
 
   // [Reg, DW_OP_constu, Offset, DW_OP_plus]  --> [DW_OP_breg, Offset]
   // [Reg, DW_OP_constu, Offset, DW_OP_minus] --> [DW_OP_breg,-Offset]
   // If Reg is a subregister we need to mask it out before subtracting.
   if (Op && Op->getOp() == dwarf::DW_OP_constu) {
+    uint64_t Offset = Op->getArg(0);
+    uint64_t IntMax = static_cast<uint64_t>(std::numeric_limits<int>::max());
     auto N = ExprCursor.peekNext();
-    if (N && (N->getOp() == dwarf::DW_OP_plus ||
-             (N->getOp() == dwarf::DW_OP_minus && !SubRegisterSizeInBits))) {
-      int Offset = Op->getArg(0);
-      SignedOffset = (N->getOp() == dwarf::DW_OP_minus) ? -Offset : Offset;
+    if (N && N->getOp() == dwarf::DW_OP_plus && Offset <= IntMax) {
+      SignedOffset = Offset;
+      ExprCursor.consume(2);
+    } else if (N && N->getOp() == dwarf::DW_OP_minus &&
+               !SubRegisterSizeInBits && Offset <= IntMax + 1) {
+      SignedOffset = -static_cast<int64_t>(Offset);
       ExprCursor.consume(2);
     }
   }
@@ -311,10 +319,7 @@ void DwarfExpression::addEntryValueExpression(DIExpressionCursor &ExprCursor) {
   assert(!isMemoryLocation() &&
          "We don't support entry values of memory locations yet");
 
-  if (DwarfVersion >= 5)
-    emitOp(dwarf::DW_OP_entry_value);
-  else
-    emitOp(dwarf::DW_OP_GNU_entry_value);
+  emitOp(CU.getDwarf5OrGNULocationAtom(dwarf::DW_OP_entry_value));
   emitUnsigned(Op->getArg(0));
 }
 

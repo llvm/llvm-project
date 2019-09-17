@@ -1,6 +1,6 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
-// RUN: ld.lld --fix-cortex-a53-843419 %t.o -o %t2
+// RUN: ld.lld --fix-cortex-a53-843419 -z separate-code %t.o -o %t2
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 -start-address=2162688   -stop-address=2162700   | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 -start-address=2166784   -stop-address=2166788   | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 -start-address=2170872   -stop-address=2170888   | FileCheck --check-prefix=CHECK3 %s

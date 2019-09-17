@@ -25,7 +25,7 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
-cl::opt<bool>
+static cl::opt<bool>
     UseDbgAddr("use-dbg-addr",
                llvm::cl::desc("Use llvm.dbg.addr for all local variables"),
                cl::init(false), cl::Hidden);

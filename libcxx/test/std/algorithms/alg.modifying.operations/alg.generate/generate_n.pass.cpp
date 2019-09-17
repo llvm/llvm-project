@@ -24,7 +24,7 @@
 #include <cassert>
 
 #include "test_iterators.h"
-#include "user_defined_integral.hpp"
+#include "user_defined_integral.h"
 
 struct gen_test
 {

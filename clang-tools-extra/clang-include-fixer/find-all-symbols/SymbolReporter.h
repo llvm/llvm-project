@@ -14,7 +14,7 @@
 namespace clang {
 namespace find_all_symbols {
 
-/// \brief An interface for classes that collect symbols.
+/// An interface for classes that collect symbols.
 class SymbolReporter {
 public:
   virtual ~SymbolReporter() = default;

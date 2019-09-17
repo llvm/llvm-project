@@ -1514,6 +1514,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     }
     SrcMgr::CharacteristicKind
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
+    // FIXME: The FileID should be created from the FileEntryRef.
     FileID FID = SourceMgr.createFileID(File, IncludeLoc, FileCharacter,
                                         ID, BaseOffset + Record[0]);
     SrcMgr::FileInfo &FileInfo =
@@ -2314,19 +2315,14 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   if ((!Overridden && !Transient) && SM.isFileOverridden(File)) {
     if (Complain)
       Error(diag::err_fe_pch_file_overridden, Filename);
-    // After emitting the diagnostic, recover by disabling the override so
-    // that the original file will be used.
-    //
-    // FIXME: This recovery is just as broken as the original state; there may
-    // be another precompiled module that's using the overridden contents, or
-    // we might be half way through parsing it. Instead, we should treat the
-    // overridden contents as belonging to a separate FileEntry.
-    SM.disableFileContentsOverride(File);
-    // The FileEntry is a virtual file entry with the size of the contents
-    // that would override the original contents. Set it to the original's
-    // size/time.
-    FileMgr.modifyFileEntry(const_cast<FileEntry*>(File),
-                            StoredSize, StoredTime);
+
+    // After emitting the diagnostic, bypass the overriding file to recover
+    // (this creates a separate FileEntry).
+    File = SM.bypassFileContentsOverride(*File);
+    if (!File) {
+      F.InputFilesLoaded[ID - 1] = InputFile::getNotFound();
+      return InputFile();
+    }
   }
 
   bool IsOutOfDate = false;
@@ -3822,7 +3818,6 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     const FileEntry *ModMap = M ? Map.getModuleMapFileForUniquing(M) : nullptr;
     // Don't emit module relocation error if we have -fno-validate-pch
     if (!PP.getPreprocessorOpts().DisablePCHValidation && !ModMap) {
-      assert(ImportedBy && "top-level import should be verified");
       if ((ClientLoadCapabilities & ARR_OutOfDate) == 0) {
         if (auto *ASTFE = M ? M->getASTFile() : nullptr) {
           // This module was defined by an imported (explicit) module.
@@ -3831,12 +3826,13 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
         } else {
           // This module was built with a different module map.
           Diag(diag::err_imported_module_not_found)
-              << F.ModuleName << F.FileName << ImportedBy->FileName
-              << F.ModuleMapPath;
+              << F.ModuleName << F.FileName
+              << (ImportedBy ? ImportedBy->FileName : "") << F.ModuleMapPath
+              << !ImportedBy;
           // In case it was imported by a PCH, there's a chance the user is
           // just missing to include the search path to the directory containing
           // the modulemap.
-          if (ImportedBy->Kind == MK_PCH)
+          if (ImportedBy && ImportedBy->Kind == MK_PCH)
             Diag(diag::note_imported_by_pch_module_not_found)
                 << llvm::sys::path::parent_path(F.ModuleMapPath);
         }
@@ -3850,11 +3846,13 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     auto StoredModMap = FileMgr.getFile(F.ModuleMapPath);
     if (!StoredModMap || *StoredModMap != ModMap) {
       assert(ModMap && "found module is missing module map file");
-      assert(ImportedBy && "top-level import should be verified");
+      assert((ImportedBy || F.Kind == MK_ImplicitModule) &&
+             "top-level import should be verified");
+      bool NotImported = F.Kind == MK_ImplicitModule && !ImportedBy;
       if ((ClientLoadCapabilities & ARR_OutOfDate) == 0)
         Diag(diag::err_imported_module_modmap_changed)
-          << F.ModuleName << ImportedBy->FileName
-          << ModMap->getName() << F.ModuleMapPath;
+            << F.ModuleName << (NotImported ? F.FileName : ImportedBy->FileName)
+            << ModMap->getName() << F.ModuleMapPath << NotImported;
       return OutOfDate;
     }
 
@@ -12204,7 +12202,7 @@ Expected<unsigned> ASTRecordReader::readRecord(llvm::BitstreamCursor &Cursor,
 ////===----------------------------------------------------------------------===//
 
 OMPClause *OMPClauseReader::readClause() {
-  OMPClause *C;
+  OMPClause *C = nullptr;
   switch (Record.readInt()) {
   case OMPC_if:
     C = new (Context) OMPIfClause();
@@ -12405,6 +12403,8 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPAllocateClause::CreateEmpty(Context, Record.readInt());
     break;
   }
+  assert(C && "Unknown OMPClause type");
+
   Visit(C);
   C->setLocStart(Record.readSourceLocation());
   C->setLocEnd(Record.readSourceLocation());

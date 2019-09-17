@@ -76,7 +76,7 @@ public:
     return SyntheticSection::classof(d) && d->name == ".eh_frame";
   }
 
-  template <class ELFT> void addSection(InputSectionBase *s);
+  void addSection(EhInputSection *sec);
 
   std::vector<EhInputSection *> sections;
   size_t numFdes = 0;
@@ -97,7 +97,9 @@ private:
   uint64_t size = 0;
 
   template <class ELFT, class RelTy>
-  void addSectionAux(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
+  void addRecords(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
+  template <class ELFT>
+  void addSectionAux(EhInputSection *s);
 
   template <class ELFT, class RelTy>
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
@@ -1098,15 +1100,6 @@ public:
   void writeTo(uint8_t *buf) override;
 };
 
-// Create a dummy .sdata for __global_pointer$ if .sdata does not exist.
-class RISCVSdataSection final : public SyntheticSection {
-public:
-  RISCVSdataSection();
-  size_t getSize() const override { return 0; }
-  bool isNeeded() const override;
-  void writeTo(uint8_t *buf) override {}
-};
-
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
@@ -1171,7 +1164,6 @@ struct InStruct {
   PltSection *plt;
   PltSection *iplt;
   PPC32Got2Section *ppc32Got2;
-  RISCVSdataSection *riscvSdata;
   RelocationBaseSection *relaPlt;
   RelocationBaseSection *relaIplt;
   StringTableSection *shStrTab;

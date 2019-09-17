@@ -39,7 +39,7 @@
 ...
 ---
 name:            CP
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -77,7 +77,7 @@ constants:
     isTargetSpecific: false
 
 
-#CHECK:  bb.{{.*}} (align 1):
+#CHECK:  bb.{{.*}} (align 2):
 #CHECK:    successors:
 #CHECK:    CONSTPOOL_ENTRY 1, %const{{.*}}, 2
 #

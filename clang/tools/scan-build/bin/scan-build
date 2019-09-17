@@ -1889,11 +1889,6 @@ foreach (sort { $Options{DisableCheckers}{$a} <=> $Options{DisableCheckers}{$b} 
   # Push checkers in order they were disabled.
   push @AnalysesToRun, "-analyzer-disable-checker", $_;
 }
-foreach (sort { $Options{SilenceCheckers}{$a} <=> $Options{SilenceCheckers}{$b} }
-         keys %{$Options{SilenceCheckers}}) {
-  # Push checkers in order they were silenced.
-  push @AnalysesToRun, "-analyzer-config silence-checker", $_;
-}
 if ($Options{AnalyzeHeaders}) { push @AnalysesToRun, "-analyzer-opt-analyze-headers"; }
 if ($Options{AnalyzerStats}) { push @AnalysesToRun, '-analyzer-checker=debug.Stats'; }
 if ($Options{MaxLoop} > 0) { push @AnalysesToRun, "-analyzer-max-loop $Options{MaxLoop}"; }
@@ -1903,6 +1898,14 @@ if ($Options{MaxLoop} > 0) { push @AnalysesToRun, "-analyzer-max-loop $Options{M
 my $CCC_ANALYZER_ANALYSIS = join ' ', @AnalysesToRun;
 my $CCC_ANALYZER_PLUGINS = join ' ', map { "-load ".$_ } @{$Options{PluginsToLoad}};
 my $CCC_ANALYZER_CONFIG = join ' ', map { "-analyzer-config ".$_ } @{$Options{ConfigOptions}};
+
+foreach (sort { $Options{SilenceCheckers}{$a} <=> $Options{SilenceCheckers}{$b} }
+         keys %{$Options{SilenceCheckers}}) {
+  # Add checkers in order they were silenced.
+  $CCC_ANALYZER_CONFIG =
+      $CCC_ANALYZER_CONFIG." -analyzer-config silence-checkers=".$_;
+}
+
 my %EnvVars = (
   'CC' => $Cmd,
   'CXX' => $CmdCXX,

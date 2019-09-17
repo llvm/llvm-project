@@ -30,9 +30,7 @@ target.
 By default, the ``check-lldb`` target builds the test programs with the same
 compiler that was used to build LLDB. To build the tests with a different
 compiler, you can set the ``LLDB_TEST_C_COMPILER`` or the
-``LLDB_TEST_CXX_COMPILER`` CMake variables. These variables are ignored unless
-the respective ``LLDB_TEST_USE_CUSTOM_C_COMPILER`` and
-``LLDB_TEST_USE_CUSTOM_CXX_COMPILER`` are set to ``ON``.
+``LLDB_TEST_CXX_COMPILER`` CMake variables.
 
 It is possible to customize the architecture of the test binaries and compiler
 used by appending ``-A`` and ``-C`` options respectively to the CMake variable
@@ -146,8 +144,6 @@ A quick guide to getting started with PTVS is as follows:
 
 ::
 
-   # quiet mode
-   -q
    --arch=i686
    # Path to debug lldb.exe
    --executable D:/src/llvmbuild/ninja/bin/lldb.exe
@@ -165,7 +161,7 @@ A quick guide to getting started with PTVS is as follows:
 
 ::
 
-   -q --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
+   --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
 
 
 

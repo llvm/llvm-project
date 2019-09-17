@@ -1309,6 +1309,7 @@ private:
   bool validateOpSel(const MCInst &Inst);
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOP3Literal(const MCInst &Inst) const;
+  unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
@@ -1852,6 +1853,8 @@ static bool isInlineValue(unsigned Reg) {
   case AMDGPU::SRC_VCCZ:
   case AMDGPU::SRC_EXECZ:
   case AMDGPU::SRC_SCC:
+    return true;
+  case AMDGPU::SGPR_NULL:
     return true;
   default:
     return false;
@@ -2654,7 +2657,6 @@ unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
     case AMDGPU::VCC_LO:
     case AMDGPU::VCC_HI:
     case AMDGPU::M0:
-    case AMDGPU::SGPR_NULL:
       return Reg;
     default:
       break;
@@ -2703,13 +2705,38 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
   }
 }
 
+unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
+  if (!isGFX10())
+    return 1;
+
+  switch (Opcode) {
+  // 64-bit shift instructions can use only one scalar value input
+  case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_gfx10:
+  case AMDGPU::V_LSHL_B64:
+  case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_gfx10:
+  case AMDGPU::V_LSHR_B64:
+  case AMDGPU::V_ASHRREV_I64:
+  case AMDGPU::V_ASHRREV_I64_gfx10:
+  case AMDGPU::V_ASHR_I64:
+    return 1;
+  default:
+    return 2;
+  }
+}
+
 bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   const MCOperand &MO = Inst.getOperand(OpIdx);
   if (MO.isImm()) {
     return !isInlineConstant(Inst, OpIdx);
+  } else if (MO.isReg()) {
+    auto Reg = MO.getReg();
+    const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+    return isSGPR(mc2PseudoReg(Reg), TRI) && Reg != SGPR_NULL;
+  } else {
+    return true;
   }
-  return !MO.isReg() ||
-         isSGPR(mc2PseudoReg(MO.getReg()), getContext().getRegisterInfo());
 }
 
 bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
@@ -2788,10 +2815,7 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
   }
   ConstantBusUseCount += NumLiterals;
 
-  if (isGFX10())
-    return ConstantBusUseCount <= 2;
-
-  return ConstantBusUseCount <= 1;
+  return ConstantBusUseCount <= getConstantBusLimit(Opcode);
 }
 
 bool AMDGPUAsmParser::validateEarlyClobberLimitations(const MCInst &Inst) {
@@ -3283,6 +3307,10 @@ bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
     if (!MO.isImm() || !AMDGPU::isSISrcOperand(Desc, OpIdx))
       continue;
 
+    if (OpIdx == Src2Idx && (Desc.TSFlags & SIInstrFlags::IsMAI) &&
+        getFeatureBits()[AMDGPU::FeatureMFMAInlineLiteralBug])
+      return false;
+
     if (!isInlineConstant(Inst, OpIdx)) {
       uint32_t Value = static_cast<uint32_t>(MO.getImm());
       if (NumLiterals == 0 || LiteralValue != Value) {
@@ -3613,37 +3641,44 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER,
                        Val, ValRange);
-      UserSGPRCount += 4;
+      if (Val)
+        UserSGPRCount += 4;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR, Val,
                        ValRange);
-      UserSGPRCount += 2;
+      if (Val)
+        UserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_queue_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR, Val,
                        ValRange);
-      UserSGPRCount += 2;
+      if (Val)
+        UserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_kernarg_segment_ptr") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR,
                        Val, ValRange);
-      UserSGPRCount += 2;
+      if (Val)
+        UserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_dispatch_id") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID, Val,
                        ValRange);
-      UserSGPRCount += 2;
+      if (Val)
+        UserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_flat_scratch_init") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT, Val,
                        ValRange);
-      UserSGPRCount += 2;
+      if (Val)
+        UserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_private_segment_size") {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
                        Val, ValRange);
-      UserSGPRCount += 1;
+      if (Val)
+        UserSGPRCount += 1;
     } else if (ID == ".amdhsa_wavefront_size32") {
       if (IVersion.Major < 10)
         return getParser().Error(IDRange.Start, "directive requires gfx10+",

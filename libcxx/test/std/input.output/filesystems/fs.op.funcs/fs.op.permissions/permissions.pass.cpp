@@ -17,11 +17,11 @@
 
 
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 
 #include "test_macros.h"
-#include "rapid-cxx-test.hpp"
-#include "filesystem_test_helper.hpp"
+#include "rapid-cxx-test.h"
+#include "filesystem_test_helper.h"
 
 using namespace fs;
 

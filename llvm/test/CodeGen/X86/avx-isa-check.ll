@@ -352,7 +352,7 @@ define <8 x float> @shuffle_v8f32_11335577(<8 x float> %a, <8 x float> %b) {
 }
 
 define <4 x float> @shuffle_v4f32_1133(<4 x float> %a, <4 x float> %b) {
-; vmovshdup 128 test 
+; vmovshdup 128 test
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
   ret <4 x float> %shuffle
 }

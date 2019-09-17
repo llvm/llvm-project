@@ -220,7 +220,8 @@ struct LegacyLICMPass : public LoopPass {
                           &getAnalysis<AAResultsWrapperPass>().getAAResults(),
                           &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
                           &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+                          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+                              *L->getHeader()->getParent()),
                           &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
                               *L->getHeader()->getParent()),
                           SE ? &SE->getSE() : nullptr, MSSA, &ORE, false);
@@ -1099,7 +1100,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     // in the same alias set as something that ends up being modified.
     if (AA->pointsToConstantMemory(LI->getOperand(0)))
       return true;
-    if (LI->getMetadata(LLVMContext::MD_invariant_load))
+    if (LI->hasMetadata(LLVMContext::MD_invariant_load))
       return true;
 
     if (LI->isAtomic() && !TargetExecutesOncePerLoop)
@@ -1392,7 +1393,7 @@ static Instruction *CloneInstructionInExitBlock(
         MSSAU->insertDef(MemDef, /*RenameUses=*/true);
       else {
         auto *MemUse = cast<MemoryUse>(NewMemAcc);
-        MSSAU->insertUse(MemUse);
+        MSSAU->insertUse(MemUse, /*RenameUses=*/true);
       }
     }
   }
@@ -2119,9 +2120,11 @@ bool llvm::promoteLoopAccessesToScalars(
     PreheaderLoadMemoryAccess = MSSAU->createMemoryAccessInBB(
         PreheaderLoad, nullptr, PreheaderLoad->getParent(), MemorySSA::End);
     MemoryUse *NewMemUse = cast<MemoryUse>(PreheaderLoadMemoryAccess);
-    MSSAU->insertUse(NewMemUse);
+    MSSAU->insertUse(NewMemUse, /*RenameUses=*/true);
   }
 
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
   // Rewrite all the loads in the loop and remember all the definitions from
   // stores in the loop.
   Promoter.run(LoopUses);

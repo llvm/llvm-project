@@ -19,7 +19,6 @@
 
 #include "CodeComplete.h"
 #include "AST.h"
-#include "ClangdUnit.h"
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
@@ -28,10 +27,12 @@
 #include "FuzzyMatch.h"
 #include "Headers.h"
 #include "Logger.h"
+#include "Preamble.h"
 #include "Protocol.h"
 #include "Quality.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
+#include "Threading.h"
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
@@ -1053,7 +1054,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   ParseInput.FS = VFS;
   ParseInput.Contents = Input.Contents;
   ParseInput.Opts = ParseOptions();
-  auto CI = buildCompilerInvocation(ParseInput);
+
+  IgnoreDiagnostics IgnoreDiags;
+  auto CI = buildCompilerInvocation(ParseInput, IgnoreDiags);
   if (!CI) {
     elog("Couldn't create CompilerInvocation");
     return false;
@@ -1084,12 +1087,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   bool CompletingInPreamble = PreambleRegion.Size > Input.Offset;
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
-  IgnoreDiagnostics DummyDiagsConsumer;
   auto Clang = prepareCompilerInstance(
       std::move(CI),
       (Input.Preamble && !CompletingInPreamble) ? &Input.Preamble->Preamble
                                                 : nullptr,
-      std::move(ContentsBuffer), std::move(VFS), DummyDiagsConsumer);
+      std::move(ContentsBuffer), std::move(VFS), IgnoreDiags);
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
 

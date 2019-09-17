@@ -55,7 +55,7 @@ bb4:
   %tmp45 = icmp slt i32 %tmp43, 256
   %tmp46 = select i1 %tmp45, i32 %tmp43, i32 256
 ; CHECK:  %tmp46 = select i1 %tmp45, i32 %tmp43, i32 256
-; CHECK-NEXT:  -->  (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)) smin {%tmp3,+,-256}<%bb4>)
+; CHECK-NEXT:  -->  (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin (1 + (256 smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>))<nsw> smin {%tmp3,+,-256}<%bb4>) U: [-2147483648,257) S: [-2147483648,257)
   %tmp47 = icmp sgt i32 %tmp44, %tmp46
   %tmp48 = select i1 %tmp47, i32 %tmp44, i32 %tmp46
   %tmp49 = ashr i32 %tmp48, 3
@@ -130,7 +130,7 @@ bb4:
   %tmp45 = icmp ult i32 %tmp43, 256
   %tmp46 = select i1 %tmp45, i32 %tmp43, i32 256
 ; CHECK:  %tmp46 = select i1 %tmp45, i32 %tmp43, i32 256
-; CHECK-NEXT:  --> (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>)) umin {%tmp3,+,-256}<%bb4>) 
+; CHECK-NEXT:  --> (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>) U: [0,257) S: [0,257)
   %tmp47 = icmp ugt i32 %tmp44, %tmp46
   %tmp48 = select i1 %tmp47, i32 %tmp44, i32 %tmp46
   %tmp49 = ashr i32 %tmp48, 3

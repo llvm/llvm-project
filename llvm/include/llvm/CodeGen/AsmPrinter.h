@@ -342,12 +342,11 @@ public:
   /// so, emit it and return true, otherwise do nothing and return false.
   bool EmitSpecialLLVMGlobal(const GlobalVariable *GV);
 
-  /// Emit an alignment directive to the specified power of two boundary. For
-  /// example, if you pass in 3 here, you will get an 8 byte alignment. If a
+  /// Emit an alignment directive to the specified power of two boundary. If a
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
   /// correctness.
-  void EmitAlignment(unsigned NumBits, const GlobalObject *GV = nullptr) const;
+  void EmitAlignment(llvm::Align Align, const GlobalObject *GV = nullptr) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   virtual const MCExpr *lowerConstant(const Constant *CV);
@@ -400,7 +399,7 @@ public:
   /// By default, this method prints the label for the specified
   /// MachineBasicBlock, an alignment (if present) and a comment describing it
   /// if appropriate.
-  virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB) const;
+  virtual void EmitBasicBlockStart(const MachineBasicBlock &MBB);
 
   /// Targets can override this to emit stuff at the end of a basic block.
   virtual void EmitBasicBlockEnd(const MachineBasicBlock &MBB);
@@ -634,6 +633,10 @@ public:
   /// This emits linkage information about \p GVSym based on \p GV, if this is
   /// supported by the target.
   void EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const;
+
+  /// Return the alignment for the specified \p GV.
+  static llvm::Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
+                                    llvm::Align InAlign = llvm::Align(1));
 
 private:
   /// Private state for PrintSpecial()

@@ -91,7 +91,7 @@
 ...
 ---
 name:            test_mul_v8i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -117,7 +117,7 @@ body:             |
 ...
 ---
 name:            test_mul_v8i16_avx
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -143,7 +143,7 @@ body:             |
 ...
 ---
 name:            test_mul_v8i16_avx512bwvl
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -169,7 +169,7 @@ body:             |
 ...
 ---
 name:            test_mul_v4i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -195,7 +195,7 @@ body:             |
 ...
 ---
 name:            test_mul_v4i32_avx
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -221,7 +221,7 @@ body:             |
 ...
 ---
 name:            test_mul_v4i32_avx512vl
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -247,7 +247,7 @@ body:             |
 ...
 ---
 name:            test_mul_v2i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -273,7 +273,7 @@ body:             |
 ...
 ---
 name:            test_mul_v16i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -299,7 +299,7 @@ body:             |
 ...
 ---
 name:            test_mul_v16i16_avx512bwvl
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -325,7 +325,7 @@ body:             |
 ...
 ---
 name:            test_mul_v8i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -351,7 +351,7 @@ body:             |
 ...
 ---
 name:            test_mul_v8i32_avx512vl
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -377,7 +377,7 @@ body:             |
 ...
 ---
 name:            test_mul_v4i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -403,7 +403,7 @@ body:             |
 ...
 ---
 name:            test_mul_v32i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -429,7 +429,7 @@ body:             |
 ...
 ---
 name:            test_mul_v16i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -455,7 +455,7 @@ body:             |
 ...
 ---
 name:            test_mul_v8i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

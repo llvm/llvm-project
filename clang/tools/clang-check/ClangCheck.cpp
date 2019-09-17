@@ -52,31 +52,34 @@ static cl::extrahelp MoreHelp(
 );
 
 static cl::OptionCategory ClangCheckCategory("clang-check options");
-static std::unique_ptr<opt::OptTable> Options(createDriverOptTable());
+static const opt::OptTable &Options = getDriverOptTable();
 static cl::opt<bool>
-ASTDump("ast-dump", cl::desc(Options->getOptionHelpText(options::OPT_ast_dump)),
-        cl::cat(ClangCheckCategory));
+    ASTDump("ast-dump",
+            cl::desc(Options.getOptionHelpText(options::OPT_ast_dump)),
+            cl::cat(ClangCheckCategory));
 static cl::opt<bool>
-ASTList("ast-list", cl::desc(Options->getOptionHelpText(options::OPT_ast_list)),
-        cl::cat(ClangCheckCategory));
+    ASTList("ast-list",
+            cl::desc(Options.getOptionHelpText(options::OPT_ast_list)),
+            cl::cat(ClangCheckCategory));
 static cl::opt<bool>
-ASTPrint("ast-print",
-         cl::desc(Options->getOptionHelpText(options::OPT_ast_print)),
-         cl::cat(ClangCheckCategory));
+    ASTPrint("ast-print",
+             cl::desc(Options.getOptionHelpText(options::OPT_ast_print)),
+             cl::cat(ClangCheckCategory));
 static cl::opt<std::string> ASTDumpFilter(
     "ast-dump-filter",
-    cl::desc(Options->getOptionHelpText(options::OPT_ast_dump_filter)),
+    cl::desc(Options.getOptionHelpText(options::OPT_ast_dump_filter)),
     cl::cat(ClangCheckCategory));
 static cl::opt<bool>
-Analyze("analyze", cl::desc(Options->getOptionHelpText(options::OPT_analyze)),
-        cl::cat(ClangCheckCategory));
+    Analyze("analyze",
+            cl::desc(Options.getOptionHelpText(options::OPT_analyze)),
+            cl::cat(ClangCheckCategory));
 
 static cl::opt<bool>
-Fixit("fixit", cl::desc(Options->getOptionHelpText(options::OPT_fixit)),
-      cl::cat(ClangCheckCategory));
+    Fixit("fixit", cl::desc(Options.getOptionHelpText(options::OPT_fixit)),
+          cl::cat(ClangCheckCategory));
 static cl::opt<bool> FixWhatYouCan(
     "fix-what-you-can",
-    cl::desc(Options->getOptionHelpText(options::OPT_fix_what_you_can)),
+    cl::desc(Options.getOptionHelpText(options::OPT_fix_what_you_can)),
     cl::cat(ClangCheckCategory));
 
 namespace {

@@ -137,7 +137,12 @@ const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 Status AdbClient::Connect() {
   Status error;
   m_conn.reset(new ConnectionFileDescriptor);
-  m_conn->Connect("connect://localhost:5037", &error);
+  std::string port = "5037";
+  if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
+    port = env_port;
+  }
+  std::string uri = "connect://localhost:" + port;
+  m_conn->Connect(uri.c_str(), &error);
 
   return error;
 }

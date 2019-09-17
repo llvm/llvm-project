@@ -177,6 +177,8 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   // files. After that, we exit from linker and ThinLTO backend runs in a
   // distributed environment.
   if (config->thinLTOIndexOnly) {
+    if (!config->ltoObjPath.empty())
+      saveBuffer(buf[0], config->ltoObjPath);
     if (indexFile)
       indexFile->close();
     return {};

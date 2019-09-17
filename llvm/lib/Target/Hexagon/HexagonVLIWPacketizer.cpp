@@ -24,6 +24,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -57,9 +58,9 @@ static cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
   cl::ZeroOrMore, cl::init(false),
   cl::desc("Disable Hexagon packetizer pass"));
 
-cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
-  cl::ZeroOrMore, cl::init(true),
-  cl::desc("Allow slot1 store and slot0 load"));
+static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
+                                cl::ZeroOrMore, cl::init(true),
+                                cl::desc("Allow slot1 store and slot0 load"));
 
 static cl::opt<bool> PacketizeVolatiles("hexagon-packetize-volatiles",
   cl::ZeroOrMore, cl::Hidden, cl::init(true),
@@ -1763,6 +1764,16 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
 void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
                                       MachineBasicBlock::iterator EndMI) {
   // Replace VLIWPacketizerList::endPacket(MBB, EndMI).
+  LLVM_DEBUG({
+    if (!CurrentPacketMIs.empty()) {
+      dbgs() << "Finalizing packet:\n";
+      unsigned Idx = 0;
+      for (MachineInstr *MI : CurrentPacketMIs) {
+        unsigned R = ResourceTracker->getUsedResources(Idx++);
+        dbgs() << " * [res:0x" << utohexstr(R) << "] " << *MI;
+      }
+    }
+  });
 
   bool memShufDisabled = getmemShufDisabled();
   if (memShufDisabled && !foundLSInPacket()) {

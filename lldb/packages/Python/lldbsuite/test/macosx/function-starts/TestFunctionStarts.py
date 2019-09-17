@@ -43,8 +43,20 @@ class FunctionStartsTestCase(TestBase):
         except CalledProcessError as cmd_error:
             self.fail("Strip failed: %d"%(cmd_error.returncode))
 
-        popen = self.spawnSubprocess(exe)
+        # Use a file as a synchronization point between test and inferior.
+        pid_file_path = lldbutil.append_to_process_working_directory(self,
+            "token_pid_%d" % (int(os.getpid())))
+        self.addTearDownHook(
+            lambda: self.run_platform_command(
+                "rm %s" %
+                (pid_file_path)))
+
+        popen = self.spawnSubprocess(exe, [pid_file_path])
         self.addTearDownHook(self.cleanupSubprocesses)
+
+        # Wait until process has fully started up.
+        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
+
         if in_memory:
           remove_file(exe)            
 
@@ -68,7 +80,8 @@ class FunctionStartsTestCase(TestBase):
         thread = threads[0]
         self.assertTrue(thread.num_frames > 1, "Couldn't backtrace.")
         name = thread.frame[1].GetFunctionName()
-        self.assertEqual("___lldb_unnamed_symbol1$$StripMe", name, "Frame name not synthetic")
+        self.assertTrue(name.startswith("___lldb_unnamed_symbol"))
+        self.assertTrue(name.endswith("$$StripMe"))
         
 
         

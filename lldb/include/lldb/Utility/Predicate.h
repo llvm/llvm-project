@@ -117,8 +117,7 @@ public:
   ///     How long to wait for the condition to hold.
   ///
   /// \return
-  ///     \li m_value if Cond(m_value) is true.
-  ///     \li None otherwise (timeout occurred).
+  ///     m_value if Cond(m_value) is true, None otherwise (timeout occurred).
   template <typename C>
   llvm::Optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
     std::unique_lock<std::mutex> lock(m_mutex);
@@ -151,8 +150,8 @@ public:
   ///     How long to wait for the condition to hold.
   ///
   /// \return
-  ///     \li \b true if the \a m_value is equal to \a value
-  ///     \li \b false otherwise (timeout occurred)
+  ///     true if the \a m_value is equal to \a value, false otherwise (timeout
+  ///     occurred).
   bool WaitForValueEqualTo(T value,
                            const Timeout<std::micro> &timeout = llvm::None) {
     return WaitFor([&value](T current) { return value == current; }, timeout) !=
@@ -179,8 +178,7 @@ public:
   ///     How long to wait for the condition to hold.
   ///
   /// \return
-  ///     \li m_value if m_value != value
-  ///     \li None otherwise (timeout occurred).
+  ///     m_value if m_value != value, None otherwise (timeout occurred).
   llvm::Optional<T>
   WaitForValueNotEqualTo(T value,
                          const Timeout<std::micro> &timeout = llvm::None) {

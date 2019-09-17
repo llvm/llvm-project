@@ -16,7 +16,7 @@ namespace tidy {
 namespace google {
 namespace runtime {
 
-/// \brief Checks the usage of non-constant references in function parameters.
+/// Checks the usage of non-constant references in function parameters.
 ///
 /// https://google.github.io/styleguide/cppguide.html#Reference_Arguments
 class NonConstReferences : public ClangTidyCheck {

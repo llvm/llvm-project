@@ -127,9 +127,14 @@ size_t InlineFunctionInfo::MemorySize() const {
 }
 
 //
-CallEdge::CallEdge(const char *symbol_name, lldb::addr_t return_pc)
-    : return_pc(return_pc), resolved(false) {
+CallEdge::CallEdge(const char *symbol_name, lldb::addr_t return_pc,
+                   CallSiteParameterArray parameters)
+    : return_pc(return_pc), parameters(std::move(parameters)), resolved(false) {
   lazy_callee.symbol_name = symbol_name;
+}
+
+llvm::ArrayRef<CallSiteParameter> CallEdge::GetCallSiteParameters() const {
+  return parameters;
 }
 
 void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
@@ -274,6 +279,20 @@ llvm::MutableArrayRef<CallEdge> Function::GetTailCallingEdges() {
   return GetCallEdges().drop_until([](const CallEdge &edge) {
     return edge.GetUnresolvedReturnPCAddress() == LLDB_INVALID_ADDRESS;
   });
+}
+
+CallEdge *Function::GetCallEdgeForReturnAddress(addr_t return_pc,
+                                                Target &target) {
+  auto edges = GetCallEdges();
+  auto edge_it =
+      std::lower_bound(edges.begin(), edges.end(), return_pc,
+                       [&](const CallEdge &edge, addr_t pc) {
+                         return edge.GetReturnPCAddress(*this, target) < pc;
+                       });
+  if (edge_it == edges.end() ||
+      edge_it->GetReturnPCAddress(*this, target) != return_pc)
+    return nullptr;
+  return &const_cast<CallEdge &>(*edge_it);
 }
 
 Block &Function::GetBlock(bool can_create) {

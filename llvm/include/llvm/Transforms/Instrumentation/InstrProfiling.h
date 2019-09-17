@@ -39,13 +39,14 @@ public:
       : Options(Options), IsCS(IsCS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  bool run(Module &M, const TargetLibraryInfo &TLI);
+  bool run(Module &M,
+           std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
 
 private:
   InstrProfOptions Options;
   Module *M;
   Triple TT;
-  const TargetLibraryInfo *TLI;
+  std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1];
     GlobalVariable *RegionCounters = nullptr;

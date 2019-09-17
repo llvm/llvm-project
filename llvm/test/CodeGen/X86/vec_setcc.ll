@@ -197,3 +197,48 @@ define <2 x i64> @test_setcc_constfold_vi64(<2 x i64> %l, <2 x i64> %r) {
   %res = or <2 x i64> %mask1, %mask2
   ret <2 x i64> %res
 }
+
+; This asserted in type legalization for v3i1 setcc after v3i16 was made
+; a simple value type.
+define <3 x i1> @test_setcc_v3i1_v3i16(<3 x i16>* %a) nounwind {
+; SSE2-LABEL: test_setcc_v3i1_v3i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %dl
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_setcc_v3i1_v3i16:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
+; SSE41-NEXT:    pextrb $0, %xmm1, %eax
+; SSE41-NEXT:    pextrb $2, %xmm1, %edx
+; SSE41-NEXT:    pextrb $4, %xmm1, %ecx
+; SSE41-NEXT:    # kill: def $al killed $al killed $eax
+; SSE41-NEXT:    # kill: def $dl killed $dl killed $edx
+; SSE41-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: test_setcc_v3i1_v3i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    vpextrb $2, %xmm0, %edx
+; AVX-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    # kill: def $dl killed $dl killed $edx
+; AVX-NEXT:    # kill: def $cl killed $cl killed $ecx
+; AVX-NEXT:    retq
+  %b = load <3 x i16>, <3 x i16>* %a
+  %cmp = icmp eq <3 x i16> %b, <i16 0, i16 0, i16 0>
+  ret <3 x i1> %cmp
+}

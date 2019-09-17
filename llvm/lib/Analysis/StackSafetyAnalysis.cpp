@@ -333,8 +333,8 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
         // FIXME: consult devirt?
         // Do not follow aliases, otherwise we could inadvertently follow
         // dso_preemptable aliases or aliases with interposable linkage.
-        const GlobalValue *Callee = dyn_cast<GlobalValue>(
-            CS.getCalledValue()->stripPointerCastsNoFollowAliases());
+        const GlobalValue *Callee =
+            dyn_cast<GlobalValue>(CS.getCalledValue()->stripPointerCasts());
         if (!Callee) {
           US.updateRange(UnknownRange);
           return false;

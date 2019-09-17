@@ -45,14 +45,21 @@ class CallLowering {
 public:
   struct ArgInfo {
     SmallVector<Register, 4> Regs;
+    // If the argument had to be split into multiple parts according to the
+    // target calling convention, then this contains the original vregs
+    // if the argument was an incoming arg.
+    SmallVector<Register, 2> OrigRegs;
     Type *Ty;
-    ISD::ArgFlagsTy Flags;
+    SmallVector<ISD::ArgFlagsTy, 4> Flags;
     bool IsFixed;
 
     ArgInfo(ArrayRef<Register> Regs, Type *Ty,
-            ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{}, bool IsFixed = true)
-        : Regs(Regs.begin(), Regs.end()), Ty(Ty), Flags(Flags),
-          IsFixed(IsFixed) {
+            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
+            bool IsFixed = true)
+        : Regs(Regs.begin(), Regs.end()), Ty(Ty),
+          Flags(Flags.begin(), Flags.end()), IsFixed(IsFixed) {
+      if (!Regs.empty() && Flags.empty())
+        this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
       assert((Ty->isVoidTy() == (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
@@ -80,6 +87,20 @@ public:
     Register SwiftErrorVReg = 0;
 
     MDNode *KnownCallees = nullptr;
+
+    /// True if the call must be tail call optimized.
+    bool IsMustTailCall = false;
+
+    /// True if the call passes all target-independent checks for tail call
+    /// optimization.
+    bool IsTailCall = false;
+
+    /// True if the call was lowered as a tail call. This is consumed by the
+    /// legalizer. This allows the legalizer to lower libcalls as tail calls.
+    bool LoweredTailCall = false;
+
+    /// True if the call is to a vararg function.
+    bool IsVarArg = false;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -135,8 +156,8 @@ public:
 
     virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
-                           CCState &State) {
-      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+                           ISD::ArgFlagsTy Flags, CCState &State) {
+      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
     }
 
     MachineIRBuilder &MIRBuilder;
@@ -185,12 +206,35 @@ protected:
   /// \p Callback to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool handleAssignments(MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
+  bool handleAssignments(MachineIRBuilder &MIRBuilder,
+                         SmallVectorImpl<ArgInfo> &Args,
                          ValueHandler &Handler) const;
   bool handleAssignments(CCState &CCState,
                          SmallVectorImpl<CCValAssign> &ArgLocs,
-                         MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
+                         MachineIRBuilder &MIRBuilder,
+                         SmallVectorImpl<ArgInfo> &Args,
                          ValueHandler &Handler) const;
+
+  /// Analyze passed or returned values from a call, supplied in \p ArgInfo,
+  /// incorporating info about the passed values into \p CCState.
+  ///
+  /// Used to check if arguments are suitable for tail call lowering.
+  bool analyzeArgInfo(CCState &CCState, SmallVectorImpl<ArgInfo> &Args,
+                      CCAssignFn &Fn) const;
+
+  /// \returns True if the calling convention for a callee and its caller pass
+  /// results in the same way. Typically used for tail call eligibility checks.
+  ///
+  /// \p Info is the CallLoweringInfo for the call.
+  /// \p MF is the MachineFunction for the caller.
+  /// \p InArgs contains the results of the call.
+  /// \p CalleeAssignFn is the CCAssignFn to be used for the callee.
+  /// \p CallerAssignFn is the CCAssignFn to be used for the caller.
+  bool resultsCompatible(CallLoweringInfo &Info, MachineFunction &MF,
+                         SmallVectorImpl<ArgInfo> &InArgs,
+                         CCAssignFn &CalleeAssignFn,
+                         CCAssignFn &CallerAssignFn) const;
+
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
   virtual ~CallLowering() = default;

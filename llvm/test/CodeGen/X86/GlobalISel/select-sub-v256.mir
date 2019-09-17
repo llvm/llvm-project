@@ -26,7 +26,7 @@
 ---
 name:            test_sub_v32i8
 # ALL-LABEL: name:  test_sub_v32i8
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -52,7 +52,7 @@ body:             |
 ---
 name:            test_sub_v16i16
 # ALL-LABEL: name:  test_sub_v16i16
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -78,7 +78,7 @@ body:             |
 ---
 name:            test_sub_v8i32
 # ALL-LABEL: name:  test_sub_v8i32
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -104,7 +104,7 @@ body:             |
 ---
 name:            test_sub_v4i64
 # ALL-LABEL: name:  test_sub_v4i64
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

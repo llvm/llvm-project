@@ -504,6 +504,15 @@ def MoveChecker: Checker<"Move">,
   ]>,
   Documentation<HasDocumentation>;
 
+def VirtualCallModeling : Checker<"VirtualCallModeling">,
+  HelpText<"Auxiliary modeling for the virtual method call checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def PureVirtualCallChecker : Checker<"PureVirtualCall">,
+  HelpText<"Check pure virtual function calls during construction/destruction">,
+  Dependencies<[VirtualCallModeling]>,
+  Documentation<HasDocumentation>;
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
@@ -552,14 +561,22 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
   Documentation<HasAlphaDocumentation>;
 
 def VirtualCallChecker : Checker<"VirtualCall">,
-  HelpText<"Check virtual function calls during construction or destruction">,
+  HelpText<"Check virtual function calls during construction/destruction">,
   CheckerOptions<[
     CmdLineOption<Boolean,
-                  "PureOnly",
-                  "Whether to only report calls to pure virtual methods.",
+                  "ShowFixIts",
+                  "Enable fix-it hints for this checker",
                   "false",
-                  Released>
+                  InAlpha>,
+    CmdLineOption<Boolean,
+                  "PureOnly",
+                  "Disables the checker. Keeps cplusplus.PureVirtualCall "
+                  "enabled. This option is only provided for backwards "
+                  "compatibility.",
+                  "false",
+                  InAlpha>
   ]>,
+  Dependencies<[VirtualCallModeling]>,
   Documentation<HasDocumentation>;
 
 } // end: "optin.cplusplus"
@@ -636,6 +653,19 @@ let ParentPackage = DeadCode in {
 def DeadStoresChecker : Checker<"DeadStores">,
   HelpText<"Check for values stored to variables that are never read "
            "afterwards">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "WarnForDeadNestedAssignments",
+                  "Warns for deadstores in nested assignments."
+                  "E.g.: if ((P = f())) where P is unused.",
+                  "true",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "ShowFixIts",
+                  "Enable fix-it hints for this checker",
+                  "false",
+                  InAlpha>
+  ]>,
   Documentation<HasDocumentation>;
 
 } // end DeadCode

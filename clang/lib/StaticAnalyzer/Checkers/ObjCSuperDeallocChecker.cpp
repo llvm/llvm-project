@@ -71,7 +71,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
                                    BugReporterContext &BRC,
-                                   BugReport &BR) override;
+                                   PathSensitiveBugReport &BR) override;
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.Add(ReceiverSymbol);
@@ -187,8 +187,8 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
     Desc = "Use of 'self' after it has been deallocated";
 
   // Generate the report.
-  std::unique_ptr<BugReport> BR(
-      new BugReport(*DoubleSuperDeallocBugType, Desc, ErrNode));
+  auto BR = std::make_unique<PathSensitiveBugReport>(*DoubleSuperDeallocBugType,
+                                                     Desc, ErrNode);
   BR->addRange(S->getSourceRange());
   BR->addVisitor(std::make_unique<SuperDeallocBRVisitor>(Sym));
   C.emitReport(std::move(BR));
@@ -244,7 +244,8 @@ ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
 
 PathDiagnosticPieceRef
 SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                 BugReporterContext &BRC, BugReport &) {
+                                 BugReporterContext &BRC,
+                                 PathSensitiveBugReport &) {
   if (Satisfied)
     return nullptr;
 

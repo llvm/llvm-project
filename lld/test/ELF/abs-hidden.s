@@ -1,46 +1,19 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/abs-hidden.s -o %t2.o
-// RUN: ld.lld --hash-style=sysv %t.o %t2.o -o %t.so -shared
-// RUN: llvm-readobj -r -S --section-data %t.so | FileCheck %s
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo '.globl foo; .hidden foo; foo = 42' | llvm-mc -filetype=obj -triple=x86_64 - -o %t2.o
+# RUN: ld.lld %t.o %t2.o -o %t.so -shared
+# RUN: llvm-readelf -r -S -x .got -x .data %t.so | FileCheck %s
 
-        .quad foo
-        .long foo@gotpcrel
+## Test we don't create relocations for non-preemptable absolute symbols.
 
-// CHECK:      Name: .text
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x1000
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: 12
-// CHECK-NEXT: Link: 0
-// CHECK-NEXT: Info: 0
-// CHECK-NEXT: AddressAlignment: 4
-// CHECK-NEXT: EntrySize: 0
-// CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 42000000 00000000 58100000
-//                                       0x2060 - (0x1000 + 8) = 1058
-// CHECK-NEXT: )
+# CHECK: There are no relocations in this file.
+# CHECK: section '.got':
+# CHECK: 0x000022b8 2a000000 00000000
 
-// CHECK:      Name: .got
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_WRITE
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x2060
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: 8
-// CHECK-NEXT: Link: 0
-// CHECK-NEXT: Info: 0
-// CHECK-NEXT: AddressAlignment: 8
-// CHECK-NEXT: EntrySize: 0
-// CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 42000000 00000000
-// CHECK-NEXT: )
+## .got - (.data+8) = 0xfffff0ef
+# CHECK: section '.data':
+# CHECK: 0x000032c0 2a000000 00000000 f0efffff
 
-// CHECK:      Relocations [
-// CHECK-NEXT: ]
+.data
+.quad foo
+.long foo@gotpcrel

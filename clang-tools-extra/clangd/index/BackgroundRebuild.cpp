@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "index/BackgroundRebuild.h"
-#include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Headers.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "Path.h"
 #include "SourceCode.h"
 #include "Symbol.h"

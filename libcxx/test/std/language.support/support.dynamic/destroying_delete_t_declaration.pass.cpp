@@ -24,7 +24,7 @@
 
 #include <cassert>
 #include "test_macros.h"
-#include "test_convertible.hpp"
+#include "test_convertible.h"
 
 #ifdef __cpp_impl_destroying_delete
 # ifndef __cpp_lib_destroying_delete

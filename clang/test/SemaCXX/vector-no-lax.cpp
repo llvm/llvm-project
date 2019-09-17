@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fno-lax-vector-conversions -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -flax-vector-conversions=none -verify %s
 typedef unsigned int __attribute__((vector_size (16))) vUInt32;
 typedef int __attribute__((vector_size (16))) vSInt32;
 

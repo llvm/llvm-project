@@ -46,7 +46,9 @@ const RegisterBank &X86RegisterBankInfo::getRegBankFromRegClass(
   if (X86::GR8RegClass.hasSubClassEq(&RC) ||
       X86::GR16RegClass.hasSubClassEq(&RC) ||
       X86::GR32RegClass.hasSubClassEq(&RC) ||
-      X86::GR64RegClass.hasSubClassEq(&RC))
+      X86::GR64RegClass.hasSubClassEq(&RC) ||
+      X86::LOW32_ADDR_ACCESSRegClass.hasSubClassEq(&RC) ||
+      X86::LOW32_ADDR_ACCESS_RBPRegClass.hasSubClassEq(&RC))
     return getRegBank(X86::GPRRegBankID);
 
   if (X86::FR32XRegClass.hasSubClassEq(&RC) ||

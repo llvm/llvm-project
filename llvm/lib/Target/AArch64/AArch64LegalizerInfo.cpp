@@ -112,6 +112,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder({G_SDIV, G_UDIV})
       .legalFor({s32, s64})
+      .libcallFor({s128})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
       .scalarize(0);
@@ -341,7 +342,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     unsigned DstSize = Query.Types[0].getSizeInBits();
 
     if (DstSize == 128 && !Query.Types[0].isVector())
-      return false; // Extending to a scalar s128 is not legal.
+      return false; // Extending to a scalar s128 needs narrowing.
     
     // Make sure that we have something that will fit in a register, and
     // make sure it's a power of 2.
@@ -363,8 +364,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
     return true;
   };
-  getActionDefinitionsBuilder({G_ZEXT, G_ANYEXT}).legalIf(ExtLegalFunc);
-  getActionDefinitionsBuilder(G_SEXT)
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
       .legalIf(ExtLegalFunc)
       .clampScalar(0, s64, s64); // Just for s128, others are handled above.
 
@@ -605,6 +605,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder(G_BRJT).legalIf([=](const LegalityQuery &Query) {
     return Query.Types[0] == p0 && Query.Types[1] == s64;
   });
+
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
 
   computeTables();
   verify(*ST.getInstrInfo());

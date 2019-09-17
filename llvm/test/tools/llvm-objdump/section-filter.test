@@ -110,8 +110,6 @@ Sections:
 # RUN: cmp %t.full %t.6
 
 ## Test that an unknown section name causes all section output to be suppressed.
-## TODO: Add a warning for this case.
-##       See https://bugs.llvm.org/show_bug.cgi?id=41898.
 # RUN: llvm-objdump %t.h.elf -h --section foobar \
 # RUN:   | FileCheck %s --check-prefix=NO-SECTION
 

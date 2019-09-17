@@ -16,6 +16,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h"
+#include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"

@@ -454,6 +454,14 @@ public:
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
 
+  /// Find types by name.
+  ///
+  /// This behaves like the other FindTypes method but allows to
+  /// specify a DeclContext and a language for the type being searched
+  /// for.
+  size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                   LanguageSet languages, bool append, TypeMap &types);
+
   lldb::TypeSP FindFirstType(const SymbolContext &sc,
                              ConstString type_name, bool exact_match);
 
@@ -886,6 +894,9 @@ public:
   ///     is filled in with a new source path, \b false otherwise.
   bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  /// Update the ArchSpec to a more specific variant.
+  bool MergeArchitecture(const ArchSpec &arch_spec);
 
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.

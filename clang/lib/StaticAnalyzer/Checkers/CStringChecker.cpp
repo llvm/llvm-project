@@ -48,10 +48,10 @@ public:
     DefaultBool CheckCStringBufferOverlap;
     DefaultBool CheckCStringNotNullTerm;
 
-    CheckName CheckNameCStringNullArg;
-    CheckName CheckNameCStringOutOfBounds;
-    CheckName CheckNameCStringBufferOverlap;
-    CheckName CheckNameCStringNotNullTerm;
+    CheckerNameRef CheckNameCStringNullArg;
+    CheckerNameRef CheckNameCStringOutOfBounds;
+    CheckerNameRef CheckNameCStringBufferOverlap;
+    CheckerNameRef CheckNameCStringNotNullTerm;
   };
 
   CStringChecksFilter Filter;
@@ -198,7 +198,8 @@ public:
   ProgramStateRef checkNonNull(CheckerContext &C,
                                    ProgramStateRef state,
                                    const Expr *S,
-                                   SVal l) const;
+                                   SVal l,
+                                   unsigned IdxOfArg) const;
   ProgramStateRef CheckLocation(CheckerContext &C,
                                     ProgramStateRef state,
                                     const Expr *S,
@@ -277,7 +278,8 @@ CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef state, SVal V,
 
 ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
                                             ProgramStateRef state,
-                                            const Expr *S, SVal l) const {
+                                            const Expr *S, SVal l,
+                                            unsigned IdxOfArg) const {
   // If a previous check has failed, propagate the failure.
   if (!state)
     return nullptr;
@@ -288,11 +290,13 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
   if (stateNull && !stateNonNull) {
     if (Filter.CheckCStringNullArg) {
       SmallString<80> buf;
-      llvm::raw_svector_ostream os(buf);
+      llvm::raw_svector_ostream OS(buf);
       assert(CurrentFunctionDescription);
-      os << "Null pointer argument in call to " << CurrentFunctionDescription;
+      OS << "Null pointer argument in call to " << CurrentFunctionDescription
+         << ' ' << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
+         << " parameter";
 
-      emitNullArgBug(C, stateNull, S, os.str());
+      emitNullArgBug(C, stateNull, S, OS.str());
     }
     return nullptr;
   }
@@ -384,7 +388,7 @@ ProgramStateRef CStringChecker::CheckBufferAccess(CheckerContext &C,
 
   // Check that the first buffer is non-null.
   SVal BufVal = C.getSVal(FirstBuf);
-  state = checkNonNull(C, state, FirstBuf, BufVal);
+  state = checkNonNull(C, state, FirstBuf, BufVal, 1);
   if (!state)
     return nullptr;
 
@@ -424,7 +428,7 @@ ProgramStateRef CStringChecker::CheckBufferAccess(CheckerContext &C,
   // If there's a second buffer, check it as well.
   if (SecondBuf) {
     BufVal = state->getSVal(SecondBuf, LCtx);
-    state = checkNonNull(C, state, SecondBuf, BufVal);
+    state = checkNonNull(C, state, SecondBuf, BufVal, 2);
     if (!state)
       return nullptr;
 
@@ -566,7 +570,7 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
                                  categories::UnixAPI, "Improper arguments"));
 
   // Generate a report for this bug.
-  auto report = std::make_unique<BugReport>(
+  auto report = std::make_unique<PathSensitiveBugReport>(
       *BT_Overlap, "Arguments must not be overlapping buffers", N);
   report->addRange(First->getSourceRange());
   report->addRange(Second->getSourceRange());
@@ -583,7 +587,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
           "Null pointer argument in call to byte string function"));
 
     BuiltinBug *BT = static_cast<BuiltinBug *>(BT_Null.get());
-    auto Report = std::make_unique<BugReport>(*BT, WarningMsg, N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     if (const auto *Ex = dyn_cast<Expr>(S))
       bugreporter::trackExpressionValue(N, Ex, *Report);
@@ -607,7 +611,7 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
     // reference is outside the range.
-    auto Report = std::make_unique<BugReport>(*BT, WarningMsg, N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
   }
@@ -622,7 +626,8 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
           Filter.CheckNameCStringNotNullTerm, categories::UnixAPI,
           "Argument is not a null-terminated string."));
 
-    auto Report = std::make_unique<BugReport>(*BT_NotCString, WarningMsg, N);
+    auto Report =
+        std::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
 
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
@@ -644,7 +649,8 @@ void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
         "This expression will create a string whose length is too big to "
         "be represented as a size_t";
 
-    auto Report = std::make_unique<BugReport>(*BT_NotCString, WarningMsg, N);
+    auto Report =
+        std::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
     C.emitReport(std::move(Report));
   }
 }
@@ -1163,7 +1169,7 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
 
     // Ensure the destination is not null. If it is NULL there will be a
     // NULL pointer dereference.
-    state = checkNonNull(C, state, Dest, destVal);
+    state = checkNonNull(C, state, Dest, destVal, 1);
     if (!state)
       return;
 
@@ -1172,7 +1178,7 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
 
     // Ensure the source is not null. If it is NULL there will be a
     // NULL pointer dereference.
-    state = checkNonNull(C, state, Source, srcVal);
+    state = checkNonNull(C, state, Source, srcVal, 2);
     if (!state)
       return;
 
@@ -1383,7 +1389,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C, const CallExpr *CE,
   const Expr *Arg = CE->getArg(0);
   SVal ArgVal = state->getSVal(Arg, LCtx);
 
-  state = checkNonNull(C, state, Arg, ArgVal);
+  state = checkNonNull(C, state, Arg, ArgVal, 1);
 
   if (!state)
     return;
@@ -1541,14 +1547,14 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   const Expr *Dst = CE->getArg(0);
   SVal DstVal = state->getSVal(Dst, LCtx);
 
-  state = checkNonNull(C, state, Dst, DstVal);
+  state = checkNonNull(C, state, Dst, DstVal, 1);
   if (!state)
     return;
 
   // Check that the source is non-null.
   const Expr *srcExpr = CE->getArg(1);
   SVal srcVal = state->getSVal(srcExpr, LCtx);
-  state = checkNonNull(C, state, srcExpr, srcVal);
+  state = checkNonNull(C, state, srcExpr, srcVal, 2);
   if (!state)
     return;
 
@@ -1904,14 +1910,14 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
   // Check that the first string is non-null
   const Expr *s1 = CE->getArg(0);
   SVal s1Val = state->getSVal(s1, LCtx);
-  state = checkNonNull(C, state, s1, s1Val);
+  state = checkNonNull(C, state, s1, s1Val, 1);
   if (!state)
     return;
 
   // Check that the second string is non-null.
   const Expr *s2 = CE->getArg(1);
   SVal s2Val = state->getSVal(s2, LCtx);
-  state = checkNonNull(C, state, s2, s2Val);
+  state = checkNonNull(C, state, s2, s2Val, 2);
   if (!state)
     return;
 
@@ -2038,14 +2044,14 @@ void CStringChecker::evalStrsep(CheckerContext &C, const CallExpr *CE) const {
   // Check that the search string pointer is non-null (though it may point to
   // a null string).
   SVal SearchStrVal = State->getSVal(SearchStrPtr, LCtx);
-  State = checkNonNull(C, State, SearchStrPtr, SearchStrVal);
+  State = checkNonNull(C, State, SearchStrPtr, SearchStrVal, 1);
   if (!State)
     return;
 
   // Check that the delimiter string is non-null.
   const Expr *DelimStr = CE->getArg(1);
   SVal DelimStrVal = State->getSVal(DelimStr, LCtx);
-  State = checkNonNull(C, State, DelimStr, DelimStrVal);
+  State = checkNonNull(C, State, DelimStr, DelimStrVal, 2);
   if (!State)
     return;
 
@@ -2148,7 +2154,7 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
 
   // Ensure the memory area is not null.
   // If it is NULL there will be a NULL pointer dereference.
-  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal);
+  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal, 1);
   if (!State)
     return;
 
@@ -2195,7 +2201,7 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
 
   // Ensure the memory area is not null.
   // If it is NULL there will be a NULL pointer dereference.
-  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal);
+  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal, 1);
   if (!State)
     return;
 
@@ -2403,14 +2409,12 @@ bool ento::shouldRegisterCStringModeling(const LangOptions &LO) {
   void ento::register##name(CheckerManager &mgr) {                             \
     CStringChecker *checker = mgr.getChecker<CStringChecker>();                \
     checker->Filter.Check##name = true;                                        \
-    checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+    checker->Filter.CheckName##name = mgr.getCurrentCheckerName();             \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
-  REGISTER_CHECKER(CStringNullArg)
-  REGISTER_CHECKER(CStringOutOfBounds)
-  REGISTER_CHECKER(CStringBufferOverlap)
+REGISTER_CHECKER(CStringNullArg)
+REGISTER_CHECKER(CStringOutOfBounds)
+REGISTER_CHECKER(CStringBufferOverlap)
 REGISTER_CHECKER(CStringNotNullTerm)

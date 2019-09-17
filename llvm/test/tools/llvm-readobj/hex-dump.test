@@ -24,12 +24,12 @@
 # RUN: llvm-readobj -x 9 -x 9 -x .strtab -x .strtab %p/Inputs/trivial.obj.elf-x86-64 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ELF
 # RUN: llvm-readobj -x 9 -x .strtab -x 10 -x not_exist \
-# RUN:   %p/Inputs/trivial.obj.elf-x86-64 2>&1 | FileCheck %s --check-prefixes=ELF-WARN,ELF
+# RUN:   %p/Inputs/trivial.obj.elf-x86-64 2>&1 | FileCheck %s -DFILE=%p/Inputs/trivial.obj.elf-x86-64 --check-prefixes=ELF-WARN,ELF
 
 # ELF-SEC: [ 9] .strtab
 
-# ELF-WARN: warning: could not find section 'not_exist'
-# ELF-WARN: warning: could not find section 10
+# ELF-WARN: warning: '[[FILE]]': could not find section 'not_exist'
+# ELF-WARN: warning: '[[FILE]]': could not find section 10
 # ELF:      Hex dump of section '.strtab':
 # ELF-NEXT: 0x00000000 00747269 7669616c 2e6c6c00 6d61696e .trivial.ll.main
 # ELF-NEXT: 0x00000010 002e4c2e 73747200 70757473 00536f6d ..L.str.puts.Som

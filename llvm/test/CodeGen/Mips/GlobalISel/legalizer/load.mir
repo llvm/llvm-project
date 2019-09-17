@@ -10,7 +10,7 @@
 ...
 ---
 name:            load_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -30,7 +30,7 @@ body:             |
 ...
 ---
 name:            load_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -54,7 +54,7 @@ body:             |
 ...
 ---
 name:            load_float
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -74,7 +74,7 @@ body:             |
 ...
 ---
 name:            load_double
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

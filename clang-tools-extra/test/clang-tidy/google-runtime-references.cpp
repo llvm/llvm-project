@@ -149,3 +149,7 @@ void f8(B &);
 }
 void f9(whitelist::A &);
 void f10(whitelist::B &);
+
+#define DEFINE_F(name) void name(int& a)
+
+DEFINE_F(func) {}

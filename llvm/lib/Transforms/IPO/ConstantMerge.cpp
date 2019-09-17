@@ -48,7 +48,7 @@ static void FindUsedValues(GlobalVariable *LLVMUsed,
   ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
 
   for (unsigned i = 0, e = Inits->getNumOperands(); i != e; ++i) {
-    Value *Operand = Inits->getOperand(i)->stripPointerCastsNoFollowAliases();
+    Value *Operand = Inits->getOperand(i)->stripPointerCasts();
     GlobalValue *GV = cast<GlobalValue>(Operand);
     UsedValues.insert(GV);
   }

@@ -13,7 +13,7 @@
 ...
 ---
 name:            test_mov_0
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: false
 frameInfo:

@@ -19,8 +19,8 @@
 # CHECK-NEXT:     SHF_MIPS_GPREL
 # CHECK-NEXT:     SHF_WRITE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x20000
-# CHECK-NEXT:   Offset: 0x20000
+# CHECK-NEXT:   Address:
+# CHECK-NEXT:   Offset:
 # CHECK:      }
 # CHECK:      Section {
 # CHECK-NEXT:   Index:
@@ -31,6 +31,6 @@
 # CHECK-NEXT:     SHF_MIPS_GPREL
 # CHECK-NEXT:     SHF_WRITE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x20008
-# CHECK-NEXT:   Offset: 0x20008
+# CHECK-NEXT:   Address:
+# CHECK-NEXT:   Offset:
 # CHECK:      }

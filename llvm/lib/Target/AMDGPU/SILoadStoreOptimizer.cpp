@@ -402,7 +402,8 @@ unsigned SILoadStoreOptimizer::getOpcodeWidth(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
 
   if (TII->isMUBUF(MI)) {
-    return AMDGPU::getMUBUFDwords(Opc);
+    // FIXME: Handle d16 correctly
+    return AMDGPU::getMUBUFElements(Opc);
   }
 
   switch (Opc) {
@@ -977,6 +978,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI) {
 
   switch (CI.InstClass) {
   default:
+    // FIXME: Handle d16 correctly
     return AMDGPU::getMUBUFOpcode(CI.InstClass, Width);
   case UNKNOWN:
     llvm_unreachable("Unknown instruction class");
@@ -1314,13 +1316,14 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MemInfoMap &Visited,
     SmallPtrSet<MachineInstr *, 4> &AnchorList) {
 
-  // TODO: Support flat and scratch.
-  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0 ||
-      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != NULL)
+  if (!(MI.mayLoad() ^ MI.mayStore()))
     return false;
 
-  // TODO: Support Store.
-  if (!MI.mayLoad())
+  // TODO: Support flat and scratch.
+  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0)
+    return false;
+
+  if (MI.mayLoad() && TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != NULL)
     return false;
 
   if (AnchorList.count(&MI))

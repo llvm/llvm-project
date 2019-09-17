@@ -20,7 +20,7 @@
 ...
 ---
 name:            ne_i32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -44,7 +44,7 @@ body:             |
 ...
 ---
 name:            eq_ptr
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -68,7 +68,7 @@ body:             |
 ...
 ---
 name:            ult_i8
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -99,7 +99,7 @@ body:             |
 ...
 ---
 name:            slt_i16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -132,7 +132,7 @@ body:             |
 ...
 ---
 name:            eq_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -166,7 +166,7 @@ body:             |
 ...
 ---
 name:            ne_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -200,7 +200,7 @@ body:             |
 ...
 ---
 name:            sgt_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -238,7 +238,7 @@ body:             |
 ...
 ---
 name:            sge_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -276,7 +276,7 @@ body:             |
 ...
 ---
 name:            slt_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -314,7 +314,7 @@ body:             |
 ...
 ---
 name:            sle_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -352,7 +352,7 @@ body:             |
 ...
 ---
 name:            ugt_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -390,7 +390,7 @@ body:             |
 ...
 ---
 name:            uge_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -428,7 +428,7 @@ body:             |
 ...
 ---
 name:            ult_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -466,7 +466,7 @@ body:             |
 ...
 ---
 name:            ule_i64
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:

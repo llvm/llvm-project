@@ -662,7 +662,21 @@ bool InstructionSelector::executeMatchTable(
           return false;
       break;
     }
-
+    case GIM_CheckCmpPredicate: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t Value = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckCmpPredicate(MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), Value=" << Value << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!MO.isPredicate() || MO.getPredicate() != Value)
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
     case GIM_CheckIsMBB: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
@@ -816,11 +830,13 @@ bool InstructionSelector::executeMatchTable(
     case GIR_AddRegister: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t RegNum = MatchTable[CurrentIdx++];
+      uint64_t RegFlags = MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      OutMIs[InsnID].addReg(RegNum);
-      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
-                      dbgs() << CurrentIdx << ": GIR_AddRegister(OutMIs["
-                             << InsnID << "], " << RegNum << ")\n");
+      OutMIs[InsnID].addReg(RegNum, RegFlags);
+      DEBUG_WITH_TYPE(
+        TgtInstructionSelector::getName(),
+        dbgs() << CurrentIdx << ": GIR_AddRegister(OutMIs["
+        << InsnID << "], " << RegNum << ", " << RegFlags << ")\n");
       break;
     }
 

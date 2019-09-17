@@ -21,7 +21,7 @@
 ---
 name:            test_insert_128_idx0
 # ALL-LABEL: name:  test_insert_128_idx0
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -53,7 +53,7 @@ body:             |
 ---
 name:            test_insert_128_idx0_undef
 # ALL-LABEL: name:  test_insert_128_idx0_undef
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -83,7 +83,7 @@ body:             |
 ---
 name:            test_insert_128_idx1
 # ALL-LABEL: name:  test_insert_128_idx1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:
@@ -114,7 +114,7 @@ body:             |
 ---
 name:            test_insert_128_idx1_undef
 # ALL-LABEL: name:  test_insert_128_idx1_undef
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 registers:

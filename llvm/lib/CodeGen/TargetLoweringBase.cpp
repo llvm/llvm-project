@@ -167,6 +167,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
         setLibcallName(RTLIB::BZERO, "__bzero");
       break;
     case Triple::aarch64:
+    case Triple::aarch64_32:
       setLibcallName(RTLIB::BZERO, "bzero");
       break;
     default:
@@ -195,6 +196,11 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::SINCOS_F80, "sincosl");
     setLibcallName(RTLIB::SINCOS_F128, "sincosl");
     setLibcallName(RTLIB::SINCOS_PPCF128, "sincosl");
+  }
+
+  if (TT.isPS4CPU()) {
+    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
+    setLibcallName(RTLIB::SINCOS_F64, "sincos");
   }
 
   if (TT.isOSOpenBSD()) {
@@ -578,13 +584,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   BooleanFloatContents = UndefinedBooleanContent;
   BooleanVectorContents = UndefinedBooleanContent;
   SchedPreferenceInfo = Sched::ILP;
-  JumpBufSize = 0;
-  JumpBufAlignment = 0;
-  MinFunctionAlignment = 0;
-  PrefFunctionAlignment = 0;
-  PrefLoopAlignment = 0;
   GatherAllAliasesMaxDepth = 18;
-  MinStackArgumentAlignment = 1;
   // TODO: the default will be switched to 0 in the next commit, along
   // with the Target-specific changes necessary.
   MaxAtomicSizeInBitsSupported = 1024;
@@ -653,6 +653,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SMULFIX, VT, Expand);
     setOperationAction(ISD::SMULFIXSAT, VT, Expand);
     setOperationAction(ISD::UMULFIX, VT, Expand);
+    setOperationAction(ISD::UMULFIXSAT, VT, Expand);
 
     // Overflow operations default to expand
     setOperationAction(ISD::SADDO, VT, Expand);
@@ -718,6 +719,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::STRICT_FMINNUM, VT, Expand);
     setOperationAction(ISD::STRICT_FP_ROUND, VT, Expand);
     setOperationAction(ISD::STRICT_FP_EXTEND, VT, Expand);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Expand);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
@@ -1282,21 +1285,33 @@ void TargetLoweringBase::computeRegisterProperties(
       LLVM_FALLTHROUGH;
 
     case TypeWidenVector:
-      // Try to widen the vector.
-      for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
-        MVT SVT = (MVT::SimpleValueType) nVT;
-        if (SVT.getVectorElementType() == EltVT
-            && SVT.getVectorNumElements() > NElts && isTypeLegal(SVT)) {
-          TransformToType[i] = SVT;
-          RegisterTypeForVT[i] = SVT;
-          NumRegistersForVT[i] = 1;
+      if (isPowerOf2_32(NElts)) {
+        // Try to widen the vector.
+        for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
+          MVT SVT = (MVT::SimpleValueType) nVT;
+          if (SVT.getVectorElementType() == EltVT
+              && SVT.getVectorNumElements() > NElts && isTypeLegal(SVT)) {
+            TransformToType[i] = SVT;
+            RegisterTypeForVT[i] = SVT;
+            NumRegistersForVT[i] = 1;
+            ValueTypeActions.setTypeAction(VT, TypeWidenVector);
+            IsLegalWiderType = true;
+            break;
+          }
+        }
+        if (IsLegalWiderType)
+          break;
+      } else {
+        // Only widen to the next power of 2 to keep consistency with EVT.
+        MVT NVT = VT.getPow2VectorType();
+        if (isTypeLegal(NVT)) {
+          TransformToType[i] = NVT;
           ValueTypeActions.setTypeAction(VT, TypeWidenVector);
-          IsLegalWiderType = true;
+          RegisterTypeForVT[i] = NVT;
+          NumRegistersForVT[i] = 1;
           break;
         }
       }
-      if (IsLegalWiderType)
-        break;
       LLVM_FALLTHROUGH;
 
     case TypeSplitVector:

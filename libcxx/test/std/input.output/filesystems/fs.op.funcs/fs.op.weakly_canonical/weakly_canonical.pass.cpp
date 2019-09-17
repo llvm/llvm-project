@@ -13,7 +13,7 @@
 // path weakly_canonical(const path& p);
 // path weakly_canonical(const path& p, error_code& ec);
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <vector>
 #include <iostream>
@@ -21,8 +21,8 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "count_new.hpp"
-#include "filesystem_test_helper.hpp"
+#include "count_new.h"
+#include "filesystem_test_helper.h"
 
 
 int main(int, char**) {

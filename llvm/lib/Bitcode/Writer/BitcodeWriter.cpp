@@ -86,7 +86,7 @@ static cl::opt<unsigned>
                    cl::desc("Number of metadatas above which we emit an index "
                             "to enable lazy-loading"));
 
-cl::opt<bool> WriteRelBFToSummary(
+static cl::opt<bool> WriteRelBFToSummary(
     "write-relbf-to-summary", cl::Hidden, cl::init(false),
     cl::desc("Write relative block frequency to function summary "));
 

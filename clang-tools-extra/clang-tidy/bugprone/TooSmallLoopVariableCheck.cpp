@@ -38,7 +38,7 @@ void TooSmallLoopVariableCheck::storeOptions(
   Options.store(Opts, "MagnitudeBitsUpperLimit", MagnitudeBitsUpperLimit);
 }
 
-/// \brief The matcher for loops with suspicious integer loop variable.
+/// The matcher for loops with suspicious integer loop variable.
 ///
 /// In this general example, assuming 'j' and 'k' are of integral type:
 /// \code
@@ -105,7 +105,7 @@ static unsigned calcMagnitudeBits(const ASTContext &Context,
              : Context.getIntWidth(IntExprType) - 1;
 }
 
-/// \brief Calculate the upper bound expression's magnitude bits, but ignore
+/// Calculate the upper bound expression's magnitude bits, but ignore
 /// constant like values to reduce false positives.
 static unsigned calcUpperBoundMagnitudeBits(const ASTContext &Context,
                                             const Expr *UpperBound,

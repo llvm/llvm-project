@@ -225,12 +225,11 @@ define <8 x i16> @test_masked_z_16xi16_to_8xi16_perm_mem_mask1(<16 x i16>* %vp, 
 define <8 x i16> @test_masked_16xi16_to_8xi16_perm_mem_mask2(<16 x i16>* %vp, <8 x i16> %vec2, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_16xi16_to_8xi16_perm_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastw 2(%rdi), %xmm2
-; CHECK-NEXT:    vmovdqa 16(%rdi), %xmm3
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm4 = [8,0,3,0,5,0,7,1]
-; CHECK-NEXT:    vpermi2w %xmm2, %xmm3, %xmm4
+; CHECK-NEXT:    vmovdqa 16(%rdi), %xmm2
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [9,0,3,0,5,0,7,1]
+; CHECK-NEXT:    vpermi2w (%rdi), %xmm2, %xmm3
 ; CHECK-NEXT:    vptestnmw %xmm1, %xmm1, %k1
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm0 {%k1}
+; CHECK-NEXT:    vmovdqu16 %xmm3, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = load <16 x i16>, <16 x i16>* %vp
   %shuf = shufflevector <16 x i16> %vec, <16 x i16> undef, <8 x i32> <i32 1, i32 8, i32 11, i32 8, i32 13, i32 8, i32 15, i32 9>
@@ -242,11 +241,10 @@ define <8 x i16> @test_masked_16xi16_to_8xi16_perm_mem_mask2(<16 x i16>* %vp, <8
 define <8 x i16> @test_masked_z_16xi16_to_8xi16_perm_mem_mask2(<16 x i16>* %vp, <8 x i16> %mask) {
 ; CHECK-LABEL: test_masked_z_16xi16_to_8xi16_perm_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastw 2(%rdi), %xmm2
-; CHECK-NEXT:    vmovdqa 16(%rdi), %xmm3
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,0,3,0,5,0,7,1]
+; CHECK-NEXT:    vmovdqa 16(%rdi), %xmm2
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [9,0,3,0,5,0,7,1]
 ; CHECK-NEXT:    vptestnmw %xmm0, %xmm0, %k1
-; CHECK-NEXT:    vpermi2w %xmm2, %xmm3, %xmm1 {%k1} {z}
+; CHECK-NEXT:    vpermi2w (%rdi), %xmm2, %xmm1 {%k1} {z}
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %vec = load <16 x i16>, <16 x i16>* %vp

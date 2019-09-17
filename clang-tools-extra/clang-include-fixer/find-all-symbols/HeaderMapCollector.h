@@ -17,7 +17,7 @@
 namespace clang {
 namespace find_all_symbols {
 
-/// \brief HeaderMappCollector collects all remapping header files. This maps
+/// HeaderMappCollector collects all remapping header files. This maps
 /// complete header names or header name regex patterns to header names.
 class HeaderMapCollector {
 public:

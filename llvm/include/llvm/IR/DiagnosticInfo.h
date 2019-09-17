@@ -75,7 +75,8 @@ enum DiagnosticKind {
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
-  DK_FirstPluginKind
+  DK_FirstPluginKind,
+  DK_MisExpect
 };
 
 /// Get the next available kind ID for a plugin diagnostic.
@@ -1000,6 +1001,25 @@ public:
   const Twine &getMessage() const { return Msg; }
 
   void print(DiagnosticPrinter &DP) const override;
+};
+
+/// Diagnostic information for MisExpect analysis.
+class DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
+public:
+    DiagnosticInfoMisExpect(const Instruction *Inst, Twine &Msg);
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_MisExpect;
+  }
+
+  const Twine &getMsg() const { return Msg; }
+
+private:
+  /// Message to report.
+  const Twine &Msg;
 };
 
 } // end namespace llvm

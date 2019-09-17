@@ -350,9 +350,17 @@ def TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TT
                     TTMP8_gfx9_gfx10, TTMP9_gfx9_gfx10, TTMP10_gfx9_gfx10, TTMP11_gfx9_gfx10,
                     TTMP12_gfx9_gfx10, TTMP13_gfx9_gfx10, TTMP14_gfx9_gfx10, TTMP15_gfx9_gfx10]>;
 
+class RegisterTypes<list<ValueType> reg_types> {
+  list<ValueType> types = reg_types;
+}
+
+def Reg16Types : RegisterTypes<[i16, f16]>;
+def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, p2, p3, p5, p6]>;
+
+
 // VGPR 32-bit registers
 // i16/f16 only on VI+
-def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16, p2, p3, p5, p6], 32,
+def VGPR_32 : RegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                             (add (sequence "VGPR%u", 0, 255))> {
   let AllocationPriority = 1;
   let Size = 32;
@@ -674,7 +682,7 @@ def AReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
 }
 
 def VReg_1 : RegisterClass<"AMDGPU", [i1], 32, (add VGPR_32)> {
-  let Size = 32;
+  let Size = 1;
 }
 
 def VS_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,

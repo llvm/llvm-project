@@ -15,7 +15,7 @@
 
 #include <variant>
 
-#include "poisoned_hash_helper.hpp"
+#include "poisoned_hash_helper.h"
 
 #include "test_macros.h"
 

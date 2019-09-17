@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS BitWriter Core Object Support)
+set(LLVM_LINK_COMPONENTS Object Support)
 
 if(NOT CLANG_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)

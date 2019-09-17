@@ -1,7 +1,7 @@
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
 // RUN: mkdir -p %t.dir
-// RUN: cp %s %t.dir/vfsoverlay.cpp
+// RUN: cp %s %t.dir/vfsoverlay_input.cpp
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/vfsoverlay.yaml > %t.dir/vfsoverlay.yaml
 // RUN: mkdir %t.dir/Inputs
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
@@ -12,6 +12,6 @@
 
 #include "not_real.h"
 
-// CHECK: clang-scan-deps dependency
-// CHECK-NEXT: vfsoverlay.cpp
+// CHECK: vfsoverlay_input.o
+// CHECK-NEXT: vfsoverlay_input.cpp
 // CHECK-NEXT: Inputs{{/|\\}}header.h

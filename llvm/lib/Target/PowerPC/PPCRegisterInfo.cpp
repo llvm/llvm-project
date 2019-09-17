@@ -325,13 +325,13 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   bool IsPositionIndependent = TM.isPositionIndependent();
   if (hasBasePointer(MF)) {
-    if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
+    if (Subtarget.is32BitELFABI() && IsPositionIndependent)
       markSuperRegs(Reserved, PPC::R29);
     else
       markSuperRegs(Reserved, PPC::R30);
   }
 
-  if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
+  if (Subtarget.is32BitELFABI() && IsPositionIndependent)
     markSuperRegs(Reserved, PPC::R30);
 
   // Reserve Altivec registers when Altivec is unavailable.
@@ -425,7 +425,6 @@ unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case PPC::G8RC_NOX0RegClassID:
   case PPC::GPRC_NOR0RegClassID:
   case PPC::SPERCRegClassID:
-  case PPC::SPE4RCRegClassID:
   case PPC::G8RCRegClassID:
   case PPC::GPRCRegClassID: {
     unsigned FP = TFI->hasFP(MF) ? 1 : 0;

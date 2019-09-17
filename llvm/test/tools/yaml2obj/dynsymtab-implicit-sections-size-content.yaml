@@ -27,10 +27,11 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
-## Specifying both `Size` and symbols at the same time is not allowed.
-# RUN: not yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=CASE2
+## Specifying both `Size` and symbols at the same time is not allowed for .dynsym.
 
-# CASE2: error: Cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'.
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE2
+
+# CASE2: yaml2obj: error: cannot specify both `Size` and `DynamicSymbols` for symbol table section '.dynsym'
 
 --- !ELF
 FileHeader:
@@ -42,14 +43,18 @@ Sections:
   - Name: .dynsym
     Type: SHT_DYNSYM
     Size: 0x100
+  - Name: .dynsym2
+    Type: SHT_DYNSYM
+    Size: 0x100
 DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
-## Specifying both `Content` and symbols at the same time is not allowed.
-# RUN: not yaml2obj --docnum=3 %s -o %t3 2>&1 | FileCheck %s --check-prefix=CASE3
+## Specifying both `Content` and symbols at the same time is not allowed for .dynsym.
 
-# CASE3: error: Cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'.
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --implicit-check-not=error --check-prefix=CASE3
+
+# CASE3: yaml2obj: error: cannot specify both `Content` and `DynamicSymbols` for symbol table section '.dynsym'
 
 --- !ELF
 FileHeader:
@@ -59,6 +64,9 @@ FileHeader:
   Machine: EM_X86_64
 Sections:
   - Name: .dynsym
+    Type: SHT_DYNSYM
+    Content: "00"
+  - Name: .dynsym2
     Type: SHT_DYNSYM
     Content: "00"
 DynamicSymbols:
@@ -75,7 +83,7 @@ DynamicSymbols:
 # CASE4-NEXT:   SHF_ALLOC
 # CASE4-NEXT: ]
 # CASE4-NEXT: Address: 0x0
-# CASE4-NEXT: Offset: 0x180
+# CASE4-NEXT: Offset: 0x40
 # CASE4-NEXT: Size: 2
 # CASE4-NEXT: Link: 0
 # CASE4-NEXT: Info: 1
@@ -107,7 +115,7 @@ Sections:
 # CASE5-NEXT:   SHF_ALLOC
 # CASE5-NEXT: ]
 # CASE5-NEXT: Address: 0x0
-# CASE5-NEXT: Offset: 0x180
+# CASE5-NEXT: Offset: 0x40
 # CASE5-NEXT: Size: 5
 # CASE5-NEXT: Link: 0
 # CASE5-NEXT: Info: 1
@@ -141,7 +149,7 @@ Sections:
 # CASE6-NEXT:   SHF_ALLOC
 # CASE6-NEXT: ]
 # CASE6-NEXT: Address: 0x0
-# CASE6-NEXT: Offset: 0x180
+# CASE6-NEXT: Offset: 0x40
 # CASE6-NEXT: Size: 4
 # CASE6-NEXT: Link: 0
 # CASE6-NEXT: Info: 1
@@ -175,7 +183,7 @@ Sections:
 # CASE7-NEXT:    SHF_ALLOC
 # CASE7-NEXT:  ]
 # CASE7-NEXT:  Address: 0x0
-# CASE7-NEXT:  Offset: 0x180
+# CASE7-NEXT:  Offset: 0x40
 # CASE7-NEXT:  Size: 2
 # CASE7-NEXT:  Link: 0
 # CASE7-NEXT:  Info: 1

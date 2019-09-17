@@ -122,7 +122,7 @@
 ...
 ---
 name:            f
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -166,7 +166,7 @@ body:             |
 ...
 ---
 name:            foo
-alignment:       4
+alignment:       16
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

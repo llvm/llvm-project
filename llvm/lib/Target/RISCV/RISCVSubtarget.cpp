@@ -12,7 +12,11 @@
 
 #include "RISCVSubtarget.h"
 #include "RISCV.h"
+#include "RISCVCallLowering.h"
 #include "RISCVFrameLowering.h"
+#include "RISCVLegalizerInfo.h"
+#include "RISCVRegisterBankInfo.h"
+#include "RISCVTargetMachine.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -47,4 +51,28 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                                StringRef ABIName, const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, FS),
       FrameLowering(initializeSubtargetDependencies(TT, CPU, FS, ABIName)),
-      InstrInfo(), RegInfo(getHwMode()), TLInfo(TM, *this) {}
+      InstrInfo(), RegInfo(getHwMode()), TLInfo(TM, *this) {
+  CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
+  Legalizer.reset(new RISCVLegalizerInfo(*this));
+
+  auto *RBI = new RISCVRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+  InstSelector.reset(createRISCVInstructionSelector(
+      *static_cast<const RISCVTargetMachine *>(&TM), *this, *RBI));
+}
+
+const CallLowering *RISCVSubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+InstructionSelector *RISCVSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}
+
+const LegalizerInfo *RISCVSubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}

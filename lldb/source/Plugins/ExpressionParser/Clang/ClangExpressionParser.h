@@ -55,7 +55,7 @@ public:
   ///     expression.
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                         bool generate_debug_info,
-                        std::vector<ConstString> include_directories = {});
+                        std::vector<std::string> include_directories = {});
 
   /// Destructor
   ~ClangExpressionParser() override;
@@ -177,7 +177,7 @@ private:
                                              ///encounters module imports
   std::unique_ptr<ClangASTContext> m_ast_context;
 
-  std::vector<ConstString> m_include_directories;
+  std::vector<std::string> m_include_directories;
 };
 }
 

@@ -229,7 +229,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
   // alignment.
   Streamer.EmitValueToAlignment(64, 0, 1, 0);
   if (ReadOnlySection.getAlignment() < 64)
-    ReadOnlySection.setAlignment(64);
+    ReadOnlySection.setAlignment(llvm::Align(64));
 
   const MCSubtargetInfo &STI = MF->getSubtarget();
 
@@ -273,7 +273,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   AsmPrinter::EmitFunctionEntryLabel();
 }
 
-void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
+void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   if (DumpCodeInstEmitter && !isBlockOnlyReachableByFallthrough(&MBB)) {
     // Write a line for the basic block label if it is not only fallthrough.
     DisasmLines.push_back(
@@ -417,7 +417,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
-  MF.setAlignment(MFI->isEntryFunction() ? 8 : 2);
+  MF.setAlignment(MFI->isEntryFunction() ? llvm::Align(256) : llvm::Align(4));
 
   SetupMachineFunction(MF);
 

@@ -629,7 +629,9 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
   unsigned NumArgs = TheCall->getNumArgs();
 
   if (NumArgs < 4) {
-    S.Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_few_args);
+    S.Diag(TheCall->getBeginLoc(),
+           diag::err_typecheck_call_too_few_args_at_least)
+        << 0 << 4 << NumArgs;
     return true;
   }
 
@@ -3218,6 +3220,8 @@ bool Sema::CheckPPCBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case PPC::BI__builtin_altivec_crypto_vshasigmad:
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 1) ||
            SemaBuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case PPC::BI__builtin_altivec_dss:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3);
   case PPC::BI__builtin_tbegin:
   case PPC::BI__builtin_tend: i = 0; l = 0; u = 1; break;
   case PPC::BI__builtin_tsr: i = 0; l = 0; u = 7; break;
@@ -3227,6 +3231,11 @@ bool Sema::CheckPPCBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case PPC::BI__builtin_tabortdci:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31) ||
            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case PPC::BI__builtin_altivec_dst:
+  case PPC::BI__builtin_altivec_dstt:
+  case PPC::BI__builtin_altivec_dstst:
+  case PPC::BI__builtin_altivec_dststt:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 3);
   case PPC::BI__builtin_vsx_xxpermdi:
   case PPC::BI__builtin_vsx_xxsldwi:
     return SemaBuiltinVSX(TheCall);
@@ -3537,9 +3546,11 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
 
   // Make sure rounding mode is either ROUND_CUR_DIRECTION or ROUND_NO_EXC bit
   // is set. If the intrinsic has rounding control(bits 1:0), make sure its only
-  // combined with ROUND_NO_EXC.
+  // combined with ROUND_NO_EXC. If the intrinsic does not have rounding
+  // control, allow ROUND_NO_EXC and ROUND_CUR_DIRECTION together.
   if (Result == 4/*ROUND_CUR_DIRECTION*/ ||
       Result == 8/*ROUND_NO_EXC*/ ||
+      (!HasRC && Result == 12/*ROUND_CUR_DIRECTION|ROUND_NO_EXC*/) ||
       (HasRC && Result.getZExtValue() >= 8 && Result.getZExtValue() <= 11))
     return false;
 
@@ -8119,9 +8130,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       // function.
       if (ICE->getType() == S.Context.IntTy ||
           ICE->getType() == S.Context.UnsignedIntTy) {
-        // All further checking is done on the subexpression.
-        if (AT.matchesType(S.Context, ExprTy))
+        // All further checking is done on the subexpression
+        const analyze_printf::ArgType::MatchKind ImplicitMatch =
+            AT.matchesType(S.Context, ExprTy);
+        if (ImplicitMatch == analyze_printf::ArgType::Match)
           return true;
+        if (ImplicitMatch == analyze_printf::ArgType::NoMatchPedantic)
+          Pedantic = true;
       }
     }
   } else if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E)) {
@@ -12995,7 +13010,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
   if (ND)
     DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,
-                        PDiag(diag::note_array_index_out_of_bounds)
+                        PDiag(diag::note_array_declared_here)
                             << ND->getDeclName());
 }
 

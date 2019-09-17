@@ -87,6 +87,30 @@ define <16 x i8> @bitselect_v16i8(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %c) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: narrow_signed_v16i8:
+; SIMD128-NEXT: .functype narrow_signed_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.narrow_i16x8_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16>, <8 x i16>)
+define <16 x i8> @narrow_signed_v16i8(<8 x i16> %low, <8 x i16> %high) {
+  %a = call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(
+    <8 x i16> %low, <8 x i16> %high
+  )
+  ret <16 x i8> %a
+}
+
+; CHECK-LABEL: narrow_unsigned_v16i8:
+; SIMD128-NEXT: .functype narrow_unsigned_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.narrow_i16x8_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(<8 x i16>, <8 x i16>)
+define <16 x i8> @narrow_unsigned_v16i8(<8 x i16> %low, <8 x i16> %high) {
+  %a = call <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(
+    <8 x i16> %low, <8 x i16> %high
+  )
+  ret <16 x i8> %a
+}
+
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
@@ -166,6 +190,70 @@ define <8 x i16> @bitselect_v8i16(<8 x i16> %v1, <8 x i16> %v2, <8 x i16> %c) {
   ret <8 x i16> %a
 }
 
+; CHECK-LABEL: narrow_signed_v8i16:
+; SIMD128-NEXT: .functype narrow_signed_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.narrow_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32>, <4 x i32>)
+define <8 x i16> @narrow_signed_v8i16(<4 x i32> %low, <4 x i32> %high) {
+  %a = call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(
+    <4 x i32> %low, <4 x i32> %high
+  )
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: narrow_unsigned_v8i16:
+; SIMD128-NEXT: .functype narrow_unsigned_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.narrow_i32x4_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(<4 x i32>, <4 x i32>)
+define <8 x i16> @narrow_unsigned_v8i16(<4 x i32> %low, <4 x i32> %high) {
+  %a = call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(
+    <4 x i32> %low, <4 x i32> %high
+  )
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: widen_low_signed_v8i16:
+; SIMD128-NEXT: .functype widen_low_signed_v8i16 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.widen_low_i8x16_s $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.widen.low.signed.v8i16.v16i8(<16 x i8>)
+define <8 x i16> @widen_low_signed_v8i16(<16 x i8> %v) {
+  %a = call <8 x i16> @llvm.wasm.widen.low.signed.v8i16.v16i8(<16 x i8> %v)
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: widen_high_signed_v8i16:
+; SIMD128-NEXT: .functype widen_high_signed_v8i16 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.widen_high_i8x16_s $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.widen.high.signed.v8i16.v16i8(<16 x i8>)
+define <8 x i16> @widen_high_signed_v8i16(<16 x i8> %v) {
+  %a = call <8 x i16> @llvm.wasm.widen.high.signed.v8i16.v16i8(<16 x i8> %v)
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: widen_low_unsigned_v8i16:
+; SIMD128-NEXT: .functype widen_low_unsigned_v8i16 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.widen_low_i8x16_u $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.widen.low.unsigned.v8i16.v16i8(<16 x i8>)
+define <8 x i16> @widen_low_unsigned_v8i16(<16 x i8> %v) {
+  %a = call <8 x i16> @llvm.wasm.widen.low.unsigned.v8i16.v16i8(<16 x i8> %v)
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: widen_high_unsigned_v8i16:
+; SIMD128-NEXT: .functype widen_high_unsigned_v8i16 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.widen_high_i8x16_u $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.widen.high.unsigned.v8i16.v16i8(<16 x i8>)
+define <8 x i16> @widen_high_unsigned_v8i16(<16 x i8> %v) {
+  %a = call <8 x i16> @llvm.wasm.widen.high.unsigned.v8i16.v16i8(<16 x i8> %v)
+  ret <8 x i16> %a
+}
+
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
@@ -220,6 +308,46 @@ define <4 x i32> @trunc_sat_s_v4i32(<4 x float> %x) {
 declare <4 x i32> @llvm.wasm.trunc.saturate.unsigned.v4i32.v4f32(<4 x float>)
 define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
   %a = call <4 x i32> @llvm.wasm.trunc.saturate.unsigned.v4i32.v4f32(<4 x float> %x)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: widen_low_signed_v4i32:
+; SIMD128-NEXT: .functype widen_low_signed_v4i32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.widen_low_i16x8_s $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.widen.low.signed.v4i32.v8i16(<8 x i16>)
+define <4 x i32> @widen_low_signed_v4i32(<8 x i16> %v) {
+  %a = call <4 x i32> @llvm.wasm.widen.low.signed.v4i32.v8i16(<8 x i16> %v)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: widen_high_signed_v4i32:
+; SIMD128-NEXT: .functype widen_high_signed_v4i32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.widen_high_i16x8_s $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.widen.high.signed.v4i32.v8i16(<8 x i16>)
+define <4 x i32> @widen_high_signed_v4i32(<8 x i16> %v) {
+  %a = call <4 x i32> @llvm.wasm.widen.high.signed.v4i32.v8i16(<8 x i16> %v)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: widen_low_unsigned_v4i32:
+; SIMD128-NEXT: .functype widen_low_unsigned_v4i32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.widen_low_i16x8_u $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.widen.low.unsigned.v4i32.v8i16(<8 x i16>)
+define <4 x i32> @widen_low_unsigned_v4i32(<8 x i16> %v) {
+  %a = call <4 x i32> @llvm.wasm.widen.low.unsigned.v4i32.v8i16(<8 x i16> %v)
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: widen_high_unsigned_v4i32:
+; SIMD128-NEXT: .functype widen_high_unsigned_v4i32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.widen_high_i16x8_u $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.widen.high.unsigned.v4i32.v8i16(<8 x i16>)
+define <4 x i32> @widen_high_unsigned_v4i32(<8 x i16> %v) {
+  %a = call <4 x i32> @llvm.wasm.widen.high.unsigned.v4i32.v8i16(<8 x i16> %v)
   ret <4 x i32> %a
 }
 
@@ -290,9 +418,33 @@ define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
 declare <4 x float> @llvm.wasm.bitselect.v4f32(<4 x float>, <4 x float>, <4 x float>)
 define <4 x float> @bitselect_v4f32(<4 x float> %v1, <4 x float> %v2, <4 x float> %c) {
   %a = call <4 x float> @llvm.wasm.bitselect.v4f32(
-     <4 x float> %v1, <4 x float> %v2, <4 x float> %c
+    <4 x float> %v1, <4 x float> %v2, <4 x float> %c
   )
   ret <4 x float> %a
+}
+
+; CHECK-LABEL: qfma_v4f32:
+; SIMD128-NEXT: .functype qfma_v4f32 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.qfma $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.qfma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+define <4 x float> @qfma_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.qfma.v4f32(
+    <4 x float> %a, <4 x float> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
+}
+
+; CHECK-LABEL: qfms_v4f32:
+; SIMD128-NEXT: .functype qfms_v4f32 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.qfms $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.qfms.v4f32(<4 x float>, <4 x float>, <4 x float>)
+define <4 x float> @qfms_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.qfms.v4f32(
+    <4 x float> %a, <4 x float> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
 }
 
 ; ==============================================================================
@@ -308,4 +460,28 @@ define <2 x double> @bitselect_v2f64(<2 x double> %v1, <2 x double> %v2, <2 x do
     <2 x double> %v1, <2 x double> %v2, <2 x double> %c
   )
   ret <2 x double> %a
+}
+
+; CHECK-LABEL: qfma_v2f64:
+; SIMD128-NEXT: .functype qfma_v2f64 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.qfma $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.qfma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+define <2 x double> @qfma_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+  %v = call <2 x double> @llvm.wasm.qfma.v2f64(
+    <2 x double> %a, <2 x double> %b, <2 x double> %c
+  )
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: qfms_v2f64:
+; SIMD128-NEXT: .functype qfms_v2f64 (v128, v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.qfms $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.wasm.qfms.v2f64(<2 x double>, <2 x double>, <2 x double>)
+define <2 x double> @qfms_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+  %v = call <2 x double> @llvm.wasm.qfms.v2f64(
+    <2 x double> %a, <2 x double> %b, <2 x double> %c
+  )
+  ret <2 x double> %v
 }

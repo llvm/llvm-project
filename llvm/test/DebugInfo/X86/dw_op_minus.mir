@@ -83,7 +83,7 @@
 ...
 ---
 name:            f
-alignment:       4
+alignment:       16
 tracksRegLiveness: true
 frameInfo:       
   stackSize:       24

@@ -11,7 +11,7 @@
 # GCN: %29:vgpr_32, %9:sreg_64_xexec = V_ADD_I32_e64 %19, %17, 0, implicit $exec
 # GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
 name:            shrink_add_vop3
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -95,7 +95,7 @@ body:             |
 # GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
 
 name:            shrink_sub_vop3
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -179,7 +179,7 @@ body:             |
 # GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
 
 name:            shrink_subrev_vop3
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -262,7 +262,7 @@ body:             |
 # GCN: %29:vgpr_32, $vcc = V_ADDC_U32_e64 %19, %17, %9, 0, implicit $exec
 # GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
 name: check_addc_src2_vop3
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -347,7 +347,7 @@ body:             |
 # GCN %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
 
 name:            shrink_addc_vop3
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -432,7 +432,7 @@ body:             |
 # GCN: %29:vgpr_32 = V_ADDC_U32_e32 %19, %17, implicit-def $vcc, implicit undef $vcc, implicit $exec
 # GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
 name:            shrink_addc_undef_vcc
-alignment:       0
+alignment:       1
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

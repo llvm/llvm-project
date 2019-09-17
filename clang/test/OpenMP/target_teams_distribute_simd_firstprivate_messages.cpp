@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=40 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-version=45 -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected -fopenmp-version=50 -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -131,8 +134,10 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd firstprivate(h) // expected-error {{threadprivate or thread local variable cannot be firstprivate}}
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute simd private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} expected-note 2 {{defined as private}}
-  for (i = 0; i < argc; ++i) foo(); // expected-error {{loop iteration variable in the associated loop of 'omp target teams distribute simd' directive may not be private, predetermined as linear}}
+#pragma omp target teams distribute simd private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} expected-note {{defined as private}}
+  // le45-note@-1 {{defined as private}}
+  // FIXME: Error is dropped for OpenMP 5.0.  Probably shouldn't be.
+  for (i = 0; i < argc; ++i) foo(); // le45-error {{loop iteration variable in the associated loop of 'omp target teams distribute simd' directive may not be private, predetermined as linear}}
 
 #pragma omp target teams distribute simd firstprivate(i)
   for (j = 0; j < argc; ++j) foo();
@@ -147,7 +152,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd lastprivate(argc), firstprivate(argc)
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute simd firstprivate(argc) map(argc) // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} expected-note {{defined as firstprivate}}
+#pragma omp target teams distribute simd firstprivate(argc) map(argc) // le45-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} le45-note {{defined as firstprivate}}
   for (i = 0; i < argc; ++i) foo();
 
   return 0;

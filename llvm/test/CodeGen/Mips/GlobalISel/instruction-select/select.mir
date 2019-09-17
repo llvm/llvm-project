@@ -11,7 +11,7 @@
 ...
 ---
 name:            select_i32
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -52,7 +52,7 @@ body:             |
 ...
 ---
 name:            select_ptr
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -93,7 +93,7 @@ body:             |
 ...
 ---
 name:            select_float
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -134,7 +134,7 @@ body:             |
 ...
 ---
 name:            select_double
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -15,7 +15,14 @@ class LinuxCoreThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
-    _initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def setUp(self):
+        super(LinuxCoreThreadsTestCase, self).setUp()
+        self._initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def tearDown(self):
+        lldb.DBG.SetSelectedPlatform(self._initial_platform)
+        super(LinuxCoreThreadsTestCase, self).tearDown()
 
     _i386_pid = 5193
     _x86_64_pid = 5222
@@ -44,6 +51,17 @@ class LinuxCoreThreadsTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), pid)
 
         for thread in process:
+            # Verify that if we try to read memory from a PT_LOAD that has
+            # p_filesz of zero that we don't get bytes from the next section
+            # that actually did have bytes. The addresses below were found by
+            # dumping the program headers of linux-i386.core and
+            # linux-x86_64.core and verifying that they had a p_filesz of zero.
+            mem_err = lldb.SBError()
+            if process.GetAddressByteSize() == 4:
+                bytes_read = process.ReadMemory(0x8048000, 4, mem_err)
+            else:
+                bytes_read = process.ReadMemory(0x400000, 4, mem_err)
+            self.assertEqual(bytes_read, None)
             reason = thread.GetStopReason()
             if( thread.GetThreadID() == tid ):
                 self.assertEqual(reason, lldb.eStopReasonSignal)
@@ -56,4 +74,3 @@ class LinuxCoreThreadsTestCase(TestBase):
                 self.assertEqual(signal, 0)
 
         self.dbg.DeleteTarget(target)
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)

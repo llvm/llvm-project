@@ -14,10 +14,10 @@ weak_func:                              # @weak_func
 # %bb.0:                                # %entry
         pushq   %rbp
 .Ltmp1:
-        .seh_pushreg 5
+        .seh_pushreg %rbp
         movq    %rsp, %rbp
 .Ltmp2:
-        .seh_setframe 5, 0
+        .seh_setframe %rbp, 0
 .Ltmp3:
         .seh_endprologue
         xorl    %eax, %eax

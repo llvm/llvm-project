@@ -1133,7 +1133,8 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     case 24:
       if (ARM::DTripleRegClass.hasSubClassEq(RC)) {
         // Use aligned spills if the stack can be realigned.
-        if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+        if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+            Subtarget.hasNEON()) {
           BuildMI(MBB, I, DebugLoc(), get(ARM::VST1d64TPseudo))
               .addFrameIndex(FI)
               .addImm(16)
@@ -1155,7 +1156,8 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       break;
     case 32:
       if (ARM::QQPRRegClass.hasSubClassEq(RC) || ARM::DQuadRegClass.hasSubClassEq(RC)) {
-        if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+        if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+            Subtarget.hasNEON()) {
           // FIXME: It's possible to only store part of the QQ register if the
           // spilled def has a sub-register index.
           BuildMI(MBB, I, DebugLoc(), get(ARM::VST1d64QPseudo))
@@ -1368,7 +1370,8 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     break;
   case 24:
     if (ARM::DTripleRegClass.hasSubClassEq(RC)) {
-      if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+      if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+          Subtarget.hasNEON()) {
         BuildMI(MBB, I, DL, get(ARM::VLD1d64TPseudo), DestReg)
             .addFrameIndex(FI)
             .addImm(16)
@@ -1390,7 +1393,8 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     break;
    case 32:
     if (ARM::QQPRRegClass.hasSubClassEq(RC) || ARM::DQuadRegClass.hasSubClassEq(RC)) {
-      if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
+      if (Align >= 16 && getRegisterInfo().canRealignStack(MF) &&
+          Subtarget.hasNEON()) {
         BuildMI(MBB, I, DL, get(ARM::VLD1d64QPseudo), DestReg)
             .addFrameIndex(FI)
             .addImm(16)
@@ -2420,7 +2424,8 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
     MachineOperand &MO = MI->getOperand(i);
     RegList.push_back(MO);
 
-    if (MO.isReg() && TRI->getEncodingValue(MO.getReg()) < FirstRegEnc)
+    if (MO.isReg() && !MO.isImplicit() &&
+        TRI->getEncodingValue(MO.getReg()) < FirstRegEnc)
       FirstRegEnc = TRI->getEncodingValue(MO.getReg());
   }
 
@@ -2430,7 +2435,7 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
   for (int CurRegEnc = FirstRegEnc - 1; CurRegEnc >= 0 && RegsNeeded;
        --CurRegEnc) {
     unsigned CurReg = RegClass->getRegister(CurRegEnc);
-    if (IsT1PushPop && CurReg > ARM::R7)
+    if (IsT1PushPop && CurRegEnc > TRI->getEncodingValue(ARM::R7))
       continue;
     if (!IsPop) {
       // Pushing any register is completely harmless, mark the register involved
@@ -3039,18 +3044,22 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
         break;
       case ARM::VSELEQD:
       case ARM::VSELEQS:
+      case ARM::VSELEQH:
         CC = ARMCC::EQ;
         break;
       case ARM::VSELGTD:
       case ARM::VSELGTS:
+      case ARM::VSELGTH:
         CC = ARMCC::GT;
         break;
       case ARM::VSELGED:
       case ARM::VSELGES:
+      case ARM::VSELGEH:
         CC = ARMCC::GE;
         break;
-      case ARM::VSELVSS:
       case ARM::VSELVSD:
+      case ARM::VSELVSS:
+      case ARM::VSELVSH:
         CC = ARMCC::VS;
         break;
       }
@@ -5348,4 +5357,51 @@ MachineInstr *llvm::findCMPToFoldIntoCBZ(MachineInstr *Br,
     return nullptr;
 
   return &*CmpMI;
+}
+
+unsigned llvm::ConstantMaterializationCost(unsigned Val,
+                                           const ARMSubtarget *Subtarget,
+                                           bool ForCodesize) {
+  if (Subtarget->isThumb()) {
+    if (Val <= 255) // MOV
+      return ForCodesize ? 2 : 1;
+    if (Subtarget->hasV6T2Ops() && (Val <= 0xffff ||                    // MOV
+                                    ARM_AM::getT2SOImmVal(Val) != -1 || // MOVW
+                                    ARM_AM::getT2SOImmVal(~Val) != -1)) // MVN
+      return ForCodesize ? 4 : 1;
+    if (Val <= 510) // MOV + ADDi8
+      return ForCodesize ? 4 : 2;
+    if (~Val <= 255) // MOV + MVN
+      return ForCodesize ? 4 : 2;
+    if (ARM_AM::isThumbImmShiftedVal(Val)) // MOV + LSL
+      return ForCodesize ? 4 : 2;
+  } else {
+    if (ARM_AM::getSOImmVal(Val) != -1) // MOV
+      return ForCodesize ? 4 : 1;
+    if (ARM_AM::getSOImmVal(~Val) != -1) // MVN
+      return ForCodesize ? 4 : 1;
+    if (Subtarget->hasV6T2Ops() && Val <= 0xffff) // MOVW
+      return ForCodesize ? 4 : 1;
+    if (ARM_AM::isSOImmTwoPartVal(Val)) // two instrs
+      return ForCodesize ? 8 : 2;
+  }
+  if (Subtarget->useMovt()) // MOVW + MOVT
+    return ForCodesize ? 8 : 2;
+  return ForCodesize ? 8 : 3; // Literal pool load
+}
+
+bool llvm::HasLowerConstantMaterializationCost(unsigned Val1, unsigned Val2,
+                                               const ARMSubtarget *Subtarget,
+                                               bool ForCodesize) {
+  // Check with ForCodesize
+  unsigned Cost1 = ConstantMaterializationCost(Val1, Subtarget, ForCodesize);
+  unsigned Cost2 = ConstantMaterializationCost(Val2, Subtarget, ForCodesize);
+  if (Cost1 < Cost2)
+    return true;
+  if (Cost1 > Cost2)
+    return false;
+
+  // If they are equal, try with !ForCodesize
+  return ConstantMaterializationCost(Val1, Subtarget, !ForCodesize) <
+         ConstantMaterializationCost(Val2, Subtarget, !ForCodesize);
 }

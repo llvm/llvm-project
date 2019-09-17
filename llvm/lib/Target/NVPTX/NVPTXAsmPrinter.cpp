@@ -434,7 +434,7 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
   return false;
 }
 
-void NVPTXAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
+void NVPTXAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
   AsmPrinter::EmitBasicBlockStart(MBB);
   if (isLoopHeaderOfNoUnroll(MBB))
     OutStreamer->EmitRawText(StringRef("\t.pragma \"nounroll\";\n"));

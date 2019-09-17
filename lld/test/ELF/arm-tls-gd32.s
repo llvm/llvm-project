@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
-// RUN: ld.lld --hash-style=sysv %t.o -o %t.so -shared
+// RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -S --dyn-relocations %t.so | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d -triple=armv7a-linux-gnueabi %t.so | FileCheck %s
 
@@ -62,7 +62,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT:  ]
-// SEC-NEXT: Address: 0x2000
+// SEC-NEXT: Address: 0x2210
 // SEC:      Size: 4
 // SEC:      Name: .tbss
 // SEC-NEXT: Type: SHT_NOBITS
@@ -71,7 +71,7 @@ x:
 // SEC-NEXT:   SHF_TLS
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x2004
+// SEC-NEXT: Address: 0x2214
 // SEC:      Size: 8
 
 // SEC:      Name: .got
@@ -80,26 +80,26 @@ x:
 // SEC-NEXT:   SHF_ALLOC
 // SEC-NEXT:   SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x204C
+// SEC-NEXT: Address: 0x2264
 // SEC:      Size: 24
 
 // SEC: Dynamic Relocations {
-// SEC-NEXT: 0x205C R_ARM_TLS_DTPMOD32 -
-// SEC-NEXT: 0x204C R_ARM_TLS_DTPMOD32 x
-// SEC-NEXT: 0x2050 R_ARM_TLS_DTPOFF32 x
-// SEC-NEXT: 0x2054 R_ARM_TLS_DTPMOD32 y
-// SEC-NEXT: 0x2058 R_ARM_TLS_DTPOFF32 y
+// SEC-NEXT: 0x2274 R_ARM_TLS_DTPMOD32 -
+// SEC-NEXT: 0x2264 R_ARM_TLS_DTPMOD32 x
+// SEC-NEXT: 0x2268 R_ARM_TLS_DTPOFF32 x
+// SEC-NEXT: 0x226C R_ARM_TLS_DTPMOD32 y
+// SEC-NEXT: 0x2270 R_ARM_TLS_DTPOFF32 y
 
 
-// CHECK-LABEL: 00001000 func:
-// CHECK-NEXT:    1000:      00 f0 20 e3     nop
-// CHECK-NEXT:    1004:      00 f0 20 e3     nop
-// CHECK-NEXT:    1008:      00 f0 20 e3     nop
+// CHECK-LABEL: 000011f8 func:
+// CHECK-NEXT:    11f8:      00 f0 20 e3     nop
+// CHECK-NEXT:    11fc:      00 f0 20 e3     nop
+// CHECK-NEXT:    1200:      00 f0 20 e3     nop
 
-// (0x204c - 0x100c) + (0x100c - 0x1000 - 8) = 0x1044
-// CHECK:    100c:	44 10 00 00
-// (0x2054 - 0x1010) + (0x1010 - 0x1004 - 8) = 0x1048
-// CHECK-NEXT:    1010:	48 10 00 00
-// (0x205c - 0x1014) + (0x1014 - 0x1008 - 8) = 0x104c
-// CHECK-NEXT:    1014:	4c 10 00 00
+// (0x2264 - 0x1204) + (0x1204 - 0x11f8 - 8) = 0x1064
+// CHECK:         1204: 64 10 00 00
+// (0x226c - 0x1204) + (0x1204 - 0x11fc - 8) = 0x1068
+// CHECK-NEXT:    1208: 68 10 00 00
+// (0x2274 - 0x1204) + (0x1204 - 0x1200 - 8) = 0x106c
+// CHECK-NEXT:    120c: 6c 10 00 00
 

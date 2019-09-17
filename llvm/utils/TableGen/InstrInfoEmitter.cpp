@@ -436,8 +436,8 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
         << "(const MCInst &MI);\n";
   }
 
-  OS << "\n} // end " << TargetName << "_MC namespace\n";
-  OS << "} // end llvm namespace\n\n";
+  OS << "\n} // end namespace " << TargetName << "_MC\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_INSTRINFO_MC_HELPER_DECLS\n\n";
 
@@ -459,8 +459,8 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "\n}\n\n";
   }
 
-  OS << "} // end " << TargetName << "_MC namespace\n";
-  OS << "} // end llvm namespace\n\n";
+  OS << "} // end namespace " << TargetName << "_MC\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_GENISTRINFO_MC_HELPERS\n";
 }
@@ -576,7 +576,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
      << TargetName << "InstrNameIndices, " << TargetName << "InstrNameData, "
      << NumberedInstructions.size() << ");\n}\n\n";
 
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n";
 
   OS << "#endif // GET_INSTRINFO_MC_DESC\n\n";
 
@@ -592,7 +592,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
      << "  ~" << ClassName << "() override = default;\n";
 
 
-  OS << "\n};\n} // end llvm namespace\n";
+  OS << "\n};\n} // end namespace llvm\n";
 
   OS << "#endif // GET_INSTRINFO_HEADER\n\n";
 
@@ -620,7 +620,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
      << "  InitMCInstrInfo(" << TargetName << "Insts, " << TargetName
      << "InstrNameIndices, " << TargetName << "InstrNameData, "
      << NumberedInstructions.size() << ");\n}\n";
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n";
 
   OS << "#endif // GET_INSTRINFO_CTOR_DTOR\n\n";
 
@@ -765,8 +765,8 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
     OS << "    " << Inst->TheDef->getName() << "\t= " << Num++ << ",\n";
   OS << "    INSTRUCTION_LIST_END = " << Num << "\n";
   OS << "  };\n\n";
-  OS << "} // end " << Namespace << " namespace\n";
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace " << Namespace << "\n";
+  OS << "} // end namespace llvm\n";
   OS << "#endif // GET_INSTRINFO_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_SCHED_ENUM\n";
@@ -780,9 +780,9 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
     OS << "    " << Class.Name << "\t= " << Num++ << ",\n";
   OS << "    SCHED_LIST_END = " << Num << "\n";
   OS << "  };\n";
-  OS << "} // end Sched namespace\n";
-  OS << "} // end " << Namespace << " namespace\n";
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace Sched\n";
+  OS << "} // end namespace " << Namespace << "\n";
+  OS << "} // end namespace llvm\n";
 
   OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
@@ -794,4 +794,4 @@ void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
   EmitMapTable(RK, OS);
 }
 
-} // end llvm namespace
+} // end namespace llvm

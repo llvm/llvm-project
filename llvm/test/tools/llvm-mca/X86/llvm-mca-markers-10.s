@@ -15,13 +15,13 @@ testloop:
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      205
-# CHECK-NEXT: Total uOps:        300
+# CHECK-NEXT: Total Cycles:      106
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.46
-# CHECK-NEXT: IPC:               0.98
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    1.89
+# CHECK-NEXT: IPC:               1.89
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -33,7 +33,7 @@ testloop:
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     0.50                        leal	42(%rdi), %eax
-# CHECK-NEXT:  2      3     1.00                        imull	%esi, %eax
+# CHECK-NEXT:  1      3     1.00                        imull	%esi, %eax
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -64,13 +64,13 @@ testloop:
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      204
-# CHECK-NEXT: Total uOps:        300
+# CHECK-NEXT: Total Cycles:      105
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.47
-# CHECK-NEXT: IPC:               0.98
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    1.90
+# CHECK-NEXT: IPC:               1.90
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -81,7 +81,7 @@ testloop:
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      3     1.00                        imull	%esi, %eax
+# CHECK-NEXT:  1      3     1.00                        imull	%esi, %eax
 # CHECK-NEXT:  1      1     0.50                        leal	42(%rdi), %eax
 
 # CHECK:      Resources:

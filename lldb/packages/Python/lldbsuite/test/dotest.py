@@ -23,9 +23,10 @@ from __future__ import print_function
 
 # System modules
 import atexit
-import os
+import datetime
 import errno
 import logging
+import os
 import platform
 import re
 import signal
@@ -47,11 +48,14 @@ from . import test_result
 from lldbsuite.test_event.event_builder import EventBuilder
 from ..support import seven
 
+def get_dotest_invocation():
+    return ' '.join(sys.argv)
+
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
     if fpath == None:
-      return False
+        return False
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 
@@ -163,20 +167,6 @@ to create reference logs for debugging.
 
 $ ./dotest.py --log-success
 
-Option 2: (DEPRECATED)
-
-The following options can only enable logs from the host lldb process.
-Only categories from the "lldb" or "gdb-remote" channels can be enabled
-They also do not automatically enable logs in locally running debug servers.
-Also, logs from all test case are written into each log file
-
-o LLDB_LOG: if defined, specifies the log file pathname for the 'lldb' subsystem
-  with a default option of 'event process' if LLDB_LOG_OPTION is not defined.
-
-o GDB_REMOTE_LOG: if defined, specifies the log file pathname for the
-  'process.gdb-remote' subsystem with a default option of 'packets' if
-  GDB_REMOTE_LOG_OPTION is not defined.
-
 """)
     sys.exit(0)
 
@@ -225,8 +215,12 @@ def parseOptionsAndInitTestdirs():
     platform_system = platform.system()
     platform_machine = platform.machine()
 
-    parser = dotest_args.create_parser()
-    args = dotest_args.parse_args(parser, sys.argv[1:])
+    try:
+        parser = dotest_args.create_parser()
+        args = parser.parse_args()
+    except:
+        print(get_dotest_invocation())
+        raise
 
     if args.unset_env_varnames:
         for env_var in args.unset_env_varnames:
@@ -248,9 +242,9 @@ def parseOptionsAndInitTestdirs():
     if args.set_inferior_env_vars:
         lldbtest_config.inferior_env = ' '.join(args.set_inferior_env_vars)
 
-    # only print the args if being verbose (and parsable is off)
-    if args.v and not args.q:
-        print(sys.argv)
+    # Only print the args if being verbose.
+    if args.v:
+        print(get_dotest_invocation())
 
     if args.h:
         do_help = True
@@ -280,10 +274,10 @@ def parseOptionsAndInitTestdirs():
                     break
 
     if args.dsymutil:
-      os.environ['DSYMUTIL'] = args.dsymutil
+        os.environ['DSYMUTIL'] = args.dsymutil
     elif platform_system == 'Darwin':
-      os.environ['DSYMUTIL'] = seven.get_command_output(
-          'xcrun -find -toolchain default dsymutil')
+        os.environ['DSYMUTIL'] = seven.get_command_output(
+            'xcrun -find -toolchain default dsymutil')
 
     if args.filecheck:
         # The lldb-dotest script produced by the CMake build passes in a path
@@ -291,13 +285,6 @@ def parseOptionsAndInitTestdirs():
         # target. However, when invoking dotest.py directly, a valid --filecheck
         # option needs to be given.
         configuration.filecheck = os.path.abspath(args.filecheck)
-    else:
-        outputPaths = get_llvm_bin_dirs()
-        for outputPath in outputPaths:
-            candidatePath = os.path.join(outputPath, 'FileCheck')
-            if is_exe(candidatePath):
-                configuration.filecheck = candidatePath
-                break
 
     if not configuration.get_filecheck_path():
         logging.warning('No valid FileCheck executable; some tests may fail...')
@@ -343,8 +330,13 @@ def parseOptionsAndInitTestdirs():
             args.skipCategories, False)
 
     if args.E:
-        cflags_extras = args.E
-        os.environ['CFLAGS_EXTRAS'] = cflags_extras
+        os.environ['CFLAGS_EXTRAS'] = args.E
+
+    if args.dwarf_version:
+        configuration.dwarf_version = args.dwarf_version
+        # We cannot modify CFLAGS_EXTRAS because they're used in test cases
+        # that explicitly require no debug info.
+        os.environ['CFLAGS'] = '-gdwarf-{}'.format(configuration.dwarf_version)
 
     if args.d:
         sys.stdout.write(
@@ -357,9 +349,6 @@ def parseOptionsAndInitTestdirs():
         if any([x.startswith('-') for x in args.f]):
             usage(parser)
         configuration.filters.extend(args.f)
-
-    if args.l:
-        configuration.skip_long_running_test = False
 
     if args.framework:
         configuration.lldbFrameworkPath = args.framework
@@ -387,13 +376,12 @@ def parseOptionsAndInitTestdirs():
             usage(parser)
         configuration.regexp = args.p
 
-    if args.q:
-        configuration.parsable = True
-
     if args.s:
-        if args.s.startswith('-'):
-            usage(parser)
         configuration.sdir_name = args.s
+    else:
+        timestamp_started = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
+        configuration.sdir_name = os.path.join(os.getcwd(), timestamp_started)
+
     configuration.session_file_format = args.session_file_format
 
     if args.t:
@@ -414,23 +402,8 @@ def parseOptionsAndInitTestdirs():
     if do_help:
         usage(parser)
 
-    # Capture test results-related args.
-    if args.curses:
-        # Act as if the following args were set.
-        args.results_formatter = "lldbsuite.test_event.formatter.curses.Curses"
-        args.results_file = "stdout"
-
     if args.results_file:
         configuration.results_filename = args.results_file
-
-    if args.results_port:
-        configuration.results_port = args.results_port
-
-    if args.results_file and args.results_port:
-        sys.stderr.write(
-            "only one of --results-file and --results-port should "
-            "be specified\n")
-        usage(args)
 
     if args.results_formatter:
         configuration.results_formatter_name = args.results_formatter
@@ -444,7 +417,6 @@ def parseOptionsAndInitTestdirs():
 
     # rerun-related arguments
     configuration.rerun_all_issues = args.rerun_all_issues
-    configuration.rerun_max_file_threshold = args.rerun_max_file_threshold
 
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
@@ -454,52 +426,17 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
-
-    if args.event_add_entries and len(args.event_add_entries) > 0:
-        entries = {}
-        # Parse out key=val pairs, separated by comma
-        for keyval in args.event_add_entries.split(","):
-            key_val_entry = keyval.split("=")
-            if len(key_val_entry) == 2:
-                (key, val) = key_val_entry
-                val_parts = val.split(':')
-                if len(val_parts) > 1:
-                    (val, val_type) = val_parts
-                    if val_type == 'int':
-                        val = int(val)
-                entries[key] = val
-        # Tell the event builder to create all events with these
-        # key/val pairs in them.
-        if len(entries) > 0:
-            EventBuilder.add_entries_to_all_events(entries)
+    if args.module_cache_dir:
+        configuration.module_cache_dir = args.module_cache_dir
+    else:
+        configuration.module_cache_dir = os.path.join(configuration.test_build_dir,
+                                                      'module-cache-lldb')
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [os.path.realpath(os.path.abspath(x)) for x in args.args]
 
     lldbtest_config.codesign_identity = args.codesign_identity
-
-
-def getXcodeOutputPaths(lldbRootDirectory):
-    result = []
-
-    # These are for xcode build directories.
-    xcode3_build_dir = ['build']
-    xcode4_build_dir = ['build', 'lldb', 'Build', 'Products']
-
-    configurations = [
-        ['Debug'],
-        ['DebugClang'],
-        ['Release'],
-        ['BuildAndIntegration']]
-    xcode_build_dirs = [xcode3_build_dir, xcode4_build_dir]
-    for configuration in configurations:
-        for xcode_build_dir in xcode_build_dirs:
-            outputPath = os.path.join(
-                lldbRootDirectory, *(xcode_build_dir + configuration))
-            result.append(outputPath)
-
-    return result
 
 
 def setupTestResults():
@@ -510,7 +447,6 @@ def setupTestResults():
     formatter_config.formatter_name = configuration.results_formatter_name
     formatter_config.formatter_options = (
         configuration.results_formatter_options)
-    formatter_config.port = configuration.results_port
 
     # Create the results formatter.
     formatter_spec = formatter.create_results_formatter(
@@ -528,65 +464,6 @@ def setupTestResults():
         if formatter_spec.cleanup_func is not None:
             atexit.register(formatter_spec.cleanup_func)
 
-
-def getOutputPaths(lldbRootDirectory):
-    """
-    Returns typical build output paths for the lldb executable
-
-    lldbDirectory - path to the root of the lldb svn/git repo
-    """
-    result = []
-
-    if sys.platform == 'darwin':
-        result.extend(getXcodeOutputPaths(lldbRootDirectory))
-
-    # cmake builds?  look for build or build/host folder next to llvm directory
-    # lldb is located in llvm/tools/lldb so we need to go up three levels
-    llvmParentDir = os.path.abspath(
-        os.path.join(
-            lldbRootDirectory,
-            os.pardir,
-            os.pardir,
-            os.pardir))
-    result.append(os.path.join(llvmParentDir, 'build', 'bin'))
-    result.append(os.path.join(llvmParentDir, 'build', 'host', 'bin'))
-
-    # some cmake developers keep their build directory beside their lldb
-    # directory
-    lldbParentDir = os.path.abspath(os.path.join(lldbRootDirectory, os.pardir))
-    result.append(os.path.join(lldbParentDir, 'build', 'bin'))
-    result.append(os.path.join(lldbParentDir, 'build', 'host', 'bin'))
-
-    return result
-
-def get_llvm_bin_dirs():
-    """
-    Returns an array of paths that may have the llvm/clang/etc binaries
-    in them, relative to this current file.
-    Returns an empty array if none are found.
-    """
-    result = []
-
-    lldb_root_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "..")
-    paths_to_try = [
-        "llvm-build/Release+Asserts/x86_64/bin",
-        "llvm-build/Debug+Asserts/x86_64/bin",
-        "llvm-build/Release/x86_64/bin",
-        "llvm-build/Debug/x86_64/bin",
-        "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-DebugAssert+asan/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-ReleaseAssert+asan/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin",
-        "llvm-build/Ninja-RelWithDebInfoAssert+asan/llvm-macosx-x86_64/bin",
-    ]
-    for p in paths_to_try:
-        path = os.path.join(lldb_root_path, p)
-        if os.path.exists(path):
-            result.append(path)
-
-    return result
 
 def setupSysPath():
     """
@@ -644,14 +521,6 @@ def setupSysPath():
         # full pathname of the lldb executable.
         if "LLDB_EXEC" in os.environ:
             lldbtest_config.lldbExec = os.environ["LLDB_EXEC"]
-
-    if not lldbtest_config.lldbExec:
-        outputPaths = getOutputPaths(lldbRootDirectory)
-        for outputPath in outputPaths:
-            candidatePath = os.path.join(outputPath, 'lldb')
-            if is_exe(candidatePath):
-                lldbtest_config.lldbExec = candidatePath
-                break
 
     if not lldbtest_config.lldbExec:
         # Last, check the path
@@ -738,39 +607,23 @@ def setupSysPath():
                         lldbPythonDir, '..', '..')
 
         if not lldbPythonDir:
-            if platform.system() == "Darwin":
-                python_resource_dir = ['LLDB.framework', 'Resources', 'Python']
-                outputPaths = getXcodeOutputPaths(lldbRootDirectory)
-                for outputPath in outputPaths:
-                    candidatePath = os.path.join(
-                        outputPath, *python_resource_dir)
-                    if os.path.isfile(
-                        os.path.join(
-                            candidatePath,
-                            init_in_python_dir)):
-                        lldbPythonDir = candidatePath
-                        break
-
-                if not lldbPythonDir:
-                    print("lldb.py is not found, some tests may fail.")
-            else:
-                print(
-                    "Unable to load lldb extension module.  Possible reasons for this include:")
-                print("  1) LLDB was built with LLDB_DISABLE_PYTHON=1")
-                print(
-                    "  2) PYTHONPATH and PYTHONHOME are not set correctly.  PYTHONHOME should refer to")
-                print(
-                    "     the version of Python that LLDB built and linked against, and PYTHONPATH")
-                print(
-                    "     should contain the Lib directory for the same python distro, as well as the")
-                print("     location of LLDB\'s site-packages folder.")
-                print(
-                    "  3) A different version of Python than that which was built against is exported in")
-                print("     the system\'s PATH environment variable, causing conflicts.")
-                print(
-                    "  4) The executable '%s' could not be found.  Please check " %
-                    lldbtest_config.lldbExec)
-                print("     that it exists and is executable.")
+            print(
+                "Unable to load lldb extension module.  Possible reasons for this include:")
+            print("  1) LLDB was built with LLDB_DISABLE_PYTHON=1")
+            print(
+                "  2) PYTHONPATH and PYTHONHOME are not set correctly.  PYTHONHOME should refer to")
+            print(
+                "     the version of Python that LLDB built and linked against, and PYTHONPATH")
+            print(
+                "     should contain the Lib directory for the same python distro, as well as the")
+            print("     location of LLDB\'s site-packages folder.")
+            print(
+                "  3) A different version of Python than that which was built against is exported in")
+            print("     the system\'s PATH environment variable, causing conflicts.")
+            print(
+                "  4) The executable '%s' could not be found.  Please check " %
+                lldbtest_config.lldbExec)
+            print("     that it exists and is executable.")
 
     if lldbPythonDir:
         lldbPythonDir = os.path.normpath(lldbPythonDir)
@@ -849,7 +702,6 @@ def visit_file(dir, name):
             unittest2.defaultTestLoader.loadTestsFromName(base))
 
 
-# TODO: This should be replaced with a call to find_test_files_in_dir_tree.
 def visit(prefix, dir, names):
     """Visitor function for os.path.walk(path, visit, arg)."""
 
@@ -904,64 +756,6 @@ def disabledynamics():
     if not res.Succeeded():
         raise Exception('disabling dynamic type support failed')
 
-
-def lldbLoggings():
-    import lldb
-    """Check and do lldb loggings if necessary."""
-
-    # Turn on logging for debugging purposes if ${LLDB_LOG} environment variable is
-    # defined.  Use ${LLDB_LOG} to specify the log file.
-    ci = lldb.DBG.GetCommandInterpreter()
-    res = lldb.SBCommandReturnObject()
-    if ("LLDB_LOG" in os.environ):
-        open(os.environ["LLDB_LOG"], 'w').close()
-        if ("LLDB_LOG_OPTION" in os.environ):
-            lldb_log_option = os.environ["LLDB_LOG_OPTION"]
-        else:
-            lldb_log_option = "event process expr state api"
-        ci.HandleCommand(
-            "log enable -n -f " +
-            os.environ["LLDB_LOG"] +
-            " lldb " +
-            lldb_log_option,
-            res)
-        if not res.Succeeded():
-            raise Exception('log enable failed (check LLDB_LOG env variable)')
-
-    if ("LLDB_LINUX_LOG" in os.environ):
-        open(os.environ["LLDB_LINUX_LOG"], 'w').close()
-        if ("LLDB_LINUX_LOG_OPTION" in os.environ):
-            lldb_log_option = os.environ["LLDB_LINUX_LOG_OPTION"]
-        else:
-            lldb_log_option = "event process expr state api"
-        ci.HandleCommand(
-            "log enable -n -f " +
-            os.environ["LLDB_LINUX_LOG"] +
-            " linux " +
-            lldb_log_option,
-            res)
-        if not res.Succeeded():
-            raise Exception(
-                'log enable failed (check LLDB_LINUX_LOG env variable)')
-
-    # Ditto for gdb-remote logging if ${GDB_REMOTE_LOG} environment variable is defined.
-    # Use ${GDB_REMOTE_LOG} to specify the log file.
-    if ("GDB_REMOTE_LOG" in os.environ):
-        if ("GDB_REMOTE_LOG_OPTION" in os.environ):
-            gdb_remote_log_option = os.environ["GDB_REMOTE_LOG_OPTION"]
-        else:
-            gdb_remote_log_option = "packets process"
-        ci.HandleCommand(
-            "log enable -n -f " + os.environ["GDB_REMOTE_LOG"] + " gdb-remote "
-            + gdb_remote_log_option,
-            res)
-        if not res.Succeeded():
-            raise Exception(
-                'log enable failed (check GDB_REMOTE_LOG env variable)')
-
-
-def getMyCommandLine():
-    return ' '.join(sys.argv)
 
 # ======================================== #
 #                                          #
@@ -1080,16 +874,16 @@ def canRunWatchpointTests():
 
     platform = lldbplatformutil.getPlatform()
     if platform == "netbsd":
-      if os.geteuid() == 0:
-        return True, "root can always write dbregs"
-      try:
-        output = subprocess.check_output(["/sbin/sysctl", "-n",
-          "security.models.extensions.user_set_dbregs"]).decode().strip()
-        if output == "1":
-          return True, "security.models.extensions.user_set_dbregs enabled"
-      except subprocess.CalledProcessError:
-        pass
-      return False, "security.models.extensions.user_set_dbregs disabled"
+        if os.geteuid() == 0:
+            return True, "root can always write dbregs"
+        try:
+            output = subprocess.check_output(["/sbin/sysctl", "-n",
+              "security.models.extensions.user_set_dbregs"]).decode().strip()
+            if output == "1":
+                return True, "security.models.extensions.user_set_dbregs enabled"
+        except subprocess.CalledProcessError:
+            pass
+        return False, "security.models.extensions.user_set_dbregs disabled"
     return True, "watchpoint support available"
 
 def checkWatchpointSupport():
@@ -1134,14 +928,13 @@ def run_suite():
 
     setupSysPath()
 
-    #
-    # If '-l' is specified, do not skip the long running tests.
-    if not configuration.skip_long_running_test:
-        os.environ["LLDB_SKIP_LONG_RUNNING_TEST"] = "NO"
 
     # For the time being, let's bracket the test runner within the
     # lldb.SBDebugger.Initialize()/Terminate() pair.
     import lldb
+
+    # Now we can also import lldbutil
+    from lldbsuite.test import lldbutil
 
     # Create a singleton SBDebugger in the lldb namespace.
     lldb.DBG = lldb.SBDebugger.Create()
@@ -1202,7 +995,6 @@ def run_suite():
 
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
-    import lldbsuite.test.lldbutil as lldbutil
     build_dir = configuration.test_build_dir
     lldbutil.mkdir_p(build_dir)
 
@@ -1235,48 +1027,27 @@ def run_suite():
     # Now that we have loaded all the test cases, run the whole test suite.
     #
 
-    # Turn on lldb loggings if necessary.
-    lldbLoggings()
-
     # Disable default dynamic types for testing purposes
     disabledynamics()
 
     # Install the control-c handler.
     unittest2.signals.installHandler()
 
-    # If sdir_name is not specified through the '-s sdir_name' option, get a
-    # timestamp string and export it as LLDB_SESSION_DIR environment var.  This will
-    # be used when/if we want to dump the session info of individual test cases
-    # later on.
-    #
-    # See also TestBase.dumpSessionInfo() in lldbtest.py.
-    import datetime
-    # The windows platforms don't like ':' in the pathname.
-    timestamp_started = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
-    if not configuration.sdir_name:
-        configuration.sdir_name = timestamp_started
-    os.environ["LLDB_SESSION_DIRNAME"] = os.path.join(
-        os.getcwd(), configuration.sdir_name)
+    lldbutil.mkdir_p(configuration.sdir_name)
+    os.environ["LLDB_SESSION_DIRNAME"] = configuration.sdir_name
 
     sys.stderr.write(
         "\nSession logs for test failures/errors/unexpected successes"
         " will go into directory '%s'\n" %
         configuration.sdir_name)
-    sys.stderr.write("Command invoked: %s\n" % getMyCommandLine())
-
-    if not os.path.isdir(configuration.sdir_name):
-        try:
-            os.mkdir(configuration.sdir_name)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
+    sys.stderr.write("Command invoked: %s\n" % get_dotest_invocation())
 
     #
     # Invoke the default TextTestRunner to run the test suite
     #
     checkCompiler()
 
-    if not configuration.parsable:
+    if configuration.verbose:
         print("compiler=%s" % configuration.compiler)
 
     # Iterating over all possible architecture and compiler combinations.
@@ -1285,36 +1056,23 @@ def run_suite():
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 
-    # Translate ' ' to '-' for pathname component.
-    if six.PY2:
-        import string
-        tbl = string.maketrans(' ', '-')
-    else:
-        tbl = str.maketrans(' ', '-')
-    configPostfix = configString.translate(tbl)
-
     # Output the configuration.
-    if not configuration.parsable:
+    if configuration.verbose:
         sys.stderr.write("\nConfiguration: " + configString + "\n")
 
     # First, write out the number of collected test cases.
-    if not configuration.parsable:
+    if configuration.verbose:
         sys.stderr.write(configuration.separator + "\n")
         sys.stderr.write(
             "Collected %d test%s\n\n" %
             (configuration.suite.countTestCases(),
              configuration.suite.countTestCases() != 1 and "s" or ""))
 
-    if configuration.parsable:
-        v = 0
-    else:
-        v = configuration.verbose
-
     # Invoke the test runner.
     if configuration.count == 1:
         result = unittest2.TextTestRunner(
             stream=sys.stderr,
-            verbosity=v,
+            verbosity=configuration.verbose,
             resultclass=test_result.LLDBTestResult).run(
             configuration.suite)
     else:
@@ -1326,13 +1084,13 @@ def run_suite():
 
             result = unittest2.TextTestRunner(
                 stream=sys.stderr,
-                verbosity=v,
+                verbosity=configuration.verbose,
                 resultclass=test_result.LLDBTestResult).run(
                 configuration.suite)
 
     configuration.failed = not result.wasSuccessful()
 
-    if configuration.sdir_has_content and not configuration.parsable:
+    if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(
             "Session logs for test failures/errors/unexpected successes"
             " can be found in directory '%s'\n" %
@@ -1345,12 +1103,6 @@ def run_suite():
             sys.stderr.write(
                 "%s - %d\n" %
                 (category, configuration.failuresPerCategory[category]))
-
-    # Terminate the test suite if ${LLDB_TESTSUITE_FORCE_FINISH} is defined.
-    # This should not be necessary now.
-    if ("LLDB_TESTSUITE_FORCE_FINISH" in os.environ):
-        print("Terminating Test suite...")
-        subprocess.Popen(["/bin/sh", "-c", "kill %s; exit 0" % (os.getpid())])
 
     # Exiting.
     exitTestSuite(configuration.failed)

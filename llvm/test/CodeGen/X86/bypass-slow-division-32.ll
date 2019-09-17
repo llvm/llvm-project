@@ -17,7 +17,6 @@ define i32 @Test_get_quotient(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
@@ -41,7 +40,6 @@ define i32 @Test_get_remainder(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    retl
@@ -65,7 +63,6 @@ define i32 @Test_get_quotient_and_remainder(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB2_1:
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %ah, %edx
 ; CHECK-NEXT:    movzbl %al, %eax
@@ -103,14 +100,12 @@ define i32 @Test_use_div_and_idiv(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    jmp .LBB3_6
 ; CHECK-NEXT:  .LBB3_1:
 ; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %bl
 ; CHECK-NEXT:    movzbl %al, %esi
 ; CHECK-NEXT:    testl $-256, %edi
 ; CHECK-NEXT:    jne .LBB3_5
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %bl
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:  .LBB3_6:
@@ -208,7 +203,6 @@ define i32 @Test_use_div_imm_reg(i32 %a) nounwind {
 ; CHECK-NEXT:  .LBB8_1:
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
@@ -230,7 +224,6 @@ define i32 @Test_use_rem_imm_reg(i32 %a) nounwind {
 ; CHECK-NEXT:  .LBB9_1:
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax def $ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl

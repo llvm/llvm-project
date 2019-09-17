@@ -1,7 +1,10 @@
 // REQUIRES: x86
+
+/// For non-preemptable ifunc, place ifunc PLT entries after regular PLT entries.
+
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-// RUN: ld.lld --hash-style=sysv --shared -o %t.so %t.o
-// RUN: llvm-objdump -d %t.so | FileCheck %s --check-prefix=DISASM
+// RUN: ld.lld --shared -o %t.so %t.o
+// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r %t.so | FileCheck %s
 
 // Check that an IRELATIVE relocation is used for a non-preemptible ifunc
@@ -9,44 +12,44 @@
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: fct:
-// DISASM-NEXT:     1000:       c3      retq
+// DISASM-NEXT:     1308:       retq
 // DISASM:     fct2:
-// DISASM-NEXT:     1001:       c3      retq
+// DISASM-NEXT:     1309:       retq
 // DISASM:     f1:
-// DISASM-NEXT:     1002:       e8 49 00 00 00          callq   73
-// DISASM-NEXT:     1007:       e8 24 00 00 00          callq   36
-// DISASM-NEXT:     100c:       e8 2f 00 00 00          callq   47
-// DISASM-NEXT:     1011:       c3      retq
+// DISASM-NEXT:     130a:       callq   65
+// DISASM-NEXT:     130f:       callq   28
+// DISASM-NEXT:     1314:       callq   39
+// DISASM-NEXT:     1319:       retq
 // DISASM:     f2:
-// DISASM-NEXT:     1012:       c3      retq
+// DISASM-NEXT:     131a:       retq
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:     1020:       ff 35 e2 1f 00 00       pushq   8162(%rip)
-// DISASM-NEXT:     1026:       ff 25 e4 1f 00 00       jmpq    *8164(%rip)
-// DISASM-NEXT:     102c:       0f 1f 40 00     nopl    (%rax)
+// DISASM-NEXT:     1320:       pushq   8482(%rip)
+// DISASM-NEXT:     1326:       jmpq    *8484(%rip)
+// DISASM-NEXT:     132c:       nopl    (%rax)
 // DISASM-EMPTY:
 // DISASM-NEXT:   fct2@plt:
-// DISASM-NEXT:     1030:       ff 25 e2 1f 00 00       jmpq    *8162(%rip)
-// DISASM-NEXT:     1036:       68 00 00 00 00          pushq   $0
-// DISASM-NEXT:     103b:       e9 e0 ff ff ff          jmp     -32 <.plt>
+// DISASM-NEXT:     1330:       jmpq    *8482(%rip)
+// DISASM-NEXT:     1336:       pushq   $0
+// DISASM-NEXT:     133b:       jmp     -32 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT:   f2@plt:
-// DISASM-NEXT:     1040:       ff 25 da 1f 00 00       jmpq    *8154(%rip)
-// DISASM-NEXT:     1046:       68 01 00 00 00          pushq   $1
-// DISASM-NEXT:     104b:       e9 d0 ff ff ff          jmp     -48 <.plt>
-// DISASM-NEXT:     1050:       ff 25 d2 1f 00 00       jmpq    *8146(%rip)
-// DISASM-NEXT:     1056:       68 00 00 00 00          pushq   $0
-// DISASM-NEXT:     105b:       e9 e0 ff ff ff          jmp     -32 <f2@plt>
+// DISASM-NEXT:     1340:       jmpq    *8474(%rip)
+// DISASM-NEXT:     1346:       pushq   $1
+// DISASM-NEXT:     134b:       jmp     -48 <.plt>
+// DISASM-NEXT:     1350:       jmpq    *8466(%rip)
+// DISASM-NEXT:     1356:       pushq   $0
+// DISASM-NEXT:     135b:       jmp     -32 <f2@plt>
 
 // CHECK: Relocations [
-// CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     0x3028 R_X86_64_IRELATIVE - 0x1000
+// CHECK-NEXT:   Section (5) .rela.dyn {
+// CHECK-NEXT:     0x3468 R_X86_64_IRELATIVE - 0x1308
 // CHECK-NEXT:   }
-// CHECK-NEXT:   Section (5) .rela.plt {
-// CHECK-NEXT:     0x3018 R_X86_64_JUMP_SLOT fct2 0x0
-// CHECK-NEXT:     0x3020 R_X86_64_JUMP_SLOT f2 0x0
+// CHECK-NEXT:   Section (6) .rela.plt {
+// CHECK-NEXT:     0x3458 R_X86_64_JUMP_SLOT fct2 0x0
+// CHECK-NEXT:     0x3460 R_X86_64_JUMP_SLOT f2 0x0
 // CHECK-NEXT:   }
 
  // Hidden expect IRELATIVE

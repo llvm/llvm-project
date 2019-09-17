@@ -1069,7 +1069,7 @@ let Predicates = [FeatureVector] in {
     def WCGDB : TernaryVRRa<"wcgdb", 0xE7C2, null_frag, v64g, v64db, 3, 8>;
   }
   // Rounding mode should agree with SystemZInstrFP.td.
-  def : FPConversion<VCGDB, fp_to_sint, v128g, v128db, 0, 5>;
+  def : FPConversion<VCGDB, any_fp_to_sint, v128g, v128db, 0, 5>;
   let Predicates = [FeatureVectorEnhancements2] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
       let isAsmParserOnly = 1 in
@@ -1078,7 +1078,7 @@ let Predicates = [FeatureVector] in {
       def WCFEB : TernaryVRRa<"wcfeb", 0xE7C2, null_frag, v32sb, v32f, 2, 8>;
     }
     // Rounding mode should agree with SystemZInstrFP.td.
-    def : FPConversion<VCFEB, fp_to_sint, v128f, v128sb, 0, 5>;
+    def : FPConversion<VCFEB, any_fp_to_sint, v128f, v128sb, 0, 5>;
   }
 
   // Convert to logical.
@@ -1088,7 +1088,7 @@ let Predicates = [FeatureVector] in {
     def WCLGDB : TernaryVRRa<"wclgdb", 0xE7C0, null_frag, v64g, v64db, 3, 8>;
   }
   // Rounding mode should agree with SystemZInstrFP.td.
-  def : FPConversion<VCLGDB, fp_to_uint, v128g, v128db, 0, 5>;
+  def : FPConversion<VCLGDB, any_fp_to_uint, v128g, v128db, 0, 5>;
   let Predicates = [FeatureVectorEnhancements2] in {
     let Uses = [FPC], mayRaiseFPException = 1 in {
       let isAsmParserOnly = 1 in
@@ -1097,7 +1097,7 @@ let Predicates = [FeatureVector] in {
       def WCLFEB : TernaryVRRa<"wclfeb", 0xE7C0, null_frag, v32sb, v32f, 2, 8>;
     }
     // Rounding mode should agree with SystemZInstrFP.td.
-    def : FPConversion<VCLFEB, fp_to_uint, v128f, v128sb, 0, 5>;
+    def : FPConversion<VCLFEB, any_fp_to_uint, v128f, v128sb, 0, 5>;
   }
 
   // Divide.

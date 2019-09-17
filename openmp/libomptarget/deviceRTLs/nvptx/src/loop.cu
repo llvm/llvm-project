@@ -381,17 +381,17 @@ public:
   // Support for dispatch next
 
   INLINE static int64_t Shuffle(unsigned active, int64_t val, int leader) {
-    int lo, hi;
+    uint32_t lo, hi;
     __kmpc_impl_unpack(val, lo, hi);
-    hi = __SHFL_SYNC(active, hi, leader);
-    lo = __SHFL_SYNC(active, lo, leader);
+    hi = __kmpc_impl_shfl_sync(active, hi, leader);
+    lo = __kmpc_impl_shfl_sync(active, lo, leader);
     return __kmpc_impl_pack(lo, hi);
   }
 
   INLINE static uint64_t NextIter() {
-    __kmpc_impl_lanemask_t active = __ACTIVEMASK();
-    int leader = __kmpc_impl_ffs(active) - 1;
-    int change = __kmpc_impl_popc(active);
+    __kmpc_impl_lanemask_t active = __kmpc_impl_activemask();
+    uint32_t leader = __kmpc_impl_ffs(active) - 1;
+    uint32_t change = __kmpc_impl_popc(active);
     __kmpc_impl_lanemask_t lane_mask_lt = __kmpc_impl_lanemask_lt();
     unsigned int rank = __kmpc_impl_popc(active & lane_mask_lt);
     uint64_t warp_res;

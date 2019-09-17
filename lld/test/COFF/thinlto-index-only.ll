@@ -41,7 +41,18 @@
 ; BACKEND2-NEXT: <COMBINED
 ; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 
-target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+; Thin archive tests. Check that the module paths point to the original files.
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: opt -thinlto-bc -o %t/foo.obj < %s
+; RUN: opt -thinlto-bc -o %t/bar.obj < %p/Inputs/thinlto.ll
+; RUN: llvm-ar rcsT %t5.lib %t/bar.obj %t3.obj
+; RUN: lld-link -thinlto-index-only -entry:main %t/foo.obj %t5.lib
+; RUN: llvm-dis -o - %t/foo.obj.thinlto.bc | FileCheck %s --check-prefix=THINARCHIVE
+; THINARCHIVE: ^0 = module: (path: "{{.*}}foo.obj",
+; THINARCHIVE: ^1 = module: (path: "{{.*}}bar.obj",
+
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.24215"
 
 declare void @g(...)

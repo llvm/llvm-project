@@ -458,9 +458,8 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
 
   // FIXME: If an instruction opcode is marked as 'mayLoad', and it has no
   // "unmodeledSideEffects", then this logic optimistically assumes that any
-  // extra register operands in the variadic sequence are not register
+  // extra register operand in the variadic sequence is not a register
   // definition.
-
   bool AssumeDefsOnly = !MCDesc.mayStore() && MCDesc.mayLoad() &&
                         !MCDesc.hasUnmodeledSideEffects();
   for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
@@ -630,8 +629,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   }
 
   // Initialize Reads first.
+  MCPhysReg RegID = 0;
   for (const ReadDescriptor &RD : D.Reads) {
-    int RegID = -1;
     if (!RD.isImplicitRead()) {
       // explicit read.
       const MCOperand &Op = MCI.getOperand(RD.OpIndex);
@@ -649,7 +648,6 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
       continue;
 
     // Okay, this is a register operand. Create a ReadState for it.
-    assert(RegID > 0 && "Invalid register ID found!");
     NewIS->getUses().emplace_back(RD, RegID);
     ReadState &RS = NewIS->getUses().back();
 
@@ -690,8 +688,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   // Initialize writes.
   unsigned WriteIndex = 0;
   for (const WriteDescriptor &WD : D.Writes) {
-    unsigned RegID = WD.isImplicitWrite() ? WD.RegisterID
-                                          : MCI.getOperand(WD.OpIndex).getReg();
+    RegID = WD.isImplicitWrite() ? WD.RegisterID
+                                 : MCI.getOperand(WD.OpIndex).getReg();
     // Check if this is a optional definition that references NoReg.
     if (WD.IsOptionalDef && !RegID) {
       ++WriteIndex;

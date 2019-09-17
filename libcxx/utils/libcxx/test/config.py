@@ -228,16 +228,18 @@ class Configuration(object):
         if not cxx:
             self.lit_config.fatal('must specify user parameter cxx_under_test '
                                   '(e.g., --param=cxx_under_test=clang++)')
-        self.cxx = CXXCompiler(cxx) if not self.cxx_is_clang_cl else \
+        self.cxx = CXXCompiler(self, cxx) if not self.cxx_is_clang_cl else \
                    self._configure_clang_cl(cxx)
         cxx_type = self.cxx.type
         if cxx_type is not None:
             assert self.cxx.version is not None
-            maj_v, min_v, _ = self.cxx.version
+            maj_v, min_v, patch_v = self.cxx.version
             self.config.available_features.add(cxx_type)
             self.config.available_features.add('%s-%s' % (cxx_type, maj_v))
             self.config.available_features.add('%s-%s.%s' % (
                 cxx_type, maj_v, min_v))
+            self.config.available_features.add('%s-%s.%s.%s' % (
+                cxx_type, maj_v, min_v, patch_v))
         self.cxx.compile_env = dict(os.environ)
         # 'CCACHE_CPP2' prevents ccache from stripping comments while
         # preprocessing. This is required to prevent stripping of '-verify'
@@ -258,7 +260,7 @@ class Configuration(object):
         link_flags = _prefixed_env_list('LIB', '-L')
         for path in _split_env_var('LIB'):
             self.add_path(self.exec_env, path)
-        return CXXCompiler(clang_path, flags=flags,
+        return CXXCompiler(self, clang_path, flags=flags,
                            compile_flags=compile_flags,
                            link_flags=link_flags)
 
@@ -488,6 +490,11 @@ class Configuration(object):
             self.config.available_features.add('glibc-%s' % maj_v)
             self.config.available_features.add('glibc-%s.%s' % (maj_v, min_v))
 
+        libcxx_gdb = self.get_lit_conf('libcxx_gdb')
+        if libcxx_gdb and 'NOTFOUND' not in libcxx_gdb:
+            self.config.available_features.add('libcxx_gdb')
+            self.cxx.libcxx_gdb = libcxx_gdb
+
         # Support Objective-C++ only on MacOS and if the compiler supports it.
         if self.target_info.platform() == "darwin" and \
            self.target_info.is_host_macosx() and \
@@ -600,11 +607,11 @@ class Configuration(object):
         if self.cxx_stdlib_under_test != 'libstdc++' and \
            not self.is_windows:
             self.cxx.compile_flags += [
-                '-include', os.path.join(support_path, 'nasty_macros.hpp')]
+                '-include', os.path.join(support_path, 'nasty_macros.h')]
         if self.cxx_stdlib_under_test == 'msvc':
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path,
-                                         'msvc_stdlib_force_include.hpp')]
+                                         'msvc_stdlib_force_include.h')]
             pass
         if self.is_windows and self.debug_build and \
                 self.cxx_stdlib_under_test != 'msvc':
@@ -1029,8 +1036,14 @@ class Configuration(object):
             self.cxx.useModules()
 
     def configure_substitutions(self):
+        tool_env = ''
+        if platform.system() == 'Darwin':
+            # Do not pass DYLD_LIBRARY_PATH to the compiler, linker, etc. as
+            # these tools are not meant to exercise the just-built libraries.
+            tool_env += 'DYLD_LIBRARY_PATH="" '
+
         sub = self.config.substitutions
-        cxx_path = pipes.quote(self.cxx.path)
+        cxx_path = tool_env + pipes.quote(self.cxx.path)
         # Configure compiler substitutions
         sub.append(('%cxx', cxx_path))
         sub.append(('%libcxx_src_root', self.libcxx_src_root))
@@ -1065,11 +1078,17 @@ class Configuration(object):
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
         # Configure run env substitution.
-        sub.append(('%run', '%t.exe'))
+        codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
+        run_py = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
+        run_str = '%s %s "%s" %%t.exe' % (pipes.quote(sys.executable), \
+                                          pipes.quote(run_py), codesign_ident)
+        sub.append(('%run', run_str))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
         sub.append(('not ', not_str))
+        if self.get_lit_conf('libcxx_gdb'):
+            sub.append(('%libcxx_gdb', self.get_lit_conf('libcxx_gdb')))
 
     def can_use_deployment(self):
         # Check if the host is on an Apple platform using clang.

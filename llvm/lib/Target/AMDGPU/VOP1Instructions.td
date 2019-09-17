@@ -107,6 +107,13 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
   foreach _ = BoolToList<P.HasExtDPP>.ret in
     def _dpp : VOP1_DPP_Pseudo <opName, P>;
+
+  def : MnemonicAlias<opName#"_e32", opName>, LetDummies;
+  def : MnemonicAlias<opName#"_e64", opName>, LetDummies;
+  def : MnemonicAlias<opName#"_sdwa", opName>, LetDummies;
+
+  foreach _ = BoolToList<P.HasExtDPP>.ret in
+    def : MnemonicAlias<opName#"_dpp", opName>, LetDummies;
 }
 
 // Special profile for instructions which have clamp
@@ -227,10 +234,10 @@ defm V_COS_F32 : VOP1Inst <"v_cos_f32", VOP_F32_F32, AMDGPUcos>;
 } // End SchedRW = [WriteQuarterRate32]
 
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
-defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32>;
+defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, bitreverse>;
 defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32>;
-defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32>;
+defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, AMDGPUffbh_i32>;
 
 let SchedRW = [WriteDoubleAdd] in {
 defm V_FREXP_EXP_I32_F64 : VOP1Inst <"v_frexp_exp_i32_f64", VOP_I32_F64, int_amdgcn_frexp_exp>;

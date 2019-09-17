@@ -563,8 +563,9 @@ void LoopInfo::finish() {
 
 void LoopInfoStack::push(BasicBlock *Header, const llvm::DebugLoc &StartLoc,
                          const llvm::DebugLoc &EndLoc) {
-  Active.push_back(LoopInfo(Header, StagedAttrs, StartLoc, EndLoc,
-                            Active.empty() ? nullptr : &Active.back()));
+  Active.emplace_back(
+      new LoopInfo(Header, StagedAttrs, StartLoc, EndLoc,
+                   Active.empty() ? nullptr : Active.back().get()));
   // Clear the attributes so nested loops do not inherit them.
   StagedAttrs.clear();
 }
@@ -756,16 +757,16 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
 
 void LoopInfoStack::pop() {
   assert(!Active.empty() && "No active loops to pop");
-  Active.back().finish();
+  Active.back()->finish();
   Active.pop_back();
 }
 
 void LoopInfoStack::InsertHelper(Instruction *I) const {
   if (I->mayReadOrWriteMemory()) {
     SmallVector<Metadata *, 4> AccessGroups;
-    for (const LoopInfo &AL : Active) {
+    for (const auto &AL : Active) {
       // Here we assume that every loop that has an access group is parallel.
-      if (MDNode *Group = AL.getAccessGroup())
+      if (MDNode *Group = AL->getAccessGroup())
         AccessGroups.push_back(Group);
     }
     MDNode *UnionMD = nullptr;

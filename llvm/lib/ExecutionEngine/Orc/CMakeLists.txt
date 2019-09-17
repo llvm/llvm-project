@@ -35,4 +35,5 @@ target_link_libraries(LLVMOrcJIT
   LLVMAnalysis
   LLVMBitReader
   LLVMBitWriter
+  LLVMPasses
   )

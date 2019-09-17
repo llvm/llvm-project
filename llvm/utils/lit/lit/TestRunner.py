@@ -238,7 +238,7 @@ def quote_windows_command(seq):
 # args are from 'export' or 'env' command.
 # Returns copy of args without those commands or their arguments.
 def updateEnv(env, args):
-    arg_idx = 1
+    arg_idx_next = len(args)
     unset_next_env_var = False
     for arg_idx, arg in enumerate(args[1:]):
         # Support for the -u flag (unsetting) for env command
@@ -257,9 +257,10 @@ def updateEnv(env, args):
         key, eq, val = arg.partition('=')
         # Stop if there was no equals.
         if eq == '':
+            arg_idx_next = arg_idx + 1
             break
         env.env[key] = val
-    return args[arg_idx+1:]
+    return args[arg_idx_next:]
 
 def executeBuiltinEcho(cmd, shenv):
     """Interpret a redirected echo command"""
@@ -880,6 +881,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
             cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
             args = updateEnv(cmd_shenv, j.args)
+            if not args:
+                raise InternalShellError(j,
+                                         "Error: 'env' requires a subcommand")
 
         stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
                                                  opened_files)

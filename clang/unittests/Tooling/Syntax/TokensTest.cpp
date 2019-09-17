@@ -755,4 +755,27 @@ TEST_F(TokenBufferTest, TokensToFileRange) {
   // We don't test assertion failures because death tests are slow.
 }
 
+TEST_F(TokenBufferTest, macroExpansions) {
+  llvm::Annotations Code(R"cpp(
+    #define FOO B
+    #define FOO2 BA
+    #define CALL(X) int X
+    #define G CALL(FOO2)
+    int B;
+    $macro[[FOO]];
+    $macro[[CALL]](A);
+    $macro[[G]];
+  )cpp");
+  recordTokens(Code.code());
+  auto &SM = *SourceMgr;
+  auto Expansions = Buffer.macroExpansions(SM.getMainFileID());
+  std::vector<FileRange> ExpectedMacroRanges;
+  for (auto Range : Code.ranges("macro"))
+    ExpectedMacroRanges.push_back(
+        FileRange(SM.getMainFileID(), Range.Begin, Range.End));
+  std::vector<FileRange> ActualMacroRanges;
+  for (auto Expansion : Expansions)
+    ActualMacroRanges.push_back(Expansion->range(SM));
+  EXPECT_EQ(ExpectedMacroRanges, ActualMacroRanges);
+}
 } // namespace

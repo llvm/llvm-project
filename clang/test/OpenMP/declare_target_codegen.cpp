@@ -3,6 +3,14 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - | FileCheck %s
 
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix HOST5
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -fopenmp-version=50 -DOMP5
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix DEV5
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix SIMD-ONLY
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -fopenmp-version=50 -DOMP5
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix SIMD-ONLY
+
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o -| FileCheck %s --check-prefix SIMD-ONLY
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
@@ -32,13 +40,13 @@
 // CHECK-DAG: [[STAT:@.+stat]] = internal global %struct.S zeroinitializer,
 // CHECK-DAG: [[STAT_REF:@.+]] = internal constant %struct.S* [[STAT]]
 // CHECK-DAG: @out_decl_target ={{ dso_local | }}global i32 0,
-// CHECK-DAG: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+80]]_ctor to i8*), i8* bitcast (void ()* @__omp_offloading__{{.+}}_stat_l[[@LINE+81]]_ctor to i8*)],
+// CHECK-DAG: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @__omp_offloading__{{.+}}_globals_l[[@LINE+84]]_ctor to i8*), i8* bitcast (void ()* @__omp_offloading__{{.+}}_stat_l[[@LINE+85]]_ctor to i8*)],
 // CHECK-DAG: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (%struct.S** [[STAT_REF]] to i8*)],
 
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
 // CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(%class.TemplateClass* %{{.*}})
 // CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(%class.TemplateClass* %{{.*}})
-// CHECK-DAG: define {{.*}}void @__omp_offloading__{{.*}}_globals_l[[@LINE+74]]_ctor()
+// CHECK-DAG: define {{.*}}void @__omp_offloading__{{.*}}_globals_l[[@LINE+78]]_ctor()
 
 #ifndef HEADER
 #define HEADER
@@ -68,6 +76,10 @@ int hhh = 0;
 #pragma omp declare target link(eee, fff, ggg, hhh)
 
 int out_decl_target = 0;
+#ifdef OMP5
+#pragma omp declare target(out_decl_target)
+#endif
+
 #pragma omp declare target
 void lambda () {
 #ifdef __cpp_lambdas
@@ -223,5 +235,19 @@ int main() {
 // CHECK-DAG: !{i32 1, !"aaa", i32 0, i32 {{[0-9]+}}}
 // CHECK-DAG: !{i32 1, !"ccc", i32 0, i32 {{[0-9]+}}}
 // CHECK-DAG: !{{{.+}}virtual_foo
+
+#ifdef OMP5
+void host_fun() {}
+#pragma omp declare target to(host_fun) device_type(host)
+void device_fun() {}
+#pragma omp declare target to(device_fun) device_type(nohost)
+// HOST5-NOT: define {{.*}}void {{.*}}device_fun{{.*}}
+// HOST5: define {{.*}}void {{.*}}host_fun{{.*}}
+// HOST5-NOT: define {{.*}}void {{.*}}device_fun{{.*}}
+
+// DEV5-NOT: define {{.*}}void {{.*}}host_fun{{.*}}
+// DEV5: define {{.*}}void {{.*}}device_fun{{.*}}
+// DEV5-NOT: define {{.*}}void {{.*}}host_fun{{.*}}
+#endif // OMP5
 
 #endif // HEADER

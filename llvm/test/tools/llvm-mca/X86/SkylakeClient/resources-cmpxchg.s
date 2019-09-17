@@ -3,6 +3,8 @@
 
 cmpxchg8b  (%rax)
 cmpxchg16b (%rax)
+lock cmpxchg8b  (%rax)
+lock cmpxchg16b (%rax)
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -15,6 +17,8 @@ cmpxchg16b (%rax)
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  14     16    2.75    *      *            cmpxchg8b	(%rax)
 # CHECK-NEXT:  19     23    4.00    *      *            cmpxchg16b	(%rax)
+# CHECK-NEXT:  14     16    2.75    *      *            lock		cmpxchg8b	(%rax)
+# CHECK-NEXT:  19     23    4.00    *      *            lock		cmpxchg16b	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SKLDivider
@@ -30,9 +34,11 @@ cmpxchg16b (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     8.75   3.75   1.67   1.67   2.00   7.75   6.75   0.67
+# CHECK-NEXT:  -      -     17.50  7.50   3.33   3.33   4.00   15.50  13.50  1.33
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
 # CHECK-NEXT:  -      -     3.25   2.25   0.83   0.83   1.00   2.25   3.25   0.33   cmpxchg8b	(%rax)
 # CHECK-NEXT:  -      -     5.50   1.50   0.83   0.83   1.00   5.50   3.50   0.33   cmpxchg16b	(%rax)
+# CHECK-NEXT:  -      -     3.25   2.25   0.83   0.83   1.00   2.25   3.25   0.33   lock		cmpxchg8b	(%rax)
+# CHECK-NEXT:  -      -     5.50   1.50   0.83   0.83   1.00   5.50   3.50   0.33   lock		cmpxchg16b	(%rax)

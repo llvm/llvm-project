@@ -61,6 +61,11 @@ def simm6nonzero : Operand<XLenVT>,
   }];
 }
 
+def immzero : Operand<XLenVT>,
+              ImmLeaf<XLenVT, [{return (Imm == 0);}]> {
+  let ParserMatchClass = ImmZeroAsmOperand;
+}
+
 def CLUIImmAsmOperand : AsmOperandClass {
   let Name = "CLUIImm";
   let RenderMethod = "addImmOperands";
@@ -344,7 +349,10 @@ def C_SD : CStore_rri<0b111, "c.sd", GPRC, uimm8_lsb000> {
 }
 
 let rd = 0, imm = 0, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">;
+def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">
+{
+  let Inst{6-2} = 0;
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
@@ -352,6 +360,15 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                         "c.addi", "$rd, $imm"> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = imm{4-0};
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def C_ADDI_NOP : RVInst16CI<0b000, 0b01, (outs GPRX0:$rd_wb),
+                            (ins GPRX0:$rd, immzero:$imm),
+                            "c.addi", "$rd, $imm"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = 0;
+  let isAsmParserOnly = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
@@ -521,6 +538,105 @@ def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther> {
 }
 
 } // Predicates = [HasStdExtC]
+
+//===----------------------------------------------------------------------===//
+// HINT Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtC, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in
+{
+
+let rd = 0 in
+def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
+                            "c.nop", "$imm"> {
+  let Inst{6-2} = imm{4-0};
+  let DecoderMethod = "decodeRVCInstrSImm";
+}
+
+// Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
+def C_ADDI_HINT_X0 : RVInst16CI<0b000, 0b01, (outs GPRX0:$rd_wb),
+                                (ins GPRX0:$rd, simm6nonzero:$imm),
+                                "c.addi", "$rd, $imm"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = imm{4-0};
+  let isAsmParserOnly = 1;
+}
+
+def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
+                                      (ins GPRNoX0:$rd, immzero:$imm),
+                                      "c.addi", "$rd, $imm"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = 0;
+  let isAsmParserOnly = 1;
+}
+
+def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),
+                           "c.li", "$rd, $imm"> {
+  let Inst{6-2} = imm{4-0};
+  let Inst{11-7} = 0;
+  let DecoderMethod = "decodeRVCInstrRdSImm";
+}
+
+def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
+                            (ins c_lui_imm:$imm),
+                            "c.lui", "$rd, $imm"> {
+  let Inst{6-2} = imm{4-0};
+  let Inst{11-7} = 0;
+  let DecoderMethod = "decodeRVCInstrRdSImm";
+}
+
+def C_MV_HINT : RVInst16CR<0b1000, 0b10, (outs GPRX0:$rs1), (ins GPRNoX0:$rs2),
+                           "c.mv", "$rs1, $rs2">
+{
+  let Inst{11-7} = 0;
+  let DecoderMethod = "decodeRVCInstrRdRs2";
+}
+
+def C_ADD_HINT : RVInst16CR<0b1001, 0b10, (outs GPRX0:$rs1_wb),
+                            (ins GPRX0:$rs1, GPRNoX0:$rs2),
+                            "c.add", "$rs1, $rs2"> {
+  let Constraints = "$rs1 = $rs1_wb";
+  let Inst{11-7} = 0;
+  let DecoderMethod = "decodeRVCInstrRdRs1Rs2";
+}
+
+def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
+                             (ins GPRX0:$rd, uimmlog2xlennonzero:$imm),
+                             "c.slli" ,"$rd, $imm"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = imm{4-0};
+  let Inst{11-7} = 0;
+  let DecoderMethod = "decodeRVCInstrRdRs1UImm";
+}
+
+def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
+                               "c.slli64" ,"$rd"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = 0;
+  let Inst{12} = 0;
+}
+
+def C_SRLI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
+                               (ins GPRC:$rd),
+                               "c.srli64", "$rd"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = 0;
+  let Inst{11-10} = 0;
+  let Inst{12} = 0;
+}
+
+def C_SRAI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
+                               (ins GPRC:$rd),
+                               "c.srai64", "$rd"> {
+  let Constraints = "$rd = $rd_wb";
+  let Inst{6-2} = 0;
+  let Inst{11-10} = 1;
+  let Inst{12} = 0;
+}
+
+} // Predicates = [HasStdExtC, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
+  // mayStore = 0
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

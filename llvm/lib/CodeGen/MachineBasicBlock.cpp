@@ -39,6 +39,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
 
+static cl::opt<bool> PrintSlotIndexes(
+    "print-slotindexes",
+    cl::desc("When printing machine IR, annotate instructions and blocks with "
+             "SlotIndexes when available"),
+    cl::init(true), cl::Hidden);
+
 MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
     : BB(B), Number(-1), xParent(&MF) {
   Insts.Parent = this;
@@ -291,7 +297,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     return;
   }
 
-  if (Indexes)
+  if (Indexes && PrintSlotIndexes)
     OS << Indexes->getMBBStartIdx(this) << '\t';
 
   OS << "bb." << getNumber();
@@ -320,9 +326,9 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "landing-pad";
     HasAttributes = true;
   }
-  if (getAlignment()) {
+  if (getLogAlignment()) {
     OS << (HasAttributes ? ", " : " (");
-    OS << "align " << getAlignment();
+    OS << "align " << getLogAlignment();
     HasAttributes = true;
   }
   if (HasAttributes)
@@ -402,7 +408,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   bool IsInBundle = false;
   for (const MachineInstr &MI : instrs()) {
-    if (Indexes) {
+    if (Indexes && PrintSlotIndexes) {
       if (Indexes->hasIndex(MI))
         OS << Indexes->getInstructionIndex(MI);
       OS << '\t';
@@ -772,7 +778,8 @@ void MachineBasicBlock::transferSuccessors(MachineBasicBlock *FromMBB) {
   while (!FromMBB->succ_empty()) {
     MachineBasicBlock *Succ = *FromMBB->succ_begin();
 
-    // If probability list is empty it means we don't use it (disabled optimization).
+    // If probability list is empty it means we don't use it (disabled
+    // optimization).
     if (!FromMBB->Probs.empty()) {
       auto Prob = *FromMBB->Probs.begin();
       addSuccessor(Succ, Prob);
@@ -798,13 +805,7 @@ MachineBasicBlock::transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB) {
     FromMBB->removeSuccessor(Succ);
 
     // Fix up any PHI nodes in the successor.
-    for (MachineBasicBlock::instr_iterator MI = Succ->instr_begin(),
-           ME = Succ->instr_end(); MI != ME && MI->isPHI(); ++MI)
-      for (unsigned i = 2, e = MI->getNumOperands()+1; i != e; i += 2) {
-        MachineOperand &MO = MI->getOperand(i);
-        if (MO.getMBB() == FromMBB)
-          MO.setMBB(this);
-      }
+    Succ->replacePhiUsesWith(FromMBB, this);
   }
   normalizeSuccProbs();
 }
@@ -979,13 +980,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     }
   }
 
-  // Fix PHI nodes in Succ so they refer to NMBB instead of this
-  for (MachineBasicBlock::instr_iterator
-         i = Succ->instr_begin(),e = Succ->instr_end();
-       i != e && i->isPHI(); ++i)
-    for (unsigned ni = 1, ne = i->getNumOperands(); ni != ne; ni += 2)
-      if (i->getOperand(ni+1).getMBB() == this)
-        i->getOperand(ni+1).setMBB(NMBB);
+  // Fix PHI nodes in Succ so they refer to NMBB instead of this.
+  Succ->replacePhiUsesWith(this, NMBB);
 
   // Inherit live-ins from the successor
   for (const auto &LI : Succ->liveins())
@@ -1215,6 +1211,16 @@ void MachineBasicBlock::ReplaceUsesOfBlockWith(MachineBasicBlock *Old,
 
   // Update the successor information.
   replaceSuccessor(Old, New);
+}
+
+void MachineBasicBlock::replacePhiUsesWith(MachineBasicBlock *Old,
+                                           MachineBasicBlock *New) {
+  for (MachineInstr &MI : phis())
+    for (unsigned i = 2, e = MI.getNumOperands() + 1; i != e; i += 2) {
+      MachineOperand &MO = MI.getOperand(i);
+      if (MO.getMBB() == Old)
+        MO.setMBB(New);
+    }
 }
 
 /// Various pieces of code can cause excess edges in the CFG to be inserted.  If

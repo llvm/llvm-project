@@ -1,7 +1,7 @@
 ; RUN: llvm-rc /FO %t -- %p/Inputs/tag-stringtable-basic.rc
 ; RUN: llvm-readobj %t | FileCheck %s
 
-; CHECK:      Resource type (int): 6
+; CHECK:      Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 1
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -16,7 +16,7 @@
 ; CHECK-NEXT:   0020: 00000000 00000000                    |........|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 6
+; CHECK-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 2
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -31,7 +31,7 @@
 ; CHECK-NEXT:   0020: 00000000 00000000                    |........|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 6
+; CHECK-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 2
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -48,7 +48,7 @@
 ; CHECK-NEXT:   0040: 00000000 00000000 00000000 00000000  |................|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 6
+; CHECK-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 3
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -63,7 +63,7 @@
 ; CHECK-NEXT:   0020: 00000000 0000                        |......|
 ; CHECK-NEXT: )
 
-; CHECK-DAG:  Resource type (int): 6
+; CHECK-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; CHECK-NEXT: Resource name (int): 4096
 ; CHECK-NEXT: Data version: 0
 ; CHECK-NEXT: Memory flags: 0x1030
@@ -84,7 +84,7 @@
 ; RUN: llvm-rc /N /FO %t0 -- %p/Inputs/tag-stringtable-basic.rc
 ; RUN: llvm-readobj %t0 | FileCheck %s --check-prefix=NULL
 
-; NULL:      Resource type (int): 6
+; NULL:      Resource type (int): STRINGTABLE (ID 6)
 ; NULL-NEXT: Resource name (int): 1
 ; NULL-NEXT: Data version: 0
 ; NULL-NEXT: Memory flags: 0x1030
@@ -100,7 +100,7 @@
 ; NULL-NEXT:   0030: 00000000                             |....|
 ; NULL-NEXT: )
 
-; NULL-DAG:  Resource type (int): 6
+; NULL-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; NULL-NEXT: Resource name (int): 2
 ; NULL-NEXT: Data version: 0
 ; NULL-NEXT: Memory flags: 0x1030
@@ -115,7 +115,7 @@
 ; NULL-NEXT:   0020: 00000000 00000000 00000000           |............|
 ; NULL-NEXT: )
 
-; NULL-DAG:  Resource type (int): 6
+; NULL-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; NULL-NEXT: Resource name (int): 2
 ; NULL-NEXT: Data version: 0
 ; NULL-NEXT: Memory flags: 0x1030
@@ -133,7 +133,7 @@
 ; NULL-NEXT:   0050: 00000000 0000                        |......|
 ; NULL-NEXT: )
 
-; NULL-DAG:  Resource type (int): 6
+; NULL-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; NULL-NEXT: Resource name (int): 3
 ; NULL-NEXT: Data version: 0
 ; NULL-NEXT: Memory flags: 0x1030
@@ -148,7 +148,7 @@
 ; NULL-NEXT:   0020: 00000000 00000000                    |........|
 ; NULL-NEXT: )
 
-; NULL-DAG:  Resource type (int): 6
+; NULL-DAG:  Resource type (int): STRINGTABLE (ID 6)
 ; NULL-NEXT: Resource name (int): 4096
 ; NULL-NEXT: Data version: 0
 ; NULL-NEXT: Memory flags: 0x1030

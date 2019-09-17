@@ -508,7 +508,9 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : Info.OrigArgs) {
     if (!isSupportedType(Arg.Ty))
       return false;
-    if (Arg.Flags.isByVal() || Arg.Flags.isSRet())
+    if (Arg.Flags[0].isByVal())
+      return false;
+    if (Arg.Flags[0].isSRet() && !Arg.Ty->isPointerTy())
       return false;
   }
 
@@ -641,7 +643,7 @@ void MipsCallLowering::subTargetRegTypeForCallingConv(
         F.getContext(), F.getCallingConv(), VT);
 
     for (unsigned i = 0; i < NumRegs; ++i) {
-      ISD::ArgFlagsTy Flags = Arg.Flags;
+      ISD::ArgFlagsTy Flags = Arg.Flags[0];
 
       if (i == 0)
         Flags.setOrigAlign(TLI.getABIAlignmentForCallingConv(Arg.Ty, DL));

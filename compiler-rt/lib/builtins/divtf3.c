@@ -213,7 +213,7 @@ COMPILER_RT_ABI fp_t __divtf3(fp_t a, fp_t b) {
     // Round.
     absResult += round;
     // Insert the sign and return.
-    const long double result = fromRep(absResult | quotientSign);
+    const fp_t result = fromRep(absResult | quotientSign);
     return result;
   }
 }

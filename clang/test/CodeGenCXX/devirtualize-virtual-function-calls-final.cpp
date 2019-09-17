@@ -24,10 +24,23 @@ namespace Test2 {
   }
 }
 
-namespace Test3 {
+namespace Test2a {
   struct A {
+    virtual ~A() final {}
     virtual int f();
   };
+
+  // CHECK-LABEL: define i32 @_ZN6Test2a1fEPNS_1AE
+  int f(A *a) {
+    // CHECK: call i32 @_ZN6Test2a1A1fEv
+    return a->f();
+  }
+}
+
+
+namespace Test3 {
+  struct A {
+    virtual int f();  };
 
   struct B final : A { };
 

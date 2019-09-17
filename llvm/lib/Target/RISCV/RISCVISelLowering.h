@@ -145,6 +145,8 @@ public:
   unsigned
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
+  bool shouldExtendTypeInLibCall(EVT Type) const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins,

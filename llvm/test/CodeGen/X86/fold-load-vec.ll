@@ -12,7 +12,7 @@ define void @sample_test(<4 x float>* %source, <2 x float>* %dest) nounwind {
 ; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movlps %xmm0, (%rsp)
-; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    movlps %xmm0, (%rsp)
 ; CHECK-NEXT:    movlps %xmm0, (%rsi)
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax

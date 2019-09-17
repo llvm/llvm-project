@@ -1,5 +1,0 @@
-RUN: llvm-objdump -r %p/Inputs/elf-reloc-no-sym.x86_64 \
-RUN:              | FileCheck %s
-
-; CHECK: elf-reloc-no-sym.x86_64:       file format ELF64-x86-64
-; CHECK-NOT: {{.}}

@@ -153,7 +153,7 @@
 ---
 
 name:            expand_BNEZC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -230,7 +230,7 @@ body:             |
 ---
 
 name:            expand_BEQZC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -307,7 +307,7 @@ body:             |
 ---
 
 name:            expand_BNEC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -405,7 +405,7 @@ body:             |
 ---
 
 name:            expand_BEQC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -503,7 +503,7 @@ body:             |
 ---
 
 name:            expand_BLTC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -601,7 +601,7 @@ body:             |
 ---
 
 name:            expand_BLTUC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -699,7 +699,7 @@ body:             |
 ---
 
 name:            expand_BGEC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -797,7 +797,7 @@ body:             |
 ---
 
 name:            expand_BGEUC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -895,7 +895,7 @@ body:             |
 ---
 
 name:            expand_BLEZC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -993,7 +993,7 @@ body:             |
 ---
 
 name:            expand_BLTZC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1091,7 +1091,7 @@ body:             |
 ---
 
 name:            expand_BGEZC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -1189,7 +1189,7 @@ body:             |
 ---
 
 name:            expand_BGTZC64
-alignment:       3
+alignment:       8
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

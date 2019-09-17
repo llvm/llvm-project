@@ -437,6 +437,13 @@ let RecomputePerFunction = 1 in {
 
   def UseBTI : Predicate<[{ MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
   def NotUseBTI : Predicate<[{ !MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
+
+  // Toggles patterns which aren't beneficial in GlobalISel when we aren't
+  // optimizing. This allows us to selectively use patterns without impacting
+  // SelectionDAG's behaviour.
+  // FIXME: One day there will probably be a nicer way to check for this, but
+  // today is not that day.
+  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasProperty(MachineFunctionProperties::Property::FailedISel) || !MF->getProperties().hasProperty(MachineFunctionProperties::Property::Legalized)">;
 }
 
 include "AArch64InstrFormats.td"
@@ -940,8 +947,12 @@ def trunc_imm : SDNodeXForm<imm, [{
 def gi_trunc_imm : GICustomOperandRenderer<"renderTruncImm">,
   GISDNodeXFormEquiv<trunc_imm>;
 
+let Predicates = [OptimizedGISelOrOtherSelector] in {
+// The SUBREG_TO_REG isn't eliminated at -O0, which can result in pointless
+// copies.
 def : Pat<(i64 i64imm_32bit:$src),
           (SUBREG_TO_REG (i64 0), (MOVi32imm (trunc_imm imm:$src)), sub_32)>;
+}
 
 // Materialize FP constants via MOVi32imm/MOVi64imm (MachO large code model).
 def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
@@ -1035,10 +1046,10 @@ def : Pat<(sub GPR32:$Rn, arith_shifted_reg32:$Rm),
 def : Pat<(sub GPR64:$Rn, arith_shifted_reg64:$Rm),
           (SUBSXrs GPR64:$Rn, arith_shifted_reg64:$Rm)>;
 let AddedComplexity = 1 in {
-def : Pat<(sub GPR32sp:$R2, arith_extended_reg32<i32>:$R3),
-          (SUBSWrx GPR32sp:$R2, arith_extended_reg32<i32>:$R3)>;
-def : Pat<(sub GPR64sp:$R2, arith_extended_reg32to64<i64>:$R3),
-          (SUBSXrx GPR64sp:$R2, arith_extended_reg32to64<i64>:$R3)>;
+def : Pat<(sub GPR32sp:$R2, arith_extended_reg32_i32:$R3),
+          (SUBSWrx GPR32sp:$R2, arith_extended_reg32_i32:$R3)>;
+def : Pat<(sub GPR64sp:$R2, arith_extended_reg32to64_i64:$R3),
+          (SUBSXrx GPR64sp:$R2, arith_extended_reg32to64_i64:$R3)>;
 }
 
 // Because of the immediate format for add/sub-imm instructions, the
@@ -3304,19 +3315,36 @@ defm FNMSUB : ThreeOperandFPData<1, 1, "fnmsub",
 
 // N.b. FMSUB etc have the accumulator at the *end* of (outs), unlike
 // the NEON variant.
+
+// Here we handle first -(a + b*c) for FNMADD:
+
+let Predicates = [HasNEON, HasFullFP16] in
+def : Pat<(f16 (fma (fneg FPR16:$Rn), FPR16:$Rm, FPR16:$Ra)),
+          (FMSUBHrrr FPR16:$Rn, FPR16:$Rm, FPR16:$Ra)>;
+
 def : Pat<(f32 (fma (fneg FPR32:$Rn), FPR32:$Rm, FPR32:$Ra)),
           (FMSUBSrrr FPR32:$Rn, FPR32:$Rm, FPR32:$Ra)>;
 
 def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, FPR64:$Ra)),
           (FMSUBDrrr FPR64:$Rn, FPR64:$Rm, FPR64:$Ra)>;
 
-// We handled -(a + b*c) for FNMADD above, now it's time for "(-a) + (-b)*c" and
-// "(-a) + b*(-c)".
+// Now it's time for "(-a) + (-b)*c"
+
+let Predicates = [HasNEON, HasFullFP16] in
+def : Pat<(f16 (fma (fneg FPR16:$Rn), FPR16:$Rm, (fneg FPR16:$Ra))),
+          (FNMADDHrrr FPR16:$Rn, FPR16:$Rm, FPR16:$Ra)>;
+
 def : Pat<(f32 (fma (fneg FPR32:$Rn), FPR32:$Rm, (fneg FPR32:$Ra))),
           (FNMADDSrrr FPR32:$Rn, FPR32:$Rm, FPR32:$Ra)>;
 
 def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, (fneg FPR64:$Ra))),
           (FNMADDDrrr FPR64:$Rn, FPR64:$Rm, FPR64:$Ra)>;
+
+// And here "(-a) + b*(-c)"
+
+let Predicates = [HasNEON, HasFullFP16] in
+def : Pat<(f16 (fma FPR16:$Rn, (fneg FPR16:$Rm), (fneg FPR16:$Ra))),
+          (FNMADDHrrr FPR16:$Rn, FPR16:$Rm, FPR16:$Ra)>;
 
 def : Pat<(f32 (fma FPR32:$Rn, (fneg FPR32:$Rm), (fneg FPR32:$Ra))),
           (FNMADDSrrr FPR32:$Rn, FPR32:$Rm, FPR32:$Ra)>;
@@ -6961,6 +6989,16 @@ def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
 
 def MOVMCSym : Pseudo<(outs GPR64:$dst), (ins i64imm:$sym), []>, Sched<[]>;
 def : Pat<(i64 (AArch64LocalRecover mcsym:$sym)), (MOVMCSym mcsym:$sym)>;
+
+// Extracting lane zero is a special case where we can just use a plain
+// EXTRACT_SUBREG instruction, which will become FMOV. This is easier for the
+// rest of the compiler, especially the register allocator and copy propagation,
+// to reason about, so is preferred when it's possible to use it.
+let AddedComplexity = 10 in {
+  def : Pat<(i64 (extractelt (v2i64 V128:$V), (i64 0))), (EXTRACT_SUBREG V128:$V, dsub)>;
+  def : Pat<(i32 (extractelt (v4i32 V128:$V), (i64 0))), (EXTRACT_SUBREG V128:$V, ssub)>;
+  def : Pat<(i32 (extractelt (v2i32 V64:$V), (i64 0))), (EXTRACT_SUBREG V64:$V, ssub)>;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

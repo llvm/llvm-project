@@ -36,8 +36,9 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
@@ -957,8 +958,9 @@ private:
   /// Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
-  /// Track DBG_VALUEs of (unmodified) register units.
-  DenseMap<unsigned, TinyPtrVector<MachineInstr*>> SeenDbgInstrs;
+  /// Track DBG_VALUEs of (unmodified) register units. Each DBG_VALUE has an
+  /// entry in this map for each unit it touches.
+  DenseMap<unsigned, TinyPtrVector<MachineInstr *>> SeenDbgInstrs;
 
   /// Sink Copy instructions unused in the same block close to their uses in
   /// successors.
@@ -1093,6 +1095,14 @@ static bool hasRegisterDependency(MachineInstr *MI,
   return HasRegDependency;
 }
 
+static SmallSet<unsigned, 4> getRegUnits(unsigned Reg,
+                                         const TargetRegisterInfo *TRI) {
+  SmallSet<unsigned, 4> RegUnits;
+  for (auto RI = MCRegUnitIterator(Reg, TRI); RI.isValid(); ++RI)
+    RegUnits.insert(*RI);
+  return RegUnits;
+}
+
 bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
                                          MachineFunction &MF,
                                          const TargetRegisterInfo *TRI,
@@ -1136,8 +1146,10 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
                                   ModifiedRegUnits, UsedRegUnits))
           continue;
 
-        // Record debug use of this register.
-        SeenDbgInstrs[MO.getReg()].push_back(MI);
+        // Record debug use of each reg unit.
+        SmallSet<unsigned, 4> Units = getRegUnits(MO.getReg(), TRI);
+        for (unsigned Reg : Units)
+          SeenDbgInstrs[Reg].push_back(MI);
       }
       continue;
     }
@@ -1176,15 +1188,22 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     assert((SuccBB->pred_size() == 1 && *SuccBB->pred_begin() == &CurBB) &&
            "Unexpected predecessor");
 
-    // Collect DBG_VALUEs that must sink with this copy.
+    // Collect DBG_VALUEs that must sink with this copy. We've previously
+    // recorded which reg units that DBG_VALUEs read, if this instruction
+    // writes any of those units then the corresponding DBG_VALUEs must sink.
+    SetVector<MachineInstr *> DbgValsToSinkSet;
     SmallVector<MachineInstr *, 4> DbgValsToSink;
     for (auto &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
-      Register reg = MO.getReg();
-      for (auto *MI : SeenDbgInstrs.lookup(reg))
-        DbgValsToSink.push_back(MI);
+
+      SmallSet<unsigned, 4> Units = getRegUnits(MO.getReg(), TRI);
+      for (unsigned Reg : Units)
+        for (auto *MI : SeenDbgInstrs.lookup(Reg))
+          DbgValsToSinkSet.insert(MI);
     }
+    DbgValsToSink.insert(DbgValsToSink.begin(), DbgValsToSinkSet.begin(),
+                         DbgValsToSinkSet.end());
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.

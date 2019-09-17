@@ -130,9 +130,10 @@ body:             |
 
     ; CHECK-LABEL: name: lshr_32_notimm64
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 8
-    ; CHECK: [[ANDXrr:%[0-9]+]]:gpr64 = ANDXrr [[MOVi64imm]], [[MOVi64imm]]
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXrr]].sub_32
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 8
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[SUBREG_TO_REG]], 8000
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXri]].sub_32
     ; CHECK: [[LSRVWr:%[0-9]+]]:gpr32 = LSRVWr [[COPY]], [[COPY1]]
     ; CHECK: $w0 = COPY [[LSRVWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -154,9 +155,10 @@ body:             |
 
     ; CHECK-LABEL: name: ashr_32_notimm64
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 8
-    ; CHECK: [[ANDXrr:%[0-9]+]]:gpr64 = ANDXrr [[MOVi64imm]], [[MOVi64imm]]
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXrr]].sub_32
+    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 8
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[SUBREG_TO_REG]], 8000
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXri]].sub_32
     ; CHECK: [[ASRVWr:%[0-9]+]]:gpr32 = ASRVWr [[COPY]], [[COPY1]]
     ; CHECK: $w0 = COPY [[ASRVWr]]
     ; CHECK: RET_ReallyLR implicit $w0

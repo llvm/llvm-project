@@ -327,7 +327,7 @@ public:
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
                                             unsigned &JumpTableSize) {
     /// Try to find the estimated number of clusters. Note that the number of
-    /// clusters identified in this function could be different from the actural
+    /// clusters identified in this function could be different from the actual
     /// numbers found in lowering. This function ignore switches that are
     /// lowered with a mix of jump table / bit test / BTree. This function was
     /// initially intended to be used when estimating the cost of switch in
@@ -380,10 +380,6 @@ public:
     }
     return N;
   }
-
-  unsigned getJumpBufAlignment() { return getTLI()->getJumpBufAlignment(); }
-
-  unsigned getJumpBufSize() { return getTLI()->getJumpBufSize(); }
 
   bool shouldBuildLookupTables() {
     const TargetLoweringBase *TLI = getTLI();

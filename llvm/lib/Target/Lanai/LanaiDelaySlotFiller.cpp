@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Simple pass to fills delay slots with useful instructions.
+// Simple pass to fill delay slots with useful instructions.
 //
 //===----------------------------------------------------------------------===//
 

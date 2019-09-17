@@ -1,4 +1,5 @@
-# RUN: not llvm-mc -triple=riscv32 -mattr=+c < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv32 -mattr=+c -mattr=-rvc-hints < %s 2>&1 \
+# RUN:     | FileCheck %s
 
 ## GPRC
 .LBB:
@@ -20,16 +21,16 @@ c.lwsp  x0, 4(sp) # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 c.lwsp  zero, 4(sp) # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 c.jr  x0 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
 c.jalr  zero # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-c.addi  x0, x0, 1 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-c.li  zero, 2 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
-c.slli  zero, zero, 4 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-c.mv  zero, s0 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+c.addi  x0, x0, 1 # CHECK: :[[@LINE]]:13: error: immediate must be zero
+c.li  zero, 2 # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
+c.slli  zero, zero, 4 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+c.mv  zero, s0 # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 c.mv  ra, x0 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
 c.add  ra, ra, x0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
-c.add  zero, zero, sp # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+c.add  zero, zero, sp # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 
 ## GPRNoX0X2
-c.lui x0, 4 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+c.lui x0, 4 # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 c.lui x2, 4 # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
 
 ## SP
@@ -54,7 +55,7 @@ c.andi a0, %lo(foo) # CHECK: :[[@LINE]]:12: error: immediate must be an integer 
 c.andi a0, %hi(foo) # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-32, 31]
 
 ## simm6nonzero
-c.addi t0, 0 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
+c.addi t0, 0 # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 c.addi t0, -33 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 c.addi t0, 32 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 c.addi t0, foo # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]

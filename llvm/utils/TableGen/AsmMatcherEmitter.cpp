@@ -1439,7 +1439,7 @@ void AsmMatcherInfo::buildOperandMatchInfo() {
 
   /// Map containing a mask with all operands indices that can be found for
   /// that class inside a instruction.
-  typedef std::map<ClassInfo *, unsigned, less_ptr<ClassInfo>> OpClassMaskTy;
+  typedef std::map<ClassInfo *, unsigned, deref<std::less<>>> OpClassMaskTy;
   OpClassMaskTy OpClassMask;
 
   for (const auto &MI : Matchables) {
@@ -2381,7 +2381,7 @@ static void emitMatchClassEnumeration(CodeGenTarget &Target,
   OS << "  NumMatchClassKinds\n";
   OS << "};\n\n";
 
-  OS << "}\n\n";
+  OS << "} // end anonymous namespace\n\n";
 }
 
 /// emitMatchClassDiagStrings - Emit a function to get the diagnostic text to be
@@ -2866,7 +2866,7 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "    }\n";
   OS << "  };\n";
 
-  OS << "} // end anonymous namespace.\n\n";
+  OS << "} // end anonymous namespace\n\n";
 
   OS << "static const OperandMatchEntry OperandMatchTable["
      << Info.OperandMatchInfo.size() << "] = {\n";
@@ -3366,7 +3366,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
   }
   OS << "};\n\n"
-     << "const static FeatureBitset FeatureBitsets[] {\n"
+     << "static constexpr FeatureBitset FeatureBitsets[] = {\n"
      << "  {}, // AMFBS_None\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())
@@ -3422,7 +3422,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    }\n";
   OS << "  };\n";
 
-  OS << "} // end anonymous namespace.\n\n";
+  OS << "} // end anonymous namespace\n\n";
 
   unsigned VariantCount = Target.getAsmParserVariantCount();
   for (unsigned VC = 0; VC != VariantCount; ++VC) {

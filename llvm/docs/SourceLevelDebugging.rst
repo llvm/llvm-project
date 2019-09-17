@@ -840,25 +840,25 @@ of variable ``!23`` should not flow "down" into the ``%exit`` block.
 C/C++ front-end specific debug information
 ==========================================
 
-The C and C++ front-ends represent information about the program in a format
-that is effectively identical to `DWARF 3.0
-<http://www.eagercon.com/dwarf/dwarf3std.htm>`_ in terms of information
-content.  This allows code generators to trivially support native debuggers by
-generating standard dwarf information, and contains enough information for
-non-dwarf targets to translate it as needed.
+The C and C++ front-ends represent information about the program in a
+format that is effectively identical to `DWARF <http://www.dwarfstd.org/>`_
+in terms of information content.  This allows code generators to
+trivially support native debuggers by generating standard dwarf
+information, and contains enough information for non-dwarf targets to
+translate it as needed.
 
 This section describes the forms used to represent C and C++ programs.  Other
 languages could pattern themselves after this (which itself is tuned to
-representing programs in the same way that DWARF 3 does), or they could choose
+representing programs in the same way that DWARF does), or they could choose
 to provide completely different forms if they don't fit into the DWARF model.
 As support for debugging information gets added to the various LLVM
 source-language front-ends, the information used should be documented here.
 
-The following sections provide examples of a few C/C++ constructs and the debug
-information that would best describe those constructs.  The canonical
-references are the ``DIDescriptor`` classes defined in
-``include/llvm/IR/DebugInfo.h`` and the implementations of the helper functions
-in ``lib/IR/DIBuilder.cpp``.
+The following sections provide examples of a few C/C++ constructs and
+the debug information that would best describe those constructs.  The
+canonical references are the ``DINode`` classes defined in
+``include/llvm/IR/DebugInfoMetadata.h`` and the implementations of the
+helper functions in ``lib/IR/DIBuilder.cpp``.
 
 C/C++ source file information
 -----------------------------

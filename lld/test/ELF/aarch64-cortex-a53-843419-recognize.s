@@ -1,8 +1,8 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
-// RUN: ld.lld -fix-cortex-a53-843419 -verbose %t.o -o %t2 2>&1 | FileCheck -check-prefix CHECK-PRINT %s
+// RUN: ld.lld -fix-cortex-a53-843419 -z separate-code -verbose %t.o -o %t2 2>&1 | FileCheck -check-prefix CHECK-PRINT %s
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s -check-prefixes=CHECK,CHECK-FIX
-// RUN: ld.lld %t.o -o %t3
+// RUN: ld.lld %t.o -z separate-code -o %t3
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t3 | FileCheck %s -check-prefixes=CHECK,CHECK-NOFIX
 // Test cases for Cortex-A53 Erratum 843419
 // See ARM-EPM-048406 Cortex_A53_MPCore_Software_Developers_Errata_Notice.pdf
@@ -85,7 +85,7 @@ t3_ffc_ldrpost:
 // CHECK-NEXT:    217ff8:        40 02 00 b0     adrp    x0, #299008
 // CHECK-NEXT:    217ffc:        21 8c 00 bc     str     s1, [x1, #8]!
 // CHECK-FIX:     218000:        09 b0 00 14     b       #180260
-// CHECK-NOFIX:   218000:        02 00 40 f9     ldr             x2, [x0]
+// CHECK-NOFIX:   218000:        02 0c 40 f9     ldr     x2, [x0, #24]
 // CHECK-NEXT:    218004:        c0 03 5f d6     ret
         .section .text.04, "ax", %progbits
         .balign 4096
@@ -103,7 +103,7 @@ t3_ff8_strpre:
 // CHECK-NEXT:    219ffc:        3c 02 00 f0     adrp    x28, #290816
 // CHECK-NEXT:    21a000:        42 00 00 f9     str             x2, [x2]
 // CHECK-FIX:     21a004:        0a a8 00 14     b       #172072
-// CHECK-NOFIX:   21a004:        9c 07 00 f9     str     x28, [x28, #8]
+// CHECK-NOFIX:   21a004:        9c 13 00 f9     str     x28, [x28, #32]
 // CHECK-NEXT:    21a008:        c0 03 5f d6     ret
         .section .text.05, "ax", %progbits
         .balign 4096
@@ -121,7 +121,7 @@ t3_ffc_str:
 // CHECK-NEXT:    21bffc:        3c 02 00 b0     adrp    x28, #282624
 // CHECK-NEXT:    21c000:        44 00 00 b9     str             w4, [x2]
 // CHECK-FIX:     21c004:        0c a0 00 14     b       #163888
-// CHECK-NOFIX:   21c004:        84 0b 00 f9     str     x4, [x28, #16]
+// CHECK-NOFIX:   21c004:        84 17 00 f9     str     x4, [x28, #40]
 // CHECK-NEXT:    21c008:        c0 03 5f d6     ret
         .section .text.06, "ax", %progbits
         .balign 4096
@@ -192,7 +192,7 @@ t3_ffc_sturh:
 // CHECK-NEXT:    223ff8:        f2 01 00 b0     adrp    x18, #249856
 // CHECK-NEXT:    223ffc:        e3 ff ff 58     ldr     x3, #-4
 // CHECK-FIX:     224000:        15 80 00 14     b       #131156
-// CHECK-NOFIX:   224000:        52 02 40 f9     ldr             x18, [x18]
+// CHECK-NOFIX:   224000:        52 0e 40 f9     ldr     x18, [x18, #24]
 // CHECK-NEXT:    224004:        c0 03 5f d6     ret
         .section .text.10, "ax", %progbits
         .balign 4096
@@ -210,7 +210,7 @@ t3_ff8_literal:
 // CHECK-NEXT:    225ffc:        cf 01 00 f0     adrp    x15, #241664
 // CHECK-NEXT:    226000:        43 68 61 f8     ldr             x3, [x2, x1]
 // CHECK-FIX:     226004:        16 78 00 14     b       #122968
-// CHECK-NOFIX:   226004:        ea 05 40 f9     ldr     x10, [x15, #8]
+// CHECK-NOFIX:   226004:        ea 11 40 f9     ldr     x10, [x15, #32]
 // CHECK-NEXT:    226008:        c0 03 5f d6     ret
         .section .text.11, "ax", %progbits
         .balign 4096
@@ -228,7 +228,7 @@ t3_ffc_register:
 // CHECK-NEXT:    227ff8:        d0 01 00 b0     adrp    x16, #233472
 // CHECK-NEXT:    227ffc:        61 08 00 a9     stp             x1, x2, [x3]
 // CHECK-FIX:     228000:        19 70 00 14     b       #114788
-// CHECK-NOFIX:   228000:        0d 0a 40 f9     ldr     x13, [x16, #16]
+// CHECK-NOFIX:   228000:        0d 16 40 f9     ldr     x13, [x16, #40]
 // CHECK-NEXT:    228004:        c0 03 5f d6     ret
         .section .text.12, "ax", %progbits
         .balign 4096
@@ -246,7 +246,7 @@ t3_ff8_stp:
 // CHECK-NEXT:    229ffc:        a7 01 00 f0     adrp    x7, #225280
 // CHECK-NEXT:    22a000:        61 08 00 a8     stnp            x1, x2, [x3]
 // CHECK-FIX:     22a004:        1a 68 00 14     b       #106600
-// CHECK-NOFIX:   22a004:        e9 00 40 f9     ldr             x9, [x7]
+// CHECK-NOFIX:   22a004:        e9 0c 40 f9     ldr             x9, [x7, #24]
 // CHECK-NEXT:    22a008:        c0 03 5f d6     ret
         .section .text.13, "ax", %progbits
         .balign 4096
@@ -264,7 +264,7 @@ t3_ffc_stnp:
 // CHECK-NEXT:    22bffc:        b7 01 00 b0     adrp    x23, #217088
 // CHECK-NEXT:    22c000:        20 04 82 0d     st1 { v0.b }[1], [x1], x2
 // CHECK-FIX:     22c004:        1c 60 00 14     b       #98416
-// CHECK-NOFIX:   22c004:        f6 06 40 f9     ldr     x22, [x23, #8]
+// CHECK-NOFIX:   22c004:        f6 12 40 f9     ldr     x22, [x23, #32]
 // CHECK-NEXT:    22c008:        c0 03 5f d6     ret
         .section .text.14, "ax", %progbits
         .balign 4096
@@ -282,7 +282,7 @@ t3_ffc_st1singlepost:
 // CHECK-NEXT:    22dff8:        97 01 00 f0     adrp    x23, #208896
 // CHECK-NEXT:    22dffc:        20 a0 00 4c     st1     { v0.16b, v1.16b }, [x1]
 // CHECK-FIX:     22e000:        1f 58 00 14     b       #90236
-// CHECK-NOFIX:   22e000:        f8 0a 40 f9     ldr     x24, [x23, #16]
+// CHECK-NOFIX:   22e000:        f8 16 40 f9     ldr     x24, [x23, #40]
 // CHECK-NEXT:    22e004:        c0 03 5f d6     ret
         .section .text.15, "ax", %progbits
         .balign 4096
@@ -531,13 +531,13 @@ _start:
 // CHECK-FIX-NEXT:    24401c:    03 08 40 f9     ldr     x3, [x0, #16]
 // CHECK-FIX-NEXT:    244020:    fa 47 ff 17     b       #-188440
 // CHECK-FIX: __CortexA53843419_218000:
-// CHECK-FIX-NEXT:    244024:    02 00 40 f9     ldr     x2, [x0]
+// CHECK-FIX-NEXT:    244024:    02 0c 40 f9     ldr     x2, [x0, #24]
 // CHECK-FIX-NEXT:    244028:    f7 4f ff 17     b       #-180260
 // CHECK-FIX: __CortexA53843419_21A004:
-// CHECK-FIX-NEXT:    24402c:    9c 07 00 f9     str     x28, [x28, #8]
+// CHECK-FIX-NEXT:    24402c:    9c 13 00 f9     str     x28, [x28, #32]
 // CHECK-FIX-NEXT:    244030:    f6 57 ff 17     b       #-172072
 // CHECK-FIX: __CortexA53843419_21C004:
-// CHECK-FIX-NEXT:    244034:    84 0b 00 f9     str     x4, [x28, #16]
+// CHECK-FIX-NEXT:    244034:    84 17 00 f9     str     x4, [x28, #40]
 // CHECK-FIX-NEXT:    244038:    f4 5f ff 17     b       #-163888
 // CHECK-FIX: __CortexA53843419_21E000:
 // CHECK-FIX-NEXT:    24403c:    bd 03 40 f9     ldr     x29, [x29]
@@ -549,22 +549,22 @@ _start:
 // CHECK-FIX-NEXT:    24404c:    41 0a 40 f9     ldr     x1, [x18, #16]
 // CHECK-FIX-NEXT:    244050:    ee 77 ff 17     b       #-139336
 // CHECK-FIX: __CortexA53843419_224000:
-// CHECK-FIX-NEXT:    244054:    52 02 40 f9     ldr     x18, [x18]
+// CHECK-FIX-NEXT:    244054:    52 0e 40 f9     ldr     x18, [x18, #24]
 // CHECK-FIX-NEXT:    244058:    eb 7f ff 17     b       #-131156
 // CHECK-FIX: __CortexA53843419_226004:
-// CHECK-FIX-NEXT:    24405c:    ea 05 40 f9     ldr     x10, [x15, #8]
+// CHECK-FIX-NEXT:    24405c:    ea 11 40 f9     ldr     x10, [x15, #32]
 // CHECK-FIX-NEXT:    244060:    ea 87 ff 17     b       #-122968
 // CHECK-FIX: __CortexA53843419_228000:
-// CHECK-FIX-NEXT:    244064:    0d 0a 40 f9     ldr     x13, [x16, #16]
+// CHECK-FIX-NEXT:    244064:    0d 16 40 f9     ldr     x13, [x16, #40]
 // CHECK-FIX-NEXT:    244068:    e7 8f ff 17     b       #-114788
 // CHECK-FIX: __CortexA53843419_22A004:
-// CHECK-FIX-NEXT:    24406c:    e9 00 40 f9     ldr     x9, [x7]
+// CHECK-FIX-NEXT:    24406c:    e9 0c 40 f9     ldr     x9, [x7, #24]
 // CHECK-FIX-NEXT:    244070:    e6 97 ff 17     b       #-106600
 // CHECK-FIX: __CortexA53843419_22C004:
-// CHECK-FIX-NEXT:    244074:    f6 06 40 f9     ldr     x22, [x23, #8]
+// CHECK-FIX-NEXT:    244074:    f6 12 40 f9     ldr     x22, [x23, #32]
 // CHECK-FIX-NEXT:    244078:    e4 9f ff 17     b       #-98416
 // CHECK-FIX: __CortexA53843419_22E000:
-// CHECK-FIX-NEXT:    24407c:    f8 0a 40 f9     ldr     x24, [x23, #16]
+// CHECK-FIX-NEXT:    24407c:    f8 16 40 f9     ldr     x24, [x23, #40]
 // CHECK-FIX-NEXT:    244080:    e1 a7 ff 17     b       #-90236
 // CHECK-FIX: __CortexA53843419_230004:
 // CHECK-FIX-NEXT:    244084:    02 00 40 f9     ldr     x2, [x0]

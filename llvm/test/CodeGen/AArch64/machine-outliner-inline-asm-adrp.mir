@@ -22,7 +22,7 @@
 ...
 ---
 name:            foo
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
@@ -34,7 +34,7 @@ body:             |
 ...
 ---
 name:            foo2
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
@@ -46,7 +46,7 @@ body:             |
 ...
 ---
 name:            foo3
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):

@@ -11,6 +11,7 @@
 
 using namespace llvm;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void MCAsmMacroParameter::dump(raw_ostream &OS) const {
   OS << "\"" << Name << "\"";
   if (Required)
@@ -39,3 +40,4 @@ void MCAsmMacro::dump(raw_ostream &OS) const {
   }
   OS << "  (BEGIN BODY)" << Body << "(END BODY)\n";
 }
+#endif

@@ -63,7 +63,6 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
@@ -81,6 +80,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -163,45 +163,6 @@ static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
     g_settings_sp = std::make_shared<PluginProperties>();
   return g_settings_sp;
 }
-
-class ProcessGDBRemoteProvider
-    : public repro::Provider<ProcessGDBRemoteProvider> {
-public:
-  struct Info {
-    static const char *name;
-    static const char *file;
-  };
-
-  ProcessGDBRemoteProvider(const FileSpec &directory) : Provider(directory) {
-  }
-
-  raw_ostream *GetHistoryStream() {
-    FileSpec history_file = GetRoot().CopyByAppendingPathComponent(Info::file);
-
-    std::error_code EC;
-    m_stream_up = std::make_unique<raw_fd_ostream>(
-        history_file.GetPath(), EC, sys::fs::OpenFlags::OF_Text);
-    return m_stream_up.get();
-  }
-
-  void SetCallback(std::function<void()> callback) {
-    m_callback = std::move(callback);
-  }
-
-  void Keep() override { m_callback(); }
-
-  void Discard() override { m_callback(); }
-
-  static char ID;
-
-private:
-  std::function<void()> m_callback;
-  std::unique_ptr<raw_fd_ostream> m_stream_up;
-};
-
-char ProcessGDBRemoteProvider::ID = 0;
-const char *ProcessGDBRemoteProvider::Info::name = "gdb-remote";
-const char *ProcessGDBRemoteProvider::Info::file = "gdb-remote.yaml";
 
 } // namespace
 
@@ -312,8 +273,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    "async thread did exit");
 
   if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    ProcessGDBRemoteProvider &provider =
-        g->GetOrCreate<ProcessGDBRemoteProvider>();
+    repro::ProcessGDBRemoteProvider &provider =
+        g->GetOrCreate<repro::ProcessGDBRemoteProvider>();
     // Set the history stream to the stream owned by the provider.
     m_gdb_comm.SetHistoryStream(provider.GetHistoryStream());
     // Make sure to clear the stream again when we're finished.
@@ -1828,8 +1789,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       }
 
       for (const auto &pair : expedited_register_map) {
-        StringExtractor reg_value_extractor;
-        reg_value_extractor.GetStringRef() = pair.second;
+        StringExtractor reg_value_extractor(pair.second);
         DataBufferSP buffer_sp(new DataBufferHeap(
             reg_value_extractor.GetStringRef().size() / 2, 0));
         reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
@@ -2646,7 +2606,7 @@ Status ProcessGDBRemote::DoDestroy() {
           LLDB_LOGF(log,
                     "ProcessGDBRemote::DoDestroy - got unexpected response "
                     "to k packet: %s",
-                    response.GetStringRef().c_str());
+                    response.GetStringRef().data());
           exit_string.assign("got unexpected response to k packet: ");
           exit_string.append(response.GetStringRef());
         }
@@ -2808,7 +2768,7 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
     else
       error.SetErrorStringWithFormat(
           "unexpected response to GDB server memory read packet '%s': '%s'",
-          packet, response.GetStringRef().c_str());
+          packet, response.GetStringRef().data());
   } else {
     error.SetErrorStringWithFormat("failed to send packet: '%s'", packet);
   }
@@ -2918,7 +2878,7 @@ Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
       else
         status.SetErrorStringWithFormat(
             "unexpected response to GDB server flash erase packet '%s': '%s'",
-            packet.GetData(), response.GetStringRef().c_str());
+            packet.GetData(), response.GetStringRef().data());
     }
   } else {
     status.SetErrorStringWithFormat("failed to send packet: '%s'",
@@ -2946,7 +2906,7 @@ Status ProcessGDBRemote::FlashDone() {
       else
         status.SetErrorStringWithFormat(
             "unexpected response to GDB server flash done packet: '%s'",
-            response.GetStringRef().c_str());
+            response.GetStringRef().data());
     }
   } else {
     status.SetErrorStringWithFormat("failed to send flash done packet");
@@ -3009,7 +2969,7 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
     else
       error.SetErrorStringWithFormat(
           "unexpected response to GDB server memory write packet '%s': '%s'",
-          packet.GetData(), response.GetStringRef().c_str());
+          packet.GetData(), response.GetStringRef().data());
   } else {
     error.SetErrorStringWithFormat("failed to send packet: '%s'",
                                    packet.GetData());
@@ -3424,7 +3384,8 @@ Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
     return Status("No loader provided.");
 
   // Construct replay history path.
-  FileSpec history_file = loader->GetFile<ProcessGDBRemoteProvider::Info>();
+  FileSpec history_file =
+      loader->GetFile<repro::ProcessGDBRemoteProvider::Info>();
   if (!history_file)
     return Status("No provider for gdb-remote.");
 
@@ -3520,8 +3481,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 
     int our_socket = sockets[0];
     int gdb_socket = sockets[1];
-    CleanUp cleanup_our(close, our_socket);
-    CleanUp cleanup_gdb(close, gdb_socket);
+    auto cleanup_our = llvm::make_scope_exit([&]() { close(our_socket); });
+    auto cleanup_gdb = llvm::make_scope_exit([&]() { close(gdb_socket); });
 
     // Don't let any child processes inherit our communication socket
     SetCloexecFlag(our_socket);
@@ -3541,7 +3502,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
       // Our process spawned correctly, we can now set our connection to use
       // our end of the socket pair
-      cleanup_our.disable();
+      cleanup_our.release();
       m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket, true));
 #endif
       StartAsyncThread();
@@ -4321,6 +4282,10 @@ llvm::VersionTuple ProcessGDBRemote::GetHostOSVersion() {
   return m_gdb_comm.GetOSVersion();
 }
 
+llvm::VersionTuple ProcessGDBRemote::GetHostMacCatalystVersion() {
+  return m_gdb_comm.GetMacCatalystVersion();
+}
+
 namespace {
 
 typedef std::vector<std::string> stringVec;
@@ -4452,14 +4417,13 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           } else if (name == "invalidate_regnums") {
             SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 0);
           } else if (name == "dynamic_size_dwarf_expr_bytes") {
-            StringExtractor opcode_extractor;
             std::string opcode_string = value.str();
             size_t dwarf_opcode_len = opcode_string.length() / 2;
             assert(dwarf_opcode_len > 0);
 
             dwarf_opcode_bytes.resize(dwarf_opcode_len);
             reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
-            opcode_extractor.GetStringRef().swap(opcode_string);
+            StringExtractor opcode_extractor(opcode_string);
             uint32_t ret_val =
                 opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
             assert(dwarf_opcode_len == ret_val);
@@ -5327,7 +5291,7 @@ public:
         result.SetStatus(eReturnStatusSuccessFinishResult);
         Stream &output_strm = result.GetOutputStream();
         output_strm.Printf("  packet: %s\n", packet_cstr);
-        std::string &response_str = response.GetStringRef();
+        std::string response_str = response.GetStringRef();
 
         if (strstr(packet_cstr, "qGetProfileData") != nullptr) {
           response_str = process->HarmonizeThreadIdsForProfileData(response);
@@ -5336,7 +5300,7 @@ public:
         if (response_str.empty())
           output_strm.PutCString("response: \nerror: UNIMPLEMENTED\n");
         else
-          output_strm.Printf("response: %s\n", response.GetStringRef().c_str());
+          output_strm.Printf("response: %s\n", response.GetStringRef().data());
       }
     }
     return true;
@@ -5385,7 +5349,7 @@ public:
       if (response_str.empty())
         output_strm.PutCString("response: \nerror: UNIMPLEMENTED\n");
       else
-        output_strm.Printf("response: %s\n", response.GetStringRef().c_str());
+        output_strm.Printf("response: %s\n", response.GetStringRef().data());
     }
     return true;
   }

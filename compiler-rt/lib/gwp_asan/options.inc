@@ -21,9 +21,9 @@ GWP_ASAN_OPTION(
     "byte buffer-overflows for multibyte allocations at the cost of "
     "performance, and may be incompatible with some architectures.")
 
-GWP_ASAN_OPTION(
-    int, MaxSimultaneousAllocations, 16,
-    "Number of usable guarded slots in the allocation pool. Defaults to 16.")
+GWP_ASAN_OPTION(int, MaxSimultaneousAllocations, 16,
+                "Number of simultaneously-guarded allocations available in the "
+                "pool. Defaults to 16.")
 
 GWP_ASAN_OPTION(int, SampleRate, 5000,
                 "The probability (1 / SampleRate) that an allocation is "

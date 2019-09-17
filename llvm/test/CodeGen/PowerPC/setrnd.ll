@@ -26,7 +26,7 @@ entry:
 ; CHECK-DAG:   mffs 1 
 ; CHECK-DAG:   mffprd [[REG1:[0-9]+]], 1 
 ; CHECK-DAG:   rldimi [[REG1]], 3, 0, 62
-; CHECK-DAG:   mtvsrd [[REG2:[0-9]+]], [[REG1]]
+; CHECK-DAG:   mtfprd [[REG2:[0-9]+]], [[REG1]]
 ; CHECK-DAG:   mtfsf 255, [[REG2]] 
 ; CHECK:       blr
 

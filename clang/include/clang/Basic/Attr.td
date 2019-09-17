@@ -911,6 +911,17 @@ def Const : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def ConstInit : InheritableAttr {
+  // This attribute does not have a C [[]] spelling because it requires the
+  // CPlusPlus language option.
+  let Spellings = [Keyword<"constinit">,
+                   Clang<"require_constant_initialization", 0>];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+  let Accessors = [Accessor<"isConstinit", [Keyword<"constinit">]>];
+  let Documentation = [ConstInitDocs];
+  let LangOpts = [CPlusPlus];
+}
+
 def Constructor : InheritableAttr {
   let Spellings = [GCC<"constructor">];
   let Args = [DefaultIntArgument<"Priority", 65535>];
@@ -1170,7 +1181,7 @@ def ExtVectorType : Attr {
 
 def FallThrough : StmtAttr {
   let Spellings = [CXX11<"", "fallthrough", 201603>, C2x<"", "fallthrough">,
-                   CXX11<"clang", "fallthrough">];
+                   CXX11<"clang", "fallthrough">, GCC<"fallthrough">];
 //  let Subjects = [NullStmt];
   let Documentation = [FallthroughDocs];
 }
@@ -1933,15 +1944,6 @@ def ReqdWorkGroupSize : InheritableAttr {
               UnsignedArgument<"ZDim">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
-}
-
-def RequireConstantInit : InheritableAttr {
-  // This attribute does not have a C [[]] spelling because it requires the
-  // CPlusPlus language option.
-  let Spellings = [Clang<"require_constant_initialization", 0>];
-  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
-  let Documentation = [RequireConstantInitDocs];
-  let LangOpts = [CPlusPlus];
 }
 
 def WorkGroupSizeHint :  InheritableAttr {
@@ -3040,7 +3042,7 @@ def LoopHint : Attr {
   }
 
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    unsigned SpellingIndex = getSpellingListIndex();
+    unsigned SpellingIndex = getAttributeSpellingListIndex();
     // For "#pragma unroll" and "#pragma nounroll" the string "unroll" or
     // "nounroll" is already emitted as the pragma name.
     if (SpellingIndex == Pragma_nounroll || SpellingIndex == Pragma_nounroll_and_jam)
@@ -3076,7 +3078,7 @@ def LoopHint : Attr {
 
   // Return a string suitable for identifying this attribute in diagnostics.
   std::string getDiagnosticName(const PrintingPolicy &Policy) const {
-    unsigned SpellingIndex = getSpellingListIndex();
+    unsigned SpellingIndex = getAttributeSpellingListIndex();
     if (SpellingIndex == Pragma_nounroll)
       return "#pragma nounroll";
     else if (SpellingIndex == Pragma_unroll)
@@ -3207,11 +3209,16 @@ def OMPDeclareTargetDecl : InheritableAttr {
   let Args = [
     EnumArgument<"MapType", "MapTypeTy",
                  [ "to", "link" ],
-                 [ "MT_To", "MT_Link" ]>
+                 [ "MT_To", "MT_Link" ]>,
+    EnumArgument<"DevType", "DevTypeTy",
+                 [ "host", "nohost", "any" ],
+                 [ "DT_Host", "DT_NoHost", "DT_Any" ]>
   ];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
       // Use fake syntax because it is for testing and debugging purpose only.
+      if (getDevType() != DT_Any)
+        OS << " device_type(" << ConvertDevTypeTyToStr(getDevType()) << ")";
       if (getMapType() != MT_To)
         OS << ' ' << ConvertMapTypeTyToStr(getMapType());
     }
@@ -3221,6 +3228,14 @@ def OMPDeclareTargetDecl : InheritableAttr {
         return llvm::None;
       if (const auto *Attr = VD->getAttr<OMPDeclareTargetDeclAttr>())
         return Attr->getMapType();
+
+      return llvm::None;
+    }
+    static llvm::Optional<DevTypeTy> getDeviceType(const ValueDecl *VD) {
+      if (!VD->hasAttrs())
+        return llvm::None;
+      if (const auto *Attr = VD->getAttr<OMPDeclareTargetDeclAttr>())
+        return Attr->getDevType();
 
       return llvm::None;
     }

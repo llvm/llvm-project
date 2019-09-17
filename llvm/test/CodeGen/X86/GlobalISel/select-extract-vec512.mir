@@ -23,7 +23,7 @@
 ---
 name:            test_extract_128_idx0
 # ALL-LABEL: name:  test_extract_128_idx0
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -49,7 +49,7 @@ body:             |
 ---
 name:            test_extract_128_idx1
 # ALL-LABEL: name:  test_extract_128_idx1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -75,7 +75,7 @@ body:             |
 ---
 name:            test_extract_256_idx0
 # ALL-LABEL: name:  test_extract_256_idx0
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
@@ -101,7 +101,7 @@ body:             |
 ---
 name:            test_extract_256_idx1
 # ALL-LABEL: name:  test_extract_256_idx1
-alignment:       4
+alignment:       16
 legalized:       true
 regBankSelected: true
 # ALL:      registers:

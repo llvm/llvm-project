@@ -177,7 +177,8 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
-static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
+static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
+                                                  uint8_t DefaultVisibility) {
   // Parse value given with --add-symbol option and create the
   // new symbol if possible. The value format for --add-symbol is:
   //
@@ -222,6 +223,8 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
     return createStringError(errc::invalid_argument, "bad symbol value: '%s'",
                              Flags[0].str().c_str());
 
+  SI.Visibility = DefaultVisibility;
+
   using Functor = std::function<void(void)>;
   SmallVector<StringRef, 6> UnsupportedFlags;
   for (size_t I = 1, NumFlags = Flags.size(); I < NumFlags; ++I)
@@ -253,29 +256,6 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
                              UnsupportedFlags.size() > 1 ? "s" : "",
                              join(UnsupportedFlags, "', '").c_str());
   return SI;
-}
-
-static const StringMap<MachineInfo> ArchMap{
-    // Name, {EMachine, 64bit, LittleEndian}
-    {"aarch64", {ELF::EM_AARCH64, true, true}},
-    {"arm", {ELF::EM_ARM, false, true}},
-    {"i386", {ELF::EM_386, false, true}},
-    {"i386:x86-64", {ELF::EM_X86_64, true, true}},
-    {"mips", {ELF::EM_MIPS, false, false}},
-    {"powerpc:common64", {ELF::EM_PPC64, true, true}},
-    {"riscv:rv32", {ELF::EM_RISCV, false, true}},
-    {"riscv:rv64", {ELF::EM_RISCV, true, true}},
-    {"sparc", {ELF::EM_SPARC, false, false}},
-    {"sparcel", {ELF::EM_SPARC, false, true}},
-    {"x86-64", {ELF::EM_X86_64, true, true}},
-};
-
-static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
-  auto Iter = ArchMap.find(Arch);
-  if (Iter == std::end(ArchMap))
-    return createStringError(errc::invalid_argument,
-                             "invalid architecture: '%s'", Arch.str().c_str());
-  return Iter->getValue();
 }
 
 struct TargetInfo {
@@ -342,9 +322,8 @@ getOutputTargetInfoByTargetName(StringRef TargetName) {
   return {TargetInfo{Format, MI}};
 }
 
-static Error addSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
-                                BumpPtrAllocator &Alloc, StringRef Filename,
-                                bool UseRegex) {
+static Error addSymbolsFromFile(NameMatcher &Symbols, BumpPtrAllocator &Alloc,
+                                StringRef Filename, bool UseRegex) {
   StringSaver Saver(Alloc);
   SmallVector<StringRef, 16> Lines;
   auto BufOrErr = MemoryBuffer::getFile(Filename);
@@ -357,7 +336,7 @@ static Error addSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
     // it's not empty.
     auto TrimmedLine = Line.split('#').first.trim();
     if (!TrimmedLine.empty())
-      Symbols.emplace_back(Saver.save(TrimmedLine), UseRegex);
+      Symbols.addMatcher({Saver.save(TrimmedLine), UseRegex});
   }
 
   return Error::success();
@@ -408,6 +387,16 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
   return Result;
 }
 
+static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
+                      StringRef ToolName) {
+  OptTable.PrintHelp(OS, (ToolName + " input [output]").str().c_str(),
+                     (ToolName + " tool").str().c_str());
+  // TODO: Replace this with libOption call once it adds extrahelp support.
+  // The CommandLine library has a cl::extrahelp class to support this,
+  // but libOption does not have that yet.
+  OS << "\nPass @FILE as argument to read options from FILE.\n";
+}
+
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -419,12 +408,12 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-objcopy input [output]", "objcopy tool");
+    printHelp(T, errs(), "llvm-objcopy");
     exit(1);
   }
 
   if (InputArgs.hasArg(OBJCOPY_help)) {
-    T.PrintHelp(outs(), "llvm-objcopy input [output]", "objcopy tool");
+    printHelp(T, outs(), "llvm-objcopy");
     exit(0);
   }
 
@@ -477,28 +466,37 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
                            .Case("binary", FileFormat::Binary)
                            .Case("ihex", FileFormat::IHex)
                            .Default(FileFormat::Unspecified);
-  if (Config.InputFormat == FileFormat::Binary) {
-    auto BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
-    if (BinaryArch.empty())
+
+  if (opt::Arg *A = InputArgs.getLastArg(OBJCOPY_new_symbol_visibility)) {
+    const uint8_t Invalid = 0xff;
+    Config.NewSymbolVisibility = StringSwitch<uint8_t>(A->getValue())
+                                     .Case("default", ELF::STV_DEFAULT)
+                                     .Case("hidden", ELF::STV_HIDDEN)
+                                     .Case("internal", ELF::STV_INTERNAL)
+                                     .Case("protected", ELF::STV_PROTECTED)
+                                     .Default(Invalid);
+
+    if (Config.NewSymbolVisibility == Invalid)
       return createStringError(
-          errc::invalid_argument,
-          "specified binary input without specifiying an architecture");
-    Expected<const MachineInfo &> MI = getMachineInfo(BinaryArch);
-    if (!MI)
-      return MI.takeError();
-    Config.BinaryArch = *MI;
+          errc::invalid_argument, "'%s' is not a valid symbol visibility",
+          InputArgs.getLastArgValue(OBJCOPY_new_symbol_visibility).str().c_str());
   }
 
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
                             .Default(FileFormat::Unspecified);
-  if (Config.OutputFormat == FileFormat::Unspecified && !OutputFormat.empty()) {
-    Expected<TargetInfo> Target = getOutputTargetInfoByTargetName(OutputFormat);
-    if (!Target)
-      return Target.takeError();
-    Config.OutputFormat = Target->Format;
-    Config.OutputArch = Target->Machine;
+  if (Config.OutputFormat == FileFormat::Unspecified) {
+    if (OutputFormat.empty()) {
+      Config.OutputFormat = Config.InputFormat;
+    } else {
+      Expected<TargetInfo> Target =
+          getOutputTargetInfoByTargetName(OutputFormat);
+      if (!Target)
+        return Target.takeError();
+      Config.OutputFormat = Target->Format;
+      Config.OutputArch = Target->Machine;
+    }
   }
 
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_compress_debug_sections,
@@ -613,11 +611,11 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
-    Config.ToRemove.emplace_back(Arg->getValue(), UseRegex);
+    Config.ToRemove.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_section))
-    Config.KeepSection.emplace_back(Arg->getValue(), UseRegex);
+    Config.KeepSection.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_only_section))
-    Config.OnlySection.emplace_back(Arg->getValue(), UseRegex);
+    Config.OnlySection.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section)) {
     StringRef ArgValue(Arg->getValue());
     if (!ArgValue.contains('='))
@@ -655,49 +653,51 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   if (Config.DiscardMode == DiscardType::All)
     Config.StripDebug = true;
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
-    Config.SymbolsToLocalize.emplace_back(Arg->getValue(), UseRegex);
+    Config.SymbolsToLocalize.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToLocalize, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
-    Config.SymbolsToKeepGlobal.emplace_back(Arg->getValue(), UseRegex);
+    Config.SymbolsToKeepGlobal.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
-    Config.SymbolsToGlobalize.emplace_back(Arg->getValue(), UseRegex);
+    Config.SymbolsToGlobalize.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToGlobalize, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
-    Config.SymbolsToWeaken.emplace_back(Arg->getValue(), UseRegex);
+    Config.SymbolsToWeaken.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToWeaken, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
-    Config.SymbolsToRemove.emplace_back(Arg->getValue(), UseRegex);
+    Config.SymbolsToRemove.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToRemove, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbol))
-    Config.UnneededSymbolsToRemove.emplace_back(Arg->getValue(), UseRegex);
+    Config.UnneededSymbolsToRemove.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbols))
     if (Error E = addSymbolsFromFile(Config.UnneededSymbolsToRemove, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
-    Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
+    Config.SymbolsToKeep.addMatcher({Arg->getValue(), UseRegex});
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbols))
     if (Error E = addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc,
                                      Arg->getValue(), UseRegex))
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
-    Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(Arg->getValue());
+    Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(
+        Arg->getValue(),
+        Config.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT));
     if (!NSI)
       return NSI.takeError();
     Config.SymbolsToAdd.push_back(*NSI);
@@ -771,12 +771,12 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-strip [options] file...", "strip tool");
+    printHelp(T, errs(), "llvm-strip");
     exit(1);
   }
 
   if (InputArgs.hasArg(STRIP_help)) {
-    T.PrintHelp(outs(), "llvm-strip [options] file...", "strip tool");
+    printHelp(T, outs(), "llvm-strip");
     exit(0);
   }
 
@@ -820,16 +820,16 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
   Config.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))
-    Config.KeepSection.emplace_back(Arg->getValue(), UseRegexp);
+    Config.KeepSection.addMatcher({Arg->getValue(), UseRegexp});
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
-    Config.ToRemove.emplace_back(Arg->getValue(), UseRegexp);
+    Config.ToRemove.addMatcher({Arg->getValue(), UseRegexp});
 
   for (auto Arg : InputArgs.filtered(STRIP_strip_symbol))
-    Config.SymbolsToRemove.emplace_back(Arg->getValue(), UseRegexp);
+    Config.SymbolsToRemove.addMatcher({Arg->getValue(), UseRegexp});
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
-    Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegexp);
+    Config.SymbolsToKeep.addMatcher({Arg->getValue(), UseRegexp});
 
   if (!InputArgs.hasArg(STRIP_no_strip_all) && !Config.StripDebug &&
       !Config.StripUnneeded && Config.DiscardMode == DiscardType::None &&

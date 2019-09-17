@@ -8,60 +8,69 @@
 
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {
 namespace yaml {
 
-Error convertYAML(yaml::Input &YIn, raw_ostream &Out, unsigned DocNum) {
-  // TODO: make yaml2* functions return Error instead of int.
-  auto IntToErr = [](int Ret) -> Error {
-    if (Ret)
-      return createStringError(errc::invalid_argument, "yaml2obj failed");
-    return Error::success();
-  };
-
+bool convertYAML(yaml::Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
+                 unsigned DocNum) {
   unsigned CurDocNum = 0;
   do {
-    if (++CurDocNum == DocNum) {
-      yaml::YamlObjectFile Doc;
-      YIn >> Doc;
-      if (std::error_code EC = YIn.error())
-        return createStringError(EC, "Failed to parse YAML input!");
-      if (Doc.Elf)
-        return IntToErr(yaml2elf(*Doc.Elf, Out));
-      if (Doc.Coff)
-        return IntToErr(yaml2coff(*Doc.Coff, Out));
-      if (Doc.MachO || Doc.FatMachO)
-        return IntToErr(yaml2macho(Doc, Out));
-      if (Doc.Minidump)
-        return IntToErr(yaml2minidump(*Doc.Minidump, Out));
-      if (Doc.Wasm)
-        return IntToErr(yaml2wasm(*Doc.Wasm, Out));
-      return createStringError(errc::invalid_argument,
-                               "Unknown document type!");
+    if (++CurDocNum != DocNum)
+      continue;
+
+    yaml::YamlObjectFile Doc;
+    YIn >> Doc;
+    if (std::error_code EC = YIn.error()) {
+      ErrHandler("failed to parse YAML input: " + EC.message());
+      return false;
     }
+
+    if (Doc.Elf)
+      return yaml2elf(*Doc.Elf, Out, ErrHandler);
+    if (Doc.Coff)
+      return yaml2coff(*Doc.Coff, Out, ErrHandler);
+    if (Doc.MachO || Doc.FatMachO)
+      return yaml2macho(Doc, Out, ErrHandler);
+    if (Doc.Minidump)
+      return yaml2minidump(*Doc.Minidump, Out, ErrHandler);
+    if (Doc.Wasm)
+      return yaml2wasm(*Doc.Wasm, Out, ErrHandler);
+
+    ErrHandler("unknown document type");
+    return false;
+
   } while (YIn.nextDocument());
 
-  return createStringError(errc::invalid_argument,
-                           "Cannot find the %u%s document", DocNum,
-                           getOrdinalSuffix(DocNum).data());
+  ErrHandler("cannot find the " + Twine(DocNum) +
+             getOrdinalSuffix(DocNum).data() + " document");
+  return false;
 }
 
-Expected<std::unique_ptr<object::ObjectFile>>
-yaml2ObjectFile(SmallVectorImpl<char> &Storage, StringRef Yaml) {
+std::unique_ptr<object::ObjectFile>
+yaml2ObjectFile(SmallVectorImpl<char> &Storage, StringRef Yaml,
+                ErrorHandler ErrHandler) {
   Storage.clear();
   raw_svector_ostream OS(Storage);
 
   yaml::Input YIn(Yaml);
-  if (Error E = convertYAML(YIn, OS))
-    return std::move(E);
+  if (!convertYAML(YIn, OS, ErrHandler))
+    return {};
 
-  return object::ObjectFile::createObjectFile(
-      MemoryBufferRef(OS.str(), "YamlObject"));
+  Expected<std::unique_ptr<object::ObjectFile>> ObjOrErr =
+      object::ObjectFile::createObjectFile(
+          MemoryBufferRef(OS.str(), "YamlObject"));
+  if (ObjOrErr)
+    return std::move(*ObjOrErr);
+
+  ErrHandler(toString(ObjOrErr.takeError()));
+  return {};
 }
 
 } // namespace yaml

@@ -90,9 +90,9 @@ d:
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
 
-// 0x20200C = TBSS_ADDR + 4
+// 0x2021F4 = TBSS_ADDR + 4
 
-// CHECK-NEXT:     Address: 0x20200C
+// CHECK-NEXT:     Address: 0x2021F4
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Link:
@@ -165,7 +165,7 @@ d:
 // DIS:      Disassembly of section .text:
 // DIS-EMPTY:
 // DIS-NEXT: _start:
-// DIS-NEXT:    201000: {{.+}} movl    %fs:-8, %eax
-// DIS-NEXT:    201008: {{.+}} movl    %fs:-16, %eax
-// DIS-NEXT:    201010: {{.+}} movl    %fs:-4, %eax
-// DIS-NEXT:    201018: {{.+}} movl    %fs:-12, %eax
+// DIS-NEXT:   movl    %fs:-8, %eax
+// DIS-NEXT:   movl    %fs:-16, %eax
+// DIS-NEXT:   movl    %fs:-4, %eax
+// DIS-NEXT:   movl    %fs:-12, %eax

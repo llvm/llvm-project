@@ -46,7 +46,8 @@ Status OptionValueRegex::SetValueFromString(llvm::StringRef value,
 
   case eVarSetOperationReplace:
   case eVarSetOperationAssign:
-    if (m_regex.Compile(value)) {
+    m_regex = RegularExpression(value);
+    if (m_regex.IsValid()) {
       m_value_was_set = true;
       NotifyValueChanged();
     } else if (llvm::Error err = m_regex.GetError()) {

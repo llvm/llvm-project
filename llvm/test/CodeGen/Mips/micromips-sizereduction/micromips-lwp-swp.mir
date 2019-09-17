@@ -19,7 +19,7 @@
 # CHECK: SWP_MM
 # CHECK: LWP_MM
 name:            f1
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -87,7 +87,7 @@ body:             |
 # CHECK: SWP_MM
 # CHECK: LWP_MM
 name:            f2
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -155,7 +155,7 @@ body:             |
 # CHECK: SWP_MM
 # CHECK: LWP_MM
 name:            f3
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
@@ -223,7 +223,7 @@ body:             |
 # CHECK: SWP_MM
 # CHECK: LWP_MM
 name:            f4
-alignment:       2
+alignment:       4
 exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false

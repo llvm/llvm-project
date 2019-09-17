@@ -14,7 +14,7 @@
 
 #include <iterator>
 #include <list>
-#include "nasty_containers.hpp"
+#include "nasty_containers.h"
 
 #include "test_macros.h"
 

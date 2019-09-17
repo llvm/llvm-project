@@ -11,6 +11,7 @@
 #include "FuzzyMatch.h"
 #include "Logger.h"
 #include "Protocol.h"
+#include "refactor/Tweak.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -19,14 +20,21 @@
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 
@@ -229,6 +237,39 @@ llvm::Optional<Range> getTokenRange(const SourceManager &SM,
   return halfOpenToRange(SM, CharSourceRange::getCharRange(TokLoc, End));
 }
 
+SourceLocation getBeginningOfIdentifier(const Position &Pos,
+                                        const SourceManager &SM,
+                                        const LangOptions &LangOpts) {
+  FileID FID = SM.getMainFileID();
+  auto Offset = positionToOffset(SM.getBufferData(FID), Pos);
+  if (!Offset) {
+    log("getBeginningOfIdentifier: {0}", Offset.takeError());
+    return SourceLocation();
+  }
+
+  // GetBeginningOfToken(pos) is almost what we want, but does the wrong thing
+  // if the cursor is at the end of the identifier.
+  // Instead, we lex at GetBeginningOfToken(pos - 1). The cases are:
+  //  1) at the beginning of an identifier, we'll be looking at something
+  //  that isn't an identifier.
+  //  2) at the middle or end of an identifier, we get the identifier.
+  //  3) anywhere outside an identifier, we'll get some non-identifier thing.
+  // We can't actually distinguish cases 1 and 3, but returning the original
+  // location is correct for both!
+  SourceLocation InputLoc = SM.getComposedLoc(FID, *Offset);
+  if (*Offset == 0) // Case 1 or 3.
+    return InputLoc;
+  SourceLocation Before = SM.getComposedLoc(FID, *Offset - 1);
+
+  Before = Lexer::GetBeginningOfToken(Before, SM, LangOpts);
+  Token Tok;
+  if (Before.isValid() &&
+      !Lexer::getRawToken(Before, Tok, SM, LangOpts, false) &&
+      Tok.is(tok::raw_identifier))
+    return Before; // Case 2.
+  return InputLoc; // Case 1 or 3.
+}
+
 bool isValidFileRange(const SourceManager &Mgr, SourceRange R) {
   if (!R.getBegin().isValid() || !R.getEnd().isValid())
     return false;
@@ -263,6 +304,29 @@ bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
                           SourceLocation L) {
   return L == R.getEnd() || halfOpenRangeContains(Mgr, R, L);
 }
+
+SourceLocation includeHashLoc(FileID IncludedFile, const SourceManager &SM) {
+  assert(SM.getLocForEndOfFile(IncludedFile).isFileID());
+  FileID IncludingFile;
+  unsigned Offset;
+  std::tie(IncludingFile, Offset) =
+      SM.getDecomposedExpansionLoc(SM.getIncludeLoc(IncludedFile));
+  bool Invalid = false;
+  llvm::StringRef Buf = SM.getBufferData(IncludingFile, &Invalid);
+  if (Invalid)
+    return SourceLocation();
+  // Now buf is "...\n#include <foo>\n..."
+  // and Offset points here:   ^
+  // Rewind to the preceding # on the line.
+  assert(Offset < Buf.size());
+  for (;; --Offset) {
+    if (Buf[Offset] == '#')
+      return SM.getComposedLoc(IncludingFile, Offset);
+    if (Buf[Offset] == '\n' || Offset == 0) // no hash, what's going on?
+      return SourceLocation();
+  }
+}
+
 
 static unsigned getTokenLengthAtLoc(SourceLocation Loc, const SourceManager &SM,
                                     const LangOptions &LangOpts) {
@@ -308,16 +372,49 @@ static SourceRange toTokenRange(CharSourceRange Range, const SourceManager &SM,
 static SourceRange unionTokenRange(SourceRange R1, SourceRange R2,
                                    const SourceManager &SM,
                                    const LangOptions &LangOpts) {
-  SourceLocation E1 = getLocForTokenEnd(R1.getEnd(), SM, LangOpts);
-  SourceLocation E2 = getLocForTokenEnd(R2.getEnd(), SM, LangOpts);
-  return SourceRange(std::min(R1.getBegin(), R2.getBegin()),
-                     E1 < E2 ? R2.getEnd() : R1.getEnd());
+  SourceLocation Begin =
+      SM.isBeforeInTranslationUnit(R1.getBegin(), R2.getBegin())
+          ? R1.getBegin()
+          : R2.getBegin();
+  SourceLocation End =
+      SM.isBeforeInTranslationUnit(getLocForTokenEnd(R1.getEnd(), SM, LangOpts),
+                                   getLocForTokenEnd(R2.getEnd(), SM, LangOpts))
+          ? R2.getEnd()
+          : R1.getEnd();
+  return SourceRange(Begin, End);
 }
 
-// Check if two locations have the same file id.
-static bool inSameFile(SourceLocation Loc1, SourceLocation Loc2,
-                       const SourceManager &SM) {
-  return SM.getFileID(Loc1) == SM.getFileID(Loc2);
+// Given a range whose endpoints may be in different expansions or files,
+// tries to find a range within a common file by following up the expansion and
+// include location in each.
+static SourceRange rangeInCommonFile(SourceRange R, const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  // Fast path for most common cases.
+  if (SM.isWrittenInSameFile(R.getBegin(), R.getEnd()))
+    return R;
+  // Record the stack of expansion locations for the beginning, keyed by FileID.
+  llvm::DenseMap<FileID, SourceLocation> BeginExpansions;
+  for (SourceLocation Begin = R.getBegin(); Begin.isValid();
+       Begin = Begin.isFileID()
+                   ? includeHashLoc(SM.getFileID(Begin), SM)
+                   : SM.getImmediateExpansionRange(Begin).getBegin()) {
+    BeginExpansions[SM.getFileID(Begin)] = Begin;
+  }
+  // Move up the stack of expansion locations for the end until we find the
+  // location in BeginExpansions with that has the same file id.
+  for (SourceLocation End = R.getEnd(); End.isValid();
+       End = End.isFileID() ? includeHashLoc(SM.getFileID(End), SM)
+                            : toTokenRange(SM.getImmediateExpansionRange(End),
+                                           SM, LangOpts)
+                                  .getEnd()) {
+    auto It = BeginExpansions.find(SM.getFileID(End));
+    if (It != BeginExpansions.end()) {
+      if (SM.getFileOffset(It->second) > SM.getFileOffset(End))
+        return SourceLocation();
+      return {It->second, End};
+    }
+  }
+  return SourceRange();
 }
 
 // Find an expansion range (not necessarily immediate) the ends of which are in
@@ -325,33 +422,11 @@ static bool inSameFile(SourceLocation Loc1, SourceLocation Loc2,
 static SourceRange
 getExpansionTokenRangeInSameFile(SourceLocation Loc, const SourceManager &SM,
                                  const LangOptions &LangOpts) {
-  SourceRange ExpansionRange =
-      toTokenRange(SM.getImmediateExpansionRange(Loc), SM, LangOpts);
-  // Fast path for most common cases.
-  if (inSameFile(ExpansionRange.getBegin(), ExpansionRange.getEnd(), SM))
-    return ExpansionRange;
-  // Record the stack of expansion locations for the beginning, keyed by FileID.
-  llvm::DenseMap<FileID, SourceLocation> BeginExpansions;
-  for (SourceLocation Begin = ExpansionRange.getBegin(); Begin.isValid();
-       Begin = Begin.isFileID()
-                   ? SourceLocation()
-                   : SM.getImmediateExpansionRange(Begin).getBegin()) {
-    BeginExpansions[SM.getFileID(Begin)] = Begin;
-  }
-  // Move up the stack of expansion locations for the end until we find the
-  // location in BeginExpansions with that has the same file id.
-  for (SourceLocation End = ExpansionRange.getEnd(); End.isValid();
-       End = End.isFileID() ? SourceLocation()
-                            : toTokenRange(SM.getImmediateExpansionRange(End),
-                                           SM, LangOpts)
-                                  .getEnd()) {
-    auto It = BeginExpansions.find(SM.getFileID(End));
-    if (It != BeginExpansions.end())
-      return {It->second, End};
-  }
-  llvm_unreachable(
-      "We should able to find a common ancestor in the expansion tree.");
+  return rangeInCommonFile(
+      toTokenRange(SM.getImmediateExpansionRange(Loc), SM, LangOpts), SM,
+      LangOpts);
 }
+
 // Returns the file range for a given Location as a Token Range
 // This is quite similar to getFileLoc in SourceManager as both use
 // getImmediateExpansionRange and getImmediateSpellingLoc (for macro IDs).
@@ -371,14 +446,17 @@ static SourceRange getTokenFileRange(SourceLocation Loc,
       FileRange = unionTokenRange(
           SM.getImmediateSpellingLoc(FileRange.getBegin()),
           SM.getImmediateSpellingLoc(FileRange.getEnd()), SM, LangOpts);
-      assert(inSameFile(FileRange.getBegin(), FileRange.getEnd(), SM));
+      assert(SM.isWrittenInSameFile(FileRange.getBegin(), FileRange.getEnd()));
     } else {
       SourceRange ExpansionRangeForBegin =
           getExpansionTokenRangeInSameFile(FileRange.getBegin(), SM, LangOpts);
       SourceRange ExpansionRangeForEnd =
           getExpansionTokenRangeInSameFile(FileRange.getEnd(), SM, LangOpts);
-      assert(inSameFile(ExpansionRangeForBegin.getBegin(),
-                        ExpansionRangeForEnd.getBegin(), SM) &&
+      if (ExpansionRangeForBegin.isInvalid() ||
+          ExpansionRangeForEnd.isInvalid())
+        return SourceRange();
+      assert(SM.isWrittenInSameFile(ExpansionRangeForBegin.getBegin(),
+                                    ExpansionRangeForEnd.getBegin()) &&
              "Both Expansion ranges should be in same file.");
       FileRange = unionTokenRange(ExpansionRangeForBegin, ExpansionRangeForEnd,
                                   SM, LangOpts);
@@ -402,7 +480,8 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
   if (!isValidFileRange(SM, R2))
     return llvm::None;
 
-  SourceRange Result = unionTokenRange(R1, R2, SM, LangOpts);
+  SourceRange Result =
+      rangeInCommonFile(unionTokenRange(R1, R2, SM, LangOpts), SM, LangOpts);
   unsigned TokLen = getTokenLengthAtLoc(Result.getEnd(), SM, LangOpts);
   // Convert from closed token range to half-open (char) range
   Result.setEnd(Result.getEnd().getLocWithOffset(TokLen));
@@ -491,7 +570,7 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
   }
 
   // Handle the symbolic link path case where the current working directory
-  // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
+  // (getCurrentWorkingDirectory) is a symlink. We always want to the real
   // file path (instead of the symlink path) for the  C++ symbols.
   //
   // Consider the following example:
@@ -835,6 +914,58 @@ llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
   if (auto *MI = MacroDef.getMacroInfo())
     return DefinedMacro{IdentifierInfo->getName(), MI};
   return None;
+}
+
+llvm::Expected<std::string> Edit::apply() const {
+  return tooling::applyAllReplacements(InitialCode, Replacements);
+}
+
+std::vector<TextEdit> Edit::asTextEdits() const {
+  return replacementsToEdits(InitialCode, Replacements);
+}
+
+bool Edit::canApplyTo(llvm::StringRef Code) const {
+  // Create line iterators, since line numbers are important while applying our
+  // edit we cannot skip blank lines.
+  auto LHS = llvm::MemoryBuffer::getMemBuffer(Code);
+  llvm::line_iterator LHSIt(*LHS, /*SkipBlanks=*/false);
+
+  auto RHS = llvm::MemoryBuffer::getMemBuffer(InitialCode);
+  llvm::line_iterator RHSIt(*RHS, /*SkipBlanks=*/false);
+
+  // Compare the InitialCode we prepared the edit for with the Code we received
+  // line by line to make sure there are no differences.
+  // FIXME: This check is too conservative now, it should be enough to only
+  // check lines around the replacements contained inside the Edit.
+  while (!LHSIt.is_at_eof() && !RHSIt.is_at_eof()) {
+    if (*LHSIt != *RHSIt)
+      return false;
+    ++LHSIt;
+    ++RHSIt;
+  }
+
+  // After we reach EOF for any of the files we make sure the other one doesn't
+  // contain any additional content except empty lines, they should not
+  // interfere with the edit we produced.
+  while (!LHSIt.is_at_eof()) {
+    if (!LHSIt->empty())
+      return false;
+    ++LHSIt;
+  }
+  while (!RHSIt.is_at_eof()) {
+    if (!RHSIt->empty())
+      return false;
+    ++RHSIt;
+  }
+  return true;
+}
+
+llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style) {
+  if (auto NewEdits = cleanupAndFormat(E.InitialCode, E.Replacements, Style))
+    E.Replacements = std::move(*NewEdits);
+  else
+    return NewEdits.takeError();
+  return llvm::Error::success();
 }
 
 } // namespace clangd

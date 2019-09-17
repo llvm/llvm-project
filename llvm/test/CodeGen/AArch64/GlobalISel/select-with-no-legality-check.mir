@@ -4,7 +4,7 @@
 # RUN:     -o - | FileCheck %s
 ---
 name:            test_rule14_id188_at_idx1067
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -30,7 +30,7 @@ body:             |
 ...
 ---
 name:            test_rule21_id2237_at_idx1449
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -59,7 +59,7 @@ body:             |
 ...
 ---
 name:            test_rule22_id2238_at_idx1505
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -88,7 +88,7 @@ body:             |
 ...
 ---
 name:            test_rule27_id2243_at_idx1781
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -117,7 +117,7 @@ body:             |
 ...
 ---
 name:            test_rule28_id2244_at_idx1837
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -146,7 +146,7 @@ body:             |
 ...
 ---
 name:            test_rule29_id2245_at_idx1893
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -175,7 +175,7 @@ body:             |
 ...
 ---
 name:            test_rule30_id2246_at_idx1949
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -204,7 +204,7 @@ body:             |
 ...
 ---
 name:            test_rule34_id2250_at_idx2173
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -234,7 +234,7 @@ body:             |
 # The rules that generated this test has changed. The generator should be rerun
 ---
 name:            test_rule92_id2150_at_idx7770
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -261,7 +261,7 @@ body:             |
 # The rules that generated this test has changed. The generator should be rerun
 ---
 name:            test_rule96_id2146_at_idx8070
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -290,7 +290,7 @@ body:             |
 ...
 ---
 name:            test_rule129_id2130_at_idx10828
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -316,7 +316,7 @@ body:             |
 ...
 ---
 name:            test_rule130_id2131_at_idx10884
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -342,7 +342,7 @@ body:             |
 ...
 ---
 name:            test_rule135_id2136_at_idx11160
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -368,7 +368,7 @@ body:             |
 ...
 ---
 name:            test_rule136_id2137_at_idx11216
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -394,7 +394,7 @@ body:             |
 ...
 ---
 name:            test_rule137_id2138_at_idx11272
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -420,7 +420,7 @@ body:             |
 ...
 ---
 name:            test_rule138_id2139_at_idx11328
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -446,7 +446,7 @@ body:             |
 ...
 ---
 name:            test_rule339_id2369_at_idx26608
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -483,7 +483,7 @@ body:             |
 ...
 ---
 name:            test_rule340_id2370_at_idx26714
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -520,7 +520,7 @@ body:             |
 ...
 ---
 name:            test_rule341_id2371_at_idx26820
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -557,7 +557,7 @@ body:             |
 ...
 ---
 name:            test_rule342_id2372_at_idx26926
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -594,7 +594,7 @@ body:             |
 ...
 ---
 name:            test_rule343_id1266_at_idx27032
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -627,7 +627,7 @@ body:             |
 ...
 ---
 name:            test_rule344_id1268_at_idx27128
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -660,7 +660,7 @@ body:             |
 ...
 ---
 name:            test_rule345_id1270_at_idx27224
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -693,7 +693,7 @@ body:             |
 ...
 ---
 name:            test_rule346_id1326_at_idx27320
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -726,7 +726,7 @@ body:             |
 ...
 ---
 name:            test_rule347_id1328_at_idx27416
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -759,7 +759,7 @@ body:             |
 ...
 ---
 name:            test_rule348_id1330_at_idx27512
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -792,7 +792,7 @@ body:             |
 ...
 ---
 name:            test_rule349_id1308_at_idx27608
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -825,7 +825,7 @@ body:             |
 ...
 ---
 name:            test_rule350_id1310_at_idx27704
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -858,7 +858,7 @@ body:             |
 ...
 ---
 name:            test_rule351_id1312_at_idx27800
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -891,7 +891,7 @@ body:             |
 ...
 ---
 name:            test_rule352_id1356_at_idx27896
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -924,7 +924,7 @@ body:             |
 ...
 ---
 name:            test_rule353_id1358_at_idx27992
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -957,7 +957,7 @@ body:             |
 ...
 ---
 name:            test_rule354_id1360_at_idx28088
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -990,7 +990,7 @@ body:             |
 ...
 ---
 name:            test_rule928_id2367_at_idx60019
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1025,7 +1025,7 @@ body:             |
 ...
 ---
 name:            test_rule929_id2368_at_idx60105
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1060,7 +1060,7 @@ body:             |
 ...
 ---
 name:            test_rule930_id2446_at_idx60191
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1095,7 +1095,7 @@ body:             |
 ...
 ---
 name:            test_rule931_id2447_at_idx60277
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1130,7 +1130,7 @@ body:             |
 ...
 ---
 name:            test_rule932_id2448_at_idx60363
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1165,7 +1165,7 @@ body:             |
 ...
 ---
 name:            test_rule934_id429_at_idx60537
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1200,7 +1200,7 @@ body:             |
 ...
 ---
 name:            test_rule935_id430_at_idx60625
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1235,7 +1235,7 @@ body:             |
 ...
 ---
 name:            test_rule938_id899_at_idx60889
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1270,7 +1270,7 @@ body:             |
 ...
 ---
 name:            test_rule939_id900_at_idx60977
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1305,7 +1305,7 @@ body:             |
 ...
 ---
 name:            test_rule940_id901_at_idx61065
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1340,7 +1340,7 @@ body:             |
 ...
 ---
 name:            test_rule942_id435_at_idx61241
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1375,7 +1375,7 @@ body:             |
 ...
 ---
 name:            test_rule943_id436_at_idx61329
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1410,7 +1410,7 @@ body:             |
 ...
 ---
 name:            test_rule944_id3803_at_idx61417
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1445,7 +1445,7 @@ body:             |
 ...
 ---
 name:            test_rule945_id3804_at_idx61505
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1480,7 +1480,7 @@ body:             |
 ...
 ---
 name:            test_rule946_id3805_at_idx61593
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1515,7 +1515,7 @@ body:             |
 ...
 ---
 name:            test_rule947_id3806_at_idx61681
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1550,7 +1550,7 @@ body:             |
 ...
 ---
 name:            test_rule950_id3869_at_idx61945
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1581,7 +1581,7 @@ body:             |
 ...
 ---
 name:            test_rule951_id3871_at_idx62021
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1612,7 +1612,7 @@ body:             |
 ...
 ---
 name:            test_rule952_id3873_at_idx62097
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1643,7 +1643,7 @@ body:             |
 ...
 ---
 name:            test_rule953_id3887_at_idx62173
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1674,7 +1674,7 @@ body:             |
 ...
 ---
 name:            test_rule954_id3889_at_idx62249
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1705,7 +1705,7 @@ body:             |
 ...
 ---
 name:            test_rule955_id3891_at_idx62325
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1736,7 +1736,7 @@ body:             |
 ...
 ---
 name:            test_rule956_id927_at_idx62401
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1771,7 +1771,7 @@ body:             |
 ...
 ---
 name:            test_rule957_id928_at_idx62489
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1806,7 +1806,7 @@ body:             |
 ...
 ---
 name:            test_rule958_id929_at_idx62577
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1841,7 +1841,7 @@ body:             |
 ...
 ---
 name:            test_rule959_id930_at_idx62665
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1876,7 +1876,7 @@ body:             |
 ...
 ---
 name:            test_rule962_id1272_at_idx62929
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1907,7 +1907,7 @@ body:             |
 ...
 ---
 name:            test_rule963_id1274_at_idx63005
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1938,7 +1938,7 @@ body:             |
 ...
 ---
 name:            test_rule964_id1276_at_idx63081
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -1969,7 +1969,7 @@ body:             |
 ...
 ---
 name:            test_rule965_id1332_at_idx63157
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2000,7 +2000,7 @@ body:             |
 ...
 ---
 name:            test_rule966_id1334_at_idx63233
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2031,7 +2031,7 @@ body:             |
 ...
 ---
 name:            test_rule967_id1336_at_idx63309
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2062,7 +2062,7 @@ body:             |
 ...
 ---
 name:            test_rule977_id933_at_idx64051
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2097,7 +2097,7 @@ body:             |
 ...
 ---
 name:            test_rule978_id934_at_idx64139
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2132,7 +2132,7 @@ body:             |
 ...
 ---
 name:            test_rule979_id935_at_idx64227
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2167,7 +2167,7 @@ body:             |
 ...
 ---
 name:            test_rule980_id936_at_idx64315
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2202,7 +2202,7 @@ body:             |
 ...
 ---
 name:            test_rule983_id1314_at_idx64579
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2233,7 +2233,7 @@ body:             |
 ...
 ---
 name:            test_rule984_id1316_at_idx64655
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2264,7 +2264,7 @@ body:             |
 ...
 ---
 name:            test_rule985_id1318_at_idx64731
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2295,7 +2295,7 @@ body:             |
 ...
 ---
 name:            test_rule986_id1362_at_idx64807
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2326,7 +2326,7 @@ body:             |
 ...
 ---
 name:            test_rule987_id1364_at_idx64883
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2357,7 +2357,7 @@ body:             |
 ...
 ---
 name:            test_rule988_id1366_at_idx64959
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2388,7 +2388,7 @@ body:             |
 ...
 ---
 name:            test_rule990_id432_at_idx65123
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2423,7 +2423,7 @@ body:             |
 ...
 ---
 name:            test_rule991_id433_at_idx65211
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2458,7 +2458,7 @@ body:             |
 ...
 ---
 name:            test_rule993_id420_at_idx65375
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2489,7 +2489,7 @@ body:             |
 ...
 ---
 name:            test_rule994_id421_at_idx65451
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2520,7 +2520,7 @@ body:             |
 ...
 ---
 name:            test_rule1230_id2969_at_idx81784
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2549,7 +2549,7 @@ body:             |
 ...
 ---
 name:            test_rule1231_id2970_at_idx81816
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2578,7 +2578,7 @@ body:             |
 ...
 ---
 name:            test_rule1239_id894_at_idx82201
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2611,7 +2611,7 @@ body:             |
 ...
 ---
 name:            test_rule1240_id895_at_idx82269
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2644,7 +2644,7 @@ body:             |
 ...
 ---
 name:            test_rule1241_id896_at_idx82337
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2677,7 +2677,7 @@ body:             |
 ...
 ---
 name:            test_rule1244_id751_at_idx82487
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2706,7 +2706,7 @@ body:             |
 ...
 ---
 name:            test_rule1245_id752_at_idx82530
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2735,7 +2735,7 @@ body:             |
 ...
 ---
 name:            test_rule1246_id753_at_idx82573
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2764,7 +2764,7 @@ body:             |
 ...
 ---
 name:            test_rule1247_id754_at_idx82616
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2793,7 +2793,7 @@ body:             |
 ...
 ---
 name:            test_rule1254_id1162_at_idx82913
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2822,7 +2822,7 @@ body:             |
 ...
 ---
 name:            test_rule1255_id1163_at_idx82956
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2851,7 +2851,7 @@ body:             |
 ...
 ---
 name:            test_rule1256_id1751_at_idx82999
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2880,7 +2880,7 @@ body:             |
 ...
 ---
 name:            test_rule1259_id1754_at_idx83128
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2909,7 +2909,7 @@ body:             |
 ...
 ---
 name:            test_rule1268_id829_at_idx83513
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2938,7 +2938,7 @@ body:             |
 ...
 ---
 name:            test_rule1269_id830_at_idx83556
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2967,7 +2967,7 @@ body:             |
 ...
 ---
 name:            test_rule1270_id831_at_idx83599
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -2996,7 +2996,7 @@ body:             |
 ...
 ---
 name:            test_rule1276_id849_at_idx83857
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3025,7 +3025,7 @@ body:             |
 ...
 ---
 name:            test_rule1277_id850_at_idx83900
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3054,7 +3054,7 @@ body:             |
 ...
 ---
 name:            test_rule1278_id851_at_idx83943
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3083,7 +3083,7 @@ body:             |
 ...
 ---
 name:            test_rule1284_id909_at_idx84201
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3112,7 +3112,7 @@ body:             |
 ...
 ---
 name:            test_rule1285_id910_at_idx84244
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3141,7 +3141,7 @@ body:             |
 ...
 ---
 name:            test_rule1286_id911_at_idx84287
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3170,7 +3170,7 @@ body:             |
 ...
 ---
 name:            test_rule1292_id924_at_idx84545
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3199,7 +3199,7 @@ body:             |
 ...
 ---
 name:            test_rule1293_id925_at_idx84588
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3228,7 +3228,7 @@ body:             |
 ...
 ---
 name:            test_rule1294_id926_at_idx84631
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3257,7 +3257,7 @@ body:             |
 ...
 ---
 name:            test_rule1296_id939_at_idx84715
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3286,7 +3286,7 @@ body:             |
 ...
 ---
 name:            test_rule1297_id940_at_idx84758
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3315,7 +3315,7 @@ body:             |
 ...
 ---
 name:            test_rule1298_id941_at_idx84801
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3344,7 +3344,7 @@ body:             |
 ...
 ---
 name:            test_rule1299_id942_at_idx84844
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3373,7 +3373,7 @@ body:             |
 ...
 ---
 name:            test_rule1304_id1174_at_idx85055
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3402,7 +3402,7 @@ body:             |
 ...
 ---
 name:            test_rule1305_id1175_at_idx85098
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3431,7 +3431,7 @@ body:             |
 ...
 ---
 name:            test_rule1306_id1827_at_idx85141
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3460,7 +3460,7 @@ body:             |
 ...
 ---
 name:            test_rule1309_id1830_at_idx85270
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3489,7 +3489,7 @@ body:             |
 ...
 ---
 name:            test_rule1315_id1051_at_idx85522
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3518,7 +3518,7 @@ body:             |
 ...
 ---
 name:            test_rule1316_id1052_at_idx85565
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3547,7 +3547,7 @@ body:             |
 ...
 ---
 name:            test_rule1317_id1053_at_idx85608
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3576,7 +3576,7 @@ body:             |
 ...
 ---
 name:            test_rule1318_id1054_at_idx85651
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3605,7 +3605,7 @@ body:             |
 ...
 ---
 name:            test_rule1329_id1170_at_idx86118
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3634,7 +3634,7 @@ body:             |
 ...
 ---
 name:            test_rule1330_id1171_at_idx86161
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3663,7 +3663,7 @@ body:             |
 ...
 ---
 name:            test_rule1331_id1791_at_idx86204
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3692,7 +3692,7 @@ body:             |
 ...
 ---
 name:            test_rule1334_id1794_at_idx86333
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3721,7 +3721,7 @@ body:             |
 ...
 ---
 name:            test_rule1337_id2925_at_idx86462
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3746,7 +3746,7 @@ body:             |
 ...
 ---
 name:            test_rule1338_id2928_at_idx86507
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3771,7 +3771,7 @@ body:             |
 ...
 ---
 name:            test_rule1339_id2931_at_idx86552
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3796,7 +3796,7 @@ body:             |
 ...
 ---
 name:            test_rule1582_id372_at_idx97075
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3821,7 +3821,7 @@ body:             |
 ...
 ---
 name:            test_rule1583_id373_at_idx97110
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3846,7 +3846,7 @@ body:             |
 ...
 ---
 name:            test_rule1586_id597_at_idx97215
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3871,7 +3871,7 @@ body:             |
 ...
 ---
 name:            test_rule1587_id598_at_idx97250
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3896,7 +3896,7 @@ body:             |
 ...
 ---
 name:            test_rule1588_id599_at_idx97285
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3921,7 +3921,7 @@ body:             |
 ...
 ---
 name:            test_rule1592_id2383_at_idx97425
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3946,7 +3946,7 @@ body:             |
 ...
 ---
 name:            test_rule1593_id2385_at_idx97458
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3971,7 +3971,7 @@ body:             |
 ...
 ---
 name:            test_rule1602_id587_at_idx97771
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -3996,7 +3996,7 @@ body:             |
 ...
 ---
 name:            test_rule1603_id588_at_idx97806
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4021,7 +4021,7 @@ body:             |
 ...
 ---
 name:            test_rule1604_id589_at_idx97841
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4046,7 +4046,7 @@ body:             |
 ...
 ---
 name:            test_rule1613_id592_at_idx98156
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4071,7 +4071,7 @@ body:             |
 ...
 ---
 name:            test_rule1614_id593_at_idx98191
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4096,7 +4096,7 @@ body:             |
 ...
 ---
 name:            test_rule1615_id594_at_idx98226
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4121,7 +4121,7 @@ body:             |
 ...
 ---
 name:            test_rule1619_id2389_at_idx98366
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4146,7 +4146,7 @@ body:             |
 ...
 ---
 name:            test_rule1620_id2390_at_idx98399
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4171,7 +4171,7 @@ body:             |
 ...
 ---
 name:            test_rule1621_id2923_at_idx98432
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4196,7 +4196,7 @@ body:             |
 ...
 ---
 name:            test_rule1622_id2926_at_idx98477
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4221,7 +4221,7 @@ body:             |
 ...
 ---
 name:            test_rule1623_id2929_at_idx98522
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4246,7 +4246,7 @@ body:             |
 ...
 ---
 name:            test_rule1632_id687_at_idx98847
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4271,7 +4271,7 @@ body:             |
 ...
 ---
 name:            test_rule1633_id688_at_idx98882
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4296,7 +4296,7 @@ body:             |
 ...
 ---
 name:            test_rule1634_id689_at_idx98917
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4321,7 +4321,7 @@ body:             |
 ...
 ---
 name:            test_rule1635_id748_at_idx98952
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4346,7 +4346,7 @@ body:             |
 ...
 ---
 name:            test_rule1636_id749_at_idx98987
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4371,7 +4371,7 @@ body:             |
 ...
 ---
 name:            test_rule1637_id750_at_idx99022
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4396,7 +4396,7 @@ body:             |
 ...
 ---
 name:            test_rule1647_id731_at_idx99386
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4421,7 +4421,7 @@ body:             |
 ...
 ---
 name:            test_rule1648_id732_at_idx99421
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4446,7 +4446,7 @@ body:             |
 ...
 ---
 name:            test_rule1649_id733_at_idx99456
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4471,7 +4471,7 @@ body:             |
 ...
 ---
 name:            test_rule1650_id2924_at_idx99491
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4496,7 +4496,7 @@ body:             |
 ...
 ---
 name:            test_rule1651_id2927_at_idx99536
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -4521,7 +4521,7 @@ body:             |
 ...
 ---
 name:            test_rule1652_id2930_at_idx99581
-alignment:       2
+alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

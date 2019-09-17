@@ -320,6 +320,9 @@ public:
   bool isSVR4ABI() const { return !isDarwinABI() && !isAIXABI(); }
   bool isELFv2ABI() const;
 
+  bool is64BitELFABI() const { return  isSVR4ABI() && isPPC64(); }
+  bool is32BitELFABI() const { return  isSVR4ABI() && !isPPC64(); }
+
   /// Originally, this function return hasISEL(). Now we always enable it,
   /// but may expand the ISEL instruction later.
   bool enableEarlyIfConversion() const override { return true; }

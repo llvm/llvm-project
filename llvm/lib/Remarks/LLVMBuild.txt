@@ -18,4 +18,4 @@
 type = Library
 name = Remarks
 parent = Libraries
-required_libraries = Support
+required_libraries = BitstreamReader Support

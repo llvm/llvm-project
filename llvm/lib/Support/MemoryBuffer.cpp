@@ -211,15 +211,17 @@ static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 getMemoryBufferForStream(sys::fs::file_t FD, const Twine &BufferName) {
   const ssize_t ChunkSize = 4096*4;
   SmallString<ChunkSize> Buffer;
-  size_t ReadBytes;
   // Read into Buffer until we hit EOF.
-  do {
+  for (;;) {
     Buffer.reserve(Buffer.size() + ChunkSize);
-    if (auto EC = sys::fs::readNativeFile(
-            FD, makeMutableArrayRef(Buffer.end(), ChunkSize), &ReadBytes))
-      return EC;
-    Buffer.set_size(Buffer.size() + ReadBytes);
-  } while (ReadBytes != 0);
+    Expected<size_t> ReadBytes = sys::fs::readNativeFile(
+        FD, makeMutableArrayRef(Buffer.end(), ChunkSize));
+    if (!ReadBytes)
+      return errorToErrorCode(ReadBytes.takeError());
+    if (*ReadBytes == 0)
+      break;
+    Buffer.set_size(Buffer.size() + *ReadBytes);
+  }
 
   return getMemBufferCopyImpl(Buffer, BufferName);
 }
@@ -458,7 +460,20 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     return make_error_code(errc::not_enough_memory);
   }
 
-  sys::fs::readNativeFileSlice(FD, Buf->getBuffer(), Offset);
+  // Read until EOF, zero-initialize the rest.
+  MutableArrayRef<char> ToRead = Buf->getBuffer();
+  while (!ToRead.empty()) {
+    Expected<size_t> ReadBytes =
+        sys::fs::readNativeFileSlice(FD, ToRead, Offset);
+    if (!ReadBytes)
+      return errorToErrorCode(ReadBytes.takeError());
+    if (*ReadBytes == 0) {
+      std::memset(ToRead.data(), 0, ToRead.size());
+      break;
+    }
+    ToRead = ToRead.drop_front(*ReadBytes);
+    Offset += *ReadBytes;
+  }
 
   return std::move(Buf);
 }

@@ -6,93 +6,43 @@
 # RUN: ld.lld %t-dso.o -shared -soname=t.so -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t-exe.o
-# RUN: ld.lld %t-exe.o %t.so -o %t.exe
-# RUN: llvm-readobj --symbols --dyn-syms --mips-plt-got %t.exe | FileCheck %s
-# RUN: llvm-objdump -d -mattr=micromips %t.exe | FileCheck --check-prefix=ASM %s
+# RUN: echo "SECTIONS { \
+# RUN:         . = 0x20000;  .text ALIGN(0x100) : { *(.text) } \
+# RUN:         . = 0x20300;  .plt : { *(.plt) } \
+# RUN:       }" > %t.script
+# RUN: ld.lld %t-exe.o %t.so --script %t.script -o %t.exe
+# RUN: llvm-readelf --symbols --dyn-syms --mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -mattr=micromips --no-show-raw-insn %t.exe \
+# RUN:   | FileCheck --check-prefix=ASM %s
 
-# CHECK:      Symbols [
-# CHECK:        Symbol {
-# CHECK:          Name: foo
-# CHECK-NEXT:     Value: 0x20010
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding: Local
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other [
-# CHECK-NEXT:       STO_MIPS_MICROMIPS
-# CHECK-NEXT:       STV_HIDDEN
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Section: .text
-# CHECK-NEXT:   }
-# CHECK:        Symbol {
-# CHECK:          Name: __start
-# CHECK-NEXT:     Value: 0x20000
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: None
-# CHECK-NEXT:     Other [
-# CHECK-NEXT:       STO_MIPS_MICROMIPS
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Section: .text
-# CHECK-NEXT:   }
-# CHECK:        Symbol {
-# CHECK:          Name: foo0
-# CHECK-NEXT:     Value: 0x20040
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other [
-# CHECK-NEXT:       STO_MIPS_MICROMIPS
-# CHECK-NEXT:       STO_MIPS_PLT
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
-# CHECK:      DynamicSymbols [
-# CHECK:        Symbol {
-# CHECK:          Name: foo0
-# CHECK-NEXT:     Value: 0x20041
-# CHECK-NEXT:     Size:
-# CHECK-NEXT:     Binding: Global
-# CHECK-NEXT:     Type: Function
-# CHECK-NEXT:     Other [
-# CHECK-NEXT:       STO_MIPS_MICROMIPS
-# CHECK-NEXT:       STO_MIPS_PLT
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Section: Undefined
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
+# CHECK: Symbol table '.dynsym'
+# CHECK:    Num:    Value  Size Type    Bind   Vis                    Ndx Name
+# CHECK:      1: 00020321     0 FUNC    GLOBAL DEFAULT [<other: 0x88>] UND foo0
 
-# CHECK:      Primary GOT {
-# CHECK:        Local entries [
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address:
-# CHECK-NEXT:       Access:
-# CHECK-NEXT:       Initial: 0x20011
-# CHECK-NEXT:     }
-# CHECK:        ]
-# CHECK:      }
+# CHECK: Symbol table '.symtab'
+# CHECK:    Num:    Value  Size Type    Bind   Vis                    Ndx Name
+# CHECK:      1: 00020210     0 NOTYPE  LOCAL  HIDDEN [<other: 0x82>]   8 foo
+# CHECK:      4: 00020200     0 NOTYPE  GLOBAL DEFAULT [<other: 0x80>]   8 __start
+# CHECK:      5: 00020320     0 FUNC    GLOBAL DEFAULT [<other: 0x88>] UND foo0
 
-# CHECK:      PLT GOT {
-# CHECK:        Entries [
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address:
-# CHECK-NEXT:       Initial: 0x20021
-# CHECK-NEXT:       Value: 0x20041
-# CHECK-NEXT:       Type: Function
-# CHECK-NEXT:       Section: Undefined
-# CHECK-NEXT:       Name: foo0
-# CHECK-NEXT:     }
-# CHECK-NEXT:   ]
-# CHECK-NEXT: }
+# CHECK: Primary GOT:
+# CHECK:  Local entries:
+# CHECK:    Address     Access  Initial
+# CHECK:            -32744(gp) 00020211
+
+# CHECK: PLT GOT:
+# CHECK:  Entries:
+# CHECK:    Address  Initial Sym.Val. Type    Ndx Name
+# CHECK:            00020301 00020321 FUNC    UND foo0
 
 # ASM:      __start:
-# ASM-NEXT:    20000:       fd 1c 80 18     lw      $8, -32744($gp)
-# ASM-NEXT:    20004:       11 08 00 11     addi    $8, $8, 17
-# ASM-NEXT:    20008:       41 a8 00 02     lui     $8, 2
-# ASM-NEXT:    2000c:       11 08 00 41     addi    $8, $8, 65
+# ASM-NEXT:    20200:  lw      $8, -32744($gp)
+# ASM-NEXT:            addi    $8, $8, 529
+# ASM-NEXT:            lui     $8, 2
+# ASM-NEXT:            addi    $8, $8, 801
 #
 # ASM:      foo:
-# ASM-NEXT:    20010:       f4 01 00 20     jal     131136
+# ASM-NEXT:    20210:  jal     131872
 
   .text
   .set micromips

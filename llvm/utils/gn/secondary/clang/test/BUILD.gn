@@ -2,6 +2,7 @@ import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("clang_lit_site_cfg_files.gni")
@@ -99,6 +100,12 @@ write_lit_config("lit_site_cfg") {
   } else {
     # FIXME: Analysis/plugins need global -fPIC
     extra_values += [ "LLVM_ENABLE_PLUGINS=0" ]
+  }
+
+  if (llvm_enable_threads) {
+    extra_values += [ "LLVM_ENABLE_THREADS=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_THREADS=0" ]  # Must be 0.
   }
 }
 

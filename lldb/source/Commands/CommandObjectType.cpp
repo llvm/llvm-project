@@ -80,9 +80,9 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
     return false;
 
   for (auto entry : llvm::enumerate(command.entries().drop_back())) {
-    if (entry.value().ref != "unsigned")
+    if (entry.value().ref() != "unsigned")
       continue;
-    auto next = command.entries()[entry.index() + 1].ref;
+    auto next = command.entries()[entry.index() + 1].ref();
     if (next == "int" || next == "short" || next == "char" || next == "long") {
       result.AppendWarningWithFormat(
           "unsigned %s being treated as two types. if you meant the combined "
@@ -323,9 +323,7 @@ private:
         m_regex = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -436,10 +434,9 @@ protected:
                 Status error;
 
                 for (const std::string &type_name : options->m_target_types) {
-                  ConstString const_type_name(type_name);
-                  if (const_type_name) {
+                  if (!type_name.empty()) {
                     if (!CommandObjectTypeSynthAdd::AddSynth(
-                            const_type_name, synth_provider,
+                            ConstString(type_name), synth_provider,
                             options->m_regex
                                 ? CommandObjectTypeSynthAdd::eRegexSynth
                                 : CommandObjectTypeSynthAdd::eRegularSynth,
@@ -549,9 +546,7 @@ private:
         m_custom_type_name.assign(option_value);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -684,25 +679,26 @@ protected:
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
     for (auto &arg_entry : command.entries()) {
-      if (arg_entry.ref.empty()) {
+      if (arg_entry.ref().empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
-      ConstString typeCS(arg_entry.ref);
+      ConstString typeCS(arg_entry.ref());
       if (m_command_options.m_regex) {
-        RegularExpressionSP typeRX(new RegularExpression());
-        if (!typeRX->Compile(arg_entry.ref)) {
+        RegularExpression typeRX(arg_entry.ref());
+        if (!typeRX.IsValid()) {
           result.AppendError(
               "regex format error (maybe this is not really a regex?)");
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
         category_sp->GetRegexTypeSummariesContainer()->Delete(typeCS);
-        category_sp->GetRegexTypeFormatsContainer()->Add(typeRX, entry);
+        category_sp->GetRegexTypeFormatsContainer()->Add(std::move(typeRX),
+                                                         entry);
       } else
-        category_sp->GetTypeFormatsContainer()->Add(typeCS, entry);
+        category_sp->GetTypeFormatsContainer()->Add(std::move(typeCS), entry);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -737,9 +733,7 @@ protected:
         m_language = Language::GetLanguageTypeFromString(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -868,9 +862,7 @@ private:
         m_delete_all = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -988,9 +980,7 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
           m_category_language.SetOptionWasSet();
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1044,9 +1034,9 @@ protected:
     std::unique_ptr<RegularExpression> formatter_regex;
 
     if (m_options.m_category_regex.OptionWasSet()) {
-      category_regex.reset(new RegularExpression());
-      if (!category_regex->Compile(
-              m_options.m_category_regex.GetCurrentValueAsRef())) {
+      category_regex.reset(new RegularExpression(
+          m_options.m_category_regex.GetCurrentValueAsRef()));
+      if (!category_regex->IsValid()) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'",
             m_options.m_category_regex.GetCurrentValueAsRef().str().c_str());
@@ -1057,8 +1047,9 @@ protected:
 
     if (argc == 1) {
       const char *arg = command.GetArgumentAtIndex(0);
-      formatter_regex.reset(new RegularExpression());
-      if (!formatter_regex->Compile(llvm::StringRef::withNullAsEmpty(arg))) {
+      formatter_regex.reset(
+          new RegularExpression(llvm::StringRef::withNullAsEmpty(arg)));
+      if (!formatter_regex->IsValid()) {
         result.AppendErrorWithFormat("syntax error in regular expression '%s'",
                                      arg);
         result.SetStatus(eReturnStatusFailed);
@@ -1099,13 +1090,13 @@ protected:
 
       foreach
         .SetWithRegex([&result, &formatter_regex, &any_printed](
-                          RegularExpressionSP regex_sp,
+                          const RegularExpression &regex,
                           const FormatterSharedPointer &format_sp) -> bool {
           if (formatter_regex) {
             bool escape = true;
-            if (regex_sp->GetText() == formatter_regex->GetText()) {
+            if (regex.GetText() == formatter_regex->GetText()) {
               escape = false;
-            } else if (formatter_regex->Execute(regex_sp->GetText())) {
+            } else if (formatter_regex->Execute(regex.GetText())) {
               escape = false;
             }
 
@@ -1115,7 +1106,7 @@ protected:
 
           any_printed = true;
           result.GetOutputStream().Printf("%s: %s\n",
-                                          regex_sp->GetText().str().c_str(),
+                                          regex.GetText().str().c_str(),
                                           format_sp->GetDescription().c_str());
           return true;
         });
@@ -1240,8 +1231,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     m_flags.SetHideItemNames(true);
     break;
   default:
-    error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
-    break;
+    llvm_unreachable("Unimplemented option");
   }
 
   return error;
@@ -1338,13 +1328,13 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
                              m_options.m_name, m_options.m_category);
 
     for (auto &entry : command.entries()) {
-      if (entry.ref.empty()) {
+      if (entry.ref().empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
-      options->m_target_types << entry.ref;
+      options->m_target_types << entry.ref();
     }
 
     m_interpreter.GetPythonCommandsFromIOHandler(
@@ -1365,7 +1355,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
 
   for (auto &entry : command.entries()) {
     CommandObjectTypeSummaryAdd::AddSummary(
-        ConstString(entry.ref), script_format,
+        ConstString(entry.ref()), script_format,
         (m_options.m_regex ? eRegexSummary : eRegularSummary),
         m_options.m_category, &error);
     if (error.Fail()) {
@@ -1438,12 +1428,12 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
   // now I have a valid format, let's add it to every type
   Status error;
   for (auto &arg_entry : command.entries()) {
-    if (arg_entry.ref.empty()) {
+    if (arg_entry.ref().empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
-    ConstString typeCS(arg_entry.ref);
+    ConstString typeCS(arg_entry.ref());
 
     AddSummary(typeCS, entry,
                (m_options.m_regex ? eRegexSummary : eRegularSummary),
@@ -1630,8 +1620,8 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (type == eRegexSummary) {
-    RegularExpressionSP typeRX(new RegularExpression());
-    if (!typeRX->Compile(type_name.GetStringRef())) {
+    RegularExpression typeRX(type_name.GetStringRef());
+    if (!typeRX.IsValid()) {
       if (error)
         error->SetErrorString(
             "regex format error (maybe this is not really a regex?)");
@@ -1639,7 +1629,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
     }
 
     category->GetRegexTypeSummariesContainer()->Delete(type_name);
-    category->GetRegexTypeSummariesContainer()->Add(typeRX, entry);
+    category->GetRegexTypeSummariesContainer()->Add(std::move(typeRX), entry);
 
     return true;
   } else if (type == eNamedSummary) {
@@ -1647,7 +1637,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
     DataVisualization::NamedSummaryFormats::Add(type_name, entry);
     return true;
   } else {
-    category->GetTypeSummariesContainer()->Add(type_name, entry);
+    category->GetTypeSummariesContainer()->Add(std::move(type_name), entry);
     return true;
   }
 }
@@ -1739,9 +1729,7 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
         error = m_cate_language.SetValueFromString(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1798,7 +1786,7 @@ protected:
 
     for (auto &entry : command.entries()) {
       TypeCategoryImplSP category_sp;
-      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref),
+      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref()),
                                                      category_sp) &&
           category_sp) {
         category_sp->AddLanguage(m_options.m_cate_language.GetCurrentValue());
@@ -1839,9 +1827,7 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
         }
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -2008,9 +1994,7 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
         }
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -2116,9 +2100,9 @@ protected:
     std::unique_ptr<RegularExpression> regex;
 
     if (argc == 1) {
-      regex.reset(new RegularExpression());
       const char *arg = command.GetArgumentAtIndex(0);
-      if (!regex->Compile(llvm::StringRef::withNullAsEmpty(arg))) {
+      regex.reset(new RegularExpression(llvm::StringRef::withNullAsEmpty(arg)));
+      if (!regex->IsValid()) {
         result.AppendErrorWithFormat(
             "syntax error in category regular expression '%s'", arg);
         result.SetStatus(eReturnStatusFailed);
@@ -2244,13 +2228,13 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
       m_options.m_cascade, m_options.m_regex, m_options.m_category);
 
   for (auto &entry : command.entries()) {
-    if (entry.ref.empty()) {
+    if (entry.ref().empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    options->m_target_types << entry.ref;
+    options->m_target_types << entry.ref();
   }
 
   m_interpreter.GetPythonCommandsFromIOHandler(
@@ -2309,13 +2293,13 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   Status error;
 
   for (auto &arg_entry : command.entries()) {
-    if (arg_entry.ref.empty()) {
+    if (arg_entry.ref().empty()) {
       result.AppendError("empty typenames not allowed");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    ConstString typeCS(arg_entry.ref);
+    ConstString typeCS(arg_entry.ref());
     if (!AddSynth(typeCS, entry,
                   m_options.m_regex ? eRegexSynth : eRegularSynth,
                   m_options.m_category, &error)) {
@@ -2370,8 +2354,8 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (type == eRegexSynth) {
-    RegularExpressionSP typeRX(new RegularExpression());
-    if (!typeRX->Compile(type_name.GetStringRef())) {
+    RegularExpression typeRX(type_name.GetStringRef());
+    if (!typeRX.IsValid()) {
       if (error)
         error->SetErrorString(
             "regex format error (maybe this is not really a regex?)");
@@ -2379,11 +2363,11 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     }
 
     category->GetRegexTypeSyntheticsContainer()->Delete(type_name);
-    category->GetRegexTypeSyntheticsContainer()->Add(typeRX, entry);
+    category->GetRegexTypeSyntheticsContainer()->Add(std::move(typeRX), entry);
 
     return true;
   } else {
-    category->GetTypeSyntheticsContainer()->Add(type_name, entry);
+    category->GetTypeSyntheticsContainer()->Add(std::move(type_name), entry);
     return true;
   }
 }
@@ -2432,9 +2416,7 @@ private:
         m_regex = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -2498,8 +2480,8 @@ private:
     }
 
     if (type == eRegexFilter) {
-      RegularExpressionSP typeRX(new RegularExpression());
-      if (!typeRX->Compile(type_name.GetStringRef())) {
+      RegularExpression typeRX(type_name.GetStringRef());
+      if (!typeRX.IsValid()) {
         if (error)
           error->SetErrorString(
               "regex format error (maybe this is not really a regex?)");
@@ -2507,11 +2489,11 @@ private:
       }
 
       category->GetRegexTypeFiltersContainer()->Delete(type_name);
-      category->GetRegexTypeFiltersContainer()->Add(typeRX, entry);
+      category->GetRegexTypeFiltersContainer()->Add(std::move(typeRX), entry);
 
       return true;
     } else {
-      category->GetTypeFiltersContainer()->Add(type_name, entry);
+      category->GetTypeFiltersContainer()->Add(std::move(type_name), entry);
       return true;
     }
   }
@@ -2612,13 +2594,13 @@ protected:
     WarnOnPotentialUnquotedUnsignedType(command, result);
 
     for (auto &arg_entry : command.entries()) {
-      if (arg_entry.ref.empty()) {
+      if (arg_entry.ref().empty()) {
         result.AppendError("empty typenames not allowed");
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
-      ConstString typeCS(arg_entry.ref);
+      ConstString typeCS(arg_entry.ref());
       if (!AddFilter(typeCS, entry,
                      m_options.m_regex ? eRegexFilter : eRegularFilter,
                      m_options.m_category, &error)) {
@@ -2686,9 +2668,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

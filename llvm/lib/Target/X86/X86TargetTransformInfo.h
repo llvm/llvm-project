@@ -83,6 +83,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::FeatureSlowUAMem32,
 
       // Based on whether user set the -mprefer-vector-width command line.
+      X86::FeaturePrefer128Bit,
       X86::FeaturePrefer256Bit,
 
       // CPU name enums. These just follow CPU string.
@@ -186,8 +187,8 @@ public:
   bool canMacroFuseCmp();
   bool isLegalMaskedLoad(Type *DataType);
   bool isLegalMaskedStore(Type *DataType);
-  bool isLegalNTLoad(Type *DataType, unsigned Alignment);
-  bool isLegalNTStore(Type *DataType, unsigned Alignment);
+  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment);
+  bool isLegalNTStore(Type *DataType, llvm::Align Alignment);
   bool isLegalMaskedGather(Type *DataType);
   bool isLegalMaskedScatter(Type *DataType);
   bool isLegalMaskedExpandLoad(Type *DataType);

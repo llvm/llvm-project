@@ -148,7 +148,7 @@ ExplodedNode *ExprInspectionChecker::reportBug(llvm::StringRef Msg,
   if (!BT)
     BT.reset(new BugType(this, "Checking analyzer assumptions", "debug"));
 
-  BR.emitReport(std::make_unique<BugReport>(*BT, Msg, N));
+  BR.emitReport(std::make_unique<PathSensitiveBugReport>(*BT, Msg, N));
   return N;
 }
 
@@ -305,7 +305,7 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
   const SourceManager &SM = C.getSourceManager();
   FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
   std::string HashContent =
-      GetIssueString(SM, FL, getCheckName().getName(), "Category",
+      GetIssueString(SM, FL, getCheckerName().getName(), "Category",
                      C.getLocationContext()->getDecl(), Opts);
 
   reportBug(HashContent, C);

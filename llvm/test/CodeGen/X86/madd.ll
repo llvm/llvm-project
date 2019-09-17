@@ -1898,9 +1898,7 @@ define <4 x i32> @larger_mul(<16 x i16> %A, <16 x i16> %B) {
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; AVX512-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrd $3, %xmm2, %eax
@@ -1977,9 +1975,11 @@ define <16 x i32> @pmaddwd_32(<32 x i16> %A, <32 x i16> %B) {
 ;
 ; AVX512F-LABEL: pmaddwd_32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: pmaddwd_32:
@@ -2188,9 +2188,11 @@ define <16 x i32> @jumbled_indices16(<32 x i16> %A, <32 x i16> %B) {
 ;
 ; AVX512F-LABEL: jumbled_indices16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: jumbled_indices16:
@@ -2693,6 +2695,90 @@ define i32 @madd_double_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* 
   ret i32 %tmp35
 }
 
+define i32 @madd_quad_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* %arg2, <8 x i16>* %arg3, <8 x i16>* %arg4, <8 x i16>* %arg5, <8 x i16>* %arg6, <8 x i16>* %arg7) {
+; SSE2-LABEL: madd_quad_reduction:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu (%rsi), %xmm1
+; SSE2-NEXT:    pmaddwd %xmm0, %xmm1
+; SSE2-NEXT:    movdqu (%rdx), %xmm0
+; SSE2-NEXT:    movdqu (%rcx), %xmm2
+; SSE2-NEXT:    pmaddwd %xmm0, %xmm2
+; SSE2-NEXT:    movdqu (%r8), %xmm0
+; SSE2-NEXT:    movdqu (%r9), %xmm3
+; SSE2-NEXT:    pmaddwd %xmm0, %xmm3
+; SSE2-NEXT:    paddd %xmm2, %xmm3
+; SSE2-NEXT:    movdqu (%rax), %xmm0
+; SSE2-NEXT:    movdqu (%r10), %xmm2
+; SSE2-NEXT:    pmaddwd %xmm0, %xmm2
+; SSE2-NEXT:    paddd %xmm3, %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: madd_quad_reduction:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX-NEXT:    vpmaddwd (%rcx), %xmm1, %xmm1
+; AVX-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vmovdqu (%r8), %xmm2
+; AVX-NEXT:    vpmaddwd (%r9), %xmm2, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqu (%rax), %xmm2
+; AVX-NEXT:    vpmaddwd (%r10), %xmm2, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+  %tmp = load <8 x i16>, <8 x i16>* %arg, align 1
+  %tmp6 = load <8 x i16>, <8 x i16>* %arg1, align 1
+  %tmp7 = sext <8 x i16> %tmp to <8 x i32>
+  %tmp17 = sext <8 x i16> %tmp6 to <8 x i32>
+  %tmp19 = mul nsw <8 x i32> %tmp7, %tmp17
+  %tmp20 = load <8 x i16>, <8 x i16>* %arg2, align 1
+  %tmp21 = load <8 x i16>, <8 x i16>* %arg3, align 1
+  %tmp22 = sext <8 x i16> %tmp20 to <8 x i32>
+  %tmp23 = sext <8 x i16> %tmp21 to <8 x i32>
+  %tmp25 = mul nsw <8 x i32> %tmp22, %tmp23
+  %tmp26 = add nuw nsw <8 x i32> %tmp25, %tmp19
+
+  %tmp40 = load <8 x i16>, <8 x i16>* %arg4, align 1
+  %tmp41 = load <8 x i16>, <8 x i16>* %arg5, align 1
+  %tmp42 = sext <8 x i16> %tmp40 to <8 x i32>
+  %tmp43 = sext <8 x i16> %tmp41 to <8 x i32>
+  %tmp45 = mul nsw <8 x i32> %tmp42, %tmp43
+  %tmp56 = add nuw nsw <8 x i32> %tmp26, %tmp45
+
+  %tmp50 = load <8 x i16>, <8 x i16>* %arg6, align 1
+  %tmp51 = load <8 x i16>, <8 x i16>* %arg7, align 1
+  %tmp52 = sext <8 x i16> %tmp50 to <8 x i32>
+  %tmp53 = sext <8 x i16> %tmp51 to <8 x i32>
+  %tmp55 = mul nsw <8 x i32> %tmp52, %tmp53
+  %tmp57 = add nuw nsw <8 x i32> %tmp55, %tmp56
+
+  %tmp29 = shufflevector <8 x i32> %tmp57, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp30 = add <8 x i32> %tmp57, %tmp29
+  %tmp31 = shufflevector <8 x i32> %tmp30, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp32 = add <8 x i32> %tmp30, %tmp31
+  %tmp33 = shufflevector <8 x i32> %tmp32, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp34 = add <8 x i32> %tmp32, %tmp33
+  %tmp35 = extractelement <8 x i32> %tmp34, i64 0
+  ret i32 %tmp35
+}
+
 define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; SSE2-LABEL: sum_and_sum_of_squares:
 ; SSE2:       # %bb.0: # %entry
@@ -2702,7 +2788,7 @@ define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    .p2align 4, 0x90
-; SSE2-NEXT:  .LBB32_1: # %vector.body
+; SSE2-NEXT:  .LBB33_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3],xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
@@ -2716,7 +2802,7 @@ define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; SSE2-NEXT:    paddd %xmm4, %xmm1
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:    addq $-8, %rax
-; SSE2-NEXT:    jne .LBB32_1
+; SSE2-NEXT:    jne .LBB33_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
@@ -2732,7 +2818,7 @@ define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4, 0x90
-; AVX1-NEXT:  .LBB32_1: # %vector.body
+; AVX1-NEXT:  .LBB33_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -2748,7 +2834,7 @@ define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    addq $8, %rdi
 ; AVX1-NEXT:    addq $-8, %rax
-; AVX1-NEXT:    jne .LBB32_1
+; AVX1-NEXT:    jne .LBB33_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -2766,7 +2852,7 @@ define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX256-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX256-NEXT:    .p2align 4, 0x90
-; AVX256-NEXT:  .LBB32_1: # %vector.body
+; AVX256-NEXT:  .LBB33_1: # %vector.body
 ; AVX256-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX256-NEXT:    vpmovzxbd {{.*#+}} ymm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; AVX256-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
@@ -2774,7 +2860,7 @@ define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
 ; AVX256-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX256-NEXT:    addq $8, %rdi
 ; AVX256-NEXT:    addq $-8, %rax
-; AVX256-NEXT:    jne .LBB32_1
+; AVX256-NEXT:    jne .LBB33_1
 ; AVX256-NEXT:  # %bb.2: # %middle.block
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

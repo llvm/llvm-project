@@ -1,0 +1,90 @@
+# RUN: llc -x mir -mtriple aarch64-apple-ios -run-pass mir-namer -verify-machineinstrs -o - < %s | FileCheck %s
+
+---
+name: foo
+body:             |
+  bb.0:
+
+    ;CHECK: bb
+    ;CHECK-NEXT: %namedVReg1353:_(p0) = COPY $d0
+    ;CHECK-NEXT: %namedVReg1352:_(<4 x s32>) = COPY $q0
+    ;CHECK-NEXT: G_STORE %namedVReg1352(<4 x s32>), %namedVReg1353
+
+    liveins: $q0, $d0
+    %1:fpr(p0) = COPY $d0
+    %0:fpr(<4 x s32>) = COPY $q0
+    G_STORE %0(<4 x s32>), %1(p0) :: (store 16)
+...
+---
+name: bar
+stack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+body:             |
+  bb.0:
+
+    ;CHECK: bb
+    ;CHECK-NEXT: %namedVReg1370:gpr32 = LDRWui
+    ;CHECK-NEXT: %namedVReg1371:gpr32 = MOVi32imm 1
+    ;CHECK-NEXT: %namedVReg1372:gpr32 = LDRWui
+    ;CHECK-NEXT: %namedVReg1373:gpr32 = MOVi32imm 2
+    ;CHECK-NEXT: %namedVReg1359:gpr32 = LDRWui
+    ;CHECK-NEXT: %namedVReg1360:gpr32 = MOVi32imm 3
+    ;CHECK-NEXT: %namedVReg1365:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %namedVReg1361:gpr32 = LDRWui
+    ;CHECK-NEXT: %namedVReg1366:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %namedVReg1362:gpr32 = MOVi32imm 4
+    ;CHECK-NEXT: %namedVReg1355:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %namedVReg1363:gpr32 = LDRWui
+    ;CHECK-NEXT: %namedVReg1364:gpr32 = MOVi32imm 5
+
+    %0:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %1:gpr32 = MOVi32imm 1
+    %2:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %3:gpr32 = MOVi32imm 2
+    %4:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %5:gpr32 = MOVi32imm 3
+    %10:gpr32 = nsw ADDWrr %0:gpr32, %1:gpr32
+    %6:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %11:gpr32 = nsw ADDWrr %2:gpr32, %3:gpr32
+    %7:gpr32 = MOVi32imm 4
+    %12:gpr32 = nsw ADDWrr %4:gpr32, %5:gpr32
+    %8:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %9:gpr32 = MOVi32imm 5
+    %13:gpr32 = nsw ADDWrr %6:gpr32, %7:gpr32
+    %14:gpr32 = nsw ADDWrr %8:gpr32, %9:gpr32
+    %15:gpr32 = nsw ADDWrr %10:gpr32, %11:gpr32
+    %16:gpr32 = nsw ADDWrr %12:gpr32, %13:gpr32
+    %17:gpr32 = nsw ADDWrr %14:gpr32, %15:gpr32
+    %18:gpr32 = nsw ADDWrr %16:gpr32, %17:gpr32
+    $w0 = COPY %18
+    RET_ReallyLR implicit $w0
+...
+---
+name: baz
+stack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $d0, $d1
+
+    ;CHECK: bb
+    ;CHECK-NEXT: %namedVReg1355:gpr32 = LDRWui
+    ;CHECK-NEXT: %namedVReg1354:gpr32 = COPY %namedVReg1355
+    ;CHECK-NEXT: %namedVReg1353:gpr32 = COPY %namedVReg1354
+    ;CHECK-NEXT: %namedVReg1352:gpr32 = COPY %namedVReg1353
+    ;CHECK-NEXT: $w0 = COPY %namedVReg1352
+
+    %0:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %1:gpr32 = COPY %0
+    %2:gpr32 = COPY %1
+    %3:gpr32 = COPY %2
+    $w0 = COPY %3
+    RET_ReallyLR implicit $w0
+...
+

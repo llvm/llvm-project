@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -126,7 +127,8 @@ public:
                                     MachineModuleInfo *MMI) const override;
 
   /// Get MachO PC relative GOT entry relocation
-  const MCExpr *getIndirectSymViaGOTPCRel(const MCSymbol *Sym,
+  const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
+                                          const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,
                                           MachineModuleInfo *MMI,
                                           MCStreamer &Streamer) const override;
@@ -230,6 +232,8 @@ public:
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
+
+  static XCOFF::StorageClass getStorageClassForGlobal(const GlobalObject *GO);
 };
 
 } // end namespace llvm

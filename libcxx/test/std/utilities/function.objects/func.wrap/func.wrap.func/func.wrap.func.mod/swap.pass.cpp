@@ -15,7 +15,7 @@
 #include <functional>
 #include <cassert>
 
-#include "count_new.hpp"
+#include "count_new.h"
 
 #include "test_macros.h"
 

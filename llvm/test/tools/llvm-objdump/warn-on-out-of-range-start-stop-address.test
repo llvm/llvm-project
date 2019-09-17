@@ -120,12 +120,12 @@
 ## No warning if neither --start-address nor --stop-address are specified.
 # RUN: llvm-objdump --file-headers %t 2>&1 | FileCheck %s --implicit-check-not=warning:
 
-# WARN: warning: no section overlaps the range {{.*}} specified by --start-address/--stop-address
-# WARN-STOP-ONLY: warning: no section has address less than 0x1000 specified by --stop-address
-# WARN-START-ONLY: warning: no section has address greater than or equal to 0x1500 specified by --start-address
+# WARN: warning: {{.*}}: no section overlaps the range {{.*}} specified by --start-address/--stop-address
+# WARN-STOP-ONLY: warning: {{.*}}: no section has address less than 0x1000 specified by --stop-address
+# WARN-START-ONLY: warning: {{.*}}: no section has address greater than or equal to 0x1500 specified by --start-address
 
 # MULTI-INPUT: file format
-# MULTI-INPUT: warning: no section overlaps the range [0x2001,0x2005) specified by --start-address/--stop-address
+# MULTI-INPUT: warning: {{.*}}: no section overlaps the range [0x2001,0x2005) specified by --start-address/--stop-address
 # MULTI-INPUT: file format
 # MULTI-INPUT-NOT: warning:
 

@@ -59,7 +59,7 @@ public:
       : CommandObjectParsed(interpreter, "add",
                             "Add a set of LLDB commands to a watchpoint, to be "
                             "executed whenever the watchpoint is hit.",
-                            nullptr),
+                            nullptr, eCommandRequiresTarget),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
         m_options() {
@@ -354,7 +354,7 @@ are no syntax errors may indicate that a function was declared but never called.
         break;
 
       default:
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -389,14 +389,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-
-    if (target == nullptr) {
-      result.AppendError("There is not a current executable; there are no "
-                         "watchpoints to which to add commands");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target = &GetSelectedTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
@@ -486,7 +479,7 @@ public:
   CommandObjectWatchpointCommandDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "delete",
                             "Delete the set of commands from a watchpoint.",
-                            nullptr) {
+                            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandArgumentData wp_id_arg;
 
@@ -506,14 +499,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-
-    if (target == nullptr) {
-      result.AppendError("There is not a current executable; there are no "
-                         "watchpoints from which to delete commands");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target = &GetSelectedTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
@@ -562,10 +548,10 @@ protected:
 class CommandObjectWatchpointCommandList : public CommandObjectParsed {
 public:
   CommandObjectWatchpointCommandList(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "list", "List the script or set of "
-                                                 "commands to be executed when "
-                                                 "the watchpoint is hit.",
-                            nullptr) {
+      : CommandObjectParsed(interpreter, "list",
+                            "List the script or set of commands to be executed "
+                            "when the watchpoint is hit.",
+                            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandArgumentData wp_id_arg;
 
@@ -585,14 +571,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-
-    if (target == nullptr) {
-      result.AppendError("There is not a current executable; there are no "
-                         "watchpoints for which to list commands");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target = &GetSelectedTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();

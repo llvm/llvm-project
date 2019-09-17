@@ -113,9 +113,7 @@ public:
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -142,11 +140,12 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
+      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     // Store into a std::string since we're about to shift the channel off.
-    const std::string channel = args[0].ref;
+    const std::string channel = args[0].ref();
     args.Shift(); // Shift off the channel
     char log_file[PATH_MAX];
     if (m_options.log_file)
@@ -209,10 +208,11 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
+      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
-    const std::string channel = args[0].ref;
+    const std::string channel = args[0].ref();
     args.Shift(); // Shift off the channel
     if (channel == "all") {
       Log::DisableAllLogChannels();
@@ -265,7 +265,7 @@ protected:
       bool success = true;
       for (const auto &entry : args.entries())
         success =
-            success && Log::ListChannelCategories(entry.ref, output_stream);
+            success && Log::ListChannelCategories(entry.ref(), output_stream);
       if (success)
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }
@@ -291,7 +291,7 @@ protected:
     result.SetStatus(eReturnStatusFailed);
 
     if (args.GetArgumentCount() == 1) {
-      auto sub_command = args[0].ref;
+      auto sub_command = args[0].ref();
 
       if (sub_command.equals_lower("enable")) {
         Timer::SetDisplayDepth(UINT32_MAX);
@@ -308,8 +308,8 @@ protected:
         result.SetStatus(eReturnStatusSuccessFinishResult);
       }
     } else if (args.GetArgumentCount() == 2) {
-      auto sub_command = args[0].ref;
-      auto param = args[1].ref;
+      auto sub_command = args[0].ref();
+      auto param = args[1].ref();
 
       if (sub_command.equals_lower("enable")) {
         uint32_t depth;

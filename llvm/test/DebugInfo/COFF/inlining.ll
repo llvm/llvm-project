@@ -75,33 +75,30 @@
 
 ; ASM: .section .debug$T,"dr"
 ; ASM: .long 4 # Debug section magic
-; ASM: # ArgList (0x1000) {
-; ASM: #   TypeLeafKind: LF_ARGLIST (0x1201)
-; ASM: #   NumArgs: 0
-; ASM: #   Arguments [
-; ASM: #   ]
-; ASM: # }
-; ASM: # Procedure (0x1001) {
-; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
-; ASM: #   ReturnType: void (0x3)
-; ASM: #   CallingConvention: NearC (0x0)
-; ASM: #   FunctionOptions [ (0x0)
-; ASM: #   ]
-; ASM: #   NumParameters: 0
-; ASM: #   ArgListType: () (0x1000)
-; ASM: # }
-; ASM: # FuncId (0x1002) {
-; ASM: #   TypeLeafKind: LF_FUNC_ID (0x1601)
-; ASM: #   ParentScope: 0x0
-; ASM: #   FunctionType: void () (0x1001)
-; ASM: #   Name: bar
-; ASM: # }
-; ASM: # FuncId (0x1003) {
-; ASM: #   TypeLeafKind: LF_FUNC_ID (0x1601)
-; ASM: #   ParentScope: 0x0
-; ASM: #   FunctionType: void () (0x1001)
-; ASM: #   Name: foo
-; ASM: # }
+; ASM: # ArgList (0x1000)
+; ASM: .short	0x6                     # Record length
+; ASM: .short	0x1201                  # Record kind: LF_ARGLIST
+; ASM: .long	0x0                     # NumArgs
+; ASM: # Procedure (0x1001)
+; ASM: .short	0xe                     # Record length
+; ASM: .short	0x1008                  # Record kind: LF_PROCEDURE
+; ASM: .long	0x3                     # ReturnType: void
+; ASM: .byte	0x0                     # CallingConvention: NearC
+; ASM: .byte	0x0                     # FunctionOptions
+; ASM: .short	0x0                     # NumParameters
+; ASM: .long	0x1000                  # ArgListType: ()
+; ASM: # FuncId (0x1002)
+; ASM: .short	0xe                     # Record length
+; ASM: .short	0x1601                  # Record kind: LF_FUNC_ID
+; ASM: .long	0x0                     # ParentScope
+; ASM: .long	0x1001                  # FunctionType: void ()
+; ASM: .asciz	"bar"                   # Name
+; ASM: # FuncId (0x1003)
+; ASM: .short	0xe                     # Record length
+; ASM: .short	0x1601                  # Record kind: LF_FUNC_ID
+; ASM: .long	0x0                     # ParentScope
+; ASM: .long	0x1001                  # FunctionType: void ()
+; ASM: .asciz	"foo"                   # Name
 
 ; We should only the LF_FUNC_ID records that we needed to reference.
 ; OBJ: CodeViewTypes [

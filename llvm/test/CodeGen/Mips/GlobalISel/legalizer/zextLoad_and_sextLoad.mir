@@ -6,15 +6,17 @@
   define void @load2_s16_to_zextLoad2_s32(i16* %px) {entry: ret void}
   define void @load1_s8_to_zextLoad1_s16(i8* %px) {entry: ret void}
   define void @load1_s8_to_zextLoad1_s16_to_zextLoad1_s32(i8* %px) {entry: ret void}
+  define void @load4_s32_to_zextLoad4_s64(i8* %px) {entry: ret void}
   define void @load1_s8_to_sextLoad1_s32(i8* %px) {entry: ret void}
   define void @load2_s16_to_sextLoad2_s32(i16* %px) {entry: ret void}
   define void @load1_s8_to_sextLoad1_s16(i8* %px) {entry: ret void}
   define void @load1_s8_to_sextLoad1_s16_to_sextLoad1_s32(i8* %px) {entry: ret void}
+  define void @load4_s32_to_sextLoad4_s64(i8* %px) {entry: ret void}
 
 ...
 ---
 name:            load1_s8_to_zextLoad1_s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -34,7 +36,7 @@ body:             |
 ...
 ---
 name:            load2_s16_to_zextLoad2_s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -54,7 +56,7 @@ body:             |
 ...
 ---
 name:            load1_s8_to_zextLoad1_s16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -76,7 +78,7 @@ body:             |
 ...
 ---
 name:            load1_s8_to_zextLoad1_s16_to_zextLoad1_s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -95,8 +97,34 @@ body:             |
 
 ...
 ---
+name:            load4_s32_to_zextLoad4_s64
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0
+
+    ; MIPS32-LABEL: name: load4_s32_to_zextLoad4_s64
+    ; MIPS32: liveins: $a0
+    ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.px)
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[C]](s32)
+    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; MIPS32: $v0 = COPY [[UV]](s32)
+    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: RetRA implicit $v0, implicit $v1
+    %0:_(p0) = COPY $a0
+    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load 4 from %ir.px)
+    %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2(s64)
+    $v0 = COPY %3(s32)
+    $v1 = COPY %4(s32)
+    RetRA implicit $v0, implicit $v1
+
+...
+---
 name:            load1_s8_to_sextLoad1_s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -116,7 +144,7 @@ body:             |
 ...
 ---
 name:            load2_s16_to_sextLoad2_s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -136,7 +164,7 @@ body:             |
 ...
 ---
 name:            load1_s8_to_sextLoad1_s16
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -158,7 +186,7 @@ body:             |
 ...
 ---
 name:            load1_s8_to_sextLoad1_s16_to_sextLoad1_s32
-alignment:       2
+alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
@@ -174,5 +202,34 @@ body:             |
     %3:_(s32) = G_SEXTLOAD %0(p0) :: (load 1 from %ir.px)
     $v0 = COPY %3(s32)
     RetRA implicit $v0
+
+...
+---
+name:            load4_s32_to_sextLoad4_s64
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0
+
+    ; MIPS32-LABEL: name: load4_s32_to_sextLoad4_s64
+    ; MIPS32: liveins: $a0
+    ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.px)
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[LOAD]], [[COPY1]](s32)
+    ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[ASHR]](s32)
+    ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; MIPS32: $v0 = COPY [[UV]](s32)
+    ; MIPS32: $v1 = COPY [[UV1]](s32)
+    ; MIPS32: RetRA implicit $v0, implicit $v1
+    %0:_(p0) = COPY $a0
+    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load 4 from %ir.px)
+    %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2(s64)
+    $v0 = COPY %3(s32)
+    $v1 = COPY %4(s32)
+    RetRA implicit $v0, implicit $v1
 
 ...

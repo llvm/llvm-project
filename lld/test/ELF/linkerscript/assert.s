@@ -6,8 +6,8 @@
 # RUN: llvm-readobj %t1 > /dev/null
 
 # RUN: echo "SECTIONS { ASSERT(0, fail) }" > %t3.script
-# RUN: not ld.lld -shared -o /dev/null --script %t3.script %t1.o > %t.log 2>&1
-# RUN: FileCheck %s -check-prefix=FAIL < %t.log
+# RUN: not ld.lld -o /dev/null -T %t3.script %t1.o 2>&1 | FileCheck --check-prefix=FAIL %s
+# RUN: ld.lld -o /dev/null -T %t3.script %t1.o --noinhibit-exec 2>&1 | FileCheck --check-prefix=FAIL %s
 # FAIL: fail
 
 # RUN: echo "SECTIONS { . = ASSERT(0x1000, fail); }" > %t4.script

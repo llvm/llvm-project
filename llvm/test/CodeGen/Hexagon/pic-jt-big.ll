@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon-unknown-elf -relocation-model=pic < %s | FileCheck %s
 
 ; CHECK: r{{[0-9]+}} = add({{pc|PC}},##.LJTI{{[0-9_]+}}@PCREL)
 ; CHECK: r{{[0-9]+}} = memw(r{{[0-9]}}+##g0@GOT

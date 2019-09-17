@@ -17,4 +17,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   HasDotTypeDotSizeDirective = false;
   COMMDirectiveAlignmentIsInBytes = false;
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
+  UseDotAlignForAlignment = true;
+  AsciiDirective = nullptr; // not supported
+  AscizDirective = nullptr; // not supported
+  Data64bitsDirective = "\t.llong\t";
 }

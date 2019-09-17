@@ -24,7 +24,7 @@
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>
-#include "test_memory_resource.hpp"
+#include "test_memory_resource.h"
 
 #include "test_macros.h"
 

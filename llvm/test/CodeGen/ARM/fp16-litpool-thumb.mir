@@ -35,7 +35,7 @@
 ...
 ---
 name:            THUMB
-alignment:       1
+alignment:       2
 tracksRegLiveness: true
 frameInfo:
   stackSize:       8
@@ -53,13 +53,13 @@ constants:
     alignment:       2
 
 #CHECK:  t2B %[[BB3:bb.[0-9]]]
-#CHECK:  bb.{{.}} (align 2):
+#CHECK:  bb.{{.}} (align 4):
 #CHECK:    successors:
 #CHECK:    CONSTPOOL_ENTRY 2, %const.{{.}}, 4
-#CHECK:  bb.{{.}} (align 1):
+#CHECK:  bb.{{.}} (align 2):
 #CHECK:    successors:
 #CHECK:    CONSTPOOL_ENTRY 3, %const.{{.}}, 2
-#CHECK:  [[BB3]].entry (align 1):
+#CHECK:  [[BB3]].entry (align 2):
 
 body:             |
   bb.0.entry:

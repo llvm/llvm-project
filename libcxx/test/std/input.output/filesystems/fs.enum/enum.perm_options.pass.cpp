@@ -12,13 +12,13 @@
 
 // enum class perm_options;
 
-#include "filesystem_include.hpp"
+#include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
 #include <sys/stat.h>
 
 #include "test_macros.h"
-#include "check_bitmask_types.hpp"
+#include "check_bitmask_types.h"
 
 
 constexpr fs::perm_options ME(int val) {

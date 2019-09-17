@@ -117,7 +117,9 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
 
   SmallVector<std::unique_ptr<ClangTidyCheck>, 1> Checks;
   tooling::ToolInvocation Invocation(
-      Args, new TestClangTidyAction<CheckTypes...>(Checks, Finder, Context),
+      Args,
+      std::make_unique<TestClangTidyAction<CheckTypes...>>(Checks, Finder,
+                                                           Context),
       Files.get());
   InMemoryFileSystem->addFile(Filename, 0,
                               llvm::MemoryBuffer::getMemBuffer(Code));

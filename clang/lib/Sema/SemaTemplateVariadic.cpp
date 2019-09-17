@@ -294,44 +294,58 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
     return false;
 
   // If we are within a lambda expression and referencing a pack that is not
-  // a parameter of the lambda itself, that lambda contains an unexpanded
+  // declared within the lambda itself, that lambda contains an unexpanded
   // parameter pack, and we are done.
   // FIXME: Store 'Unexpanded' on the lambda so we don't need to recompute it
   // later.
   SmallVector<UnexpandedParameterPack, 4> LambdaParamPackReferences;
-  for (unsigned N = FunctionScopes.size(); N; --N) {
-    sema::FunctionScopeInfo *Func = FunctionScopes[N-1];
-    // We do not permit pack expansion that would duplicate a statement
-    // expression, not even within a lambda.
-    // FIXME: We could probably support this for statement expressions that do
-    // not contain labels, and for pack expansions that expand both the stmt
-    // expr and the enclosing lambda.
-    if (std::any_of(
-            Func->CompoundScopes.begin(), Func->CompoundScopes.end(),
-            [](sema::CompoundScopeInfo &CSI) { return CSI.IsStmtExpr; }))
-      break;
-
-    if (auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Func)) {
-      if (N == FunctionScopes.size()) {
-        for (auto &Pack : Unexpanded) {
-          auto *VD = dyn_cast_or_null<VarDecl>(
-              Pack.first.dyn_cast<NamedDecl *>());
-          if (VD && VD->getDeclContext() == LSI->CallOperator)
-            LambdaParamPackReferences.push_back(Pack);
+  if (auto *LSI = getEnclosingLambda()) {
+    for (auto &Pack : Unexpanded) {
+      auto DeclaresThisPack = [&](NamedDecl *LocalPack) {
+        if (auto *TTPT = Pack.first.dyn_cast<const TemplateTypeParmType *>()) {
+          auto *TTPD = dyn_cast<TemplateTypeParmDecl>(LocalPack);
+          return TTPD && TTPD->getTypeForDecl() == TTPT;
         }
+        return declaresSameEntity(Pack.first.get<NamedDecl *>(), LocalPack);
+      };
+      if (std::find_if(LSI->LocalPacks.begin(), LSI->LocalPacks.end(),
+                       DeclaresThisPack) != LSI->LocalPacks.end())
+        LambdaParamPackReferences.push_back(Pack);
+    }
+
+    if (LambdaParamPackReferences.empty()) {
+      // Construct in lambda only references packs declared outside the lambda.
+      // That's OK for now, but the lambda itself is considered to contain an
+      // unexpanded pack in this case, which will require expansion outside the
+      // lambda.
+
+      // We do not permit pack expansion that would duplicate a statement
+      // expression, not even within a lambda.
+      // FIXME: We could probably support this for statement expressions that
+      // do not contain labels.
+      // FIXME: This is insufficient to detect this problem; consider
+      //   f( ({ bad: 0; }) + pack ... );
+      bool EnclosingStmtExpr = false;
+      for (unsigned N = FunctionScopes.size(); N; --N) {
+        sema::FunctionScopeInfo *Func = FunctionScopes[N-1];
+        if (std::any_of(
+                Func->CompoundScopes.begin(), Func->CompoundScopes.end(),
+                [](sema::CompoundScopeInfo &CSI) { return CSI.IsStmtExpr; })) {
+          EnclosingStmtExpr = true;
+          break;
+        }
+        // Coumpound-statements outside the lambda are OK for now; we'll check
+        // for those when we finish handling the lambda.
+        if (Func == LSI)
+          break;
       }
 
-      // If we have references to a parameter pack of the innermost enclosing
-      // lambda, only diagnose those ones. We don't know whether any other
-      // unexpanded parameters referenced herein are actually unexpanded;
-      // they might be expanded at an outer level.
-      if (!LambdaParamPackReferences.empty()) {
-        Unexpanded = LambdaParamPackReferences;
-        break;
+      if (!EnclosingStmtExpr) {
+        LSI->ContainsUnexpandedParameterPack = true;
+        return false;
       }
-
-      LSI->ContainsUnexpandedParameterPack = true;
-      return false;
+    } else {
+      Unexpanded = LambdaParamPackReferences;
     }
   }
 

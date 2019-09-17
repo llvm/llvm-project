@@ -3,6 +3,7 @@
 // RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -r %t.so | FileCheck %s
 
+.p2align 4
   adr     x8, .Lfoo                 // R_AARCH64_ADR_PREL_LO21
   adrp    x8, .Lfoo                 // R_AARCH64_ADR_PREL_PG_HI21
   strb    w9, [x8, :lo12:.Lfoo]     // R_AARCH64_LDST8_ABS_LO12_NC

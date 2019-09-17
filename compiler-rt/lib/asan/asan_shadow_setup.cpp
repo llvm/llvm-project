@@ -30,14 +30,13 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
   CHECK_EQ(((end + 1) % GetMmapGranularity()), 0);
   uptr size = end - beg + 1;
   DecreaseTotalMmap(size);  // Don't count the shadow against mmap_limit_mb.
-  if (!MmapFixedNoReserve(beg, size, name)) {
+  if (!MmapFixedSuperNoReserve(beg, size, name)) {
     Report(
         "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
         "Perhaps you're using ulimit -v\n",
         size);
     Abort();
   }
-  SetShadowRegionHugePageMode(beg, size);
   if (common_flags()->use_madv_dontdump) DontDumpShadowMemory(beg, size);
 }
 

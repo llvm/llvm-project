@@ -84,7 +84,7 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 
 } // namespace __sanitizer
 
-using namespace __sanitizer;  // NOLINT
+using namespace __sanitizer;
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE

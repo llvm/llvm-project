@@ -50,8 +50,6 @@ void lld::wasm::markLive() {
     // function.  However, this function does not contain relocations so we
     // have to manually mark the ctors as live if callCtors itself is live.
     if (sym == WasmSym::callCtors) {
-      if (config->passiveSegments)
-        enqueue(WasmSym::initMemory);
       if (config->isPic)
         enqueue(WasmSym::applyRelocs);
       for (const ObjFile *obj : symtab->objectFiles) {
@@ -69,9 +67,9 @@ void lld::wasm::markLive() {
   if (!config->entry.empty())
     enqueue(symtab->find(config->entry));
 
-  // We need to preserve any exported symbol
+  // We need to preserve any no-strip or exported symbol
   for (Symbol *sym : symtab->getSymbols())
-    if (sym->isExported())
+    if (sym->isNoStrip() || sym->isExported())
       enqueue(sym);
 
   // For relocatable output, we need to preserve all the ctor functions
@@ -85,6 +83,9 @@ void lld::wasm::markLive() {
 
   if (config->isPic)
     enqueue(WasmSym::callCtors);
+
+  if (config->sharedMemory && !config->shared)
+    enqueue(WasmSym::initMemory);
 
   // Follow relocations to mark all reachable chunks.
   while (!q.empty()) {
