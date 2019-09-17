@@ -2487,28 +2487,28 @@ public:
 
   void addModImmNotOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     uint32_t Enc = ARM_AM::getSOImmVal(~CE->getValue());
     Inst.addOperand(MCOperand::createImm(Enc));
   }
 
   void addModImmNegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     uint32_t Enc = ARM_AM::getSOImmVal(-CE->getValue());
     Inst.addOperand(MCOperand::createImm(Enc));
   }
 
   void addThumbModImmNeg8_255Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     uint32_t Val = -CE->getValue();
     Inst.addOperand(MCOperand::createImm(Val));
   }
 
   void addThumbModImmNeg1_7Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     uint32_t Val = -CE->getValue();
     Inst.addOperand(MCOperand::createImm(Val));
   }
@@ -2531,19 +2531,19 @@ public:
 
   void addFBits16Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(16 - CE->getValue()));
   }
 
   void addFBits32Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(32 - CE->getValue()));
   }
 
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     int Val = ARM_AM::getFP32Imm(APInt(32, CE->getValue()));
     Inst.addOperand(MCOperand::createImm(Val));
   }
@@ -2552,7 +2552,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // FIXME: We really want to scale the value here, but the LDRD/STRD
     // instruction don't encode operands that way yet.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
@@ -2560,35 +2560,31 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // FIXME: We really want to scale the value here, but the VSTR/VLDR_VSYSR
     // instruction don't encode operands that way yet.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
   void addImm7Shift0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    assert(CE != nullptr && "Invalid operand type!");
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
   void addImm7Shift1Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    assert(CE != nullptr && "Invalid operand type!");
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
   void addImm7Shift2Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    assert(CE != nullptr && "Invalid operand type!");
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
   void addImm7Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    assert(CE != nullptr && "Invalid operand type!");
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
@@ -2596,7 +2592,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The immediate is scaled by four in the encoding and is stored
     // in the MCInst as such. Lop off the low two bits here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue() / 4));
   }
 
@@ -2604,7 +2600,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The immediate is scaled by four in the encoding and is stored
     // in the MCInst as such. Lop off the low two bits here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(-(CE->getValue() / 4)));
   }
 
@@ -2612,7 +2608,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The immediate is scaled by four in the encoding and is stored
     // in the MCInst as such. Lop off the low two bits here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue() / 4));
   }
 
@@ -2620,7 +2616,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The constant encodes as the immediate-1, and we store in the instruction
     // the bits as encoded, so subtract off one here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue() - 1));
   }
 
@@ -2628,7 +2624,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The constant encodes as the immediate-1, and we store in the instruction
     // the bits as encoded, so subtract off one here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue() - 1));
   }
 
@@ -2636,7 +2632,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The constant encodes as the immediate, except for 32, which encodes as
     // zero.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Imm = CE->getValue();
     Inst.addOperand(MCOperand::createImm((Imm == 32 ? 0 : Imm)));
   }
@@ -2645,7 +2641,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // An ASR value of 32 encodes as 0, so that's how we want to add it to
     // the instruction as well.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     int Val = CE->getValue();
     Inst.addOperand(MCOperand::createImm(Val == 32 ? 0 : Val));
   }
@@ -2654,7 +2650,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The operand is actually a t2_so_imm, but we have its bitwise
     // negation in the assembly source, so twiddle it here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(~(uint32_t)CE->getValue()));
   }
 
@@ -2662,7 +2658,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The operand is actually a t2_so_imm, but we have its
     // negation in the assembly source, so twiddle it here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(-(uint32_t)CE->getValue()));
   }
 
@@ -2670,7 +2666,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The operand is actually an imm0_4095, but we have its
     // negation in the assembly source, so twiddle it here.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(-(uint32_t)CE->getValue()));
   }
 
@@ -2679,9 +2675,7 @@ public:
       Inst.addOperand(MCOperand::createImm(CE->getValue() >> 2));
       return;
     }
-
-    const MCSymbolRefExpr *SR = dyn_cast<MCSymbolRefExpr>(Imm.Val);
-    assert(SR && "Unknown value type!");
+    const MCSymbolRefExpr *SR = cast<MCSymbolRefExpr>(Imm.Val);
     Inst.addOperand(MCOperand::createExpr(SR));
   }
 
@@ -2693,10 +2687,7 @@ public:
         Inst.addOperand(MCOperand::createImm(CE->getValue()));
         return;
       }
-
-      const MCSymbolRefExpr *SR = dyn_cast<MCSymbolRefExpr>(Imm.Val);
-
-      assert(SR && "Unknown value type!");
+      const MCSymbolRefExpr *SR = cast<MCSymbolRefExpr>(Imm.Val);
       Inst.addOperand(MCOperand::createExpr(SR));
       return;
     }
@@ -2758,7 +2749,7 @@ public:
       return;
     }
 
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     int Val = CE->getValue();
     Inst.addOperand(MCOperand::createImm(Val));
   }
@@ -3138,7 +3129,7 @@ public:
 
   void addPowerTwoOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
@@ -3233,14 +3224,14 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
     // Mask in that this is an i8 splat.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue() | 0xe00));
   }
 
   void addNEONi16splatOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Value = CE->getValue();
     Value = ARM_AM::encodeNEONi16splat(Value);
     Inst.addOperand(MCOperand::createImm(Value));
@@ -3249,7 +3240,7 @@ public:
   void addNEONi16splatNotOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Value = CE->getValue();
     Value = ARM_AM::encodeNEONi16splat(~Value & 0xffff);
     Inst.addOperand(MCOperand::createImm(Value));
@@ -3258,7 +3249,7 @@ public:
   void addNEONi32splatOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Value = CE->getValue();
     Value = ARM_AM::encodeNEONi32splat(Value);
     Inst.addOperand(MCOperand::createImm(Value));
@@ -3267,7 +3258,7 @@ public:
   void addNEONi32splatNotOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Value = CE->getValue();
     Value = ARM_AM::encodeNEONi32splat(~Value);
     Inst.addOperand(MCOperand::createImm(Value));
@@ -3275,7 +3266,7 @@ public:
 
   void addNEONi8ReplicateOperands(MCInst &Inst, bool Inv) const {
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     assert((Inst.getOpcode() == ARM::VMOVv8i8 ||
             Inst.getOpcode() == ARM::VMOVv16i8) &&
           "All instructions that wants to replicate non-zero byte "
@@ -3306,7 +3297,7 @@ public:
   void addNEONi32vmovOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Value = encodeNeonVMOVImmediate(CE->getValue());
     Inst.addOperand(MCOperand::createImm(Value));
   }
@@ -3318,7 +3309,7 @@ public:
 
   void addNEONvmovi16ReplicateOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     assert((Inst.getOpcode() == ARM::VMOVv4i16 ||
             Inst.getOpcode() == ARM::VMOVv8i16 ||
             Inst.getOpcode() == ARM::VMVNv4i16 ||
@@ -3335,14 +3326,14 @@ public:
   void addNEONi32vmovNegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Value = encodeNeonVMOVImmediate(~CE->getValue());
     Inst.addOperand(MCOperand::createImm(Value));
   }
 
   void addNEONvmovi32ReplicateOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     assert((Inst.getOpcode() == ARM::VMOVv2i32 ||
             Inst.getOpcode() == ARM::VMOVv4i32 ||
             Inst.getOpcode() == ARM::VMVNv2i32 ||
@@ -3357,7 +3348,7 @@ public:
   void addNEONi64splatOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate encodes the type of constant as well as the value.
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     uint64_t Value = CE->getValue();
     unsigned Imm = 0;
     for (unsigned i = 0; i < 8; ++i, Value >>= 8) {
@@ -3368,19 +3359,19 @@ public:
 
   void addComplexRotationEvenOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm(CE->getValue() / 90));
   }
 
   void addComplexRotationOddOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     Inst.addOperand(MCOperand::createImm((CE->getValue() - 90) / 180));
   }
 
   void addMveSaturateOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     unsigned Imm = CE->getValue();
     assert((Imm == 48 || Imm == 64) && "Invalid saturate operand");
     Inst.addOperand(MCOperand::createImm(Imm == 48 ? 1 : 0));

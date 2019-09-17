@@ -21,15 +21,68 @@ namespace llvm {
 class raw_ostream;
 namespace gsym {
 
-/// Function information in GSYM files encodes information for one
-/// contiguous address range. The name of the function is encoded as
-/// a string table offset and allows multiple functions with the same
-/// name to share the name string in the string table. Line tables are
-/// stored in a sorted vector of gsym::LineEntry objects and are split
-/// into line tables for each function. If a function has a discontiguous
-/// range, it will be split into two gsym::FunctionInfo objects. If the
-/// function has inline functions, the information will be encoded in
-/// the "Inline" member, see gsym::InlineInfo for more information.
+/// Function information in GSYM files encodes information for one contiguous
+/// address range. If a function has discontiguous address ranges, they will
+/// need to be encoded using multiple FunctionInfo objects.
+///
+/// ENCODING
+///
+/// The function information gets the function start address as an argument
+/// to the FunctionInfo::decode(...) function. This information is calculated
+/// from the GSYM header and an address offset from the GSYM address offsets
+/// table. The encoded FunctionInfo information must be alinged to a 4 byte
+/// boundary.
+///
+/// The encoded data for a FunctionInfo starts with fixed data that all
+/// function info objects have:
+///
+/// ENCODING  NAME        DESCRIPTION
+/// ========= =========== ====================================================
+/// uint32_t  Size        The size in bytes of this function.
+/// uint32_t  Name        The string table offset of the function name.
+///
+/// The optional data in a FunctionInfo object follows this fixed information
+/// and consists of a stream of tuples that consist of:
+///
+/// ENCODING  NAME        DESCRIPTION
+/// ========= =========== ====================================================
+/// uint32_t  InfoType    An "InfoType" enumeration that describes the type
+///                       of optional data that is encoded.
+/// uint32_t  InfoLength  The size in bytes of the encoded data that
+///                       immediately follows this length if this value is
+///                       greater than zero.
+/// uint8_t[] InfoData    Encoded bytes that represent the data for the
+///                       "InfoType". These bytes are only present if
+///                       "InfoLength" is greater than zero.
+///
+/// The "InfoType" is an enumeration:
+///
+///   enum InfoType {
+///     EndOfList = 0u,
+///     LineTableInfo = 1u,
+///     InlineInfo = 2u
+///   };
+///
+/// This stream of tuples is terminated by a "InfoType" whose value is
+/// InfoType::EndOfList and a zero for "InfoLength". This signifies the end of
+/// the optional information list. This format allows us to add new optional
+/// information data to a FunctionInfo object over time and allows older
+/// clients to still parse the format and skip over any data that they don't
+/// understand or want to parse.
+///
+/// So the function information encoding essientially looks like:
+///
+/// struct {
+///   uint32_t Size;
+///   uint32_t Name;
+///   struct {
+///     uint32_t InfoType;
+///     uint32_t InfoLength;
+///     uint8_t InfoData[InfoLength];
+///   }[N];
+/// }
+///
+/// Where "N" is the number of tuples.
 struct FunctionInfo {
   AddressRange Range;
   uint32_t Name; ///< String table offset in the string table.
@@ -39,22 +92,53 @@ struct FunctionInfo {
   FunctionInfo(uint64_t Addr = 0, uint64_t Size = 0, uint32_t N = 0)
       : Range(Addr, Addr + Size), Name(N) {}
 
+  /// Query if a FunctionInfo has rich debug info.
+  ///
+  /// \returns A bool that indicates if this object has something else than
+  /// range and name. When converting information from a symbol table and from
+  /// debug info, we might end up with multiple FunctionInfo objects for the
+  /// same range and we need to be able to tell which one is the better object
+  /// to use.
   bool hasRichInfo() const {
-    /// Returns whether we have something else than range and name. When
-    /// converting information from a symbol table and from debug info, we
-    /// might end up with multiple FunctionInfo objects for the same range
-    /// and we need to be able to tell which one is the better object to use.
     return OptLineTable.hasValue() || Inline.hasValue();
   }
 
+  /// Query if a FunctionInfo object is valid.
+  ///
+  /// Address and size can be zero and there can be no line entries for a
+  /// symbol so the only indication this entry is valid is if the name is
+  /// not zero. This can happen when extracting information from symbol
+  /// tables that do not encode symbol sizes. In that case only the
+  /// address and name will be filled in.
+  ///
+  /// \returns A boolean indicating if this FunctionInfo is valid.
   bool isValid() const {
-    /// Address and size can be zero and there can be no line entries for a
-    /// symbol so the only indication this entry is valid is if the name is
-    /// not zero. This can happen when extracting information from symbol
-    /// tables that do not encode symbol sizes. In that case only the
-    /// address and name will be filled in.
     return Name != 0;
   }
+
+  /// Decode an object from a binary data stream.
+  ///
+  /// \param Data The binary stream to read the data from. This object must
+  /// have the data for the object starting at offset zero. The data
+  /// can contain more data than needed.
+  ///
+  /// \param BaseAddr The FunctionInfo's start address and will be used as the
+  /// base address when decoding any contained information like the line table
+  /// and the inline info.
+  ///
+  /// \returns An FunctionInfo or an error describing the issue that was
+  /// encountered during decoding.
+  static llvm::Expected<FunctionInfo> decode(DataExtractor &Data,
+                                             uint64_t BaseAddr);
+
+  /// Encode this object into FileWriter stream.
+  ///
+  /// \param O The binary stream to write the data to at the current file
+  /// position.
+  ///
+  /// \returns An error object that indicates failure or the offset of the
+  /// function info that was successfully written into the stream.
+  llvm::Expected<uint64_t> encode(FileWriter &O) const;
 
   uint64_t startAddress() const { return Range.Start; }
   uint64_t endAddress() const { return Range.End; }

@@ -733,6 +733,12 @@ struct Attributor {
   /// various places.
   void identifyDefaultAbstractAttributes(Function &F);
 
+  /// Initialize the information cache for queries regarding function \p F.
+  ///
+  /// This method needs to be called for all function that might be looked at
+  /// through the information cache interface *prior* to looking at them.
+  void initializeInformationCache(Function &F);
+
   /// Mark the internal function \p F as live.
   ///
   /// This will trigger the identification and initialization of attributes for

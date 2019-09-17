@@ -74,9 +74,10 @@ enum DiagnosticKind {
   DK_LastMachineRemark = DK_MachineOptimizationRemarkAnalysis,
   DK_MIRParser,
   DK_PGOProfile,
+  DK_MisExpect,
   DK_Unsupported,
-  DK_FirstPluginKind,
-  DK_MisExpect
+  DK_FirstPluginKind // Must be last value to work with
+                     // getNextAvailablePluginDiagnosticKind
 };
 
 /// Get the next available kind ID for a plugin diagnostic.

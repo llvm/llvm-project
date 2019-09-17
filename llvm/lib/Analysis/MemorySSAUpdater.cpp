@@ -339,6 +339,9 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
       ForwardIDFCalculator IDFs(*MSSA->DT);
       SmallVector<BasicBlock *, 32> IDFBlocks;
       SmallPtrSet<BasicBlock *, 2> DefiningBlocks;
+      for (const auto &VH : InsertedPHIs)
+        if (const auto *RealPHI = cast_or_null<MemoryPhi>(VH))
+          DefiningBlocks.insert(RealPHI->getBlock());
       DefiningBlocks.insert(MD->getBlock());
       IDFs.setDefiningBlocks(DefiningBlocks);
       IDFs.calculate(IDFBlocks);

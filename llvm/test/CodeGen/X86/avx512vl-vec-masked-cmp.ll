@@ -23526,8 +23526,7 @@ define i8 @mask_zero_lower(<4 x i32> %a) {
 ; NoVLX:       # %bb.0:
 ; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kshiftlw $12, %k0, %k0
-; NoVLX-NEXT:    kshiftrw $8, %k0, %k0
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k0
 ; NoVLX-NEXT:    kmovw %k0, %eax
 ; NoVLX-NEXT:    # kill: def $al killed $al killed $eax
 ; NoVLX-NEXT:    vzeroupper

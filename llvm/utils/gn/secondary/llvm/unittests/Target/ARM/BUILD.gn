@@ -1,0 +1,17 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ARMTests") {
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target/ARM:LLVMARMCodeGen",
+    "//llvm/lib/Target/ARM/MCTargetDesc",
+    "//llvm/lib/Target/ARM/TargetInfo",
+    "//llvm/lib/Target/ARM/Utils",
+  ]
+  include_dirs = [ "//llvm/lib/Target/ARM" ]
+  sources = [
+    "MachineInstrTest.cpp",
+  ]
+}

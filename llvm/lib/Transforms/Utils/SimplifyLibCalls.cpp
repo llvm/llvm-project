@@ -624,8 +624,6 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
   CallInst *NewCI = B.CreateMemCpy(Dst, 1, Src, 1, ConstantInt::get(DL.getIntPtrType(PT), Len));
- // AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
-//  NewCI->getAttributes().addParamAttributes(CI->getContext(), 0, ArgAttrs);
   NewCI->setAttributes(CI->getAttributes());
   return Dst;
 }

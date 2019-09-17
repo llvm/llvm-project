@@ -578,6 +578,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsMAI;
   }
 
+  static bool isDOT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsDOT;
+  }
+
+  bool isDOT(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
+  }
+
   static bool isScalarUnit(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
   }

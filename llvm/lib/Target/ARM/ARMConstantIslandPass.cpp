@@ -229,7 +229,6 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
       AU.addRequired<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }

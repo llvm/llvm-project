@@ -4208,6 +4208,12 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
       Call.addAttribute(AttributeList::ReturnIndex,
                         Attribute::getWithDereferenceableOrNullBytes(
                             Call.getContext(), Size.getZExtValue()));
+  } else if (isStrdupLikeFn(&Call, TLI) && Call.getNumArgOperands() == 1) {
+    // TODO: handle strndup
+    if (uint64_t Len = GetStringLength(Call.getOperand(0)))
+      Call.addAttribute(
+          AttributeList::ReturnIndex,
+          Attribute::getWithDereferenceableOrNullBytes(Call.getContext(), Len));
   }
 }
 
