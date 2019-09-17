@@ -86,6 +86,15 @@ int diff_ret_variant(void);
 #pragma omp declare variant(diff_ret_variant) match(xxx={})
 void diff_ret(void);
 
+void marked(void);
+void not_marked(void);
+// expected-note@+1 {{marked as 'declare variant' here}}
+#pragma omp declare variant(not_marked) match(xxx={})
+void marked_variant(void);
+// expected-warning@+1 {{variant function in '#pragma omp declare variant' is itself marked as '#pragma omp declare variant'}}
+#pragma omp declare variant(marked_variant) match(xxx={})
+void marked(void);
+
 // expected-error@+1 {{function declaration is expected after 'declare variant' directive}}
 #pragma omp declare variant
 // expected-error@+1 {{function declaration is expected after 'declare variant' directive}}

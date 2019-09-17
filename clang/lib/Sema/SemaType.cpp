@@ -1619,6 +1619,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     case OpenCLAccessAttr::Keyword_read_only:                                  \
       Result = Context.Id##ROTy;                                               \
       break;                                                                   \
+    case OpenCLAccessAttr::SpellingNotCalculated:                              \
+      llvm_unreachable("Spelling not yet calculated");                         \
     }                                                                          \
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
