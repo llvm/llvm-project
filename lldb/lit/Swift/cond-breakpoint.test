@@ -1,0 +1,10 @@
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g %S/Inputs/main.swift -o a.out
+# RUN: %lldb a.out -b -s %s 2>&1 | FileCheck %s
+
+# CHECK-NOT: Stopped due to an error evaluating condition of breakpoint
+
+# The parentheses surrounding the expression matter.
+br s -n main -c '((nil == nil))'
+r
+c

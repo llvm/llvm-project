@@ -1462,7 +1462,8 @@ LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
 
   Scalar scalar_value;
 
-  CompilerType valobj_type(valobj.GetCompilerType());
+  auto swift_ty = GetCanonicalSwiftType(valobj.GetCompilerType());
+  CompilerType valobj_type(swift_ty);
   Flags type_flags(valobj_type.GetTypeInfo());
   if (llvm::isa<SwiftASTContext>(valobj_type.GetTypeSystem())) {
     if (type_flags.AllSet(eTypeIsStructUnion) &&
