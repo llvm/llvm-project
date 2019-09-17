@@ -2761,8 +2761,8 @@ static __inline__ vector double __ATTRS_o_ai vec_xl_len(double *__a,
   return (vector double)__builtin_vsx_lxvl(__a, (__b << 56));
 }
 
-static __inline__ vector double __ATTRS_o_ai vec_xl_len_r(unsigned char *__a,
-                                                          size_t __b) {
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_xl_len_r(unsigned char *__a, size_t __b) {
   vector unsigned char __res =
       (vector unsigned char)__builtin_vsx_lxvll(__a, (__b << 56));
 #ifdef __LITTLE_ENDIAN__
@@ -2912,10 +2912,11 @@ static __inline__ vector double __ATTRS_o_ai vec_cpsgn(vector double __a,
 #ifdef __VSX__
 #define vec_cts(__a, __b)                                                      \
   _Generic((__a), vector float                                                 \
-           : __builtin_altivec_vctsxs((__a), (__b)), vector double             \
+           : __builtin_altivec_vctsxs((vector float)(__a), (__b)),             \
+             vector double                                                     \
            : __extension__({                                                   \
              vector double __ret =                                             \
-                 (__a) *                                                       \
+                 (vector double)(__a) *                                        \
                  (vector double)(vector unsigned long long)((0x3ffULL + (__b)) \
                                                             << 52);            \
              __builtin_convertvector(__ret, vector signed long long);          \
@@ -2933,10 +2934,11 @@ static __inline__ vector double __ATTRS_o_ai vec_cpsgn(vector double __a,
 #ifdef __VSX__
 #define vec_ctu(__a, __b)                                                      \
   _Generic((__a), vector float                                                 \
-           : __builtin_altivec_vctuxs((__a), (__b)), vector double             \
+           : __builtin_altivec_vctuxs((vector float)(__a), (__b)),             \
+             vector double                                                     \
            : __extension__({                                                   \
              vector double __ret =                                             \
-                 (__a) *                                                       \
+                 (vector double)(__a) *                                        \
                  (vector double)(vector unsigned long long)((0x3ffULL + __b)   \
                                                             << 52);            \
              __builtin_convertvector(__ret, vector unsigned long long);        \
@@ -6301,19 +6303,20 @@ static __inline__ vector float __ATTRS_o_ai vec_or(vector float __a,
 #ifdef __VSX__
 static __inline__ vector double __ATTRS_o_ai vec_or(vector bool long long __a,
                                                     vector double __b) {
-  return (vector unsigned long long)__a | (vector unsigned long long)__b;
+  return (vector double)((vector unsigned long long)__a |
+                         (vector unsigned long long)__b);
 }
 
 static __inline__ vector double __ATTRS_o_ai vec_or(vector double __a,
                                                     vector bool long long __b) {
-  return (vector unsigned long long)__a | (vector unsigned long long)__b;
+  return (vector double)((vector unsigned long long)__a |
+                         (vector unsigned long long)__b);
 }
 
 static __inline__ vector double __ATTRS_o_ai vec_or(vector double __a,
                                                     vector double __b) {
-  vector unsigned long long __res =
-      (vector unsigned long long)__a | (vector unsigned long long)__b;
-  return (vector double)__res;
+  return (vector double)((vector unsigned long long)__a |
+                         (vector unsigned long long)__b);
 }
 
 static __inline__ vector signed long long __ATTRS_o_ai
@@ -14781,7 +14784,7 @@ static __inline__ int __ATTRS_o_ai vec_all_ne(vector bool long long __a,
 static __inline__ int __ATTRS_o_ai vec_all_ne(vector float __a,
                                               vector float __b) {
 #ifdef __VSX__
-  return __builtin_vsx_xvcmpeqdp_p(__CR6_EQ, __a, __b);
+  return __builtin_vsx_xvcmpeqdp_p(__CR6_EQ, (vector double)__a, (vector double)__b);
 #else
   return __builtin_altivec_vcmpeqfp_p(__CR6_EQ, __a, __b);
 #endif
@@ -16671,13 +16674,13 @@ static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned __int128 __vec,
 #endif
 
 #ifdef __POWER9_VECTOR__
-#define vec_test_data_class(__a, __b)                                      \
-        _Generic((__a),                                                    \
-           vector float:                                                   \
-             (vector bool int)__builtin_vsx_xvtstdcsp((__a), (__b)),       \
-           vector double:                                                  \
-             (vector bool long long)__builtin_vsx_xvtstdcdp((__a), (__b))  \
-        )
+#define vec_test_data_class(__a, __b)                                          \
+  _Generic(                                                                    \
+      (__a), vector float                                                      \
+      : (vector bool int)__builtin_vsx_xvtstdcsp((vector float)(__a), (__b)),  \
+        vector double                                                          \
+      : (vector bool long long)__builtin_vsx_xvtstdcdp((vector double)(__a),   \
+                                                       (__b)))
 
 #endif /* #ifdef __POWER9_VECTOR__ */
 

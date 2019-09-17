@@ -122,8 +122,7 @@ private:
         ND, SourceRange(BeginLoc, EndLoc));
   }
   bool visit(const NamedDecl *ND, SourceLocation Loc) {
-    return visit(ND, Loc,
-                 Loc.getLocWithOffset(ND->getNameAsString().length() - 1));
+    return visit(ND, Loc, Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts));
   }
 };
 

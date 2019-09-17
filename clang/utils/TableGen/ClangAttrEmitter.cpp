@@ -3750,10 +3750,10 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
       // specific attribute, or MSP430-specific attribute. Additionally, an
       // attribute can be spelled GNU<"dllexport"> and Declspec<"dllexport">
       // for the same semantic attribute. Ultimately, we need to map each of
-      // these to a single ParsedAttr::Kind value, but the StringMatcher
-      // class cannot handle duplicate match strings. So we generate a list of
-      // string to match based on the syntax, and emit multiple string matchers
-      // depending on the syntax used.
+      // these to a single AttributeCommonInfo::Kind value, but the
+      // StringMatcher class cannot handle duplicate match strings. So we
+      // generate a list of string to match based on the syntax, and emit
+      // multiple string matchers depending on the syntax used.
       std::string AttrName;
       if (Attr.isSubClassOf("TargetSpecificAttr") &&
           !Attr.isValueUnset("ParseKind")) {
@@ -3798,33 +3798,33 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 
         if (SemaHandler)
           Matches->push_back(StringMatcher::StringPair(
-              Spelling, "return ParsedAttr::AT_" + AttrName + ";"));
+              Spelling, "return AttributeCommonInfo::AT_" + AttrName + ";"));
         else
           Matches->push_back(StringMatcher::StringPair(
-              Spelling, "return ParsedAttr::IgnoredAttribute;"));
+              Spelling, "return AttributeCommonInfo::IgnoredAttribute;"));
       }
     }
   }
 
-  OS << "static ParsedAttr::Kind getAttrKind(StringRef Name, ";
-  OS << "ParsedAttr::Syntax Syntax) {\n";
-  OS << "  if (ParsedAttr::AS_GNU == Syntax) {\n";
+  OS << "static AttributeCommonInfo::Kind getAttrKind(StringRef Name, ";
+  OS << "AttributeCommonInfo::Syntax Syntax) {\n";
+  OS << "  if (AttributeCommonInfo::AS_GNU == Syntax) {\n";
   StringMatcher("Name", GNU, OS).Emit();
-  OS << "  } else if (ParsedAttr::AS_Declspec == Syntax) {\n";
+  OS << "  } else if (AttributeCommonInfo::AS_Declspec == Syntax) {\n";
   StringMatcher("Name", Declspec, OS).Emit();
-  OS << "  } else if (ParsedAttr::AS_Microsoft == Syntax) {\n";
+  OS << "  } else if (AttributeCommonInfo::AS_Microsoft == Syntax) {\n";
   StringMatcher("Name", Microsoft, OS).Emit();
-  OS << "  } else if (ParsedAttr::AS_CXX11 == Syntax) {\n";
+  OS << "  } else if (AttributeCommonInfo::AS_CXX11 == Syntax) {\n";
   StringMatcher("Name", CXX11, OS).Emit();
-  OS << "  } else if (ParsedAttr::AS_C2x == Syntax) {\n";
+  OS << "  } else if (AttributeCommonInfo::AS_C2x == Syntax) {\n";
   StringMatcher("Name", C2x, OS).Emit();
-  OS << "  } else if (ParsedAttr::AS_Keyword == Syntax || ";
-  OS << "ParsedAttr::AS_ContextSensitiveKeyword == Syntax) {\n";
+  OS << "  } else if (AttributeCommonInfo::AS_Keyword == Syntax || ";
+  OS << "AttributeCommonInfo::AS_ContextSensitiveKeyword == Syntax) {\n";
   StringMatcher("Name", Keywords, OS).Emit();
-  OS << "  } else if (ParsedAttr::AS_Pragma == Syntax) {\n";
+  OS << "  } else if (AttributeCommonInfo::AS_Pragma == Syntax) {\n";
   StringMatcher("Name", Pragma, OS).Emit();
   OS << "  }\n";
-  OS << "  return ParsedAttr::UnknownAttribute;\n"
+  OS << "  return AttributeCommonInfo::UnknownAttribute;\n"
      << "}\n";
 }
 
