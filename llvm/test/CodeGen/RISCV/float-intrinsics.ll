@@ -108,17 +108,16 @@ define float @sincos_f32(float %a) nounwind {
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
 ; RV32IF-NEXT:    sw s0, 8(sp)
-; RV32IF-NEXT:    sw s1, 4(sp)
 ; RV32IF-NEXT:    mv s0, a0
 ; RV32IF-NEXT:    call sinf
-; RV32IF-NEXT:    mv s1, a0
+; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    fsw ft0, 4(sp)
 ; RV32IF-NEXT:    mv a0, s0
 ; RV32IF-NEXT:    call cosf
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    fmv.w.x ft1, s1
+; RV32IF-NEXT:    flw ft1, 4(sp)
 ; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
-; RV32IF-NEXT:    lw s1, 4(sp)
 ; RV32IF-NEXT:    lw s0, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -129,17 +128,16 @@ define float @sincos_f32(float %a) nounwind {
 ; RV64IF-NEXT:    addi sp, sp, -32
 ; RV64IF-NEXT:    sd ra, 24(sp)
 ; RV64IF-NEXT:    sd s0, 16(sp)
-; RV64IF-NEXT:    sd s1, 8(sp)
 ; RV64IF-NEXT:    mv s0, a0
 ; RV64IF-NEXT:    call sinf
-; RV64IF-NEXT:    mv s1, a0
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    fsw ft0, 12(sp)
 ; RV64IF-NEXT:    mv a0, s0
 ; RV64IF-NEXT:    call cosf
 ; RV64IF-NEXT:    fmv.w.x ft0, a0
-; RV64IF-NEXT:    fmv.w.x ft1, s1
+; RV64IF-NEXT:    flw ft1, 12(sp)
 ; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
-; RV64IF-NEXT:    ld s1, 8(sp)
 ; RV64IF-NEXT:    ld s0, 16(sp)
 ; RV64IF-NEXT:    ld ra, 24(sp)
 ; RV64IF-NEXT:    addi sp, sp, 32
@@ -324,21 +322,21 @@ define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
 ; Use of fmadd depends on TargetLowering::isFMAFasterthanFMulAndFAdd
 ; RV32IF-LABEL: fmuladd_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a1
-; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    fmul.s ft0, ft1, ft0
-; RV32IF-NEXT:    fmv.w.x ft1, a2
-; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmul.s ft1, ft2, ft1
+; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fmuladd_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a1
-; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    fmul.s ft0, ft1, ft0
-; RV64IF-NEXT:    fmv.w.x ft1, a2
-; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV64IF-NEXT:    fmv.w.x ft0, a2
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fmv.w.x ft2, a0
+; RV64IF-NEXT:    fmul.s ft1, ft2, ft1
+; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %1 = call float @llvm.fmuladd.f32(float %a, float %b, float %c)

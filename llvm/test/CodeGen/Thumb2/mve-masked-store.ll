@@ -5,16 +5,14 @@
 define arm_aapcs_vfpcc void @masked_v4i32(<4 x i32> *%dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v4i32:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    vstrwt.32 q1, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -26,8 +24,7 @@ entry:
 define arm_aapcs_vfpcc void @masked_v4i32_align1(<4 x i32> *%dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -35,8 +32,7 @@ define arm_aapcs_vfpcc void @masked_v4i32_align1(<4 x i32> *%dest, <4 x i32> %a)
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vrev32.8 q0, q1
-; CHECK-BE-NEXT:    vcmp.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s32 gt, q1, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -51,8 +47,7 @@ define i8* @masked_v4i32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrwt.32 q1, [r0, #4]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -63,8 +58,7 @@ define i8* @masked_v4i32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    vcmp.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrwt.32 q1, [r0, #4]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -84,8 +78,7 @@ define i8* @masked_v4i32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrwt.32 q1, [r0]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -96,8 +89,7 @@ define i8* @masked_v4i32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    vcmp.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrwt.32 q1, [r0]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -115,16 +107,14 @@ entry:
 define arm_aapcs_vfpcc void @masked_v8i16(<8 x i16> *%dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v8i16:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    vstrht.16 q1, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -136,8 +126,7 @@ entry:
 define arm_aapcs_vfpcc void @masked_v8i16_align1(<8 x i16> *%dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -145,8 +134,7 @@ define arm_aapcs_vfpcc void @masked_v8i16_align1(<8 x i16> *%dest, <8 x i16> %a)
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vrev16.8 q0, q1
-; CHECK-BE-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s16 gt, q1, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -161,8 +149,7 @@ define i8* @masked_v8i16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrht.16 q1, [r0, #4]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -173,8 +160,7 @@ define i8* @masked_v8i16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vldrh.u16 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
-; CHECK-BE-NEXT:    vcmp.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrht.16 q1, [r0, #4]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -194,8 +180,7 @@ define i8* @masked_v8i16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrht.16 q1, [r0]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -206,8 +191,7 @@ define i8* @masked_v8i16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vldrh.u16 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
-; CHECK-BE-NEXT:    vcmp.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrht.16 q1, [r0]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -225,16 +209,14 @@ entry:
 define arm_aapcs_vfpcc void @masked_v16i8(<16 x i8> *%dest, <16 x i8> %a) {
 ; CHECK-LE-LABEL: masked_v16i8:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v16i8:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
-; CHECK-BE-NEXT:    vcmp.s8 gt, q1, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s8 gt, q1, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q1, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -249,8 +231,7 @@ define i8* @masked_v16i8_pre(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q1, [r0, #4]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -261,8 +242,7 @@ define i8* @masked_v16i8_pre(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vldrb.u8 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.8 q2, q0
-; CHECK-BE-NEXT:    vcmp.s8 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s8 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q1, [r0, #4]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -282,8 +262,7 @@ define i8* @masked_v16i8_post(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s8 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q1, [r0]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -294,8 +273,7 @@ define i8* @masked_v16i8_post(i8* %y, i8* %x, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vldrb.u8 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.8 q2, q0
-; CHECK-BE-NEXT:    vcmp.s8 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s8 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q1, [r0]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -313,8 +291,7 @@ entry:
 define arm_aapcs_vfpcc void @masked_v4f32(<4 x float> *%dest, <4 x float> %a, <4 x i32> %b) {
 ; CHECK-LE-LABEL: masked_v4f32:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.i32 ne, q1, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-LE-NEXT:    vstrwt.32 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -322,8 +299,7 @@ define arm_aapcs_vfpcc void @masked_v4f32(<4 x float> *%dest, <4 x float> %a, <4
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vcmp.i32 ne, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.i32 ne, q2, zr
 ; CHECK-BE-NEXT:    vstrwt.32 q1, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -335,8 +311,7 @@ entry:
 define arm_aapcs_vfpcc void @masked_v4f32_align1(<4 x float> *%dest, <4 x float> %a, <4 x i32> %b) {
 ; CHECK-LE-LABEL: masked_v4f32_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.i32 ne, q1, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.i32 ne, q1, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -345,8 +320,7 @@ define arm_aapcs_vfpcc void @masked_v4f32_align1(<4 x float> *%dest, <4 x float>
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vrev32.8 q0, q1
-; CHECK-BE-NEXT:    vcmp.i32 ne, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.i32 ne, q2, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -361,8 +335,7 @@ define i8* @masked_v4f32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrwt.32 q1, [r0, #4]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -373,8 +346,7 @@ define i8* @masked_v4f32_pre(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    vcmp.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrwt.32 q1, [r0, #4]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -394,8 +366,7 @@ define i8* @masked_v4f32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrwt.32 q1, [r0]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -406,8 +377,7 @@ define i8* @masked_v4f32_post(i8* %y, i8* %x, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q2, q0
-; CHECK-BE-NEXT:    vcmp.s32 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s32 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrwt.32 q1, [r0]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -425,8 +395,7 @@ entry:
 define arm_aapcs_vfpcc void @masked_v8f16(<8 x half> *%dest, <8 x half> %a, <8 x i16> %b) {
 ; CHECK-LE-LABEL: masked_v8f16:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.i16 ne, q1, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-LE-NEXT:    vstrht.16 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -434,8 +403,7 @@ define arm_aapcs_vfpcc void @masked_v8f16(<8 x half> *%dest, <8 x half> %a, <8 x
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.16 q2, q1
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    vcmp.i16 ne, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.i16 ne, q2, zr
 ; CHECK-BE-NEXT:    vstrht.16 q1, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -447,8 +415,7 @@ entry:
 define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %a, <8 x i16> %b) {
 ; CHECK-LE-LABEL: masked_v8f16_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vcmp.i16 ne, q1, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.i16 ne, q1, zr
 ; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -457,8 +424,7 @@ define arm_aapcs_vfpcc void @masked_v8f16_align1(<8 x half> *%dest, <8 x half> %
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
 ; CHECK-BE-NEXT:    vrev16.8 q0, q2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q1
-; CHECK-BE-NEXT:    vcmp.i16 ne, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.i16 ne, q2, zr
 ; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
@@ -473,8 +439,7 @@ define i8* @masked_v8f16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrht.16 q1, [r0, #4]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -485,8 +450,7 @@ define i8* @masked_v8f16_pre(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vldrh.u16 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
-; CHECK-BE-NEXT:    vcmp.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrht.16 q1, [r0, #4]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr
@@ -506,8 +470,7 @@ define i8* @masked_v8f16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vldr d1, [sp]
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-LE-NEXT:    vmov d0, r2, r3
-; CHECK-LE-NEXT:    vcmp.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vpst
+; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
 ; CHECK-LE-NEXT:    vstrht.16 q1, [r0]
 ; CHECK-LE-NEXT:    adds r0, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -518,8 +481,7 @@ define i8* @masked_v8f16_post(i8* %y, i8* %x, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vldrh.u16 q1, [r1]
 ; CHECK-BE-NEXT:    vmov d0, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q2, q0
-; CHECK-BE-NEXT:    vcmp.s16 gt, q2, zr
-; CHECK-BE-NEXT:    vpst
+; CHECK-BE-NEXT:    vpt.s16 gt, q2, zr
 ; CHECK-BE-NEXT:    vstrht.16 q1, [r0]
 ; CHECK-BE-NEXT:    adds r0, #4
 ; CHECK-BE-NEXT:    bx lr

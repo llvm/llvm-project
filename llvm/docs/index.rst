@@ -22,6 +22,7 @@ Several introductory papers and presentations.
    :hidden:
 
    LangRef
+   Lexicon
 
 :doc:`LangRef`
   Defines the LLVM intermediate representation.
@@ -50,6 +51,9 @@ Several introductory papers and presentations.
 `Publications mentioning LLVM <http://llvm.org/pubs>`_
    ..
 
+:doc:`Lexicon`
+   Definition of acronyms, terms and concepts used in LLVM.
+
 Documentation
 =============
 
@@ -61,8 +65,6 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
    UserGuides
    ProgrammingDocumentation
    SubsystemDocumentation
-   ReferenceDocumentation
-
 
 :doc:`UserGuides`
   For those new to the LLVM system.
@@ -73,8 +75,56 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
 :doc:`SubsystemDocumentation`
   For API clients and LLVM developers.
 
-:doc:`ReferenceDocumentation`
-  LLVM and API reference documentation.
+Getting Started/Tutorials
+-------------------------
+
+.. toctree::
+   :hidden:
+
+   GettingStarted
+   tutorial/index
+
+:doc:`GettingStarted`
+   Discusses how to get up and running quickly with the LLVM infrastructure.
+   Everything from unpacking and compilation of the distribution to execution
+   of some tools.
+
+:doc:`tutorial/index`
+   Tutorials about using LLVM. Includes a tutorial about making a custom
+   language with LLVM.
+
+Reference
+---------
+
+.. toctree::
+   :hidden:
+
+LLVM and API reference documentation.
+
+.. toctree::
+   :hidden:
+
+   CommandGuide/index
+   TestingGuide
+
+:doc:`LLVM Language Reference Manual <LangRef>`
+  Defines the LLVM intermediate representation and the assembly form of the
+  different nodes.
+
+:doc:`LLVM Command Guide <CommandGuide/index>`
+   A reference manual for the LLVM command line utilities ("man" pages for LLVM
+   tools).
+
+:doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
+   A reference manual for using the LLVM testing infrastructure.
+
+`Doxygen generated documentation <http://llvm.org/doxygen/>`_
+  (`classes <http://llvm.org/doxygen/inherits.html>`_)
+
+`Documentation for Go bindings <http://godoc.org/llvm.org/llvm/bindings/go/llvm>`_
+
+`Github Source Repository Browser <http://github.com/llvm/llvm-project//>`_
+   ..
 
 Community
 =========
@@ -132,6 +182,7 @@ Information about LLVM's development process.
    HowToReleaseLLVM
    Packaging
    ReleaseProcess
+   ReleaseNotes
 
 :doc:`Projects`
   How-to guide and templates for new projects that *use* the LLVM
@@ -151,6 +202,9 @@ Information about LLVM's development process.
 
 :doc:`Packaging`
    Advice on packaging LLVM into a distribution.
+
+:doc:`Release notes for the current release <ReleaseNotes>`
+   This describes new features, known bugs, and other limitations.
 
 Mailing Lists
 -------------

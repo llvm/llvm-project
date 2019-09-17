@@ -48,22 +48,22 @@ define i64 @caller_i128_in_regs() nounwind {
 define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, i128 %g, i32 %h) nounwind {
 ; RV64I-LABEL: callee_many_scalars:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld t0, 0(sp)
-; RV64I-NEXT:    xor a4, a4, t0
-; RV64I-NEXT:    xor a3, a3, a7
-; RV64I-NEXT:    or a3, a3, a4
-; RV64I-NEXT:    lui a4, 16
-; RV64I-NEXT:    addiw a4, a4, -1
-; RV64I-NEXT:    and a1, a1, a4
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lw t0, 8(sp)
+; RV64I-NEXT:    ld t1, 0(sp)
+; RV64I-NEXT:    andi t2, a0, 255
+; RV64I-NEXT:    lui a0, 16
+; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    add a0, t2, a0
 ; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    seqz a1, a3
+; RV64I-NEXT:    xor a1, a4, t1
+; RV64I-NEXT:    xor a2, a3, a7
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    seqz a1, a1
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    add a0, a0, a5
 ; RV64I-NEXT:    add a0, a0, a6
-; RV64I-NEXT:    lw a1, 8(sp)
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, t0
 ; RV64I-NEXT:    ret
   %a_ext = zext i8 %a to i32
   %b_ext = zext i16 %b to i32
@@ -85,15 +85,15 @@ define i32 @caller_many_scalars() nounwind {
 ; RV64I-NEXT:    sd ra, 24(sp)
 ; RV64I-NEXT:    addi a0, zero, 8
 ; RV64I-NEXT:    sd a0, 8(sp)
-; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    addi a1, zero, 2
 ; RV64I-NEXT:    addi a2, zero, 3
 ; RV64I-NEXT:    addi a3, zero, 4
-; RV64I-NEXT:    mv a4, zero
 ; RV64I-NEXT:    addi a5, zero, 5
 ; RV64I-NEXT:    addi a6, zero, 6
 ; RV64I-NEXT:    addi a7, zero, 7
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    mv a4, zero
 ; RV64I-NEXT:    call callee_many_scalars
 ; RV64I-NEXT:    ld ra, 24(sp)
 ; RV64I-NEXT:    addi sp, sp, 32
@@ -107,20 +107,20 @@ define i32 @caller_many_scalars() nounwind {
 define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; RV64I-LABEL: callee_large_scalars:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a2, 24(a1)
-; RV64I-NEXT:    ld a3, 24(a0)
-; RV64I-NEXT:    xor a2, a3, a2
-; RV64I-NEXT:    ld a3, 8(a1)
-; RV64I-NEXT:    ld a4, 8(a0)
-; RV64I-NEXT:    xor a3, a4, a3
+; RV64I-NEXT:    ld a6, 0(a1)
+; RV64I-NEXT:    ld a7, 0(a0)
+; RV64I-NEXT:    ld a4, 8(a1)
+; RV64I-NEXT:    ld a5, 24(a1)
+; RV64I-NEXT:    ld a2, 24(a0)
+; RV64I-NEXT:    ld a3, 8(a0)
+; RV64I-NEXT:    ld a1, 16(a1)
+; RV64I-NEXT:    ld a0, 16(a0)
+; RV64I-NEXT:    xor a2, a2, a5
+; RV64I-NEXT:    xor a3, a3, a4
 ; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    ld a3, 16(a1)
-; RV64I-NEXT:    ld a4, 16(a0)
-; RV64I-NEXT:    xor a3, a4, a3
-; RV64I-NEXT:    ld a1, 0(a1)
-; RV64I-NEXT:    ld a0, 0(a0)
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    xor a1, a7, a6
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -134,18 +134,18 @@ define i64 @caller_large_scalars() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -80
 ; RV64I-NEXT:    sd ra, 72(sp)
-; RV64I-NEXT:    addi a0, zero, 2
-; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd zero, 24(sp)
 ; RV64I-NEXT:    sd zero, 16(sp)
 ; RV64I-NEXT:    sd zero, 8(sp)
+; RV64I-NEXT:    addi a0, zero, 2
+; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd zero, 56(sp)
 ; RV64I-NEXT:    sd zero, 48(sp)
 ; RV64I-NEXT:    sd zero, 40(sp)
-; RV64I-NEXT:    addi a0, zero, 1
-; RV64I-NEXT:    sd a0, 32(sp)
+; RV64I-NEXT:    addi a2, zero, 1
 ; RV64I-NEXT:    addi a0, sp, 32
 ; RV64I-NEXT:    mv a1, sp
+; RV64I-NEXT:    sd a2, 32(sp)
 ; RV64I-NEXT:    call callee_large_scalars
 ; RV64I-NEXT:    ld ra, 72(sp)
 ; RV64I-NEXT:    addi sp, sp, 80
@@ -162,20 +162,20 @@ define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, 
 ; RV64I-LABEL: callee_large_scalars_exhausted_regs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ld a0, 8(sp)
-; RV64I-NEXT:    ld a1, 24(a0)
-; RV64I-NEXT:    ld a2, 24(a7)
-; RV64I-NEXT:    xor a1, a2, a1
-; RV64I-NEXT:    ld a2, 8(a0)
-; RV64I-NEXT:    ld a3, 8(a7)
-; RV64I-NEXT:    xor a2, a3, a2
-; RV64I-NEXT:    or a1, a2, a1
-; RV64I-NEXT:    ld a2, 16(a0)
-; RV64I-NEXT:    ld a3, 16(a7)
-; RV64I-NEXT:    xor a2, a3, a2
-; RV64I-NEXT:    ld a0, 0(a0)
-; RV64I-NEXT:    ld a3, 0(a7)
-; RV64I-NEXT:    xor a0, a3, a0
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    ld a6, 0(a0)
+; RV64I-NEXT:    ld t0, 0(a7)
+; RV64I-NEXT:    ld a3, 8(a0)
+; RV64I-NEXT:    ld a4, 24(a0)
+; RV64I-NEXT:    ld a5, 24(a7)
+; RV64I-NEXT:    ld a1, 8(a7)
+; RV64I-NEXT:    ld a0, 16(a0)
+; RV64I-NEXT:    ld a2, 16(a7)
+; RV64I-NEXT:    xor a4, a5, a4
+; RV64I-NEXT:    xor a1, a1, a3
+; RV64I-NEXT:    or a1, a1, a4
+; RV64I-NEXT:    xor a0, a2, a0
+; RV64I-NEXT:    xor a2, t0, a6
+; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -193,16 +193,15 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    addi a0, zero, 9
 ; RV64I-NEXT:    sd a0, 0(sp)
-; RV64I-NEXT:    addi a0, zero, 10
-; RV64I-NEXT:    sd a0, 16(sp)
 ; RV64I-NEXT:    sd zero, 40(sp)
 ; RV64I-NEXT:    sd zero, 32(sp)
 ; RV64I-NEXT:    sd zero, 24(sp)
+; RV64I-NEXT:    addi a0, zero, 10
+; RV64I-NEXT:    sd a0, 16(sp)
 ; RV64I-NEXT:    sd zero, 72(sp)
 ; RV64I-NEXT:    sd zero, 64(sp)
 ; RV64I-NEXT:    sd zero, 56(sp)
-; RV64I-NEXT:    addi a0, zero, 8
-; RV64I-NEXT:    sd a0, 48(sp)
+; RV64I-NEXT:    addi t0, zero, 8
 ; RV64I-NEXT:    addi a7, sp, 48
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    addi a1, zero, 2
@@ -211,6 +210,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    addi a4, zero, 5
 ; RV64I-NEXT:    addi a5, zero, 6
 ; RV64I-NEXT:    addi a6, zero, 7
+; RV64I-NEXT:    sd t0, 48(sp)
 ; RV64I-NEXT:    call callee_large_scalars_exhausted_regs
 ; RV64I-NEXT:    ld ra, 88(sp)
 ; RV64I-NEXT:    addi sp, sp, 96
@@ -277,9 +277,9 @@ define i64 @caller_small_coerced_struct() nounwind {
 define i64 @callee_large_struct(%struct.large* byval align 8 %a) nounwind {
 ; RV64I-LABEL: callee_large_struct:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a1, 24(a0)
-; RV64I-NEXT:    ld a0, 0(a0)
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ld a1, 0(a0)
+; RV64I-NEXT:    ld a0, 24(a0)
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = getelementptr inbounds %struct.large, %struct.large* %a, i64 0, i32 0
   %2 = getelementptr inbounds %struct.large, %struct.large* %a, i64 0, i32 3
@@ -296,16 +296,16 @@ define i64 @caller_large_struct() nounwind {
 ; RV64I-NEXT:    sd ra, 72(sp)
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    sd a0, 40(sp)
+; RV64I-NEXT:    addi a1, zero, 2
+; RV64I-NEXT:    sd a1, 48(sp)
+; RV64I-NEXT:    addi a2, zero, 3
+; RV64I-NEXT:    sd a2, 56(sp)
+; RV64I-NEXT:    addi a3, zero, 4
+; RV64I-NEXT:    sd a3, 64(sp)
 ; RV64I-NEXT:    sd a0, 8(sp)
-; RV64I-NEXT:    addi a0, zero, 2
-; RV64I-NEXT:    sd a0, 48(sp)
-; RV64I-NEXT:    sd a0, 16(sp)
-; RV64I-NEXT:    addi a0, zero, 3
-; RV64I-NEXT:    sd a0, 56(sp)
-; RV64I-NEXT:    sd a0, 24(sp)
-; RV64I-NEXT:    addi a0, zero, 4
-; RV64I-NEXT:    sd a0, 64(sp)
-; RV64I-NEXT:    sd a0, 32(sp)
+; RV64I-NEXT:    sd a1, 16(sp)
+; RV64I-NEXT:    sd a2, 24(sp)
+; RV64I-NEXT:    sd a3, 32(sp)
 ; RV64I-NEXT:    addi a0, sp, 8
 ; RV64I-NEXT:    call callee_large_struct
 ; RV64I-NEXT:    ld ra, 72(sp)
@@ -332,15 +332,15 @@ define i64 @callee_aligned_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i128 %f
 ; should only be 8-byte aligned
 ; RV64I-LABEL: callee_aligned_stack:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a5, a7
+; RV64I-NEXT:    ld a0, 40(sp)
 ; RV64I-NEXT:    ld a1, 0(sp)
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ld a1, 16(sp)
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ld a1, 32(sp)
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ld a1, 40(sp)
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ld a2, 16(sp)
+; RV64I-NEXT:    ld a3, 32(sp)
+; RV64I-NEXT:    add a4, a5, a7
+; RV64I-NEXT:    add a1, a4, a1
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    add a1, a1, a3
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %f_trunc = trunc i128 %f to i64
   %1 = add i64 %f_trunc, %g
@@ -366,19 +366,19 @@ define void @caller_aligned_stack() nounwind {
 ; RV64I-NEXT:    sd a0, 40(sp)
 ; RV64I-NEXT:    addi a0, zero, 10
 ; RV64I-NEXT:    sd a0, 32(sp)
+; RV64I-NEXT:    sd zero, 24(sp)
 ; RV64I-NEXT:    addi a0, zero, 9
 ; RV64I-NEXT:    sd a0, 16(sp)
-; RV64I-NEXT:    addi a0, zero, 8
-; RV64I-NEXT:    sd a0, 0(sp)
-; RV64I-NEXT:    sd zero, 24(sp)
+; RV64I-NEXT:    addi a6, zero, 8
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    addi a1, zero, 2
 ; RV64I-NEXT:    addi a2, zero, 3
 ; RV64I-NEXT:    addi a3, zero, 4
 ; RV64I-NEXT:    addi a4, zero, 5
 ; RV64I-NEXT:    addi a5, zero, 6
-; RV64I-NEXT:    mv a6, zero
 ; RV64I-NEXT:    addi a7, zero, 7
+; RV64I-NEXT:    sd a6, 0(sp)
+; RV64I-NEXT:    mv a6, zero
 ; RV64I-NEXT:    call callee_aligned_stack
 ; RV64I-NEXT:    ld ra, 56(sp)
 ; RV64I-NEXT:    addi sp, sp, 64
@@ -482,18 +482,18 @@ define void @caller_large_scalar_ret() nounwind {
 define void @callee_large_struct_ret(%struct.large* noalias sret %agg.result) nounwind {
 ; RV64I-LABEL: callee_large_struct_ret:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, 4
-; RV64I-NEXT:    sw a1, 24(a0)
-; RV64I-NEXT:    addi a1, zero, 3
-; RV64I-NEXT:    sw a1, 16(a0)
-; RV64I-NEXT:    addi a1, zero, 2
-; RV64I-NEXT:    sw a1, 8(a0)
-; RV64I-NEXT:    sw zero, 28(a0)
-; RV64I-NEXT:    sw zero, 20(a0)
-; RV64I-NEXT:    sw zero, 12(a0)
 ; RV64I-NEXT:    sw zero, 4(a0)
 ; RV64I-NEXT:    addi a1, zero, 1
 ; RV64I-NEXT:    sw a1, 0(a0)
+; RV64I-NEXT:    sw zero, 12(a0)
+; RV64I-NEXT:    addi a1, zero, 2
+; RV64I-NEXT:    sw a1, 8(a0)
+; RV64I-NEXT:    sw zero, 20(a0)
+; RV64I-NEXT:    addi a1, zero, 3
+; RV64I-NEXT:    sw a1, 16(a0)
+; RV64I-NEXT:    sw zero, 28(a0)
+; RV64I-NEXT:    addi a1, zero, 4
+; RV64I-NEXT:    sw a1, 24(a0)
 ; RV64I-NEXT:    ret
   %a = getelementptr inbounds %struct.large, %struct.large* %agg.result, i64 0, i32 0
   store i64 1, i64* %a, align 4
@@ -513,9 +513,9 @@ define i64 @caller_large_struct_ret() nounwind {
 ; RV64I-NEXT:    sd ra, 40(sp)
 ; RV64I-NEXT:    addi a0, sp, 8
 ; RV64I-NEXT:    call callee_large_struct_ret
-; RV64I-NEXT:    ld a0, 32(sp)
-; RV64I-NEXT:    ld a1, 8(sp)
-; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    ld a0, 8(sp)
+; RV64I-NEXT:    ld a1, 32(sp)
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld ra, 40(sp)
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret

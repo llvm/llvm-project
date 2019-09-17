@@ -533,12 +533,24 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned SubReg = TRI.getSubRegFromChannel(I.getOperand(3).getImm() / 32);
-  DebugLoc DL = I.getDebugLoc();
+
+  Register Src0Reg = I.getOperand(1).getReg();
+  Register Src1Reg = I.getOperand(2).getReg();
+  LLT Src1Ty = MRI.getType(Src1Reg);
+  if (Src1Ty.getSizeInBits() != 32)
+    return false;
+
+  int64_t Offset = I.getOperand(3).getImm();
+  if (Offset % 32 != 0)
+    return false;
+
+  unsigned SubReg = TRI.getSubRegFromChannel(Offset / 32);
+  const DebugLoc &DL = I.getDebugLoc();
+
   MachineInstr *Ins = BuildMI(*BB, &I, DL, TII.get(TargetOpcode::INSERT_SUBREG))
                                .addDef(I.getOperand(0).getReg())
-                               .addReg(I.getOperand(1).getReg())
-                               .addReg(I.getOperand(2).getReg())
+                               .addReg(Src0Reg)
+                               .addReg(Src1Reg)
                                .addImm(SubReg);
 
   for (const MachineOperand &MO : Ins->operands()) {

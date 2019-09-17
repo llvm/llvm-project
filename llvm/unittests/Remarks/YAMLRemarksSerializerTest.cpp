@@ -22,21 +22,18 @@
 
 using namespace llvm;
 
-static void check(remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
+static void check(remarks::Format SerializerFormat,
+                  remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
                   StringRef ExpectedR, Optional<StringRef> ExpectedMeta,
-                  bool UseStrTab = false,
                   Optional<remarks::StringTable> StrTab = None) {
   std::string Buf;
   raw_string_ostream OS(Buf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
-    if (UseStrTab) {
-      if (StrTab)
-        return createRemarkSerializer(remarks::Format::YAMLStrTab, Mode, OS,
-                                      std::move(*StrTab));
-      else
-        return createRemarkSerializer(remarks::Format::YAMLStrTab, Mode, OS);
-    } else
-      return createRemarkSerializer(remarks::Format::YAML, Mode, OS);
+    if (StrTab)
+      return createRemarkSerializer(SerializerFormat, Mode, OS,
+                                    std::move(*StrTab));
+    else
+      return createRemarkSerializer(SerializerFormat, Mode, OS);
   }();
   EXPECT_FALSE(errorToBool(MaybeS.takeError()));
   std::unique_ptr<remarks::RemarkSerializer> S = std::move(*MaybeS);
@@ -54,18 +51,20 @@ static void check(remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
   }
 }
 
-static void check(const remarks::Remark &R, StringRef ExpectedR,
-                  StringRef ExpectedMeta, bool UseStrTab = false,
+static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
+                  StringRef ExpectedR, StringRef ExpectedMeta,
                   Optional<remarks::StringTable> StrTab = None) {
-  return check(remarks::SerializerMode::Separate, makeArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
-               UseStrTab, std::move(StrTab));
+  return check(SerializerFormat, remarks::SerializerMode::Separate,
+               makeArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
+               std::move(StrTab));
 }
 
-static void checkStandalone(const remarks::Remark &R, StringRef ExpectedR,
+static void checkStandalone(remarks::Format SerializerFormat,
+                            const remarks::Remark &R, StringRef ExpectedR,
                             Optional<remarks::StringTable> StrTab = None) {
-  bool UseStrTab = StrTab.hasValue();
-  return check(remarks::SerializerMode::Standalone, makeArrayRef(&R, &R +1), ExpectedR,
-               /*ExpectedMeta=*/None, UseStrTab, std::move(StrTab));
+  return check(SerializerFormat, remarks::SerializerMode::Standalone,
+               makeArrayRef(&R, &R + 1), ExpectedR,
+               /*ExpectedMeta=*/None, std::move(StrTab));
 }
 
 TEST(YAMLRemarks, SerializerRemark) {
@@ -83,7 +82,7 @@ TEST(YAMLRemarks, SerializerRemark) {
   R.Args.back().Key = "keydebug";
   R.Args.back().Val = "valuedebug";
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  check(R,
+  check(remarks::Format::YAML, R,
         "--- !Missed\n"
         "Pass:            pass\n"
         "Name:            name\n"
@@ -97,8 +96,7 @@ TEST(YAMLRemarks, SerializerRemark) {
         "...\n",
         StringRef("REMARKS\0"
                   "\0\0\0\0\0\0\0\0"
-                  "\0\0\0\0\0\0\0\0"
-                  EXTERNALFILETESTPATH"\0",
+                  "\0\0\0\0\0\0\0\0" EXTERNALFILETESTPATH "\0",
                   38));
 }
 
@@ -118,7 +116,7 @@ TEST(YAMLRemarks, SerializerRemarkStandalone) {
   R.Args.back().Val = "valuedebug";
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
   checkStandalone(
-      R,
+      remarks::Format::YAML, R,
       StringRef("--- !Missed\n"
                 "Pass:            pass\n"
                 "Name:            name\n"
@@ -147,7 +145,7 @@ TEST(YAMLRemarks, SerializerRemarkStrTab) {
   R.Args.back().Key = "keydebug";
   R.Args.back().Val = "valuedebug";
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  check(R,
+  check(remarks::Format::YAMLStrTab, R,
         "--- !Missed\n"
         "Pass:            0\n"
         "Name:            1\n"
@@ -162,10 +160,9 @@ TEST(YAMLRemarks, SerializerRemarkStrTab) {
         StringRef("REMARKS\0"
                   "\0\0\0\0\0\0\0\0"
                   "\x2d\0\0\0\0\0\0\0"
-                  "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
-                  EXTERNALFILETESTPATH"\0",
-                  83),
-        /*UseStrTab=*/true);
+                  "pass\0name\0func\0path\0value\0valuedebug\0argpath"
+                  "\0" EXTERNALFILETESTPATH "\0",
+                  83));
 }
 
 TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
@@ -184,7 +181,7 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
   R.Args.back().Key = "keydebug";
   R.Args.back().Val = "valuedebug";
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
-  check(R,
+  check(remarks::Format::YAMLStrTab, R,
         "--- !Missed\n"
         "Pass:            0\n"
         "Name:            1\n"
@@ -199,11 +196,45 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTab) {
         StringRef("REMARKS\0"
                   "\0\0\0\0\0\0\0\0"
                   "\x2d\0\0\0\0\0\0\0"
-                  "pass\0name\0func\0path\0value\0valuedebug\0argpath\0"
-                  EXTERNALFILETESTPATH"\0",
+                  "pass\0name\0func\0path\0value\0valuedebug\0argpath"
+                  "\0" EXTERNALFILETESTPATH "\0",
                   83),
-        /*UseStrTab=*/true,
         remarks::StringTable(remarks::ParsedStringTable(StrTab)));
+}
+
+TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneNoStrTab) {
+  // Check that we don't use the string table even if it was provided.
+  StringRef StrTab("pass\0name\0func\0path\0value\0valuedebug\0argpath\0", 45);
+  remarks::ParsedStringTable ParsedStrTab(StrTab);
+  remarks::StringTable PreFilledStrTab(ParsedStrTab);
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Missed;
+  R.PassName = "pass";
+  R.RemarkName = "name";
+  R.FunctionName = "func";
+  R.Loc = remarks::RemarkLocation{"path", 3, 4};
+  R.Hotness = 5;
+  R.Args.emplace_back();
+  R.Args.back().Key = "key";
+  R.Args.back().Val = "value";
+  R.Args.emplace_back();
+  R.Args.back().Key = "keydebug";
+  R.Args.back().Val = "valuedebug";
+  R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
+  checkStandalone(
+      remarks::Format::YAML, R,
+      StringRef("--- !Missed\n"
+                "Pass:            pass\n"
+                "Name:            name\n"
+                "DebugLoc:        { File: path, Line: 3, Column: 4 }\n"
+                "Function:        func\n"
+                "Hotness:         5\n"
+                "Args:\n"
+                "  - key:             value\n"
+                "  - keydebug:        valuedebug\n"
+                "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
+                "...\n"),
+      std::move(PreFilledStrTab));
 }
 
 TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandalone) {
@@ -225,7 +256,7 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandalone) {
   R.Args.back().Val = "valuedebug";
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
   checkStandalone(
-      R,
+      remarks::Format::YAMLStrTab, R,
       StringRef("REMARKS\0"
                 "\0\0\0\0\0\0\0\0"
                 "\x2d\0\0\0\0\0\0\0"
@@ -266,7 +297,7 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneMultipleRemarks) {
   R.Args.back().Loc = remarks::RemarkLocation{"argpath", 6, 7};
   Rs.emplace_back(R.clone());
   Rs.emplace_back(std::move(R));
-  check(remarks::SerializerMode::Standalone, Rs,
+  check(remarks::Format::YAMLStrTab, remarks::SerializerMode::Standalone, Rs,
         StringRef("REMARKS\0"
                   "\0\0\0\0\0\0\0\0"
                   "\x2d\0\0\0\0\0\0\0"
@@ -294,6 +325,5 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneMultipleRemarks) {
                   "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
                   "...\n",
                   561),
-        /*ExpectedMeta=*/None,
-        /*UseStrTab=*/true, std::move(PreFilledStrTab));
+        /*ExpectedMeta=*/None, std::move(PreFilledStrTab));
 }

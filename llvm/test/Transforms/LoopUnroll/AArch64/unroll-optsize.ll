@@ -136,7 +136,7 @@ define void @fully_unrolled_bigger() #0 {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[ARR]], i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 [[OR]], i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 7
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[PTR:%.*]] = bitcast [4 x i32]* [[ARR]] to i32*
@@ -156,7 +156,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %arr, i64 0, i64 %indvars.iv
   store i32 %or, i32* %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv, 6
+  %exitcond = icmp eq i64 %indvars.iv, 7
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.cond
