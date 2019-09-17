@@ -42,15 +42,13 @@ remarks::createRemarkSerializer(Format RemarksFormat, SerializerMode Mode,
     return createStringError(std::errc::invalid_argument,
                              "Unknown remark serializer format.");
   case Format::YAML:
-    return createStringError(std::errc::invalid_argument,
-                             "Unable to use a string table with the yaml "
-                             "format. Use 'yaml-strtab' instead.");
+    return std::make_unique<YAMLRemarkSerializer>(OS, Mode, std::move(StrTab));
   case Format::YAMLStrTab:
     return std::make_unique<YAMLStrTabRemarkSerializer>(OS, Mode,
-                                                         std::move(StrTab));
+                                                        std::move(StrTab));
   case Format::Bitstream:
     return std::make_unique<BitstreamRemarkSerializer>(OS, Mode,
-                                                        std::move(StrTab));
+                                                       std::move(StrTab));
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }

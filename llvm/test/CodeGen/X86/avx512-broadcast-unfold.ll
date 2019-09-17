@@ -4448,3 +4448,38 @@ bb1:                                              ; preds = %bb1, %bb
 bb10:                                             ; preds = %bb1
   ret void
 }
+
+define void @bcast_unfold_cmp_v8f32_refold(float* nocapture %0) {
+; CHECK-LABEL: bcast_unfold_cmp_v8f32_refold:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0,3.0E+0]
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB126_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vcmpgtps 4096(%rdi,%rax), %ymm0, %k1
+; CHECK-NEXT:    vblendmps {{.*}}(%rip){1to8}, %ymm1, %ymm2 {%k1}
+; CHECK-NEXT:    vmovups %ymm2, 4096(%rdi,%rax)
+; CHECK-NEXT:    addq $32, %rax
+; CHECK-NEXT:    jne .LBB126_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  br label %2
+
+2:                                                ; preds = %2, %1
+  %3 = phi i64 [ 0, %1 ], [ %10, %2 ]
+  %4 = getelementptr inbounds float, float* %0, i64 %3
+  %5 = bitcast float* %4 to <8 x float>*
+  %6 = load <8 x float>, <8 x float>* %5, align 4
+  %7 = fcmp olt <8 x float> %6, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %8 = select <8 x i1> %7, <8 x float> <float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00>, <8 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+  %9 = bitcast float* %4 to <8 x float>*
+  store <8 x float> %8, <8 x float>* %9, align 4
+  %10 = add i64 %3, 8
+  %11 = icmp eq i64 %10, 1024
+  br i1 %11, label %12, label %2
+
+12:                                               ; preds = %2
+  ret void
+}

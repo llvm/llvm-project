@@ -1765,7 +1765,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     }
 
     MachineBasicBlock &MBB = *MI.getParent();
-    MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
+    MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
     return Legalized;
@@ -3156,7 +3156,7 @@ LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
   }
 
   MachineBasicBlock &MBB = *MI.getParent();
-  MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
+  MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
   moreElementsVectorDst(MI, MoreTy, 0);
   Observer.changedInstr(MI);
   return Legalized;

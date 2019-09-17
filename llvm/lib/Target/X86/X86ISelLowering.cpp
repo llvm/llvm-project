@@ -1996,6 +1996,12 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
 MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                      CallingConv::ID CC,
                                                      EVT VT) const {
+  // Break wide vXi1 vectors into scalars to match avx2 behavior.
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
+      Subtarget.hasAVX512() &&
+      ((VT.getVectorNumElements() > 32 && !Subtarget.hasBWI()) ||
+       (VT.getVectorNumElements() > 64 && Subtarget.hasBWI())))
+    return MVT::i8;
   if (VT == MVT::v32i1 && Subtarget.hasAVX512() && !Subtarget.hasBWI())
     return MVT::v32i8;
   // FIXME: Should we just make these types legal and custom split operations?
@@ -2008,6 +2014,12 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                           CallingConv::ID CC,
                                                           EVT VT) const {
+  // Break wide vXi1 vectors into scalars to match avx2 behavior.
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
+      Subtarget.hasAVX512() &&
+      ((VT.getVectorNumElements() > 32 && !Subtarget.hasBWI()) ||
+       (VT.getVectorNumElements() > 64 && Subtarget.hasBWI())))
+    return VT.getVectorNumElements();
   if (VT == MVT::v32i1 && Subtarget.hasAVX512() && !Subtarget.hasBWI())
     return 1;
   // FIXME: Should we just make these types legal and custom split operations?
@@ -2015,6 +2027,24 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       Subtarget.hasAVX512() && !Subtarget.hasBWI() && !EnableOldKNLABI)
     return 1;
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+}
+
+unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT) const {
+  // Break wide vXi1 vectors into scalars to match avx2 behavior.
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
+      Subtarget.hasAVX512() &&
+      ((VT.getVectorNumElements() > 32 && !Subtarget.hasBWI()) ||
+       (VT.getVectorNumElements() > 64 && Subtarget.hasBWI()))) {
+    RegisterVT = MVT::i8;
+    IntermediateVT = MVT::i1;
+    NumIntermediates = VT.getVectorNumElements();
+    return NumIntermediates;
+  }
+
+  return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
+                                              NumIntermediates, RegisterVT);
 }
 
 EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,

@@ -15,7 +15,7 @@ test_extract() {
   _mm_extract_epi8(mi, 0);
   _mm_extract_epi32(mi, 0);
   _mm_extract_epi64(mi, 0);
-  _mm_extract_ps(mi, 0);
+  _mm_extract_ps((__m128)mi, 0);
 }
 
 // CHECK-LABEL: @test_extract

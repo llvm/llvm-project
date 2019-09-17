@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
@@ -105,7 +105,7 @@ __m256d test_mm256_broadcast_sd(double* A) {
   return _mm256_broadcast_sd(A);
 }
 
-__m128d test_mm_broadcast_ss(float* A) {
+__m128 test_mm_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm_broadcast_ss
   // CHECK: load float, float* %{{.*}}
   // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
@@ -115,7 +115,7 @@ __m128d test_mm_broadcast_ss(float* A) {
   return _mm_broadcast_ss(A);
 }
 
-__m256d test_mm256_broadcast_ss(float* A) {
+__m256 test_mm256_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm256_broadcast_ss
   // CHECK: load float, float* %{{.*}}
   // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
@@ -1278,7 +1278,7 @@ __m128 test_mm_maskload_ps(float* A, __m128i B) {
   return _mm_maskload_ps(A, B);
 }
 
-__m256d test_mm256_maskload_ps(float* A, __m256i B) {
+__m256 test_mm256_maskload_ps(float* A, __m256i B) {
   // CHECK-LABEL: test_mm256_maskload_ps
   // CHECK: call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_maskload_ps(A, B);

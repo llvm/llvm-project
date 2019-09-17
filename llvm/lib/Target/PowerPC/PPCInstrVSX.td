@@ -58,8 +58,8 @@ def SDT_PPCldvsxlh : SDTypeProfile<1, 1, [
   SDTCisVT<0, v4f32>, SDTCisPtrTy<1>
 ]>;
 
-def SDT_PPCfpextlh : SDTypeProfile<1, 1, [
-  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>
+def SDT_PPCfpexth : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v2f64>, SDTCisVT<1, v4f32>, SDTCisPtrTy<2>
 ]>;
 
 // Little-endian-specific nodes.
@@ -102,7 +102,7 @@ def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
 def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
 
-def PPCfpextlh : SDNode<"PPCISD::FP_EXTEND_LH", SDT_PPCfpextlh, []>;
+def PPCfpexth : SDNode<"PPCISD::FP_EXTEND_HALF", SDT_PPCfpexth, []>;
 def PPCldvsxlh : SDNode<"PPCISD::LD_VSX_LH", SDT_PPCldvsxlh,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -1086,7 +1086,8 @@ def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 0)),
 def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 1)),
           (v2f64 (XVCVUXWDP (v2i64 (XXMRGLW $C, $C))))>;
 
-def : Pat<(v2f64 (PPCfpextlh v4f32:$C)), (XVCVSPDP (XXMRGHW $C, $C))>;
+def : Pat<(v2f64 (PPCfpexth v4f32:$C, 0)), (XVCVSPDP (XXMRGHW $C, $C))>;
+def : Pat<(v2f64 (PPCfpexth v4f32:$C, 1)), (XVCVSPDP (XXMRGLW $C, $C))>;
 
 // Loads.
 let Predicates = [HasVSX, HasOnlySwappingMemOps] in {

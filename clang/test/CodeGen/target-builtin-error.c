@@ -3,6 +3,6 @@
 
 #include <x86intrin.h>
 
-__m128d foo(__m128d a, __m128d b) {
+__m128 foo(__m128 a, __m128 b) {
   return __builtin_ia32_addsubps(b, a); // expected-error {{'__builtin_ia32_addsubps' needs target feature sse3}}
 }

@@ -25,12 +25,12 @@
 
 #include "test_macros.h"
 
-struct TestClock
+struct Clock
 {
     typedef std::chrono::milliseconds duration;
     typedef duration::rep             rep;
     typedef duration::period          period;
-    typedef std::chrono::time_point<TestClock> time_point;
+    typedef std::chrono::time_point<Clock> time_point;
     static const bool is_steady =  true;
 
     static time_point now()
@@ -50,40 +50,35 @@ int test2 = 0;
 
 int runs = 0;
 
-template <typename Clock>
 void f()
 {
     std::unique_lock<std::mutex> lk(mut);
     assert(test2 == 0);
     test1 = 1;
     cv.notify_one();
-    typename Clock::time_point t0 = Clock::now();
-    typename Clock::time_point t = t0 + std::chrono::milliseconds(250);
+    Clock::time_point t0 = Clock::now();
+    Clock::time_point t = t0 + Clock::duration(250);
     while (test2 == 0 && cv.wait_until(lk, t) == std::cv_status::no_timeout)
         ;
-    typename Clock::time_point t1 = Clock::now();
+    Clock::time_point t1 = Clock::now();
     if (runs == 0)
     {
-        assert(t1 - t0 < std::chrono::milliseconds(250));
+        assert(t1 - t0 < Clock::duration(250));
         assert(test2 != 0);
     }
     else
     {
-        assert(t1 - t0 - std::chrono::milliseconds(250) < std::chrono::milliseconds(50));
+        assert(t1 - t0 - Clock::duration(250) < Clock::duration(50));
         assert(test2 == 0);
     }
     ++runs;
 }
 
-template <typename Clock>
-void run_test()
+int main(int, char**)
 {
-    runs = 0;
-    test1 = 0;
-    test2 = 0;
     {
         std::unique_lock<std::mutex>lk(mut);
-        std::thread t(f<Clock>);
+        std::thread t(f);
         assert(test1 == 0);
         while (test1 == 0)
             cv.wait(lk);
@@ -97,7 +92,7 @@ void run_test()
     test2 = 0;
     {
         std::unique_lock<std::mutex>lk(mut);
-        std::thread t(f<Clock>);
+        std::thread t(f);
         assert(test1 == 0);
         while (test1 == 0)
             cv.wait(lk);
@@ -105,12 +100,6 @@ void run_test()
         lk.unlock();
         t.join();
     }
-}
 
-int main(int, char**)
-{
-    run_test<TestClock>();
-    run_test<std::chrono::steady_clock>();
-    run_test<std::chrono::system_clock>();
-    return 0;
+  return 0;
 }

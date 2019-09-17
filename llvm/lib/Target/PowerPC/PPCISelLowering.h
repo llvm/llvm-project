@@ -412,8 +412,9 @@ namespace llvm {
       /// representation.
       QBFLT,
 
-      /// Custom extend v4f32 to v2f64.
-      FP_EXTEND_LH,
+      /// FP_EXTEND_HALF(VECTOR, IDX) - Custom extend upper (IDX=0) half or
+      /// lower (IDX=1) half of v4f32 to v2f64.
+      FP_EXTEND_HALF,
 
       /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
       /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
