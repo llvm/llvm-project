@@ -2699,12 +2699,12 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     StreamString command_stream;
 
     // Before executing Python code, lock the GIL.
-    Locker py_lock(this,
-                   Locker::AcquireLock |
-                       (init_session ? Locker::InitSession : 0) |
-                       Locker::NoSTDIN,
-                   Locker::FreeAcquiredLock |
-                       (init_session ? Locker::TearDownSession : 0));
+    Locker py_lock(
+        this,
+        Locker::AcquireLock | (init_session ? Locker::InitSession : 0) |
+            (init_session ? Locker::InitGlobals : 0) | Locker::NoSTDIN,
+        Locker::FreeAcquiredLock |
+            (init_session ? Locker::TearDownSession : 0));
     namespace fs = llvm::sys::fs;
     fs::file_status st;
     std::error_code ec = status(target_file.GetPath(), st);

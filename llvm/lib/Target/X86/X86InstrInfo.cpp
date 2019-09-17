@@ -1177,40 +1177,62 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   case X86::VMOVUPDZrmk:      case X86::VMOVAPDZrmk:
   case X86::VMOVUPSZ128rmk:   case X86::VMOVAPSZ128rmk:
   case X86::VMOVUPSZ256rmk:   case X86::VMOVAPSZ256rmk:
-  case X86::VMOVUPSZrmk:      case X86::VMOVAPSZrmk: {
+  case X86::VMOVUPSZrmk:      case X86::VMOVAPSZrmk:
+  case X86::VBROADCASTSDZ256mk:
+  case X86::VBROADCASTSDZmk:
+  case X86::VBROADCASTSSZ128mk:
+  case X86::VBROADCASTSSZ256mk:
+  case X86::VBROADCASTSSZmk:
+  case X86::VPBROADCASTDZ128mk:
+  case X86::VPBROADCASTDZ256mk:
+  case X86::VPBROADCASTDZmk:
+  case X86::VPBROADCASTQZ128mk:
+  case X86::VPBROADCASTQZ256mk:
+  case X86::VPBROADCASTQZmk: {
     unsigned Opc;
     switch (MIOpc) {
     default: llvm_unreachable("Unreachable!");
-    case X86::VMOVDQU8Z128rmk:  Opc = X86::VPBLENDMBZ128rmk; break;
-    case X86::VMOVDQU8Z256rmk:  Opc = X86::VPBLENDMBZ256rmk; break;
-    case X86::VMOVDQU8Zrmk:     Opc = X86::VPBLENDMBZrmk;    break;
-    case X86::VMOVDQU16Z128rmk: Opc = X86::VPBLENDMWZ128rmk; break;
-    case X86::VMOVDQU16Z256rmk: Opc = X86::VPBLENDMWZ256rmk; break;
-    case X86::VMOVDQU16Zrmk:    Opc = X86::VPBLENDMWZrmk;    break;
-    case X86::VMOVDQU32Z128rmk: Opc = X86::VPBLENDMDZ128rmk; break;
-    case X86::VMOVDQU32Z256rmk: Opc = X86::VPBLENDMDZ256rmk; break;
-    case X86::VMOVDQU32Zrmk:    Opc = X86::VPBLENDMDZrmk;    break;
-    case X86::VMOVDQU64Z128rmk: Opc = X86::VPBLENDMQZ128rmk; break;
-    case X86::VMOVDQU64Z256rmk: Opc = X86::VPBLENDMQZ256rmk; break;
-    case X86::VMOVDQU64Zrmk:    Opc = X86::VPBLENDMQZrmk;    break;
-    case X86::VMOVUPDZ128rmk:   Opc = X86::VBLENDMPDZ128rmk; break;
-    case X86::VMOVUPDZ256rmk:   Opc = X86::VBLENDMPDZ256rmk; break;
-    case X86::VMOVUPDZrmk:      Opc = X86::VBLENDMPDZrmk;    break;
-    case X86::VMOVUPSZ128rmk:   Opc = X86::VBLENDMPSZ128rmk; break;
-    case X86::VMOVUPSZ256rmk:   Opc = X86::VBLENDMPSZ256rmk; break;
-    case X86::VMOVUPSZrmk:      Opc = X86::VBLENDMPSZrmk;    break;
-    case X86::VMOVDQA32Z128rmk: Opc = X86::VPBLENDMDZ128rmk; break;
-    case X86::VMOVDQA32Z256rmk: Opc = X86::VPBLENDMDZ256rmk; break;
-    case X86::VMOVDQA32Zrmk:    Opc = X86::VPBLENDMDZrmk;    break;
-    case X86::VMOVDQA64Z128rmk: Opc = X86::VPBLENDMQZ128rmk; break;
-    case X86::VMOVDQA64Z256rmk: Opc = X86::VPBLENDMQZ256rmk; break;
-    case X86::VMOVDQA64Zrmk:    Opc = X86::VPBLENDMQZrmk;    break;
-    case X86::VMOVAPDZ128rmk:   Opc = X86::VBLENDMPDZ128rmk; break;
-    case X86::VMOVAPDZ256rmk:   Opc = X86::VBLENDMPDZ256rmk; break;
-    case X86::VMOVAPDZrmk:      Opc = X86::VBLENDMPDZrmk;    break;
-    case X86::VMOVAPSZ128rmk:   Opc = X86::VBLENDMPSZ128rmk; break;
-    case X86::VMOVAPSZ256rmk:   Opc = X86::VBLENDMPSZ256rmk; break;
-    case X86::VMOVAPSZrmk:      Opc = X86::VBLENDMPSZrmk;    break;
+    case X86::VMOVDQU8Z128rmk:    Opc = X86::VPBLENDMBZ128rmk; break;
+    case X86::VMOVDQU8Z256rmk:    Opc = X86::VPBLENDMBZ256rmk; break;
+    case X86::VMOVDQU8Zrmk:       Opc = X86::VPBLENDMBZrmk;    break;
+    case X86::VMOVDQU16Z128rmk:   Opc = X86::VPBLENDMWZ128rmk; break;
+    case X86::VMOVDQU16Z256rmk:   Opc = X86::VPBLENDMWZ256rmk; break;
+    case X86::VMOVDQU16Zrmk:      Opc = X86::VPBLENDMWZrmk;    break;
+    case X86::VMOVDQU32Z128rmk:   Opc = X86::VPBLENDMDZ128rmk; break;
+    case X86::VMOVDQU32Z256rmk:   Opc = X86::VPBLENDMDZ256rmk; break;
+    case X86::VMOVDQU32Zrmk:      Opc = X86::VPBLENDMDZrmk;    break;
+    case X86::VMOVDQU64Z128rmk:   Opc = X86::VPBLENDMQZ128rmk; break;
+    case X86::VMOVDQU64Z256rmk:   Opc = X86::VPBLENDMQZ256rmk; break;
+    case X86::VMOVDQU64Zrmk:      Opc = X86::VPBLENDMQZrmk;    break;
+    case X86::VMOVUPDZ128rmk:     Opc = X86::VBLENDMPDZ128rmk; break;
+    case X86::VMOVUPDZ256rmk:     Opc = X86::VBLENDMPDZ256rmk; break;
+    case X86::VMOVUPDZrmk:        Opc = X86::VBLENDMPDZrmk;    break;
+    case X86::VMOVUPSZ128rmk:     Opc = X86::VBLENDMPSZ128rmk; break;
+    case X86::VMOVUPSZ256rmk:     Opc = X86::VBLENDMPSZ256rmk; break;
+    case X86::VMOVUPSZrmk:        Opc = X86::VBLENDMPSZrmk;    break;
+    case X86::VMOVDQA32Z128rmk:   Opc = X86::VPBLENDMDZ128rmk; break;
+    case X86::VMOVDQA32Z256rmk:   Opc = X86::VPBLENDMDZ256rmk; break;
+    case X86::VMOVDQA32Zrmk:      Opc = X86::VPBLENDMDZrmk;    break;
+    case X86::VMOVDQA64Z128rmk:   Opc = X86::VPBLENDMQZ128rmk; break;
+    case X86::VMOVDQA64Z256rmk:   Opc = X86::VPBLENDMQZ256rmk; break;
+    case X86::VMOVDQA64Zrmk:      Opc = X86::VPBLENDMQZrmk;    break;
+    case X86::VMOVAPDZ128rmk:     Opc = X86::VBLENDMPDZ128rmk; break;
+    case X86::VMOVAPDZ256rmk:     Opc = X86::VBLENDMPDZ256rmk; break;
+    case X86::VMOVAPDZrmk:        Opc = X86::VBLENDMPDZrmk;    break;
+    case X86::VMOVAPSZ128rmk:     Opc = X86::VBLENDMPSZ128rmk; break;
+    case X86::VMOVAPSZ256rmk:     Opc = X86::VBLENDMPSZ256rmk; break;
+    case X86::VMOVAPSZrmk:        Opc = X86::VBLENDMPSZrmk;    break;
+    case X86::VBROADCASTSDZ256mk: Opc = X86::VBLENDMPDZ256rmbk; break;
+    case X86::VBROADCASTSDZmk:    Opc = X86::VBLENDMPDZrmbk;    break;
+    case X86::VBROADCASTSSZ128mk: Opc = X86::VBLENDMPSZ128rmbk; break;
+    case X86::VBROADCASTSSZ256mk: Opc = X86::VBLENDMPSZ256rmbk; break;
+    case X86::VBROADCASTSSZmk:    Opc = X86::VBLENDMPSZrmbk;    break;
+    case X86::VPBROADCASTDZ128mk: Opc = X86::VPBLENDMDZ128rmbk; break;
+    case X86::VPBROADCASTDZ256mk: Opc = X86::VPBLENDMDZ256rmbk; break;
+    case X86::VPBROADCASTDZmk:    Opc = X86::VPBLENDMDZrmbk;    break;
+    case X86::VPBROADCASTQZ128mk: Opc = X86::VPBLENDMQZ128rmbk; break;
+    case X86::VPBROADCASTQZ256mk: Opc = X86::VPBLENDMQZ256rmbk; break;
+    case X86::VPBROADCASTQZmk:    Opc = X86::VPBLENDMQZrmbk;    break;
     }
 
     NewMI = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1224,6 +1246,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
               .add(MI.getOperand(7));
     break;
   }
+
   case X86::VMOVDQU8Z128rrk:
   case X86::VMOVDQU8Z256rrk:
   case X86::VMOVDQU8Zrrk:
@@ -1720,6 +1743,27 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }
+  case X86::VCMPSDZrr:
+  case X86::VCMPSSZrr:
+  case X86::VCMPPDZrri:
+  case X86::VCMPPSZrri:
+  case X86::VCMPPDZ128rri:
+  case X86::VCMPPSZ128rri:
+  case X86::VCMPPDZ256rri:
+  case X86::VCMPPSZ256rri:
+  case X86::VCMPPDZrrik:
+  case X86::VCMPPSZrrik:
+  case X86::VCMPPDZ128rrik:
+  case X86::VCMPPSZ128rrik:
+  case X86::VCMPPDZ256rrik:
+  case X86::VCMPPSZ256rrik: {
+    unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm() & 0x1f;
+    Imm = X86::getSwappedVCMPImm(Imm);
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(Imm);
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                   OpIdx1, OpIdx2);
+  }
   case X86::VPERM2F128rr:
   case X86::VPERM2I128rr: {
     // Flip permute source immediate.
@@ -1963,17 +2007,23 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     // Ordered/Unordered/Equal/NotEqual tests
     unsigned Imm = MI.getOperand(3 + OpOffset).getImm() & 0x7;
     switch (Imm) {
+    default:
+      // EVEX versions can be commuted.
+      if ((Desc.TSFlags & X86II::EncodingMask) == X86II::EVEX)
+        break;
+      return false;
     case 0x00: // EQUAL
     case 0x03: // UNORDERED
     case 0x04: // NOT EQUAL
     case 0x07: // ORDERED
-      // The indices of the commutable operands are 1 and 2 (or 2 and 3
-      // when masked).
-      // Assign them to the returned operand indices here.
-      return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1 + OpOffset,
-                                  2 + OpOffset);
+      break;
     }
-    return false;
+
+    // The indices of the commutable operands are 1 and 2 (or 2 and 3
+    // when masked).
+    // Assign them to the returned operand indices here.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1 + OpOffset,
+                                2 + OpOffset);
   }
   case X86::MOVSSrr:
     // X86::MOVSDrr is always commutable. MOVSS is only commutable if we can
@@ -2270,7 +2320,7 @@ unsigned X86::getVPCMPImmForCond(ISD::CondCode CC) {
   }
 }
 
-/// Get the VPCMP immediate if the opcodes are swapped.
+/// Get the VPCMP immediate if the operands are swapped.
 unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
   switch (Imm) {
   default: llvm_unreachable("Unreachable!");
@@ -2288,7 +2338,7 @@ unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
   return Imm;
 }
 
-/// Get the VPCOM immediate if the opcodes are swapped.
+/// Get the VPCOM immediate if the operands are swapped.
 unsigned X86::getSwappedVPCOMImm(unsigned Imm) {
   switch (Imm) {
   default: llvm_unreachable("Unreachable!");
@@ -2300,6 +2350,23 @@ unsigned X86::getSwappedVPCOMImm(unsigned Imm) {
   case 0x05: // NE
   case 0x06: // FALSE
   case 0x07: // TRUE
+    break;
+  }
+
+  return Imm;
+}
+
+/// Get the VCMP immediate if the operands are swapped.
+unsigned X86::getSwappedVCMPImm(unsigned Imm) {
+  // Only need the lower 2 bits to distinquish.
+  switch (Imm & 0x3) {
+  default: llvm_unreachable("Unreachable!");
+  case 0x00: case 0x03:
+    // EQ/NE/TRUE/FALSE/ORD/UNORD don't change immediate when commuted.
+    break;
+  case 0x01: case 0x02:
+    // Need to toggle bits 3:0. Bit 4 stays the same.
+    Imm ^= 0xf;
     break;
   }
 

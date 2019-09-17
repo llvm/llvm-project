@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 
@@ -9468,7 +9468,7 @@ __m256 test_mm512_mask_cvtpd_ps (__m256 __W, __mmask8 __U, __m512d __A)
   return _mm512_mask_cvtpd_ps (__W,__U,__A);
 }
 
-__m512d test_mm512_cvtpd_pslo(__m512 __A) 
+__m512 test_mm512_cvtpd_pslo(__m512d __A)
 {
   // CHECK-LABEL: @test_mm512_cvtpd_pslo
   // CHECK: @llvm.x86.avx512.mask.cvtpd2ps.512
@@ -9477,7 +9477,7 @@ __m512d test_mm512_cvtpd_pslo(__m512 __A)
   return _mm512_cvtpd_pslo(__A);
 }
 
-__m512d test_mm512_mask_cvtpd_pslo(__m512 __W, __mmask8 __U, __m512d __A) {
+__m512 test_mm512_mask_cvtpd_pslo(__m512 __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtpd_pslo
   // CHECK: @llvm.x86.avx512.mask.cvtpd2ps.512
   // CHECK: zeroinitializer
@@ -10659,7 +10659,7 @@ __m512i test_mm512_setzero_epi32()
   return _mm512_setzero_epi32();
 }
 
-__m512i test_mm512_setzero()
+__m512 test_mm512_setzero()
 {
   // CHECK-LABEL: @test_mm512_setzero
   // CHECK: zeroinitializer
@@ -10673,7 +10673,7 @@ __m512i test_mm512_setzero_si512()
   return _mm512_setzero_si512();
 }
 
-__m512i test_mm512_setzero_ps()
+__m512 test_mm512_setzero_ps()
 {
   // CHECK-LABEL: @test_mm512_setzero_ps
   // CHECK: zeroinitializer

@@ -2,16 +2,8 @@
 ; their direct uses (which in turn are replaced with 'undef').
 ;
 ; RUN: rm -rf %t
-; RUN: mkdir %t
-; get the python path from lit
-; RUN: echo "#!" %python > %t/test.py
-; then include the rest of the test script
-; RUN: cat %p/Inputs/remove-global-vars.py >> %t/test.py
-; RUN: chmod +x %t/test.py
-
-; RUN: llvm-reduce --test %t/test.py %s -o %t/out.ll
-; RUN: cat %t/out.ll | FileCheck -implicit-check-not=uninteresting %s
-; REQUIRES: shell
+; RUN: llvm-reduce --test %python --test-arg %p/Inputs/remove-global-vars.py %s -o %t
+; RUN: cat %t | FileCheck -implicit-check-not=uninteresting %s
 
 ; CHECK: @interesting = global
 @interesting = global i32 0, align 4

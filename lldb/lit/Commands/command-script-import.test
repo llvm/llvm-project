@@ -1,0 +1,8 @@
+# RUN: echo 'b main' > %t.in
+# RUN: echo 'run' >> %t.in
+# RUN: echo 'command script import %S/Inputs/frame.py' >> %t.in
+
+# RUN: %clang -g -O0 %S/../Settings/Inputs/main.c -o %t.out
+# RUN: %lldb -b -s %t.in %t.out | FileCheck %s
+
+# CHECK: frame #0

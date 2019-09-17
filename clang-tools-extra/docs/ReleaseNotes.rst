@@ -91,6 +91,11 @@ Improvements to clang-tidy
   Finds historical use of ``unsigned`` to hold vregs and physregs and rewrites
   them to use ``Register``
 
+- Improved :doc:`bugprone-posix-return
+  <clang-tidy/checks/bugprone-posix-return>` check.
+
+  Now also checks if any calls to ``pthread_*`` functions expect negative return
+  values.
 
 Improvements to include-fixer
 -----------------------------
