@@ -3,8 +3,6 @@
 # CHECK-NOT: WhileLoopStart
 
 --- |
-  ; ModuleID = '/home/sampar01/src/llvm/test/CodeGen/Thumb2/LowOverheadLoops/while-negative-offset.ll'
-  source_filename = "while-size-limit.ll"
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main"
   
@@ -47,8 +45,10 @@
   
   ; Function Attrs: nounwind
   declare i32 @llvm.arm.space(i32 immarg, i32) #1
+  
   ; Function Attrs: noduplicate nounwind
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #2
+  
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
   
@@ -65,7 +65,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -130,6 +130,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.4(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r4, $lr
   
     frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -192,5 +193,3 @@ body:             |
     tB %bb.2, 14, $noreg
 
 ...
-
-

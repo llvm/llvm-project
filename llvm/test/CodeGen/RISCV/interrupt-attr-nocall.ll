@@ -213,11 +213,11 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32IF-NEXT:    sw a0, 12(sp)
 ; CHECK-RV32IF-NEXT:    fsw ft0, 8(sp)
 ; CHECK-RV32IF-NEXT:    fsw ft1, 4(sp)
-; CHECK-RV32IF-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IF-NEXT:    flw ft0, %lo(f)(a0)
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IF-NEXT:    flw ft1, %lo(e)(a0)
-; CHECK-RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; CHECK-RV32IF-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IF-NEXT:    lui a0, %hi(f)
+; CHECK-RV32IF-NEXT:    flw ft1, %lo(f)(a0)
+; CHECK-RV32IF-NEXT:    fadd.s ft0, ft0, ft1
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(d)
 ; CHECK-RV32IF-NEXT:    fsw ft0, %lo(d)(a0)
 ; CHECK-RV32IF-NEXT:    flw ft1, 4(sp)
@@ -232,11 +232,11 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    sw a0, 28(sp)
 ; CHECK-RV32IFD-NEXT:    fsd ft0, 16(sp)
 ; CHECK-RV32IFD-NEXT:    fsd ft1, 8(sp)
-; CHECK-RV32IFD-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IFD-NEXT:    flw ft0, %lo(f)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IFD-NEXT:    flw ft1, %lo(e)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.s ft0, ft1, ft0
+; CHECK-RV32IFD-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IFD-NEXT:    lui a0, %hi(f)
+; CHECK-RV32IFD-NEXT:    flw ft1, %lo(f)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.s ft0, ft0, ft1
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(d)
 ; CHECK-RV32IFD-NEXT:    fsw ft0, %lo(d)(a0)
 ; CHECK-RV32IFD-NEXT:    fld ft1, 8(sp)
@@ -312,11 +312,11 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32IF-NEXT:    fsw ft0, 16(sp)
 ; CHECK-RV32IF-NEXT:    fsw ft1, 12(sp)
 ; CHECK-RV32IF-NEXT:    addi s0, sp, 32
-; CHECK-RV32IF-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IF-NEXT:    flw ft0, %lo(f)(a0)
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IF-NEXT:    flw ft1, %lo(e)(a0)
-; CHECK-RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; CHECK-RV32IF-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IF-NEXT:    lui a0, %hi(f)
+; CHECK-RV32IF-NEXT:    flw ft1, %lo(f)(a0)
+; CHECK-RV32IF-NEXT:    fadd.s ft0, ft0, ft1
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(d)
 ; CHECK-RV32IF-NEXT:    fsw ft0, %lo(d)(a0)
 ; CHECK-RV32IF-NEXT:    flw ft1, 12(sp)
@@ -336,11 +336,11 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; CHECK-RV32IFD-NEXT:    fsd ft1, 0(sp)
 ; CHECK-RV32IFD-NEXT:    addi s0, sp, 32
-; CHECK-RV32IFD-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IFD-NEXT:    flw ft0, %lo(f)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IFD-NEXT:    flw ft1, %lo(e)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.s ft0, ft1, ft0
+; CHECK-RV32IFD-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IFD-NEXT:    lui a0, %hi(f)
+; CHECK-RV32IFD-NEXT:    flw ft1, %lo(f)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.s ft0, ft0, ft1
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(d)
 ; CHECK-RV32IFD-NEXT:    fsw ft0, %lo(d)(a0)
 ; CHECK-RV32IFD-NEXT:    fld ft1, 0(sp)
@@ -534,11 +534,11 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    sw a0, 28(sp)
 ; CHECK-RV32IFD-NEXT:    fsd ft0, 16(sp)
 ; CHECK-RV32IFD-NEXT:    fsd ft1, 8(sp)
-; CHECK-RV32IFD-NEXT:    lui a0, %hi(i)
-; CHECK-RV32IFD-NEXT:    fld ft0, %lo(i)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(h)
-; CHECK-RV32IFD-NEXT:    fld ft1, %lo(h)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
+; CHECK-RV32IFD-NEXT:    fld ft0, %lo(h)(a0)
+; CHECK-RV32IFD-NEXT:    lui a0, %hi(i)
+; CHECK-RV32IFD-NEXT:    fld ft1, %lo(i)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(g)
 ; CHECK-RV32IFD-NEXT:    fsd ft0, %lo(g)(a0)
 ; CHECK-RV32IFD-NEXT:    fld ft1, 8(sp)
@@ -738,11 +738,11 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; CHECK-RV32IFD-NEXT:    fsd ft1, 0(sp)
 ; CHECK-RV32IFD-NEXT:    addi s0, sp, 32
-; CHECK-RV32IFD-NEXT:    lui a0, %hi(i)
-; CHECK-RV32IFD-NEXT:    fld ft0, %lo(i)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(h)
-; CHECK-RV32IFD-NEXT:    fld ft1, %lo(h)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
+; CHECK-RV32IFD-NEXT:    fld ft0, %lo(h)(a0)
+; CHECK-RV32IFD-NEXT:    lui a0, %hi(i)
+; CHECK-RV32IFD-NEXT:    fld ft1, %lo(i)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(g)
 ; CHECK-RV32IFD-NEXT:    fsd ft0, %lo(g)(a0)
 ; CHECK-RV32IFD-NEXT:    fld ft1, 0(sp)

@@ -82,8 +82,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    sw a1, 8(sp)
 ; RV32I-NEXT:    addi a1, zero, 10
 ; RV32I-NEXT:    sw a1, 4(sp)
-; RV32I-NEXT:    addi a1, zero, 9
-; RV32I-NEXT:    sw a1, 0(sp)
+; RV32I-NEXT:    addi t0, zero, 9
 ; RV32I-NEXT:    addi a1, zero, 2
 ; RV32I-NEXT:    addi a2, zero, 3
 ; RV32I-NEXT:    addi a3, zero, 4
@@ -91,6 +90,7 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; RV32I-NEXT:    addi a5, zero, 6
 ; RV32I-NEXT:    addi a6, zero, 7
 ; RV32I-NEXT:    addi a7, zero, 8
+; RV32I-NEXT:    sw t0, 0(sp)
 ; RV32I-NEXT:    call func
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    addi sp, s0, -16

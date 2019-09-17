@@ -161,7 +161,7 @@ ChangeStatus llvm::operator&(ChangeStatus l, ChangeStatus r) {
 /// limit how much effort is invested, we will never visit more values than
 /// specified by \p MaxValues.
 template <typename AAType, typename StateTy>
-bool genericValueTraversal(
+static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
     const function_ref<bool(Value &, StateTy &, bool)> &VisitValueCB,
     int MaxValues = 8) {
@@ -486,6 +486,7 @@ void IRPosition::verify() {
   }
 }
 
+namespace {
 /// Helper functions to clamp a state \p S of type \p StateType with the
 /// information in \p R and indicate/return if \p S did change (as-in update is
 /// required to be run again).
@@ -1762,11 +1763,18 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       if (!ArgOp->getType()->isPointerTy())
         continue;
 
-      // TODO: Use AliasAnalysis
-      //       AAResults& AAR = ..;
-      //       if(AAR.isNoAlias(&getAssociatedValue(), ArgOp))
-      //          return indicatePessimitisicFixpoint();
+      if (const Function *F = getAnchorScope()) {
+        if (AAResults *AAR = A.getInfoCache().getAAResultsForFunction(*F)) {
+          LLVM_DEBUG(dbgs()
+                     << "[Attributor][NoAliasCSArg] Check alias between "
+                        "callsite arguments "
+                     << AAR->isNoAlias(&getAssociatedValue(), ArgOp) << " "
+                     << getAssociatedValue() << " " << *ArgOp << "\n");
 
+          if (AAR->isNoAlias(&getAssociatedValue(), ArgOp))
+            continue;
+        }
+      }
       return indicatePessimisticFixpoint();
     }
 
@@ -1856,12 +1864,14 @@ struct AAIsDeadImpl : public AAIsDead {
 
   void exploreFromEntry(Attributor &A, const Function *F) {
     ToBeExploredPaths.insert(&(F->getEntryBlock().front()));
-    assumeLive(A, F->getEntryBlock());
 
     for (size_t i = 0; i < ToBeExploredPaths.size(); ++i)
       if (const Instruction *NextNoReturnI =
               findNextNoReturn(A, ToBeExploredPaths[i]))
         NoReturnCalls.insert(NextNoReturnI);
+
+    // Mark the block live after we looked for no-return instructions.
+    assumeLive(A, F->getEntryBlock());
   }
 
   /// Find the next assumed noreturn instruction in the block of \p I starting
@@ -3397,6 +3407,7 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
     BUILD_STAT_NAME(MallocCalls, Function) += MallocCalls.size();
   }
 };
+} // namespace
 
 /// ----------------------------------------------------------------------------
 ///                               Attributor
@@ -3530,6 +3541,26 @@ bool Attributor::checkForAllReturnedValues(
       });
 }
 
+static bool
+checkForAllInstructionsImpl(InformationCache::OpcodeInstMapTy &OpcodeInstMap,
+                            const function_ref<bool(Instruction &)> &Pred,
+                            const AAIsDead *LivenessAA, bool &AnyDead,
+                            const ArrayRef<unsigned> &Opcodes) {
+  for (unsigned Opcode : Opcodes) {
+    for (Instruction *I : OpcodeInstMap[Opcode]) {
+      // Skip dead instructions.
+      if (LivenessAA && LivenessAA->isAssumedDead(I)) {
+        AnyDead = true;
+        continue;
+      }
+
+      if (!Pred(*I))
+        return false;
+    }
+  }
+  return true;
+}
+
 bool Attributor::checkForAllInstructions(
     const llvm::function_ref<bool(Instruction &)> &Pred,
     const AbstractAttribute &QueryingAA, const ArrayRef<unsigned> &Opcodes) {
@@ -3548,18 +3579,8 @@ bool Attributor::checkForAllInstructions(
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
-  for (unsigned Opcode : Opcodes) {
-    for (Instruction *I : OpcodeInstMap[Opcode]) {
-      // Skip dead instructions.
-      if (LivenessAA.isAssumedDead(I)) {
-        AnyDead = true;
-        continue;
-      }
-
-      if (!Pred(*I))
-        return false;
-    }
-  }
+  if (!checkForAllInstructionsImpl(OpcodeInstMap, Pred, &LivenessAA, AnyDead, Opcodes))
+    return false;
 
   // If we actually used liveness information so we have to record a dependence.
   if (AnyDead)
@@ -3845,13 +3866,51 @@ ChangeStatus Attributor::run(Module &M) {
   return ManifestChange;
 }
 
-void Attributor::identifyDefaultAbstractAttributes(
-    Function &F, std::function<TargetLibraryInfo *(Function &)> &TLIGetter) {
+void Attributor::initializeInformationCache(Function &F) {
+
+  // Walk all instructions to find interesting instructions that might be
+  // queried by abstract attributes during their initialization or update.
+  // This has to happen before we create attributes.
+  auto &ReadOrWriteInsts = InfoCache.FuncRWInstsMap[&F];
+  auto &InstOpcodeMap = InfoCache.FuncInstOpcodeMap[&F];
+
+  for (Instruction &I : instructions(&F)) {
+    bool IsInterestingOpcode = false;
+
+    // To allow easy access to all instructions in a function with a given
+    // opcode we store them in the InfoCache. As not all opcodes are interesting
+    // to concrete attributes we only cache the ones that are as identified in
+    // the following switch.
+    // Note: There are no concrete attributes now so this is initially empty.
+    switch (I.getOpcode()) {
+    default:
+      assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
+             "New call site/base instruction type needs to be known int the "
+             "Attributor.");
+      break;
+    case Instruction::Load:
+      // The alignment of a pointer is interesting for loads.
+    case Instruction::Store:
+      // The alignment of a pointer is interesting for stores.
+    case Instruction::Call:
+    case Instruction::CallBr:
+    case Instruction::Invoke:
+    case Instruction::CleanupRet:
+    case Instruction::CatchSwitch:
+    case Instruction::Resume:
+    case Instruction::Ret:
+      IsInterestingOpcode = true;
+    }
+    if (IsInterestingOpcode)
+      InstOpcodeMap[I.getOpcode()].push_back(&I);
+    if (I.mayReadOrWriteMemory())
+      ReadOrWriteInsts.push_back(&I);
+  }
+}
+
+void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   if (!VisitedFunctions.insert(&F).second)
     return;
-
-  if (EnableHeapToStack)
-    InfoCache.FuncTLIMap[&F] = TLIGetter(F);
 
   IRPosition FPos = IRPosition::function(F);
 
@@ -3932,52 +3991,9 @@ void Attributor::identifyDefaultAbstractAttributes(
     }
   }
 
-  // Walk all instructions to find more attribute opportunities and also
-  // interesting instructions that might be queried by abstract attributes
-  // during their initialization or update.
-  auto &ReadOrWriteInsts = InfoCache.FuncRWInstsMap[&F];
-  auto &InstOpcodeMap = InfoCache.FuncInstOpcodeMap[&F];
-
-  for (Instruction &I : instructions(&F)) {
-    bool IsInterestingOpcode = false;
-
-    // To allow easy access to all instructions in a function with a given
-    // opcode we store them in the InfoCache. As not all opcodes are interesting
-    // to concrete attributes we only cache the ones that are as identified in
-    // the following switch.
-    // Note: There are no concrete attributes now so this is initially empty.
-    switch (I.getOpcode()) {
-    default:
-      assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
-             "New call site/base instruction type needs to be known int the "
-             "attributor.");
-      break;
-    case Instruction::Load:
-      // The alignment of a pointer is interesting for loads.
-      getOrCreateAAFor<AAAlign>(
-          IRPosition::value(*cast<LoadInst>(I).getPointerOperand()));
-      break;
-    case Instruction::Store:
-      // The alignment of a pointer is interesting for stores.
-      getOrCreateAAFor<AAAlign>(
-          IRPosition::value(*cast<StoreInst>(I).getPointerOperand()));
-      break;
-    case Instruction::Call:
-    case Instruction::CallBr:
-    case Instruction::Invoke:
-    case Instruction::CleanupRet:
-    case Instruction::CatchSwitch:
-    case Instruction::Resume:
-    case Instruction::Ret:
-      IsInterestingOpcode = true;
-    }
-    if (IsInterestingOpcode)
-      InstOpcodeMap[I.getOpcode()].push_back(&I);
-    if (I.mayReadOrWriteMemory())
-      ReadOrWriteInsts.push_back(&I);
-
+  auto CallSitePred = [&](Instruction &I) -> bool {
     CallSite CS(&I);
-    if (CS && CS.getCalledFunction()) {
+    if (CS.getCalledFunction()) {
       for (int i = 0, e = CS.getCalledFunction()->arg_size(); i < e; i++) {
 
         IRPosition CSArgPos = IRPosition::callsite_argument(CS, i);
@@ -4001,7 +4017,32 @@ void Attributor::identifyDefaultAbstractAttributes(
         getOrCreateAAFor<AAAlign>(CSArgPos);
       }
     }
-  }
+    return true;
+  };
+
+  auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
+  bool Success, AnyDead = false;
+  Success = checkForAllInstructionsImpl(
+      OpcodeInstMap, CallSitePred, nullptr, AnyDead,
+      {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
+       (unsigned)Instruction::Call});
+  (void)Success;
+  assert(Success && !AnyDead && "Expected the check call to be successful!");
+
+  auto LoadStorePred = [&](Instruction &I) -> bool {
+    if (isa<LoadInst>(I))
+      getOrCreateAAFor<AAAlign>(
+          IRPosition::value(*cast<LoadInst>(I).getPointerOperand()));
+    else
+      getOrCreateAAFor<AAAlign>(
+          IRPosition::value(*cast<StoreInst>(I).getPointerOperand()));
+    return true;
+  };
+  Success = checkForAllInstructionsImpl(
+      OpcodeInstMap, LoadStorePred, nullptr, AnyDead,
+      {(unsigned)Instruction::Load, (unsigned)Instruction::Store});
+  (void)Success;
+  assert(Success && !AnyDead && "Expected the check call to be successful!");
 }
 
 /// Helpers to ease debugging through output streams and print calls.
@@ -4063,8 +4104,7 @@ void AbstractAttribute::print(raw_ostream &OS) const {
 ///                       Pass (Manager) Boilerplate
 /// ----------------------------------------------------------------------------
 
-static bool runAttributorOnModule(
-    Module &M, std::function<TargetLibraryInfo *(Function &)> &TLIGetter) {
+static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
   if (DisableAttributor)
     return false;
 
@@ -4073,8 +4113,11 @@ static bool runAttributorOnModule(
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  InformationCache InfoCache(M.getDataLayout());
+  InformationCache InfoCache(M.getDataLayout(), AG);
   Attributor A(InfoCache, DepRecInterval);
+
+  for (Function &F : M)
+    A.initializeInformationCache(F);
 
   for (Function &F : M) {
     if (F.hasExactDefinition())
@@ -4099,7 +4142,7 @@ static bool runAttributorOnModule(
 
     // Populate the Attributor with abstract attribute opportunities in the
     // function and the information cache with IR information.
-    A.identifyDefaultAbstractAttributes(F, TLIGetter);
+    A.identifyDefaultAbstractAttributes(F);
   }
 
   return A.run(M) == ChangeStatus::CHANGED;
@@ -4108,12 +4151,8 @@ static bool runAttributorOnModule(
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  std::function<TargetLibraryInfo *(Function &)> TLIGetter =
-      [&](Function &F) -> TargetLibraryInfo * {
-    return &FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
-  if (runAttributorOnModule(M, TLIGetter)) {
+  AnalysisGetter AG(FAM);
+  if (runAttributorOnModule(M, AG)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
   }
@@ -4132,10 +4171,9 @@ struct AttributorLegacyPass : public ModulePass {
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-    std::function<TargetLibraryInfo *(Function &)> TLIGetter =
-        [&](Function &F) -> TargetLibraryInfo * { return nullptr; };
 
-    return runAttributorOnModule(M, TLIGetter);
+    AnalysisGetter AG;
+    return runAttributorOnModule(M, AG);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

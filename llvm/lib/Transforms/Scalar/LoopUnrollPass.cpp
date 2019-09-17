@@ -1032,10 +1032,10 @@ static LoopUnrollResult tryToUnrollLoop(
     return LoopUnrollResult::Unmodified;
   }
 
-  // When optimizing for size, use LoopSize as threshold, to (fully) unroll
-  // loops, if it does not increase code size.
+  // When optimizing for size, use LoopSize + 1 as threshold (we use < Threshold
+  // later), to (fully) unroll loops, if it does not increase code size.
   if (OptForSize)
-    UP.Threshold = std::max(UP.Threshold, LoopSize);
+    UP.Threshold = std::max(UP.Threshold, LoopSize + 1);
 
   if (NumInlineCandidates != 0) {
     LLVM_DEBUG(dbgs() << "  Not unrolling loop with inlinable calls.\n");

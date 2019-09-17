@@ -20,9 +20,9 @@ define i64 @addc_adde(i64 %a, i64 %b) nounwind {
 define i64 @subc_sube(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: subc_sube:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a4, a0, a2
 ; RV32I-NEXT:    sub a1, a1, a3
-; RV32I-NEXT:    sltu a3, a0, a2
-; RV32I-NEXT:    sub a1, a1, a3
+; RV32I-NEXT:    sub a1, a1, a4
 ; RV32I-NEXT:    sub a0, a0, a2
 ; RV32I-NEXT:    ret
   %1 = sub i64 %a, %b

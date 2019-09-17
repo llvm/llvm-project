@@ -466,6 +466,10 @@ namespace llvm {
       /// v2f32 value into the lower half of a VSR register.
       LD_VSX_LH,
 
+      /// VSRC, CHAIN = LD_SPLAT, CHAIN, Ptr - a splatting load memory
+      /// instructions such as LXVDSX, LXVWSX.
+      LD_SPLAT,
+
       /// CHAIN = STXVD2X CHAIN, VSRC, Ptr - Occurs only for little endian.
       /// Maps directly to an stxvd2x instruction that will be preceded by
       /// an xxswapd.
@@ -574,9 +578,11 @@ namespace llvm {
     bool isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                          unsigned &InsertAtByte, bool &Swap, bool IsLE);
 
-    /// getVSPLTImmediate - Return the appropriate VSPLT* immediate to splat the
-    /// specified isSplatShuffleMask VECTOR_SHUFFLE mask.
-    unsigned getVSPLTImmediate(SDNode *N, unsigned EltSize, SelectionDAG &DAG);
+    /// getSplatIdxForPPCMnemonics - Return the splat index as a value that is
+    /// appropriate for PPC mnemonics (which have a big endian bias - namely
+    /// elements are counted from the left of the vector register).
+    unsigned getSplatIdxForPPCMnemonics(SDNode *N, unsigned EltSize,
+                                        SelectionDAG &DAG);
 
     /// get_VSPLTI_elt - If this is a build_vector of constants which can be
     /// formed by using a vspltis[bhw] instruction of the specified element

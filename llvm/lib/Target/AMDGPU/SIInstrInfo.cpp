@@ -6410,3 +6410,40 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
       return true;
   }
 }
+
+MachineInstr *SIInstrInfo::createPHIDestinationCopy(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator LastPHIIt,
+    const DebugLoc &DL, Register Src, Register Dst) const {
+  auto Cur = MBB.begin();
+  if (Cur != MBB.end())
+    do {
+      if (!Cur->isPHI() && Cur->readsRegister(Dst))
+        return BuildMI(MBB, Cur, DL, get(TargetOpcode::COPY), Dst).addReg(Src);
+      ++Cur;
+    } while (Cur != MBB.end() && Cur != LastPHIIt);
+
+  return TargetInstrInfo::createPHIDestinationCopy(MBB, LastPHIIt, DL, Src,
+                                                   Dst);
+}
+
+MachineInstr *SIInstrInfo::createPHISourceCopy(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
+    const DebugLoc &DL, Register Src, Register SrcSubReg, Register Dst) const {
+  if (InsPt != MBB.end() &&
+      (InsPt->getOpcode() == AMDGPU::SI_IF ||
+       InsPt->getOpcode() == AMDGPU::SI_ELSE ||
+       InsPt->getOpcode() == AMDGPU::SI_IF_BREAK) &&
+      InsPt->definesRegister(Src)) {
+    InsPt++;
+    return BuildMI(MBB, InsPt, InsPt->getDebugLoc(),
+                   get(ST.isWave32() ? AMDGPU::S_MOV_B32_term
+                                     : AMDGPU::S_MOV_B64_term),
+                   Dst)
+        .addReg(Src, 0, SrcSubReg)
+        .addReg(AMDGPU::EXEC, RegState::Implicit);
+  }
+  return TargetInstrInfo::createPHISourceCopy(MBB, InsPt, DL, Src, SrcSubReg,
+                                              Dst);
+}
+
+bool llvm::SIInstrInfo::isWave32() const { return ST.isWave32(); }

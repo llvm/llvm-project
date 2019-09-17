@@ -4200,7 +4200,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::BitCast: {
-    auto *CI = dyn_cast<CastInst>(&I);
+    auto *CI = cast<CastInst>(&I);
     setDebugLocFromInst(Builder, CI);
 
     /// Vectorize casts.

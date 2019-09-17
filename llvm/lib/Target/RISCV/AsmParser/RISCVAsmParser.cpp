@@ -986,11 +986,11 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 static bool matchRegisterNameHelper(bool IsRV32E, Register &RegNo,
                                     StringRef Name) {
   RegNo = MatchRegisterName(Name);
-  if (RegNo == 0)
+  if (RegNo == RISCV::NoRegister)
     RegNo = MatchRegisterAltName(Name);
   if (IsRV32E && RegNo >= RISCV::X16 && RegNo <= RISCV::X31)
-    RegNo = 0;
-  return RegNo == 0;
+    RegNo = RISCV::NoRegister;
+  return RegNo == RISCV::NoRegister;
 }
 
 bool RISCVAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
@@ -1036,7 +1036,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     Register RegNo;
     matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
-    if (RegNo == 0) {
+    if (RegNo == RISCV::NoRegister) {
       if (HadParens)
         getLexer().UnLex(LParen);
       return MatchOperand_NoMatch;

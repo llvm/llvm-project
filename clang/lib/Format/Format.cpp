@@ -1417,22 +1417,29 @@ public:
 
     checkEmptyNamespace(AnnotatedLines);
 
-    for (auto &Line : AnnotatedLines) {
-      if (Line->Affected) {
-        cleanupRight(Line->First, tok::comma, tok::comma);
-        cleanupRight(Line->First, TT_CtorInitializerColon, tok::comma);
-        cleanupRight(Line->First, tok::l_paren, tok::comma);
-        cleanupLeft(Line->First, tok::comma, tok::r_paren);
-        cleanupLeft(Line->First, TT_CtorInitializerComma, tok::l_brace);
-        cleanupLeft(Line->First, TT_CtorInitializerColon, tok::l_brace);
-        cleanupLeft(Line->First, TT_CtorInitializerColon, tok::equal);
-      }
-    }
+    for (auto *Line : AnnotatedLines)
+      cleanupLine(Line);
 
     return {generateFixes(), 0};
   }
 
 private:
+  void cleanupLine(AnnotatedLine *Line) {
+    for (auto *Child : Line->Children) {
+      cleanupLine(Child);
+    }
+
+    if (Line->Affected) {
+      cleanupRight(Line->First, tok::comma, tok::comma);
+      cleanupRight(Line->First, TT_CtorInitializerColon, tok::comma);
+      cleanupRight(Line->First, tok::l_paren, tok::comma);
+      cleanupLeft(Line->First, tok::comma, tok::r_paren);
+      cleanupLeft(Line->First, TT_CtorInitializerComma, tok::l_brace);
+      cleanupLeft(Line->First, TT_CtorInitializerColon, tok::l_brace);
+      cleanupLeft(Line->First, TT_CtorInitializerColon, tok::equal);
+    }
+  }
+
   bool containsOnlyComments(const AnnotatedLine &Line) {
     for (FormatToken *Tok = Line.First; Tok != nullptr; Tok = Tok->Next) {
       if (Tok->isNot(tok::comment))

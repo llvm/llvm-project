@@ -61,10 +61,8 @@ class IntList<string _Name, list<int> _List> {
 //                      OpenCL C classes for types
 //===----------------------------------------------------------------------===//
 // OpenCL C basic data types (int, float, image2d_t, ...).
-// Its Child classes can represent concrete types (e.g.: VectorType) or
-// custom types (e.g.: GenType).
-// Instances of these child classes should be used in Builtin function
-// arguments.  See the definition of the "read_imagef" function as example.
+// Its child classes can represent concrete types (e.g. VectorType) or
+// abstract types (e.g. GenType).
 class Type<string _Name, QualType _QTName> {
   // Name of the Type.
   string Name = _Name;
@@ -150,12 +148,8 @@ class TypeList<string _Name, list<Type> _Type> {
 // A GenericType is an abstract type that defines a set of types as a
 // combination of Types and vector sizes.
 //
-// E.g.: If TypeList = <int, float> and VectorList = <1, 2, 4>, then it
-//       represents <int, int2, int4, float, float2, float4>.
-// _Ty          : Name of the GenType.
-// _TypeList    : List of basic data Types.
-// _VectorList  : Sizes of the vector for each type of the _TypeList, 1 being a
-//                scalar.
+// For example, if TypeList = <int, float> and VectorList = <1, 2, 4>, then it
+// represents <int, int2, int4, float, float2, float4>.
 //
 // Some rules apply when using multiple GenericType arguments in a declaration:
 //   1. The number of vector sizes must be equal or 1 for all gentypes in a

@@ -307,6 +307,13 @@ bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI,
   return getAllocationData(V, OpNewLike, TLI, LookThroughBitCast).hasValue();
 }
 
+/// Tests if a value is a call or invoke to a library function that
+/// allocates memory (strdup, strndup).
+bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                          bool LookThroughBitCast) {
+  return getAllocationData(V, StrDupLike, TLI, LookThroughBitCast).hasValue();
+}
+
 /// extractMallocCall - Returns the corresponding CallInst if the instruction
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.

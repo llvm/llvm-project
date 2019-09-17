@@ -2581,6 +2581,7 @@ bool X86DAGToDAGISel::tryFoldLoad(SDNode *Root, SDNode *P, SDValue N,
                                   SDValue &Base, SDValue &Scale,
                                   SDValue &Index, SDValue &Disp,
                                   SDValue &Segment) {
+  assert(Root && P && "Unknown root/parent nodes");
   if (!ISD::isNON_EXTLoad(N.getNode()) ||
       !IsProfitableToFold(N, P, Root) ||
       !IsLegalToFold(N, P, Root, OptLevel))

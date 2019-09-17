@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm-apple-ios   -mcpu=cortex-a8 -O0 -filetype=obj -o %t.o
+; RUN: llc < %s -mtriple=arm-apple-ios   -mcpu=cortex-a8 -O0 -filetype=obj -verify-machine-dom-info -o %t.o
 ; RUN: llc < %s -mtriple=thumb-apple-ios -mcpu=cortex-a8 -O0 -filetype=obj -o %t.o
 ; RUN: llc < %s -mtriple=arm-apple-ios   -mcpu=cortex-a8 -O2 -filetype=obj -verify-machineinstrs -o %t.o
 ; RUN: llc < %s -mtriple=thumb-apple-ios -mcpu=cortex-a8 -O2 -filetype=obj -verify-machineinstrs -o %t.o

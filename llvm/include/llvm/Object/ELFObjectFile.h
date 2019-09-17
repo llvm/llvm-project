@@ -239,6 +239,10 @@ public:
   using Elf_Rela = typename ELFT::Rela;
   using Elf_Dyn = typename ELFT::Dyn;
 
+  SectionRef toSectionRef(const Elf_Shdr *Sec) const {
+    return SectionRef(toDRI(Sec), this);
+  }
+
 private:
   ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
                 const Elf_Shdr *DotDynSymSec, const Elf_Shdr *DotSymtabSec,

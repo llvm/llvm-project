@@ -257,9 +257,9 @@ define double @fmv_d_x(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IFD-LABEL: fmv_d_x:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fmv.d.x ft1, a1
+; RV64IFD-NEXT:    fadd.d ft0, ft0, ft1
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %1 = bitcast i64 %a to double

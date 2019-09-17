@@ -240,14 +240,14 @@ define float @select_fcmp_ord(float %a, float %b) nounwind {
 define float @select_fcmp_ueq(float %a, float %b) nounwind {
 ; RV32IF-LABEL: select_fcmp_ueq:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a0
 ; RV32IF-NEXT:    fmv.w.x ft1, a1
-; RV32IF-NEXT:    feq.s a0, ft1, ft1
-; RV32IF-NEXT:    feq.s a1, ft0, ft0
-; RV32IF-NEXT:    and a0, a1, a0
-; RV32IF-NEXT:    seqz a0, a0
-; RV32IF-NEXT:    feq.s a1, ft0, ft1
-; RV32IF-NEXT:    or a0, a1, a0
+; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    feq.s a0, ft0, ft1
+; RV32IF-NEXT:    feq.s a1, ft1, ft1
+; RV32IF-NEXT:    feq.s a2, ft0, ft0
+; RV32IF-NEXT:    and a1, a2, a1
+; RV32IF-NEXT:    seqz a1, a1
+; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    bnez a0, .LBB8_2
 ; RV32IF-NEXT:  # %bb.1:
 ; RV32IF-NEXT:    fmv.s ft0, ft1
@@ -257,14 +257,14 @@ define float @select_fcmp_ueq(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: select_fcmp_ueq:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a0
 ; RV64IF-NEXT:    fmv.w.x ft1, a1
-; RV64IF-NEXT:    feq.s a0, ft1, ft1
-; RV64IF-NEXT:    feq.s a1, ft0, ft0
-; RV64IF-NEXT:    and a0, a1, a0
-; RV64IF-NEXT:    seqz a0, a0
-; RV64IF-NEXT:    feq.s a1, ft0, ft1
-; RV64IF-NEXT:    or a0, a1, a0
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    feq.s a0, ft0, ft1
+; RV64IF-NEXT:    feq.s a1, ft1, ft1
+; RV64IF-NEXT:    feq.s a2, ft0, ft0
+; RV64IF-NEXT:    and a1, a2, a1
+; RV64IF-NEXT:    seqz a1, a1
+; RV64IF-NEXT:    or a0, a0, a1
 ; RV64IF-NEXT:    bnez a0, .LBB8_2
 ; RV64IF-NEXT:  # %bb.1:
 ; RV64IF-NEXT:    fmv.s ft0, ft1
@@ -486,24 +486,24 @@ define i32 @i32_select_fcmp_oeq(float %a, float %b, i32 %c, i32 %d) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    feq.s a0, ft1, ft0
-; RV32IF-NEXT:    bnez a0, .LBB16_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    mv a2, a3
-; RV32IF-NEXT:  .LBB16_2:
+; RV32IF-NEXT:    feq.s a1, ft1, ft0
 ; RV32IF-NEXT:    mv a0, a2
+; RV32IF-NEXT:    bnez a1, .LBB16_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    mv a0, a3
+; RV32IF-NEXT:  .LBB16_2:
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: i32_select_fcmp_oeq:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fmv.w.x ft0, a1
 ; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    feq.s a0, ft1, ft0
-; RV64IF-NEXT:    bnez a0, .LBB16_2
-; RV64IF-NEXT:  # %bb.1:
-; RV64IF-NEXT:    mv a2, a3
-; RV64IF-NEXT:  .LBB16_2:
+; RV64IF-NEXT:    feq.s a1, ft1, ft0
 ; RV64IF-NEXT:    mv a0, a2
+; RV64IF-NEXT:    bnez a1, .LBB16_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    mv a0, a3
+; RV64IF-NEXT:  .LBB16_2:
 ; RV64IF-NEXT:    ret
   %1 = fcmp oeq float %a, %b
   %2 = select i1 %1, i32 %c, i32 %d

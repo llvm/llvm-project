@@ -330,16 +330,16 @@ static bool is843419ErratumSequence(uint32_t instr1, uint32_t instr2,
 }
 
 // Scan the instruction sequence starting at Offset Off from the base of
-// InputSection IS. We update Off in this function rather than in the caller as
-// we can skip ahead much further into the section when we know how many
+// InputSection isec. We update Off in this function rather than in the caller
+// as we can skip ahead much further into the section when we know how many
 // instructions we've scanned.
-// Return the offset of the load or store instruction in IS that we want to
+// Return the offset of the load or store instruction in isec that we want to
 // patch or 0 if no patch required.
 static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
                                           uint64_t limit) {
   uint64_t isecAddr = isec->getVA(0);
 
-  // Advance Off so that (ISAddr + Off) modulo 0x1000 is at least 0xff8.
+  // Advance Off so that (isecAddr + Off) modulo 0x1000 is at least 0xff8.
   uint64_t initialPageOff = (isecAddr + off) & 0xfff;
   if (initialPageOff < 0xff8)
     off += 0xff8 - initialPageOff;
@@ -383,7 +383,7 @@ public:
 
   // The Section we are patching.
   const InputSection *patchee;
-  // The offset of the instruction in the Patchee section we are patching.
+  // The offset of the instruction in the patchee section we are patching.
   uint64_t patcheeOffset;
   // A label for the start of the Patch that we can use as a relocation target.
   Symbol *patchSym;
@@ -406,10 +406,10 @@ uint64_t Patch843419Section::getLDSTAddr() const {
 
 void Patch843419Section::writeTo(uint8_t *buf) {
   // Copy the instruction that we will be replacing with a branch in the
-  // Patchee Section.
+  // patchee Section.
   write32le(buf, read32le(patchee->data().begin() + patcheeOffset));
 
-  // Apply any relocation transferred from the original PatcheeSection.
+  // Apply any relocation transferred from the original patchee section.
   // For a SyntheticSection Buf already has outSecOff added, but relocateAlloc
   // also adds outSecOff so we need to subtract to avoid double counting.
   this->relocateAlloc(buf - outSecOff, buf - outSecOff + getSize());
@@ -464,10 +464,12 @@ void AArch64Err843419Patcher::init() {
     mapSyms.erase(
         std::unique(mapSyms.begin(), mapSyms.end(),
                     [=](const Defined *a, const Defined *b) {
-                      return (isCodeMapSymbol(a) && isCodeMapSymbol(b)) ||
-                             (isDataMapSymbol(a) && isDataMapSymbol(b));
+                      return isCodeMapSymbol(a) == isCodeMapSymbol(b);
                     }),
         mapSyms.end());
+    // Always start with a Code Mapping Symbol.
+    if (!mapSyms.empty() && !isCodeMapSymbol(mapSyms.front()))
+      mapSyms.erase(mapSyms.begin());
   }
   initialized = true;
 }
@@ -513,12 +515,9 @@ void AArch64Err843419Patcher::insertPatches(
   std::vector<InputSection *> tmp;
   tmp.reserve(isd.sections.size() + patches.size());
   auto mergeCmp = [](const InputSection *a, const InputSection *b) {
-    if (a->outSecOff < b->outSecOff)
-      return true;
-    if (a->outSecOff == b->outSecOff && isa<Patch843419Section>(a) &&
-        !isa<Patch843419Section>(b))
-      return true;
-    return false;
+    if (a->outSecOff != b->outSecOff)
+      return a->outSecOff < b->outSecOff;
+    return isa<Patch843419Section>(a) && !isa<Patch843419Section>(b);
   };
   std::merge(isd.sections.begin(), isd.sections.end(), patches.begin(),
              patches.end(), std::back_inserter(tmp), mergeCmp);
@@ -527,7 +526,7 @@ void AArch64Err843419Patcher::insertPatches(
 
 // Given an erratum sequence that starts at address adrpAddr, with an
 // instruction that we need to patch at patcheeOffset from the start of
-// InputSection IS, create a Patch843419 Section and add it to the
+// InputSection isec, create a Patch843419 Section and add it to the
 // Patches that we need to insert.
 static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
                            InputSection *isec,
@@ -573,7 +572,7 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
 
 // Scan all the instructions in InputSectionDescription, for each instance of
 // the erratum sequence create a Patch843419Section. We return the list of
-// Patch843419Sections that need to be applied to ISD.
+// Patch843419Sections that need to be applied to the InputSectionDescription.
 std::vector<Patch843419Section *>
 AArch64Err843419Patcher::patchInputSectionDescription(
     InputSectionDescription &isd) {
@@ -589,10 +588,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
     // section size).
     std::vector<const Defined *> &mapSyms = sectionMap[isec];
 
-    auto codeSym = llvm::find_if(mapSyms, [&](const Defined *ms) {
-      return ms->getName().startswith("$x");
-    });
-
+    auto codeSym = mapSyms.begin();
     while (codeSym != mapSyms.end()) {
       auto dataSym = std::next(codeSym);
       uint64_t off = (*codeSym)->value;
@@ -601,7 +597,8 @@ AArch64Err843419Patcher::patchInputSectionDescription(
 
       while (off < limit) {
         uint64_t startAddr = isec->getVA(off);
-        if (uint64_t patcheeOffset = scanCortexA53Errata843419(isec, off, limit))
+        if (uint64_t patcheeOffset =
+                scanCortexA53Errata843419(isec, off, limit))
           implementPatch(startAddr, patcheeOffset, isec, patches);
       }
       if (dataSym == mapSyms.end())

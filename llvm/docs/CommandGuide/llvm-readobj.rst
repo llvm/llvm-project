@@ -133,7 +133,7 @@ file formats.
 
 .. option:: --version
 
- Display the version of this program.
+ Display the version of the :program:`llvm-readobj` executable.
 
 .. option:: @<FILE>
 
