@@ -72,8 +72,8 @@ define void @test5(i8* %ptr, i8** %esc) {
 ; CHECK-NEXT:    [[E:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
 ; CHECK-NEXT:    [[F:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
 ; CHECK-NEXT:    [[G:%.*]] = call dereferenceable_or_null(700) i8* @malloc(i32 700)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 dereferenceable(32) [[PTR:%.*]], i8* align 1 dereferenceable(32) [[A]], i32 32, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* align 1 dereferenceable(32) [[PTR]], i8* align 1 dereferenceable(32) [[B]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(32) [[PTR:%.*]], i8* nonnull align 1 dereferenceable(32) [[A]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(32) [[PTR]], i8* nonnull align 1 dereferenceable(32) [[B]], i32 32, i1 false)
 ; CHECK-NEXT:    store i8* [[C]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[D]], i8* [[PTR]], i32 32, i1 true)
 ; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i32(i8* [[E]], i8* [[PTR]], i32 32, i1 true)

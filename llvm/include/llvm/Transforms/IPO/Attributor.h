@@ -97,6 +97,7 @@
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/CallSite.h"
@@ -519,6 +520,21 @@ public:
   iterator end() { return IRPositions.end(); }
 };
 
+/// Wrapper for FunctoinAnalysisManager.
+struct AnalysisGetter {
+  template <typename Analysis>
+  typename Analysis::Result *getAnalysis(const Function &F) {
+    if (!FAM)
+      return nullptr;
+    return &FAM->getResult<Analysis>(const_cast<Function &>(F));
+  }
+  AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
+  AnalysisGetter() {}
+
+private:
+  FunctionAnalysisManager *FAM = nullptr;
+};
+
 /// Data structure to hold cached (LLVM-IR) information.
 ///
 /// All attributes are given an InformationCache object at creation time to
@@ -532,7 +548,7 @@ public:
 /// reusable, it is advised to inherit from the InformationCache and cast the
 /// instance down in the abstract attributes.
 struct InformationCache {
-  InformationCache(const DataLayout &DL) : DL(DL) {}
+  InformationCache(const DataLayout &DL, AnalysisGetter &AG) : DL(DL), AG(AG) {}
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
@@ -553,7 +569,12 @@ struct InformationCache {
 
   /// Return TargetLibraryInfo for function \p F.
   TargetLibraryInfo *getTargetLibraryInfoForFunction(const Function &F) {
-    return FuncTLIMap[&F];
+    return AG.getAnalysis<TargetLibraryAnalysis>(F);
+  }
+
+  /// Return AliasAnalysis Result for function \p F.
+  AAResults *getAAResultsForFunction(const Function &F) {
+    return AG.getAnalysis<AAManager>(F);
   }
 
   /// Return datalayout used in the module.
@@ -566,9 +587,6 @@ private:
   /// A map type from functions to their read or write instructions.
   using FuncRWInstsMapTy = DenseMap<const Function *, InstructionVectorTy>;
 
-  /// A map type from functions to their TLI.
-  using FuncTLIMapTy = DenseMap<const Function *, TargetLibraryInfo *>;
-
   /// A nested map that remembers all instructions in a function with a certain
   /// instruction opcode (Instruction::getOpcode()).
   FuncInstOpcodeMapTy FuncInstOpcodeMap;
@@ -577,10 +595,12 @@ private:
   FuncRWInstsMapTy FuncRWInstsMap;
 
   /// A map from functions to their TLI.
-  FuncTLIMapTy FuncTLIMap;
 
   /// The datalayout used in the module.
   const DataLayout &DL;
+
+  /// Getters for analysis.
+  AnalysisGetter &AG;
 
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
@@ -711,8 +731,7 @@ struct Attributor {
   /// reason for this is the single interface, the one of the abstract attribute
   /// instance, which can be queried without the need to look at the IR in
   /// various places.
-  void identifyDefaultAbstractAttributes(
-      Function &F, std::function<TargetLibraryInfo *(Function &)> &TLIGetter);
+  void identifyDefaultAbstractAttributes(Function &F);
 
   /// Mark the internal function \p F as live.
   ///
@@ -720,12 +739,9 @@ struct Attributor {
   /// \p F.
   void markLiveInternalFunction(const Function &F) {
     assert(F.hasInternalLinkage() &&
-            "Only internal linkage is assumed dead initially.");
+           "Only internal linkage is assumed dead initially.");
 
-    std::function<TargetLibraryInfo *(Function &)> TLIGetter =
-        [&](Function &F) -> TargetLibraryInfo * { return nullptr; };
-
-    identifyDefaultAbstractAttributes(const_cast<Function &>(F), TLIGetter);
+    identifyDefaultAbstractAttributes(const_cast<Function &>(F));
   }
 
   /// Record that \p I is deleted after information was manifested.

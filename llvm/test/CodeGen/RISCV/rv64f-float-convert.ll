@@ -113,9 +113,9 @@ define zeroext i32 @bcvt_f32_to_zext_i32(float %a, float %b) nounwind {
 define float @bcvt_i64_to_f32_via_i32(i64 %a, i64 %b) nounwind {
 ; RV64IF-LABEL: bcvt_i64_to_f32_via_i32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a1
-; RV64IF-NEXT:    fmv.w.x ft1, a0
-; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %1 = trunc i64 %a to i32

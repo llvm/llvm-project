@@ -10,19 +10,19 @@
 define void @imm32_cse() nounwind {
 ; RV32I-LABEL: imm32_cse:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    lui a1, %hi(src)
-; RV32I-NEXT:    lw a2, %lo(src)(a1)
-; RV32I-NEXT:    add a2, a2, a0
-; RV32I-NEXT:    lui a3, %hi(dst)
-; RV32I-NEXT:    sw a2, %lo(dst)(a3)
-; RV32I-NEXT:    lw a2, %lo(src)(a1)
-; RV32I-NEXT:    add a2, a2, a0
+; RV32I-NEXT:    lui a0, %hi(src)
+; RV32I-NEXT:    lw a1, %lo(src)(a0)
+; RV32I-NEXT:    lui a2, 1
 ; RV32I-NEXT:    addi a2, a2, 1
-; RV32I-NEXT:    sw a2, %lo(dst)(a3)
-; RV32I-NEXT:    lw a1, %lo(src)(a1)
-; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    lui a3, %hi(dst)
+; RV32I-NEXT:    sw a1, %lo(dst)(a3)
+; RV32I-NEXT:    lw a1, %lo(src)(a0)
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    sw a1, %lo(dst)(a3)
+; RV32I-NEXT:    lw a0, %lo(src)(a0)
+; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    addi a0, a0, 2
 ; RV32I-NEXT:    sw a0, %lo(dst)(a3)
 ; RV32I-NEXT:    ret

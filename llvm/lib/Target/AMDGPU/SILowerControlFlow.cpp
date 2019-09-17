@@ -98,6 +98,8 @@ private:
   void emitLoop(MachineInstr &MI);
   void emitEndCf(MachineInstr &MI);
 
+  Register getSaveExec(MachineInstr* MI);
+
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
                         SmallVectorImpl<MachineOperand> &Src) const;
 
@@ -175,17 +177,31 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI,
   return true;
 }
 
+Register SILowerControlFlow::getSaveExec(MachineInstr *MI) {
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineOperand &SaveExec = MI->getOperand(0);
+  assert(SaveExec.getSubReg() == AMDGPU::NoSubRegister);
+
+  Register SaveExecReg = SaveExec.getReg();
+  unsigned FalseTermOpc =
+      TII->isWave32() ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term;
+  MachineBasicBlock::iterator I = (MI);
+  MachineBasicBlock::iterator J = std::next(I);
+  if (J != MBB->end() && J->getOpcode() == FalseTermOpc &&
+      J->getOperand(1).isReg() && J->getOperand(1).getReg() == SaveExecReg) {
+    SaveExecReg = J->getOperand(0).getReg();
+    J->eraseFromParent();
+  }
+  return SaveExecReg;
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
-
-  MachineOperand &SaveExec = MI.getOperand(0);
-  MachineOperand &Cond = MI.getOperand(1);
-  assert(SaveExec.getSubReg() == AMDGPU::NoSubRegister &&
-         Cond.getSubReg() == AMDGPU::NoSubRegister);
-
-  Register SaveExecReg = SaveExec.getReg();
+  Register SaveExecReg = getSaveExec(&MI);
+  MachineOperand& Cond = MI.getOperand(1);
+  assert(Cond.getSubReg() == AMDGPU::NoSubRegister);
 
   MachineOperand &ImpDefSCC = MI.getOperand(4);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
@@ -266,8 +282,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  Register DstReg = MI.getOperand(0).getReg();
-  assert(MI.getOperand(0).getSubReg() == AMDGPU::NoSubRegister);
+  Register DstReg = getSaveExec(&MI);
 
   bool ExecModified = MI.getOperand(3).getImm() != 0;
   MachineBasicBlock::iterator Start = MBB.begin();
@@ -339,7 +354,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
-  auto Dst = MI.getOperand(0).getReg();
+  auto Dst = getSaveExec(&MI);
 
   // Skip ANDing with exec if the break condition is already masked by exec
   // because it is a V_CMP in the same basic block. (We know the break
@@ -400,13 +415,17 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
 
 void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  unsigned CFMask = MI.getOperand(0).getReg();
+  MachineInstr *Def = MRI.getUniqueVRegDef(CFMask);
   const DebugLoc &DL = MI.getDebugLoc();
 
-  MachineBasicBlock::iterator InsPt = MBB.begin();
-  MachineInstr *NewMI =
-      BuildMI(MBB, InsPt, DL, TII->get(OrOpc), Exec)
-          .addReg(Exec)
-          .add(MI.getOperand(0));
+  MachineBasicBlock::iterator InsPt =
+      Def && Def->getParent() == &MBB ? std::next(MachineBasicBlock::iterator(Def))
+                               : MBB.begin();
+  MachineInstr *NewMI = BuildMI(MBB, InsPt, DL, TII->get(OrOpc), Exec)
+                            .addReg(Exec)
+                            .add(MI.getOperand(0));
 
   if (LIS)
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);

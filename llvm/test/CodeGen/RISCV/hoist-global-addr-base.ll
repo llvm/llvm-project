@@ -12,10 +12,10 @@ define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
-; CHECK-NEXT:    addi a1, zero, 20
-; CHECK-NEXT:    sw a1, 164(a0)
 ; CHECK-NEXT:    addi a1, zero, 10
 ; CHECK-NEXT:    sw a1, 160(a0)
+; CHECK-NEXT:    addi a1, zero, 20
+; CHECK-NEXT:    sw a1, 164(a0)
 ; CHECK-NEXT:    ret
 entry:
   store i32 10, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
