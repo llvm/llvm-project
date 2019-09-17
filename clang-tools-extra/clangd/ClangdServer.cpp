@@ -17,6 +17,7 @@
 #include "Preamble.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
+#include "SemanticSelection.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
 #include "Trace.h"
@@ -125,8 +126,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // critical paths.
       WorkScheduler(
           CDB, Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-          std::make_unique<UpdateIndexCallbacks>(
-              DynamicIdx.get(), DiagConsumer, Opts.SemanticHighlighting),
+          std::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(), DiagConsumer,
+                                                 Opts.SemanticHighlighting),
           Opts.UpdateDebounce, Opts.RetentionPolicy) {
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
@@ -618,6 +619,17 @@ void ClangdServer::symbolInfo(PathRef File, Position Pos,
       };
 
   WorkScheduler.runWithAST("SymbolInfo", File, std::move(Action));
+}
+
+void ClangdServer::semanticRanges(PathRef File, Position Pos,
+                                  Callback<std::vector<Range>> CB) {
+  auto Action =
+      [Pos, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        CB(clangd::getSemanticRanges(InpAST->AST, Pos));
+      };
+  WorkScheduler.runWithAST("SemanticRanges", File, std::move(Action));
 }
 
 std::vector<std::pair<Path, std::size_t>>
