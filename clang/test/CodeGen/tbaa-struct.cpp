@@ -17,7 +17,7 @@ typedef A __attribute__((may_alias)) AA;
 
 void copy(A *a1, A *a2) {
 // CHECK-LABEL: _Z4copyP1AS0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(16) %{{.*}}, i8* align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(16) %{{.*}}, i8* nonnull align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS:!.*]]
 // CHECK-NEW-SAME: !tbaa [[TAG_A:![0-9]*]]
   *a1 = *a2;
@@ -31,7 +31,7 @@ struct B {
 
 void copy2(B *b1, B *b2) {
 // CHECK-LABEL: _Z5copy2P1BS0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(24) %{{.*}}, i8* align 4 dereferenceable(24) %{{.*}}, i64 24, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(24) %{{.*}}, i8* nonnull align 4 dereferenceable(24) %{{.*}}, i64 24, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS2:!.*]]
 // CHECK-NEW-SAME: !tbaa [[TAG_B:![0-9]*]]
   *b1 = *b2;
@@ -49,7 +49,7 @@ union U {
 
 void copy3(U *u1, U *u2) {
 // CHECK-LABEL: _Z5copy3P1US0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(12) %{{.*}}, i8* align 4 dereferenceable(12) %{{.*}}, i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(12) %{{.*}}, i8* nonnull align 4 dereferenceable(12) %{{.*}}, i64 12, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS3:!.*]]
 // CHECK-NEW-SAME: !tbaa [[TAG_U:![0-9]*]]
   *u1 = *u2;
@@ -65,7 +65,7 @@ struct C {
 
 void copy4(C *c1, C *c2) {
 // CHECK-LABEL: _Z5copy4P1CS0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(3) {{.*}}, i8* align 1 dereferenceable(3) {{.*}}, i64 3, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(3) {{.*}}, i8* nonnull align 1 dereferenceable(3) {{.*}}, i64 3, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS4:!.*]]
 // CHECK-NEW-SAME: !tbaa [[TAG_C:![0-9]*]]
   *c1 = *c2;
@@ -80,7 +80,7 @@ struct D {
 
 void copy5(D *d1, D *d2) {
 // CHECK-LABEL: _Z5copy5P1DS0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(6) {{.*}}, i8* align 1 dereferenceable(6) {{.*}}, i64 6, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(6) {{.*}}, i8* nonnull align 1 dereferenceable(6) {{.*}}, i64 6, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS5:!.*]]
 // CHECK-NEW-SAME: !tbaa [[TAG_D:![0-9]*]]
   *d1 = *d2;
@@ -88,7 +88,7 @@ void copy5(D *d1, D *d2) {
 
 void copy6(AA *a1, A *a2) {
 // CHECK-LABEL: _Z5copy6P1AS0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(16) %{{.*}}, i8* align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(16) %{{.*}}, i8* nonnull align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS]]
 // CHECK-NEW-SAME: !tbaa [[TAG_char:![0-9]*]]
   *a1 = *a2;
@@ -96,7 +96,7 @@ void copy6(AA *a1, A *a2) {
 
 void copy7(A *a1, AA *a2) {
 // CHECK-LABEL: _Z5copy7P1AS0_
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 dereferenceable(16) %{{.*}}, i8* align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 dereferenceable(16) %{{.*}}, i8* nonnull align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TS]]
 // CHECK-NEW-SAME: !tbaa [[TAG_char]]
   *a1 = *a2;

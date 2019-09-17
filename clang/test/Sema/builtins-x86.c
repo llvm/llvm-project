@@ -37,7 +37,7 @@ __m128d test__builtin_ia32_cmpsd(__m128d __a, __m128d __b) {
   return __builtin_ia32_cmpsd(__a, __b, 32); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
-__mmask16 test__builtin_ia32_cmpps512_mask(__m512d __a, __m512d __b) {
+__mmask16 test__builtin_ia32_cmpps512_mask(__m512 __a, __m512 __b) {
   return __builtin_ia32_cmpps512_mask(__a, __b, 32, -1, 4); // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
