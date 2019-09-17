@@ -1,10 +1,15 @@
-# RUN: llc -mtriple=armv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
+# RUN: llc -mtriple=armv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 # CHECK: for.body:
 # CHECK-NOT: t2DLS
 # CHECK-NOT: t2LEUpdate
 
 --- |
-  define dso_local arm_aapcscc void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) local_unnamed_addr {
+  ; ModuleID = 'multiblock-massive.ll'
+  source_filename = "multiblock-massive.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
+  define void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
   entry:
     %cmp8 = icmp eq i32 %N, 0
     br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -53,6 +58,9 @@
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
   
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #0
+  
   attributes #0 = { nounwind }
   attributes #1 = { noduplicate nounwind }
 
@@ -65,7 +73,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -106,6 +114,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r4, $lr
   
     frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -120,6 +129,7 @@ body:             |
   
   bb.1.for.end:
     successors: %bb.4(0x04000000), %bb.2(0x7c000000)
+    liveins: $lr, $r0, $r1, $r2
   
     renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 4, 14, $noreg
     renamable $r2, dead $cpsr = tADDi8 killed renamable $r2, 4, 14, $noreg
@@ -130,6 +140,7 @@ body:             |
   
   bb.2.for.body:
     successors: %bb.3(0x50000000), %bb.1(0x30000000)
+    liveins: $lr, $r0, $r1, $r2
   
     dead renamable $r3 = SPACE 3072, undef renamable $r0
     renamable $r3 = tLDRi renamable $r1, 0, 14, $noreg :: (load 4 from %ir.lsr.iv4)
@@ -141,6 +152,7 @@ body:             |
   
   bb.3.middle.block:
     successors: %bb.1(0x80000000)
+    liveins: $lr, $r0, $r1, $r2, $r3, $r12
   
     renamable $r3 = t2UDIV killed renamable $r12, killed renamable $r3, 14, $noreg
     tSTRi killed renamable $r3, renamable $r0, 0, 14, $noreg :: (store 4 into %ir.lsr.iv1)

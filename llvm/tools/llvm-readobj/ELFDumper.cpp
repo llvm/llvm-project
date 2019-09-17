@@ -218,6 +218,8 @@ private:
                      S->sh_entsize, ObjF->getFileName()});
   }
 
+  std::pair<const Elf_Phdr *, const Elf_Shdr *>
+  findDynamic(const ELFFile<ELFT> *Obj);
   void loadDynamicTable(const ELFFile<ELFT> *Obj);
   void parseDynamicTable();
 
@@ -1417,7 +1419,8 @@ static const char *getElfMipsOptionsOdkType(unsigned Odk) {
 }
 
 template <typename ELFT>
-void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
+std::pair<const typename ELFT::Phdr *, const typename ELFT::Shdr *>
+ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
   // Try to locate the PT_DYNAMIC header.
   const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr :
@@ -1438,53 +1441,112 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     break;
   }
 
-  // Information in the section header has priority over the information
-  // in a PT_DYNAMIC header.
-  // Ignore sh_entsize and use the expected value for entry size explicitly.
-  // This allows us to dump the dynamic sections with a broken sh_entsize
-  // field.
-  if (DynamicSec) {
-    DynamicTable =
-        checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
-                  DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
-    parseDynamicTable();
-  }
-
-  // If we have a PT_DYNAMIC header, we will either check the found dynamic
-  // section or take the dynamic table data directly from the header.
-  if (!DynamicPhdr)
-    return;
-
-  if (DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
-      ObjF->getMemoryBufferRef().getBufferSize()) {
+  if (DynamicPhdr && DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
+                         ObjF->getMemoryBufferRef().getBufferSize()) {
     reportWarning(
         createError(
             "PT_DYNAMIC segment offset + size exceeds the size of the file"),
         ObjF->getFileName());
+    // Don't use the broken dynamic header.
+    DynamicPhdr = nullptr;
+  }
+
+  if (DynamicPhdr && DynamicSec) {
+    StringRef Name =
+        unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DynamicSec));
+    if (DynamicSec->sh_addr + DynamicSec->sh_size >
+            DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
+        DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
+      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
+                                "' is not contained within the "
+                                "PT_DYNAMIC segment"),
+                    ObjF->getFileName());
+
+    if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
+      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
+                                "' is not at the start of "
+                                "PT_DYNAMIC segment"),
+                    ObjF->getFileName());
+  }
+
+  return std::make_pair(DynamicPhdr, DynamicSec);
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
+  const Elf_Phdr *DynamicPhdr;
+  const Elf_Shdr *DynamicSec;
+  std::tie(DynamicPhdr, DynamicSec) = findDynamic(Obj);
+  if (!DynamicPhdr && !DynamicSec)
+    return;
+
+  DynRegionInfo FromPhdr(ObjF->getFileName());
+  bool IsPhdrTableValid = false;
+  if (DynamicPhdr) {
+    FromPhdr = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
+    IsPhdrTableValid = !FromPhdr.getAsArrayRef<Elf_Dyn>().empty();
+  }
+
+  // Locate the dynamic table described in a section header.
+  // Ignore sh_entsize and use the expected value for entry size explicitly.
+  // This allows us to dump dynamic sections with a broken sh_entsize
+  // field.
+  DynRegionInfo FromSec(ObjF->getFileName());
+  bool IsSecTableValid = false;
+  if (DynamicSec) {
+    FromSec =
+        checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
+                  DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
+    IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+  }
+
+  // When we only have information from one of the SHT_DYNAMIC section header or
+  // PT_DYNAMIC program header, just use that.
+  if (!DynamicPhdr || !DynamicSec) {
+    if ((DynamicPhdr && IsPhdrTableValid) || (DynamicSec && IsSecTableValid)) {
+      DynamicTable = DynamicPhdr ? FromPhdr : FromSec;
+      parseDynamicTable();
+    } else {
+      reportWarning(createError("no valid dynamic table was found"),
+                    ObjF->getFileName());
+    }
     return;
   }
 
-  if (!DynamicSec) {
-    DynamicTable = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
-    parseDynamicTable();
+  // At this point we have tables found from the section header and from the
+  // dynamic segment. Usually they match, but we have to do sanity checks to
+  // verify that.
+
+  if (FromPhdr.Addr != FromSec.Addr)
+    reportWarning(createError("SHT_DYNAMIC section header and PT_DYNAMIC "
+                              "program header disagree about "
+                              "the location of the dynamic table"),
+                  ObjF->getFileName());
+
+  if (!IsPhdrTableValid && !IsSecTableValid) {
+    reportWarning(createError("no valid dynamic table was found"),
+                  ObjF->getFileName());
     return;
   }
 
-  StringRef Name =
-      unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DynamicSec));
-  if (DynamicSec->sh_addr + DynamicSec->sh_size >
-          DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
-      DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
-    reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                              "' is not contained within the "
-                              "PT_DYNAMIC segment"),
-                  ObjF->getFileName());
+  // Information in the PT_DYNAMIC program header has priority over the information
+  // in a section header.
+  if (IsPhdrTableValid) {
+    if (!IsSecTableValid)
+      reportWarning(
+          createError(
+              "SHT_DYNAMIC dynamic table is invalid: PT_DYNAMIC will be used"),
+          ObjF->getFileName());
+    DynamicTable = FromPhdr;
+  } else {
+    reportWarning(
+        createError(
+            "PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used"),
+        ObjF->getFileName());
+    DynamicTable = FromSec;
+  }
 
-  if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
-    reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                              "' is not at the start of "
-                              "PT_DYNAMIC segment"),
-                  ObjF->getFileName());
+  parseDynamicTable();
 }
 
 template <typename ELFT>
@@ -4749,11 +4811,14 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
                                Data, &Offset);
 }
 
-template <class ELFT>
-SectionRef toSectionRef(const ObjectFile *Obj, const typename ELFT::Shdr *Sec) {
-  DataRefImpl DRI;
-  DRI.p = reinterpret_cast<uintptr_t>(Sec);
-  return SectionRef(DRI, Obj);
+// Used for printing section names in places where possible errors can be
+// ignored.
+static StringRef getSectionName(const SectionRef &Sec) {
+  Expected<StringRef> NameOrErr = Sec.getName();
+  if (NameOrErr)
+    return *NameOrErr;
+  consumeError(NameOrErr.takeError());
+  return "<?>";
 }
 
 template <class ELFT>
@@ -4764,16 +4829,11 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
   const ELFFile<ELFT> *EF = Obj->getELFFile();
   StringRef FileStr = Obj->getFileName();
   for (const SectionRef &Sec : Obj->sections()) {
-    StringRef SectionName;
-    if (Expected<StringRef> NameOrErr = Sec.getName())
-      SectionName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
-    const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
+    StringRef SectionName = getSectionName(Sec);
     if (!SectionName.startswith(".stack_sizes"))
       continue;
     PrintHeader();
+    const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, EF->getSectionContents(ElfSec));
     DataExtractor Data(
@@ -4798,8 +4858,7 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
             FileStr);
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(Obj, SymValue,
-                             toSectionRef<ELFT>(Obj, FunctionELFSec),
+      printFunctionStackSize(Obj, SymValue, Obj->toSectionRef(FunctionELFSec),
                              SectionName, Data, &Offset);
     }
   }
@@ -4848,7 +4907,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     if (!ContentsSectionNameOrErr->startswith(".stack_sizes"))
       continue;
     // Insert a mapping from the stack sizes section to its relocation section.
-    StackSizeRelocMap[toSectionRef<ELFT>(Obj, ContentsSec)] = Sec;
+    StackSizeRelocMap[Obj->toSectionRef(ContentsSec)] = Sec;
   }
 
   for (const auto &StackSizeMapEntry : StackSizeRelocMap) {
@@ -4857,12 +4916,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     const SectionRef &RelocSec = StackSizeMapEntry.second;
 
     // Warn about stack size sections without a relocation section.
-    StringRef StackSizeSectionName;
-    if (Expected<StringRef> NameOrErr = StackSizesSec.getName())
-      StackSizeSectionName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
+    StringRef StackSizeSectionName = getSectionName(StackSizesSec);
     if (RelocSec == NullSection) {
       reportWarning(createError("section " + StackSizeSectionName +
                                 " does not have a corresponding "
@@ -4876,9 +4930,8 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     // described in it.
     const Elf_Shdr *StackSizesELFSec =
         Obj->getSection(StackSizesSec.getRawDataRefImpl());
-    const SectionRef FunctionSec = toSectionRef<ELFT>(
-        Obj, unwrapOrError(this->FileName,
-                           EF->getSection(StackSizesELFSec->sh_link)));
+    const SectionRef FunctionSec = Obj->toSectionRef(unwrapOrError(
+        this->FileName, EF->getSection(StackSizesELFSec->sh_link)));
 
     bool (*IsSupportedFn)(uint64_t);
     RelocationResolver Resolver;
@@ -4889,21 +4942,13 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
                   Contents.size()),
         Obj->isLittleEndian(), sizeof(Elf_Addr));
     for (const RelocationRef &Reloc : RelocSec.relocations()) {
-      if (!IsSupportedFn(Reloc.getType())) {
-        StringRef RelocSectionName;
-        Expected<StringRef> NameOrErr = RelocSec.getName();
-        if (NameOrErr)
-          RelocSectionName = *NameOrErr;
-        else
-          consumeError(NameOrErr.takeError());
-
-        StringRef RelocName = EF->getRelocationTypeName(Reloc.getType());
-        reportError(
-            createStringError(object_error::parse_failed,
-                              "unsupported relocation type in section %s: %s",
-                              RelocSectionName.data(), RelocName.data()),
-            Obj->getFileName());
-      }
+      if (!IsSupportedFn(Reloc.getType()))
+        reportError(createStringError(
+                        object_error::parse_failed,
+                        "unsupported relocation type in section %s: %s",
+                        getSectionName(RelocSec).data(),
+                        EF->getRelocationTypeName(Reloc.getType()).data()),
+                    Obj->getFileName());
       this->printStackSize(Obj, Reloc, FunctionSec, StackSizeSectionName,
                            Resolver, Data);
     }

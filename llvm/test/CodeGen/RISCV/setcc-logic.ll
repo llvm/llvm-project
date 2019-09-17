@@ -7,17 +7,17 @@
 define i1 @and_icmp_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; RV32I-LABEL: and_icmp_eq:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xor a2, a2, a3
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    xor a1, a2, a3
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_icmp_eq:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    xor a2, a2, a3
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    xor a1, a2, a3
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    seqz a0, a0
@@ -31,17 +31,17 @@ define i1 @and_icmp_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 define i1 @or_icmp_ne(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; RV32I-LABEL: or_icmp_ne:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xor a2, a2, a3
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    xor a1, a2, a3
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: or_icmp_ne:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    xor a2, a2, a3
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    xor a1, a2, a3
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    snez a0, a0
@@ -102,22 +102,22 @@ define i1 @and_icmps_const_1bit_diff(i32 %x) nounwind {
 define i1 @and_icmps_const_not1bit_diff(i32 %x) nounwind {
 ; RV32I-LABEL: and_icmps_const_not1bit_diff:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    xori a1, a0, 92
+; RV32I-NEXT:    xori a1, a0, 44
 ; RV32I-NEXT:    snez a1, a1
-; RV32I-NEXT:    xori a0, a0, 44
+; RV32I-NEXT:    xori a0, a0, 92
 ; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_icmps_const_not1bit_diff:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    xori a1, a0, 92
+; RV64I-NEXT:    xori a1, a0, 44
 ; RV64I-NEXT:    snez a1, a1
-; RV64I-NEXT:    xori a0, a0, 44
+; RV64I-NEXT:    xori a0, a0, 92
 ; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
   %a = icmp ne i32 %x, 44
   %b = icmp ne i32 %x, 92

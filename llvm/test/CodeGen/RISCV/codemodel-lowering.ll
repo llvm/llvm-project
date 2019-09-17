@@ -61,9 +61,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-SMALL-NEXT:    sw ra, 12(sp)
 ; RV32I-SMALL-NEXT:    lui a1, %hi(.Ltmp0)
 ; RV32I-SMALL-NEXT:    addi a1, a1, %lo(.Ltmp0)
+; RV32I-SMALL-NEXT:    addi a2, zero, 101
 ; RV32I-SMALL-NEXT:    sw a1, 8(sp)
-; RV32I-SMALL-NEXT:    addi a1, zero, 101
-; RV32I-SMALL-NEXT:    blt a0, a1, .LBB2_3
+; RV32I-SMALL-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-SMALL-NEXT:  # %bb.1: # %if.then
 ; RV32I-SMALL-NEXT:    lw a0, 8(sp)
 ; RV32I-SMALL-NEXT:    jr a0
@@ -86,9 +86,9 @@ define signext i32 @lower_blockaddress_displ(i32 signext %w) nounwind {
 ; RV32I-MEDIUM-NEXT:    # Label of block must be emitted
 ; RV32I-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.Ltmp0)
 ; RV32I-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.LBB2_5)
+; RV32I-MEDIUM-NEXT:    addi a2, zero, 101
 ; RV32I-MEDIUM-NEXT:    sw a1, 8(sp)
-; RV32I-MEDIUM-NEXT:    addi a1, zero, 101
-; RV32I-MEDIUM-NEXT:    blt a0, a1, .LBB2_3
+; RV32I-MEDIUM-NEXT:    blt a0, a2, .LBB2_3
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %if.then
 ; RV32I-MEDIUM-NEXT:    lw a0, 8(sp)
 ; RV32I-MEDIUM-NEXT:    jr a0
@@ -131,11 +131,11 @@ indirectgoto:
 define float @lower_constantpool(float %a) nounwind {
 ; RV32I-SMALL-LABEL: lower_constantpool:
 ; RV32I-SMALL:       # %bb.0:
-; RV32I-SMALL-NEXT:    fmv.w.x ft0, a0
-; RV32I-SMALL-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32I-SMALL-NEXT:    addi a0, a0, %lo(.LCPI3_0)
-; RV32I-SMALL-NEXT:    flw ft1, 0(a0)
-; RV32I-SMALL-NEXT:    fadd.s ft0, ft0, ft1
+; RV32I-SMALL-NEXT:    lui a1, %hi(.LCPI3_0)
+; RV32I-SMALL-NEXT:    addi a1, a1, %lo(.LCPI3_0)
+; RV32I-SMALL-NEXT:    flw ft0, 0(a1)
+; RV32I-SMALL-NEXT:    fmv.w.x ft1, a0
+; RV32I-SMALL-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32I-SMALL-NEXT:    fmv.x.w a0, ft0
 ; RV32I-SMALL-NEXT:    ret
 ;

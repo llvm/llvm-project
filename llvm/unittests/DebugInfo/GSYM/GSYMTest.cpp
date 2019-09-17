@@ -24,6 +24,23 @@
 using namespace llvm;
 using namespace gsym;
 
+void checkError(ArrayRef<std::string> ExpectedMsgs, Error Err) {
+  ASSERT_TRUE(bool(Err));
+  size_t WhichMsg = 0;
+  Error Remaining =
+      handleErrors(std::move(Err), [&](const ErrorInfoBase &Actual) {
+        ASSERT_LT(WhichMsg, ExpectedMsgs.size());
+        // Use .str(), because googletest doesn't visualise a StringRef
+        // properly.
+        EXPECT_EQ(Actual.message(), ExpectedMsgs[WhichMsg++]);
+      });
+  EXPECT_EQ(WhichMsg, ExpectedMsgs.size());
+  EXPECT_FALSE(Remaining);
+}
+
+void checkError(std::string ExpectedMsg, Error Err) {
+  checkError(ArrayRef<std::string>{ExpectedMsg}, std::move(Err));
+}
 TEST(GSYMTest, TestFileEntry) {
   // Make sure default constructed GSYM FileEntry has zeroes in the
   // directory and basename string table indexes.
@@ -137,22 +154,160 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_LT(FIWithLines, FIWithLinesWithHigherAddress);
 }
 
-void checkError(ArrayRef<std::string> ExpectedMsgs, Error Err) {
-  ASSERT_TRUE(Err.operator bool());
-  size_t WhichMsg = 0;
-  Error Remaining =
-      handleErrors(std::move(Err), [&](const ErrorInfoBase &Actual) {
-        ASSERT_LT(WhichMsg, ExpectedMsgs.size());
-        // Use .str(), because googletest doesn't visualise a StringRef
-        // properly.
-        EXPECT_EQ(Actual.message(), ExpectedMsgs[WhichMsg++]);
-      });
-  EXPECT_EQ(WhichMsg, ExpectedMsgs.size());
-  EXPECT_FALSE(Remaining);
+static void TestFunctionInfoDecodeError(llvm::support::endianness ByteOrder,
+                                        std::string Bytes,
+                                        const uint64_t BaseAddr,
+                                        std::string ExpectedErrorMsg) {
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data, BaseAddr);
+  // Make sure decoding fails.
+  ASSERT_FALSE((bool)Decoded);
+  // Make sure decoded object is the same as the one we encoded.
+  checkError(ExpectedErrorMsg, Decoded.takeError());
 }
 
-void checkError(std::string ExpectedMsg, Error Err) {
-  checkError(ArrayRef<std::string>{ExpectedMsg}, std::move(Err));
+TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
+  // Test decoding FunctionInfo objects that ensure we report an appropriate
+  // error message.
+  const llvm::support::endianness ByteOrder = llvm::support::little;
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  const uint64_t BaseAddr = 0x100;
+  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000000: missing FunctionInfo Size");
+  FW.writeU32(0x100); // Function size.
+  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000004: missing FunctionInfo Name");
+  // Write out an invalid Name string table offset of zero.
+  FW.writeU32(0);
+  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000004: invalid FunctionInfo Name value 0x00000000");
+  // Modify the Name to be 0x00000001, which is a valid value.
+  FW.fixup32(0x00000001, 4);
+  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000008: missing FunctionInfo InfoType value");
+  auto FixupOffset = FW.tell();
+  FW.writeU32(1); // InfoType::LineTableInfo.
+  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x0000000c: missing FunctionInfo InfoType length");
+  FW.fixup32(4, FixupOffset); // Write an invalid InfoType enumeration value
+  FW.writeU32(0); // LineTableInfo InfoType data length.
+  TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
+      "0x00000008: unsupported InfoType 4");
+}
+
+static void TestFunctionInfoEncodeError(llvm::support::endianness ByteOrder,
+                                      const FunctionInfo &FI,
+                                      std::string ExpectedErrorMsg) {
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  Expected<uint64_t> ExpectedOffset = FI.encode(FW);
+  ASSERT_FALSE(ExpectedOffset);
+  checkError(ExpectedErrorMsg, ExpectedOffset.takeError());
+}
+
+TEST(GSYMTest, TestFunctionInfoEncodeErrors) {
+  const uint64_t FuncAddr = 0x1000;
+  const uint64_t FuncSize = 0x100;
+  const uint32_t InvalidName = 0;
+  const uint32_t ValidName = 1;
+  FunctionInfo InvalidNameFI(FuncAddr, FuncSize, InvalidName);
+  TestFunctionInfoEncodeError(llvm::support::little, InvalidNameFI,
+      "attempted to encode invalid FunctionInfo object");
+
+  FunctionInfo InvalidLineTableFI(FuncAddr, FuncSize, ValidName);
+  // Empty line tables are not valid. Verify if the encoding of anything
+  // in our line table fails, that we see get the error propagated.
+  InvalidLineTableFI.OptLineTable = LineTable();
+  TestFunctionInfoEncodeError(llvm::support::little, InvalidLineTableFI,
+      "attempted to encode invalid LineTable object");
+
+  FunctionInfo InvalidInlineInfoFI(FuncAddr, FuncSize, ValidName);
+  // Empty line tables are not valid. Verify if the encoding of anything
+  // in our line table fails, that we see get the error propagated.
+  InvalidInlineInfoFI.Inline = InlineInfo();
+  TestFunctionInfoEncodeError(llvm::support::little, InvalidInlineInfoFI,
+      "attempted to encode invalid InlineInfo object");
+}
+
+static void TestFunctionInfoEncodeDecode(llvm::support::endianness ByteOrder,
+                                         const FunctionInfo &FI) {
+  // Test encoding and decoding FunctionInfo objects.
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  llvm::Expected<uint64_t> ExpectedOffset = FI.encode(FW);
+  ASSERT_TRUE(bool(ExpectedOffset));
+  // Verify we got the encoded offset back from the encode function.
+  ASSERT_EQ(ExpectedOffset.get(), 0ULL);
+  std::string Bytes(OutStrm.str());
+  uint8_t AddressSize = 4;
+  DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
+  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data,
+                                                              FI.Range.Start);
+  // Make sure decoding succeeded.
+  ASSERT_TRUE((bool)Decoded);
+  // Make sure decoded object is the same as the one we encoded.
+  EXPECT_EQ(FI, Decoded.get());
+}
+
+
+TEST(GSYMTest, TestFunctionInfoEncoding) {
+  constexpr uint64_t FuncAddr = 0x1000;
+  constexpr uint64_t FuncSize = 0x100;
+  constexpr uint32_t FuncName = 1;
+  constexpr uint32_t FileIdx = 1;
+  // Make sure that we can encode and decode a FunctionInfo with no line table
+  // or inline info.
+  FunctionInfo FI(FuncAddr, FuncSize, FuncName);
+  TestFunctionInfoEncodeDecode(llvm::support::little, FI);
+  TestFunctionInfoEncodeDecode(llvm::support::big, FI);
+
+  auto AddLinesLambda = [](FunctionInfo &FI) {
+    FI.OptLineTable = LineTable();
+    LineEntry Line0(FuncAddr+0x000, FileIdx, 10);
+    LineEntry Line1(FuncAddr+0x010, FileIdx, 11);
+    LineEntry Line2(FuncAddr+0x100, FileIdx, 1000);
+    FI.OptLineTable->push(Line0);
+    FI.OptLineTable->push(Line1);
+    FI.OptLineTable->push(Line2);
+  };
+
+  auto AddInlineLambda = [](FunctionInfo &FI) {
+    FI.Inline = InlineInfo();
+    FI.Inline->Ranges.insert(AddressRange(FuncAddr, FuncAddr+FuncSize));
+    InlineInfo Inline1;
+    Inline1.Ranges.insert(AddressRange(FuncAddr+0x10, FuncAddr+0x30));
+    Inline1.Name = 1;
+    Inline1.CallFile = 1;
+    Inline1.CallLine = 11;
+    FI.Inline->Children.push_back(Inline1);
+  };
+
+  // Make sure that we can encode and decode a FunctionInfo with a line table
+  // and no inline info.
+  FunctionInfo FILines(FuncAddr, FuncSize, FuncName);
+  AddLinesLambda(FILines);
+  TestFunctionInfoEncodeDecode(llvm::support::little, FILines);
+  TestFunctionInfoEncodeDecode(llvm::support::big, FILines);
+
+  // Make sure that we can encode and decode a FunctionInfo with no line table
+  // and with inline info.
+  FunctionInfo FIInline(FuncAddr, FuncSize, FuncName);
+  AddInlineLambda(FIInline);
+  TestFunctionInfoEncodeDecode(llvm::support::little, FIInline);
+  TestFunctionInfoEncodeDecode(llvm::support::big, FIInline);
+
+  // Make sure that we can encode and decode a FunctionInfo with no line table
+  // and with inline info.
+  FunctionInfo FIBoth(FuncAddr, FuncSize, FuncName);
+  AddLinesLambda(FIBoth);
+  AddInlineLambda(FIBoth);
+  TestFunctionInfoEncodeDecode(llvm::support::little, FIBoth);
+  TestFunctionInfoEncodeDecode(llvm::support::big, FIBoth);
 }
 
 static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,

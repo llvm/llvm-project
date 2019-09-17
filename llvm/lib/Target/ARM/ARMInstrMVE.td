@@ -160,7 +160,8 @@ class TMemImm7ShiftOffsetAsmOperand<int shift> : AsmOperandClass {
   let RenderMethod = "addMemImmOffsetOperands";
 }
 
-class taddrmode_imm7<int shift> : MemOperand {
+class taddrmode_imm7<int shift> : MemOperand,
+    ComplexPattern<i32, 2, "SelectTAddrModeImm7<"#shift#">", []>  {
   let ParserMatchClass = TMemImm7ShiftOffsetAsmOperand<shift>;
   // They are printed the same way as the T2 imm8 version
   let PrintMethod = "printT2AddrModeImm8Operand<false>";
@@ -506,6 +507,7 @@ class MVE_VABAV<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   let Inst{5} = Qm{3};
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b1;
+  let invalidForTailPredication = 1;
 }
 
 def MVE_VABAVs8  : MVE_VABAV<"s8", 0b0, 0b00>;
@@ -532,6 +534,7 @@ class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
   let Inst{5} = A;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b0;
+  let invalidForTailPredication = 1;
 }
 
 multiclass MVE_VADDV_A<string suffix, bit U, bits<2> size,
@@ -582,6 +585,7 @@ class MVE_VADDLV<string iname, string suffix, dag iops, string cstr,
   let Inst{5} = A;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b0;
+  let invalidForTailPredication = 1;
 }
 
 multiclass MVE_VADDLV_A<string suffix, bit U, list<dag> pattern=[]> {
@@ -619,6 +623,7 @@ class MVE_VMINMAXNMV<string iname, string suffix, bit sz,
   let Inst{0} = 0b0;
 
   let Predicates = [HasMVEFloat];
+  let invalidForTailPredication = 1;
 }
 
 multiclass MVE_VMINMAXNMV_fty<string iname, bit bit_7, list<dag> pattern=[]> {
@@ -655,6 +660,7 @@ class MVE_VMINMAXV<string iname, string suffix, bit U, bits<2> size,
   let Inst{6-5} = 0b00;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b0;
+  let invalidForTailPredication = 1;
 }
 
 multiclass MVE_VMINMAXV_ty<string iname, bit bit_7, list<dag> pattern=[]> {
@@ -727,6 +733,7 @@ class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
   let Inst{5} = A;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = bit_0;
+  let invalidForTailPredication = 1;
 }
 
 multiclass MVE_VMLAMLSDAV_A<string iname, string x, string suffix,
@@ -802,6 +809,7 @@ class MVE_VMLALDAVBase<string iname, string suffix, dag iops, string cstr,
   let Inst{5} = A;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = bit_0;
+  let invalidForTailPredication = 1;
 }
 
 multiclass MVE_VMLALDAVBase_A<string iname, string x, string suffix,
@@ -5150,12 +5158,12 @@ let MinAlignment = 2 in {
 }
 
 let Predicates = [HasMVEInt] in {
-  def : Pat<(truncstorevi8 (v8i16 MQPR:$val), t2addrmode_imm7<0>:$addr),
-            (MVE_VSTRB16 MQPR:$val, t2addrmode_imm7<0>:$addr)>;
-  def : Pat<(truncstorevi8 (v4i32 MQPR:$val), t2addrmode_imm7<0>:$addr),
-            (MVE_VSTRB32 MQPR:$val, t2addrmode_imm7<0>:$addr)>;
-  def : Pat<(truncstorevi16_align2 (v4i32 MQPR:$val), t2addrmode_imm7<1>:$addr),
-            (MVE_VSTRH32 MQPR:$val, t2addrmode_imm7<1>:$addr)>;
+  def : Pat<(truncstorevi8 (v8i16 MQPR:$val), taddrmode_imm7<0>:$addr),
+            (MVE_VSTRB16 MQPR:$val, taddrmode_imm7<0>:$addr)>;
+  def : Pat<(truncstorevi8 (v4i32 MQPR:$val), taddrmode_imm7<0>:$addr),
+            (MVE_VSTRB32 MQPR:$val, taddrmode_imm7<0>:$addr)>;
+  def : Pat<(truncstorevi16_align2 (v4i32 MQPR:$val), taddrmode_imm7<1>:$addr),
+            (MVE_VSTRH32 MQPR:$val, taddrmode_imm7<1>:$addr)>;
 
   def : Pat<(post_truncstvi8 (v8i16 MQPR:$Rt), tGPR:$Rn, t2am_imm7_offset<0>:$addr),
             (MVE_VSTRB16_post MQPR:$Rt, tGPR:$Rn, t2am_imm7_offset<0>:$addr)>;
@@ -5197,9 +5205,9 @@ multiclass MVEExtLoad<string DestLanes, string DestElemBits,
 }
 
 let Predicates = [HasMVEInt] in {
-  defm : MVEExtLoad<"4", "32", "8",  "B", "", t2addrmode_imm7<0>>;
-  defm : MVEExtLoad<"8", "16", "8",  "B", "", t2addrmode_imm7<0>>;
-  defm : MVEExtLoad<"4", "32", "16", "H", "_align2", t2addrmode_imm7<1>>;
+  defm : MVEExtLoad<"4", "32", "8",  "B", "", taddrmode_imm7<0>>;
+  defm : MVEExtLoad<"8", "16", "8",  "B", "", taddrmode_imm7<0>>;
+  defm : MVEExtLoad<"4", "32", "16", "H", "_align2", taddrmode_imm7<1>>;
 }
 
 

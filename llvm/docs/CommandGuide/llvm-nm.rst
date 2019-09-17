@@ -227,7 +227,8 @@ OPTIONS
 
 .. option:: --version
 
- Display the version of this program. Does not stack with other commands.
+ Display the version of the :program:`llvm-nm` executable. Does not stack with
+ other commands.
 
 .. option:: --without-aliases
 

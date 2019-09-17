@@ -1,0 +1,6 @@
+# RUN: llvm-ar h | FileCheck %s
+# RUN: llvm-ar -h | FileCheck %s
+# RUN: llvm-ar -help | FileCheck %s
+# RUN: llvm-ar --help | FileCheck %s
+
+# CHECK: USAGE: llvm-ar

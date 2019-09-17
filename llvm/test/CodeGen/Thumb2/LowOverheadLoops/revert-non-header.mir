@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 # CHECK-NOT: t2DLS
 # CHECK: bb.5.for.inc16:
 # CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14
@@ -8,6 +8,11 @@
 # CHECK: bb.6.for.cond4.preheader:
 
 --- |
+  ; ModuleID = 'revert-non-header.ll'
+  source_filename = "revert-non-header.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
   define void @header_not_target_unrolled_loop(i32* nocapture %v, i32 %n) {
   entry:
     %cmp56 = icmp sgt i32 %n, 1
@@ -48,16 +53,16 @@
     br label %land.rhs
   
   land.rhs:                                         ; preds = %land.rhs.preheader, %for.body8
-    %lsr.iv4 = phi i32 [ 0, %land.rhs.preheader ], [ %lsr.iv.next, %for.body8 ]
+    %lsr.iv4 = phi i32 [ %lsr.iv.next, %for.body8 ], [ 0, %land.rhs.preheader ]
     %j.051 = phi i32 [ %j.0, %for.body8 ], [ %j.048, %land.rhs.preheader ]
     %1 = bitcast i32* %lsr.iv2 to i8*
     %2 = bitcast i32* %lsr.iv to i8*
-    %uglygep10 = getelementptr i8, i8* %2, i32 %lsr.iv4
-    %uglygep1011 = bitcast i8* %uglygep10 to i32*
-    %tmp9 = load i32, i32* %uglygep1011, align 4
-    %uglygep7 = getelementptr i8, i8* %1, i32 %lsr.iv4
-    %uglygep78 = bitcast i8* %uglygep7 to i32*
-    %tmp12 = load i32, i32* %uglygep78, align 4
+    %uglygep3 = getelementptr i8, i8* %2, i32 %lsr.iv4
+    %uglygep34 = bitcast i8* %uglygep3 to i32*
+    %tmp9 = load i32, i32* %uglygep34, align 4
+    %uglygep1 = getelementptr i8, i8* %1, i32 %lsr.iv4
+    %uglygep12 = bitcast i8* %uglygep1 to i32*
+    %tmp12 = load i32, i32* %uglygep12, align 4
     %cmp7 = icmp sgt i32 %tmp9, %tmp12
     br i1 %cmp7, label %for.body8, label %for.inc16
   
@@ -108,7 +113,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -165,6 +170,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.9(0x40000000)
+    liveins: $r0, $r1, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $lr
   
     $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 32
@@ -181,18 +187,21 @@ body:             |
   
   bb.1:
     successors: %bb.3(0x80000000)
+    liveins: $r0, $r1
   
     $r9 = tMOVr $r1, 14, $noreg
     tB %bb.3, 14, $noreg
   
   bb.2.for.cond.loopexit:
     successors: %bb.3(0x7c000000), %bb.9(0x04000000)
+    liveins: $r0, $r1, $r9, $r12
   
     t2CMPri killed renamable $r12, 4, 14, $noreg, implicit-def $cpsr
     tBcc %bb.9, 11, killed $cpsr
   
   bb.3.for.cond1.preheader:
     successors: %bb.4(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1, $r9
   
     renamable $r2 = t2ADDrs $r9, $r9, 251, 14, $noreg, $noreg
     $r12 = tMOVr killed $r9, 14, $noreg
@@ -204,6 +213,7 @@ body:             |
   
   bb.4.for.cond4.preheader.preheader:
     successors: %bb.7(0x50000000), %bb.5(0x30000000)
+    liveins: $lr, $r0, $r1, $r9, $r12
   
     renamable $r3 = t2ADDrs renamable $r0, renamable $r9, 18, 14, $noreg, $noreg
     renamable $r10 = t2LSLri renamable $r9, 2, 14, $noreg, $noreg
@@ -214,6 +224,7 @@ body:             |
   
   bb.5.for.inc16:
     successors: %bb.6(0x7c000000), %bb.2(0x04000000)
+    liveins: $lr, $r0, $r1, $r3, $r5, $r8, $r9, $r10, $r12
   
     renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 4, 14, $noreg
     renamable $r5, dead $cpsr = tADDi8 killed renamable $r5, 4, 14, $noreg
@@ -224,20 +235,23 @@ body:             |
   
   bb.6.for.cond4.preheader:
     successors: %bb.7(0x50000000), %bb.5(0x30000000)
+    liveins: $lr, $r0, $r1, $r3, $r5, $r8, $r9, $r10, $r12
   
     renamable $r7 = nsw t2SUBrr renamable $r8, renamable $r9, 14, $noreg, def $cpsr
     tBcc %bb.5, 4, killed $cpsr
   
   bb.7.land.rhs.preheader:
     successors: %bb.8(0x80000000)
+    liveins: $lr, $r0, $r1, $r3, $r5, $r7, $r8, $r9, $r10, $r12
   
     renamable $r6, dead $cpsr = tMOVi8 0, 14, $noreg
   
   bb.8.land.rhs:
     successors: %bb.5(0x07e00000), %bb.8(0x78200000)
+    liveins: $lr, $r0, $r1, $r3, $r5, $r6, $r7, $r8, $r9, $r10, $r12
   
-    renamable $r4 = tLDRr renamable $r3, $r6, 14, $noreg :: (load 4 from %ir.uglygep78)
-    renamable $r2 = tLDRr renamable $r5, $r6, 14, $noreg :: (load 4 from %ir.uglygep1011)
+    renamable $r4 = tLDRr renamable $r3, $r6, 14, $noreg :: (load 4 from %ir.uglygep12)
+    renamable $r2 = tLDRr renamable $r5, $r6, 14, $noreg :: (load 4 from %ir.uglygep34)
     tCMPr renamable $r2, renamable $r4, 14, $noreg, implicit-def $cpsr
     t2IT 12, 1, implicit-def $itstate
     tSTRr killed renamable $r4, renamable $r5, $r6, 12, $cpsr, implicit $itstate :: (store 4 into %ir.5)

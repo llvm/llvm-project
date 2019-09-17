@@ -118,9 +118,9 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fcopysign_fneg:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    addi a2, zero, -1
 ; RV64I-NEXT:    slli a2, a2, 63
-; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a0, a0, a2

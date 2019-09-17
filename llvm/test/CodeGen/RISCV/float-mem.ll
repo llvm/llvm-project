@@ -7,17 +7,17 @@
 define float @flw(float *%a) nounwind {
 ; RV32IF-LABEL: flw:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    flw ft0, 12(a0)
-; RV32IF-NEXT:    flw ft1, 0(a0)
-; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV32IF-NEXT:    flw ft0, 0(a0)
+; RV32IF-NEXT:    flw ft1, 12(a0)
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: flw:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    flw ft0, 12(a0)
-; RV64IF-NEXT:    flw ft1, 0(a0)
-; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV64IF-NEXT:    flw ft0, 0(a0)
+; RV64IF-NEXT:    flw ft1, 12(a0)
+; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %1 = load float, float* %a
@@ -37,8 +37,8 @@ define void @fsw(float *%a, float %b, float %c) nounwind {
 ; RV32IF-NEXT:    fmv.w.x ft0, a2
 ; RV32IF-NEXT:    fmv.w.x ft1, a1
 ; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
-; RV32IF-NEXT:    fsw ft0, 32(a0)
 ; RV32IF-NEXT:    fsw ft0, 0(a0)
+; RV32IF-NEXT:    fsw ft0, 32(a0)
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fsw:
@@ -46,8 +46,8 @@ define void @fsw(float *%a, float %b, float %c) nounwind {
 ; RV64IF-NEXT:    fmv.w.x ft0, a2
 ; RV64IF-NEXT:    fmv.w.x ft1, a1
 ; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
-; RV64IF-NEXT:    fsw ft0, 32(a0)
 ; RV64IF-NEXT:    fsw ft0, 0(a0)
+; RV64IF-NEXT:    fsw ft0, 32(a0)
 ; RV64IF-NEXT:    ret
   %1 = fadd float %b, %c
   store float %1, float* %a
@@ -70,10 +70,10 @@ define float @flw_fsw_global(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    lui a0, %hi(G)
 ; RV32IF-NEXT:    flw ft1, %lo(G)(a0)
 ; RV32IF-NEXT:    fsw ft0, %lo(G)(a0)
-; RV32IF-NEXT:    addi a0, a0, %lo(G)
-; RV32IF-NEXT:    flw ft1, 36(a0)
-; RV32IF-NEXT:    fsw ft0, 36(a0)
+; RV32IF-NEXT:    addi a1, a0, %lo(G)
+; RV32IF-NEXT:    flw ft1, 36(a1)
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    fsw ft0, 36(a1)
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: flw_fsw_global:
@@ -84,10 +84,10 @@ define float @flw_fsw_global(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    lui a0, %hi(G)
 ; RV64IF-NEXT:    flw ft1, %lo(G)(a0)
 ; RV64IF-NEXT:    fsw ft0, %lo(G)(a0)
-; RV64IF-NEXT:    addi a0, a0, %lo(G)
-; RV64IF-NEXT:    flw ft1, 36(a0)
-; RV64IF-NEXT:    fsw ft0, 36(a0)
+; RV64IF-NEXT:    addi a1, a0, %lo(G)
+; RV64IF-NEXT:    flw ft1, 36(a1)
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    fsw ft0, 36(a1)
 ; RV64IF-NEXT:    ret
   %1 = fadd float %a, %b
   %2 = load volatile float, float* @G
@@ -102,24 +102,24 @@ define float @flw_fsw_global(float %a, float %b) nounwind {
 define float @flw_fsw_constant(float %a) nounwind {
 ; RV32IF-LABEL: flw_fsw_constant:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fmv.w.x ft0, a0
-; RV32IF-NEXT:    lui a0, 912092
-; RV32IF-NEXT:    flw ft1, -273(a0)
-; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
-; RV32IF-NEXT:    fsw ft0, -273(a0)
+; RV32IF-NEXT:    lui a1, 912092
+; RV32IF-NEXT:    flw ft0, -273(a1)
+; RV32IF-NEXT:    fmv.w.x ft1, a0
+; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    fsw ft0, -273(a1)
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: flw_fsw_constant:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fmv.w.x ft0, a0
-; RV64IF-NEXT:    lui a0, 56
-; RV64IF-NEXT:    addiw a0, a0, -1353
-; RV64IF-NEXT:    slli a0, a0, 14
-; RV64IF-NEXT:    flw ft1, -273(a0)
-; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
-; RV64IF-NEXT:    fsw ft0, -273(a0)
+; RV64IF-NEXT:    lui a1, 56
+; RV64IF-NEXT:    addiw a1, a1, -1353
+; RV64IF-NEXT:    slli a1, a1, 14
+; RV64IF-NEXT:    flw ft0, -273(a1)
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    fsw ft0, -273(a1)
 ; RV64IF-NEXT:    ret
   %1 = inttoptr i32 3735928559 to float*
   %2 = load volatile float, float* %1
@@ -135,34 +135,32 @@ define float @flw_stack(float %a) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp)
-; RV32IF-NEXT:    sw s0, 8(sp)
-; RV32IF-NEXT:    mv s0, a0
-; RV32IF-NEXT:    addi a0, sp, 4
+; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    fsw ft0, 4(sp)
+; RV32IF-NEXT:    addi a0, sp, 8
 ; RV32IF-NEXT:    call notdead
-; RV32IF-NEXT:    fmv.w.x ft0, s0
+; RV32IF-NEXT:    flw ft0, 8(sp)
 ; RV32IF-NEXT:    flw ft1, 4(sp)
-; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
-; RV32IF-NEXT:    lw s0, 8(sp)
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: flw_stack:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -32
-; RV64IF-NEXT:    sd ra, 24(sp)
-; RV64IF-NEXT:    sd s0, 16(sp)
-; RV64IF-NEXT:    mv s0, a0
-; RV64IF-NEXT:    addi a0, sp, 12
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    fsw ft0, 0(sp)
+; RV64IF-NEXT:    addi a0, sp, 4
 ; RV64IF-NEXT:    call notdead
-; RV64IF-NEXT:    fmv.w.x ft0, s0
-; RV64IF-NEXT:    flw ft1, 12(sp)
-; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV64IF-NEXT:    flw ft0, 4(sp)
+; RV64IF-NEXT:    flw ft1, 0(sp)
+; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
-; RV64IF-NEXT:    ld s0, 16(sp)
-; RV64IF-NEXT:    ld ra, 24(sp)
-; RV64IF-NEXT:    addi sp, sp, 32
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
   %1 = alloca float, align 4
   %2 = bitcast float* %1 to i8*

@@ -13,16 +13,16 @@ define i64 @complex_float_add(i64 %a.coerce, i64 %b.coerce) nounwind {
 ; CHECK-NEXT:    sd s0, 16(sp)
 ; CHECK-NEXT:    sd s1, 8(sp)
 ; CHECK-NEXT:    sd s2, 0(sp)
-; CHECK-NEXT:    mv s0, a1
-; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:    srli s2, a0, 32
+; CHECK-NEXT:    srli s1, a1, 32
 ; CHECK-NEXT:    call __addsf3
-; CHECK-NEXT:    mv s2, a0
-; CHECK-NEXT:    srli a0, s1, 32
-; CHECK-NEXT:    srli a1, s0, 32
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    mv a0, s2
+; CHECK-NEXT:    mv a1, s1
 ; CHECK-NEXT:    call __addsf3
-; CHECK-NEXT:    slli a1, s2, 32
-; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    slli a1, s0, 32
+; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ld s2, 0(sp)
 ; CHECK-NEXT:    ld s1, 8(sp)
