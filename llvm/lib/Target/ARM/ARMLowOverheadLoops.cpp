@@ -34,6 +34,7 @@ using namespace llvm;
 namespace {
 
   class ARMLowOverheadLoops : public MachineFunctionPass {
+    MachineFunction           *MF = nullptr;
     const ARMBaseInstrInfo    *TII = nullptr;
     MachineRegisterInfo       *MRI = nullptr;
     std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
@@ -51,19 +52,6 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    bool ProcessLoop(MachineLoop *ML);
-
-    bool RevertNonLoops(MachineFunction &MF);
-
-    void RevertWhile(MachineInstr *MI) const;
-
-    void RevertLoopDec(MachineInstr *MI) const;
-
-    void RevertLoopEnd(MachineInstr *MI) const;
-
-    void Expand(MachineLoop *ML, MachineInstr *Start,
-                MachineInstr *Dec, MachineInstr *End, bool Revert);
-
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
@@ -72,6 +60,24 @@ namespace {
     StringRef getPassName() const override {
       return ARM_LOW_OVERHEAD_LOOPS_NAME;
     }
+
+  private:
+    bool ProcessLoop(MachineLoop *ML);
+
+    MachineInstr * IsSafeToDefineLR(MachineInstr *MI);
+
+    bool RevertNonLoops();
+
+    void RevertWhile(MachineInstr *MI) const;
+
+    void RevertLoopDec(MachineInstr *MI) const;
+
+    void RevertLoopEnd(MachineInstr *MI) const;
+
+    void Expand(MachineLoop *ML, MachineInstr *Start,
+                MachineInstr *InsertPt, MachineInstr *Dec,
+                MachineInstr *End, bool Revert);
+
   };
 }
 
@@ -80,32 +86,128 @@ char ARMLowOverheadLoops::ID = 0;
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
 
-bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &MF) {
-  if (!static_cast<const ARMSubtarget&>(MF.getSubtarget()).hasLOB())
+bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
+  const ARMSubtarget &ST = static_cast<const ARMSubtarget&>(mf.getSubtarget());
+  if (!ST.hasLOB())
     return false;
 
-  LLVM_DEBUG(dbgs() << "ARM Loops on " << MF.getName() << " ------------- \n");
+  MF = &mf;
+  LLVM_DEBUG(dbgs() << "ARM Loops on " << MF->getName() << " ------------- \n");
 
   auto &MLI = getAnalysis<MachineLoopInfo>();
-  MRI = &MF.getRegInfo();
-  TII = static_cast<const ARMBaseInstrInfo*>(
-    MF.getSubtarget().getInstrInfo());
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(MF));
+  MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
+  MRI = &MF->getRegInfo();
+  TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
+  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(*MF));
   BBUtils->computeAllBlockSizes();
-  BBUtils->adjustBBOffsetsAfter(&MF.front());
+  BBUtils->adjustBBOffsetsAfter(&MF->front());
 
   bool Changed = false;
   for (auto ML : MLI) {
     if (!ML->getParentLoop())
       Changed |= ProcessLoop(ML);
   }
-  Changed |= RevertNonLoops(MF);
+  Changed |= RevertNonLoops();
   return Changed;
 }
 
 static bool IsLoopStart(MachineInstr &MI) {
   return MI.getOpcode() == ARM::t2DoLoopStart ||
          MI.getOpcode() == ARM::t2WhileLoopStart;
+}
+
+template<typename T>
+static MachineInstr* SearchForDef(MachineInstr *Begin, T End, unsigned Reg) {
+  for(auto &MI : make_range(T(Begin), End)) {
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isDef() || MO.getReg() != Reg)
+        continue;
+      return &MI;
+    }
+  }
+  return nullptr;
+}
+
+static MachineInstr* SearchForUse(MachineInstr *Begin,
+                                  MachineBasicBlock::iterator End,
+                                  unsigned Reg) {
+  for(auto &MI : make_range(MachineBasicBlock::iterator(Begin), End)) {
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isUse() || MO.getReg() != Reg)
+        continue;
+      return &MI;
+    }
+  }
+  return nullptr;
+}
+
+// Is it safe to define LR with DLS/WLS?
+// LR can defined if it is the operand to start, because it's the same value,
+// or if it's going to be equivalent to the operand to Start.
+MachineInstr *ARMLowOverheadLoops::IsSafeToDefineLR(MachineInstr *Start) {
+
+  auto IsMoveLR = [](MachineInstr *MI, unsigned Reg) {
+    return MI->getOpcode() == ARM::tMOVr &&
+           MI->getOperand(0).getReg() == ARM::LR &&
+           MI->getOperand(1).getReg() == Reg &&
+           MI->getOperand(2).getImm() == ARMCC::AL;
+   };
+
+  MachineBasicBlock *MBB = Start->getParent();
+  unsigned CountReg = Start->getOperand(0).getReg();
+  // Walk forward and backward in the block to find the closest instructions
+  // that define LR. Then also filter them out if they're not a mov lr.
+  MachineInstr *PredLRDef = SearchForDef(Start, MBB->rend(), ARM::LR);
+  if (PredLRDef && !IsMoveLR(PredLRDef, CountReg))
+    PredLRDef = nullptr;
+
+  MachineInstr *SuccLRDef = SearchForDef(Start, MBB->end(), ARM::LR);
+  if (SuccLRDef && !IsMoveLR(SuccLRDef, CountReg))
+    SuccLRDef = nullptr;
+
+  // We've either found one, two or none mov lr instructions... Now figure out
+  // if they are performing the equilvant mov that the Start instruction will.
+  // Do this by scanning forward and backward to see if there's a def of the
+  // register holding the count value. If we find a suitable def, return it as
+  // the insert point. Later, if InsertPt != Start, then we can remove the
+  // redundant instruction.
+  if (SuccLRDef) {
+    MachineBasicBlock::iterator End(SuccLRDef);
+    if (!SearchForDef(Start, End, CountReg)) {
+      return SuccLRDef;
+    } else
+      SuccLRDef = nullptr;
+  }
+  if (PredLRDef) {
+    MachineBasicBlock::reverse_iterator End(PredLRDef);
+    if (!SearchForDef(Start, End, CountReg)) {
+      return PredLRDef;
+    } else
+      PredLRDef = nullptr;
+  }
+
+  // We can define LR because LR already contains the same value.
+  if (Start->getOperand(0).getReg() == ARM::LR)
+    return Start;
+
+  // We've found no suitable LR def and Start doesn't use LR directly. Can we
+  // just define LR anyway? 
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  LivePhysRegs LiveRegs(*TRI);
+  LiveRegs.addLiveOuts(*MBB);
+
+  // Not if we've haven't found a suitable mov and LR is live out.
+  if (LiveRegs.contains(ARM::LR))
+    return nullptr;
+
+  // If LR is not live out, we can insert the instruction if nothing else
+  // uses LR after it.
+  if (!SearchForUse(Start, MBB->end(), ARM::LR))
+    return Start;
+
+  LLVM_DEBUG(dbgs() << "ARM Loops: Failed to find suitable insertion point for"
+             << " LR\n");
+  return nullptr;
 }
 
 bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
@@ -169,11 +271,13 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         End = &MI;
       else if (IsLoopStart(MI))
         Start = &MI;
-      else if (MI.getDesc().isCall())
+      else if (MI.getDesc().isCall()) {
         // TODO: Though the call will require LE to execute again, does this
         // mean we should revert? Always executing LE hopefully should be
         // faster than performing a sub,cmp,br or even subs,br.
         Revert = true;
+        LLVM_DEBUG(dbgs() << "ARM Loops: Found call.\n");
+      }
 
       if (!Dec || End)
         continue;
@@ -237,7 +341,14 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     Revert = true;
   }
 
-  Expand(ML, Start, Dec, End, Revert);
+  MachineInstr *InsertPt = Revert ? nullptr : IsSafeToDefineLR(Start);
+  if (!InsertPt) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
+    Revert = true;
+  } else
+    LLVM_DEBUG(dbgs() << "ARM Loops: Start insertion point: " << *InsertPt);
+
+  Expand(ML, Start, InsertPt, Dec, End, Revert);
   return true;
 }
 
@@ -304,33 +415,13 @@ void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI) const {
 }
 
 void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
+                                 MachineInstr *InsertPt,
                                  MachineInstr *Dec, MachineInstr *End,
                                  bool Revert) {
 
-  auto ExpandLoopStart = [this](MachineLoop *ML, MachineInstr *Start) {
-    // The trip count should already been held in LR since the instructions
-    // within the loop can only read and write to LR. So, there should be a
-    // mov to setup the count. WLS/DLS perform this move, so find the original
-    // and delete it - inserting WLS/DLS in its place.
-    MachineBasicBlock *MBB = Start->getParent();
-    MachineInstr *InsertPt = Start;
-    for (auto &I : MRI->def_instructions(ARM::LR)) {
-      if (I.getParent() != MBB)
-        continue;
-
-      // Always execute.
-      if (!I.getOperand(2).isImm() || I.getOperand(2).getImm() != ARMCC::AL)
-        continue;
-
-      // Only handle move reg, if the trip count it will need moving into a reg
-      // before the setup instruction anyway.
-      if (!I.getDesc().isMoveReg() ||
-          !I.getOperand(1).isIdenticalTo(Start->getOperand(0)))
-        continue;
-      InsertPt = &I;
-      break;
-    }
-
+  auto ExpandLoopStart = [this](MachineLoop *ML, MachineInstr *Start,
+                                MachineInstr *InsertPt) {
+    MachineBasicBlock *MBB = InsertPt->getParent();
     unsigned Opc = Start->getOpcode() == ARM::t2DoLoopStart ?
       ARM::t2DLS : ARM::t2WLS;
     MachineInstrBuilder MIB =
@@ -389,18 +480,18 @@ void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
     RevertLoopDec(Dec);
     RevertLoopEnd(End);
   } else {
-    Start = ExpandLoopStart(ML, Start);
+    Start = ExpandLoopStart(ML, Start, InsertPt);
     RemoveDeadBranch(Start);
     End = ExpandLoopEnd(ML, Dec, End);
     RemoveDeadBranch(End);
   }
 }
 
-bool ARMLowOverheadLoops::RevertNonLoops(MachineFunction &MF) {
+bool ARMLowOverheadLoops::RevertNonLoops() {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting any remaining pseudos...\n");
   bool Changed = false;
 
-  for (auto &MBB : MF) {
+  for (auto &MBB : *MF) {
     SmallVector<MachineInstr*, 4> Starts;
     SmallVector<MachineInstr*, 4> Decs;
     SmallVector<MachineInstr*, 4> Ends;

@@ -1667,6 +1667,7 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
 //  "Stage=%d Cycle=%d".
 //===----------------------------------------------------------------------===//
 
+namespace {
 class ModuloScheduleTest : public MachineFunctionPass {
 public:
   static char ID;
@@ -1684,6 +1685,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+} // namespace
 
 char ModuloScheduleTest::ID = 0;
 

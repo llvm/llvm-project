@@ -181,7 +181,7 @@ OPTIONS
 
 .. option:: --version
 
- Display the version of this program.
+ Display the version of the :program:`llvm-readelf` executable.
 
 .. option:: --version-info, -V
 

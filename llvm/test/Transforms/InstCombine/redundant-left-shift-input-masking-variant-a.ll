@@ -407,28 +407,3 @@ define i32 @n13_not_minus_one(i32 %x, i32 %nbits) {
   %t4 = shl i32 %t2, %t3
   ret i32 %t4
 }
-
-define i32 @n14_insifficient_sum(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n14_insifficient_sum(
-; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = add nsw i32 [[T0]], -1
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = sub i32 31, [[NBITS]]
-; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    call void @use32(i32 [[T3]])
-; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[T2]], [[T3]]
-; CHECK-NEXT:    ret i32 [[T4]]
-;
-  %t0 = shl i32 1, %nbits
-  %t1 = add nsw i32 %t0, -1
-  %t2 = and i32 %t1, %x
-  %t3 = sub i32 31, %nbits ; summary shift amount is less than 32
-  call void @use32(i32 %t0)
-  call void @use32(i32 %t1)
-  call void @use32(i32 %t2)
-  call void @use32(i32 %t3)
-  %t4 = shl i32 %t2, %t3
-  ret i32 %t4
-}

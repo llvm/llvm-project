@@ -300,14 +300,14 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // Handle prefetches with PFD or PFDRL.
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  for (MVT VT : MVT::vector_valuetypes()) {
+  for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
     // Assume by default that all vector operations need to be expanded.
     for (unsigned Opcode = 0; Opcode < ISD::BUILTIN_OP_END; ++Opcode)
       if (getOperationAction(Opcode, VT) == Legal)
         setOperationAction(Opcode, VT, Expand);
 
     // Likewise all truncating stores and extending loads.
-    for (MVT InnerVT : MVT::vector_valuetypes()) {
+    for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
       setTruncStoreAction(VT, InnerVT, Expand);
       setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
       setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Expand);
@@ -333,7 +333,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   }
 
   // Handle integer vector types.
-  for (MVT VT : MVT::integer_vector_valuetypes()) {
+  for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
     if (isTypeLegal(VT)) {
       // These operations have direct equivalents.
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);

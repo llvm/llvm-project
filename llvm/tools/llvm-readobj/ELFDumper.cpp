@@ -218,6 +218,8 @@ private:
                      S->sh_entsize, ObjF->getFileName()});
   }
 
+  std::pair<const Elf_Phdr *, const Elf_Shdr *>
+  findDynamic(const ELFFile<ELFT> *Obj);
   void loadDynamicTable(const ELFFile<ELFT> *Obj);
   void parseDynamicTable();
 
@@ -1417,7 +1419,8 @@ static const char *getElfMipsOptionsOdkType(unsigned Odk) {
 }
 
 template <typename ELFT>
-void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
+std::pair<const typename ELFT::Phdr *, const typename ELFT::Shdr *>
+ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
   // Try to locate the PT_DYNAMIC header.
   const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr :
@@ -1438,53 +1441,112 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     break;
   }
 
-  // Information in the section header has priority over the information
-  // in a PT_DYNAMIC header.
-  // Ignore sh_entsize and use the expected value for entry size explicitly.
-  // This allows us to dump the dynamic sections with a broken sh_entsize
-  // field.
-  if (DynamicSec) {
-    DynamicTable =
-        checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
-                  DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
-    parseDynamicTable();
-  }
-
-  // If we have a PT_DYNAMIC header, we will either check the found dynamic
-  // section or take the dynamic table data directly from the header.
-  if (!DynamicPhdr)
-    return;
-
-  if (DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
-      ObjF->getMemoryBufferRef().getBufferSize()) {
+  if (DynamicPhdr && DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
+                         ObjF->getMemoryBufferRef().getBufferSize()) {
     reportWarning(
         createError(
             "PT_DYNAMIC segment offset + size exceeds the size of the file"),
         ObjF->getFileName());
+    // Don't use the broken dynamic header.
+    DynamicPhdr = nullptr;
+  }
+
+  if (DynamicPhdr && DynamicSec) {
+    StringRef Name =
+        unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DynamicSec));
+    if (DynamicSec->sh_addr + DynamicSec->sh_size >
+            DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
+        DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
+      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
+                                "' is not contained within the "
+                                "PT_DYNAMIC segment"),
+                    ObjF->getFileName());
+
+    if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
+      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
+                                "' is not at the start of "
+                                "PT_DYNAMIC segment"),
+                    ObjF->getFileName());
+  }
+
+  return std::make_pair(DynamicPhdr, DynamicSec);
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
+  const Elf_Phdr *DynamicPhdr;
+  const Elf_Shdr *DynamicSec;
+  std::tie(DynamicPhdr, DynamicSec) = findDynamic(Obj);
+  if (!DynamicPhdr && !DynamicSec)
+    return;
+
+  DynRegionInfo FromPhdr(ObjF->getFileName());
+  bool IsPhdrTableValid = false;
+  if (DynamicPhdr) {
+    FromPhdr = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
+    IsPhdrTableValid = !FromPhdr.getAsArrayRef<Elf_Dyn>().empty();
+  }
+
+  // Locate the dynamic table described in a section header.
+  // Ignore sh_entsize and use the expected value for entry size explicitly.
+  // This allows us to dump dynamic sections with a broken sh_entsize
+  // field.
+  DynRegionInfo FromSec(ObjF->getFileName());
+  bool IsSecTableValid = false;
+  if (DynamicSec) {
+    FromSec =
+        checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
+                  DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
+    IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+  }
+
+  // When we only have information from one of the SHT_DYNAMIC section header or
+  // PT_DYNAMIC program header, just use that.
+  if (!DynamicPhdr || !DynamicSec) {
+    if ((DynamicPhdr && IsPhdrTableValid) || (DynamicSec && IsSecTableValid)) {
+      DynamicTable = DynamicPhdr ? FromPhdr : FromSec;
+      parseDynamicTable();
+    } else {
+      reportWarning(createError("no valid dynamic table was found"),
+                    ObjF->getFileName());
+    }
     return;
   }
 
-  if (!DynamicSec) {
-    DynamicTable = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
-    parseDynamicTable();
+  // At this point we have tables found from the section header and from the
+  // dynamic segment. Usually they match, but we have to do sanity checks to
+  // verify that.
+
+  if (FromPhdr.Addr != FromSec.Addr)
+    reportWarning(createError("SHT_DYNAMIC section header and PT_DYNAMIC "
+                              "program header disagree about "
+                              "the location of the dynamic table"),
+                  ObjF->getFileName());
+
+  if (!IsPhdrTableValid && !IsSecTableValid) {
+    reportWarning(createError("no valid dynamic table was found"),
+                  ObjF->getFileName());
     return;
   }
 
-  StringRef Name =
-      unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DynamicSec));
-  if (DynamicSec->sh_addr + DynamicSec->sh_size >
-          DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
-      DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
-    reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                              "' is not contained within the "
-                              "PT_DYNAMIC segment"),
-                  ObjF->getFileName());
+  // Information in the PT_DYNAMIC program header has priority over the information
+  // in a section header.
+  if (IsPhdrTableValid) {
+    if (!IsSecTableValid)
+      reportWarning(
+          createError(
+              "SHT_DYNAMIC dynamic table is invalid: PT_DYNAMIC will be used"),
+          ObjF->getFileName());
+    DynamicTable = FromPhdr;
+  } else {
+    reportWarning(
+        createError(
+            "PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used"),
+        ObjF->getFileName());
+    DynamicTable = FromSec;
+  }
 
-  if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
-    reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                              "' is not at the start of "
-                              "PT_DYNAMIC segment"),
-                  ObjF->getFileName());
+  parseDynamicTable();
 }
 
 template <typename ELFT>

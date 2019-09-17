@@ -205,7 +205,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::i8, MVT::i16, MVT::i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Action);
   }
-  for (auto T : MVT::integer_vector_valuetypes())
+  for (auto T : MVT::integer_fixedlen_vector_valuetypes())
     setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
 
   // Dynamic stack allocation: use the default expansion.
@@ -237,7 +237,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   if (Subtarget->hasSIMD128()) {
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32,
                    MVT::v2f64}) {
-      for (auto MemT : MVT::vector_valuetypes()) {
+      for (auto MemT : MVT::fixedlen_vector_valuetypes()) {
         if (MVT(T) != MemT) {
           setTruncStoreAction(T, MemT, Expand);
           for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})

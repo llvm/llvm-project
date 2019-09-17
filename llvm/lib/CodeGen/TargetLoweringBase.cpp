@@ -1266,7 +1266,8 @@ void TargetLoweringBase::computeRegisterProperties(
     case TypePromoteInteger:
       // Try to promote the elements of integer vectors. If no legal
       // promotion was found, fall through to the widen-vector method.
-      for (unsigned nVT = i + 1; nVT <= MVT::LAST_INTEGER_VECTOR_VALUETYPE; ++nVT) {
+      for (unsigned nVT = i + 1;
+           nVT <= MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE; ++nVT) {
         MVT SVT = (MVT::SimpleValueType) nVT;
         // Promote vectors of integers to vectors with the same number
         // of elements, with a wider element type.
