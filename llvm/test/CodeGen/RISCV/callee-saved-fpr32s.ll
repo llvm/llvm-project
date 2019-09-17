@@ -23,8 +23,8 @@ define void @callee() nounwind {
 ; ILP32-LP64-LABEL: callee:
 ; ILP32-LP64:       # %bb.0:
 ; ILP32-LP64-NEXT:    lui a0, %hi(var)
-; ILP32-LP64-NEXT:    addi a1, a0, %lo(var)
 ; ILP32-LP64-NEXT:    flw ft0, %lo(var)(a0)
+; ILP32-LP64-NEXT:    addi a1, a0, %lo(var)
 ; ILP32-LP64-NEXT:    flw ft1, 4(a1)
 ; ILP32-LP64-NEXT:    flw ft2, 8(a1)
 ; ILP32-LP64-NEXT:    flw ft3, 12(a1)
@@ -52,14 +52,14 @@ define void @callee() nounwind {
 ; ILP32-LP64-NEXT:    flw fs5, 100(a1)
 ; ILP32-LP64-NEXT:    flw fs6, 104(a1)
 ; ILP32-LP64-NEXT:    flw fs7, 108(a1)
-; ILP32-LP64-NEXT:    flw fs8, 112(a1)
-; ILP32-LP64-NEXT:    flw fs9, 116(a1)
-; ILP32-LP64-NEXT:    flw fs10, 120(a1)
-; ILP32-LP64-NEXT:    flw fs11, 124(a1)
-; ILP32-LP64-NEXT:    fsw fs11, 124(a1)
-; ILP32-LP64-NEXT:    fsw fs10, 120(a1)
-; ILP32-LP64-NEXT:    fsw fs9, 116(a1)
-; ILP32-LP64-NEXT:    fsw fs8, 112(a1)
+; ILP32-LP64-NEXT:    flw fs8, 124(a1)
+; ILP32-LP64-NEXT:    flw fs9, 120(a1)
+; ILP32-LP64-NEXT:    flw fs10, 116(a1)
+; ILP32-LP64-NEXT:    flw fs11, 112(a1)
+; ILP32-LP64-NEXT:    fsw fs8, 124(a1)
+; ILP32-LP64-NEXT:    fsw fs9, 120(a1)
+; ILP32-LP64-NEXT:    fsw fs10, 116(a1)
+; ILP32-LP64-NEXT:    fsw fs11, 112(a1)
 ; ILP32-LP64-NEXT:    fsw fs7, 108(a1)
 ; ILP32-LP64-NEXT:    fsw fs6, 104(a1)
 ; ILP32-LP64-NEXT:    fsw fs5, 100(a1)
@@ -106,6 +106,7 @@ define void @callee() nounwind {
 ; ILP32F-LP64F-NEXT:    fsw fs10, 4(sp)
 ; ILP32F-LP64F-NEXT:    fsw fs11, 0(sp)
 ; ILP32F-LP64F-NEXT:    lui a0, %hi(var)
+; ILP32F-LP64F-NEXT:    flw ft0, %lo(var)(a0)
 ; ILP32F-LP64F-NEXT:    addi a1, a0, %lo(var)
 ;
 ; ILP32D-LP64D-LABEL: callee:
@@ -124,6 +125,7 @@ define void @callee() nounwind {
 ; ILP32D-LP64D-NEXT:    fsd fs10, 8(sp)
 ; ILP32D-LP64D-NEXT:    fsd fs11, 0(sp)
 ; ILP32D-LP64D-NEXT:    lui a0, %hi(var)
+; ILP32D-LP64D-NEXT:    flw ft0, %lo(var)(a0)
 ; ILP32D-LP64D-NEXT:    addi a1, a0, %lo(var)
   %val = load [32 x float], [32 x float]* @var
   store volatile [32 x float] %val, [32 x float]* @var

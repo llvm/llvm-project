@@ -67,6 +67,9 @@ unsigned getSwappedVPCMPImm(unsigned Imm);
 /// Get the VPCOM immediate if the opcodes are swapped.
 unsigned getSwappedVPCOMImm(unsigned Imm);
 
+/// Get the VCMP immediate if the opcodes are swapped.
+unsigned getSwappedVCMPImm(unsigned Imm);
+
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is

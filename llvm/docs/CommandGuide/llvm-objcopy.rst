@@ -131,11 +131,11 @@ multiple file formats.
 
 .. option:: --version, -V
 
-  Display the version of this program.
+ Display the version of the :program:`llvm-objcopy` executable.
 
 .. option:: @<FILE>
 
-  Read command-line options and commands from response file `<FILE>`.
+ Read command-line options and commands from response file `<FILE>`.
 
 COFF-SPECIFIC OPTIONS
 ---------------------

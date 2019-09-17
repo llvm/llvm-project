@@ -1,10 +1,15 @@
-# RUN: llc -mtriple=armv8.1m.main -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
+# RUN: llc -mtriple=armv8.1m.main -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 # CHECK: entry:
 # CHECK: $lr = t2DLS
 # CHECK: for.body:
 # CHECK: $lr = t2LEUpdate renamable $lr
 
---- |  
+--- |
+  ; ModuleID = 'size-limit.ll'
+  source_filename = "size-limit.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
   define dso_local arm_aapcscc void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
   entry:
     %cmp8 = icmp eq i32 %N, 0
@@ -26,13 +31,13 @@
     %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
     %0 = phi i32 [ %N, %for.body.preheader ], [ %3, %for.body ]
     %size = call i32 @llvm.arm.space(i32 4070, i32 undef)
-    %scevgep1 = getelementptr i32, i32* %lsr.iv9, i32 1
-    %1 = load i32, i32* %scevgep1, align 4
-    %scevgep5 = getelementptr i32, i32* %lsr.iv5, i32 1
-    %2 = load i32, i32* %scevgep5, align 4
+    %scevgep3 = getelementptr i32, i32* %lsr.iv9, i32 1
+    %1 = load i32, i32* %scevgep3, align 4
+    %scevgep7 = getelementptr i32, i32* %lsr.iv5, i32 1
+    %2 = load i32, i32* %scevgep7, align 4
     %mul = mul nsw i32 %2, %1
-    %scevgep9 = getelementptr i32, i32* %lsr.iv1, i32 1
-    store i32 %mul, i32* %scevgep9, align 4
+    %scevgep11 = getelementptr i32, i32* %lsr.iv1, i32 1
+    store i32 %mul, i32* %scevgep11, align 4
     %scevgep2 = getelementptr i32, i32* %lsr.iv1, i32 1
     %scevgep6 = getelementptr i32, i32* %lsr.iv5, i32 1
     %scevgep10 = getelementptr i32, i32* %lsr.iv9, i32 1
@@ -43,10 +48,15 @@
   
   ; Function Attrs: nounwind
   declare i32 @llvm.arm.space(i32 immarg, i32) #0
+  
   ; Function Attrs: noduplicate nounwind
   declare void @llvm.set.loop.iterations.i32(i32) #1
+  
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #0
   
   attributes #0 = { nounwind }
   attributes #1 = { noduplicate nounwind }
@@ -60,7 +70,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -101,6 +111,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r7, $lr
   
     frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -117,12 +128,13 @@ body:             |
   
   bb.1.for.body:
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+    liveins: $lr, $r0, $r1, $r2
   
     dead renamable $r3 = SPACE 4070, undef renamable $r0
-    renamable $r12, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep1)
-    renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14, $noreg :: (load 4 from %ir.scevgep5)
+    renamable $r12, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep3)
+    renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14, $noreg :: (load 4 from %ir.scevgep7)
     renamable $r3 = nsw t2MUL killed renamable $r3, killed renamable $r12, 14, $noreg
-    early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep9)
+    early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep11)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
@@ -131,5 +143,3 @@ body:             |
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...
-
-

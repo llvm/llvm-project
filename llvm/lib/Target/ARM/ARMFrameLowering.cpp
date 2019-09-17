@@ -1503,8 +1503,12 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
 /// instructions will require a scratch register during their expansion later.
 // FIXME: Move to TII?
 static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
-                                         const TargetFrameLowering *TFI) {
+                                         const TargetFrameLowering *TFI,
+                                         bool &HasNonSPFrameIndex) {
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  const ARMBaseInstrInfo &TII =
+      *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   unsigned Limit = (1 << 12) - 1;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
@@ -1518,6 +1522,11 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           Limit = std::min(Limit, (1U << 8) - 1);
           break;
         }
+
+        const MCInstrDesc &MCID = MI.getDesc();
+        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i, TRI, MF);
+        if (RegClass && !RegClass->contains(ARM::SP))
+          HasNonSPFrameIndex = true;
 
         // Otherwise check the addressing mode.
         switch (MI.getDesc().TSFlags & ARMII::AddrModeMask) {
@@ -1541,6 +1550,15 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           // Addressing modes 4 & 6 (load/store) instructions can't encode an
           // immediate offset for stack references.
           return 0;
+        case ARMII::AddrModeT2_i7:
+          Limit = std::min(Limit, ((1U << 7) - 1) * 1);
+          break;
+        case ARMII::AddrModeT2_i7s2:
+          Limit = std::min(Limit, ((1U << 7) - 1) * 2);
+          break;
+        case ARMII::AddrModeT2_i7s4:
+          Limit = std::min(Limit, ((1U << 7) - 1) * 4);
+          break;
         default:
           break;
         }
@@ -1784,6 +1802,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   EstimatedStackSize += 16; // For possible paddings.
 
   unsigned EstimatedRSStackSizeLimit, EstimatedRSFixedSizeLimit;
+  bool HasNonSPFrameIndex = false;
   if (AFI->isThumb1OnlyFunction()) {
     // For Thumb1, don't bother to iterate over the function. The only
     // instruction that requires an emergency spill slot is a store to a
@@ -1804,7 +1823,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       EstimatedRSStackSizeLimit = (1U << 8) * 4;
     EstimatedRSFixedSizeLimit = (1U << 5) * 4;
   } else {
-    EstimatedRSStackSizeLimit = estimateRSStackSizeLimit(MF, this);
+    EstimatedRSStackSizeLimit =
+        estimateRSStackSizeLimit(MF, this, HasNonSPFrameIndex);
     EstimatedRSFixedSizeLimit = EstimatedRSStackSizeLimit;
   }
   // Final estimate of whether sp or bp-relative accesses might require
@@ -1830,12 +1850,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       HasFP && (MaxFixedOffset - MaxFPOffset) > (int)EstimatedRSFixedSizeLimit;
 
   bool BigFrameOffsets = HasLargeStack || !HasBPOrFixedSP ||
-                         HasLargeArgumentList;
+                         HasLargeArgumentList || HasNonSPFrameIndex;
   LLVM_DEBUG(dbgs() << "EstimatedLimit: " << EstimatedRSStackSizeLimit
-                    << "; EstimatedStack" << EstimatedStackSize
-                    << "; EstimatedFPStack" << MaxFixedOffset - MaxFPOffset
-                    << "; BigFrameOffsets: " << BigFrameOffsets
-                    << "\n");
+                    << "; EstimatedStack: " << EstimatedStackSize
+                    << "; EstimatedFPStack: " << MaxFixedOffset - MaxFPOffset
+                    << "; BigFrameOffsets: " << BigFrameOffsets << "\n");
   if (BigFrameOffsets ||
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);

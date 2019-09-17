@@ -1,0 +1,55 @@
+## Test how the Machine YAML field can be used to set the e_machine ELF header field.
+
+## Test we can use an arbitrary value.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf %t1 --file-headers | FileCheck %s --check-prefix=UNKNOWN
+
+# UNKNOWN: Machine: 1234
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: 0x1234
+
+## Test we can't use a number that doesn't fit into 2 bytes.
+
+# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: out of range hex16 number
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: 0x12345
+
+## Test we can use a known named constant.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf %t3 --file-headers | FileCheck %s --check-prefix=NONE
+
+# NONE: Machine: None
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_NONE
+
+## Test we can't use an unknown string constant.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=ERR2
+
+# ERR2: error: invalid hex16 number
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_UNKNOWN_FOO

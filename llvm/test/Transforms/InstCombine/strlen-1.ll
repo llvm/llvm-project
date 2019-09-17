@@ -100,7 +100,7 @@ define i1 @test_simplify8(i8* %str_p) {
 
 define i32 @test_simplify9(i1 %x) {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 %x, i32 5, i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i32 5, i32 6
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %hello = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
@@ -115,7 +115,7 @@ define i32 @test_simplify9(i1 %x) {
 
 define i32 @test_simplify10(i32 %x) {
 ; CHECK-LABEL: @test_simplify10(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 5, %x
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 5, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %hello_p = getelementptr inbounds [6 x i8], [6 x i8]* @hello, i32 0, i32 %x
@@ -127,7 +127,7 @@ define i32 @test_simplify10(i32 %x) {
 
 define i32 @test_simplify11(i32 %x) {
 ; CHECK-LABEL: @test_simplify11(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 7
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i32 9, [[AND]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
@@ -141,7 +141,7 @@ define i32 @test_simplify11(i32 %x) {
 
 define i32 @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[A_L:%.*]] = call i32 @strlen(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0))
+; CHECK-NEXT:    [[A_L:%.*]] = call i32 @strlen(i8* nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0))
 ; CHECK-NEXT:    ret i32 [[A_L]]
 ;
   %a_p = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
@@ -153,7 +153,7 @@ define i32 @test_no_simplify1() {
 
 define i32 @test_no_simplify2(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* @null_hello, i32 0, i32 %x
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* @null_hello, i32 0, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i32 [[HELLO_L]]
 ;
@@ -164,7 +164,7 @@ define i32 @test_no_simplify2(i32 %x) {
 
 define i32 @test_no_simplify2_no_null_opt(i32 %x) #0 {
 ; CHECK-LABEL: @test_no_simplify2_no_null_opt(
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* @null_hello, i32 0, i32 %x
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* @null_hello, i32 0, i32 [[X:%.*]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* [[HELLO_P]])
 ; CHECK-NEXT:    ret i32 [[HELLO_L]]
 ;
@@ -177,7 +177,7 @@ define i32 @test_no_simplify2_no_null_opt(i32 %x) #0 {
 
 define i32 @test_no_simplify3(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 15
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i8], [13 x i8]* @null_hello_mid, i32 0, i32 [[AND]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i32 [[HELLO_L]]
@@ -190,7 +190,7 @@ define i32 @test_no_simplify3(i32 %x) {
 
 define i32 @test_no_simplify3_on_null_opt(i32 %x) #0 {
 ; CHECK-LABEL: @test_no_simplify3_on_null_opt(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 15
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i8], [13 x i8]* @null_hello_mid, i32 0, i32 [[AND]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* [[HELLO_P]])
 ; CHECK-NEXT:    ret i32 [[HELLO_L]]
@@ -199,6 +199,24 @@ define i32 @test_no_simplify3_on_null_opt(i32 %x) #0 {
   %hello_p = getelementptr inbounds [13 x i8], [13 x i8]* @null_hello_mid, i32 0, i32 %and
   %hello_l = call i32 @strlen(i8* %hello_p)
   ret i32 %hello_l
+}
+
+define i32 @test1(i8* %str) {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i32 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]]) #1
+; CHECK-NEXT:    ret i32 [[LEN]]
+;
+  %len = tail call i32 @strlen(i8* %str) nounwind
+  ret i32 %len
+}
+
+define i32 @test2(i8* %str) #0 {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i32 @strlen(i8* [[STR:%.*]]) #1
+; CHECK-NEXT:    ret i32 [[LEN]]
+;
+  %len = tail call i32 @strlen(i8* %str) nounwind
+  ret i32 %len
 }
 
 attributes #0 = { "null-pointer-is-valid"="true" }
