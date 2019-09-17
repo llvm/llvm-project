@@ -7,8 +7,9 @@
 define i64 @lb(i8 *%a) nounwind {
 ; RV64I-LABEL: lb:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lb a1, 0(a0)
-; RV64I-NEXT:    lb a0, 1(a0)
+; RV64I-NEXT:    lb a1, 1(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i8, i8* %a, i32 1
   %2 = load i8, i8* %1
@@ -21,8 +22,9 @@ define i64 @lb(i8 *%a) nounwind {
 define i64 @lh(i16 *%a) nounwind {
 ; RV64I-LABEL: lh:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lh a1, 0(a0)
-; RV64I-NEXT:    lh a0, 4(a0)
+; RV64I-NEXT:    lh a1, 4(a0)
+; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i32 2
   %2 = load i16, i16* %1
@@ -35,8 +37,9 @@ define i64 @lh(i16 *%a) nounwind {
 define i64 @lw(i32 *%a) nounwind {
 ; RV64I-LABEL: lw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lw a1, 0(a0)
-; RV64I-NEXT:    lw a0, 12(a0)
+; RV64I-NEXT:    lw a1, 12(a0)
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i32, i32* %a, i32 3
   %2 = load i32, i32* %1
@@ -49,9 +52,9 @@ define i64 @lw(i32 *%a) nounwind {
 define i64 @lbu(i8 *%a) nounwind {
 ; RV64I-LABEL: lbu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a1, 0(a0)
-; RV64I-NEXT:    lbu a0, 4(a0)
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lbu a1, 4(a0)
+; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = getelementptr i8, i8* %a, i32 4
   %2 = load i8, i8* %1
@@ -65,9 +68,9 @@ define i64 @lbu(i8 *%a) nounwind {
 define i64 @lhu(i16 *%a) nounwind {
 ; RV64I-LABEL: lhu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lhu a0, 10(a0)
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lhu a1, 10(a0)
+; RV64I-NEXT:    lhu a0, 0(a0)
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i32 5
   %2 = load i16, i16* %1
@@ -81,9 +84,9 @@ define i64 @lhu(i16 *%a) nounwind {
 define i64 @lwu(i32 *%a) nounwind {
 ; RV64I-LABEL: lwu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lwu a1, 0(a0)
-; RV64I-NEXT:    lwu a0, 24(a0)
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lwu a1, 24(a0)
+; RV64I-NEXT:    lwu a0, 0(a0)
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = getelementptr i32, i32* %a, i32 6
   %2 = load i32, i32* %1
@@ -99,8 +102,8 @@ define i64 @lwu(i32 *%a) nounwind {
 define void @sb(i8 *%a, i8 %b) nounwind {
 ; RV64I-LABEL: sb:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sb a1, 7(a0)
 ; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    sb a1, 7(a0)
 ; RV64I-NEXT:    ret
   store i8 %b, i8* %a
   %1 = getelementptr i8, i8* %a, i32 7
@@ -111,8 +114,8 @@ define void @sb(i8 *%a, i8 %b) nounwind {
 define void @sh(i16 *%a, i16 %b) nounwind {
 ; RV64I-LABEL: sh:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sh a1, 16(a0)
 ; RV64I-NEXT:    sh a1, 0(a0)
+; RV64I-NEXT:    sh a1, 16(a0)
 ; RV64I-NEXT:    ret
   store i16 %b, i16* %a
   %1 = getelementptr i16, i16* %a, i32 8
@@ -123,8 +126,8 @@ define void @sh(i16 *%a, i16 %b) nounwind {
 define void @sw(i32 *%a, i32 %b) nounwind {
 ; RV64I-LABEL: sw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sw a1, 36(a0)
 ; RV64I-NEXT:    sw a1, 0(a0)
+; RV64I-NEXT:    sw a1, 36(a0)
 ; RV64I-NEXT:    ret
   store i32 %b, i32* %a
   %1 = getelementptr i32, i32* %a, i32 9
@@ -137,8 +140,9 @@ define void @sw(i32 *%a, i32 %b) nounwind {
 define i64 @ld(i64 *%a) nounwind {
 ; RV64I-LABEL: ld:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a1, 0(a0)
-; RV64I-NEXT:    ld a0, 80(a0)
+; RV64I-NEXT:    ld a1, 80(a0)
+; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = getelementptr i64, i64* %a, i32 10
   %2 = load i64, i64* %1
@@ -149,8 +153,8 @@ define i64 @ld(i64 *%a) nounwind {
 define void @sd(i64 *%a, i64 %b) nounwind {
 ; RV64I-LABEL: sd:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sd a1, 88(a0)
 ; RV64I-NEXT:    sd a1, 0(a0)
+; RV64I-NEXT:    sd a1, 88(a0)
 ; RV64I-NEXT:    ret
   store i64 %b, i64* %a
   %1 = getelementptr i64, i64* %a, i32 11
@@ -162,10 +166,10 @@ define void @sd(i64 *%a, i64 %b) nounwind {
 define i64 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 ; RV64I-LABEL: load_sext_zext_anyext_i1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lb a1, 0(a0)
 ; RV64I-NEXT:    lbu a1, 1(a0)
-; RV64I-NEXT:    lbu a0, 2(a0)
-; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    lbu a2, 2(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    sub a0, a2, a1
 ; RV64I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, i1* %a, i32 1
@@ -184,10 +188,10 @@ define i64 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 ; RV64I-LABEL: load_sext_zext_anyext_i1_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lb a1, 0(a0)
 ; RV64I-NEXT:    lbu a1, 1(a0)
-; RV64I-NEXT:    lbu a0, 2(a0)
-; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    lbu a2, 2(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    sub a0, a2, a1
 ; RV64I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, i1* %a, i32 1

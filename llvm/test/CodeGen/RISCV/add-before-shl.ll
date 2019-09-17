@@ -96,36 +96,36 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ; RV32I-LABEL: add_wide_operand:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    srli a3, a2, 29
-; RV32I-NEXT:    lw a4, 4(a1)
-; RV32I-NEXT:    slli a5, a4, 3
-; RV32I-NEXT:    or a6, a5, a3
-; RV32I-NEXT:    srli a4, a4, 29
-; RV32I-NEXT:    lw a5, 8(a1)
-; RV32I-NEXT:    slli a3, a5, 3
-; RV32I-NEXT:    or a3, a3, a4
+; RV32I-NEXT:    lw a3, 4(a1)
+; RV32I-NEXT:    lw a6, 12(a1)
+; RV32I-NEXT:    lw a1, 8(a1)
+; RV32I-NEXT:    srli a5, a2, 29
+; RV32I-NEXT:    slli a4, a3, 3
+; RV32I-NEXT:    or a4, a4, a5
+; RV32I-NEXT:    srli a3, a3, 29
+; RV32I-NEXT:    slli a5, a1, 3
+; RV32I-NEXT:    or a3, a5, a3
+; RV32I-NEXT:    srli a1, a1, 29
+; RV32I-NEXT:    slli a5, a6, 3
+; RV32I-NEXT:    or a1, a5, a1
 ; RV32I-NEXT:    slli a2, a2, 3
+; RV32I-NEXT:    lui a5, 128
+; RV32I-NEXT:    add a1, a1, a5
 ; RV32I-NEXT:    sw a2, 0(a0)
 ; RV32I-NEXT:    sw a3, 8(a0)
-; RV32I-NEXT:    sw a6, 4(a0)
-; RV32I-NEXT:    srli a2, a5, 29
-; RV32I-NEXT:    lw a1, 12(a1)
-; RV32I-NEXT:    slli a1, a1, 3
-; RV32I-NEXT:    or a1, a1, a2
-; RV32I-NEXT:    lui a2, 128
-; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    sw a4, 4(a0)
 ; RV32I-NEXT:    sw a1, 12(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_wide_operand:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a1, 3
 ; RV64I-NEXT:    srli a2, a0, 61
+; RV64I-NEXT:    slli a1, a1, 3
 ; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    addi a2, zero, 1
 ; RV64I-NEXT:    slli a2, a2, 51
 ; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    slli a0, a0, 3
 ; RV64I-NEXT:    ret
   %1 = add i128 %a, 5192296858534827628530496329220096
   %2 = shl i128 %1, 3

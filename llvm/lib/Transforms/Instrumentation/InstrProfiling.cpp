@@ -740,9 +740,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
     PD = It->second;
   }
 
-  // Match the linkage and visibility of the name global, except on COFF, where
-  // the linkage must be local and consequentially the visibility must be
-  // default.
+  // Match the linkage and visibility of the name global. COFF supports using
+  // comdats with internal symbols, so do that if we can.
   Function *Fn = Inc->getParent()->getParent();
   GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
   GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
@@ -759,15 +758,16 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // of the parent function, that will result in relocations against discarded
   // sections.
   Comdat *Cmdt = nullptr;
-  GlobalValue::LinkageTypes CounterLinkage = Linkage;
   if (needsComdatForCounter(*Fn, *M)) {
     StringRef CmdtPrefix = getInstrProfComdatPrefix();
     if (TT.isOSBinFormatCOFF()) {
       // For COFF, the comdat group name must be the name of a symbol in the
       // group. Use the counter variable name, and upgrade its linkage to
-      // something externally visible, like linkonce_odr.
+      // something externally visible, like linkonce_odr. Use hidden visibility
+      // to imply that this is dso local.
       CmdtPrefix = getInstrProfCountersVarPrefix();
-      CounterLinkage = GlobalValue::LinkOnceODRLinkage;
+      Linkage = GlobalValue::LinkOnceODRLinkage;
+      Visibility = GlobalValue::HiddenVisibility;
     }
     Cmdt = M->getOrInsertComdat(getVarName(Inc, CmdtPrefix));
   }
@@ -786,7 +786,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
   CounterPtr->setAlignment(8);
   CounterPtr->setComdat(Cmdt);
-  CounterPtr->setLinkage(CounterLinkage);
+  CounterPtr->setLinkage(Linkage);
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -841,6 +841,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(INSTR_PROF_DATA_ALIGNMENT);
   Data->setComdat(Cmdt);
+  Data->setLinkage(Linkage);
 
   PD.RegionCounters = CounterPtr;
   PD.DataVar = Data;

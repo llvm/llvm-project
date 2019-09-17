@@ -1,4 +1,4 @@
-; RUN: opt -S -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 < %s | FileCheck %s
+; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 < %s | FileCheck %s
 
 define dso_local i32 @visible(i32* noalias %A, i32* noalias %B) #0 {
 entry:
@@ -10,7 +10,7 @@ entry:
 
 ; FIXME: Should be something like this.
 ; define internal i32 @noalias_args(i32* nocapture readonly %A, i32* noalias nocapture readonly %B)
-; CHECK: define internal i32 @noalias_args(i32* nocapture %A, i32* nocapture %B)
+; CHECK: define internal i32 @noalias_args(i32* nocapture %A, i32* noalias nocapture %B)
 
 define internal i32 @noalias_args(i32* %A, i32* %B) #0 {
 entry:

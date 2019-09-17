@@ -61,7 +61,7 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X32_AVX512F-LABEL: fcmp_select_fp_constants:
 ; X32_AVX512F:       # %bb.0:
 ; X32_AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32_AVX512F-NEXT:    vcmpneqss {{[0-9]+}}(%esp), %xmm0, %k0
+; X32_AVX512F-NEXT:    vcmpneqss {{\.LCPI.*}}, %xmm0, %k0
 ; X32_AVX512F-NEXT:    kmovw %k0, %eax
 ; X32_AVX512F-NEXT:    flds {{\.LCPI.*}}(,%eax,4)
 ; X32_AVX512F-NEXT:    retl

@@ -102,6 +102,7 @@ static_library("clangd") {
     "RIFF.cpp",
     "Selection.cpp",
     "SemanticHighlighting.cpp",
+    "SemanticSelection.cpp",
     "SourceCode.cpp",
     "TUScheduler.cpp",
     "Threading.cpp",

@@ -70,14 +70,14 @@ USAGE: llvm-ar [options] [-]<operation>[modifiers] [relpos] [count] <archive> [f
        llvm-ar -M [<mri-script]
 
 OPTIONS:
-  --format              - Archive format to create
+  --format              - archive format to create
     =default            -   default
     =gnu                -   gnu
     =darwin             -   darwin
     =bsd                -   bsd
-  --plugin=<string>     - Ignored for compatibility
-  --help                - Display available options
-  --version             - Display the version of this program
+  --plugin=<string>     - ignored for compatibility
+  -h --help             - display this help and exit
+  --version             - print the version and exit
   @<file>               - read options from <file>
 
 OPERATIONS:
@@ -1030,7 +1030,7 @@ static void runMRIScript() {
 }
 
 static bool handleGenericOption(StringRef arg) {
-  if (arg == "-help" || arg == "--help") {
+  if (arg == "h" || arg.startswith("-h") || arg == "--help") {
     printHelpMessage();
     return true;
   }

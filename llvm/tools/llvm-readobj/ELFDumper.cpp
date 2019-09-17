@@ -4749,11 +4749,14 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
                                Data, &Offset);
 }
 
-template <class ELFT>
-SectionRef toSectionRef(const ObjectFile *Obj, const typename ELFT::Shdr *Sec) {
-  DataRefImpl DRI;
-  DRI.p = reinterpret_cast<uintptr_t>(Sec);
-  return SectionRef(DRI, Obj);
+// Used for printing section names in places where possible errors can be
+// ignored.
+static StringRef getSectionName(const SectionRef &Sec) {
+  Expected<StringRef> NameOrErr = Sec.getName();
+  if (NameOrErr)
+    return *NameOrErr;
+  consumeError(NameOrErr.takeError());
+  return "<?>";
 }
 
 template <class ELFT>
@@ -4764,16 +4767,11 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
   const ELFFile<ELFT> *EF = Obj->getELFFile();
   StringRef FileStr = Obj->getFileName();
   for (const SectionRef &Sec : Obj->sections()) {
-    StringRef SectionName;
-    if (Expected<StringRef> NameOrErr = Sec.getName())
-      SectionName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
-    const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
+    StringRef SectionName = getSectionName(Sec);
     if (!SectionName.startswith(".stack_sizes"))
       continue;
     PrintHeader();
+    const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, EF->getSectionContents(ElfSec));
     DataExtractor Data(
@@ -4798,8 +4796,7 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
             FileStr);
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(Obj, SymValue,
-                             toSectionRef<ELFT>(Obj, FunctionELFSec),
+      printFunctionStackSize(Obj, SymValue, Obj->toSectionRef(FunctionELFSec),
                              SectionName, Data, &Offset);
     }
   }
@@ -4848,7 +4845,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     if (!ContentsSectionNameOrErr->startswith(".stack_sizes"))
       continue;
     // Insert a mapping from the stack sizes section to its relocation section.
-    StackSizeRelocMap[toSectionRef<ELFT>(Obj, ContentsSec)] = Sec;
+    StackSizeRelocMap[Obj->toSectionRef(ContentsSec)] = Sec;
   }
 
   for (const auto &StackSizeMapEntry : StackSizeRelocMap) {
@@ -4857,12 +4854,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     const SectionRef &RelocSec = StackSizeMapEntry.second;
 
     // Warn about stack size sections without a relocation section.
-    StringRef StackSizeSectionName;
-    if (Expected<StringRef> NameOrErr = StackSizesSec.getName())
-      StackSizeSectionName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
+    StringRef StackSizeSectionName = getSectionName(StackSizesSec);
     if (RelocSec == NullSection) {
       reportWarning(createError("section " + StackSizeSectionName +
                                 " does not have a corresponding "
@@ -4876,9 +4868,8 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     // described in it.
     const Elf_Shdr *StackSizesELFSec =
         Obj->getSection(StackSizesSec.getRawDataRefImpl());
-    const SectionRef FunctionSec = toSectionRef<ELFT>(
-        Obj, unwrapOrError(this->FileName,
-                           EF->getSection(StackSizesELFSec->sh_link)));
+    const SectionRef FunctionSec = Obj->toSectionRef(unwrapOrError(
+        this->FileName, EF->getSection(StackSizesELFSec->sh_link)));
 
     bool (*IsSupportedFn)(uint64_t);
     RelocationResolver Resolver;
@@ -4889,21 +4880,13 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
                   Contents.size()),
         Obj->isLittleEndian(), sizeof(Elf_Addr));
     for (const RelocationRef &Reloc : RelocSec.relocations()) {
-      if (!IsSupportedFn(Reloc.getType())) {
-        StringRef RelocSectionName;
-        Expected<StringRef> NameOrErr = RelocSec.getName();
-        if (NameOrErr)
-          RelocSectionName = *NameOrErr;
-        else
-          consumeError(NameOrErr.takeError());
-
-        StringRef RelocName = EF->getRelocationTypeName(Reloc.getType());
-        reportError(
-            createStringError(object_error::parse_failed,
-                              "unsupported relocation type in section %s: %s",
-                              RelocSectionName.data(), RelocName.data()),
-            Obj->getFileName());
-      }
+      if (!IsSupportedFn(Reloc.getType()))
+        reportError(createStringError(
+                        object_error::parse_failed,
+                        "unsupported relocation type in section %s: %s",
+                        getSectionName(RelocSec).data(),
+                        EF->getRelocationTypeName(Reloc.getType()).data()),
+                    Obj->getFileName());
       this->printStackSize(Obj, Reloc, FunctionSec, StackSizeSectionName,
                            Resolver, Data);
     }

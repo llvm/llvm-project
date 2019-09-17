@@ -491,7 +491,7 @@ bb10:
 	%tmp.0.reg2mem.0.rec = mul i32 %indvar, -1
 	%tmp12.rec = add i32 %tmp.0.reg2mem.0.rec, -1
 	%tmp12 = getelementptr inbounds %struct.x, %struct.x* %tmp45, i32 %tmp12.rec
-	%tmp16 = call i32 (i8*, ...) @printf( i8* getelementptr ([12 x i8], [12 x i8]* @.str1, i32 0, i32 0), %struct.x* %tmp12 ) nounwind
+	%tmp16 = call i32 (i8*, ...) @printf( i8* nonnull dereferenceable(1) getelementptr ([12 x i8], [12 x i8]* @.str1, i32 0, i32 0), %struct.x* %tmp12 ) nounwind
 	%tmp84 = icmp eq %struct.x* %tmp12, %orientations62
 	%indvar.next = add i32 %indvar, 1
 	br i1 %tmp84, label %bb17, label %bb10
@@ -652,7 +652,7 @@ define i32 @test35() nounwind {
              i8* getelementptr (%t1, %t1* bitcast (%t0* @s to %t1*), i32 0, i32 1, i32 0)) nounwind
   ret i32 0
 ; CHECK-LABEL: @test35(
-; CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[$NUW:#[0-9]+]]
+; CHECK: call i32 (i8*, ...) @printf(i8*  nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[$NUW:#[0-9]+]]
 }
 
 ; Don't treat signed offsets as unsigned.

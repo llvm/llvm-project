@@ -385,11 +385,11 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp)
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    feq.d a1, ft0, ft0
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    feq.d a0, ft0, ft0
-; RV64IFD-NEXT:    and a0, a0, a1
+; RV64IFD-NEXT:    fmv.d.x ft1, a1
+; RV64IFD-NEXT:    feq.d a0, ft1, ft1
+; RV64IFD-NEXT:    feq.d a1, ft0, ft0
+; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    bnez a0, .LBB8_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    ld ra, 8(sp)
@@ -712,11 +712,11 @@ define void @br_fcmp_uno(double %a, double %b) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp)
-; RV64IFD-NEXT:    fmv.d.x ft0, a1
-; RV64IFD-NEXT:    feq.d a1, ft0, ft0
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    feq.d a0, ft0, ft0
-; RV64IFD-NEXT:    and a0, a0, a1
+; RV64IFD-NEXT:    fmv.d.x ft1, a1
+; RV64IFD-NEXT:    feq.d a0, ft1, ft1
+; RV64IFD-NEXT:    feq.d a1, ft0, ft0
+; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    seqz a0, a0
 ; RV64IFD-NEXT:    bnez a0, .LBB15_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else

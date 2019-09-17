@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -70,6 +71,7 @@ STATISTIC(NumT2BrShrunk, "Number of Thumb2 immediate branches shrunk");
 STATISTIC(NumCBZ,        "Number of CBZ / CBNZ formed");
 STATISTIC(NumJTMoved,    "Number of jump table destination blocks moved");
 STATISTIC(NumJTInserted, "Number of jump table intermediate blocks inserted");
+STATISTIC(NumLEInserted, "Number of LE backwards branches inserted");
 
 static cl::opt<bool>
 AdjustJumpTableBlocks("arm-adjust-jump-tables", cl::Hidden, cl::init(true),
@@ -213,6 +215,7 @@ namespace {
     const ARMBaseInstrInfo *TII;
     const ARMSubtarget *STI;
     ARMFunctionInfo *AFI;
+    MachineDominatorTree *DT = nullptr;
     bool isThumb;
     bool isThumb1;
     bool isThumb2;
@@ -224,6 +227,12 @@ namespace {
     ARMConstantIslands() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      AU.addRequired<MachineDominatorTree>();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
 
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
@@ -350,6 +359,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isPositionIndependentOrROPI =
       STI->getTargetLowering()->isPositionIndependent() || STI->isROPI();
   AFI = MF->getInfo<ARMFunctionInfo>();
+  DT = &getAnalysis<MachineDominatorTree>();
 
   isThumb = AFI->isThumbFunction();
   isThumb1 = AFI->isThumb1OnlyFunction();
@@ -1809,16 +1819,10 @@ bool ARMConstantIslands::optimizeThumb2Instructions() {
   return MadeChange;
 }
 
-bool ARMConstantIslands::optimizeThumb2Branches() {
-  bool MadeChange = false;
 
-  // The order in which branches appear in ImmBranches is approximately their
-  // order within the function body. By visiting later branches first, we reduce
-  // the distance between earlier forward branches and their targets, making it
-  // more likely that the cbn?z optimization, which can only apply to forward
-  // branches, will succeed.
-  for (unsigned i = ImmBranches.size(); i != 0; --i) {
-    ImmBranch &Br = ImmBranches[i-1];
+bool ARMConstantIslands::optimizeThumb2Branches() {
+
+  auto TryShrinkBranch = [this](ImmBranch &Br) {
     unsigned Opcode = Br.MI->getOpcode();
     unsigned NewOpc = 0;
     unsigned Scale = 1;
@@ -1846,47 +1850,115 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
         BBUtils->adjustBBSize(MBB, -2);
         BBUtils->adjustBBOffsetsAfter(MBB);
         ++NumT2BrShrunk;
-        MadeChange = true;
+        return true;
       }
     }
+    return false;
+  };
 
-    Opcode = Br.MI->getOpcode();
-    if (Opcode != ARM::tBcc)
-      continue;
+  struct ImmCompare {
+    MachineInstr* MI = nullptr;
+    unsigned NewOpc = 0;
+  };
+
+  auto FindCmpForCBZ = [this](ImmBranch &Br, ImmCompare &ImmCmp,
+                              MachineBasicBlock *DestBB) {
+    ImmCmp.MI = nullptr;
+    ImmCmp.NewOpc = 0;
 
     // If the conditional branch doesn't kill CPSR, then CPSR can be liveout
     // so this transformation is not safe.
     if (!Br.MI->killsRegister(ARM::CPSR))
-      continue;
+      return false;
 
-    NewOpc = 0;
     unsigned PredReg = 0;
+    unsigned NewOpc = 0;
     ARMCC::CondCodes Pred = getInstrPredicate(*Br.MI, PredReg);
     if (Pred == ARMCC::EQ)
       NewOpc = ARM::tCBZ;
     else if (Pred == ARMCC::NE)
       NewOpc = ARM::tCBNZ;
-    if (!NewOpc)
-      continue;
-    MachineBasicBlock *DestBB = Br.MI->getOperand(0).getMBB();
+    else
+      return false;
+
     // Check if the distance is within 126. Subtract starting offset by 2
     // because the cmp will be eliminated.
     unsigned BrOffset = BBUtils->getOffsetOf(Br.MI) + 4 - 2;
     BBInfoVector &BBInfo = BBUtils->getBBInfo();
     unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
     if (BrOffset >= DestOffset || (DestOffset - BrOffset) > 126)
-      continue;
+      return false;
 
     // Search backwards to find a tCMPi8
     auto *TRI = STI->getRegisterInfo();
     MachineInstr *CmpMI = findCMPToFoldIntoCBZ(Br.MI, TRI);
     if (!CmpMI || CmpMI->getOpcode() != ARM::tCMPi8)
+      return false;
+
+    ImmCmp.MI = CmpMI;
+    ImmCmp.NewOpc = NewOpc;
+    return true;
+  };
+
+  auto TryConvertToLE = [this](ImmBranch &Br, ImmCompare &Cmp) {
+    if (Br.MI->getOpcode() != ARM::t2Bcc || !STI->hasLOB() ||
+        STI->hasMinSize())
+      return false;
+
+    MachineBasicBlock *MBB = Br.MI->getParent();
+    MachineBasicBlock *DestBB = Br.MI->getOperand(0).getMBB();
+    if (BBUtils->getOffsetOf(MBB) < BBUtils->getOffsetOf(DestBB) ||
+        !BBUtils->isBBInRange(Br.MI, DestBB, 4094))
+      return false;
+
+    if (!DT->dominates(DestBB, MBB))
+      return false;
+
+    // We queried for the CBN?Z opcode based upon the 'ExitBB', the opposite
+    // target of Br. So now we need to reverse the condition.
+    Cmp.NewOpc = Cmp.NewOpc == ARM::tCBZ ? ARM::tCBNZ : ARM::tCBZ;
+
+    MachineInstrBuilder MIB = BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(),
+                                      TII->get(ARM::t2LE));
+    MIB.add(Br.MI->getOperand(0));
+    Br.MI->eraseFromParent();
+    Br.MI = MIB;
+    ++NumLEInserted;
+    return true;
+  };
+
+  bool MadeChange = false;
+
+  // The order in which branches appear in ImmBranches is approximately their
+  // order within the function body. By visiting later branches first, we reduce
+  // the distance between earlier forward branches and their targets, making it
+  // more likely that the cbn?z optimization, which can only apply to forward
+  // branches, will succeed.
+  for (ImmBranch &Br : reverse(ImmBranches)) {
+    MachineBasicBlock *DestBB = Br.MI->getOperand(0).getMBB();
+    MachineBasicBlock *MBB = Br.MI->getParent();
+    MachineBasicBlock *ExitBB = &MBB->back() == Br.MI ?
+      MBB->getFallThrough() :
+      MBB->back().getOperand(0).getMBB();
+
+    ImmCompare Cmp;
+    if (FindCmpForCBZ(Br, Cmp, ExitBB) && TryConvertToLE(Br, Cmp)) {
+      DestBB = ExitBB;
+      MadeChange = true;
+    } else {
+      FindCmpForCBZ(Br, Cmp, DestBB);
+      MadeChange |= TryShrinkBranch(Br);
+    }
+
+    unsigned Opcode = Br.MI->getOpcode();
+    if ((Opcode != ARM::tBcc && Opcode != ARM::t2LE) || !Cmp.NewOpc)
       continue;
 
-    Register Reg = CmpMI->getOperand(0).getReg();
+    Register Reg = Cmp.MI->getOperand(0).getReg();
 
     // Check for Kill flags on Reg. If they are present remove them and set kill
     // on the new CBZ.
+    auto *TRI = STI->getRegisterInfo();
     MachineBasicBlock::iterator KillMI = Br.MI;
     bool RegKilled = false;
     do {
@@ -1896,19 +1968,32 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
         RegKilled = true;
         break;
       }
-    } while (KillMI != CmpMI);
+    } while (KillMI != Cmp.MI);
 
     // Create the new CBZ/CBNZ
-    MachineBasicBlock *MBB = Br.MI->getParent();
-    LLVM_DEBUG(dbgs() << "Fold: " << *CmpMI << " and: " << *Br.MI);
+    LLVM_DEBUG(dbgs() << "Fold: " << *Cmp.MI << " and: " << *Br.MI);
     MachineInstr *NewBR =
-        BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(), TII->get(NewOpc))
+        BuildMI(*MBB, Br.MI, Br.MI->getDebugLoc(), TII->get(Cmp.NewOpc))
             .addReg(Reg, getKillRegState(RegKilled))
             .addMBB(DestBB, Br.MI->getOperand(0).getTargetFlags());
-    CmpMI->eraseFromParent();
-    Br.MI->eraseFromParent();
-    Br.MI = NewBR;
+
+    Cmp.MI->eraseFromParent();
+    BBInfoVector &BBInfo = BBUtils->getBBInfo();
     BBInfo[MBB->getNumber()].Size -= 2;
+
+    if (Br.MI->getOpcode() == ARM::tBcc) {
+      Br.MI->eraseFromParent();
+      Br.MI = NewBR;
+    } else if (&MBB->back() != Br.MI) {
+      // We've generated an LE and already erased the original conditional
+      // branch. The CBN?Z is now used to branch to the other successor, so an
+      // unconditional branch terminator is now redundant.
+      MachineInstr *LastMI = &MBB->back();
+      if (LastMI != Br.MI) {
+        BBInfo[MBB->getNumber()].Size -= LastMI->getDesc().getSize();
+        LastMI->eraseFromParent();
+      }
+    }
     BBUtils->adjustBBOffsetsAfter(MBB);
     ++NumCBZ;
     MadeChange = true;

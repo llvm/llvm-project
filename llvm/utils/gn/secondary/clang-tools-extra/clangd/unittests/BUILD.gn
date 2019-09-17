@@ -63,6 +63,7 @@ unittest("ClangdTests") {
     "RenameTests.cpp",
     "SelectionTests.cpp",
     "SemanticHighlightingTests.cpp",
+    "SemanticSelectionTests.cpp",
     "SerializationTests.cpp",
     "SourceCodeTests.cpp",
     "SymbolCollectorTests.cpp",
