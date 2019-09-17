@@ -3,9 +3,9 @@
 bugprone-posix-return
 =====================
 
-Checks if any calls to POSIX functions (except ``posix_openpt``) expect negative
-return values. These functions return either ``0`` on success or an ``errno`` on failure,
-which is positive only.
+Checks if any calls to ``pthread_*`` or ``posix_*`` functions
+(except ``posix_openpt``) expect negative return values. These functions return
+either ``0`` on success or an ``errno`` on failure, which is positive only.
 
 Example buggy usage looks like:
 

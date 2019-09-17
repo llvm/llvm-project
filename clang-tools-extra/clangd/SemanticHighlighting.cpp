@@ -14,6 +14,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -23,6 +24,77 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+/// Some names are not written in the source code and cannot be highlighted,
+/// e.g. anonymous classes. This function detects those cases.
+bool canHighlightName(DeclarationName Name) {
+  if (Name.getNameKind() == DeclarationName::CXXConstructorName ||
+      Name.getNameKind() == DeclarationName::CXXUsingDirective)
+    return true;
+  auto *II = Name.getAsIdentifierInfo();
+  return II && !II->getName().empty();
+}
+
+llvm::Optional<HighlightingKind> kindForType(const Type *TP);
+llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
+  if (auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    // We try to highlight typedefs as their underlying type.
+    if (auto K = kindForType(TD->getUnderlyingType().getTypePtrOrNull()))
+      return K;
+    // And fallback to a generic kind if this fails.
+    return HighlightingKind::Typedef;
+  }
+  // We highlight class decls, constructor decls and destructor decls as
+  // `Class` type. The destructor decls are handled in `VisitTypeLoc` (we
+  // will visit a TypeLoc where the underlying Type is a CXXRecordDecl).
+  if (auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
+    // We don't want to highlight lambdas like classes.
+    if (RD->isLambda())
+      return llvm::None;
+    return HighlightingKind::Class;
+  }
+  if (isa<ClassTemplateDecl>(D) || isa<RecordDecl>(D) ||
+      isa<CXXConstructorDecl>(D))
+    return HighlightingKind::Class;
+  if (auto *MD = dyn_cast<CXXMethodDecl>(D))
+    return MD->isStatic() ? HighlightingKind::StaticMethod
+                          : HighlightingKind::Method;
+  if (isa<FieldDecl>(D))
+    return HighlightingKind::Field;
+  if (isa<EnumDecl>(D))
+    return HighlightingKind::Enum;
+  if (isa<EnumConstantDecl>(D))
+    return HighlightingKind::EnumConstant;
+  if (isa<ParmVarDecl>(D))
+    return HighlightingKind::Parameter;
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    return VD->isStaticDataMember()
+               ? HighlightingKind::StaticField
+               : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
+                                      : HighlightingKind::Variable;
+  if (isa<BindingDecl>(D))
+    return HighlightingKind::Variable;
+  if (isa<FunctionDecl>(D))
+    return HighlightingKind::Function;
+  if (isa<NamespaceDecl>(D) || isa<NamespaceAliasDecl>(D) ||
+      isa<UsingDirectiveDecl>(D))
+    return HighlightingKind::Namespace;
+  if (isa<TemplateTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
+      isa<NonTypeTemplateParmDecl>(D))
+    return HighlightingKind::TemplateParameter;
+  return llvm::None;
+}
+llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
+  if (!TP)
+    return llvm::None;
+  if (TP->isBuiltinType()) // Builtins are special, they do not have decls.
+    return HighlightingKind::Primitive;
+  if (auto *TD = dyn_cast<TemplateTypeParmType>(TP))
+    return kindForDecl(TD->getDecl());
+  if (auto *TD = TP->getAsTagDecl())
+    return kindForDecl(TD);
+  return llvm::None;
+}
 
 // Collects all semantic tokens in an ASTContext.
 class HighlightingTokenCollector
@@ -70,66 +142,30 @@ public:
 
   bool VisitNamespaceAliasDecl(NamespaceAliasDecl *NAD) {
     // The target namespace of an alias can not be found in any other way.
-    addToken(NAD->getTargetNameLoc(), HighlightingKind::Namespace);
+    addToken(NAD->getTargetNameLoc(), NAD->getAliasedNamespace());
     return true;
   }
 
   bool VisitMemberExpr(MemberExpr *ME) {
-    const auto *MD = ME->getMemberDecl();
-    if (isa<CXXDestructorDecl>(MD))
-      // When calling the destructor manually like: AAA::~A(); The ~ is a
-      // MemberExpr. Other methods should still be highlighted though.
-      return true;
-    if (isa<CXXConversionDecl>(MD))
-      // The MemberLoc is invalid for C++ conversion operators. We do not
-      // attempt to add tokens with invalid locations.
-      return true;
-    addToken(ME->getMemberLoc(), MD);
+    if (canHighlightName(ME->getMemberNameInfo().getName()))
+      addToken(ME->getMemberLoc(), ME->getMemberDecl());
     return true;
   }
 
   bool VisitNamedDecl(NamedDecl *ND) {
-    // UsingDirectiveDecl's namespaces do not show up anywhere else in the
-    // Visit/Traverse mehods. But they should also be highlighted as a
-    // namespace.
-    if (const auto *UD = dyn_cast<UsingDirectiveDecl>(ND)) {
-      addToken(UD->getIdentLocation(), HighlightingKind::Namespace);
-      return true;
-    }
-
-    // Constructors' TypeLoc has a TypePtr that is a FunctionProtoType. It has
-    // no tag decl and therefore constructors must be gotten as NamedDecls
-    // instead.
-    if (ND->getDeclName().getNameKind() ==
-        DeclarationName::CXXConstructorName) {
+    if (canHighlightName(ND->getDeclName()))
       addToken(ND->getLocation(), ND);
-      return true;
-    }
-
-    if (ND->getDeclName().getNameKind() != DeclarationName::Identifier)
-      return true;
-
-    addToken(ND->getLocation(), ND);
     return true;
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *Ref) {
-    if (Ref->getNameInfo().getName().getNameKind() !=
-        DeclarationName::Identifier)
-      // Only want to highlight identifiers.
-      return true;
-
-    addToken(Ref->getLocation(), Ref->getDecl());
-    return true;
-  }
-
-  bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
-    addTokenForTypedef(TD->getLocation(), TD);
+    if (canHighlightName(Ref->getNameInfo().getName()))
+      addToken(Ref->getLocation(), Ref->getDecl());
     return true;
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-    addTokenForTypedef(TL.getBeginLoc(), TL.getTypedefNameDecl());
+    addToken(TL.getBeginLoc(), TL.getTypedefNameDecl());
     return true;
   }
 
@@ -140,22 +176,29 @@ public:
     return true;
   }
 
-  bool VisitTypeLoc(TypeLoc &TL) {
-    // This check is for not getting two entries when there are anonymous
-    // structs. It also makes us not highlight certain namespace qualifiers
-    // twice. For elaborated types the actual type is highlighted as an inner
-    // TypeLoc.
-    if (TL.getTypeLocClass() != TypeLoc::TypeLocClass::Elaborated)
-      addType(TL.getBeginLoc(), TL.getTypePtr());
+  bool WalkUpFromTagTypeLoc(TagTypeLoc L) {
+    if (L.isDefinition())
+      return true; // Definition will be highligthed by VisitNamedDecl.
+    return RecursiveASTVisitor::WalkUpFromTagTypeLoc(L);
+  }
+
+  bool WalkUpFromElaboratedTypeLoc(ElaboratedTypeLoc L) {
+    // Avoid highlighting 'struct' or 'enum' keywords.
+    return true;
+  }
+
+  bool VisitTypeLoc(TypeLoc TL) {
+    if (auto K = kindForType(TL.getTypePtr()))
+      addToken(TL.getBeginLoc(), *K);
     return true;
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLoc) {
-    if (NestedNameSpecifier *NNS = NNSLoc.getNestedNameSpecifier())
+    if (auto *NNS = NNSLoc.getNestedNameSpecifier()) {
       if (NNS->getKind() == NestedNameSpecifier::Namespace ||
           NNS->getKind() == NestedNameSpecifier::NamespaceAlias)
         addToken(NNSLoc.getLocalBeginLoc(), HighlightingKind::Namespace);
-
+    }
     return RecursiveASTVisitor<
         HighlightingTokenCollector>::TraverseNestedNameSpecifierLoc(NNSLoc);
   }
@@ -168,127 +211,21 @@ public:
   }
 
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
-    if ((!D->getTypeSourceInfo()))
+    // Highlight 'auto' with its underlying type.
+    auto *AT = D->getType()->getContainedAutoType();
+    if (!AT)
       return true;
-
-    if (auto *AT = D->getType()->getContainedAutoType()) {
-      const auto Deduced = AT->getDeducedType();
-      if (!Deduced.isNull())
-        addType(D->getTypeSpecStartLoc(), Deduced.getTypePtr());
-    }
+    auto K = kindForType(AT->getDeducedType().getTypePtrOrNull());
+    if (!K)
+      return true;
+    addToken(D->getTypeSpecStartLoc(), *K);
     return true;
   }
 
 private:
-  void addTokenForTypedef(SourceLocation Loc, const TypedefNameDecl *TD) {
-    auto *TSI = TD->getTypeSourceInfo();
-    if (!TSI)
-      return;
-    // Try to highlight as underlying type.
-    if (addType(Loc, TSI->getType().getTypePtrOrNull()))
-      return;
-    // Fallback to the typedef highlighting kind.
-    addToken(Loc, HighlightingKind::Typedef);
-  }
-
-  bool addType(SourceLocation Loc, const Type *TP) {
-    if (!TP)
-      return false;
-    if (TP->isBuiltinType()) {
-      // Builtins must be special cased as they do not have a TagDecl.
-      addToken(Loc, HighlightingKind::Primitive);
-      return true;
-    }
-    if (auto *TD = dyn_cast<TemplateTypeParmType>(TP)) {
-      // TemplateTypeParmType also do not have a TagDecl.
-      addToken(Loc, TD->getDecl());
-      return true;
-    }
-    if (auto *TD = TP->getAsTagDecl()) {
-      addToken(Loc, TD);
-      return true;
-    }
-    return false;
-  }
-
-  void addToken(SourceLocation Loc, const NamedDecl *D) {
-    if (D->getDeclName().isIdentifier() && D->getName().empty())
-      // Don't add symbols that don't have any length.
-      return;
-    // We highlight class decls, constructor decls and destructor decls as
-    // `Class` type. The destructor decls are handled in `VisitTypeLoc` (we will
-    // visit a TypeLoc where the underlying Type is a CXXRecordDecl).
-    if (isa<ClassTemplateDecl>(D)) {
-      addToken(Loc, HighlightingKind::Class);
-      return;
-    }
-    if (isa<RecordDecl>(D)) {
-      addToken(Loc, HighlightingKind::Class);
-      return;
-    }
-    if (isa<CXXConstructorDecl>(D)) {
-      addToken(Loc, HighlightingKind::Class);
-      return;
-    }
-    if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-      addToken(Loc, MD->isStatic() ? HighlightingKind::StaticMethod
-                                   : HighlightingKind::Method);
-      return;
-    }
-    if (isa<FieldDecl>(D)) {
-      addToken(Loc, HighlightingKind::Field);
-      return;
-    }
-    if (isa<EnumDecl>(D)) {
-      addToken(Loc, HighlightingKind::Enum);
-      return;
-    }
-    if (isa<EnumConstantDecl>(D)) {
-      addToken(Loc, HighlightingKind::EnumConstant);
-      return;
-    }
-    if (isa<ParmVarDecl>(D)) {
-      addToken(Loc, HighlightingKind::Parameter);
-      return;
-    }
-    if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      addToken(Loc, VD->isStaticDataMember()
-                        ? HighlightingKind::StaticField
-                        : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
-                                               : HighlightingKind::Variable);
-      return;
-    }
-    if (isa<BindingDecl>(D)) {
-      addToken(Loc, HighlightingKind::Variable);
-      return;
-    }
-    if (isa<FunctionDecl>(D)) {
-      addToken(Loc, HighlightingKind::Function);
-      return;
-    }
-    if (isa<NamespaceDecl>(D)) {
-      addToken(Loc, HighlightingKind::Namespace);
-      return;
-    }
-    if (isa<NamespaceAliasDecl>(D)) {
-      addToken(Loc, HighlightingKind::Namespace);
-      return;
-    }
-    if (isa<TemplateTemplateParmDecl>(D)) {
-      addToken(Loc, HighlightingKind::TemplateParameter);
-      return;
-    }
-    if (isa<TemplateTypeParmDecl>(D)) {
-      addToken(Loc, HighlightingKind::TemplateParameter);
-      return;
-    }
-    if (isa<NonTypeTemplateParmDecl>(D)) {
-      addToken(Loc, HighlightingKind::TemplateParameter);
-      return;
-    }
-  }
-
   void addToken(SourceLocation Loc, HighlightingKind Kind) {
+    if (Loc.isInvalid())
+      return;
     const auto &SM = AST.getSourceManager();
     if (Loc.isMacroID()) {
       // Only intereseted in highlighting arguments in macros (DEF_X(arg)).
@@ -298,8 +235,8 @@ private:
     }
 
     // Non top level decls that are included from a header are not filtered by
-    // topLevelDecls. (example: method declarations being included from another
-    // file for a class from another file)
+    // topLevelDecls. (example: method declarations being included from
+    // another file for a class from another file).
     // There are also cases with macros where the spelling loc will not be in
     // the main file and the highlighting would be incorrect.
     if (!isInsideMainFile(Loc, SM))
@@ -313,6 +250,11 @@ private:
     }
 
     Tokens.push_back({Kind, R.getValue()});
+  }
+
+  void addToken(SourceLocation Loc, const NamedDecl *D) {
+    if (auto K = kindForDecl(D))
+      addToken(Loc, *K);
   }
 };
 
