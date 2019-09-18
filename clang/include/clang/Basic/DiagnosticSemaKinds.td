@@ -8077,6 +8077,9 @@ def warn_printf_invalid_objc_flag: Warning<
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,
   InGroup<Format>;
+def warn_format_bool_as_character : Warning<
+  "using '%0' format specifier, but argument has boolean value">,
+  InGroup<Format>;
 def note_format_string_defined : Note<"format string is defined here">;
 def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
 def note_printf_c_str: Note<"did you mean to call the %0 method?">;
