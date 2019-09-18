@@ -41,6 +41,7 @@ class SearchPathOptions;
 class SILModule;
 class VarDecl;
 class ModuleDecl;
+class SourceFile;
 struct PrintOptions;
 class MemoryBufferSerializedModuleLoader;
 namespace irgen {
