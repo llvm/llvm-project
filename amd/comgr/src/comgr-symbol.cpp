@@ -76,8 +76,7 @@ SymbolHelper::mapToComgrSymbolType(uint8_t ELFSymbolType) {
   case ELF::STT_COMMON:
     return AMD_COMGR_SYMBOL_TYPE_COMMON;
   default:
-    // TODO: this case should be distinguished from NOTYPE
-    return AMD_COMGR_SYMBOL_TYPE_NOTYPE;
+    return AMD_COMGR_SYMBOL_TYPE_UNKNOWN;
   }
 }
 

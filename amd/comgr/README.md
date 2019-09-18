@@ -107,6 +107,10 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `1.5`: Add `AMD_COMGR_SYMBOL_TYPE_UNKNOWN` for unknown/unsupported ELF symbol
+  types. This fixes a bug where these symbols were previously reported as
+  `AMD_COMGR_SYMBOL_TYPE_NOTYPE`.
+* `1.4`: Support out-of-process HIP compilation to fat binary.
 * `1.3`: Introduce `amd_comgr_action_info_set_option_list`,
   `amd_comgr_action_info_get_option_list_count`, and
   `amd_comgr_action_info_get_option_list_item` to replace the old option APIs

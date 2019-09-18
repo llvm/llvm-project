@@ -76,7 +76,7 @@
 #endif
 
 #define AMD_COMGR_INTERFACE_VERSION_MAJOR 1
-#define AMD_COMGR_INTERFACE_VERSION_MINOR 4
+#define AMD_COMGR_INTERFACE_VERSION_MINOR 5
 
 #ifdef __cplusplus
 extern "C" {
@@ -1823,6 +1823,15 @@ amd_comgr_symbol_lookup(
  * @brief Machine code object symbol type.
  */
 typedef enum amd_comgr_symbol_type_s {
+  /**
+   * The symbol's type is unknown.
+   *
+   * The user should not infer any specific type for symbols which return
+   * `AMD_COMGR_SYMBOL_TYPE_UNKNOWN`, and these symbols may return different
+   * types in future releases.
+  */
+  AMD_COMGR_SYMBOL_TYPE_UNKNOWN = -0x1,
+
   /**
    * The symbol's type is not specified.
   */

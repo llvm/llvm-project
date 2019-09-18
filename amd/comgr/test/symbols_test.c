@@ -75,7 +75,7 @@ void expectSymbol(const char *objectFilename, const char *symbolName,
 int main(int argc, char *argv[]) {
   expectSymbol(TEST_OBJ_DIR "/shared.so",
                "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
-               AMD_COMGR_SYMBOL_TYPE_NOTYPE);
+               AMD_COMGR_SYMBOL_TYPE_UNKNOWN);
   expectSymbol(TEST_OBJ_DIR "/shared-v3.so",
                "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
                AMD_COMGR_SYMBOL_TYPE_FUNC);
