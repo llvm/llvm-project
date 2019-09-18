@@ -158,41 +158,23 @@ void template_test(double *List, int Length) {
   for_template_constant_expression_test<double, 2, 4, 8>(List, Length);
 }
 
-void vec_width_1(int *List, int Length) {
-// CHECK-LABEL: @{{.*}}vec_width_1{{.*}}(
-// CHECK: br label {{.*}}, !llvm.loop ![[LOOP_15:.*]]
-
-  #pragma clang loop vectorize(enable) vectorize_width(1)
-  for (int i = 0; i < Length; i++)
-    List[i] = i * 2;
-}
-
-void width_1(int *List, int Length) {
-// CHECK-LABEL: @{{.*}}width_1{{.*}}(
-// CHECK: br label {{.*}}, !llvm.loop ![[LOOP_16:.*]]
-
-  #pragma clang loop vectorize_width(1)
-  for (int i = 0; i < Length; i++)
-    List[i] = i * 2;
-}
-
 // CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[UNROLL_FULL:.*]]}
 // CHECK: ![[UNROLL_FULL]] = !{!"llvm.loop.unroll.full"}
 
-// CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2]], ![[UNROLL_DISABLE:.*]], ![[DISTRIBUTE_DISABLE:.*]], ![[VECTORIZE_ENABLE:.*]], ![[WIDTH_8:.*]], ![[INTERLEAVE_4:.*]]}
+// CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2]], ![[UNROLL_DISABLE:.*]], ![[DISTRIBUTE_DISABLE:.*]], ![[WIDTH_8:.*]], ![[INTERLEAVE_4:.*]]}
 // CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
 // CHECK: ![[DISTRIBUTE_DISABLE]] = !{!"llvm.loop.distribute.enable", i1 false}
-// CHECK: ![[VECTORIZE_ENABLE]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: ![[WIDTH_8]] = !{!"llvm.loop.vectorize.width", i32 8}
 // CHECK: ![[INTERLEAVE_4]] = !{!"llvm.loop.interleave.count", i32 4}
 
-// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[INTERLEAVE_4:.*]], ![[VECTORIZE_ENABLE]], ![[FOLLOWUP_VECTOR_3:.*]]}
+// CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[INTERLEAVE_4:.*]], ![[INTENABLE_1:.*]], ![[FOLLOWUP_VECTOR_3:.*]]}
+// CHECK: ![[INTENABLE_1]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: ![[FOLLOWUP_VECTOR_3]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_3:.*]]}
 // CHECK: ![[AFTER_VECTOR_3]] = distinct !{![[AFTER_VECTOR_3]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
 // CHECK: ![[ISVECTORIZED]] = !{!"llvm.loop.isvectorized"}
 // CHECK: ![[UNROLL_8]] = !{!"llvm.loop.unroll.count", i32 8}
 
-// CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[VECTORIZE_ENABLE]], ![[WIDTH_2:.*]], ![[INTERLEAVE_2:.*]]}
+// CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[WIDTH_2:.*]], ![[INTERLEAVE_2:.*]]}
 // CHECK: ![[WIDTH_2]] = !{!"llvm.loop.vectorize.width", i32 2}
 // CHECK: ![[INTERLEAVE_2]] = !{!"llvm.loop.interleave.count", i32 2}
 
@@ -203,7 +185,7 @@ void width_1(int *List, int Length) {
 // CHECK: ![[FOLLOWUP_VECTOR_6]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_6:.*]]}
 // CHECK: ![[AFTER_VECTOR_6]] = distinct !{![[AFTER_VECTOR_6]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
 
-// CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[VECTORIZE_ENABLE]], ![[WIDTH_5:.*]]}
+// CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[WIDTH_5:.*]]}
 // CHECK: ![[WIDTH_5]] = !{!"llvm.loop.vectorize.width", i32 5}
 
 // CHECK: ![[LOOP_8]] = distinct !{![[LOOP_8]], ![[WIDTH_5:.*]]}
@@ -231,9 +213,5 @@ void width_1(int *List, int Length) {
 // CHECK: ![[AFTER_VECTOR_13]] = distinct !{![[AFTER_VECTOR_13]], ![[ISVECTORIZED:.*]], ![[UNROLL_32:.*]]}
 // CHECK: ![[UNROLL_32]] = !{!"llvm.loop.unroll.count", i32 32}
 
-// CHECK: ![[LOOP_14]] = distinct !{![[LOOP_14]], ![[VECTORIZE_ENABLE]], ![[WIDTH_10:.*]]}
+// CHECK: ![[LOOP_14]] = distinct !{![[LOOP_14]], ![[WIDTH_10:.*]]}
 // CHECK: ![[WIDTH_10]] = !{!"llvm.loop.vectorize.width", i32 10}
-
-// CHECK:      ![[LOOP_15]] = distinct !{![[LOOP_15]], ![[WIDTH_1]], ![[VECTORIZE_ENABLE]]}
-
-// CHECK-NEXT: ![[LOOP_16]] = distinct !{![[LOOP_16]], ![[VECTORIZE_ENABLE]], ![[WIDTH_1]]}

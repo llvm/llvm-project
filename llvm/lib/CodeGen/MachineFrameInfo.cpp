@@ -89,8 +89,8 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
   // object is 16-byte aligned. Note that unlike the non-fixed case, if the
   // stack needs realignment, we can't assume that the stack will in fact be
   // aligned.
-  llvm::Align Alignment =
-      commonAlignment(ForcedRealign ? llvm::Align() : StackAlignment, SPOffset);
+  llvm::Align Alignment = commonAlignment(
+      ForcedRealign ? llvm::Align::None() : StackAlignment, SPOffset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
                  StackObject(Size, Alignment, SPOffset, IsImmutable,
@@ -102,8 +102,8 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
 int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size,
                                                   int64_t SPOffset,
                                                   bool IsImmutable) {
-  llvm::Align Alignment =
-      commonAlignment(ForcedRealign ? llvm::Align() : StackAlignment, SPOffset);
+  llvm::Align Alignment = commonAlignment(
+      ForcedRealign ? llvm::Align::None() : StackAlignment, SPOffset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
                  StackObject(Size, Alignment, SPOffset, IsImmutable,

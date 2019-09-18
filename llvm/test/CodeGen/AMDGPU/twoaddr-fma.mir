@@ -181,3 +181,23 @@ body:             |
     %1 = V_FMAC_F32_e32 %stack.0, %0, %2, implicit $exec
 
 ...
+
+# GCN-LABEL: name: test_fmaak_inline_literal_f16
+# GCN: %2:vgpr_32 = V_FMAAK_F16 16384, killed %0, 49664, implicit $exec
+
+---
+name:            test_fmaak_inline_literal_f16
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $vgpr0
+  
+    %3:vgpr_32 = COPY killed $vgpr0
+
+    %26:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
+    %28:vgpr_32 = V_FMAC_F16_e32 16384, killed %3, %26, implicit $exec
+    S_ENDPGM 0
+
+...
+

@@ -2904,7 +2904,7 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   // Emit an alignment directive for this block, if needed.
   const llvm::Align Align = MBB.getAlignment();
-  if (Align > 1)
+  if (Align != llvm::Align::None())
     EmitAlignment(Align);
   MCCodePaddingContext Context;
   setupCodePaddingContext(MBB, Context);

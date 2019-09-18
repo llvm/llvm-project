@@ -279,7 +279,7 @@ void X86RetpolineThunks::populateThunk(MachineFunction &MF,
 
   CallTarget->addLiveIn(Reg);
   CallTarget->setHasAddressTaken();
-  CallTarget->setLogAlignment(4);
+  CallTarget->setAlignment(llvm::Align(16));
   insertRegReturnAddrClobber(*CallTarget, Reg);
   CallTarget->back().setPreInstrSymbol(MF, TargetSym);
   BuildMI(CallTarget, DebugLoc(), TII->get(RetOpc));
