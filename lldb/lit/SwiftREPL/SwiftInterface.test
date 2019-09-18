@@ -1,8 +1,5 @@
 // Test that .swiftinterface files can be loaded via the repl.
 
-// Disabled on linux due to flakiness in CI (rdar://problem/53181277)
-// REQUIRES: system-darwin
-
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/A.swift %t/AA.swift
