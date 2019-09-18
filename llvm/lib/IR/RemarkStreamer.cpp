@@ -22,12 +22,10 @@
 using namespace llvm;
 
 RemarkStreamer::RemarkStreamer(
-    StringRef Filename,
-    std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer)
-    : Filename(Filename), PassFilter(),
-      RemarkSerializer(std::move(RemarkSerializer)) {
-  assert(!Filename.empty() && "This needs to be a real filename.");
-}
+    std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
+    Optional<StringRef> FilenameIn)
+    : PassFilter(), RemarkSerializer(std::move(RemarkSerializer)),
+      Filename(FilenameIn ? Optional<std::string>(FilenameIn->str()) : None) {}
 
 Error RemarkStreamer::setFilter(StringRef Filter) {
   Regex R = Regex(Filter);
@@ -137,16 +135,48 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
     return make_error<RemarkSetupFormatError>(std::move(E));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
-      remarks::createRemarkSerializer(*Format, remarks::SerializerMode::Separate, RemarksFile->os());
+      remarks::createRemarkSerializer(
+          *Format, remarks::SerializerMode::Separate, RemarksFile->os());
   if (Error E = RemarkSerializer.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 
   Context.setRemarkStreamer(std::make_unique<RemarkStreamer>(
-      RemarksFilename, std::move(*RemarkSerializer)));
+      std::move(*RemarkSerializer), RemarksFilename));
 
   if (!RemarksPasses.empty())
     if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
       return make_error<RemarkSetupPatternError>(std::move(E));
 
   return std::move(RemarksFile);
+}
+
+Error llvm::setupOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,
+                                     StringRef RemarksPasses,
+                                     StringRef RemarksFormat,
+                                     bool RemarksWithHotness,
+                                     unsigned RemarksHotnessThreshold) {
+  if (RemarksWithHotness)
+    Context.setDiagnosticsHotnessRequested(true);
+
+  if (RemarksHotnessThreshold)
+    Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
+
+  Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
+  if (Error E = Format.takeError())
+    return make_error<RemarkSetupFormatError>(std::move(E));
+
+  Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
+      remarks::createRemarkSerializer(*Format,
+                                      remarks::SerializerMode::Separate, OS);
+  if (Error E = RemarkSerializer.takeError())
+    return make_error<RemarkSetupFormatError>(std::move(E));
+
+  Context.setRemarkStreamer(
+      std::make_unique<RemarkStreamer>(std::move(*RemarkSerializer)));
+
+  if (!RemarksPasses.empty())
+    if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
+      return make_error<RemarkSetupPatternError>(std::move(E));
+
+  return Error::success();
 }

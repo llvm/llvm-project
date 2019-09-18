@@ -2225,6 +2225,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                << EstimatedStackSize + AlignedCSStackSize
                << " bytes.\n");
 
+  assert((!MFI.isCalleeSavedInfoValid() ||
+          AFI->getCalleeSavedStackSize() == AlignedCSStackSize) &&
+         "Should not invalidate callee saved info");
+
   // Round up to register pair alignment to avoid additional SP adjustment
   // instructions.
   AFI->setCalleeSavedStackSize(AlignedCSStackSize);

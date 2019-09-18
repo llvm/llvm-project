@@ -121,6 +121,12 @@ non-obvious ways.  Here are some hints and tips:
   miscompilation.  Programs should be temporarily modified to disable outputs
   that are likely to vary from run to run.
 
+* In the `crash debugger`_, ``bugpoint`` does not distiguish different crashes
+  during reduction. Thus, if new crash or miscompilation happens, ``bugpoint``
+  will continue with the new crash instead. If you would like to stick to
+  particular crash, you should write check scripts to validate the error
+  message, see ``-compile-command`` in :doc:`CommandGuide/bugpoint`.
+
 * In the code generator and miscompilation debuggers, debugging will go faster
   if you manually modify the program or its inputs to reduce the runtime, but
   still exhibit the problem.
