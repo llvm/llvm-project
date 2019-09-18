@@ -176,11 +176,6 @@ public:
 
   public:
     CompilerType FulfillTypePromise(Status *error = nullptr);
-
-    llvm::Optional<swift::MetadataKind>
-    FulfillKindPromise(Status *error = nullptr);
-
-    bool IsStaticallyDetermined();
   };
 
   class SwiftExceptionPrecondition : public BreakpointPrecondition {
