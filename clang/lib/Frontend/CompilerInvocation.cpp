@@ -680,6 +680,12 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
       // If you change anything here, be sure to update <ptrauth.h>.
       Opts.FunctionPointers =
         PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+      Opts.BlockInvocationFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.BlockHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.BlockByrefHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
       Opts.ThunkCXXVirtualMemberPointers = false;
     }
 

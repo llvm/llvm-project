@@ -144,6 +144,15 @@ struct PointerAuthOptions {
 
   /// The ABI for C function pointers.
   PointerAuthSchema FunctionPointers;
+
+  /// The ABI for block invocation function pointers.
+  PointerAuthSchema BlockInvocationFunctionPointers;
+
+  /// The ABI for block object copy/destroy function pointers.
+  PointerAuthSchema BlockHelperFunctionPointers;
+
+  /// The ABI for __block variable copy/destroy function pointers.
+  PointerAuthSchema BlockByrefHelperFunctionPointers;
 };
 
 }  // end namespace clang

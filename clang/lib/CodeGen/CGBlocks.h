@@ -287,7 +287,7 @@ public:
   CGBlockInfo(const BlockDecl *blockDecl, StringRef Name);
 
   // Indicates whether the block needs a custom copy or dispose function.
-  bool needsCopyDisposeHelpers() const {
+  bool needsCopyDisposeHelpers(const ASTContext &Ctx) const {
     return NeedsCopyDispose && !Block->doesNotEscape();
   }
 };
