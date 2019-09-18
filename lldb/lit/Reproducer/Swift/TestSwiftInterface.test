@@ -5,6 +5,7 @@
 # Start clean.
 # RUN: rm -rf %t.build && mkdir %t.build && cd %t.build
 # RUN: rm -rf %t.lib && mkdir %t.lib
+# RUN: rm -rf %t.out && mkdir %t.out
 # RUN: cp %S/Inputs/A.swift %t.build/AA.swift
 # RUN: cp %S/Inputs/Main.swift %t.build/Main.swift
 
@@ -26,7 +27,7 @@
 # RUN:          -module-cache-path %t.build/cache \
 # RUN:          -I%t.lib -L%t.lib -lAA \
 # RUN:          -module-name main \
-# RUN:          -o %t.out \
+# RUN:          -o %t.out/a.out \
 # RUN:          %t.build/Main.swift
 
 # Cleanup build directory.
@@ -42,7 +43,7 @@
 # RUN:          -s %S/Inputs/SwiftInterface.in \
 # RUN:          --capture \
 # RUN:          --capture-path %t.repro \
-# RUN:          %t.out 2>&1 | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN:          %t.out/a.out 2>&1 | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 
 # Cleanup lib directory and binary.
 # RUN: rm -rf %t.lib
