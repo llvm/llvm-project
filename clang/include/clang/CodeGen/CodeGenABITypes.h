@@ -43,6 +43,7 @@ class CXXMethodDecl;
 class CodeGenOptions;
 class CoverageSourceInfo;
 class DiagnosticsEngine;
+class GlobalDecl;
 class HeaderSearchOptions;
 class ObjCMethodDecl;
 class PreprocessorOptions;
@@ -91,6 +92,9 @@ unsigned getLLVMFieldNumber(CodeGenModule &CGM,
 /// non-doubled (i.e. 64-bit) result of applying a SipHash-2-4 using
 /// a specific key value which can be found in the source.
 uint64_t computeStableStringHash(StringRef string);
+
+/// Return a declaration discriminator for the given global decl.
+uint16_t getPointerAuthDeclDiscriminator(CodeGenModule &CGM, GlobalDecl GD);
 
 /// Return a type discriminator for the given function type.
 uint16_t getPointerAuthTypeDiscriminator(CodeGenModule &CGM, QualType fnType);

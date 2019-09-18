@@ -29,6 +29,31 @@
 using namespace clang;
 using namespace CodeGen;
 
+/// Given a pointer-authentication schema, return a concrete "other"
+/// discriminator for it.
+llvm::Constant *
+CodeGenModule::getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
+                                                GlobalDecl decl,
+                                                QualType type) {
+  switch (schema.getOtherDiscrimination()) {
+  case PointerAuthSchema::Discrimination::None:
+    return nullptr;
+
+  case PointerAuthSchema::Discrimination::Type:
+    assert(!type.isNull() &&
+           "type not provided for type-discriminated schema");
+    return llvm::ConstantInt::get(
+        IntPtrTy, getContext().getPointerAuthTypeDiscriminator(type));
+
+  case PointerAuthSchema::Discrimination::Decl:
+    assert(decl.getDecl() &&
+           "declaration not provided for decl-discriminated schema");
+    return llvm::ConstantInt::get(IntPtrTy,
+                                  getPointerAuthDeclDiscriminator(decl));
+  }
+  llvm_unreachable("bad discrimination kind");
+}
+
 uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
                                                   QualType functionType) {
   return CGM.getContext().getPointerAuthTypeDiscriminator(functionType);
@@ -37,6 +62,186 @@ uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
 /// Compute an ABI-stable hash of the given string.
 uint64_t CodeGen::computeStableStringHash(StringRef string) {
   return clang::getStableStringHash(string);
+}
+
+uint16_t CodeGen::getPointerAuthDeclDiscriminator(CodeGenModule &CGM,
+                                                  GlobalDecl declaration) {
+  return CGM.getPointerAuthDeclDiscriminator(declaration);
+}
+
+/// Return the "other" decl-specific discriminator for the given decl.
+uint16_t
+CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl declaration) {
+  uint16_t &entityHash = PtrAuthDiscriminatorHashes[declaration];
+
+  if (entityHash == 0) {
+    StringRef name = getMangledName(declaration);
+    entityHash = getPointerAuthStringDiscriminator(getContext(), name);
+  }
+
+  return entityHash;
+}
+
+/// Return the abstract pointer authentication schema for a
+/// function pointer of the given type.
+CGPointerAuthInfo
+CodeGenModule::getFunctionPointerAuthInfo(QualType functionType) {
+  // Check for a generic pointer authentication schema.
+  auto &schema = getCodeGenOpts().PointerAuth.FunctionPointers;
+  if (!schema) return CGPointerAuthInfo();
+
+  assert(!schema.isAddressDiscriminated() &&
+         "function pointers cannot use address-specific discrimination");
+
+  auto discriminator =
+    getPointerAuthOtherDiscriminator(schema, GlobalDecl(), functionType);
+  return CGPointerAuthInfo(schema.getKey(), discriminator);
+}
+
+/// Return the natural pointer authentication for values of the given
+/// pointer type.
+static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
+                                                   QualType type) {
+  assert(type->isPointerType());
+
+  // Function pointers use the function-pointer schema by default.
+  if (auto ptrTy = type->getAs<PointerType>()) {
+    auto functionType = ptrTy->getPointeeType();
+    if (functionType->isFunctionType()) {
+      return CGM.getFunctionPointerAuthInfo(functionType);
+    }
+  }
+
+  // Normal data pointers never use direct pointer authentication by default.
+  return CGPointerAuthInfo();
+}
+
+llvm::Value *CodeGenFunction::EmitPointerAuthBlendDiscriminator(
+    llvm::Value *storageAddress, llvm::Value *discriminator) {
+  storageAddress = Builder.CreatePtrToInt(storageAddress, IntPtrTy);
+  auto intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_blend,
+                                    { CGM.IntPtrTy });
+  return Builder.CreateCall(intrinsic, {storageAddress, discriminator});
+}
+
+/// Emit the concrete pointer authentication informaton for the
+/// given authentication schema.
+CGPointerAuthInfo
+CodeGenFunction::EmitPointerAuthInfo(const PointerAuthSchema &schema,
+                                     llvm::Value *storageAddress,
+                                     GlobalDecl schemaDecl,
+                                     QualType schemaType) {
+  if (!schema) return CGPointerAuthInfo();
+
+  llvm::Value *discriminator =
+    CGM.getPointerAuthOtherDiscriminator(schema, schemaDecl, schemaType);
+
+  if (schema.isAddressDiscriminated()) {
+    assert(storageAddress &&
+           "address not provided for address-discriminated schema");
+
+    if (discriminator)
+      discriminator =
+          EmitPointerAuthBlendDiscriminator(storageAddress, discriminator);
+    else
+      discriminator = Builder.CreatePtrToInt(storageAddress, IntPtrTy);
+  }
+
+  return CGPointerAuthInfo(schema.getKey(), discriminator);
+}
+
+CGPointerAuthInfo
+CodeGenFunction::EmitPointerAuthInfo(PointerAuthQualifier qualifier,
+                                     Address storageAddress) {
+  assert(qualifier &&
+         "don't call this if you don't know that the qualifier is present");
+
+  llvm::Value *discriminator = nullptr;
+  if (unsigned extra = qualifier.getExtraDiscriminator()) {
+    discriminator = llvm::ConstantInt::get(IntPtrTy, extra);
+  }
+
+  if (qualifier.isAddressDiscriminated()) {
+    assert(storageAddress.isValid() &&
+           "address discrimination without address");
+    auto storagePtr = storageAddress.getPointer();
+    if (discriminator) {
+      discriminator =
+        EmitPointerAuthBlendDiscriminator(storagePtr, discriminator);
+    } else {
+      discriminator = Builder.CreatePtrToInt(storagePtr, IntPtrTy);
+    }
+  }
+
+  return CGPointerAuthInfo(qualifier.getKey(), discriminator);
+}
+
+static bool isZeroConstant(llvm::Value *value) {
+  if (auto ci = dyn_cast<llvm::ConstantInt>(value))
+    return ci->isZero();
+  return false;
+}
+
+llvm::Value *
+CodeGenFunction::EmitPointerAuthResign(llvm::Value *value, QualType type,
+                                       const CGPointerAuthInfo &curAuthInfo,
+                                       const CGPointerAuthInfo &newAuthInfo,
+                                       bool isKnownNonNull) {
+  // Fast path: if neither schema wants a signature, we're done.
+  if (!curAuthInfo && !newAuthInfo)
+    return value;
+
+  // If the value is obviously null, we're done.
+  auto null =
+    CGM.getNullPointer(cast<llvm::PointerType>(value->getType()), type);
+  if (value == null) {
+    return value;
+  }
+
+  // If both schemas sign the same way, we're done.
+  if (curAuthInfo && newAuthInfo &&
+      curAuthInfo.getKey() == newAuthInfo.getKey()) {
+    auto curD = curAuthInfo.getDiscriminator();
+    auto newD = newAuthInfo.getDiscriminator();
+    if (curD == newD ||
+        (curD == nullptr && isZeroConstant(newD)) ||
+        (newD == nullptr && isZeroConstant(curD)))
+      return value;
+  }
+
+  llvm::BasicBlock *initBB = Builder.GetInsertBlock();
+  llvm::BasicBlock *resignBB = nullptr, *contBB = nullptr;
+
+  // Null pointers have to be mapped to null, and the ptrauth_resign
+  // intrinsic doesn't do that.
+  if (!isKnownNonNull && !llvm::isKnownNonZero(value, CGM.getDataLayout())) {
+    contBB = createBasicBlock("resign.cont");
+    resignBB = createBasicBlock("resign.nonnull");
+
+    auto isNonNull = Builder.CreateICmpNE(value, null);
+    Builder.CreateCondBr(isNonNull, resignBB, contBB);
+    EmitBlock(resignBB);
+  }
+
+  // Perform the auth/sign/resign operation.
+  if (!newAuthInfo) {
+    value = EmitPointerAuthAuth(curAuthInfo, value);
+  } else if (!curAuthInfo) {
+    value = EmitPointerAuthSign(newAuthInfo, value);
+  } else {
+    value = EmitPointerAuthResignCall(value, curAuthInfo, newAuthInfo);
+  }
+
+  // Clean up with a phi if we branched before.
+  if (contBB) {
+    EmitBlock(contBB);
+    auto phi = Builder.CreatePHI(value->getType(), 2);
+    phi->addIncoming(null, initBB);
+    phi->addIncoming(value, resignBB);
+    value = phi;
+  }
+
+  return value;
 }
 
 /// We use an abstract, side-allocated cache for signed function pointers
@@ -168,6 +373,21 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *pointer,
   return llvm::ConstantExpr::getBitCast(global, pointer->getType());
 }
 
+/// Sign a constant pointer using the given scheme, producing a constant
+/// with the same IR type.
+llvm::Constant *
+CodeGenModule::getConstantSignedPointer(llvm::Constant *pointer,
+                                        const PointerAuthSchema &schema,
+                                        llvm::Constant *storageAddress,
+                                        GlobalDecl schemaDecl,
+                                        QualType schemaType) {
+  llvm::Constant *otherDiscriminator =
+    getPointerAuthOtherDiscriminator(schema, schemaDecl, schemaType);
+
+  return getConstantSignedPointer(pointer, schema.getKey(),
+                                  storageAddress, otherDiscriminator);
+}
+
 llvm::Constant *
 CodeGen::getConstantSignedPointer(CodeGenModule &CGM,
                                   llvm::Constant *pointer, unsigned key,
@@ -175,6 +395,24 @@ CodeGen::getConstantSignedPointer(CodeGenModule &CGM,
                                   llvm::Constant *otherDiscriminator) {
   return CGM.getConstantSignedPointer(pointer, key, storageAddress,
                                       otherDiscriminator);
+}
+
+/// Sign the given pointer and add it to the constant initializer
+/// currently being built.
+void ConstantAggregateBuilderBase::addSignedPointer(
+    llvm::Constant *pointer, const PointerAuthSchema &schema,
+    GlobalDecl calleeDecl, QualType calleeType) {
+  if (!schema) return add(pointer);
+
+  llvm::Constant *storageAddress = nullptr;
+  if (schema.isAddressDiscriminated()) {
+    storageAddress = getAddrOfCurrentPosition(pointer->getType());
+  }
+
+  llvm::Constant *signedPointer =
+    Builder.CGM.getConstantSignedPointer(pointer, schema, storageAddress,
+                                         calleeDecl, calleeType);
+  add(signedPointer);
 }
 
 void ConstantAggregateBuilderBase::addSignedPointer(
@@ -193,4 +431,42 @@ void ConstantAggregateBuilderBase::addSignedPointer(
 
 void CodeGenModule::destroyConstantSignedPointerCaches() {
   destroyCache<ByConstantCacheTy>(ConstantSignedPointersByConstant);
+  destroyCache<ByDeclCacheTy>(ConstantSignedPointersByDecl);
+}
+
+llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
+                                                  QualType functionType,
+                                                  const FunctionDecl *FD) {
+  if (auto pointerAuth = getFunctionPointerAuthInfo(functionType)) {
+    // Check a cache that, for now, just has entries for functions signed
+    // with the standard function-pointer scheme.
+    // Cache function pointers based on their decl.  Anything without a decl is
+    // going to be a one-off that doesn't need to be cached anyway.
+    llvm::Constant **entry = nullptr;
+    if (FD) {
+      auto &cache =
+          getOrCreateCache<ByDeclCacheTy>(ConstantSignedPointersByDecl);
+      entry = &cache[FD->getCanonicalDecl()];
+      if (*entry)
+        return llvm::ConstantExpr::getBitCast(*entry, pointer->getType());
+    }
+
+    // If the cache misses, build a new constant.  It's not a *problem* to
+    // have more than one of these for a particular function, but it's nice
+    // to avoid it.
+    pointer = getConstantSignedPointer(
+        pointer, pointerAuth.getKey(), nullptr,
+        cast_or_null<llvm::Constant>(pointerAuth.getDiscriminator()));
+
+    // Store the result back into the cache, if any.
+    if (entry)
+      *entry = pointer;
+  }
+
+  return pointer;
+}
+
+llvm::Constant *CodeGenModule::getFunctionPointer(const FunctionDecl *FD,
+                                                  llvm::Type *Ty) {
+  return getFunctionPointer(getRawFunctionPointer(FD, Ty), FD->getType(), FD);
 }

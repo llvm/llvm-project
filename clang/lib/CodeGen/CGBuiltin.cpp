@@ -4189,7 +4189,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // using exactly the normal call path.
   if (getContext().BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
-                      cast<llvm::Constant>(EmitScalarExpr(E->getCallee())));
+                           CGM.getRawFunctionPointer(FD));
 
   // Check that a call to a target specific builtin has the correct target
   // features.

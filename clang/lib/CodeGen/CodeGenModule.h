@@ -66,6 +66,7 @@ class Stmt;
 class InitListExpr;
 class StringLiteral;
 class NamedDecl;
+class PointerAuthSchema;
 class ValueDecl;
 class VarDecl;
 class LangOptions;
@@ -406,6 +407,7 @@ private:
   std::vector<llvm::Constant*> Annotations;
 
   /// Signed constant pointers.
+  void *ConstantSignedPointersByDecl = nullptr;
   void *ConstantSignedPointersByConstant = nullptr;
 
   /// Map used to get unique annotation strings.
@@ -549,6 +551,8 @@ private:
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
+
+  llvm::DenseMap<GlobalDecl, uint16_t> PtrAuthDiscriminatorHashes;
 
 public:
   CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
@@ -848,10 +852,43 @@ public:
                                     ForDefinition_t IsForDefinition
                                       = NotForDefinition);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  llvm::Constant *getRawFunctionPointer(const FunctionDecl *FD,
+                                        llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  llvm::Constant *getFunctionPointer(const FunctionDecl *FD,
+                                     llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, but will only cache the result if \p FD is passed.
+  llvm::Constant *getFunctionPointer(llvm::Constant *pointer,
+                                     QualType functionType,
+                                     const FunctionDecl *FD = nullptr);
+
+  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType functionType);
+
+  CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType functionType);
+
+  llvm::Constant *getConstantSignedPointer(llvm::Constant *pointer,
+                                           const PointerAuthSchema &schema,
+                                           llvm::Constant *storageAddress,
+                                           GlobalDecl schemaDecl,
+                                           QualType schemaType);
   llvm::Constant *getConstantSignedPointer(llvm::Constant *pointer,
                                            unsigned key,
                                            llvm::Constant *storageAddress,
                                            llvm::Constant *extraDiscrim);
+
+  llvm::Constant *
+  getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
+                                   GlobalDecl schemaDecl, QualType schemaType);
+  uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
 
   /// Get the address of the RTTI descriptor for the given type.
   llvm::Constant *GetAddrOfRTTIDescriptor(QualType Ty, bool ForEH = false);

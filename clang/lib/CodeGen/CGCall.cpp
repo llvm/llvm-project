@@ -4370,6 +4370,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
       getBundlesForFunclet(CalleePtr);
 
+  // Add the pointer-authentication bundle.
+  EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
+
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
   if (!InvokeDest) {

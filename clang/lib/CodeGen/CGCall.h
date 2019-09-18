@@ -62,6 +62,42 @@ public:
   const GlobalDecl getCalleeDecl() const { return CalleeDecl; }
   };
 
+  /// Information necessary for pointer authentication.
+  class CGPointerAuthInfo {
+    unsigned Signed : 1;
+    unsigned Key : 31;
+    llvm::Value *Discriminator;
+  public:
+    CGPointerAuthInfo() {
+      Signed = false;
+    }
+    CGPointerAuthInfo(unsigned key, llvm::Value *discriminator)
+        : Discriminator(discriminator) {
+      assert(!discriminator ||
+             discriminator->getType()->isIntegerTy() ||
+             discriminator->getType()->isPointerTy());
+      Signed = true;
+      Key = key;
+    }
+
+    explicit operator bool() const {
+      return isSigned();
+    }
+
+    bool isSigned() const {
+      return Signed;
+    }
+
+    unsigned getKey() const {
+      assert(isSigned());
+      return Key;
+    }
+    llvm::Value *getDiscriminator() const {
+      assert(isSigned());
+      return Discriminator;
+    }
+  };
+
   /// All available information about a concrete callee.
   class CGCallee {
     enum class SpecialKind : uintptr_t {
@@ -73,6 +109,10 @@ public:
       Last = Virtual
     };
 
+    struct OrdinaryInfoStorage {
+      CGCalleeInfo AbstractInfo;
+      CGPointerAuthInfo PointerAuthInfo;
+    };
     struct BuiltinInfoStorage {
       const FunctionDecl *Decl;
       unsigned ID;
@@ -89,7 +129,7 @@ public:
 
     SpecialKind KindOrFunctionPointer;
     union {
-      CGCalleeInfo AbstractInfo;
+      OrdinaryInfoStorage OrdinaryInfo;
       BuiltinInfoStorage BuiltinInfo;
       PseudoDestructorInfoStorage PseudoDestructorInfo;
       VirtualInfoStorage VirtualInfo;
@@ -108,9 +148,11 @@ public:
 
     /// Construct a callee.  Call this constructor directly when this
     /// isn't a direct call.
-    CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
+    CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr,
+             const CGPointerAuthInfo &pointerAuthInfo = /*FIXME*/ CGPointerAuthInfo())
         : KindOrFunctionPointer(SpecialKind(uintptr_t(functionPtr))) {
-      AbstractInfo = abstractInfo;
+      OrdinaryInfo.AbstractInfo = abstractInfo;
+      OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
       assert(functionPtr && "configuring callee without function pointer");
       assert(functionPtr->getType()->isPointerTy());
       assert(functionPtr->getType()->getPointerElementType()->isFunctionTy());
@@ -132,13 +174,13 @@ public:
 
     static CGCallee forDirect(llvm::Constant *functionPtr,
                         const CGCalleeInfo &abstractInfo = CGCalleeInfo()) {
-      return CGCallee(abstractInfo, functionPtr);
+      return CGCallee(abstractInfo, functionPtr, CGPointerAuthInfo());
     }
 
     static CGCallee
     forDirect(llvm::FunctionCallee functionPtr,
               const CGCalleeInfo &abstractInfo = CGCalleeInfo()) {
-      return CGCallee(abstractInfo, functionPtr.getCallee());
+      return CGCallee(abstractInfo, functionPtr.getCallee(), CGPointerAuthInfo());
     }
 
     static CGCallee forVirtual(const CallExpr *CE, GlobalDecl MD, Address Addr,
@@ -178,7 +220,11 @@ public:
       if (isVirtual())
         return VirtualInfo.MD;
       assert(isOrdinary());
-      return AbstractInfo;
+      return OrdinaryInfo.AbstractInfo;
+    }
+    const CGPointerAuthInfo &getPointerAuthInfo() const {
+      assert(isOrdinary());
+      return OrdinaryInfo.PointerAuthInfo;
     }
     llvm::Value *getFunctionPointer() const {
       assert(isOrdinary());
@@ -187,6 +233,10 @@ public:
     void setFunctionPointer(llvm::Value *functionPtr) {
       assert(isOrdinary());
       KindOrFunctionPointer = SpecialKind(uintptr_t(functionPtr));
+    }
+    void setPointerAuthInfo(CGPointerAuthInfo pointerAuth) {
+      assert(isOrdinary());
+      OrdinaryInfo.PointerAuthInfo = pointerAuth;
     }
 
     bool isVirtual() const {

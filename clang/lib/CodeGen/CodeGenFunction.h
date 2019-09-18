@@ -3648,6 +3648,31 @@ public:
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
 
+  /// Create the discriminator from the storage address and the entity hash.
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *storageAddress,
+                                                 llvm::Value *discriminator);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &schema,
+                                        llvm::Value *storageAddress,
+                                        GlobalDecl calleeDecl,
+                                        QualType calleeType);
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthResign(llvm::Value *pointer,
+                                     QualType pointerType,
+                                     const CGPointerAuthInfo &curAuthInfo,
+                                     const CGPointerAuthInfo &newAuthInfo,
+                                     bool isKnownNonNull);
+  llvm::Value *EmitPointerAuthResignCall(llvm::Value *pointer,
+                                         const CGPointerAuthInfo &curInfo,
+                                         const CGPointerAuthInfo &newInfo);
+  void EmitPointerAuthOperandBundle(const CGPointerAuthInfo &info,
+                          SmallVectorImpl<llvm::OperandBundleDef> &bundles);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
+                                        Address storageAddress);
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
   static std::string getNonTrivialCopyConstructorStr(QualType QT,

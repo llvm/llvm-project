@@ -2393,14 +2393,14 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
-                                               const FunctionDecl *FD) {
+llvm::Constant *CodeGenModule::getRawFunctionPointer(const FunctionDecl *FD,
+                                                     llvm::Type *Ty) {
   if (FD->hasAttr<WeakRefAttr>()) {
-    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = CGM.GetAddrOfFunction(FD);
+  llvm::Constant *V = GetAddrOfFunction(FD, Ty);
   if (!FD->hasPrototype()) {
     if (const FunctionProtoType *Proto =
             FD->getType()->getAs<FunctionProtoType>()) {
@@ -2408,10 +2408,9 @@ static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
       // isn't the same as the type of a use.  Correct for this with a
       // bitcast.
       QualType NoProtoType =
-          CGM.getContext().getFunctionNoProtoType(Proto->getReturnType());
-      NoProtoType = CGM.getContext().getPointerType(NoProtoType);
-      V = llvm::ConstantExpr::getBitCast(V,
-                                      CGM.getTypes().ConvertType(NoProtoType));
+          getContext().getFunctionNoProtoType(Proto->getReturnType());
+      NoProtoType = getContext().getPointerType(NoProtoType);
+      V = llvm::ConstantExpr::getBitCast(V,getTypes().ConvertType(NoProtoType));
     }
   }
   return V;
@@ -2419,7 +2418,7 @@ static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
 
 static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF,
                                      const Expr *E, const FunctionDecl *FD) {
-  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, FD);
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(FD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
