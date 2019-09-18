@@ -1780,6 +1780,14 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
       FuncAttrs.addAttribute("stackrealign");
     if (CodeGenOpts.Backchain)
       FuncAttrs.addAttribute("backchain");
+    if (CodeGenOpts.PointerAuth.ReturnAddresses)
+      FuncAttrs.addAttribute("ptrauth-returns");
+    if (CodeGenOpts.PointerAuth.FunctionPointers)
+      FuncAttrs.addAttribute("ptrauth-calls");
+    if (CodeGenOpts.PointerAuth.IndirectGotos)
+      FuncAttrs.addAttribute("ptrauth-indirect-gotos");
+    if (CodeGenOpts.PointerAuth.AuthTraps)
+      FuncAttrs.addAttribute("ptrauth-auth-traps");
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
