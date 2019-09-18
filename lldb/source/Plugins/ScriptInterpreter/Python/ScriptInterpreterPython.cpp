@@ -616,6 +616,10 @@ void ScriptInterpreterPythonImpl::LeaveSession() {
   if (log)
     log->PutCString("ScriptInterpreterPythonImpl::LeaveSession()");
 
+  // Unset the LLDB global variables.
+  PyRun_SimpleString("lldb.debugger = None; lldb.target = None; lldb.process "
+                     "= None; lldb.thread = None; lldb.frame = None");
+
   // checking that we have a valid thread state - since we use our own
   // threading and locking in some (rare) cases during cleanup Python may end
   // up believing we have no thread state and PyImport_AddModule will crash if
@@ -2687,12 +2691,12 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     StreamString command_stream;
 
     // Before executing Python code, lock the GIL.
-    Locker py_lock(
-        this,
-        Locker::AcquireLock | (init_session ? Locker::InitSession : 0) |
-            (init_session ? Locker::InitGlobals : 0) | Locker::NoSTDIN,
-        Locker::FreeAcquiredLock |
-            (init_session ? Locker::TearDownSession : 0));
+    Locker py_lock(this,
+                   Locker::AcquireLock |
+                       (init_session ? Locker::InitSession : 0) |
+                       Locker::NoSTDIN,
+                   Locker::FreeAcquiredLock |
+                       (init_session ? Locker::TearDownSession : 0));
     namespace fs = llvm::sys::fs;
     fs::file_status st;
     std::error_code ec = status(target_file.GetPath(), st);
