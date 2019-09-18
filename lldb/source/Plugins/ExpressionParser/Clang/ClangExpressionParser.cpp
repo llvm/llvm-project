@@ -137,12 +137,14 @@ public:
 
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
-  ClangDiagnosticManagerAdapter()
-      : m_passthrough(new clang::TextDiagnosticBuffer) {}
-
-  ClangDiagnosticManagerAdapter(
-      const std::shared_ptr<clang::TextDiagnosticBuffer> &passthrough)
-      : m_passthrough(passthrough) {}
+  ClangDiagnosticManagerAdapter(DiagnosticOptions &opts) {
+    DiagnosticOptions *m_options = new DiagnosticOptions(opts);
+    m_options->ShowPresumedLoc = true;
+    m_options->ShowLevel = false;
+    m_os.reset(new llvm::raw_string_ostream(m_output));
+    m_passthrough.reset(
+        new clang::TextDiagnosticPrinter(*m_os, m_options, false));
+  }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
     m_manager = manager;
@@ -150,12 +152,12 @@ public:
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override {
-    if (m_manager) {
-      llvm::SmallVector<char, 32> diag_str;
-      Info.FormatDiagnostic(diag_str);
-      diag_str.push_back('\0');
-      const char *data = diag_str.data();
+    // Render diagnostic message to m_output.
+    m_output.clear();
+    m_passthrough->HandleDiagnostic(DiagLevel, Info);
+    m_os->flush();
 
+    if (m_manager) {
       lldb_private::DiagnosticSeverity severity;
       bool make_new_diagnostic = true;
 
@@ -172,12 +174,16 @@ public:
         severity = eDiagnosticSeverityRemark;
         break;
       case DiagnosticsEngine::Level::Note:
-        m_manager->AppendMessageToDiagnostic(data);
+        m_manager->AppendMessageToDiagnostic(m_output);
         make_new_diagnostic = false;
       }
       if (make_new_diagnostic) {
+        // ClangDiagnostic messages are expected to have no whitespace/newlines
+        // around them.
+        std::string stripped_output = llvm::StringRef(m_output).trim();
+
         ClangDiagnostic *new_diagnostic =
-            new ClangDiagnostic(data, severity, Info.getID());
+            new ClangDiagnostic(stripped_output, severity, Info.getID());
         m_manager->AddDiagnostic(new_diagnostic);
 
         // Don't store away warning fixits, since the compiler doesn't have
@@ -194,23 +200,17 @@ public:
         }
       }
     }
-
-    m_passthrough->HandleDiagnostic(DiagLevel, Info);
   }
 
-  void FlushDiagnostics(DiagnosticsEngine &Diags) {
-    m_passthrough->FlushDiagnostics(Diags);
-  }
-
-  DiagnosticConsumer *clone(DiagnosticsEngine &Diags) const {
-    return new ClangDiagnosticManagerAdapter(m_passthrough);
-  }
-
-  clang::TextDiagnosticBuffer *GetPassthrough() { return m_passthrough.get(); }
+  clang::TextDiagnosticPrinter *GetPassthrough() { return m_passthrough.get(); }
 
 private:
   DiagnosticManager *m_manager = nullptr;
-  std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
+  std::shared_ptr<clang::TextDiagnosticPrinter> m_passthrough;
+  /// Output stream of m_passthrough.
+  std::shared_ptr<llvm::raw_string_ostream> m_os;
+  /// Output string filled by m_os.
+  std::string m_output;
 };
 
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
@@ -258,12 +258,11 @@ static void SetupModuleHeaderPaths(CompilerInstance *compiler,
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
 
-ClangExpressionParser::ClangExpressionParser(
-    ExecutionContextScope *exe_scope, Expression &expr,
-    bool generate_debug_info, std::vector<std::string> include_directories)
+ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
+    bool generate_debug_info, std::vector<std::string> include_directories, std::string filename)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr),
-      m_include_directories(std::move(include_directories)) {
+      m_include_directories(std::move(include_directories)), m_filename(std::move(filename)) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // We can't compile expressions without a target.  So if the exe_scope is
@@ -557,7 +556,9 @@ ClangExpressionParser::ClangExpressionParser(
 
   // 6. Set up the diagnostic buffer for reporting errors
 
-  m_compiler->getDiagnostics().setClient(new ClangDiagnosticManagerAdapter);
+  auto diag_mgr = new ClangDiagnosticManagerAdapter(
+      m_compiler->getDiagnostics().getDiagnosticOptions());
+  m_compiler->getDiagnostics().setClient(diag_mgr);
 
   // 7. Set up the source management objects inside the compiler
   m_compiler->createFileManager();
@@ -869,8 +870,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   ClangDiagnosticManagerAdapter *adapter =
       static_cast<ClangDiagnosticManagerAdapter *>(
           m_compiler->getDiagnostics().getClient());
-  clang::TextDiagnosticBuffer *diag_buf = adapter->GetPassthrough();
-  diag_buf->FlushDiagnostics(m_compiler->getDiagnostics());
+  auto diag_buf = adapter->GetPassthrough();
 
   adapter->ResetManager(&diagnostic_manager);
 
@@ -921,7 +921,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   if (!created_main_file) {
     std::unique_ptr<MemoryBuffer> memory_buffer =
-        MemoryBuffer::getMemBufferCopy(expr_text, "<lldb-expr>");
+        MemoryBuffer::getMemBufferCopy(expr_text, m_filename);
     source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
   }
 

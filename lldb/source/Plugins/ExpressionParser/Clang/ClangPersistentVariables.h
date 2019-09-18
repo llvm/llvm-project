@@ -50,6 +50,15 @@ public:
     return "$";
   }
 
+  /// Returns the next file name that should be used for user expressions.
+  std::string GetNextExprFileName() {
+    std::string name;
+    name.append("<user expression ");
+    name.append(std::to_string(m_next_user_file_id++));
+    name.append(">");
+    return name;
+  }
+
   llvm::Optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
@@ -66,6 +75,8 @@ public:
   }
 
 private:
+  /// The counter used by GetNextExprFileName.
+  uint32_t m_next_user_file_id = 0;
   // The counter used by GetNextPersistentVariableName
   uint32_t m_next_persistent_variable_id = 0;
 
