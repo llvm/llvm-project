@@ -2212,18 +2212,6 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   return ret_val;
 }
 
-void ScriptInterpreterPythonImpl::Clear() {
-  // Release any global variables that might have strong references to
-  // LLDB objects when clearing the python script interpreter.
-  Locker locker(this, Locker::AcquireLock, Locker::FreeAcquiredLock);
-
-  // This may be called as part of Py_Finalize.  In that case the modules are
-  // destroyed in random order and we can't guarantee that we can access these.
-  if (Py_IsInitialized())
-    PyRun_SimpleString("lldb.debugger = None; lldb.target = None; lldb.process "
-                       "= None; lldb.thread = None; lldb.frame = None");
-}
-
 bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
