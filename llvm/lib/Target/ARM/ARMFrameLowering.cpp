@@ -1512,6 +1512,8 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
   unsigned Limit = (1 << 12) - 1;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
       for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         if (!MI.getOperand(i).isFI())
           continue;
@@ -1522,6 +1524,10 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           Limit = std::min(Limit, (1U << 8) - 1);
           break;
         }
+        // t2ADDri will not require an extra register, it can reuse the
+        // destination.
+        if (MI.getOpcode() == ARM::t2ADDri || MI.getOpcode() == ARM::t2ADDri12)
+          break;
 
         const MCInstrDesc &MCID = MI.getDesc();
         const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i, TRI, MF);
@@ -1530,9 +1536,16 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
 
         // Otherwise check the addressing mode.
         switch (MI.getDesc().TSFlags & ARMII::AddrModeMask) {
+        case ARMII::AddrMode_i12:
+        case ARMII::AddrMode2:
+          // Default 12 bit limit.
+          break;
         case ARMII::AddrMode3:
         case ARMII::AddrModeT2_i8:
           Limit = std::min(Limit, (1U << 8) - 1);
+          break;
+        case ARMII::AddrMode5FP16:
+          Limit = std::min(Limit, ((1U << 8) - 1) * 2);
           break;
         case ARMII::AddrMode5:
         case ARMII::AddrModeT2_i8s4:
@@ -1560,7 +1573,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           Limit = std::min(Limit, ((1U << 7) - 1) * 4);
           break;
         default:
-          break;
+          llvm_unreachable("Unhandled addressing mode in stack size limit calculation");
         }
         break; // At most one FI per instruction
       }
