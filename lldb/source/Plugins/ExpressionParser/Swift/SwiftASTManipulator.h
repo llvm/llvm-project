@@ -29,6 +29,7 @@ class ExtensionDecl;
 class FuncDecl;
 class RepeatWhileStmt;
 class ReturnStmt;
+class SourceFile;
 class VarDecl;
 } // namespace swift
 
