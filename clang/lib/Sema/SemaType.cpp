@@ -2456,6 +2456,12 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
     return true;
   }
 
+  // __ptrauth is illegal on a function return type.
+  if (T.getPointerAuth()) {
+    Diag(Loc, diag::err_ptrauth_qualifier_return) << T;
+    return true;
+  }
+
   if (T.hasNonTrivialToPrimitiveDestructCUnion() ||
       T.hasNonTrivialToPrimitiveCopyCUnion())
     checkNonTrivialCUnion(T, Loc, NTCUC_FunctionReturn,
@@ -2543,6 +2549,10 @@ QualType Sema::BuildFunctionType(QualType T,
       // Disallow half FP arguments.
       Diag(Loc, diag::err_parameters_retval_cannot_have_fp16_type) << 0 <<
         FixItHint::CreateInsertion(Loc, "*");
+      Invalid = true;
+    } else if (ParamType.getPointerAuth()) {
+      // __ptrauth is illegal on a function return type.
+      Diag(Loc, diag::err_ptrauth_qualifier_param) << T;
       Invalid = true;
     }
 
@@ -4621,6 +4631,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             diag::err_parameters_retval_cannot_have_fp16_type) << 1;
           D.setInvalidType(true);
         }
+      }
+
+      // __ptrauth is illegal on a function return type.
+      if (T.getPointerAuth()) {
+        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_return) << T;
       }
 
       if (LangOpts.OpenCL) {
@@ -7343,6 +7358,90 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   CurType = S.Context.getVectorType(CurType, numElts, VecKind);
 }
 
+/// Handle the __ptrauth qualifier.
+static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
+                                   Sema &S) {
+  if (attr.getNumArgs() < 1 || attr.getNumArgs() > 3) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count);
+    attr.setInvalid();
+    return;
+  }
+
+  Expr *keyArg =
+    attr.getArgAsExpr(0);
+  Expr *isAddressDiscriminatedArg =
+    attr.getNumArgs() >= 2 ? attr.getArgAsExpr(1) : nullptr;
+  Expr *extraDiscriminatorArg =
+    attr.getNumArgs() >= 3 ? attr.getArgAsExpr(2) : nullptr;
+
+  unsigned key;
+  if (S.checkConstantPointerAuthKey(keyArg, key)) {
+    attr.setInvalid();
+    return;
+  }
+  assert(key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
+
+  bool isInvalid = false;
+  auto checkArg = [&](Expr *arg, unsigned argIndex) -> unsigned {
+    if (!arg) return 0;
+
+    llvm::APSInt result;
+    if (!arg->isIntegerConstantExpr(result, S.Context)) {
+      isInvalid = true;
+      S.Diag(arg->getExprLoc(), diag::err_ptrauth_qualifier_arg_not_ice);
+      return 0;
+    }
+
+    unsigned max =
+      (argIndex == 1 ? 1 : PointerAuthQualifier::MaxDiscriminator);
+    if (result < 0 || result > max) {
+      llvm::SmallString<32> value; {
+        llvm::raw_svector_ostream str(value);
+        str << result;
+      }
+
+      if (argIndex == 1) {
+        S.Diag(arg->getExprLoc(),
+               diag::err_ptrauth_qualifier_address_discrimination_invalid)
+          << value;
+      } else {
+        S.Diag(arg->getExprLoc(),
+               diag::err_ptrauth_qualifier_extra_discriminator_invalid)
+          << value << max;
+      }
+      isInvalid = true;
+    }
+    return result.getZExtValue();
+  };
+  bool isAddressDiscriminated = checkArg(isAddressDiscriminatedArg, 1);
+  unsigned extraDiscriminator = checkArg(extraDiscriminatorArg, 2);
+  if (isInvalid) {
+    attr.setInvalid();
+    return;
+  }
+
+  if (!type->isPointerType()) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << type;
+    attr.setInvalid();
+    return;
+  }
+
+  if (type.getPointerAuth()) {
+    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_redundant) << type;
+    attr.setInvalid();
+    return;
+  }
+
+  if (!S.getLangOpts().PointerAuthIntrinsics) {
+    S.diagnosePointerAuthDisabled(attr.getLoc(), attr.getRange());
+    attr.setInvalid();
+    return;
+  }
+
+  PointerAuthQualifier qual(key, isAddressDiscriminated, extraDiscriminator);
+  type = S.Context.getPointerAuthType(type, qual);
+}
+
 /// Handle OpenCL Access Qualifier Attribute.
 static void HandleOpenCLAccessAttr(QualType &CurType, const ParsedAttr &Attr,
                                    Sema &S) {
@@ -7650,6 +7749,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     case ParsedAttr::AT_OpenCLAccess:
       HandleOpenCLAccessAttr(type, attr, state.getSema());
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_PointerAuth:
+      HandlePtrAuthQualifier(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_LifetimeBound:

@@ -766,6 +766,26 @@ def err_ptrauth_type_disc_variably_modified : Error<
    "cannot pass variably-modified type %0 to "
    "'__builtin_ptrauth_type_discriminator'">;
 
+// __ptrauth qualifier
+def err_ptrauth_qualifier_return : Error<
+  "return types may not be qualified with __ptrauth; type is %0">;
+def err_ptrauth_qualifier_param : Error<
+  "parameter types may not be qualified with __ptrauth; type is %0">;
+def err_ptrauth_qualifier_cast : Error<
+  "cast types may not be qualified with __ptrauth; type is %0">;
+def err_ptrauth_qualifier_nonpointer : Error<
+  "__ptrauth qualifier may only be applied to pointer types; type here is %0">;
+def err_ptrauth_qualifier_redundant : Error<
+  "type %0 is already __ptrauth-qualified">;
+def err_ptrauth_qualifier_bad_arg_count : Error<
+  "__ptrauth qualifier must take between 1 and 3 arguments">;
+def err_ptrauth_qualifier_arg_not_ice : Error<
+  "argument to __ptrauth must be an integer constant expression">;
+def err_ptrauth_qualifier_address_discrimination_invalid : Error<
+  "address discrimination flag for __ptrauth must be 0 or 1; value is %0">;
+def err_ptrauth_qualifier_extra_discriminator_invalid : Error<
+  "extra discriminator for __ptrauth must between 0 and %1; value is %0">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -4970,7 +4990,7 @@ def note_deleted_special_member_class_subobject : Note<
   "%select{default|corresponding|default|default|default}4 constructor}0|"
   "destructor}5"
   "%select{||s||}4"
-  "|is an ObjC pointer}6">;
+  "|is an ObjC pointer|has an address-discriminated ptrauth qualifier}6">;
 def note_deleted_default_ctor_uninit_field : Note<
   "%select{default constructor of|constructor inherited by}0 "
   "%1 is implicitly deleted because field %2 of "
@@ -7386,6 +7406,19 @@ def err_typecheck_incompatible_ownership : Error<
   "sending to parameter of different type}0,1"
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " changes retain/release properties of pointer">;
+def err_typecheck_incompatible_ptrauth : Error<
+  "%select{%diff{assigning $ to $|assigning to different types}1,0"
+  "|%diff{passing $ to parameter of type $|"
+  "passing to parameter of different type}0,1"
+  "|%diff{returning $ from a function with result type $|"
+  "returning from function with different return type}0,1"
+  "|%diff{converting $ to type $|converting between types}0,1"
+  "|%diff{initializing $ with an expression of type $|"
+  "initializing with expression of different type}0,1"
+  "|%diff{sending $ to parameter of type $|"
+  "sending to parameter of different type}0,1"
+  "|%diff{casting $ to type $|casting between types}0,1}2"
+  " changes pointer-authentication of pointee type">;
 def err_typecheck_comparison_of_distinct_blocks : Error<
   "comparison of distinct block types%diff{ ($ and $)|}0,1">;
 
@@ -7690,6 +7723,8 @@ def ext_typecheck_cond_pointer_integer_mismatch : ExtWarn<
   "pointer/integer type mismatch in conditional expression"
   "%diff{ ($ and $)|}0,1">,
   InGroup<DiagGroup<"conditional-type-mismatch">>;
+def err_typecheck_cond_incompatible_ptrauth : Error<
+  "__ptrauth qualification mismatch%diff{ ($ and $)|}0,1">;
 def err_typecheck_choose_expr_requires_constant : Error<
   "'__builtin_choose_expr' requires a constant expression">;
 def warn_unused_expr : Warning<"expression result unused">,

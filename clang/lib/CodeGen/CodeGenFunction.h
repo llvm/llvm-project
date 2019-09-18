@@ -3674,6 +3674,26 @@ public:
 
   CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
                                         Address storageAddress);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      llvm::Value *pointer,
+                                      QualType valueType,
+                                      Address storageAddress,
+                                      bool isKnownNonNull);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      const Expr *pointerExpr,
+                                      Address storageAddress);
+  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier qualifier,
+                                        llvm::Value *pointer,
+                                        QualType pointerType,
+                                        Address storageAddress,
+                                        bool isKnownNonNull);
+  void EmitPointerAuthCopy(PointerAuthQualifier qualifier, QualType type,
+                           Address destField, Address srcField);
+
+  std::pair<llvm::Value *, CGPointerAuthInfo>
+  EmitOrigPointerRValue(const Expr *E);
+  bool isPointerKnownNonNull(const Expr *E);
+
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
   static std::string getNonTrivialCopyConstructorStr(QualType QT,

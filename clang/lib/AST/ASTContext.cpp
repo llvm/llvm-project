@@ -6204,6 +6204,9 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
     return true;
   }
 
+  if (Ty.hasAddressDiscriminatedPointerAuth())
+    return true;
+
   // The block needs copy/destroy helpers if Ty is non-trivial to destructively
   // move or destroy.
   if (Ty.isNonTrivialToPrimitiveDestructiveMove() || Ty.isDestructedType())
@@ -8880,6 +8883,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
         LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
         LQuals.getObjCLifetime() != RQuals.getObjCLifetime() ||
+        LQuals.getPointerAuth() != RQuals.getPointerAuth() ||
         LQuals.hasUnaligned() != RQuals.hasUnaligned())
       return {};
 

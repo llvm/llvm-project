@@ -1754,10 +1754,13 @@ namespace {
 struct ConstantLValue {
   llvm::Constant *Value;
   bool HasOffsetApplied;
+  bool HasDestPointerAuth;
 
   /*implicit*/ ConstantLValue(llvm::Constant *value,
-                              bool hasOffsetApplied = false)
-    : Value(value), HasOffsetApplied(false) {}
+                              bool hasOffsetApplied = false,
+                              bool hasDestPointerAuth = false)
+    : Value(value), HasOffsetApplied(false),
+      HasDestPointerAuth(hasDestPointerAuth) {}
 
   /*implicit*/ ConstantLValue(ConstantAddress address)
     : ConstantLValue(address.getPointer()) {}
@@ -1806,6 +1809,8 @@ private:
   unsigned emitPointerAuthKey(const Expr *E);
   std::pair<llvm::Constant*, llvm::Constant*>
   emitPointerAuthDiscriminator(const Expr *E);
+  llvm::Constant *tryEmitConstantSignedPointer(llvm::Constant *ptr,
+                                               PointerAuthQualifier auth);
 
   bool hasNonZeroOffset() const {
     return !Value.getLValueOffset().isZero();
@@ -1865,6 +1870,14 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
     value = applyOffset(value);
   }
 
+  // Apply pointer-auth signing from the destination type.
+  if (auto pointerAuth = DestType.getPointerAuth()) {
+    if (!result.HasDestPointerAuth) {
+      value = tryEmitConstantSignedPointer(value, pointerAuth);
+      if (!value) return nullptr;
+    }
+  }
+
   // Convert to the appropriate type; this could be an lvalue for
   // an integer.  FIXME: performAddrSpaceCast
   if (isa<llvm::PointerType>(destTy))
@@ -1903,6 +1916,12 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       return CGM.GetWeakRefReference(D).getPointer();
 
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
+      if (auto pointerAuth = DestType.getPointerAuth()) {
+        llvm::Constant *C = CGM.getRawFunctionPointer(FD);
+        C = applyOffset(C);
+        C = tryEmitConstantSignedPointer(C, pointerAuth);
+        return ConstantLValue(C, /*applied offset*/ true, /*signed*/ true);
+      }
       return CGM.getFunctionPointer(FD);
     }
 
@@ -2008,6 +2027,42 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
     // FIXME: need to deal with UCN conversion issues.
     return CGM.GetAddrOfConstantCFString(literal);
   }
+}
+
+/// Try to emit a constant signed pointer, given a raw pointer and the
+/// destination ptrauth qualifier.
+///
+/// This can fail if the qualifier needs address discrimination and the
+/// emitter is in an abstract mode.
+llvm::Constant *
+ConstantLValueEmitter::tryEmitConstantSignedPointer(
+                                             llvm::Constant *unsignedPointer,
+                                             PointerAuthQualifier schema) {
+  assert(schema && "applying trivial ptrauth schema");
+  auto key = schema.getKey();
+
+  // Create an address placeholder if we're using address discrimination.
+  llvm::GlobalValue *storageAddress = nullptr;
+  if (schema.isAddressDiscriminated()) {
+    // We can't do this if the emitter is in an abstract state.
+    if (Emitter.isAbstract())
+      return nullptr;
+
+    storageAddress = Emitter.getCurrentAddrPrivate();
+  }
+
+  // Fetch the extra discriminator.
+  llvm::Constant *otherDiscriminator =
+    llvm::ConstantInt::get(CGM.IntPtrTy, schema.getExtraDiscriminator());
+
+  auto signedPointer =
+    CGM.getConstantSignedPointer(unsignedPointer, key, storageAddress,
+                                 otherDiscriminator);
+
+  if (schema.isAddressDiscriminated())
+    Emitter.registerCurrentAddrPrivate(signedPointer, storageAddress);
+
+  return signedPointer;
 }
 
 ConstantLValue

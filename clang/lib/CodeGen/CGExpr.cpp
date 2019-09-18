@@ -1772,6 +1772,15 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
+  // Load from __ptrauth.
+  if (auto ptrauth = LV.getQuals().getPointerAuth()) {
+    LV.getQuals().removePtrAuth();
+    auto value = EmitLoadOfLValue(LV, Loc).getScalarVal();
+    return RValue::get(EmitPointerAuthUnqualify(ptrauth, value,
+                                                LV.getType(), LV.getAddress(),
+                                                /*known nonnull*/ false));
+  }
+
   if (LV.isObjCWeak()) {
     // load of a __weak object.
     Address AddrWeakObj = LV.getAddress();
@@ -1948,6 +1957,13 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
     assert(Dst.isBitField() && "Unknown LValue type");
     return EmitStoreThroughBitfieldLValue(Src, Dst);
+  }
+
+  // Handle __ptrauth qualification by re-signing the value.
+  if (auto pointerAuth = Dst.getQuals().getPointerAuth()) {
+    Src = RValue::get(EmitPointerAuthQualify(pointerAuth, Src.getScalarVal(),
+                                             Dst.getType(), Dst.getAddress(),
+                                             /*known nonnull*/ false));
   }
 
   // There's special magic for assigning into an ARC-qualified l-value.
@@ -3871,7 +3887,8 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
     if (IsBaseCXXThis)
       SkippedChecks.set(SanitizerKind::Alignment, true);
-    if (IsBaseCXXThis || isa<DeclRefExpr>(BaseExpr))
+    if (IsBaseCXXThis || isa<DeclRefExpr>(BaseExpr) ||
+        isa<llvm::ConstantPointerNull>(Addr.getPointer()))
       SkippedChecks.set(SanitizerKind::Null, true);
     EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
@@ -4621,6 +4638,27 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
       return EmitCallee(ICE->getSubExpr());
     }
 
+    // Try to remember the original __ptrauth qualifier for loads of
+    // function pointers.
+    if (ICE->getCastKind() == CK_LValueToRValue) {
+      auto subExpr = ICE->getSubExpr();
+      if (auto ptrType = subExpr->getType()->getAs<PointerType>()) {
+        auto result = EmitOrigPointerRValue(E);
+
+        QualType functionType = ptrType->getPointeeType();
+        assert(functionType->isFunctionType());
+
+        GlobalDecl GD;
+        if (const auto *VD =
+            dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
+          GD = GlobalDecl(VD);
+        }
+        CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+        CGCallee callee(calleeInfo, result.first, result.second);
+        return callee;
+      }
+    }
+
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
@@ -4712,6 +4750,17 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 
   switch (getEvaluationKind(E->getType())) {
   case TEK_Scalar: {
+    if (auto ptrauth = E->getLHS()->getType().getPointerAuth()) {
+      LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+      LValue CopiedLV = LV;
+      CopiedLV.getQuals().removePtrAuth();
+      llvm::Value *RV = EmitPointerAuthQualify(ptrauth, E->getRHS(),
+                                               CopiedLV.getAddress());
+      EmitNullabilityCheck(CopiedLV, RV, E->getExprLoc());
+      EmitStoreThroughLValue(RValue::get(RV), CopiedLV);
+      return LV;
+    }
+
     switch (E->getLHS()->getType().getObjCLifetime()) {
     case Qualifiers::OCL_Strong:
       return EmitARCStoreStrong(E, /*ignored*/ false).first;

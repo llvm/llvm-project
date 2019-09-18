@@ -2319,37 +2319,40 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   if (Quals.getObjCLifetime() == Qualifiers::OCL_Weak)
     mangleVendorQualifier("__weak");
 
+  // The __unsafe_unretained qualifier is *not* mangled, so that
+  // __unsafe_unretained types in ARC produce the same manglings as the
+  // equivalent (but, naturally, unqualified) types in non-ARC, providing
+  // better ABI compatibility.
+  //
+  // It's safe to do this because unqualified 'id' won't show up
+  // in any type signatures that need to be mangled.
+
   // __unaligned (from -fms-extensions)
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
 
-  // Remaining ARC ownership qualifiers.
-  switch (Quals.getObjCLifetime()) {
-  case Qualifiers::OCL_None:
-    break;
-
-  case Qualifiers::OCL_Weak:
-    // Do nothing as we already handled this case above.
-    break;
-
-  case Qualifiers::OCL_Strong:
+  // The __strong ARC qualifier.
+  if (Quals.getObjCLifetime() == Qualifiers::OCL_Strong)
     mangleVendorQualifier("__strong");
-    break;
 
-  case Qualifiers::OCL_Autoreleasing:
-    mangleVendorQualifier("__autoreleasing");
-    break;
+  // __ptrauth.  Note that this is parameterized.
+  if (auto ptrauth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
 
-  case Qualifiers::OCL_ExplicitNone:
-    // The __unsafe_unretained qualifier is *not* mangled, so that
-    // __unsafe_unretained types in ARC produce the same manglings as the
-    // equivalent (but, naturally, unqualified) types in non-ARC, providing
-    // better ABI compatibility.
-    //
-    // It's safe to do this because unqualified 'id' won't show up
-    // in any type signatures that need to be mangled.
-    break;
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+             "Lj" << ptrauth.getKey() << "E"
+             "Lb" << unsigned(ptrauth.isAddressDiscriminated()) << "E"
+             "Lj" << ptrauth.getExtraDiscriminator() << "E"
+           "E";
   }
+
+  // The __autoreleasing ARC qualifier.
+  if (Quals.getObjCLifetime() == Qualifiers::OCL_Autoreleasing)
+    mangleVendorQualifier("__autoreleasing");
 
   // <CV-qualifiers> ::= [r] [V] [K]    # restrict (C99), volatile, const
   if (Quals.hasRestrict())
