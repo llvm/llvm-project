@@ -39,15 +39,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char *argv[]) {
+void expectSymbol(const char *objectFilename, const char *symbolName,
+                  amd_comgr_symbol_type_t expectedType) {
   long size;
   char *buf;
   amd_comgr_data_t dataObject;
-  amd_comgr_symbol_t sym;
+  amd_comgr_symbol_t symbol;
   amd_comgr_status_t status;
-  int count = 1;
 
-  size = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
+  size = setBuf(objectFilename, &buf);
 
   status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &dataObject);
   checkError(status, "amd_comgr_create_data");
@@ -55,15 +55,32 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_set_data(dataObject, size, buf);
   checkError(status, "amd_comgr_set_data");
 
-  status = amd_comgr_symbol_lookup(
-      dataObject, "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
-      &sym);
+  status = amd_comgr_symbol_lookup(dataObject, symbolName, &symbol);
   checkError(status, "amd_comgr_symbol_lookup");
-  printSymbol(sym, &count);
+
+  amd_comgr_symbol_type_t type;
+  status = amd_comgr_symbol_get_info(symbol, AMD_COMGR_SYMBOL_INFO_TYPE,
+                                     (void *)&type);
+  checkError(status, "amd_comgr_symbol_get_info");
+
+  if (type != expectedType)
+    fail("unexpected symbol type for symbol %s: expected %d, saw %d\n",
+         symbolName, expectedType, type);
 
   status = amd_comgr_release_data(dataObject);
   checkError(status, "amd_comgr_release_data");
   free(buf);
+}
 
+int main(int argc, char *argv[]) {
+  expectSymbol(TEST_OBJ_DIR "/shared.so",
+               "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+               AMD_COMGR_SYMBOL_TYPE_NOTYPE);
+  expectSymbol(TEST_OBJ_DIR "/shared-v3.so",
+               "bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+               AMD_COMGR_SYMBOL_TYPE_FUNC);
+  expectSymbol(TEST_OBJ_DIR "/shared.so", "foo", AMD_COMGR_SYMBOL_TYPE_OBJECT);
+  expectSymbol(TEST_OBJ_DIR "/shared-v3.so", "foo",
+               AMD_COMGR_SYMBOL_TYPE_OBJECT);
   return 0;
 }

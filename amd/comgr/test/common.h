@@ -60,7 +60,7 @@ NORETURN void fail(const char *format, ...) {
   exit(1);
 }
 
-int setBuf(char *infile, char **buf) {
+int setBuf(const char *infile, char **buf) {
   FILE *fp;
   long size;
 

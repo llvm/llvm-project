@@ -35,6 +35,9 @@
 
 // clang shared.cl --target=amdgcn-amdhsa-opencl -mcpu=gfx803 -o shared.so
 
+__attribute__((visibility("default")))
+constant int foo = 0;
+
 void kernel bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(global int *a, const global int *b) {
   *a = *b;
 }

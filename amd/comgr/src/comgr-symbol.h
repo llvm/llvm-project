@@ -57,8 +57,7 @@ struct SymbolContext {
 class SymbolHelper {
 
 public:
-  amd_comgr_symbol_type_t
-  mapToComgrSymbolType(llvm::object::SymbolRef::Type SymType, uint64_t Flags);
+  amd_comgr_symbol_type_t mapToComgrSymbolType(uint8_t ELFSymbolType);
 
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>>
   createBinary(llvm::StringRef InBuffer);

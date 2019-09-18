@@ -1854,7 +1854,7 @@ typedef enum amd_comgr_symbol_type_s {
   /**
    * The symbol labels an uninitialized common block.
   */
-  AMD_COMGR_SYMBOL_TYPE_COMMON
+  AMD_COMGR_SYMBOL_TYPE_COMMON = 0x5
 } amd_comgr_symbol_type_t;
 
 /**

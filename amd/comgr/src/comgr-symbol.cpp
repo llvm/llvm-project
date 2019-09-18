@@ -61,36 +61,24 @@ amd_comgr_status_t SymbolContext::setName(llvm::StringRef Name) {
 }
 
 amd_comgr_symbol_type_t
-SymbolHelper::mapToComgrSymbolType(SymbolRef::Type Stype, uint64_t Flags) {
-  amd_comgr_symbol_type_t Type;
-
-  switch (Stype) {
-  case SymbolRef::ST_Unknown:
-    Type = AMD_COMGR_SYMBOL_TYPE_NOTYPE;
-    break;
-  case SymbolRef::ST_File:
-    Type = AMD_COMGR_SYMBOL_TYPE_FILE;
-    break;
-  case SymbolRef::ST_Function:
-    Type = AMD_COMGR_SYMBOL_TYPE_FUNC;
-    break;
-  case SymbolRef::ST_Data:
-    if (Flags & SymbolRef::SF_Common)
-      Type = AMD_COMGR_SYMBOL_TYPE_COMMON;
-    else
-      Type = AMD_COMGR_SYMBOL_TYPE_OBJECT;
-    break;
-  case SymbolRef::ST_Debug:
-    Type = AMD_COMGR_SYMBOL_TYPE_SECTION;
-    break;
+SymbolHelper::mapToComgrSymbolType(uint8_t ELFSymbolType) {
+  switch (ELFSymbolType) {
+  case ELF::STT_NOTYPE:
+    return AMD_COMGR_SYMBOL_TYPE_NOTYPE;
+  case ELF::STT_OBJECT:
+    return AMD_COMGR_SYMBOL_TYPE_OBJECT;
+  case ELF::STT_FUNC:
+    return AMD_COMGR_SYMBOL_TYPE_FUNC;
+  case ELF::STT_SECTION:
+    return AMD_COMGR_SYMBOL_TYPE_SECTION;
+  case ELF::STT_FILE:
+    return AMD_COMGR_SYMBOL_TYPE_FILE;
+  case ELF::STT_COMMON:
+    return AMD_COMGR_SYMBOL_TYPE_COMMON;
   default:
-    Type = AMD_COMGR_SYMBOL_TYPE_NOTYPE;
-    break; // Please Check:
-           // Actually there is a ST_Other, the API may be missing
-           // a default amd_comgr_symbol_type_t here.
+    // TODO: this case should be distinguished from NOTYPE
+    return AMD_COMGR_SYMBOL_TYPE_NOTYPE;
   }
-
-  return Type;
 }
 
 // SymbolHelper version of createBinary, contrary to the one in Binary.cpp,
@@ -181,20 +169,13 @@ SymbolContext *SymbolHelper::createBinary(StringRef Ins, const char *Name,
     Symp->setName(Name);
     Symp->Value = Fsym.getValue();
 
-    Expected<SymbolRef::Type> TypeOrErr = Fsym.getType();
-    if (!TypeOrErr)
-      return NULL;
-
-    // get flags in symbol
-    // SymbolRef does not directly use ELF::STT_<types>, it maps them to
-    // SymbolRef::ST_<types> in ELFObjectFile<ELFT>::getSymbolType().
     DataRefImpl Symb = Fsym.getRawDataRefImpl();
     uint64_t Flags = Fsym.getObject()->getSymbolFlags(Symb);
-    Symp->Type = mapToComgrSymbolType(*TypeOrErr, Flags);
 
     // symbol size
     ELFSymbolRef Esym(Fsym);
     Symp->Size = Esym.getSize();
+    Symp->Type = mapToComgrSymbolType(Esym.getELFType());
 
     // symbol undefined?
     if (Flags & SymbolRef::SF_Undefined)
@@ -258,10 +239,10 @@ amd_comgr_status_t SymbolHelper::iterateTable(
         return AMD_COMGR_STATUS_ERROR;
       DataRefImpl Symb = Symbol.getRawDataRefImpl();
       uint64_t Flags = Symbol.getObject()->getSymbolFlags(Symb);
-      Ctxp->Type = mapToComgrSymbolType(*TypeOrErr, Flags);
 
       ELFSymbolRef Esym(Symbol);
       Ctxp->Size = Esym.getSize();
+      Ctxp->Type = mapToComgrSymbolType(Esym.getELFType());
 
       Ctxp->Undefined = (Flags & SymbolRef::SF_Undefined) ? true : false;
 
