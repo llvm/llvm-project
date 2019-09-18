@@ -98,6 +98,22 @@ CodeGenModule::getFunctionPointerAuthInfo(QualType functionType) {
   return CGPointerAuthInfo(schema.getKey(), discriminator);
 }
 
+CGPointerAuthInfo
+CodeGenModule::getMemberFunctionPointerAuthInfo(QualType functionType) {
+  assert(functionType->getAs<MemberPointerType>() &&
+         "MemberPointerType expected");
+  auto &schema = getCodeGenOpts().PointerAuth.CXXMemberFunctionPointers;
+  if (!schema)
+    return CGPointerAuthInfo();
+
+  assert(!schema.isAddressDiscriminated() &&
+         "function pointers cannot use address-specific discrimination");
+
+  auto discriminator =
+      getPointerAuthOtherDiscriminator(schema, GlobalDecl(), functionType);
+  return CGPointerAuthInfo(schema.getKey(), discriminator);
+}
+
 /// Return the natural pointer authentication for values of the given
 /// pointer type.
 static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
@@ -432,6 +448,7 @@ void ConstantAggregateBuilderBase::addSignedPointer(
 void CodeGenModule::destroyConstantSignedPointerCaches() {
   destroyCache<ByConstantCacheTy>(ConstantSignedPointersByConstant);
   destroyCache<ByDeclCacheTy>(ConstantSignedPointersByDecl);
+  destroyCache<ByDeclCacheTy>(SignedThunkPointers);
 }
 
 llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
@@ -469,4 +486,38 @@ llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
 llvm::Constant *CodeGenModule::getFunctionPointer(const FunctionDecl *FD,
                                                   llvm::Type *Ty) {
   return getFunctionPointer(getRawFunctionPointer(FD, Ty), FD->getType(), FD);
+}
+
+llvm::Constant *
+CodeGenModule::getMemberFunctionPointer(llvm::Constant *pointer,
+                                        QualType functionType,
+                                        const FunctionDecl *FD) {
+  if (auto pointerAuth = getMemberFunctionPointerAuthInfo(functionType)) {
+    llvm::Constant **entry = nullptr;
+    if (FD) {
+      auto &cache =
+          getOrCreateCache<ByDeclCacheTy>(SignedThunkPointers);
+      entry = &cache[FD->getCanonicalDecl()];
+      if (*entry)
+        return llvm::ConstantExpr::getBitCast(*entry, pointer->getType());
+    }
+
+    pointer = getConstantSignedPointer(
+        pointer, pointerAuth.getKey(), nullptr,
+        cast_or_null<llvm::Constant>(pointerAuth.getDiscriminator()));
+
+    if (entry)
+      *entry = pointer;
+  }
+
+  return pointer;
+}
+
+llvm::Constant *
+CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD, llvm::Type *Ty) {
+  QualType functionType = FD->getType();
+  functionType = getContext().getMemberPointerType(
+      functionType, cast<CXXMethodDecl>(FD)->getParent()->getTypeForDecl());
+  return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), functionType,
+                                  FD);
 }

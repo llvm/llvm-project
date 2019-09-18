@@ -169,6 +169,9 @@ struct PointerAuthOptions {
 
   /// The ABI for variadic C++ virtual function pointers.
   PointerAuthSchema CXXVirtualVariadicFunctionPointers;
+
+  /// The ABI for C++ member function pointers.
+  PointerAuthSchema CXXMemberFunctionPointers;
 };
 
 }  // end namespace clang

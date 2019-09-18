@@ -3598,7 +3598,8 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::CallBase **callOrInvoke, SourceLocation Loc);
+                  llvm::CallBase **callOrInvoke, SourceLocation Loc,
+                  bool IsVirtualFunctionPointerThunk = false);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke = nullptr) {
