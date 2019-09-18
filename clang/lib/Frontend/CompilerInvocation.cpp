@@ -673,6 +673,44 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
       !LangOpts.PointerAuthIndirectGotos && !LangOpts.PointerAuthAuthTraps)
     return true;
 
+  if (LangOpts.SoftPointerAuth) {
+    if (LangOpts.PointerAuthCalls) {
+      using Key = PointerAuthSchema::SoftKey;
+      using Discrimination = PointerAuthSchema::Discrimination;
+      Opts.FunctionPointers =
+        PointerAuthSchema(Key::FunctionPointers, false, Discrimination::None);
+      Opts.BlockInvocationFunctionPointers =
+        PointerAuthSchema(Key::BlockInvocationFunctionPointers, true,
+                          Discrimination::None);
+      Opts.BlockHelperFunctionPointers =
+        PointerAuthSchema(Key::BlockHelperFunctionPointers, true,
+                          Discrimination::None);
+      Opts.BlockByrefHelperFunctionPointers =
+        PointerAuthSchema(Key::BlockHelperFunctionPointers, true,
+                          Discrimination::None);
+      Opts.ObjCMethodListFunctionPointers =
+        PointerAuthSchema(Key::ObjCMethodListFunctionPointers, true,
+                          Discrimination::None);
+      Opts.CXXVTablePointers =
+      Opts.CXXVTTVTablePointers =
+        PointerAuthSchema(Key::CXXVTablePointers, false,
+                          Discrimination::None);
+      Opts.CXXVirtualFunctionPointers =
+      Opts.CXXVirtualVariadicFunctionPointers =
+        PointerAuthSchema(Key::CXXVirtualFunctionPointers, true,
+                          Discrimination::Decl);
+      Opts.CXXMemberFunctionPointers =
+        PointerAuthSchema(Key::CXXMemberFunctionPointers, false,
+                          Discrimination::Type);
+      Opts.ThunkCXXVirtualMemberPointers = false;
+    }
+
+    Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
+    Opts.IndirectGotos = LangOpts.PointerAuthIndirectGotos;
+    Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
+    return true;
+  }
+
   if (Triple.getArch() == llvm::Triple::aarch64) {
     if (LangOpts.PointerAuthCalls) {
       using Key = PointerAuthSchema::ARM8_3Key;
@@ -3187,6 +3225,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
   Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
   Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
+  Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
 
   Opts.FastMath = Args.hasArg(OPT_ffast_math) ||
       Args.hasArg(OPT_cl_fast_relaxed_math);

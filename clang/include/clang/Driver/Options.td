@@ -1962,12 +1962,15 @@ let Group = f_Group in {
       HelpText<"Enable signing and authentication of indirect goto targets">;
     def fptrauth_auth_traps : Flag<["-"], "fptrauth-auth-traps">,
       HelpText<"Enable traps on authentication failures">;
+    def fptrauth_soft : Flag<["-"], "fptrauth-soft">,
+      HelpText<"Enable software lowering of pointer authentication">;
   }
   def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
   def fno_ptrauth_calls : Flag<["-"], "fno-ptrauth-calls">;
   def fno_ptrauth_returns : Flag<["-"], "fno-ptrauth-returns">;
   def fno_ptrauth_indirect_gotos : Flag<["-"], "fno-ptrauth-indirect-gotos">;
   def fno_ptrauth_auth_traps : Flag<["-"], "fno-ptrauth-auth-traps">;
+  def fno_ptrauth_soft : Flag<["-"], "fno-ptrauth-soft">;
 }
 
 def fallow_editor_placeholders : Flag<["-"], "fallow-editor-placeholders">,

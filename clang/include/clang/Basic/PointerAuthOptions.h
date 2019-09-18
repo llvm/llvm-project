@@ -29,7 +29,19 @@ class PointerAuthSchema {
 public:
   enum class Kind {
     None,
+    Soft,
     ARM8_3,
+  };
+
+  /// Software pointer-signing "keys".
+  enum class SoftKey {
+    FunctionPointers = 0,
+    BlockInvocationFunctionPointers = 1,
+    BlockHelperFunctionPointers = 2,
+    ObjCMethodListFunctionPointers = 3,
+    CXXVTablePointers = 4,
+    CXXVirtualFunctionPointers = 5,
+    CXXMemberFunctionPointers = 6,
   };
 
   /// Hardware pointer-signing keys in ARM8.3.
@@ -70,6 +82,13 @@ private:
       unsigned Kind : NumKindBits;
       unsigned AddressDiscriminated : 1;
       unsigned Discrimination : 2;
+      unsigned Key : 3;
+    } Soft;
+
+    struct {
+      unsigned Kind : NumKindBits;
+      unsigned AddressDiscriminated : 1;
+      unsigned Discrimination : 2;
       unsigned Key : 2;
     } ARM8_3;
   };
@@ -77,6 +96,14 @@ private:
 public:
   PointerAuthSchema() {
     Common.Kind = unsigned(Kind::None);
+  }
+
+  PointerAuthSchema(SoftKey key, bool isAddressDiscriminated,
+                    Discrimination otherDiscrimination) {
+    Common.Kind = unsigned(Kind::Soft);
+    Common.AddressDiscriminated = isAddressDiscriminated;
+    Common.Discrimination = unsigned(otherDiscrimination);
+    Soft.Key = unsigned(key);
   }
 
   PointerAuthSchema(ARM8_3Key key, bool isAddressDiscriminated,
@@ -116,9 +143,15 @@ public:
   unsigned getKey() const {
     switch (getKind()) {
     case Kind::None: llvm_unreachable("calling getKey() on disabled schema");
+    case Kind::Soft: return unsigned(getSoftKey());
     case Kind::ARM8_3: return unsigned(getARM8_3Key());
     }
     llvm_unreachable("bad key kind");
+  }
+
+  SoftKey getSoftKey() const {
+    assert(getKind() == Kind::Soft);
+    return SoftKey(Soft.Key);
   }
 
   ARM8_3Key getARM8_3Key() const {
