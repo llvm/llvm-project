@@ -247,7 +247,7 @@ namespace {
     void doInitialJumpTablePlacement(std::vector<MachineInstr *> &CPEMIs);
     bool BBHasFallthrough(MachineBasicBlock *MBB);
     CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
-    unsigned getCPELogAlign(const MachineInstr *CPEMI);
+    llvm::Align getCPEAlign(const MachineInstr *CPEMI);
     void scanFunctionJumpTables();
     void initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs);
     MachineBasicBlock *splitBlockBeforeInstr(MachineInstr *MI);
@@ -336,8 +336,7 @@ LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
       const BasicBlockInfo &BBI = BBInfo[J];
       dbgs() << format("%08x %bb.%u\t", BBI.Offset, J)
              << " kb=" << unsigned(BBI.KnownBits)
-             << " ua=" << unsigned(BBI.Unalign)
-             << " pa=" << unsigned(BBI.PostAlign)
+             << " ua=" << unsigned(BBI.Unalign) << " pa=" << Log2(BBI.PostAlign)
              << format(" size=%#x\n", BBInfo[J].Size);
     }
   });
@@ -494,11 +493,12 @@ ARMConstantIslands::doInitialConstPlacement(std::vector<MachineInstr*> &CPEMIs) 
   MachineBasicBlock *BB = MF->CreateMachineBasicBlock();
   MF->push_back(BB);
 
-  // MachineConstantPool measures alignment in bytes. We measure in log2(bytes).
-  unsigned MaxLogAlign = Log2_32(MCP->getConstantPoolAlignment());
+  // MachineConstantPool measures alignment in bytes.
+  const llvm::Align MaxAlign(MCP->getConstantPoolAlignment());
+  const unsigned MaxLogAlign = Log2(MaxAlign);
 
   // Mark the basic block as required by the const-pool.
-  BB->setLogAlignment(MaxLogAlign);
+  BB->setAlignment(MaxAlign);
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
@@ -648,29 +648,27 @@ ARMConstantIslands::findConstPoolEntry(unsigned CPI,
   return nullptr;
 }
 
-/// getCPELogAlign - Returns the required alignment of the constant pool entry
-/// represented by CPEMI.  Alignment is measured in log2(bytes) units.
-unsigned ARMConstantIslands::getCPELogAlign(const MachineInstr *CPEMI) {
+/// getCPEAlign - Returns the required alignment of the constant pool entry
+/// represented by CPEMI.
+llvm::Align ARMConstantIslands::getCPEAlign(const MachineInstr *CPEMI) {
   switch (CPEMI->getOpcode()) {
   case ARM::CONSTPOOL_ENTRY:
     break;
   case ARM::JUMPTABLE_TBB:
-    return isThumb1 ? 2 : 0;
+    return isThumb1 ? llvm::Align(4) : llvm::Align(1);
   case ARM::JUMPTABLE_TBH:
-    return isThumb1 ? 2 : 1;
+    return isThumb1 ? llvm::Align(4) : llvm::Align(2);
   case ARM::JUMPTABLE_INSTS:
-    return 1;
+    return llvm::Align(2);
   case ARM::JUMPTABLE_ADDRS:
-    return 2;
+    return llvm::Align(4);
   default:
     llvm_unreachable("unknown constpool entry kind");
   }
 
   unsigned CPI = getCombinedIndex(CPEMI);
   assert(CPI < MCP->getConstants().size() && "Invalid constant pool index.");
-  unsigned Align = MCP->getConstants()[CPI].getAlignment();
-  assert(isPowerOf2_32(Align) && "Invalid CPE alignment");
-  return Log2_32(Align);
+  return llvm::Align(MCP->getConstants()[CPI].getAlignment());
 }
 
 /// scanFunctionJumpTables - Do a scan of the function, building up
@@ -1023,8 +1021,8 @@ bool ARMConstantIslands::isWaterInRange(unsigned UserOffset,
                                         MachineBasicBlock* Water, CPUser &U,
                                         unsigned &Growth) {
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
-  unsigned CPELogAlign = getCPELogAlign(U.CPEMI);
-  unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset(CPELogAlign);
+  const llvm::Align CPEAlign = getCPEAlign(U.CPEMI);
+  const unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset(CPEAlign);
   unsigned NextBlockOffset;
   llvm::Align NextBlockAlignment;
   MachineFunction::const_iterator NextBlock = Water->getIterator();
@@ -1050,8 +1048,7 @@ bool ARMConstantIslands::isWaterInRange(unsigned UserOffset,
     // the offset of the instruction. Also account for unknown alignment padding
     // in blocks between CPE and the user.
     if (CPEOffset < UserOffset)
-      UserOffset +=
-          Growth + UnknownPadding(Log2(MF->getAlignment()), CPELogAlign);
+      UserOffset += Growth + UnknownPadding(MF->getAlignment(), Log2(CPEAlign));
   } else
     // CPE fits in existing padding.
     Growth = 0;
@@ -1217,8 +1214,8 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
   // inserting islands between BB0 and BB1 makes other accesses out of range.
   MachineBasicBlock *UserBB = U.MI->getParent();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
-  unsigned MinNoSplitDisp =
-      BBInfo[UserBB->getNumber()].postOffset(getCPELogAlign(U.CPEMI));
+  const llvm::Align CPEAlign = getCPEAlign(U.CPEMI);
+  unsigned MinNoSplitDisp = BBInfo[UserBB->getNumber()].postOffset(CPEAlign);
   if (CloserWater && MinNoSplitDisp > U.getMaxDisp() / 2)
     return false;
   for (water_iterator IP = std::prev(WaterList.end()), B = WaterList.begin();;
@@ -1271,7 +1268,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   CPUser &U = CPUsers[CPUserIndex];
   MachineInstr *UserMI = U.MI;
   MachineInstr *CPEMI  = U.CPEMI;
-  unsigned CPELogAlign = getCPELogAlign(CPEMI);
+  const llvm::Align CPEAlign = getCPEAlign(CPEMI);
   MachineBasicBlock *UserMBB = UserMI->getParent();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   const BasicBlockInfo &UserBBI = BBInfo[UserMBB->getNumber()];
@@ -1284,7 +1281,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     // Size of branch to insert.
     unsigned Delta = isThumb1 ? 2 : 4;
     // Compute the offset where the CPE will begin.
-    unsigned CPEOffset = UserBBI.postOffset(CPELogAlign) + Delta;
+    unsigned CPEOffset = UserBBI.postOffset(CPEAlign) + Delta;
 
     if (isOffsetInRange(UserOffset, CPEOffset, U)) {
       LLVM_DEBUG(dbgs() << "Split at end of " << printMBBReference(*UserMBB)
@@ -1325,11 +1322,11 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
 
   // Try to split the block so it's fully aligned.  Compute the latest split
   // point where we can add a 4-byte branch instruction, and then align to
-  // LogAlign which is the largest possible alignment in the function.
-  unsigned LogAlign = Log2(MF->getAlignment());
-  assert(LogAlign >= CPELogAlign && "Over-aligned constant pool entry");
+  // Align which is the largest possible alignment in the function.
+  const llvm::Align Align = MF->getAlignment();
+  assert(Align >= CPEAlign && "Over-aligned constant pool entry");
   unsigned KnownBits = UserBBI.internalKnownBits();
-  unsigned UPad = UnknownPadding(LogAlign, KnownBits);
+  unsigned UPad = UnknownPadding(Align, KnownBits);
   unsigned BaseInsertOffset = UserOffset + U.getMaxDisp() - UPad;
   LLVM_DEBUG(dbgs() << format("Split in middle of big block before %#x",
                               BaseInsertOffset));
@@ -1340,7 +1337,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   BaseInsertOffset -= 4;
 
   LLVM_DEBUG(dbgs() << format(", adjusted to %#x", BaseInsertOffset)
-                    << " la=" << LogAlign << " kb=" << KnownBits
+                    << " la=" << Log2(Align) << " kb=" << KnownBits
                     << " up=" << UPad << '\n');
 
   // This could point off the end of the block if we've already got constant
@@ -1393,8 +1390,8 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
       CPUser &U = CPUsers[CPUIndex];
       if (!isOffsetInRange(Offset, EndInsertOffset, U)) {
         // Shift intertion point by one unit of alignment so it is within reach.
-        BaseInsertOffset -= 1u << LogAlign;
-        EndInsertOffset  -= 1u << LogAlign;
+        BaseInsertOffset -= Align.value();
+        EndInsertOffset -= Align.value();
       }
       // This is overly conservative, as we don't account for CPEMIs being
       // reused within the block, but it doesn't matter much.  Also assume CPEs
@@ -1504,9 +1501,9 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
   // Always align the new block because CP entries can be smaller than 4
   // bytes. Be careful not to decrease the existing alignment, e.g. NewMBB may
   // be an already aligned constant pool block.
-  const unsigned LogAlign = isThumb ? 1 : 2;
-  if (NewMBB->getLogAlignment() < LogAlign)
-    NewMBB->setLogAlignment(LogAlign);
+  const llvm::Align Align = isThumb ? llvm::Align(2) : llvm::Align(4);
+  if (NewMBB->getAlignment() < Align)
+    NewMBB->setAlignment(Align);
 
   // Remove the original WaterList entry; we want subsequent insertions in
   // this vicinity to go after the one we're about to insert.  This
@@ -1535,7 +1532,7 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
   decrementCPEReferenceCount(CPI, CPEMI);
 
   // Mark the basic block as aligned as required by the const-pool entry.
-  NewIsland->setLogAlignment(getCPELogAlign(U.CPEMI));
+  NewIsland->setAlignment(getCPEAlign(U.CPEMI));
 
   // Increase the size of the island block to account for the new entry.
   BBUtils->adjustBBSize(NewIsland, Size);
@@ -1569,10 +1566,11 @@ void ARMConstantIslands::removeDeadCPEMI(MachineInstr *CPEMI) {
     BBInfo[CPEBB->getNumber()].Size = 0;
 
     // This block no longer needs to be aligned.
-    CPEBB->setLogAlignment(0);
-  } else
+    CPEBB->setAlignment(llvm::Align::None());
+  } else {
     // Entries are sorted by descending alignment, so realign from the front.
-    CPEBB->setLogAlignment(getCPELogAlign(&*CPEBB->begin()));
+    CPEBB->setAlignment(getCPEAlign(&*CPEBB->begin()));
+  }
 
   BBUtils->adjustBBOffsetsAfter(CPEBB);
   // An island has only one predecessor BB and one successor BB. Check if

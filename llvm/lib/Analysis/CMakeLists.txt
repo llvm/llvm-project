@@ -22,9 +22,11 @@ add_llvm_library(LLVMAnalysis
   CostModel.cpp
   CodeMetrics.cpp
   ConstantFolding.cpp
+  DDG.cpp
   Delinearization.cpp
   DemandedBits.cpp
   DependenceAnalysis.cpp
+  DependenceGraphBuilder.cpp
   DivergenceAnalysis.cpp
   DomPrinter.cpp
   DomTreeUpdater.cpp

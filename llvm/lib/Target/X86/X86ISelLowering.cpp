@@ -4862,7 +4862,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       ScalarVT = MVT::i32;
 
     Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -4875,7 +4875,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags |= MachineMemOperand::MOLoad;
     break;
   }
@@ -4887,7 +4887,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = Align(1);
+    Info.align = Align::None();
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }

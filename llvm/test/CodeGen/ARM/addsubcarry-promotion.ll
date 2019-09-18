@@ -10,11 +10,11 @@
 define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ; ARM-LABEL: fn1:
 ; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    rsb r2, r2, #0
 ; ARM-NEXT:    adds r0, r1, r0
-; ARM-NEXT:    mov r3, #0
-; ARM-NEXT:    adc r0, r3, #0
 ; ARM-NEXT:    movw r1, #65535
-; ARM-NEXT:    sub r0, r0, r2
+; ARM-NEXT:    sxth r2, r2
+; ARM-NEXT:    adc r0, r2, #0
 ; ARM-NEXT:    uxth r0, r0
 ; ARM-NEXT:    cmp r0, r1
 ; ARM-NEXT:    bxeq lr
@@ -24,11 +24,12 @@ define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ;
 ; THUMBV6M-LABEL: fn1:
 ; THUMBV6M:       @ %bb.0: @ %entry
+; THUMBV6M-NEXT:    rsbs r2, r2, #0
+; THUMBV6M-NEXT:    sxth r2, r2
 ; THUMBV6M-NEXT:    movs r3, #0
 ; THUMBV6M-NEXT:    adds r0, r1, r0
-; THUMBV6M-NEXT:    adcs r3, r3
-; THUMBV6M-NEXT:    subs r0, r3, r2
-; THUMBV6M-NEXT:    uxth r0, r0
+; THUMBV6M-NEXT:    adcs r3, r2
+; THUMBV6M-NEXT:    uxth r0, r3
 ; THUMBV6M-NEXT:    ldr r1, .LCPI0_0
 ; THUMBV6M-NEXT:    cmp r0, r1
 ; THUMBV6M-NEXT:    beq .LBB0_2
@@ -44,11 +45,12 @@ define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ;
 ; THUMBV8M-BASE-LABEL: fn1:
 ; THUMBV8M-BASE:       @ %bb.0: @ %entry
+; THUMBV8M-BASE-NEXT:    rsbs r2, r2, #0
+; THUMBV8M-BASE-NEXT:    sxth r2, r2
 ; THUMBV8M-BASE-NEXT:    movs r3, #0
 ; THUMBV8M-BASE-NEXT:    adds r0, r1, r0
-; THUMBV8M-BASE-NEXT:    adcs r3, r3
-; THUMBV8M-BASE-NEXT:    subs r0, r3, r2
-; THUMBV8M-BASE-NEXT:    uxth r0, r0
+; THUMBV8M-BASE-NEXT:    adcs r3, r2
+; THUMBV8M-BASE-NEXT:    uxth r0, r3
 ; THUMBV8M-BASE-NEXT:    movw r1, #65535
 ; THUMBV8M-BASE-NEXT:    cmp r0, r1
 ; THUMBV8M-BASE-NEXT:    beq .LBB0_2
@@ -60,11 +62,11 @@ define void @fn1(i32 %a, i32 %b, i32 %c) local_unnamed_addr #0 {
 ;
 ; THUMB-LABEL: fn1:
 ; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    rsbs r2, r2, #0
 ; THUMB-NEXT:    adds r0, r0, r1
-; THUMB-NEXT:    mov.w r3, #0
-; THUMB-NEXT:    adc r0, r3, #0
 ; THUMB-NEXT:    movw r1, #65535
-; THUMB-NEXT:    subs r0, r0, r2
+; THUMB-NEXT:    sxth r2, r2
+; THUMB-NEXT:    adc r0, r2, #0
 ; THUMB-NEXT:    uxth r0, r0
 ; THUMB-NEXT:    cmp r0, r1
 ; THUMB-NEXT:    it eq

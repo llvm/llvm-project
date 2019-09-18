@@ -724,7 +724,6 @@ struct Attributor {
   /// abstract attribute objects for them.
   ///
   /// \param F The function that is checked for attribute opportunities.
-  /// \param TLIGetter helper function to get TargetLibraryInfo Analysis result.
   ///
   /// Note that abstract attribute instances are generally created even if the
   /// IR already contains the information they would deduce. The most important

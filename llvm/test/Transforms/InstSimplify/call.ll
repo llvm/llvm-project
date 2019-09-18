@@ -742,3 +742,139 @@ define i9 @fshr_shift_undef(i9 %x, i9 %y) {
   ret i9 %r
 }
 
+declare double @llvm.fma.f64(double,double,double)
+declare double @llvm.fmuladd.f64(double,double,double)
+
+define double @fma_nan_op0(double %x, double %y) {
+; CHECK-LABEL: @fma_nan_op0(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 0x7FF8000000000000, double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double 0x7ff8000000000000, double %x, double %y)
+  ret double %r
+}
+
+define double @fma_nan_op1(double %x, double %y) {
+; CHECK-LABEL: @fma_nan_op1(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double [[X:%.*]], double 0x7FF8000000000001, double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double %x, double 0x7ff8000000000001, double %y)
+  ret double %r
+}
+
+define double @fma_nan_op2(double %x, double %y) {
+; CHECK-LABEL: @fma_nan_op2(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double 0x7FF8000000000002)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double %x, double %y, double 0x7ff8000000000002)
+  ret double %r
+}
+
+define double @fmuladd_nan_op0_op1(double %x) {
+; CHECK-LABEL: @fmuladd_nan_op0_op1(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double 0x7FF8000000001234, double 0x7FF800000000DEAD, double [[X:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double 0x7ff8000000001234, double 0x7ff800000000dead, double %x)
+  ret double %r
+}
+
+define double @fmuladd_nan_op0_op2(double %x) {
+; CHECK-LABEL: @fmuladd_nan_op0_op2(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double 0x7FF8000000005678, double [[X:%.*]], double 0x7FF800000000DEAD)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double 0x7ff8000000005678, double %x, double 0x7ff800000000dead)
+  ret double %r
+}
+
+define double @fmuladd_nan_op1_op2(double %x) {
+; CHECK-LABEL: @fmuladd_nan_op1_op2(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double [[X:%.*]], double 0x7FF80000AAAAAAAA, double 0x7FF800000000DEAD)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double %x, double 0x7ff80000aaaaaaaa, double 0x7ff800000000dead)
+  ret double %r
+}
+
+define double @fma_nan_multiplicand_inf_zero(double %x) {
+; CHECK-LABEL: @fma_nan_multiplicand_inf_zero(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 0x7FF0000000000000, double 0.000000e+00, double [[X:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double 0x7ff0000000000000, double 0.0, double %x)
+  ret double %r
+}
+
+define double @fma_nan_multiplicand_zero_inf(double %x) {
+; CHECK-LABEL: @fma_nan_multiplicand_zero_inf(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 0.000000e+00, double 0x7FF0000000000000, double [[X:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double 0.0, double 0x7ff0000000000000, double %x)
+  ret double %r
+}
+
+define double @fma_nan_addend_inf_neginf(double %x, i32 %y) {
+; CHECK-LABEL: @fma_nan_addend_inf_neginf(
+; CHECK-NEXT:    [[NOTNAN:%.*]] = uitofp i32 [[Y:%.*]] to double
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 0x7FF0000000000000, double [[NOTNAN]], double 0xFFF0000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %notnan = uitofp i32 %y to double
+  %r = call double @llvm.fma.f64(double 0x7ff0000000000000, double %notnan, double 0xfff0000000000000)
+  ret double %r
+}
+
+define double @fma_nan_addend_neginf_inf(double %x, i1 %y) {
+; CHECK-LABEL: @fma_nan_addend_neginf_inf(
+; CHECK-NEXT:    [[NOTNAN:%.*]] = select i1 [[Y:%.*]], double 4.200000e+01, double -1.000000e-01
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double [[NOTNAN]], double 0xFFF0000000000000, double 0x7FF0000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %notnan = select i1 %y, double 42.0, double -0.1
+  %r = call double @llvm.fma.f64(double %notnan, double 0xfff0000000000000, double 0x7ff0000000000000)
+  ret double %r
+}
+
+define double @fmuladd_nan_multiplicand_neginf_zero(double %x) {
+; CHECK-LABEL: @fmuladd_nan_multiplicand_neginf_zero(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double 0xFFF0000000000000, double 0.000000e+00, double [[X:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double 0xfff0000000000000, double 0.0, double %x)
+  ret double %r
+}
+
+define double @fmuladd_nan_multiplicand_negzero_inf(double %x) {
+; CHECK-LABEL: @fmuladd_nan_multiplicand_negzero_inf(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double -0.000000e+00, double 0x7FF0000000000000, double [[X:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double -0.0, double 0x7ff0000000000000, double %x)
+  ret double %r
+}
+
+define double @fmuladd_nan_addend_inf_neginf(double %x, i32 %y) {
+; CHECK-LABEL: @fmuladd_nan_addend_inf_neginf(
+; CHECK-NEXT:    [[NOTNAN:%.*]] = sitofp i32 [[Y:%.*]] to double
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double 0x7FF0000000000000, double [[NOTNAN]], double 0xFFF0000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %notnan = sitofp i32 %y to double
+  %r = call double @llvm.fmuladd.f64(double 0x7ff0000000000000, double %notnan, double 0xfff0000000000000)
+  ret double %r
+}
+
+define double @fmuladd_nan_addend_neginf_inf(double %x, i1 %y) {
+; CHECK-LABEL: @fmuladd_nan_addend_neginf_inf(
+; CHECK-NEXT:    [[NOTNAN:%.*]] = select i1 [[Y:%.*]], double 4.200000e+01, double -1.000000e-01
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double [[NOTNAN]], double 0xFFF0000000000000, double 0x7FF0000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %notnan = select i1 %y, double 42.0, double -0.1
+  %r = call double @llvm.fmuladd.f64(double %notnan, double 0xfff0000000000000, double 0x7ff0000000000000)
+  ret double %r
+}
