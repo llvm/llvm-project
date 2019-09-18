@@ -249,12 +249,12 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
                             : ARM::FK_VFPV3_D16)
                      : (STI.hasFeature(ARM::FeatureFP16) ? ARM::FK_VFPV3XD_FP16
                                                          : ARM::FK_VFPV3XD)));
-    else if (STI.hasFeature(ARM::FeatureVFP2_D16_SP))
+    else if (STI.hasFeature(ARM::FeatureVFP2_SP))
       emitFPU(ARM::FK_VFPV2);
   }
 
   // ABI_HardFP_use attribute to indicate single precision FP.
-  if (STI.hasFeature(ARM::FeatureVFP2_D16_SP) && !STI.hasFeature(ARM::FeatureFP64))
+  if (STI.hasFeature(ARM::FeatureVFP2_SP) && !STI.hasFeature(ARM::FeatureFP64))
     emitAttribute(ARMBuildAttrs::ABI_HardFP_use,
                   ARMBuildAttrs::HardFPSinglePrecision);
 

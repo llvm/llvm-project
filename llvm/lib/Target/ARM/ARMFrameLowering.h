@@ -53,6 +53,8 @@ public:
   int ResolveFrameIndexReference(const MachineFunction &MF, int FI,
                                  unsigned &FrameReg, int SPAdj) const;
 
+  void getCalleeSaves(const MachineFunction &MF,
+                      BitVector &SavedRegs) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
