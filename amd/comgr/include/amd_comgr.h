@@ -76,7 +76,7 @@
 #endif
 
 #define AMD_COMGR_INTERFACE_VERSION_MAJOR 1
-#define AMD_COMGR_INTERFACE_VERSION_MINOR 5
+#define AMD_COMGR_INTERFACE_VERSION_MINOR 6
 
 #ifdef __cplusplus
 extern "C" {
@@ -1863,7 +1863,12 @@ typedef enum amd_comgr_symbol_type_s {
   /**
    * The symbol labels an uninitialized common block.
   */
-  AMD_COMGR_SYMBOL_TYPE_COMMON = 0x5
+  AMD_COMGR_SYMBOL_TYPE_COMMON = 0x5,
+
+  /**
+   * The symbol is associated with an AMDGPU Code Object V2 kernel function.
+  */
+  AMD_COMGR_SYMBOL_TYPE_AMDGPU_HSA_KERNEL = 0xa
 } amd_comgr_symbol_type_t;
 
 /**

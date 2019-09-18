@@ -75,6 +75,8 @@ SymbolHelper::mapToComgrSymbolType(uint8_t ELFSymbolType) {
     return AMD_COMGR_SYMBOL_TYPE_FILE;
   case ELF::STT_COMMON:
     return AMD_COMGR_SYMBOL_TYPE_COMMON;
+  case ELF::STT_AMDGPU_HSA_KERNEL:
+    return AMD_COMGR_SYMBOL_TYPE_AMDGPU_HSA_KERNEL;
   default:
     return AMD_COMGR_SYMBOL_TYPE_UNKNOWN;
   }

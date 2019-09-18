@@ -107,6 +107,8 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `1.6`: Add `AMD_COMGR_SYMBOL_TYPE_AMDGPU_HSA_KERNEL` for Code Object V2
+  kernel symbols.
 * `1.5`: Add `AMD_COMGR_SYMBOL_TYPE_UNKNOWN` for unknown/unsupported ELF symbol
   types. This fixes a bug where these symbols were previously reported as
   `AMD_COMGR_SYMBOL_TYPE_NOTYPE`.
