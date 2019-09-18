@@ -1902,8 +1902,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
-    if (auto FD = dyn_cast<FunctionDecl>(D))
-      return CGM.GetAddrOfFunction(FD);
+    if (auto FD = dyn_cast<FunctionDecl>(D)) {
+      return CGM.getFunctionPointer(FD);
+    }
 
     if (auto VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.

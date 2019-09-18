@@ -141,6 +141,9 @@ struct PointerAuthOptions {
 
   /// Do authentication failures cause a trap?
   bool AuthTraps = false;
+
+  /// The ABI for C function pointers.
+  PointerAuthSchema FunctionPointers;
 };
 
 }  // end namespace clang
