@@ -31,6 +31,9 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   if (Opts.Sanitize.has(SanitizerKind::Address))
     Builder.defineMacro("_FORTIFY_SOURCE", "0");
 
+  if (Opts.PointerAuthIntrinsics)
+    Builder.defineMacro("__PTRAUTH_INTRINSICS__");
+
   // Darwin defines __weak, __strong, and __unsafe_unretained even in C mode.
   if (!Opts.ObjC) {
     // __weak is always defined, for use in blocks and with objc pointers.

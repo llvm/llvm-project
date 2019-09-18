@@ -197,6 +197,8 @@ protected:
 
   unsigned HasAArch64SVETypes : 1;
 
+  unsigned PointerAuthSupported : 1;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -1178,6 +1180,14 @@ public:
   /// Whether the target supports thread-local storage.
   bool isTLSSupported() const {
     return TLSSupported;
+  }
+
+  /// \brief Whether the target supports pointer authentication at all.
+  ///
+  /// Whether pointer authentication is actually being used is determined
+  /// by the language option.
+  bool isPointerAuthSupported() const {
+    return PointerAuthSupported;
   }
 
   /// Return the maximum alignment (in bits) of a TLS variable
