@@ -190,6 +190,8 @@ public:
     CSI_TapirLate,
     CSI_TapirLoopEnd
   };
+public:
+  llvm::TapirTargetType Tapir = llvm::TapirTargetType::Last_TapirTargetType;
 
   enum CilktoolKind {
     // No Cilktool
