@@ -13,6 +13,7 @@ Clang Language Extensions
    BlockLanguageSpec
    Block-ABI-Apple
    AutomaticReferenceCounting
+   PointerAuthentication
 
 Introduction
 ============
@@ -2827,6 +2828,10 @@ Note that these intrinsics are implemented as motion barriers that block
 reordering of memory accesses and side effect instructions. Other instructions
 like simple arithmetic may be reordered around the intrinsic. If you expect to
 have no reordering at all, use inline assembly instead.
+
+Pointer Authentication
+^^^^^^^^^^^^^^^^^^^^^^
+See :doc:`PointerAuthentication`.
 
 X86/X86-64 Language Extensions
 ------------------------------
