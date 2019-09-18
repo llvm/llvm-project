@@ -609,6 +609,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // If any timers were active but haven't been destroyed yet, print their
   // results now.
   TimerGroup::printAll(errs());
+  TimerGroup::clearAll();
 
   return !!Failed;
 }
