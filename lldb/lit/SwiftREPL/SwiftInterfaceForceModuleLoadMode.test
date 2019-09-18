@@ -4,9 +4,6 @@
 // modes as this also causes the Swift stdlib to be loaded via its module
 // interface file, which slows down this test considerably.
 
-// Disabled on linux due to flakiness in CI (rdar://problem/53312825)
-// REQUIRES: system-darwin
-
 // RUN: rm -rf %t && mkdir %t
 
 // Setup generates a dylib and .swiftinterface for A.swift as is, but generates
