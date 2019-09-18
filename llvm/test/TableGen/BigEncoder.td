@@ -46,21 +46,12 @@ def biz : Instruction {
     }
 
 }
-
 // CHECK-LABEL: case ::biz: {
-// CHECK: const APInt [[x:M[0-9]+]] = APInt::getBitsSet(65, 3, 7);
-// CHECK-NEXT: Value |= (op & [[x]]) << 9;
-// CHECK-NEXT: const APInt [[y:M[0-9]+]] = APInt::getBitsSet(65, 7, 11);
-// CHECK-NEXT: Value |= (op & [[y]]) << 1;
+// CHECK:      Value.insertBits(op.extractBitsAsZExtValue(4, 3), 12, 4);
+// CHECK-NEXT: Value.insertBits(op.extractBitsAsZExtValue(4, 7), 8, 4);
 
 // CHECK-LABEL: case ::foo: {
-// CHECK: const APInt [[x:M[0-9]+]] = APInt::getBitsSet(65, 0, 7);
-// CHECK-NEXT: op &= [[x]];
-// CHECK-NEXT: op <<= 8;
-// CHECK-NEXT: Value |= op;
+// CHECK:      Value.insertBits(op.extractBitsAsZExtValue(7, 0), 8, 7);
 
 // CHECK-LABEL: case ::bar: {
-// CHECK: const APInt [[x:M[0-9]+]] = APInt::getBitsSet(65, 3, 11);
-// CHECK-NEXT: op &= [[x]];
-// CHECK-NEXT: op <<= 5;
-// CHECK-NEXT: Value |= op;
+// CHECK:      Value.insertBits(op.extractBitsAsZExtValue(8, 3), 8, 8);

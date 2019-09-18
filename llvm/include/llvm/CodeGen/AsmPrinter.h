@@ -636,7 +636,7 @@ public:
 
   /// Return the alignment for the specified \p GV.
   static llvm::Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
-                                    llvm::Align InAlign = llvm::Align(1));
+                                    llvm::Align InAlign = llvm::Align::None());
 
 private:
   /// Private state for PrintSpecial()

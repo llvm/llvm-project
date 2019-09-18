@@ -47,5 +47,17 @@ define float @test3(float* %v) nounwind uwtable ssp {
   ret float %conv38
 }
 
+; PR43347 - https://bugs.llvm.org/show_bug.cgi?id=43347
+
+define void @0(float %f) {
+; CHECK-LABEL: @0(
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]]) #2
+; CHECK-NEXT:    ret void
+;
+  %d = fpext float %f to double
+  %r = call double @sqrt(double %d)
+  ret void
+}
+
 declare i32 @foo(double)
 declare double @sqrt(double) readnone
