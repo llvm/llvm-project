@@ -172,7 +172,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
   br label %.continue0
 
 .continue0:
-  %live = call i1 @llvm.amdgcn.ps.live()
+  %live = call i1 @llvm.amdgcn.wqm.helper()
   %live.cond = select i1 %live, i32 0, i32 1065353216
   %live.v0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %live.cond, i32 85, i32 15, i32 15, i1 true)
   %live.v0f = bitcast i32 %live.v0 to float
@@ -228,7 +228,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 
 .continue0:
   %count = phi i32 [ 0, %.entry ], [ 0, %.demote0 ], [ %next, %.continue1 ]
-  %live = call i1 @llvm.amdgcn.ps.live()
+  %live = call i1 @llvm.amdgcn.wqm.helper()
   %live.cond = select i1 %live, i32 0, i32 %count
   %live.v0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %live.cond, i32 85, i32 15, i32 15, i1 true)
   %live.v0f = bitcast i32 %live.v0 to float
@@ -255,7 +255,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 }
 
 declare void @llvm.amdgcn.wqm.demote(i1) #0
-declare i1 @llvm.amdgcn.ps.live() #1
+declare i1 @llvm.amdgcn.wqm.helper() #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare float @llvm.amdgcn.wqm.f32(float) #1

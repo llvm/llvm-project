@@ -1276,7 +1276,13 @@ def int_amdgcn_interp_p2_f16 :
 
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).
-def int_amdgcn_ps_live : Intrinsic <[llvm_i1_ty], [], []>;
+def int_amdgcn_ps_live : Intrinsic <
+  [llvm_i1_ty],
+  [],
+  [IntrNoMem]>;
+
+// Like ps.live, but cannot be moved by LICM.
+def int_amdgcn_wqm_helper : Intrinsic <[llvm_i1_ty], [], []>;
 
 def int_amdgcn_mbcnt_lo :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,

@@ -325,11 +325,16 @@ def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins sopp_brtarget:$simm16)> {
   let isBranch = 1;
 }
 
-let Uses = [EXEC] in {
-
 def SI_PS_LIVE : PseudoInstSI <
   (outs SReg_1:$dst), (ins),
   [(set i1:$dst, (int_amdgcn_ps_live))]> {
+  let SALU = 1;
+}
+
+let Uses = [EXEC] in {
+def SI_WQM_HELPER : PseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_wqm_helper))]> {
   let SALU = 1;
 }
 
