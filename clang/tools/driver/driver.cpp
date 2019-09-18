@@ -499,6 +499,7 @@ int main(int argc_, const char **argv_) {
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
   llvm::TimerGroup::printAll(llvm::errs());
+  llvm::TimerGroup::clearAll();
 
 #ifdef _WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.

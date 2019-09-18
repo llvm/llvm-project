@@ -23,7 +23,6 @@
 #include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
-#include "ClangExpressionSourceCode.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 
@@ -328,6 +327,7 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
     if (PersistentExpressionState *persistent_state =
             target->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeC)) {
+      m_clang_state = llvm::cast<ClangPersistentVariables>(persistent_state);
       m_result_delegate.RegisterPersistentState(persistent_state);
     } else {
       diagnostic_manager.PutString(
@@ -392,18 +392,18 @@ void ClangUserExpression::CreateSourceCode(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
     std::vector<std::string> modules_to_import, bool for_completion) {
 
+  m_filename = m_clang_state->GetNextExprFileName();
   std::string prefix = m_expr_prefix;
 
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
     m_transformed_text = m_expr_text;
   } else {
-    std::unique_ptr<ClangExpressionSourceCode> source_code(
-        ClangExpressionSourceCode::CreateWrapped(prefix.c_str(),
-                                                 m_expr_text.c_str()));
+    m_source_code.reset(ClangExpressionSourceCode::CreateWrapped(
+        m_filename, prefix.c_str(), m_expr_text.c_str()));
 
-    if (!source_code->GetText(m_transformed_text, m_expr_lang,
-                              m_in_static_method, exe_ctx, !m_ctx_obj,
-                              for_completion, modules_to_import)) {
+    if (!m_source_code->GetText(m_transformed_text, m_expr_lang,
+                                m_in_static_method, exe_ctx, !m_ctx_obj,
+                                for_completion, modules_to_import)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -413,7 +413,7 @@ void ClangUserExpression::CreateSourceCode(
     // transformed code. We need this later for the code completion.
     std::size_t original_start;
     std::size_t original_end;
-    bool found_bounds = source_code->GetOriginalBodyBounds(
+    bool found_bounds = m_source_code->GetOriginalBodyBounds(
         m_transformed_text, m_expr_lang, original_start, original_end);
     if (found_bounds)
       m_user_expression_start_pos = original_start;
@@ -568,7 +568,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // parser_sp will never be empty.
 
   ClangExpressionParser parser(exe_scope, *this, generate_debug_info,
-                               m_include_directories);
+                               m_include_directories, m_filename);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 
@@ -581,8 +581,8 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         size_t fixed_end;
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
-        if (ClangExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, m_expr_lang, fixed_start, fixed_end))
+        if (m_source_code->GetOriginalBodyBounds(fixed_expression, m_expr_lang,
+                                                 fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
