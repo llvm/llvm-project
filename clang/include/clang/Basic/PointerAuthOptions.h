@@ -156,6 +156,19 @@ struct PointerAuthOptions {
 
   /// The ABI for Objective-C method lists.
   PointerAuthSchema ObjCMethodListFunctionPointers;
+
+  /// The ABI for C++ virtual table pointers (the pointer to the table
+  /// itself) as installed in an actual class instance.
+  PointerAuthSchema CXXVTablePointers;
+
+  /// The ABI for C++ virtual table pointers as installed in a VTT.
+  PointerAuthSchema CXXVTTVTablePointers;
+
+  /// The ABI for most C++ virtual function pointers, i.e. v-table entries.
+  PointerAuthSchema CXXVirtualFunctionPointers;
+
+  /// The ABI for variadic C++ virtual function pointers.
+  PointerAuthSchema CXXVirtualVariadicFunctionPointers;
 };
 
 }  // end namespace clang

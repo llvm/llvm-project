@@ -688,6 +688,13 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
       Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.CXXVTablePointers =
+        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+      Opts.CXXVTTVTablePointers =
+        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+      Opts.CXXVirtualFunctionPointers =
+      Opts.CXXVirtualVariadicFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
       Opts.ThunkCXXVirtualMemberPointers = false;
     }
 

@@ -2494,6 +2494,13 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   VTableField = Builder.CreateBitCast(VTableField, VTablePtrTy->getPointerTo());
   VTableAddressPoint = Builder.CreateBitCast(VTableAddressPoint, VTablePtrTy);
 
+  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers) {
+    CGPointerAuthInfo PointerAuth = EmitPointerAuthInfo(Schema, nullptr,
+                                                        GlobalDecl(),
+                                                        QualType());
+    VTableAddressPoint = EmitPointerAuthSign(PointerAuth, VTableAddressPoint);
+  }
+
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTablePtrTy);
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
@@ -2592,6 +2599,13 @@ llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
   llvm::Instruction *VTable = Builder.CreateLoad(VTablePtrSrc, "vtable");
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTableTy);
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);
+
+  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers) {
+    CGPointerAuthInfo PointerAuth = EmitPointerAuthInfo(Schema, nullptr,
+                                                        GlobalDecl(),
+                                                        QualType());
+    VTable = cast<llvm::Instruction>(EmitPointerAuthAuth(PointerAuth, VTable));
+  }
 
   if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       CGM.getCodeGenOpts().StrictVTablePointers)
