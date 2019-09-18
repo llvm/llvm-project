@@ -180,11 +180,9 @@ protected:
   bool HasVFPv3SP = false;
   bool HasVFPv4SP = false;
   bool HasFPARMv8SP = false;
-  bool HasVFPv2D16 = false;
   bool HasVFPv3D16 = false;
   bool HasVFPv4D16 = false;
   bool HasFPARMv8D16 = false;
-  bool HasVFPv2D16SP = false;
   bool HasVFPv3D16SP = false;
   bool HasVFPv4D16SP = false;
   bool HasFPARMv8D16SP = false;
@@ -606,7 +604,7 @@ public:
 
   bool hasARMOps() const { return !NoARM; }
 
-  bool hasVFP2Base() const { return HasVFPv2D16SP; }
+  bool hasVFP2Base() const { return HasVFPv2SP; }
   bool hasVFP3Base() const { return HasVFPv3D16SP; }
   bool hasVFP4Base() const { return HasVFPv4D16SP; }
   bool hasFPARMv8Base() const { return HasFPARMv8D16SP; }

@@ -185,6 +185,12 @@ bool Expr::isKnownToHaveBooleanValue() const {
     return CO->getTrueExpr()->isKnownToHaveBooleanValue() &&
            CO->getFalseExpr()->isKnownToHaveBooleanValue();
 
+  if (isa<ObjCBoolLiteralExpr>(E))
+    return true;
+
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    return OVE->getSourceExpr()->isKnownToHaveBooleanValue();
+
   return false;
 }
 

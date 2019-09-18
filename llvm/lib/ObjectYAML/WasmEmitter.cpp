@@ -518,7 +518,7 @@ void WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
     writeStringRef("reloc.DATA", OS);
     break;
   case wasm::WASM_SEC_CUSTOM: {
-    auto CustomSection = dyn_cast<WasmYAML::CustomSection>(&Sec);
+    auto *CustomSection = cast<WasmYAML::CustomSection>(&Sec);
     writeStringRef(("reloc." + CustomSection->Name).str(), OS);
     break;
   }

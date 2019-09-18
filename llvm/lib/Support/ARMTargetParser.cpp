@@ -176,10 +176,8 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
     // exist).
 
     {"+fpregs", "-fpregs", FPUVersion::VFPV2, FPURestriction::SP_D16},
-    {"+vfp2", "-vfp2", FPUVersion::VFPV2, FPURestriction::None},
-    {"+vfp2d16", "-vfp2d16", FPUVersion::VFPV2, FPURestriction::D16},
-    {"+vfp2d16sp", "-vfp2d16sp", FPUVersion::VFPV2, FPURestriction::SP_D16},
-    {"+vfp2sp", "-vfp2sp", FPUVersion::VFPV2, FPURestriction::None},
+    {"+vfp2", "-vfp2", FPUVersion::VFPV2, FPURestriction::D16},
+    {"+vfp2sp", "-vfp2sp", FPUVersion::VFPV2, FPURestriction::SP_D16},
     {"+vfp3", "-vfp3", FPUVersion::VFPV3, FPURestriction::None},
     {"+vfp3d16", "-vfp3d16", FPUVersion::VFPV3, FPURestriction::D16},
     {"+vfp3d16sp", "-vfp3d16sp", FPUVersion::VFPV3, FPURestriction::SP_D16},
@@ -195,7 +193,7 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
     {"+fp-armv8sp", "-fp-armv8sp", FPUVersion::VFPV5, FPURestriction::None},
     {"+fullfp16", "-fullfp16", FPUVersion::VFPV5_FULLFP16, FPURestriction::SP_D16},
     {"+fp64", "-fp64", FPUVersion::VFPV2, FPURestriction::D16},
-    {"+d32", "-d32", FPUVersion::VFPV2, FPURestriction::None},
+    {"+d32", "-d32", FPUVersion::VFPV3, FPURestriction::None},
   };
 
   for (const auto &Info: FPUFeatureInfoList) {
