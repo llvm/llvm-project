@@ -1278,6 +1278,9 @@ void StmtPrinter::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node){
   case UETT_PreferredAlignOf:
     OS << "__alignof";
     break;
+  case UETT_PtrAuthTypeDiscriminator:
+    OS << "__builtin_ptrauth_type_discriminator";
+    break;
   case UETT_VecStep:
     OS << "vec_step";
     break;

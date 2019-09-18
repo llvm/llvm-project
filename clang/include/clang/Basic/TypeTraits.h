@@ -104,6 +104,8 @@ namespace clang {
     /// __alignof returns the preferred alignment of a type, the alignment
     /// clang will attempt to give an object of the type if allowed by ABI.
     UETT_PreferredAlignOf,
+    /// __builtin_ptrauth_type_discriminator
+    UETT_PtrAuthTypeDiscriminator,
   };
 }
 

@@ -3748,6 +3748,17 @@ static bool CheckVecStepTraitOperandType(Sema &S, QualType T,
   return false;
 }
 
+static bool CheckPtrAuthTypeDiscriminatorOperandType(Sema &S, QualType T,
+                                                     SourceLocation Loc,
+                                                     SourceRange ArgRange) {
+  if (T->isVariablyModifiedType()) {
+    S.Diag(Loc, diag::err_ptrauth_type_disc_variably_modified) << T << ArgRange;
+    return true;
+  }
+
+  return false;
+}
+
 static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
                                            SourceLocation Loc,
                                            SourceRange ArgRange,
@@ -3946,6 +3957,10 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
 
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return CheckPtrAuthTypeDiscriminatorOperandType(
+        *this, ExprType, OpLoc, ExprRange);
 
   // Whitelist some types as extensions
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,

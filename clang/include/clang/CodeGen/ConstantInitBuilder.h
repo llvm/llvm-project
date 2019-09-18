@@ -199,6 +199,12 @@ public:
     add(llvm::ConstantInt::get(intTy, value, isSigned));
   }
 
+  /// Add a signed pointer using the given pointer authentication schema.
+  void addSignedPointer(llvm::Constant *pointer,
+                        unsigned key,
+                        bool useAddressDiscrimination,
+                        llvm::Constant *otherDiscriminator);
+
   /// Add a null pointer of a specific type.
   void addNullPointer(llvm::PointerType *ptrTy) {
     add(llvm::ConstantPointerNull::get(ptrTy));

@@ -1233,6 +1233,8 @@ void JSONNodeDumper::VisitUnaryExprOrTypeTraitExpr(
   case UETT_AlignOf: JOS.attribute("name", "alignof"); break;
   case UETT_VecStep:  JOS.attribute("name", "vec_step"); break;
   case UETT_PreferredAlignOf:  JOS.attribute("name", "__alignof"); break;
+  case UETT_PtrAuthTypeDiscriminator:
+    JOS.attribute("name", "ptrauth_type_discriminator"); break;
   case UETT_OpenMPRequiredSimdAlign:
     JOS.attribute("name", "__builtin_omp_required_simd_align"); break;
   }

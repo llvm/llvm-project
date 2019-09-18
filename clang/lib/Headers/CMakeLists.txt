@@ -83,6 +83,7 @@ set(files
   pconfigintrin.h
   popcntintrin.h
   prfchwintrin.h
+  ptrauth.h
   ptwriteintrin.h
   rdseedintrin.h
   rtmintrin.h

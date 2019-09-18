@@ -1234,6 +1234,11 @@ public:
 
   const LangASMap &getAddressSpaceMap() const { return *AddrSpaceMap; }
 
+  /// Determine whether the given pointer-authentication key is valid.
+  ///
+  /// The value has been coerced to type 'int'.
+  virtual bool validatePointerAuthKey(const llvm::APSInt &value) const;
+
   /// Map from the address space field in builtin description strings to the
   /// language address space.
   virtual LangAS getOpenCLBuiltinAddressSpace(unsigned AS) const {

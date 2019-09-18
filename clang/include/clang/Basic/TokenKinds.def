@@ -529,6 +529,8 @@ KEYWORD(__array_extent              , KEYCXX)
 KEYWORD(__private_extern__          , KEYALL)
 KEYWORD(__module_private__          , KEYALL)
 
+KEYWORD(__builtin_ptrauth_type_discriminator, KEYALL)
+
 // Extension that will be enabled for Microsoft, Borland and PS4, but can be
 // disabled via '-fno-declspec'.
 KEYWORD(__declspec                  , 0)

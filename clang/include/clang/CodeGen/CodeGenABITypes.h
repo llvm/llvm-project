@@ -28,6 +28,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 
 namespace llvm {
+  class Constant;
   class DataLayout;
   class Module;
   class Function;
@@ -83,6 +84,23 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 /// be a field in RD directly (i.e. not an inherited field).
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
+
+/// Compute a stable hash of the given string.
+///
+/// The exact algorithm is the little-endian interpretation of the
+/// non-doubled (i.e. 64-bit) result of applying a SipHash-2-4 using
+/// a specific key value which can be found in the source.
+uint64_t computeStableStringHash(StringRef string);
+
+/// Return a type discriminator for the given function type.
+uint16_t getPointerAuthTypeDiscriminator(CodeGenModule &CGM, QualType fnType);
+
+/// Return a signed constant pointer.
+llvm::Constant *getConstantSignedPointer(CodeGenModule &CGM,
+                                         llvm::Constant *pointer,
+                                         unsigned key,
+                                         llvm::Constant *storageAddress,
+                                         llvm::Constant *otherDiscriminator);
 
 /// Returns the default constructor for a C struct with non-trivially copyable
 /// fields, generating it if necessary. The returned function uses the `cdecl`
