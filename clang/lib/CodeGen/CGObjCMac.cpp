@@ -6639,7 +6639,14 @@ void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
   } else {
     llvm::Function *fn = GetMethodDefinition(MD);
     assert(fn && "no definition for method?");
-    method.addBitCast(fn, ObjCTypes.Int8PtrTy);
+
+    if (const auto &schema =
+            CGM.getCodeGenOpts().PointerAuth.ObjCMethodListFunctionPointers) {
+      auto *bitcast = llvm::ConstantExpr::getBitCast(fn, ObjCTypes.Int8PtrTy);
+      method.addSignedPointer(bitcast, schema, GlobalDecl(), QualType());
+    } else {
+      method.addBitCast(fn, ObjCTypes.Int8PtrTy);
+    }
   }
 
   method.finishAndAddTo(builder);
@@ -7212,7 +7219,8 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
   llvm::Value *calleePtr = CGF.Builder.CreateLoad(calleeAddr, "msgSend_fn");
 
   calleePtr = CGF.Builder.CreateBitCast(calleePtr, MSI.MessengerType);
-  CGCallee callee(CGCalleeInfo(), calleePtr);
+  CGPointerAuthInfo pointerAuth; // This code path is unsupported.
+  CGCallee callee(CGCalleeInfo(), calleePtr, pointerAuth);
 
   RValue result = CGF.EmitCall(MSI.CallInfo, callee, returnSlot, args);
   return nullReturn.complete(CGF, returnSlot, result, resultType, formalArgs,

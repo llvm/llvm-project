@@ -686,6 +686,8 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
       Opts.BlockByrefHelperFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+      Opts.ObjCMethodListFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
       Opts.ThunkCXXVirtualMemberPointers = false;
     }
 

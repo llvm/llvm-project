@@ -153,6 +153,9 @@ struct PointerAuthOptions {
 
   /// The ABI for __block variable copy/destroy function pointers.
   PointerAuthSchema BlockByrefHelperFunctionPointers;
+
+  /// The ABI for Objective-C method lists.
+  PointerAuthSchema ObjCMethodListFunctionPointers;
 };
 
 }  // end namespace clang
