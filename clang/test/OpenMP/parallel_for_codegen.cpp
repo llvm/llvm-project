@@ -387,14 +387,12 @@ void parallel_for(float *a, const int n) {
 // TERM_DEBUG-DAG: [[DBG_LOC_END]] = !DILocation(line: [[@LINE-18]],
 
 #else // OMP5
-// OMP5: [[LOOP_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 514, i32 0, i32 0, i8*
-
 // OMP5-LABEL: increment
 int increment () {
 // OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[DEFAULT_LOC:[@%].+]])
   #pragma omp for
 // Determine UB = min(UB, GlobalUB)
-// OMP5: call void @__kmpc_for_static_init_4(%struct.ident_t* [[LOOP_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
+// OMP5: call void @__kmpc_for_static_init_4(%struct.ident_t* [[LOOP_LOC:[@%].+]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
 // OMP5-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
 // OMP5-NEXT: [[UBCMP:%.+]] = icmp sgt i32 [[UB]], 4
 // OMP5-NEXT: br i1 [[UBCMP]], label [[UB_TRUE:%[^,]+]], label [[UB_FALSE:%[^,]+]]

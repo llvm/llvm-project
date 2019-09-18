@@ -454,12 +454,10 @@ TEST(AddressSanitizer, StrNCatOOBTest) {
   size_t from_size = Ident(20);
   char *from = MallocAndMemsetString(from_size);
   // Normal strncat calls.
-  strncat(to, from, 1);
+  strncat(to, from, 0);
   strncat(to, from, from_size);
   from[from_size - 1] = '\0';
   strncat(to, from, 2 * from_size);
-  // Catenating empty string with an invalid string is still an error.
-  EXPECT_DEATH(strncat(to - 1, from, 0), LeftOOBAccessMessage(1));
   strncat(to, from + from_size - 1, 10);
   // One of arguments points to not allocated memory.
   EXPECT_DEATH(strncat(to - 1, from, 2), LeftOOBAccessMessage(1));

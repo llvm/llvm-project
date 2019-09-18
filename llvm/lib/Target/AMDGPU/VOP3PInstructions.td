@@ -261,6 +261,7 @@ class SDot2Pat<Instruction Inst> : GCNPat <
   let SubtargetPredicate = !cast<VOP_Pseudo>(Inst).SubtargetPredicate;
 }
 
+let IsDOT = 1 in {
 let SubtargetPredicate = HasDot2Insts in {
 
 def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>>;
@@ -277,6 +278,7 @@ def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8", VOP3_Profile<VOP_I32_I32_I32_I32
 def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>>;
 
 } // End SubtargetPredicate = HasDot1Insts
+} // End let IsDOT = 1
 
 multiclass DotPats<SDPatternOperator dot_op,
                    VOP3PInst dot_inst> {

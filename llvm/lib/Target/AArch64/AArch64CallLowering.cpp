@@ -130,9 +130,11 @@ struct CallReturnHandler : public IncomingArgHandler {
 struct OutgoingArgHandler : public CallLowering::ValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
-                     CCAssignFn *AssignFnVarArg, bool IsTailCall = false)
+                     CCAssignFn *AssignFnVarArg, bool IsTailCall = false,
+                     int FPDiff = 0)
       : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
-        AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), StackSize(0) {}
+        AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
+        StackSize(0) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -141,8 +143,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     LLT s64 = LLT::scalar(64);
 
     if (IsTailCall) {
-      // TODO: For -tailcallopt tail calls, Offset will need FPDiff like in
-      // ISelLowering.
+      Offset += FPDiff;
       int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
       Register FIReg = MRI.createGenericVirtualRegister(p0);
       MIRBuilder.buildFrameIndex(FIReg, FI);
@@ -201,9 +202,17 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
   MachineInstrBuilder MIB;
   CCAssignFn *AssignFnVarArg;
   bool IsTailCall;
+
+  /// For tail calls, the byte offset of the call's argument area from the
+  /// callee's. Unused elsewhere.
+  int FPDiff;
   uint64_t StackSize;
 };
 } // namespace
+
+static bool doesCalleeRestoreStack(CallingConv::ID CallConv, bool TailCallOpt) {
+  return CallConv == CallingConv::Fast && TailCallOpt;
+}
 
 void AArch64CallLowering::splitToValueTypes(
     const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
@@ -408,9 +417,21 @@ bool AArch64CallLowering::lowerFormalArguments(
     FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
   }
 
-  // TODO: Port checks for stack to restore for -tailcallopt from ISelLowering.
-  // We need to keep track of the size of function stacks for tail call
-  // optimization. When we tail call, we need to check if the callee's arguments
+  if (doesCalleeRestoreStack(F.getCallingConv(),
+                             MF.getTarget().Options.GuaranteedTailCallOpt)) {
+    // We have a non-standard ABI, so why not make full use of the stack that
+    // we're going to pop? It must be aligned to 16 B in any case.
+    StackOffset = alignTo(StackOffset, 16);
+
+    // If we're expected to restore the stack (e.g. fastcc), then we'll be
+    // adding a multiple of 16.
+    FuncInfo->setArgumentStackToRestore(StackOffset);
+
+    // Our own callers will guarantee that the space is free by giving an
+    // aligned value to CALLSEQ_START.
+  }
+
+  // When we tail call, we need to check if the callee's arguments
   // will fit on the caller's stack. So, whenever we lower formal arguments,
   // we should keep track of this information, since we might lower a tail call
   // in this function later.
@@ -639,9 +660,12 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     }
   }
 
-  // If we have -tailcallopt and matching CCs, at this point, we could return
-  // true. However, we don't have full tail call support yet. So, continue
-  // checking. We want to emit a sibling call.
+  // If we have -tailcallopt, then we're done.
+  if (MF.getTarget().Options.GuaranteedTailCallOpt)
+    return canGuaranteeTCO(CalleeCC) && CalleeCC == CallerF.getCallingConv();
+
+  // We don't have -tailcallopt, so we're allowed to change the ABI (sibcall).
+  // Try to find cases where we can do that.
 
   // I want anyone implementing a new calling convention to think long and hard
   // about this assert.
@@ -687,6 +711,128 @@ static unsigned getCallOpcode(const Function &CallerF, bool IsIndirect,
   return AArch64::TCRETURNri;
 }
 
+bool AArch64CallLowering::lowerTailCall(
+    MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
+    SmallVectorImpl<ArgInfo> &OutArgs) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
+
+  // True when we're tail calling, but without -tailcallopt.
+  bool IsSibCall = !MF.getTarget().Options.GuaranteedTailCallOpt;
+
+  // TODO: Right now, regbankselect doesn't know how to handle the rtcGPR64
+  // register class. Until we can do that, we should fall back here.
+  if (F.hasFnAttribute("branch-target-enforcement")) {
+    LLVM_DEBUG(
+        dbgs() << "Cannot lower indirect tail calls with BTI enabled yet.\n");
+    return false;
+  }
+
+  // Find out which ABI gets to decide where things go.
+  CallingConv::ID CalleeCC = Info.CallConv;
+  CCAssignFn *AssignFnFixed =
+      TLI.CCAssignFnForCall(CalleeCC, /*IsVarArg=*/false);
+  CCAssignFn *AssignFnVarArg =
+      TLI.CCAssignFnForCall(CalleeCC, /*IsVarArg=*/true);
+
+  MachineInstrBuilder CallSeqStart;
+  if (!IsSibCall)
+    CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
+
+  unsigned Opc = getCallOpcode(F, Info.Callee.isReg(), true);
+  auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  MIB.add(Info.Callee);
+
+  // Byte offset for the tail call. When we are sibcalling, this will always
+  // be 0.
+  MIB.addImm(0);
+
+  // Tell the call which registers are clobbered.
+  auto TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, F.getCallingConv());
+  if (MF.getSubtarget<AArch64Subtarget>().hasCustomCallingConv())
+    TRI->UpdateCustomCallPreservedMask(MF, &Mask);
+  MIB.addRegMask(Mask);
+
+  if (TRI->isAnyArgRegReserved(MF))
+    TRI->emitReservedArgRegCallError(MF);
+
+  // FPDiff is the byte offset of the call's argument area from the callee's.
+  // Stores to callee stack arguments will be placed in FixedStackSlots offset
+  // by this amount for a tail call. In a sibling call it must be 0 because the
+  // caller will deallocate the entire stack and the callee still expects its
+  // arguments to begin at SP+0.
+  int FPDiff = 0;
+
+  // This will be 0 for sibcalls, potentially nonzero for tail calls produced
+  // by -tailcallopt. For sibcalls, the memory operands for the call are
+  // already available in the caller's incoming argument space.
+  unsigned NumBytes = 0;
+  if (!IsSibCall) {
+    // We aren't sibcalling, so we need to compute FPDiff. We need to do this
+    // before handling assignments, because FPDiff must be known for memory
+    // arguments.
+    AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+    unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
+    SmallVector<CCValAssign, 16> OutLocs;
+    CCState OutInfo(CalleeCC, false, MF, OutLocs, F.getContext());
+    analyzeArgInfo(OutInfo, OutArgs,
+                   *TLI.CCAssignFnForCall(CalleeCC, Info.IsVarArg));
+
+    // The callee will pop the argument stack as a tail call. Thus, we must
+    // keep it 16-byte aligned.
+    NumBytes = alignTo(OutInfo.getNextStackOffset(), 16);
+
+    // FPDiff will be negative if this tail call requires more space than we
+    // would automatically have in our incoming argument space. Positive if we
+    // actually shrink the stack.
+    FPDiff = NumReusableBytes - NumBytes;
+
+    // The stack pointer must be 16-byte aligned at all times it's used for a
+    // memory operation, which in practice means at *all* times and in
+    // particular across call boundaries. Therefore our own arguments started at
+    // a 16-byte aligned SP and the delta applied for the tail call should
+    // satisfy the same constraint.
+    assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
+  }
+
+  // Do the actual argument marshalling.
+  SmallVector<unsigned, 8> PhysRegs;
+  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
+                             AssignFnVarArg, true, FPDiff);
+  if (!handleAssignments(MIRBuilder, OutArgs, Handler))
+    return false;
+
+  // If we have -tailcallopt, we need to adjust the stack. We'll do the call
+  // sequence start and end here.
+  if (!IsSibCall) {
+    MIB->getOperand(1).setImm(FPDiff);
+    CallSeqStart.addImm(NumBytes).addImm(0);
+    // End the call sequence *before* emitting the call. Normally, we would
+    // tidy the frame up after the call. However, here, we've laid out the
+    // parameters so that when SP is reset, they will be in the correct
+    // location.
+    MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP).addImm(NumBytes).addImm(0);
+  }
+
+  // Now we can add the actual call instruction to the correct basic block.
+  MIRBuilder.insertInstr(MIB);
+
+  // If Callee is a reg, since it is used by a target specific instruction,
+  // it must have a register class matching the constraint of that instruction.
+  if (Info.Callee.isReg())
+    MIB->getOperand(0).setReg(constrainOperandRegClass(
+        MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
+        *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(), Info.Callee,
+        0));
+
+  MF.getFrameInfo().setHasTailCall();
+  Info.LoweredTailCall = true;
+  return true;
+}
+
 bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     CallLoweringInfo &Info) const {
   MachineFunction &MF = MIRBuilder.getMF();
@@ -698,12 +844,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (Info.IsMustTailCall) {
     // TODO: Until we lower all tail calls, we should fall back on this.
     LLVM_DEBUG(dbgs() << "Cannot lower musttail calls yet.\n");
-    return false;
-  }
-
-  if (Info.IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
-    // TODO: Until we lower all tail calls, we should fall back on this.
-    LLVM_DEBUG(dbgs() << "Cannot handle -tailcallopt yet.\n");
     return false;
   }
 
@@ -719,10 +859,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!Info.OrigRet.Ty->isVoidTy())
     splitToValueTypes(Info.OrigRet, InArgs, DL, MRI, F.getCallingConv());
 
-  bool IsSibCall = Info.IsTailCall && isEligibleForTailCallOptimization(
-                                          MIRBuilder, Info, InArgs, OutArgs);
-  if (IsSibCall)
-    MF.getFrameInfo().setHasTailCall();
+  // If we can lower as a tail call, do that instead.
+  if (Info.IsTailCall &&
+      isEligibleForTailCallOptimization(MIRBuilder, Info, InArgs, OutArgs))
+    return lowerTailCall(MIRBuilder, Info, OutArgs);
 
   // Find out which ABI gets to decide where things go.
   CCAssignFn *AssignFnFixed =
@@ -730,32 +870,15 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFnVarArg =
       TLI.CCAssignFnForCall(Info.CallConv, /*IsVarArg=*/true);
 
-  // If we have a sibling call, then we don't have to adjust the stack.
-  // Otherwise, we need to adjust it.
   MachineInstrBuilder CallSeqStart;
-  if (!IsSibCall)
-    CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
+  CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
-  unsigned Opc = getCallOpcode(F, Info.Callee.isReg(), IsSibCall);
-
-  // TODO: Right now, regbankselect doesn't know how to handle the rtcGPR64
-  // register class. Until we can do that, we should fall back here.
-  if (Opc == AArch64::TCRETURNriBTI) {
-    LLVM_DEBUG(
-        dbgs() << "Cannot lower indirect tail calls with BTI enabled yet.\n");
-    return false;
-  }
+  unsigned Opc = getCallOpcode(F, Info.Callee.isReg(), false);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);
-
-  // Add the byte offset for the tail call. We only have sibling calls, so this
-  // is always 0.
-  // TODO: Handle tail calls where we will have a different value here.
-  if (IsSibCall)
-    MIB.addImm(0);
 
   // Tell the call which registers are clobbered.
   auto TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
@@ -770,7 +893,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Do the actual argument marshalling.
   SmallVector<unsigned, 8> PhysRegs;
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, IsSibCall);
+                             AssignFnVarArg, false);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler))
     return false;
 
@@ -785,13 +908,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
         *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(), Info.Callee,
         0));
-
-  // If we're tail calling, then we're the return from the block. So, we don't
-  // want to copy anything.
-  if (IsSibCall) {
-    Info.LoweredTailCall = true;
-    return true;
-  }
 
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arugments, the physical register must be an
@@ -808,10 +924,16 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildCopy(Info.SwiftErrorVReg, Register(AArch64::X21));
   }
 
+  uint64_t CalleePopBytes =
+      doesCalleeRestoreStack(Info.CallConv,
+                             MF.getTarget().Options.GuaranteedTailCallOpt)
+          ? alignTo(Handler.StackSize, 16)
+          : 0;
+
   CallSeqStart.addImm(Handler.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
       .addImm(Handler.StackSize)
-      .addImm(0);
+      .addImm(CalleePopBytes);
 
   return true;
 }

@@ -1,2 +1,2 @@
 import lldb
-print(lldb.frame)
+print("frame:py: {}".format(lldb.frame))

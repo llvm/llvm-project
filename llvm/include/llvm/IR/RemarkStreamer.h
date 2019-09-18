@@ -25,12 +25,12 @@
 namespace llvm {
 /// Streamer for remarks.
 class RemarkStreamer {
-  /// The filename that the remark diagnostics are emitted to.
-  const std::string Filename;
   /// The regex used to filter remarks based on the passes that emit them.
   Optional<Regex> PassFilter;
   /// The object used to serialize the remarks to a specific format.
   std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer;
+  /// The filename that the remark diagnostics are emitted to.
+  const Optional<std::string> Filename;
 
   /// Convert diagnostics into remark objects.
   /// The lifetime of the members of the result is bound to the lifetime of
@@ -38,10 +38,12 @@ class RemarkStreamer {
   remarks::Remark toRemark(const DiagnosticInfoOptimizationBase &Diag);
 
 public:
-  RemarkStreamer(StringRef Filename,
-                 std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer);
+  RemarkStreamer(std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
+                 Optional<StringRef> Filename = None);
   /// Return the filename that the remark diagnostics are emitted to.
-  StringRef getFilename() const { return Filename; }
+  Optional<StringRef> getFilename() const {
+    return Filename ? Optional<StringRef>(*Filename) : None;
+  }
   /// Return stream that the remark diagnostics are emitted to.
   raw_ostream &getStream() { return RemarkSerializer->OS; }
   /// Return the serializer used for this stream.
@@ -84,12 +86,20 @@ struct RemarkSetupFormatError : RemarkSetupErrorInfo<RemarkSetupFormatError> {
   using RemarkSetupErrorInfo<RemarkSetupFormatError>::RemarkSetupErrorInfo;
 };
 
-/// Setup optimization remarks.
+/// Setup optimization remarks that output to a file.
 Expected<std::unique_ptr<ToolOutputFile>>
 setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
                          StringRef RemarksPasses, StringRef RemarksFormat,
                          bool RemarksWithHotness,
                          unsigned RemarksHotnessThreshold = 0);
+
+/// Setup optimization remarks that output directly to a raw_ostream.
+/// \p OS is managed by the caller and should be open for writing as long as \p
+/// Context is streaming remarks to it.
+Error setupOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,
+                               StringRef RemarksPasses, StringRef RemarksFormat,
+                               bool RemarksWithHotness,
+                               unsigned RemarksHotnessThreshold = 0);
 
 } // end namespace llvm
 

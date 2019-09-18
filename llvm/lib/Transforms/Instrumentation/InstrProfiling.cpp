@@ -757,20 +757,25 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // new comdat group for the counters and profiling data. If we use the comdat
   // of the parent function, that will result in relocations against discarded
   // sections.
-  Comdat *Cmdt = nullptr;
-  if (needsComdatForCounter(*Fn, *M)) {
-    StringRef CmdtPrefix = getInstrProfComdatPrefix();
+  bool NeedComdat = needsComdatForCounter(*Fn, *M);
+  Comdat *Cmdt = nullptr; // Comdat group.
+  if (NeedComdat) {
     if (TT.isOSBinFormatCOFF()) {
-      // For COFF, the comdat group name must be the name of a symbol in the
-      // group. Use the counter variable name, and upgrade its linkage to
-      // something externally visible, like linkonce_odr. Use hidden visibility
-      // to imply that this is dso local.
-      CmdtPrefix = getInstrProfCountersVarPrefix();
+      // For COFF, put the counters, data, and values each into their own
+      // comdats. We can't use a group because the Visual C++ linker will
+      // report duplicate symbol errors if there are multiple external symbols
+      // with the same name marked IMAGE_COMDAT_SELECT_ASSOCIATIVE.
       Linkage = GlobalValue::LinkOnceODRLinkage;
       Visibility = GlobalValue::HiddenVisibility;
+    } else {
+      // Otherwise, create one comdat group for everything.
+      Cmdt = M->getOrInsertComdat(getVarName(Inc, getInstrProfComdatPrefix()));
     }
-    Cmdt = M->getOrInsertComdat(getVarName(Inc, CmdtPrefix));
   }
+  auto MaybeSetComdat = [=](GlobalVariable *GV) {
+    if (NeedComdat)
+      GV->setComdat(Cmdt ? Cmdt : M->getOrInsertComdat(GV->getName()));
+  };
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   LLVMContext &Ctx = M->getContext();
@@ -785,7 +790,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   CounterPtr->setSection(
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
   CounterPtr->setAlignment(8);
-  CounterPtr->setComdat(Cmdt);
+  MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
@@ -807,7 +812,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
       ValuesVar->setSection(
           getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
       ValuesVar->setAlignment(8);
-      ValuesVar->setComdat(Cmdt);
+      MaybeSetComdat(ValuesVar);
       ValuesPtrExpr =
           ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
     }
@@ -840,7 +845,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(INSTR_PROF_DATA_ALIGNMENT);
-  Data->setComdat(Cmdt);
+  MaybeSetComdat(Data);
   Data->setLinkage(Linkage);
 
   PD.RegionCounters = CounterPtr;
