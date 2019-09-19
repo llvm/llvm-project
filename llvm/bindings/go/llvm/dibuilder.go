@@ -44,7 +44,7 @@ const (
 	FlagProtected
 	FlagFwdDecl
 	FlagAppleBlock
-	FlagBlockByrefStruct
+	FlagReserved
 	FlagVirtual
 	FlagArtificial
 	FlagExplicit

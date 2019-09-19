@@ -37,20 +37,20 @@ target triple = "wasm32-unknown-unknown"
 ; ACTIVE-NEXT:        Offset:
 ; ACTIVE-NEXT:          Opcode:          I32_CONST
 ; ACTIVE-NEXT:          Value:           1024
-; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
-; ACTIVE-NEXT:      - SectionOffset:   34
+; ACTIVE-NEXT:        Content:         636F6E7374616E74000000002B
+; ACTIVE-NEXT:      - SectionOffset:   26
 ; ACTIVE-NEXT:        InitFlags:       0
 ; ACTIVE-NEXT:        Offset:
 ; ACTIVE-NEXT:          Opcode:          I32_CONST
-; ACTIVE-NEXT:          Value:           1044
+; ACTIVE-NEXT:          Value:           1040
+; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
+; ACTIVE-NEXT:      - SectionOffset:   53
+; ACTIVE-NEXT:        InitFlags:       0
+; ACTIVE-NEXT:        Offset:
+; ACTIVE-NEXT:          Opcode:          I32_CONST
+; ACTIVE-NEXT:          Value:           1060
 ; ACTIVE-NEXT:        Content:         '0000000000
 ; ACTIVE-SAME:                           0000000000'
-; ACTIVE-NEXT:      - SectionOffset:   10041
-; ACTIVE-NEXT:        InitFlags:       0
-; ACTIVE-NEXT:        Offset:
-; ACTIVE-NEXT:          Opcode:          I32_CONST
-; ACTIVE-NEXT:          Value:           11044
-; ACTIVE-NEXT:        Content:         636F6E7374616E74000000002B
 ; ACTIVE-NEXT:  - Type:            CUSTOM
 ; ACTIVE-NEXT:    Name:            name
 ; ACTIVE-NEXT:    FunctionNames:
@@ -66,7 +66,7 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:        Body:            0B
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Locals:          []
-; PASSIVE-NEXT:        Body:            41B4D60041004101FE480200044041B4D6004101427FFE0102001A0541800841004114FC08000041940841004190CE00FC08010041A4D6004100410DFC08020041B4D6004102FE17020041B4D600417FFE0002001A0BFC0900FC0901FC09020B
+; PASSIVE-NEXT:        Body:            41B4D60041004101FE480200044041B4D6004101427FFE0102001A054180084100410DFC08000041900841004114FC08010041A40841004190CE00FC08020041B4D6004102FE17020041B4D600417FFE0002001A0BFC0900FC0901FC09020B
 ; PASSIVE-NEXT:  - Index:           2
 ; PASSIVE-NEXT:    Locals:          []
 ; PASSIVE-NEXT:    Body:            0B
@@ -74,14 +74,14 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:    Segments:
 ; PASSIVE-NEXT:      - SectionOffset:   3
 ; PASSIVE-NEXT:        InitFlags:       1
+; PASSIVE-NEXT:        Content:         636F6E7374616E74000000002B
+; PASSIVE-NEXT:      - SectionOffset:   18
+; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
-; PASSIVE-NEXT:      - SectionOffset:   26
+; PASSIVE-NEXT:      - SectionOffset:   41
 ; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         '0000000000
 ; PASSIVE-SAME:                           0000000000'
-; PASSIVE-NEXT:      - SectionOffset:   10028
-; PASSIVE-NEXT:        InitFlags:       1
-; PASSIVE-NEXT:        Content:         636F6E7374616E74000000002B
 ; PASSIVE-NEXT:  - Type:            CUSTOM
 ; PASSIVE-NEXT:    Name:            name
 ; PASSIVE-NEXT:    FunctionNames:
@@ -89,5 +89,5 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:        Name:            __wasm_call_ctors
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Name:            __wasm_init_memory
-; PASSIVE-NEXT:  - Index:           2
-; PASSIVE-NEXT:    Name:            __wasm_init_tls
+; PASSIVE-NEXT:      - Index:           2
+; PASSIVE-NEXT:        Name:            __wasm_init_tls

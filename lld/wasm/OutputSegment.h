@@ -20,7 +20,7 @@ class InputSegment;
 
 class OutputSegment {
 public:
-  OutputSegment(StringRef n, uint32_t index) : name(n), index(index) {}
+  OutputSegment(StringRef n) : name(n) {}
 
   void addInputSegment(InputSegment *inSeg) {
     alignment = std::max(alignment, inSeg->getAlignment());
@@ -32,7 +32,7 @@ public:
   }
 
   StringRef name;
-  const uint32_t index;
+  uint32_t index = 0;
   uint32_t initFlags = 0;
   uint32_t sectionOffset = 0;
   uint32_t alignment = 0;

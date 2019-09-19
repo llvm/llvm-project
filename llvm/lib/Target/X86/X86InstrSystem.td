@@ -43,7 +43,7 @@ def INT3 : I<0xcc, RawFrm, (outs), (ins), "int3", [(int_x86_int (i8 3))]>;
 let SchedRW = [WriteSystem] in {
 
 def INT : Ii8<0xcd, RawFrm, (outs), (ins u8imm:$trap), "int\t$trap",
-              [(int_x86_int imm:$trap)]>;
+              [(int_x86_int timm:$trap)]>;
 
 
 def SYSCALL  : I<0x05, RawFrm, (outs), (ins), "syscall", []>, TB;

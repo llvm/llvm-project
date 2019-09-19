@@ -685,11 +685,11 @@ def logical_imm64_not : Operand<i64> {
 
 // iXX_imm0_65535 predicates - True if the immediate is in the range [0,65535].
 let ParserMatchClass = AsmImmRange<0, 65535>, PrintMethod = "printImmHex" in {
-def i32_imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
+def i32_imm0_65535 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 65536;
 }]>;
 
-def i64_imm0_65535 : Operand<i64>, ImmLeaf<i64, [{
+def i64_imm0_65535 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 65536;
 }]>;
 }

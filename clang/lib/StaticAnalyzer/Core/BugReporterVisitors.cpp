@@ -1438,6 +1438,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
 
   if (!StoreSite)
     return nullptr;
+
   Satisfied = true;
 
   // If we have an expression that provided the value, try to track where it
@@ -1802,7 +1803,7 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
   if (ControlDeps.isControlDependent(OriginB, NB)) {
     // We don't really want to explain for range loops. Evidence suggests that
     // the only thing that leads to is the addition of calls to operator!=.
-    if (isa<CXXForRangeStmt>(NB->getTerminator()))
+    if (llvm::isa_and_nonnull<CXXForRangeStmt>(NB->getTerminatorStmt()))
       return nullptr;
 
     if (const Expr *Condition = NB->getLastCondition()) {

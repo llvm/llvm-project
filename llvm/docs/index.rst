@@ -182,6 +182,7 @@ Information about LLVM's development process.
    HowToReleaseLLVM
    Packaging
    ReleaseProcess
+   HowToAddABuilder
    ReleaseNotes
 
 :doc:`Projects`
@@ -199,6 +200,9 @@ Information about LLVM's development process.
 
 :doc:`ReleaseProcess`
   This is a guide to validate a new release, during the release process. Most developers can ignore it.
+
+:doc:`HowToAddABuilder`
+   Instructions for adding new builder to LLVM buildbot master.
 
 :doc:`Packaging`
    Advice on packaging LLVM into a distribution.
@@ -292,6 +296,7 @@ can be better.
 
    CodeOfConduct
    Proposals/GitHubMove
+   BugpointRedesign
    Proposals/LLVMLibC
    Proposals/TestSuite
    Proposals/VariableNames
@@ -303,6 +308,9 @@ can be better.
 
 :doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.
+
+:doc:`BugpointRedesign`
+   Design doc for a redesign of the Bugpoint tool.
 
 :doc:`Proposals/LLVMLibC`
    Proposal to add a libc implementation under the LLVM project.

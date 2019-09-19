@@ -14,7 +14,6 @@ For API clients and LLVM developers.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
-   BugpointRedesign
    CodeGenerator
    ExceptionHandling
    AddingConstrainedIntrinsics
@@ -55,6 +54,7 @@ For API clients and LLVM developers.
    SpeculativeLoadHardening
    StackSafetyAnalysis
    LoopTerminology
+   DependenceGraphs/index
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -104,9 +104,6 @@ For API clients and LLVM developers.
 :doc:`Bugpoint`
    Automatic bug finder and test-case reducer description and usage
    information.
-
-:doc:`BugpointRedesign`
-   Design doc for a redesign of the Bugpoint tool.
 
 :doc:`BitCodeFormat`
    This describes the file format and encoding used for LLVM "bc" files.
@@ -208,3 +205,7 @@ For API clients and LLVM developers.
 
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
+
+:doc:`Dependence Graphs <DependenceGraphs/index>`
+  A description of the design of the various dependence graphs such as
+  the DDG (Data Dependence Graph).

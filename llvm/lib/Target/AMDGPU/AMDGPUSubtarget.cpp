@@ -283,7 +283,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
   Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
-  RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
+  RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
   InstSelector.reset(new AMDGPUInstructionSelector(
   *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
 }

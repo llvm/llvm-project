@@ -1192,9 +1192,14 @@ APValue &CallStackFrame::createTemporary(const void *Key,
   return Result;
 }
 
+static bool isRead(AccessKinds AK) {
+  return AK == AK_Read || AK == AK_ReadObjectRepresentation;
+}
+
 static bool isModification(AccessKinds AK) {
   switch (AK) {
   case AK_Read:
+  case AK_ReadObjectRepresentation:
   case AK_MemberCall:
   case AK_DynamicCast:
   case AK_TypeId:
@@ -1209,7 +1214,7 @@ static bool isModification(AccessKinds AK) {
 
 /// Is this an access per the C++ definition?
 static bool isFormalAccess(AccessKinds AK) {
-  return AK == AK_Read || isModification(AK);
+  return isRead(AK) || isModification(AK);
 }
 
 namespace {
@@ -1858,14 +1863,16 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
   return false;
 }
 
-/// Check that this core constant expression value is a valid value for a
-/// constant expression. If not, report an appropriate diagnostic. Does not
-/// check that the expression is of literal type.
+enum class CheckEvaluationResultKind {
+  ConstantExpression,
+  FullyInitialized,
+};
+
 static bool
-CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
-                        const APValue &Value,
-                        Expr::ConstExprUsage Usage = Expr::EvaluateForCodeGen,
-                        SourceLocation SubobjectLoc = SourceLocation()) {
+CheckEvaluationResult(CheckEvaluationResultKind CERK, EvalInfo &Info,
+                      SourceLocation DiagLoc, QualType Type,
+                      const APValue &Value, Expr::ConstExprUsage Usage,
+                      SourceLocation SubobjectLoc = SourceLocation()) {
   if (!Value.hasValue()) {
     Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
       << true << Type;
@@ -1885,30 +1892,29 @@ CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
   if (Value.isArray()) {
     QualType EltTy = Type->castAsArrayTypeUnsafe()->getElementType();
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
-      if (!CheckConstantExpression(Info, DiagLoc, EltTy,
-                                   Value.getArrayInitializedElt(I), Usage,
-                                   SubobjectLoc))
+      if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
+                                 Value.getArrayInitializedElt(I), Usage,
+                                 SubobjectLoc))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
-    return CheckConstantExpression(Info, DiagLoc, EltTy, Value.getArrayFiller(),
-                                   Usage, SubobjectLoc);
+    return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
+                                 Value.getArrayFiller(), Usage, SubobjectLoc);
   }
   if (Value.isUnion() && Value.getUnionField()) {
-    return CheckConstantExpression(Info, DiagLoc,
-                                   Value.getUnionField()->getType(),
-                                   Value.getUnionValue(), Usage,
-                                   Value.getUnionField()->getLocation());
+    return CheckEvaluationResult(
+        CERK, Info, DiagLoc, Value.getUnionField()->getType(),
+        Value.getUnionValue(), Usage, Value.getUnionField()->getLocation());
   }
   if (Value.isStruct()) {
     RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
-        if (!CheckConstantExpression(Info, DiagLoc, BS.getType(),
-                                     Value.getStructBase(BaseIndex), Usage,
-                                     BS.getBeginLoc()))
+        if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
+                                   Value.getStructBase(BaseIndex), Usage,
+                                   BS.getBeginLoc()))
           return false;
         ++BaseIndex;
       }
@@ -1917,24 +1923,46 @@ CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
       if (I->isUnnamedBitfield())
         continue;
 
-      if (!CheckConstantExpression(Info, DiagLoc, I->getType(),
-                                   Value.getStructField(I->getFieldIndex()),
-                                   Usage, I->getLocation()))
+      if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
+                                 Value.getStructField(I->getFieldIndex()),
+                                 Usage, I->getLocation()))
         return false;
     }
   }
 
-  if (Value.isLValue()) {
+  if (Value.isLValue() &&
+      CERK == CheckEvaluationResultKind::ConstantExpression) {
     LValue LVal;
     LVal.setFrom(Info.Ctx, Value);
     return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Usage);
   }
 
-  if (Value.isMemberPointer())
+  if (Value.isMemberPointer() &&
+      CERK == CheckEvaluationResultKind::ConstantExpression)
     return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Usage);
 
   // Everything else is fine.
   return true;
+}
+
+/// Check that this core constant expression value is a valid value for a
+/// constant expression. If not, report an appropriate diagnostic. Does not
+/// check that the expression is of literal type.
+static bool
+CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
+                        const APValue &Value,
+                        Expr::ConstExprUsage Usage = Expr::EvaluateForCodeGen) {
+  return CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
+                               Info, DiagLoc, Type, Value, Usage);
+}
+
+/// Check that this evaluated value is fully-initialized and can be loaded by
+/// an lvalue-to-rvalue conversion.
+static bool CheckFullyInitialized(EvalInfo &Info, SourceLocation DiagLoc,
+                                  QualType Type, const APValue &Value) {
+  return CheckEvaluationResult(CheckEvaluationResultKind::FullyInitialized,
+                               Info, DiagLoc, Type, Value,
+                               Expr::EvaluateForCodeGen);
 }
 
 static bool EvalPointerValueAsBool(const APValue &Value, bool &Result) {
@@ -2821,7 +2849,9 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
   // Walk the designator's path to find the subobject.
   for (unsigned I = 0, N = Sub.Entries.size(); /**/; ++I) {
     // Reading an indeterminate value is undefined, but assigning over one is OK.
-    if (O->isAbsent() || (O->isIndeterminate() && handler.AccessKind != AK_Assign)) {
+    if (O->isAbsent() ||
+        (O->isIndeterminate() && handler.AccessKind != AK_Assign &&
+         handler.AccessKind != AK_ReadObjectRepresentation)) {
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isIndeterminate();
@@ -2876,7 +2906,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // things we need to check: if there are any mutable subobjects, we
       // cannot perform this read. (This only happens when performing a trivial
       // copy or assignment.)
-      if (ObjType->isRecordType() && handler.AccessKind == AK_Read &&
+      if (ObjType->isRecordType() && isRead(handler.AccessKind) &&
           !Obj.mayReadMutableMembers(Info) &&
           diagnoseUnreadableFields(Info, E, ObjType))
         return handler.failed();
@@ -2916,7 +2946,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       if (O->getArrayInitializedElts() > Index)
         O = &O->getArrayInitializedElt(Index);
-      else if (handler.AccessKind != AK_Read) {
+      else if (!isRead(handler.AccessKind)) {
         expandArray(*O, Index);
         O = &O->getArrayInitializedElt(Index);
       } else
@@ -2946,7 +2976,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
                                    : O->getComplexFloatReal(), ObjType);
       }
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
-      if (Field->isMutable() && handler.AccessKind == AK_Read &&
+      if (Field->isMutable() && isRead(handler.AccessKind) &&
           !Obj.mayReadMutableMembers(Info)) {
         Info.FFDiag(E, diag::note_constexpr_ltor_mutable, 1)
           << Field;
@@ -2986,15 +3016,17 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 namespace {
 struct ExtractSubobjectHandler {
   EvalInfo &Info;
+  const Expr *E;
   APValue &Result;
-
-  static const AccessKinds AccessKind = AK_Read;
+  const AccessKinds AccessKind;
 
   typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) {
     Result = Subobj;
-    return true;
+    if (AccessKind == AK_ReadObjectRepresentation)
+      return true;
+    return CheckFullyInitialized(Info, E->getExprLoc(), SubobjType, Result);
   }
   bool found(APSInt &Value, QualType SubobjType) {
     Result = APValue(Value);
@@ -3007,14 +3039,13 @@ struct ExtractSubobjectHandler {
 };
 } // end anonymous namespace
 
-const AccessKinds ExtractSubobjectHandler::AccessKind;
-
 /// Extract the designated sub-object of an rvalue.
 static bool extractSubobject(EvalInfo &Info, const Expr *E,
                              const CompleteObject &Obj,
-                             const SubobjectDesignator &Sub,
-                             APValue &Result) {
-  ExtractSubobjectHandler Handler = { Info, Result };
+                             const SubobjectDesignator &Sub, APValue &Result,
+                             AccessKinds AK = AK_Read) {
+  assert(AK == AK_Read || AK == AK_ReadObjectRepresentation);
+  ExtractSubobjectHandler Handler = {Info, E, Result, AK};
   return findSubobject(Info, E, Obj, Sub, Handler);
 }
 
@@ -3340,14 +3371,21 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 ///               case of a non-class type).
 /// \param LVal - The glvalue on which we are attempting to perform this action.
 /// \param RVal - The produced value will be placed here.
-static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
-                                           QualType Type,
-                                           const LValue &LVal, APValue &RVal) {
+/// \param WantObjectRepresentation - If true, we're looking for the object
+///               representation rather than the value, and in particular,
+///               there is no requirement that the result be fully initialized.
+static bool
+handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
+                               const LValue &LVal, APValue &RVal,
+                               bool WantObjectRepresentation = false) {
   if (LVal.Designator.Invalid)
     return false;
 
   // Check for special cases where there is no existing APValue to look at.
   const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
+
+  AccessKinds AK =
+      WantObjectRepresentation ? AK_ReadObjectRepresentation : AK_Read;
 
   if (Base && !LVal.getLValueCallIndex() && !Type.isVolatileQualified()) {
     if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(Base)) {
@@ -3362,7 +3400,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       if (!Evaluate(Lit, Info, CLE->getInitializer()))
         return false;
       CompleteObject LitObj(LVal.Base, &Lit, Base->getType());
-      return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal);
+      return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal, AK);
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
       // APValue for the whole string.
@@ -3377,7 +3415,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       }
       if (LVal.Designator.isOnePastTheEnd()) {
         if (Info.getLangOpts().CPlusPlus11)
-          Info.FFDiag(Conv, diag::note_constexpr_access_past_end) << AK_Read;
+          Info.FFDiag(Conv, diag::note_constexpr_access_past_end) << AK;
         else
           Info.FFDiag(Conv);
         return false;
@@ -3388,8 +3426,8 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
     }
   }
 
-  CompleteObject Obj = findCompleteObject(Info, Conv, AK_Read, LVal, Type);
-  return Obj && extractSubobject(Info, Conv, Obj, LVal.Designator, RVal);
+  CompleteObject Obj = findCompleteObject(Info, Conv, AK, LVal, Type);
+  return Obj && extractSubobject(Info, Conv, Obj, LVal.Designator, RVal, AK);
 }
 
 /// Perform an assignment of Val to LVal. Takes ownership of Val.
@@ -3843,6 +3881,40 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
   return CastToDerivedClass(Info, E, Result, TargetType, NewEntriesSize);
 }
 
+/// Get the value to use for a default-initialized object of type T.
+static APValue getDefaultInitValue(QualType T) {
+  if (auto *RD = T->getAsCXXRecordDecl()) {
+    if (RD->isUnion())
+      return APValue((const FieldDecl*)nullptr);
+
+    APValue Struct(APValue::UninitStruct(), RD->getNumBases(),
+                   std::distance(RD->field_begin(), RD->field_end()));
+
+    unsigned Index = 0;
+    for (CXXRecordDecl::base_class_const_iterator I = RD->bases_begin(),
+           End = RD->bases_end(); I != End; ++I, ++Index)
+      Struct.getStructBase(Index) = getDefaultInitValue(I->getType());
+
+    for (const auto *I : RD->fields()) {
+      if (I->isUnnamedBitfield())
+        continue;
+      Struct.getStructField(I->getFieldIndex()) =
+          getDefaultInitValue(I->getType());
+    }
+    return Struct;
+  }
+
+  if (auto *AT =
+          dyn_cast_or_null<ConstantArrayType>(T->getAsArrayTypeUnsafe())) {
+    APValue Array(APValue::UninitArray(), 0, AT->getSize().getZExtValue());
+    if (Array.hasArrayFiller())
+      Array.getArrayFiller() = getDefaultInitValue(AT->getElementType());
+    return Array;
+  }
+
+  return APValue::IndeterminateValue();
+}
+
 namespace {
 enum EvalStmtResult {
   /// Evaluation failed.
@@ -3870,10 +3942,8 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
 
   const Expr *InitE = VD->getInit();
   if (!InitE) {
-    Info.FFDiag(VD->getBeginLoc(), diag::note_constexpr_uninitialized)
-        << false << VD->getType();
-    Val = APValue();
-    return false;
+    Val = getDefaultInitValue(VD->getType());
+    return true;
   }
 
   if (InitE->isValueDependent())
@@ -4089,9 +4159,23 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       break;
     }
 
-    case Stmt::DeclStmtClass:
-      // FIXME: If the variable has initialization that can't be jumped over,
-      // bail out of any immediately-surrounding compound-statement too.
+    case Stmt::DeclStmtClass: {
+      // Start the lifetime of any uninitialized variables we encounter. They
+      // might be used by the selected branch of the switch.
+      const DeclStmt *DS = cast<DeclStmt>(S);
+      for (const auto *D : DS->decls()) {
+        if (const auto *VD = dyn_cast<VarDecl>(D)) {
+          if (VD->hasLocalStorage() && !VD->getInit())
+            if (!EvaluateVarDecl(Info, VD))
+              return ESR_Failed;
+          // FIXME: If the variable has initialization that can't be jumped
+          // over, bail out of any immediately-surrounding compound-statement
+          // too. There can't be any case labels here.
+        }
+      }
+      return ESR_CaseNotFound;
+    }
+
     default:
       return ESR_CaseNotFound;
     }
@@ -4116,12 +4200,10 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
   case Stmt::DeclStmtClass: {
     const DeclStmt *DS = cast<DeclStmt>(S);
-    for (const auto *DclIt : DS->decls()) {
+    for (const auto *D : DS->decls()) {
       // Each declaration initialization is its own full-expression.
-      // FIXME: This isn't quite right; if we're performing aggregate
-      // initialization, each braced subexpression is its own full-expression.
       FullExpressionRAII Scope(Info);
-      if (!EvaluateDecl(Info, DclIt) && !Info.noteFailure())
+      if (!EvaluateDecl(Info, D) && !Info.noteFailure())
         return ESR_Failed;
     }
     return ESR_Succeeded;
@@ -4743,39 +4825,6 @@ struct StartLifetimeOfUnionMemberHandler {
 
   static const AccessKinds AccessKind = AK_Assign;
 
-  APValue getDefaultInitValue(QualType SubobjType) {
-    if (auto *RD = SubobjType->getAsCXXRecordDecl()) {
-      if (RD->isUnion())
-        return APValue((const FieldDecl*)nullptr);
-
-      APValue Struct(APValue::UninitStruct(), RD->getNumBases(),
-                     std::distance(RD->field_begin(), RD->field_end()));
-
-      unsigned Index = 0;
-      for (CXXRecordDecl::base_class_const_iterator I = RD->bases_begin(),
-             End = RD->bases_end(); I != End; ++I, ++Index)
-        Struct.getStructBase(Index) = getDefaultInitValue(I->getType());
-
-      for (const auto *I : RD->fields()) {
-        if (I->isUnnamedBitfield())
-          continue;
-        Struct.getStructField(I->getFieldIndex()) =
-            getDefaultInitValue(I->getType());
-      }
-      return Struct;
-    }
-
-    if (auto *AT = dyn_cast_or_null<ConstantArrayType>(
-            SubobjType->getAsArrayTypeUnsafe())) {
-      APValue Array(APValue::UninitArray(), 0, AT->getSize().getZExtValue());
-      if (Array.hasArrayFiller())
-        Array.getArrayFiller() = getDefaultInitValue(AT->getElementType());
-      return Array;
-    }
-
-    return APValue::IndeterminateValue();
-  }
-
   typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) {
@@ -4981,8 +5030,8 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
     LValue RHS;
     RHS.setFrom(Info.Ctx, ArgValues[0]);
     APValue RHSValue;
-    if (!handleLValueToRValueConversion(Info, Args[0], Args[0]->getType(),
-                                        RHS, RHSValue))
+    if (!handleLValueToRValueConversion(Info, Args[0], Args[0]->getType(), RHS,
+                                        RHSValue, MD->getParent()->isUnion()))
       return false;
     if (Info.getLangOpts().CPlusPlus2a && MD->isTrivial() &&
         !HandleUnionActiveMemberChange(Info, Args[0], *This))
@@ -5066,7 +5115,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     RHS.setFrom(Info.Ctx, ArgValues[0]);
     return handleLValueToRValueConversion(
         Info, E, Definition->getParamDecl(0)->getType().getNonReferenceType(),
-        RHS, Result);
+        RHS, Result, Definition->getParent()->isUnion());
   }
 
   // Reserve space for the struct members.
@@ -5085,6 +5134,25 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 #ifndef NDEBUG
   CXXRecordDecl::base_class_const_iterator BaseIt = RD->bases_begin();
 #endif
+  CXXRecordDecl::field_iterator FieldIt = RD->field_begin();
+  auto SkipToField = [&](FieldDecl *FD, bool Indirect) {
+    // We might be initializing the same field again if this is an indirect
+    // field initialization.
+    if (FieldIt == RD->field_end() ||
+        FieldIt->getFieldIndex() > FD->getFieldIndex()) {
+      assert(Indirect && "fields out of order?");
+      return;
+    }
+
+    // Default-initialize any fields with no explicit initializer.
+    for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
+      assert(FieldIt != RD->field_end() && "missing field?");
+      if (!FieldIt->isUnnamedBitfield())
+        Result.getStructField(FieldIt->getFieldIndex()) =
+            getDefaultInitValue(FieldIt->getType());
+    }
+    ++FieldIt;
+  };
   for (const auto *I : Definition->inits()) {
     LValue Subobject = This;
     LValue SubobjectParent = This;
@@ -5113,6 +5181,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
         Result = APValue(FD);
         Value = &Result.getUnionValue();
       } else {
+        SkipToField(FD, false);
         Value = &Result.getStructField(FD->getFieldIndex());
       }
     } else if (IndirectFieldDecl *IFD = I->getIndirectMember()) {
@@ -5132,8 +5201,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
           if (CD->isUnion())
             *Value = APValue(FD);
           else
-            *Value = APValue(APValue::UninitStruct(), CD->getNumBases(),
-                             std::distance(CD->field_begin(), CD->field_end()));
+            // FIXME: This immediately starts the lifetime of all members of an
+            // anonymous struct. It would be preferable to strictly start member
+            // lifetime in initialization order.
+            *Value = getDefaultInitValue(Info.Ctx.getRecordType(CD));
         }
         // Store Subobject as its parent before updating it for the last element
         // in the chain.
@@ -5143,8 +5214,11 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
           return false;
         if (CD->isUnion())
           Value = &Value->getUnionValue();
-        else
+        else {
+          if (C == IndirectFieldChain.front() && !RD->isUnion())
+            SkipToField(FD, true);
           Value = &Value->getStructField(FD->getFieldIndex());
+        }
       }
     } else {
       llvm_unreachable("unknown base initializer kind");
@@ -5171,6 +5245,15 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     // class type.
     if (I->isBaseInitializer() && BasesSeen == RD->getNumBases())
       EvalObj.finishedConstructingBases();
+  }
+
+  // Default-initialize any remaining fields.
+  if (!RD->isUnion()) {
+    for (; FieldIt != RD->field_end(); ++FieldIt) {
+      if (!FieldIt->isUnnamedBitfield())
+        Result.getStructField(FieldIt->getFieldIndex()) =
+            getDefaultInitValue(FieldIt->getType());
+    }
   }
 
   return Success &&
@@ -5658,9 +5741,9 @@ static bool handleLValueToRValueBitCast(EvalInfo &Info, APValue &DestValue,
   LValue SourceLValue;
   APValue SourceRValue;
   SourceLValue.setFrom(Info.Ctx, SourceValue);
-  if (!handleLValueToRValueConversion(Info, BCE,
-                                      BCE->getSubExpr()->getType().withConst(),
-                                      SourceLValue, SourceRValue))
+  if (!handleLValueToRValueConversion(
+          Info, BCE, BCE->getSubExpr()->getType().withConst(), SourceLValue,
+          SourceRValue, /*WantObjectRepresentation=*/true))
     return false;
 
   // Read out SourceValue into a char buffer.
@@ -7455,6 +7538,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     while (true) {
       APValue Val;
+      // FIXME: Set WantObjectRepresentation to true if we're copying a
+      // char-like type?
       if (!handleLValueToRValueConversion(Info, E, T, Src, Val) ||
           !handleAssignment(Info, E, Dest, T, Val))
         return false;
@@ -7830,15 +7915,11 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     if (Result.hasValue())
       return true;
 
-    // We can get here in two different ways:
-    //  1) We're performing value-initialization, and should zero-initialize
-    //     the object, or
-    //  2) We're performing default-initialization of an object with a trivial
-    //     constexpr default constructor, in which case we should start the
-    //     lifetimes of all the base subobjects (there can be no data member
-    //     subobjects in this case) per [basic.life]p1.
-    // Either way, ZeroInitialization is appropriate.
-    return ZeroInitialization(E, T);
+    if (ZeroInit)
+      return ZeroInitialization(E, T);
+
+    Result = getDefaultInitValue(T);
+    return true;
   }
 
   const FunctionDecl *Definition = nullptr;

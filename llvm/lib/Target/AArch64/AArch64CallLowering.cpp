@@ -596,6 +596,11 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
     SmallVectorImpl<ArgInfo> &InArgs,
     SmallVectorImpl<ArgInfo> &OutArgs) const {
+
+  // Must pass all target-independent checks in order to tail call optimize.
+  if (!Info.IsTailCall)
+    return false;
+
   CallingConv::ID CalleeCC = Info.CallConv;
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &CallerF = MF.getFunction();
@@ -675,8 +680,12 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // Before we can musttail varargs, we need to forward parameters like in
   // r345641. Make sure that we don't enable musttail with varargs without
   // addressing that!
-  assert(!(Info.IsVarArg && Info.IsMustTailCall) &&
-         "musttail support for varargs not implemented yet!");
+  if (Info.IsVarArg && Info.IsMustTailCall) {
+    LLVM_DEBUG(
+        dbgs()
+        << "... Cannot handle vararg musttail functions yet.\n");
+    return false;
+  }
 
   // Verify that the incoming and outgoing arguments from the callee are
   // safe to tail call.
@@ -841,12 +850,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   auto &DL = F.getParent()->getDataLayout();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
 
-  if (Info.IsMustTailCall) {
-    // TODO: Until we lower all tail calls, we should fall back on this.
-    LLVM_DEBUG(dbgs() << "Cannot lower musttail calls yet.\n");
-    return false;
-  }
-
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {
     splitToValueTypes(OrigArg, OutArgs, DL, MRI, Info.CallConv);
@@ -860,8 +863,19 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(Info.OrigRet, InArgs, DL, MRI, F.getCallingConv());
 
   // If we can lower as a tail call, do that instead.
-  if (Info.IsTailCall &&
-      isEligibleForTailCallOptimization(MIRBuilder, Info, InArgs, OutArgs))
+  bool CanTailCallOpt =
+      isEligibleForTailCallOptimization(MIRBuilder, Info, InArgs, OutArgs);
+
+  // We must emit a tail call if we have musttail.
+  if (Info.IsMustTailCall && !CanTailCallOpt) {
+    // There are types of incoming/outgoing arguments we can't handle yet, so
+    // it doesn't make sense to actually die here like in ISelLowering. Instead,
+    // fall back to SelectionDAG and let it try to handle this.
+    LLVM_DEBUG(dbgs() << "Failed to lower musttail call as tail call\n");
+    return false;
+  }
+
+  if (CanTailCallOpt)
     return lowerTailCall(MIRBuilder, Info, OutArgs);
 
   // Find out which ABI gets to decide where things go.

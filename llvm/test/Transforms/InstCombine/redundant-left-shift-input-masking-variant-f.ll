@@ -241,16 +241,15 @@ define i32 @n11_shamt_is_smaller(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    [[T1:%.*]] = ashr i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[NBITS]], -1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[T1]], [[T2]]
+; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = shl i32 %x, %nbits
   %t1 = ashr i32 %t0, %nbits
   %t2 = add i32 %nbits, -1
   call void @use32(i32 %t0)
-  call void @use32(i32 %t1)
   call void @use32(i32 %t2)
   %t3 = shl i32 %t1, %t2 ; shift is smaller than mask
-  ret i32 %t2
+  ret i32 %t3
 }

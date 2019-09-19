@@ -67,7 +67,8 @@ inline unsigned columnWidthWithTabs(StringRef Text, unsigned StartColumn,
     if (TabPos == StringRef::npos)
       return TotalWidth + columnWidth(Tail, Encoding);
     TotalWidth += columnWidth(Tail.substr(0, TabPos), Encoding);
-    TotalWidth += TabWidth - (TotalWidth + StartColumn) % TabWidth;
+    if (TabWidth)
+      TotalWidth += TabWidth - (TotalWidth + StartColumn) % TabWidth;
     Tail = Tail.substr(TabPos + 1);
   }
 }

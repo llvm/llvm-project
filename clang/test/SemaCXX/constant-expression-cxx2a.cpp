@@ -416,7 +416,7 @@ namespace TypeId {
 
 namespace Union {
   struct Base {
-    int y; // expected-note {{here}}
+    int y; // expected-note 2{{here}}
   };
   struct A : Base {
     int x;
@@ -489,13 +489,15 @@ namespace Union {
   constexpr A return_uninit_struct() {
     B b = {.b = 1};
     b.a.x = 2;
-    return b.a;
+    return b.a; // expected-note {{in call to 'A(b.a)'}} expected-note {{subobject of type 'int' is not initialized}}
   }
-  // FIXME: It's unclear that this should be valid. Copying a B involves
-  // copying the object representation of the union, but copying an A invokes a
-  // copy constructor that copies the object elementwise, and reading from
-  // b.a.y is undefined.
-  static_assert(return_uninit_struct().x == 2);
+  // Note that this is rejected even though return_uninit() is accepted, and
+  // return_uninit() copies the same stuff wrapped in a union.
+  //
+  // Copying a B involves copying the object representation of the union, but
+  // copying an A invokes a copy constructor that copies the object
+  // elementwise, and reading from b.a.y is undefined.
+  static_assert(return_uninit_struct().x == 2); // expected-error {{constant expression}} expected-note {{in call}}
   constexpr B return_init_all() {
     B b = {.b = 1};
     b.a.x = 2;
@@ -547,4 +549,75 @@ namespace TwosComplementShifts {
   static_assert(-2 >> 1 == -1);
   static_assert(-3 >> 1 == -2);
   static_assert(-4 >> 1 == -2);
+}
+
+namespace Uninit {
+  constexpr int f(bool init) {
+    int a;
+    if (init)
+      a = 1;
+    return a; // expected-note {{read of uninitialized object}}
+  }
+  static_assert(f(true) == 1);
+  static_assert(f(false) == 1); // expected-error {{constant expression}} expected-note {{in call}}
+
+  struct X {
+    int n; // expected-note {{declared here}}
+    constexpr X(bool init) {
+      if (init) n = 123;
+    }
+  };
+  constinit X x1(true);
+  constinit X x2(false); // expected-error {{constant initializer}} expected-note {{constinit}} expected-note {{subobject of type 'int' is not initialized}}
+
+  struct Y {
+    struct Z { int n; }; // expected-note {{here}}
+    Z z1;
+    Z z2;
+    Z z3;
+    // OK: the lifetime of z1 (and its members) start before the initializer of
+    // z2 runs.
+    constexpr Y() : z2{ (z1.n = 1, z1.n + 1) } { z3.n = 3; }
+    // Not OK: z3 is not in its lifetime when the initializer of z2 runs.
+    constexpr Y(int) : z2{
+      (z3.n = 1, // expected-note {{assignment to object outside its lifetime}}
+       z3.n + 1) // expected-warning {{uninitialized}}
+    } { z1.n = 3; }
+    constexpr Y(int, int) : z2{} {}
+  };
+  // FIXME: This is working around clang not implementing DR2026. With that
+  // fixed, we should be able to test this without the injected copy.
+  constexpr Y copy(Y y) { return y; } // expected-note {{in call to 'Y(y)'}} expected-note {{subobject of type 'int' is not initialized}}
+  constexpr Y y1 = copy(Y());
+  static_assert(y1.z1.n == 1 && y1.z2.n == 2 && y1.z3.n == 3);
+
+  constexpr Y y2 = copy(Y(0)); // expected-error {{constant expression}} expected-note {{in call}}
+
+  static_assert(Y(0,0).z2.n == 0);
+  static_assert(Y(0,0).z1.n == 0); // expected-error {{constant expression}} expected-note {{read of uninitialized object}}
+  static_assert(Y(0,0).z3.n == 0); // expected-error {{constant expression}} expected-note {{read of uninitialized object}}
+
+  static_assert(copy(Y(0,0)).z2.n == 0); // expected-error {{constant expression}} expected-note {{in call}}
+
+  constexpr unsigned char not_even_unsigned_char() {
+    unsigned char c;
+    return c; // expected-note {{read of uninitialized object}}
+  }
+  constexpr unsigned char x = not_even_unsigned_char(); // expected-error {{constant expression}} expected-note {{in call}}
+
+  constexpr int switch_var(int n) {
+    switch (n) {
+    case 1:
+      int a;
+      a = n;
+      return a;
+
+    case 2:
+      a = n;
+      return a;
+    }
+  }
+  constexpr int s1 = switch_var(1);
+  constexpr int s2 = switch_var(2);
+  static_assert(s1 == 1 && s2 == 2);
 }

@@ -1,1 +1,1 @@
-included_line3
+unsigned int included_line3 = -10;

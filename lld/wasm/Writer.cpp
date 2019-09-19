@@ -263,7 +263,6 @@ void Writer::layoutMemory() {
     memoryPtr += 4;
   }
 
-  // TODO: Add .bss space here.
   if (WasmSym::dataEnd)
     WasmSym::dataEnd->setVirtualAddress(memoryPtr);
 
@@ -667,7 +666,7 @@ void Writer::createOutputSegments() {
       OutputSegment *&s = segmentMap[name];
       if (s == nullptr) {
         LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
-        s = make<OutputSegment>(name, segments.size());
+        s = make<OutputSegment>(name);
         if (config->sharedMemory || name == ".tdata")
           s->initFlags = WASM_SEGMENT_IS_PASSIVE;
         segments.push_back(s);
@@ -675,6 +674,24 @@ void Writer::createOutputSegments() {
       s->addInputSegment(segment);
       LLVM_DEBUG(dbgs() << "added data: " << name << ": " << s->size << "\n");
     }
+  }
+
+  // Sort segments by type, placing .bss last
+  std::stable_sort(segments.begin(), segments.end(),
+                   [](const OutputSegment *a, const OutputSegment *b) {
+                     auto order = [](StringRef name) {
+                       return StringSwitch<int>(name)
+                           .StartsWith(".rodata", 0)
+                           .StartsWith(".data", 1)
+                           .StartsWith(".tdata", 2)
+                           .StartsWith(".bss", 4)
+                           .Default(3);
+                     };
+                     return order(a->name) < order(b->name);
+                   });
+
+  for (size_t i = 0; i < segments.size(); ++i) {
+    segments[i]->index = i;
   }
 }
 

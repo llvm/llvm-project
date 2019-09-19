@@ -19,11 +19,11 @@ target triple = "wasm32-unknown-unknown"
 ; MERGE-NEXT:      - SectionOffset:   7
 ; MERGE-NEXT:        InitFlags:       0
 ; MERGE-NEXT:        Offset:
-; MERGE:             Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
-; MERGE-NEXT:      - SectionOffset:   41
+; MERGE:             Content:         636F6E7374616E74000000002B
+; MERGE-NEXT:      - SectionOffset:   26
 ; MERGE-NEXT:        InitFlags:       0
 ; MERGE-NEXT:        Offset:
-; MERGE:             Content:         636F6E7374616E74000000002B
+; MERGE:             Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
 ; MERGE-NEXT:  - Type:            CUSTOM
 ; MERGE-NEXT:    Name:            name
 ; MERGE-NEXT:    FunctionNames:
@@ -40,27 +40,27 @@ target triple = "wasm32-unknown-unknown"
 ; SEPARATE-NEXT:      - SectionOffset:   7
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         68656C6C6F00
-; SEPARATE-NEXT:      - SectionOffset:   19
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         676F6F6462796500
-; SEPARATE-NEXT:      - SectionOffset:   33
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         '776861746576657200'
-; SEPARATE-NEXT:      - SectionOffset:   48
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         2A000000
-; SEPARATE-NEXT:      - SectionOffset:   58
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         636F6E7374616E7400
-; SEPARATE-NEXT:      - SectionOffset:   73
+; SEPARATE-NEXT:      - SectionOffset:   22
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         2B
+; SEPARATE-NEXT:      - SectionOffset:   29
+; SEPARATE-NEXT:        InitFlags:       0
+; SEPARATE-NEXT:        Offset:
+; SEPARATE:             Content:         68656C6C6F00
+; SEPARATE-NEXT:      - SectionOffset:   41
+; SEPARATE-NEXT:        InitFlags:       0
+; SEPARATE-NEXT:        Offset:
+; SEPARATE:             Content:         676F6F6462796500
+; SEPARATE-NEXT:      - SectionOffset:   55
+; SEPARATE-NEXT:        InitFlags:       0
+; SEPARATE-NEXT:        Offset:
+; SEPARATE:             Content:         '776861746576657200'
+; SEPARATE-NEXT:      - SectionOffset:   70
+; SEPARATE-NEXT:        InitFlags:       0
+; SEPARATE-NEXT:        Offset:
+; SEPARATE:             Content:         2A000000
 ; SEPARATE-NEXT:  - Type:            CUSTOM
 ; SEPARATE-NEXT:    Name:            name
 ; SEPARATE-NEXT:    FunctionNames:
@@ -77,10 +77,10 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-MERGE-NEXT:    Segments:
 ; PASSIVE-MERGE-NEXT:      - SectionOffset:   3
 ; PASSIVE-MERGE-NEXT:        InitFlags:       1
-; PASSIVE-MERGE-NEXT:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
-; PASSIVE-MERGE-NEXT:      - SectionOffset:   33
-; PASSIVE-MERGE-NEXT:        InitFlags:       1
 ; PASSIVE-MERGE-NEXT:        Content:         636F6E7374616E74000000002B
+; PASSIVE-MERGE-NEXT:      - SectionOffset:   18
+; PASSIVE-MERGE-NEXT:        InitFlags:       1
+; PASSIVE-MERGE-NEXT:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
 ; PASSIVE-MERGE-NEXT:  - Type:            CUSTOM
 ; PASSIVE-MERGE-NEXT:    Name:            name
 ; PASSIVE-MERGE-NEXT:    FunctionNames:
@@ -100,22 +100,22 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-SEPARATE-NEXT:    Segments:
 ; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   3
 ; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         68656C6C6F00
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   11
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         676F6F6462796500
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   21
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         '776861746576657200'
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   32
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         2A000000
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   38
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
 ; PASSIVE-SEPARATE-NEXT:        Content:         636F6E7374616E7400
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   49
+; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   14
 ; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
 ; PASSIVE-SEPARATE-NEXT:        Content:         2B
+; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   17
+; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
+; PASSIVE-SEPARATE-NEXT:        Content:         68656C6C6F00
+; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   25
+; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
+; PASSIVE-SEPARATE-NEXT:        Content:         676F6F6462796500
+; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   35
+; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
+; PASSIVE-SEPARATE-NEXT:        Content:         '776861746576657200'
+; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   46
+; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
+; PASSIVE-SEPARATE-NEXT:        Content:         2A000000
 ; PASSIVE-SEPARATE-NEXT:    - Type:            CUSTOM
 ; PASSIVE-SEPARATE-NEXT:      Name:            name
 ; PASSIVE-SEPARATE-NEXT:      FunctionNames:

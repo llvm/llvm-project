@@ -191,11 +191,21 @@ static bool SemaBuiltinAddressof(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
-/// Check the number of arguments, and set the result type to
+/// Check the number of arguments and arg type, and set the result type to
 /// the argument type.
 static bool SemaBuiltinPreserveAI(Sema &S, CallExpr *TheCall) {
   if (checkArgCount(S, TheCall, 1))
     return true;
+
+  // The argument type must be a pointer
+  ExprResult Arg = TheCall->getArg(0);
+  QualType Ty = Arg.get()->getType();
+  if (!Ty->isPointerType()) {
+    S.Diag(Arg.get()->getBeginLoc(),
+           diag::err_builtin_preserve_access_index_invalid_arg)
+        << Ty << Arg.get()->getSourceRange();
+    return true;
+  }
 
   TheCall->setType(TheCall->getArg(0)->getType());
   return false;
@@ -8107,6 +8117,22 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
   QualType ExprTy = E->getType();
   while (const TypeOfExprType *TET = dyn_cast<TypeOfExprType>(ExprTy)) {
     ExprTy = TET->getUnderlyingExpr()->getType();
+  }
+
+  // Diagnose attempts to print a boolean value as a character. Unlike other
+  // -Wformat diagnostics, this is fine from a type perspective, but it still
+  // doesn't make sense.
+  if (FS.getConversionSpecifier().getKind() == ConversionSpecifier::cArg &&
+      E->isKnownToHaveBooleanValue()) {
+    const CharSourceRange &CSR =
+        getSpecifierRange(StartSpecifier, SpecifierLen);
+    SmallString<4> FSString;
+    llvm::raw_svector_ostream os(FSString);
+    FS.toString(os);
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_bool_as_character)
+                             << FSString,
+                         E->getExprLoc(), false, CSR);
+    return true;
   }
 
   const analyze_printf::ArgType::MatchKind Match =

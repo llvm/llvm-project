@@ -2871,7 +2871,6 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
                                             bool Is32BitSym, SMLoc IDLoc,
                                             MCStreamer &Out,
                                             const MCSubtargetInfo *STI) {
-  // FIXME: These expansions do not respect -mxgot.
   MipsTargetStreamer &TOut = getTargetStreamer();
   bool UseSrcReg = SrcReg != Mips::NoRegister && SrcReg != Mips::ZERO &&
                    SrcReg != Mips::ZERO_64;
@@ -2895,6 +2894,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         (Res.getSymA()->getSymbol().isELF() &&
          cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
              ELF::STB_LOCAL);
+    bool UseXGOT = STI->getFeatureBits()[Mips::FeatureXGOT] && !IsLocalSym;
 
     // The case where the result register is $25 is somewhat special. If the
     // symbol in the final relocation is external and not modified with a
@@ -2902,10 +2902,69 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     // or R_MIPS_CALL16 instead of R_MIPS_GOT_DISP in 64-bit case.
     if ((DstReg == Mips::T9 || DstReg == Mips::T9_64) && !UseSrcReg &&
         Res.getConstant() == 0 && !IsLocalSym) {
-      const MCExpr *CallExpr =
-          MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, SymExpr, getContext());
-      TOut.emitRRX(IsPtr64 ? Mips::LD : Mips::LW, DstReg, GPReg,
-                   MCOperand::createExpr(CallExpr), IDLoc, STI);
+      if (UseXGOT) {
+        const MCExpr *CallHiExpr = MipsMCExpr::create(MipsMCExpr::MEK_CALL_HI16,
+                                                      SymExpr, getContext());
+        const MCExpr *CallLoExpr = MipsMCExpr::create(MipsMCExpr::MEK_CALL_LO16,
+                                                      SymExpr, getContext());
+        TOut.emitRX(Mips::LUi, DstReg, MCOperand::createExpr(CallHiExpr), IDLoc,
+                    STI);
+        TOut.emitRRR(IsPtr64 ? Mips::DADDu : Mips::ADDu, DstReg, DstReg, GPReg,
+                     IDLoc, STI);
+        TOut.emitRRX(IsPtr64 ? Mips::LD : Mips::LW, DstReg, DstReg,
+                     MCOperand::createExpr(CallLoExpr), IDLoc, STI);
+      } else {
+        const MCExpr *CallExpr =
+            MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, SymExpr, getContext());
+        TOut.emitRRX(IsPtr64 ? Mips::LD : Mips::LW, DstReg, GPReg,
+                     MCOperand::createExpr(CallExpr), IDLoc, STI);
+      }
+      return false;
+    }
+
+    unsigned TmpReg = DstReg;
+    if (UseSrcReg &&
+        getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg,
+                                                               SrcReg)) {
+      // If $rs is the same as $rd, we need to use AT.
+      // If it is not available we exit.
+      unsigned ATReg = getATReg(IDLoc);
+      if (!ATReg)
+        return true;
+      TmpReg = ATReg;
+    }
+
+    if (UseXGOT) {
+      // Loading address from XGOT
+      //   External GOT: lui $tmp, %got_hi(symbol)($gp)
+      //                 addu $tmp, $tmp, $gp
+      //                 lw $tmp, %got_lo(symbol)($tmp)
+      //                >addiu $tmp, $tmp, offset
+      //                >addiu $rd, $tmp, $rs
+      // The addiu's marked with a '>' may be omitted if they are redundant. If
+      // this happens then the last instruction must use $rd as the result
+      // register.
+      const MCExpr *CallHiExpr =
+          MipsMCExpr::create(MipsMCExpr::MEK_GOT_HI16, SymExpr, getContext());
+      const MCExpr *CallLoExpr = MipsMCExpr::create(
+          MipsMCExpr::MEK_GOT_LO16, Res.getSymA(), getContext());
+
+      TOut.emitRX(Mips::LUi, TmpReg, MCOperand::createExpr(CallHiExpr), IDLoc,
+                  STI);
+      TOut.emitRRR(IsPtr64 ? Mips::DADDu : Mips::ADDu, TmpReg, TmpReg, GPReg,
+                   IDLoc, STI);
+      TOut.emitRRX(IsPtr64 ? Mips::LD : Mips::LW, TmpReg, TmpReg,
+                   MCOperand::createExpr(CallLoExpr), IDLoc, STI);
+
+      if (Res.getConstant() != 0)
+        TOut.emitRRX(IsPtr64 ? Mips::DADDiu : Mips::ADDiu, TmpReg, TmpReg,
+                     MCOperand::createExpr(MCConstantExpr::create(
+                         Res.getConstant(), getContext())),
+                     IDLoc, STI);
+
+      if (UseSrcReg)
+        TOut.emitRRR(IsPtr64 ? Mips::DADDu : Mips::ADDu, DstReg, TmpReg, SrcReg,
+                     IDLoc, STI);
       return false;
     }
 
@@ -2959,18 +3018,6 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         if (Res.getConstant() != 0)
           LoExpr = MCConstantExpr::create(Res.getConstant(), getContext());
       }
-    }
-
-    unsigned TmpReg = DstReg;
-    if (UseSrcReg &&
-        getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg,
-                                                               SrcReg)) {
-      // If $rs is the same as $rd, we need to use AT.
-      // If it is not available we exit.
-      unsigned ATReg = getATReg(IDLoc);
-      if (!ATReg)
-        return true;
-      TmpReg = ATReg;
     }
 
     TOut.emitRRX(IsPtr64 ? Mips::LD : Mips::LW, TmpReg, GPReg,

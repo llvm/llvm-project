@@ -164,6 +164,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // In this pattern SumOfShAmts correlates with the number of low bits that
     // shall remain in the root value (OuterShift). If SumOfShAmts is less than
     // bitwidth, we'll need to also produce a mask to keep SumOfShAmts low bits.
+    // So, does *any* channel need a mask?
     if (!match(SumOfShAmts, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_UGE,
                                                APInt(BitWidth, BitWidth))))
       return nullptr; // FIXME.
@@ -172,15 +173,17 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
              match(Masked, m_Shr(m_Shl(m_Value(X), m_Value(MaskShAmt)),
                                  m_Deferred(MaskShAmt)))) {
     // Can we simplify (ShiftShAmt-MaskShAmt) ?
-    Value *ShAmtsDiff =
+    auto *ShAmtsDiff = dyn_cast_or_null<Constant>(
         SimplifySubInst(ShiftShAmt, MaskShAmt, /*IsNSW=*/false, /*IsNUW=*/false,
-                        SQ.getWithInstruction(OuterShift));
+                        SQ.getWithInstruction(OuterShift)));
     if (!ShAmtsDiff)
       return nullptr; // Did not simplify.
-    // Is the difference non-negative? (is ShiftShAmt u>= MaskShAmt ?)
-    // FIXME: could also rely on ConstantRange.
+    // In this pattern ShAmtsDiff correlates with the number of high bits that
+    // shall be unset in the root value (OuterShift). If ShAmtsDiff is negative,
+    // we'll need to also produce a mask to unset ShAmtsDiff high bits.
+    // So, does *any* channel need a mask? (is ShiftShAmt u>= MaskShAmt ?)
     if (!match(ShAmtsDiff, m_NonNegative()))
-      return nullptr;
+      return nullptr; // FIXME.
     // All good, we can do this fold.
   } else
     return nullptr; // Don't know anything about this pattern.
