@@ -1460,6 +1460,15 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
       UnrollOpts.setOptLevel(OptLevel);
       continue;
     }
+    if (ParamName.consume_front("full-unroll-max=")) {
+      int Count;
+      if (ParamName.getAsInteger(0, Count))
+        return make_error<StringError>(
+            formatv("invalid LoopUnrollPass parameter '{0}' ", ParamName).str(),
+            inconvertibleErrorCode());
+      UnrollOpts.setFullUnrollMaxCount(Count);
+      continue;
+    }
 
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "partial") {

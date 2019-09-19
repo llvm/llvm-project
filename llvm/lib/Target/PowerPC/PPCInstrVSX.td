@@ -2868,12 +2868,12 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
                               "xvtstdcsp $XT, $XB, $DCMX", IIC_VecFP,
                               [(set v4i32: $XT,
-                               (int_ppc_vsx_xvtstdcsp v4f32:$XB, timm:$DCMX))]>;
+                               (int_ppc_vsx_xvtstdcsp v4f32:$XB, imm:$DCMX))]>;
   def XVTSTDCDP : XX2_RD6_DCMX7_RS6<60, 15, 5,
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
                               "xvtstdcdp $XT, $XB, $DCMX", IIC_VecFP,
                               [(set v2i64: $XT,
-                               (int_ppc_vsx_xvtstdcdp v2f64:$XB, timm:$DCMX))]>;
+                               (int_ppc_vsx_xvtstdcdp v2f64:$XB, imm:$DCMX))]>;
 
   //===--------------------------------------------------------------------===//
 

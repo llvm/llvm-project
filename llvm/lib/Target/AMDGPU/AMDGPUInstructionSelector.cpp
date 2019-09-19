@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -244,6 +243,10 @@ AMDGPUInstructionSelector::getSubOperand64(MachineOperand &MO,
   case AMDGPU::sub1:
     return MachineOperand::CreateImm(Imm.getHiBits(32).getSExtValue());
   }
+}
+
+static int64_t getConstant(const MachineInstr *MI) {
+  return MI->getOperand(1).getCImm()->getSExtValue();
 }
 
 static unsigned getLogicalBitOpcode(unsigned Opc, bool Is64) {
@@ -734,260 +737,6 @@ buildEXP(const TargetInstrInfo &TII, MachineInstr *Insert, unsigned Tgt,
           .addImm(Enabled);
 }
 
-static bool isZero(Register Reg, MachineRegisterInfo &MRI) {
-  int64_t C;
-  if (mi_match(Reg, MRI, m_ICst(C)) && C == 0)
-    return true;
-
-  // FIXME: matcher should ignore copies
-  return mi_match(Reg, MRI, m_Copy(m_ICst(C))) && C == 0;
-}
-
-static unsigned extractGLC(unsigned CachePolicy) {
-  return CachePolicy & 1;
-}
-
-static unsigned extractSLC(unsigned CachePolicy) {
-  return (CachePolicy >> 1) & 1;
-}
-
-static unsigned extractDLC(unsigned CachePolicy) {
-  return (CachePolicy >> 2) & 1;
-}
-
-// Returns Base register, constant offset, and offset def point.
-static std::tuple<Register, unsigned, MachineInstr *>
-getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
-  MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
-  if (!Def)
-    return {Reg, 0, nullptr};
-
-  if (Def->getOpcode() == AMDGPU::G_CONSTANT) {
-    unsigned Offset;
-    const MachineOperand &Op = Def->getOperand(1);
-    if (Op.isImm())
-      Offset = Op.getImm();
-    else
-      Offset = Op.getCImm()->getZExtValue();
-
-    return {Register(), Offset, Def};
-  }
-
-  int64_t Offset;
-  if (Def->getOpcode() == AMDGPU::G_ADD) {
-    // TODO: Handle G_OR used for add case
-    if (mi_match(Def->getOperand(1).getReg(), MRI, m_ICst(Offset)))
-      return {Def->getOperand(0).getReg(), Offset, Def};
-
-    // FIXME: matcher should ignore copies
-    if (mi_match(Def->getOperand(1).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return {Def->getOperand(0).getReg(), Offset, Def};
-  }
-
-  return {Reg, 0, Def};
-}
-
-static unsigned getBufferStoreOpcode(LLT Ty,
-                                     const unsigned MemSize,
-                                     const bool Offen) {
-  const int Size = Ty.getSizeInBits();
-  switch (8 * MemSize) {
-  case 8:
-    return Offen ? AMDGPU::BUFFER_STORE_BYTE_OFFEN_exact :
-                   AMDGPU::BUFFER_STORE_BYTE_OFFSET_exact;
-  case 16:
-    return Offen ? AMDGPU::BUFFER_STORE_SHORT_OFFEN_exact :
-                   AMDGPU::BUFFER_STORE_SHORT_OFFSET_exact;
-  default:
-    unsigned Opc = Offen ? AMDGPU::BUFFER_STORE_DWORD_OFFEN_exact :
-                           AMDGPU::BUFFER_STORE_DWORD_OFFSET_exact;
-    if (Size > 32)
-      Opc = AMDGPU::getMUBUFOpcode(Opc, Size / 32);
-    return Opc;
-  }
-}
-
-static unsigned getBufferStoreFormatOpcode(LLT Ty,
-                                           const unsigned MemSize,
-                                           const bool Offen) {
-  bool IsD16Packed = Ty.getScalarSizeInBits() == 16;
-  bool IsD16Unpacked = 8 * MemSize < Ty.getSizeInBits();
-  int NumElts = Ty.isVector() ? Ty.getNumElements() : 1;
-
-  if (IsD16Packed) {
-    switch (NumElts) {
-    case 1:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_X_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_X_OFFSET_exact;
-    case 2:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_XY_OFFSET_exact;
-    case 3:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_XYZ_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_XYZ_OFFSET_exact;
-    case 4:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_XYZW_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_XYZW_OFFSET_exact;
-    default:
-      return -1;
-    }
-  }
-
-  if (IsD16Unpacked) {
-    switch (NumElts) {
-    case 1:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_X_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_X_OFFSET_exact;
-    case 2:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_XY_gfx80_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_XY_gfx80_OFFSET_exact;
-    case 3:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_XYZ_gfx80_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_XYZ_gfx80_OFFSET_exact;
-    case 4:
-      return Offen ? AMDGPU::BUFFER_STORE_FORMAT_D16_XYZW_gfx80_OFFEN_exact :
-                     AMDGPU::BUFFER_STORE_FORMAT_D16_XYZW_gfx80_OFFSET_exact;
-    default:
-      return -1;
-    }
-  }
-
-  switch (NumElts) {
-  case 1:
-    return Offen ? AMDGPU::BUFFER_STORE_FORMAT_X_OFFEN_exact :
-                   AMDGPU::BUFFER_STORE_FORMAT_X_OFFSET_exact;
-  case 2:
-    return Offen ? AMDGPU::BUFFER_STORE_FORMAT_XY_OFFEN_exact :
-                  AMDGPU::BUFFER_STORE_FORMAT_XY_OFFSET_exact;
-  case 3:
-    return Offen ? AMDGPU::BUFFER_STORE_FORMAT_XYZ_OFFEN_exact :
-                   AMDGPU::BUFFER_STORE_FORMAT_XYZ_OFFSET_exact;
-  case 4:
-    return Offen ? AMDGPU::BUFFER_STORE_FORMAT_XYZW_OFFEN_exact :
-                   AMDGPU::BUFFER_STORE_FORMAT_XYZW_OFFSET_exact;
-  default:
-    return -1;
-  }
-
-  llvm_unreachable("unhandled buffer store");
-}
-
-// TODO: Move this to combiner
-// Returns base register, imm offset, total constant offset.
-std::tuple<Register, unsigned, unsigned>
-AMDGPUInstructionSelector::splitBufferOffsets(MachineIRBuilder &B,
-                                              Register OrigOffset) const {
-  const unsigned MaxImm = 4095;
-  Register BaseReg;
-  unsigned TotalConstOffset;
-  MachineInstr *OffsetDef;
-  MachineRegisterInfo &MRI = *B.getMRI();
-
-  std::tie(BaseReg, TotalConstOffset, OffsetDef)
-    = getBaseWithConstantOffset(MRI, OrigOffset);
-
-  unsigned ImmOffset = TotalConstOffset;
-
-  // If the immediate value is too big for the immoffset field, put the value
-  // and -4096 into the immoffset field so that the value that is copied/added
-  // for the voffset field is a multiple of 4096, and it stands more chance
-  // of being CSEd with the copy/add for another similar load/store.f
-  // However, do not do that rounding down to a multiple of 4096 if that is a
-  // negative number, as it appears to be illegal to have a negative offset
-  // in the vgpr, even if adding the immediate offset makes it positive.
-  unsigned Overflow = ImmOffset & ~MaxImm;
-  ImmOffset -= Overflow;
-  if ((int32_t)Overflow < 0) {
-    Overflow += ImmOffset;
-    ImmOffset = 0;
-  }
-
-  if (Overflow != 0) {
-    // In case this is in a waterfall loop, insert offset code at the def point
-    // of the offset, not inside the loop.
-    MachineBasicBlock::iterator OldInsPt = B.getInsertPt();
-    MachineBasicBlock &OldMBB = B.getMBB();
-    B.setInstr(*OffsetDef);
-
-    if (!BaseReg) {
-      BaseReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      B.buildInstr(AMDGPU::V_MOV_B32_e32)
-        .addDef(BaseReg)
-        .addImm(Overflow);
-    } else {
-      Register OverflowVal = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      B.buildInstr(AMDGPU::V_MOV_B32_e32)
-        .addDef(OverflowVal)
-        .addImm(Overflow);
-
-      Register NewBaseReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      TII.getAddNoCarry(B.getMBB(), B.getInsertPt(), B.getDebugLoc(), NewBaseReg)
-        .addReg(BaseReg)
-        .addReg(OverflowVal, RegState::Kill)
-        .addImm(0);
-      BaseReg = NewBaseReg;
-    }
-
-    B.setInsertPt(OldMBB, OldInsPt);
-  }
-
-  return {BaseReg, ImmOffset, TotalConstOffset};
-}
-
-bool AMDGPUInstructionSelector::selectStoreIntrinsic(MachineInstr &MI,
-                                                     bool IsFormat) const {
-  MachineIRBuilder B(MI);
-  MachineRegisterInfo &MRI = *B.getMRI();
-  MachineFunction &MF = B.getMF();
-  Register VData = MI.getOperand(1).getReg();
-  LLT Ty = MRI.getType(VData);
-
-  int Size = Ty.getSizeInBits();
-  if (Size % 32 != 0)
-    return false;
-
-  // FIXME: Verifier should enforce 1 MMO for these intrinsics.
-  MachineMemOperand *MMO = *MI.memoperands_begin();
-  const int MemSize = MMO->getSize();
-
-  Register RSrc = MI.getOperand(2).getReg();
-  Register VOffset = MI.getOperand(3).getReg();
-  Register SOffset = MI.getOperand(4).getReg();
-  unsigned CachePolicy = MI.getOperand(5).getImm();
-  unsigned ImmOffset;
-  unsigned TotalOffset;
-
-  std::tie(VOffset, ImmOffset, TotalOffset) = splitBufferOffsets(B, VOffset);
-  if (TotalOffset != 0)
-    MMO = MF.getMachineMemOperand(MMO, TotalOffset, MemSize);
-
-  const bool Offen = !isZero(VOffset, MRI);
-
-  int Opc = IsFormat ? getBufferStoreFormatOpcode(Ty, MemSize, Offen) :
-    getBufferStoreOpcode(Ty, MemSize, Offen);
-  if (Opc == -1)
-    return false;
-
-  MachineInstrBuilder MIB = B.buildInstr(Opc)
-    .addUse(VData);
-
-  if (Offen)
-    MIB.addUse(VOffset);
-
-  MIB.addUse(RSrc)
-     .addUse(SOffset)
-     .addImm(ImmOffset)
-     .addImm(extractGLC(CachePolicy))
-     .addImm(extractSLC(CachePolicy))
-     .addImm(0) // tfe: FIXME: Remove from inst
-     .addImm(extractDLC(CachePolicy))
-     .addMemOperand(MMO);
-
-  MI.eraseFromParent();
-
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
@@ -997,10 +746,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp: {
-    int64_t Tgt = I.getOperand(1).getImm();
-    int64_t Enabled = I.getOperand(2).getImm();
-    int64_t Done = I.getOperand(7).getImm();
-    int64_t VM = I.getOperand(8).getImm();
+    int64_t Tgt = getConstant(MRI.getVRegDef(I.getOperand(1).getReg()));
+    int64_t Enabled = getConstant(MRI.getVRegDef(I.getOperand(2).getReg()));
+    int64_t Done = getConstant(MRI.getVRegDef(I.getOperand(7).getReg()));
+    int64_t VM = getConstant(MRI.getVRegDef(I.getOperand(8).getReg()));
 
     MachineInstr *Exp = buildEXP(TII, &I, Tgt, I.getOperand(3).getReg(),
                                  I.getOperand(4).getReg(),
@@ -1013,13 +762,13 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   }
   case Intrinsic::amdgcn_exp_compr: {
     const DebugLoc &DL = I.getDebugLoc();
-    int64_t Tgt = I.getOperand(1).getImm();
-    int64_t Enabled = I.getOperand(2).getImm();
+    int64_t Tgt = getConstant(MRI.getVRegDef(I.getOperand(1).getReg()));
+    int64_t Enabled = getConstant(MRI.getVRegDef(I.getOperand(2).getReg()));
     Register Reg0 = I.getOperand(3).getReg();
     Register Reg1 = I.getOperand(4).getReg();
     Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    int64_t Done = I.getOperand(5).getImm();
-    int64_t VM = I.getOperand(6).getImm();
+    int64_t Done = getConstant(MRI.getVRegDef(I.getOperand(5).getReg()));
+    int64_t VM = getConstant(MRI.getVRegDef(I.getOperand(6).getReg()));
 
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
     MachineInstr *Exp = buildEXP(TII, &I, Tgt, Reg0, Reg1, Undef, Undef, VM,
@@ -1042,10 +791,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
       MRI.setRegClass(Reg, TRI.getWaveMaskRegClass());
     return true;
   }
-  case Intrinsic::amdgcn_raw_buffer_store:
-    return selectStoreIntrinsic(I, false);
-  case Intrinsic::amdgcn_raw_buffer_store_format:
-    return selectStoreIntrinsic(I, true);
   default:
     return selectImpl(I, *CoverageInfo);
   }

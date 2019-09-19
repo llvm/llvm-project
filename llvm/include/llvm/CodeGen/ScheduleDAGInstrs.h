@@ -374,9 +374,6 @@ namespace llvm {
     /// Returns a mask for which lanes get read/written by the given (register)
     /// machine operand.
     LaneBitmask getLaneMaskForMO(const MachineOperand &MO) const;
-
-    /// Returns true if the def register in \p MO has no uses.
-    bool deadDefHasNoUse(const MachineOperand &MO);
   };
 
   /// Creates a new SUnit and return a ptr to it.

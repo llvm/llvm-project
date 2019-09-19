@@ -4768,22 +4768,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // Add all operands of the call to the operand list.
   for (unsigned i = 0, e = I.getNumArgOperands(); i != e; ++i) {
-    const Value *Arg = I.getArgOperand(i);
-    if (!I.paramHasAttr(i, Attribute::ImmArg)) {
-      Ops.push_back(getValue(Arg));
-      continue;
-    }
-
-    // Use TargetConstant instead of a regular constant for immarg.
-    EVT VT = TLI.getValueType(*DL, Arg->getType(), true);
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(Arg)) {
-      assert(CI->getBitWidth() <= 64 &&
-             "large intrinsic immediates not handled");
-      Ops.push_back(DAG.getTargetConstant(*CI, SDLoc(), VT));
-    } else {
-      Ops.push_back(
-          DAG.getTargetConstantFP(*cast<ConstantFP>(Arg), SDLoc(), VT));
-    }
+    SDValue Op = getValue(I.getArgOperand(i));
+    Ops.push_back(Op);
   }
 
   SmallVector<EVT, 4> ValueVTs;

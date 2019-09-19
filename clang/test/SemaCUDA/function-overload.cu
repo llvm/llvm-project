@@ -402,3 +402,20 @@ __host__ void test_host_template_overload() {
 __device__ void test_device_template_overload() {
   template_overload(1); // OK. Attribute-based overloading picks __device__ variant.
 }
+
+// Two classes with `operator-` defined. One of them is device only.
+struct C1;
+struct C2;
+__device__
+int operator-(const C1 &x, const C1 &y);
+int operator-(const C2 &x, const C2 &y);
+
+template <typename T>
+__host__ __device__ int constexpr_overload(const T &x, const T &y) {
+  return x - y;
+}
+
+// Verify that function overloading doesn't prune candidate wrongly.
+int test_constexpr_overload(C2 &x, C2 &y) {
+  return constexpr_overload(x, y);
+}

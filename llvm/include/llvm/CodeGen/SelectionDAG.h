@@ -388,7 +388,11 @@ private:
     Node->OperandList = nullptr;
   }
   void CreateTopologicalOrder(std::vector<SDNode*>& Order);
+
 public:
+  // Maximum depth for recursive analysis such as computeKnownBits, etc.
+  static constexpr unsigned MaxRecursionDepth = 6;
+
   explicit SelectionDAG(const TargetMachine &TM, CodeGenOpt::Level);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;

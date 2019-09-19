@@ -114,13 +114,13 @@ multiclass ssse3_palign_mm<string asm, Intrinsic IntId,
   def rri  : MMXSS3AI<0x0F, MRMSrcReg, (outs VR64:$dst),
       (ins VR64:$src1, VR64:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-      [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 timm:$src3)))]>,
+      [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 imm:$src3)))]>,
       Sched<[sched]>;
   def rmi  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
       (ins VR64:$src1, i64mem:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1,
-                       (bitconvert (load_mmx addr:$src2)), (i8 timm:$src3)))]>,
+                       (bitconvert (load_mmx addr:$src2)), (i8 imm:$src3)))]>,
       Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
@@ -496,14 +496,14 @@ def MMX_PSHUFWri : MMXIi8<0x70, MRMSrcReg,
                           (outs VR64:$dst), (ins VR64:$src1, u8imm:$src2),
                           "pshufw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                           [(set VR64:$dst,
-                             (int_x86_sse_pshuf_w VR64:$src1, timm:$src2))]>,
+                             (int_x86_sse_pshuf_w VR64:$src1, imm:$src2))]>,
                           Sched<[SchedWriteShuffle.MMX]>;
 def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
                           (outs VR64:$dst), (ins i64mem:$src1, u8imm:$src2),
                           "pshufw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                           [(set VR64:$dst,
                              (int_x86_sse_pshuf_w (load_mmx addr:$src1),
-                                                   timm:$src2))]>,
+                                                   imm:$src2))]>,
                           Sched<[SchedWriteShuffle.MMX.Folded]>;
 
 // -- Conversion Instructions

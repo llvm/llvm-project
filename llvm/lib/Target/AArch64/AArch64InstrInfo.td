@@ -798,7 +798,7 @@ def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
 let Uses = [ X9 ], Defs = [ X16, X17, LR, NZCV ] in {
 def HWASAN_CHECK_MEMACCESS : Pseudo<
   (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
-  [(int_hwasan_check_memaccess X9, GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  [(int_hwasan_check_memaccess X9, GPR64noip:$ptr, (i32 imm:$accessinfo))]>,
   Sched<[]>;
 }
 

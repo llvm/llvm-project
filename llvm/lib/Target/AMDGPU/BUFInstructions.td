@@ -1135,29 +1135,29 @@ def extract_dlc : SDNodeXForm<imm, [{
 multiclass MUBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
                                   string opcode> {
   def : GCNPat<
-    (vt (name v4i32:$rsrc, 0, 0, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, 0)),
+    (vt (name v4i32:$rsrc, 0, 0, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, 0)),
     (!cast<MUBUF_Pseudo>(opcode # _OFFSET) $rsrc, $soffset, (as_i16imm $offset),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0,  (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (vt (name v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, 0)),
+    (vt (name v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, 0)),
     (!cast<MUBUF_Pseudo>(opcode # _OFFEN) $voffset, $rsrc, $soffset, (as_i16imm $offset),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0,  (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (vt (name v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, timm)),
+    (vt (name v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, imm)),
     (!cast<MUBUF_Pseudo>(opcode # _IDXEN) $vindex, $rsrc, $soffset, (as_i16imm $offset),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0,  (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (vt (name v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, timm)),
+    (vt (name v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, imm)),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN)
       (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
       $rsrc, $soffset, (as_i16imm $offset),
@@ -1210,31 +1210,31 @@ defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_ushort,  i32, "BUFFER_LOAD_USHORT">;
 multiclass MUBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
                                    string opcode> {
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, 0, 0, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, 0),
+    (name vt:$vdata, v4i32:$rsrc, 0, 0, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, 0),
     (!cast<MUBUF_Pseudo>(opcode # _OFFSET_exact) $vdata, $rsrc, $soffset, (as_i16imm $offset),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0,  (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, 0),
+    (name vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, 0),
     (!cast<MUBUF_Pseudo>(opcode # _OFFEN_exact) $vdata, $voffset, $rsrc, $soffset,
       (as_i16imm $offset), (extract_glc $cachepolicy),
       (extract_slc $cachepolicy), 0,  (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, timm),
+    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, imm),
     (!cast<MUBUF_Pseudo>(opcode # _IDXEN_exact) $vdata, $vindex, $rsrc, $soffset,
       (as_i16imm $offset), (extract_glc $cachepolicy),
       (extract_slc $cachepolicy), 0,  (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, timm:$offset,
-              timm:$cachepolicy, timm),
+    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$cachepolicy, imm),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN_exact)
       $vdata,
       (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
@@ -1291,32 +1291,32 @@ multiclass BufferAtomicPatterns<SDPatternOperator name, ValueType vt,
                                 string opcode> {
   def : GCNPat<
     (vt (name vt:$vdata_in, v4i32:$rsrc, 0,
-          0, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, 0)),
+          0, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, 0)),
     (!cast<MUBUF_Pseudo>(opcode # _OFFSET_RTN) $vdata_in, $rsrc, $soffset,
                                         (as_i16imm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (vt (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
-          0, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, timm)),
+          0, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, imm)),
     (!cast<MUBUF_Pseudo>(opcode # _IDXEN_RTN) $vdata_in, $vindex, $rsrc, $soffset,
                                        (as_i16imm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (vt (name vt:$vdata_in, v4i32:$rsrc, 0,
-          i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, 0)),
+          i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, 0)),
     (!cast<MUBUF_Pseudo>(opcode # _OFFEN_RTN) $vdata_in, $voffset, $rsrc, $soffset,
                                        (as_i16imm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (vt (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
-          i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, timm)),
+          i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, imm)),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN_RTN)
       $vdata_in,
       (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
@@ -1353,32 +1353,32 @@ multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
                                        string opcode> {
   def : GCNPat<
     (name vt:$vdata_in, v4i32:$rsrc, 0,
-          0, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, 0),
+          0, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, 0),
     (!cast<MUBUF_Pseudo>(opcode # _OFFSET) $vdata_in, $rsrc, $soffset,
                                         (as_i16imm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
-          0, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, timm),
+          0, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, imm),
     (!cast<MUBUF_Pseudo>(opcode # _IDXEN) $vdata_in, $vindex, $rsrc, $soffset,
                                        (as_i16imm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (name vt:$vdata_in, v4i32:$rsrc, 0,
-          i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, 0),
+          i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, 0),
     (!cast<MUBUF_Pseudo>(opcode # _OFFEN) $vdata_in, $voffset, $rsrc, $soffset,
                                        (as_i16imm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
-          i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, timm),
+          i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, imm),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN)
       $vdata_in,
       (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
@@ -1392,8 +1392,8 @@ defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_pk_fadd, v2f16, "BUFFER_ATOMI
 def : GCNPat<
   (SIbuffer_atomic_cmpswap
       i32:$data, i32:$cmp, v4i32:$rsrc, 0,
-      0, i32:$soffset, timm:$offset,
-      timm:$cachepolicy, 0),
+      0, i32:$soffset, imm:$offset,
+      imm:$cachepolicy, 0),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_OFFSET_RTN
       (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
@@ -1404,8 +1404,8 @@ def : GCNPat<
 def : GCNPat<
   (SIbuffer_atomic_cmpswap
       i32:$data, i32:$cmp, v4i32:$rsrc, i32:$vindex,
-      0, i32:$soffset, timm:$offset,
-      timm:$cachepolicy, timm),
+      0, i32:$soffset, imm:$offset,
+      imm:$cachepolicy, imm),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_IDXEN_RTN
       (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
@@ -1416,8 +1416,8 @@ def : GCNPat<
 def : GCNPat<
   (SIbuffer_atomic_cmpswap
       i32:$data, i32:$cmp, v4i32:$rsrc, 0,
-      i32:$voffset, i32:$soffset, timm:$offset,
-      timm:$cachepolicy, 0),
+      i32:$voffset, i32:$soffset, imm:$offset,
+      imm:$cachepolicy, 0),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN
       (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
@@ -1428,8 +1428,8 @@ def : GCNPat<
 def : GCNPat<
   (SIbuffer_atomic_cmpswap
       i32:$data, i32:$cmp, v4i32:$rsrc, i32:$vindex,
-      i32:$voffset, i32:$soffset, timm:$offset,
-      timm:$cachepolicy, timm),
+      i32:$voffset, i32:$soffset, imm:$offset,
+      imm:$cachepolicy, imm),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN
       (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
@@ -1642,32 +1642,32 @@ defm : MUBUFScratchStorePat <BUFFER_STORE_BYTE_D16_HI_OFFEN, BUFFER_STORE_BYTE_D
 multiclass MTBUF_LoadIntrinsicPat<SDPatternOperator name, ValueType vt,
                                   string opcode> {
   def : GCNPat<
-    (vt (name v4i32:$rsrc, 0, 0, i32:$soffset, timm:$offset,
-              timm:$format, timm:$cachepolicy, 0)),
+    (vt (name v4i32:$rsrc, 0, 0, i32:$soffset, imm:$offset,
+              imm:$format, imm:$cachepolicy, 0)),
     (!cast<MTBUF_Pseudo>(opcode # _OFFSET) $rsrc, $soffset, (as_i16imm $offset),
       (as_i8imm $format),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0, (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (vt (name v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, timm:$offset,
-              timm:$format, timm:$cachepolicy, timm)),
+    (vt (name v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, imm:$offset,
+              imm:$format, imm:$cachepolicy, imm)),
     (!cast<MTBUF_Pseudo>(opcode # _IDXEN) $vindex, $rsrc, $soffset, (as_i16imm $offset),
       (as_i8imm $format),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0, (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (vt (name v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, timm:$offset,
-              timm:$format, timm:$cachepolicy, 0)),
+    (vt (name v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$format, imm:$cachepolicy, 0)),
     (!cast<MTBUF_Pseudo>(opcode # _OFFEN) $voffset, $rsrc, $soffset, (as_i16imm $offset),
       (as_i8imm $format),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0, (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (vt (name v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, timm:$offset,
-              timm:$format, timm:$cachepolicy, timm)),
+    (vt (name v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, imm:$offset,
+              imm:$format, imm:$cachepolicy, imm)),
     (!cast<MTBUF_Pseudo>(opcode # _BOTHEN)
       (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
       $rsrc, $soffset, (as_i16imm $offset),
@@ -1700,24 +1700,24 @@ let SubtargetPredicate = HasPackedD16VMem in {
 multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
                                    string opcode> {
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, 0, 0, i32:$soffset, timm:$offset,
-          timm:$format, timm:$cachepolicy, 0),
+    (name vt:$vdata, v4i32:$rsrc, 0, 0, i32:$soffset, imm:$offset,
+          imm:$format, imm:$cachepolicy, 0),
     (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact) $vdata, $rsrc, $soffset,
       (as_i16imm $offset), (as_i8imm $format),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0, (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, timm:$offset,
-          timm:$format, timm:$cachepolicy, timm),
+    (name vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, imm:$offset,
+          imm:$format, imm:$cachepolicy, imm),
     (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact) $vdata, $vindex, $rsrc, $soffset,
       (as_i16imm $offset), (as_i8imm $format),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0, (extract_dlc $cachepolicy))
   >;
 
   def : GCNPat<
-    (name vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$format, timm:$cachepolicy, 0),
+    (name vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$format, imm:$cachepolicy, 0),
     (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact) $vdata, $voffset, $rsrc, $soffset,
       (as_i16imm $offset), (as_i8imm $format),
       (extract_glc $cachepolicy), (extract_slc $cachepolicy), 0, (extract_dlc $cachepolicy))
@@ -1725,7 +1725,7 @@ multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
 
   def : GCNPat<
     (name vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset,
-          timm:$offset, timm:$format, timm:$cachepolicy, timm),
+          imm:$offset, imm:$format, imm:$cachepolicy, imm),
     (!cast<MTBUF_Pseudo>(opcode # _BOTHEN_exact)
       $vdata,
       (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
