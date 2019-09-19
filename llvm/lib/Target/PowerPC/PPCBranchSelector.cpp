@@ -178,21 +178,20 @@ int PPCBSel::computeBranchSize(MachineFunction &Fn,
                                const MachineBasicBlock *Dest,
                                unsigned BrOffset) {
   int BranchSize;
-  unsigned MaxLogAlign = 2;
+  llvm::Align MaxAlign = llvm::Align(4);
   bool NeedExtraAdjustment = false;
   if (Dest->getNumber() <= Src->getNumber()) {
     // If this is a backwards branch, the delta is the offset from the
     // start of this block to this branch, plus the sizes of all blocks
     // from this block to the dest.
     BranchSize = BrOffset;
-    MaxLogAlign = std::max(MaxLogAlign, Src->getLogAlignment());
+    MaxAlign = std::max(MaxAlign, Src->getAlignment());
 
     int DestBlock = Dest->getNumber();
     BranchSize += BlockSizes[DestBlock].first;
     for (unsigned i = DestBlock+1, e = Src->getNumber(); i < e; ++i) {
       BranchSize += BlockSizes[i].first;
-      MaxLogAlign =
-          std::max(MaxLogAlign, Fn.getBlockNumbered(i)->getLogAlignment());
+      MaxAlign = std::max(MaxAlign, Fn.getBlockNumbered(i)->getAlignment());
     }
 
     NeedExtraAdjustment = (FirstImpreciseBlock >= 0) &&
@@ -203,11 +202,10 @@ int PPCBSel::computeBranchSize(MachineFunction &Fn,
     unsigned StartBlock = Src->getNumber();
     BranchSize = BlockSizes[StartBlock].first - BrOffset;
 
-    MaxLogAlign = std::max(MaxLogAlign, Dest->getLogAlignment());
+    MaxAlign = std::max(MaxAlign, Dest->getAlignment());
     for (unsigned i = StartBlock+1, e = Dest->getNumber(); i != e; ++i) {
       BranchSize += BlockSizes[i].first;
-      MaxLogAlign =
-          std::max(MaxLogAlign, Fn.getBlockNumbered(i)->getLogAlignment());
+      MaxAlign = std::max(MaxAlign, Fn.getBlockNumbered(i)->getAlignment());
     }
 
     NeedExtraAdjustment = (FirstImpreciseBlock >= 0) &&
@@ -257,7 +255,7 @@ int PPCBSel::computeBranchSize(MachineFunction &Fn,
   // The computed offset is at most ((1 << alignment) - 4) bytes smaller
   // than actual offset. So we add this number to the offset for safety.
   if (NeedExtraAdjustment)
-    BranchSize += (1 << MaxLogAlign) - 4;
+    BranchSize += MaxAlign.value() - 4;
 
   return BranchSize;
 }

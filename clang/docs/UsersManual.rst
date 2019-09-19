@@ -1128,6 +1128,185 @@ number of cases where the compilation environment is tightly controlled
 and the precompiled header cannot be generated after headers have been
 installed.
 
+.. _controlling-fp-behavior:
+
+Controlling Floating Point Behavior
+-----------------------------------
+
+Clang provides a number of ways to control floating point behavior. The options
+are listed below.
+
+.. option:: -ffast-math
+
+   Enable fast-math mode.  This option lets the
+   compiler make aggressive, potentially-lossy assumptions about
+   floating-point math.  These include:
+
+   * Floating-point math obeys regular algebraic rules for real numbers (e.g.
+     ``+`` and ``*`` are associative, ``x/y == x * (1/y)``, and
+     ``(a + b) * c == a * c + b * c``),
+   * Operands to floating-point operations are not equal to ``NaN`` and
+     ``Inf``, and
+   * ``+0`` and ``-0`` are interchangeable.
+
+   ``-ffast-math`` also defines the ``__FAST_MATH__`` preprocessor
+   macro. Some math libraries recognize this macro and change their behavior.
+   With the exception of ``-ffp-contract=fast``, using any of the options
+   below to disable any of the individual optimizations in ``-ffast-math``
+   will cause ``__FAST_MATH__`` to no longer be set.
+
+  This option implies:
+
+   * ``-fno-honor-infinities``
+
+   * ``-fno-honor-nans``
+
+   * ``-fno-math-errno``
+
+   * ``-ffinite-math``
+
+   * ``-fassociative-math``
+
+   * ``-freciprocal-math``
+
+   * ``-fno-signed-zeros``
+
+   * ``-fno-trapping-math``
+
+   * ``-ffp-contract=fast``
+
+.. option:: -fdenormal-fp-math=<value>
+
+   Select which denormal numbers the code is permitted to require.
+
+   Valid values are: 
+
+   * ``ieee`` - IEEE 754 denormal numbers
+   * ``preserve-sign`` - the sign of a flushed-to-zero number is preserved in the sign of 0
+   * ``positive-zero`` - denormals are flushed to positive zero
+
+   Defaults to ``ieee``.
+
+.. _opt_fstrict-float-cast-overflow:
+
+**-f[no-]strict-float-cast-overflow**
+
+   When a floating-point value is not representable in a destination integer 
+   type, the code has undefined behavior according to the language standard.
+   By default, Clang will not guarantee any particular result in that case.
+   With the 'no-strict' option, Clang attempts to match the overflowing behavior
+   of the target's native float-to-int conversion instructions.
+
+.. _opt_fmath-errno:
+
+**-f[no-]math-errno**
+
+   Require math functions to indicate errors by setting errno.
+   The default varies by ToolChain.  ``-fno-math-errno`` allows optimizations
+   that might cause standard C math functions to not set ``errno``.
+   For example, on some systems, the math function ``sqrt`` is specified
+   as setting ``errno`` to ``EDOM`` when the input is negative. On these
+   systems, the compiler cannot normally optimize a call to ``sqrt`` to use
+   inline code (e.g. the x86 ``sqrtsd`` instruction) without additional
+   checking to ensure that ``errno`` is set appropriately.
+   ``-fno-math-errno`` permits these transformations.
+
+   On some targets, math library functions never set ``errno``, and so
+   ``-fno-math-errno`` is the default. This includes most BSD-derived
+   systems, including Darwin.
+
+.. _opt_ftrapping-math:
+
+**-f[no-]trapping-math**
+
+   ``-fno-trapping-math`` allows optimizations that assume that
+   floating point operations cannot generate traps such as divide-by-zero,
+   overflow and underflow. Defaults to ``-ftrapping-math``.
+   Currently this option has no effect.
+
+.. option:: -ffp-contract=<value>
+
+   Specify when the compiler is permitted to form fused floating-point
+   operations, such as fused multiply-add (FMA). Fused operations are
+   permitted to produce more precise results than performing the same
+   operations separately.
+
+   The C standard permits intermediate floating-point results within an
+   expression to be computed with more precision than their type would
+   normally allow. This permits operation fusing, and Clang takes advantage
+   of this by default. This behavior can be controlled with the
+   ``FP_CONTRACT`` pragma. Please refer to the pragma documentation for a
+   description of how the pragma interacts with this option.
+
+   Valid values are:
+
+   * ``fast`` (everywhere)
+   * ``on`` (according to FP_CONTRACT pragma, default)
+   * ``off`` (never fuse)
+
+.. _opt_fhonor-infinities:
+
+**-f[no-]honor-infinities**
+
+   If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
+   has the same effect as specifying ``-ffinite-math``.
+
+.. _opt_fhonor-nans:
+
+**-f[no-]honor-nans**
+
+   If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
+   has the same effect as specifying ``-ffinite-math``.
+
+.. _opt_fsigned-zeros:
+
+**-f[no-]signed-zeros**
+
+   Allow optimizations that ignore the sign of floating point zeros.
+   Defaults to ``-fno-signed-zeros``.
+
+.. _opt_fassociative-math:
+
+**-f[no-]associative-math**
+
+  Allow floating point operations to be reassociated.
+  Defaults to ``-fno-associative-math``.
+
+.. _opt_freciprocal-math:
+
+**-f[no-]reciprocal-math**
+
+  Allow division operations to be transformed into multiplication by a
+  reciprocal. This can be significantly faster than an ordinary division
+  but can also have significantly less precision. Defaults to
+  ``-fno-reciprocal-math``.
+
+.. _opt_funsafe-math-optimizations:
+
+**-f[no-]unsafe-math-optimizations**
+
+   Allow unsafe floating-point optimizations. Also implies:
+
+   * ``-fassociative-math``
+   * ``-freciprocal-math``
+   * ``-fno-signed-zeroes``
+   * ``-fno-trapping-math``.
+
+   Defaults to ``-fno-unsafe-math-optimizations``.
+
+.. _opt_ffinite-math:
+
+**-f[no-]finite-math**
+
+   Allow floating-point optimizations that assume arguments and results are
+   not NaNs or +-Inf.  This defines the ``__FINITE_MATH_ONLY__`` preprocessor macro.
+   Also implies:
+
+   * ``-fno-honor-infinities``
+   * ``-fno-honor-nans``
+
+   Defaults to ``-fno-finite-math``.
+
 .. _controlling-code-generation:
 
 Controlling Code Generation
@@ -1265,36 +1444,6 @@ are listed below.
    C++ objects, i.e. the vptr is invariant during an object's lifetime.
    This enables better devirtualization. Turned off by default, because it is
    still experimental.
-
-.. option:: -ffast-math
-
-   Enable fast-math mode. This defines the ``__FAST_MATH__`` preprocessor
-   macro, and lets the compiler make aggressive, potentially-lossy assumptions
-   about floating-point math.  These include:
-
-   * Floating-point math obeys regular algebraic rules for real numbers (e.g.
-     ``+`` and ``*`` are associative, ``x/y == x * (1/y)``, and
-     ``(a + b) * c == a * c + b * c``),
-   * operands to floating-point operations are not equal to ``NaN`` and
-     ``Inf``, and
-   * ``+0`` and ``-0`` are interchangeable.
-
-.. option:: -fdenormal-fp-math=[values]
-
-   Select which denormal numbers the code is permitted to require.
-
-   Valid values are: ``ieee``, ``preserve-sign``, and ``positive-zero``,
-   which correspond to IEEE 754 denormal numbers, the sign of a
-   flushed-to-zero number is preserved in the sign of 0, denormals are
-   flushed to positive zero, respectively.
-
-.. option:: -f[no-]strict-float-cast-overflow
-
-   When a floating-point value is not representable in a destination integer 
-   type, the code has undefined behavior according to the language standard.
-   By default, Clang will not guarantee any particular result in that case.
-   With the 'no-strict' option, Clang attempts to match the overflowing behavior
-   of the target's native float-to-int conversion instructions.
 
 .. option:: -fwhole-program-vtables
 

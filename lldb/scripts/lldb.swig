@@ -265,8 +265,8 @@ def lldb_iter(obj, getsize, getelem):
 debugger_unique_id = 0
 SBDebugger.Initialize()
 debugger = None
-target = SBTarget()
-process = SBProcess()
-thread = SBThread()
-frame = SBFrame()
+target = None
+process = None
+thread = None
+frame = None
 %}

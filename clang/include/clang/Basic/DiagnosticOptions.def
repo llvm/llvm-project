@@ -49,6 +49,7 @@ DIAGOPT(Pedantic, 1, 0)         /// -pedantic
 DIAGOPT(PedanticErrors, 1, 0)   /// -pedantic-errors
 DIAGOPT(ShowColumn, 1, 1)       /// Show column number on diagnostics.
 DIAGOPT(ShowLocation, 1, 1)     /// Show source location information.
+DIAGOPT(ShowLevel, 1, 1)        /// Show diagnostic level.
 DIAGOPT(AbsolutePath, 1, 0)     /// Use absolute paths.
 DIAGOPT(ShowCarets, 1, 1)       /// Show carets in diagnostics.
 DIAGOPT(ShowFixits, 1, 1)       /// Show fixit information.

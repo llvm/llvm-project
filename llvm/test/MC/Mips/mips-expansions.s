@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LE
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-BE
+# RUN: llvm-mc %s -triple=mipsel-unknown-linux -mcpu=mips32r2 \
+# RUN:            -show-encoding | FileCheck %s --check-prefixes=CHECK,CHECK-LE,GOT
+# RUN: llvm-mc %s -triple=mips-unknown-linux -mcpu=mips32r2 \
+# RUN:            -show-encoding | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
 # Check that the IAS expands macro instructions in the same way as GAS.
 
@@ -110,56 +110,56 @@
   .option pic2
   .set noat
   lw $10, symbol($4)
-# CHECK-LE: lw      $10, %got(symbol)($gp)    # encoding: [A,A,0x8a,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE: addu    $10, $10, $4              # encoding: [0x21,0x50,0x44,0x01]
-# CHECK-LE: lw      $10, 0($10)               # encoding: [0x00,0x00,0x4a,0x8d]
+# GOT:      lw      $10, %got(symbol)($gp)  # encoding: [A,A,0x8a,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# GOT-NEXT: addu    $10, $10, $4            # encoding: [0x21,0x50,0x44,0x01]
+# GOT-NEXT: lw      $10, 0($10)             # encoding: [0x00,0x00,0x4a,0x8d]
   .set at
   sw $10, symbol($9)
-# CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE: addu    $1, $1, $9                # encoding: [0x21,0x08,0x29,0x00]
-# CHECK-LE: sw      $10, 0($1)                # encoding: [0x00,0x00,0x2a,0xac]
+# GOT:      lw      $1, %got(symbol)($gp)   # encoding: [A,A,0x81,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# GOT-NEXT: addu    $1, $1, $9              # encoding: [0x21,0x08,0x29,0x00]
+# GOT-NEXT: sw      $10, 0($1)              # encoding: [0x00,0x00,0x2a,0xac]
 
   lw $8, 1f+8
-# CHECK-LE:      lw    $8, %got($tmp0)($gp)   # encoding: [A,A,0x88,0x8f]
-# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_Mips_GOT
-# CHECK-LE-NEXT: addiu $8, $8, %lo($tmp0)     # encoding: [A,A,0x08,0x25]
-# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
-# CHECK-LE-NEXT: lw    $8, 8($8)              # encoding: [0x08,0x00,0x08,0x8d]
+# GOT:      lw      $8, %got($tmp0)($gp)    # encoding: [A,A,0x88,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_Mips_GOT
+# GOT-NEXT: addiu   $8, $8, %lo($tmp0)      # encoding: [A,A,0x08,0x25]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
+# GOT-NEXT: lw      $8, 8($8)               # encoding: [0x08,0x00,0x08,0x8d]
   sw $8, 1f+8
-# CHECK-LE:      lw    $1, %got($tmp0)($gp)   # encoding: [A,A,0x81,0x8f]
-# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_Mips_GOT
-# CHECK-LE-NEXT: addiu $1, $1, %lo($tmp0)     # encoding: [A,A,0x21,0x24]
-# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
-# CHECK-LE-NEXT: sw    $8, 8($1)              # encoding: [0x08,0x00,0x28,0xac]
+# GOT:      lw      $1, %got($tmp0)($gp)    # encoding: [A,A,0x81,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_Mips_GOT
+# GOT-NEXT: addiu   $1, $1, %lo($tmp0)      # encoding: [A,A,0x21,0x24]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
+# GOT-NEXT: sw      $8, 8($1)               # encoding: [0x08,0x00,0x28,0xac]
 
   lw $10, 655483($4)
-# CHECK-LE: lui     $10, 10                   # encoding: [0x0a,0x00,0x0a,0x3c]
-# CHECK-LE: addu    $10, $10, $4              # encoding: [0x21,0x50,0x44,0x01]
-# CHECK-LE: lw      $10, 123($10)             # encoding: [0x7b,0x00,0x4a,0x8d]
+# GOT:      lui     $10, 10                 # encoding: [0x0a,0x00,0x0a,0x3c]
+# GOT-NEXT: addu    $10, $10, $4            # encoding: [0x21,0x50,0x44,0x01]
+# GOT-NEXT: lw      $10, 123($10)           # encoding: [0x7b,0x00,0x4a,0x8d]
   sw $10, 123456($9)
-# CHECK-LE: lui     $1, 2                     # encoding: [0x02,0x00,0x01,0x3c]
-# CHECK-LE: addu    $1, $1, $9                # encoding: [0x21,0x08,0x29,0x00]
-# CHECK-LE: sw      $10, -7616($1)            # encoding: [0x40,0xe2,0x2a,0xac]
+# GOT:      lui     $1, 2                   # encoding: [0x02,0x00,0x01,0x3c]
+# GOT-NEXT: addu    $1, $1, $9              # encoding: [0x21,0x08,0x29,0x00]
+# GOT-NEXT: sw      $10, -7616($1)          # encoding: [0x40,0xe2,0x2a,0xac]
 
   lw $8, symbol+8
-# CHECK-LE:      lw $8, %got(symbol)($gp)     # encoding: [A,A,0x88,0x8f]
-# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE-NEXT: lw $8, 8($8)                 # encoding: [0x08,0x00,0x08,0x8d]
+# GOT:      lw      $8, %got(symbol)($gp)   # encoding: [A,A,0x88,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# GOT-NEXT: lw      $8, 8($8)               # encoding: [0x08,0x00,0x08,0x8d]
   sw $8, symbol+8
-# CHECK-LE:      lw $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
-# CHECK-LE-NEXT:                              #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE-NEXT: sw $8, 8($1)                 # encoding: [0x08,0x00,0x28,0xac]
+# GOT:      lw      $1, %got(symbol)($gp)   # encoding: [A,A,0x81,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# GOT-NEXT: sw $8, 8($1)                    # encoding: [0x08,0x00,0x28,0xac]
 
   ldc1 $f0, symbol
-# CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE: ldc1    $f0, 0($1)                # encoding: [0x00,0x00,0x20,0xd4]
+# GOT:      lw      $1, %got(symbol)($gp)   # encoding: [A,A,0x81,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# GOT-NEXT: ldc1    $f0, 0($1)              # encoding: [0x00,0x00,0x20,0xd4]
   sdc1 $f0, symbol
-# CHECK-LE: lw      $1, %got(symbol)($gp)     # encoding: [A,A,0x81,0x8f]
-# CHECK-LE:                                   #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
-# CHECK-LE: sdc1    $f0, 0($1)                # encoding: [0x00,0x00,0x20,0xf4]
+# GOT:      lw      $1, %got(symbol)($gp)   # encoding: [A,A,0x81,0x8f]
+# GOT-NEXT:                                 #   fixup A - offset: 0, value: %got(symbol), kind: fixup_Mips_GOT
+# GOT-NEXT: sdc1    $f0, 0($1)              # encoding: [0x00,0x00,0x20,0xf4]
   .option pic0
 
 # Test BNE with an immediate as the 2nd operand.

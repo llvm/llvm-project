@@ -4913,12 +4913,24 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512F-LABEL: widen_masked_store:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3]
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %edx, %k0
+; AVX512F-NEXT:    andl $1, %esi
+; AVX512F-NEXT:    kmovw %esi, %k1
+; AVX512F-NEXT:    kxorw %k0, %k0, %k2
+; AVX512F-NEXT:    kshiftrw $1, %k2, %k2
+; AVX512F-NEXT:    kshiftlw $1, %k2, %k2
+; AVX512F-NEXT:    korw %k1, %k2, %k1
+; AVX512F-NEXT:    kshiftrw $1, %k1, %k2
+; AVX512F-NEXT:    kxorw %k0, %k2, %k0
+; AVX512F-NEXT:    kshiftlw $15, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k0
+; AVX512F-NEXT:    kxorw %k0, %k1, %k0
+; AVX512F-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512F-NEXT:    kmovw %ecx, %k2
+; AVX512F-NEXT:    kxorw %k2, %k1, %k1
+; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512F-NEXT:    kshiftrw $13, %k1, %k1
+; AVX512F-NEXT:    kxorw %k1, %k0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
@@ -4927,24 +4939,48 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ;
 ; AVX512VLDQ-LABEL: widen_masked_store:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512VLDQ-NEXT:    vpmovd2m %xmm1, %k0
-; AVX512VLDQ-NEXT:    vpmovm2d %k0, %xmm1
-; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VLDQ-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3]
-; AVX512VLDQ-NEXT:    vpmovd2m %xmm1, %k1
+; AVX512VLDQ-NEXT:    kmovw %edx, %k0
+; AVX512VLDQ-NEXT:    kmovw %esi, %k1
+; AVX512VLDQ-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512VLDQ-NEXT:    kshiftrb $7, %k1, %k1
+; AVX512VLDQ-NEXT:    kxorw %k0, %k0, %k2
+; AVX512VLDQ-NEXT:    kshiftrb $1, %k2, %k2
+; AVX512VLDQ-NEXT:    kshiftlb $1, %k2, %k2
+; AVX512VLDQ-NEXT:    korb %k1, %k2, %k1
+; AVX512VLDQ-NEXT:    kshiftrb $1, %k1, %k2
+; AVX512VLDQ-NEXT:    kxorb %k0, %k2, %k0
+; AVX512VLDQ-NEXT:    kshiftlb $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $6, %k0, %k0
+; AVX512VLDQ-NEXT:    kxorb %k0, %k1, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $2, %k0, %k1
+; AVX512VLDQ-NEXT:    kmovw %ecx, %k2
+; AVX512VLDQ-NEXT:    kxorb %k2, %k1, %k1
+; AVX512VLDQ-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512VLDQ-NEXT:    kshiftrb $5, %k1, %k1
+; AVX512VLDQ-NEXT:    kxorw %k1, %k0, %k1
 ; AVX512VLDQ-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: widen_masked_store:
 ; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vptestmd %xmm1, %xmm1, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vmovdqa32 %xmm1, %xmm1 {%k1} {z}
-; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3]
-; AVX512VLBW-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; AVX512VLBW-NEXT:    kmovd %edx, %k0
+; AVX512VLBW-NEXT:    andl $1, %esi
+; AVX512VLBW-NEXT:    kmovw %esi, %k1
+; AVX512VLBW-NEXT:    kxorw %k0, %k0, %k2
+; AVX512VLBW-NEXT:    kshiftrw $1, %k2, %k2
+; AVX512VLBW-NEXT:    kshiftlw $1, %k2, %k2
+; AVX512VLBW-NEXT:    korw %k1, %k2, %k1
+; AVX512VLBW-NEXT:    kshiftrw $1, %k1, %k2
+; AVX512VLBW-NEXT:    kxorw %k0, %k2, %k0
+; AVX512VLBW-NEXT:    kshiftlw $15, %k0, %k0
+; AVX512VLBW-NEXT:    kshiftrw $14, %k0, %k0
+; AVX512VLBW-NEXT:    kxorw %k0, %k1, %k0
+; AVX512VLBW-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512VLBW-NEXT:    kmovd %ecx, %k2
+; AVX512VLBW-NEXT:    kxorw %k2, %k1, %k1
+; AVX512VLBW-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512VLBW-NEXT:    kshiftrw $13, %k1, %k1
+; AVX512VLBW-NEXT:    kxorw %k1, %k0, %k1
 ; AVX512VLBW-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
   call void @llvm.masked.store.v3i32.p0v3i32(<3 x i32> %v, <3 x i32>* %p, i32 16, <3 x i1> %mask)

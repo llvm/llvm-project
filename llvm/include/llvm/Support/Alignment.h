@@ -55,7 +55,7 @@ private:
 
 public:
   /// Default is byte-aligned.
-  Align() = default;
+  constexpr Align() = default;
   /// Do not perform checks in case of copy/move construct/assign, because the
   /// checks have been performed when building `Other`.
   Align(const Align &Other) = default;
@@ -73,6 +73,13 @@ public:
   /// This is a hole in the type system and should not be abused.
   /// Needed to interact with C for instance.
   uint64_t value() const { return uint64_t(1) << ShiftValue; }
+
+  /// Returns a default constructed Align which corresponds to no alignment.
+  /// This is useful to test for unalignment as it conveys clear semantic.
+  /// `if (A != llvm::Align::None())`
+  /// would be better than
+  /// `if (A > llvm::Align(1))`
+  constexpr static const Align None() { return llvm::Align(); }
 };
 
 /// Treats the value 0 as a 1, so Align is always at least 1.

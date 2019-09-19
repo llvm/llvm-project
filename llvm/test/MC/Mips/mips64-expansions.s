@@ -1,4 +1,5 @@
-# RUN: llvm-mc %s -triple=mips64el-unknown-linux -show-encoding -mcpu=mips64r2 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips64el-unknown-linux -mcpu=mips64r2 \
+# RUN:            -show-encoding | FileCheck --check-prefixes=CHECK,GOT %s
 
 # Check that signed negative 32-bit immediates are loaded correctly:
   li $10, ~(0x101010)
@@ -470,48 +471,48 @@ sym:
 # LW/SW and LDC1/SDC1 of symbol address, done by MipsAsmParser::expandMemInst():
   .option pic2
   lw $10, symbol($4)
-# CHECK: ld      $10, %got_disp(symbol)($gp) # encoding: [A,A,0x8a,0xdf]
-# CHECK:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK: daddu   $10, $10, $4               # encoding: [0x2d,0x50,0x44,0x01]
-# CHECK: lw      $10, 0($10)                # encoding: [0x00,0x00,0x4a,0x8d]
+# GOT:      ld      $10, %got_disp(symbol)($gp) # encoding: [A,A,0x8a,0xdf]
+# GOT-NEXT:                                     #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: daddu   $10, $10, $4                # encoding: [0x2d,0x50,0x44,0x01]
+# GOT-NEXT: lw      $10, 0($10)                 # encoding: [0x00,0x00,0x4a,0x8d]
   sw $10, symbol($9)
-# CHECK: ld      $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
-# CHECK:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK: daddu   $1, $1, $9                 # encoding: [0x2d,0x08,0x29,0x00]
-# CHECK: sw      $10, 0($1)                 # encoding: [0x00,0x00,0x2a,0xac]
+# GOT:      ld      $1, %got_disp(symbol)($gp)  # encoding: [A,A,0x81,0xdf]
+# GOT-NEXT:                                     #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: daddu   $1, $1, $9                  # encoding: [0x2d,0x08,0x29,0x00]
+# GOT-NEXT: sw      $10, 0($1)                  # encoding: [0x00,0x00,0x2a,0xac]
 
   lw $8, sym+8
-# CHECK:      ld $8, %got_disp(sym)($gp)    # encoding: [A,A,0x88,0xdf]
-# CHECK-NEXT:                               #   fixup A - offset: 0, value: %got_disp(sym), kind: fixup_Mips_GOT_DISP
-# CHECK-NEXT: lw $8, 8($8)                  # encoding: [0x08,0x00,0x08,0x8d]
+# GOT:      ld      $8, %got_disp(sym)($gp)     # encoding: [A,A,0x88,0xdf]
+# GOT-NEXT:                                     #   fixup A - offset: 0, value: %got_disp(sym), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: lw      $8, 8($8)                   # encoding: [0x08,0x00,0x08,0x8d]
   sw $8, sym+8
-# CHECK:      ld $1, %got_disp(sym)($gp)    # encoding: [A,A,0x81,0xdf]
-# CHECK-NEXT:                               #   fixup A - offset: 0, value: %got_disp(sym), kind: fixup_Mips_GOT_DISP
-# CHECK-NEXT: sw $8, 8($1)                  # encoding: [0x08,0x00,0x28,0xac]
+# GOT:      ld      $1, %got_disp(sym)($gp)     # encoding: [A,A,0x81,0xdf]
+# GOT-NEXT:                                     #   fixup A - offset: 0, value: %got_disp(sym), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: sw      $8, 8($1)                   # encoding: [0x08,0x00,0x28,0xac]
 
   lw $10, 655483($4)
-# CHECK: lui     $10, 10                    # encoding: [0x0a,0x00,0x0a,0x3c]
-# CHECK: daddu   $10, $10, $4               # encoding: [0x2d,0x50,0x44,0x01]
-# CHECK: lw      $10, 123($10)              # encoding: [0x7b,0x00,0x4a,0x8d]
+# GOT:      lui     $10, 10                     # encoding: [0x0a,0x00,0x0a,0x3c]
+# GOT-NEXT: daddu   $10, $10, $4                # encoding: [0x2d,0x50,0x44,0x01]
+# GOT-NEXT: lw      $10, 123($10)               # encoding: [0x7b,0x00,0x4a,0x8d]
   sw $10, 123456($9)
-# CHECK: lui     $1, 2                      # encoding: [0x02,0x00,0x01,0x3c]
-# CHECK: daddu   $1, $1, $9                 # encoding: [0x2d,0x08,0x29,0x00]
-# CHECK: sw      $10, -7616($1)             # encoding: [0x40,0xe2,0x2a,0xac]
+# GOT:      lui     $1, 2                       # encoding: [0x02,0x00,0x01,0x3c]
+# GOT-NEXT: daddu   $1, $1, $9                  # encoding: [0x2d,0x08,0x29,0x00]
+# GOT-NEXT: sw      $10, -7616($1)              # encoding: [0x40,0xe2,0x2a,0xac]
 
   lw $8, symbol+8
-# CHECK:      ld $8, %got_disp(symbol)($gp) # encoding: [A,A,0x88,0xdf]
-# CHECK-NEXT:                               #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK-NEXT: lw $8, 8($8)                  # encoding: [0x08,0x00,0x08,0x8d]
+# GOT:      ld      $8, %got_disp(symbol)($gp)  # encoding: [A,A,0x88,0xdf]
+# GOT-NEXT:                                     #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: lw      $8, 8($8)                   # encoding: [0x08,0x00,0x08,0x8d]
   sw $8, symbol+8
-# CHECK:      ld $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
-# CHECK-NEXT:                               #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK-NEXT: sw $8, 8($1)                  # encoding: [0x08,0x00,0x28,0xac]
+# GOT:      ld      $1, %got_disp(symbol)($gp)  # encoding: [A,A,0x81,0xdf]
+# GOT-NEXT:                                     #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: sw $8, 8($1)                        # encoding: [0x08,0x00,0x28,0xac]
 
   ldc1 $f0, symbol
-# CHECK: ld      $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
-# CHECK:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK: ldc1    $f0, 0($1)                 # encoding: [0x00,0x00,0x20,0xd4]
+# GOT:      ld      $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
+# GOT-NEXT:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: ldc1    $f0, 0($1)                 # encoding: [0x00,0x00,0x20,0xd4]
   sdc1 $f0, symbol
-# CHECK: ld      $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
-# CHECK:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
-# CHECK: sdc1    $f0, 0($1)                 # encoding: [0x00,0x00,0x20,0xf4]
+# GOT:      ld      $1, %got_disp(symbol)($gp) # encoding: [A,A,0x81,0xdf]
+# GOT-NEXT:                                    #   fixup A - offset: 0, value: %got_disp(symbol), kind: fixup_Mips_GOT_DISP
+# GOT-NEXT: sdc1    $f0, 0($1)                 # encoding: [0x00,0x00,0x20,0xf4]

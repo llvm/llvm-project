@@ -40,7 +40,6 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-/// @returns the Module stripped of out-of-chunk functions
 static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
                                        Module *Program) {
   unsigned I = 0, ArgCount = 0;
