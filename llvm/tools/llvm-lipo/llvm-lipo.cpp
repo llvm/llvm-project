@@ -306,9 +306,8 @@ static void verifyArch(ArrayRef<OwningBinary<Binary>> InputBinaries,
   if (auto UO =
           dyn_cast<MachOUniversalBinary>(InputBinaries.front().getBinary())) {
     for (StringRef Arch : VerifyArchList) {
-      Expected<std::unique_ptr<MachOObjectFile>> Obj =
-          UO->getObjectForArch(Arch);
-      if (!Obj)
+      auto ObjForArch = UO->getObjectForArch(Arch);
+      if (!ObjForArch)
         exit(EXIT_FAILURE);
     }
   } else if (auto O =
@@ -399,7 +398,7 @@ static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
 
   auto *UO = cast<MachOUniversalBinary>(InputBinaries.front().getBinary());
   Expected<std::unique_ptr<MachOObjectFile>> Obj =
-      UO->getObjectForArch(ThinArchType);
+      UO->getMachOObjectForArch(ThinArchType);
   if (!Obj)
     reportError("fat input file " + UO->getFileName() +
                 " does not contain the specified architecture " + ThinArchType +

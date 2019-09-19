@@ -31,7 +31,7 @@ using BBInfoVector = SmallVectorImpl<BasicBlockInfo>;
 /// @param KnownBits Number of known low offset bits.
 inline unsigned UnknownPadding(llvm::Align Align, unsigned KnownBits) {
   if (KnownBits < Log2(Align))
-    return Align.value() - (1u << KnownBits);
+    return Align.value() - (1ull << KnownBits);
   return 0;
 }
 

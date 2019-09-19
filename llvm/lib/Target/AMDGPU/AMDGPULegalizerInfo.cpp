@@ -1751,6 +1751,62 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
   return true;
 }
 
+/// Handle register layout difference for f16 images for some subtargets.
+Register AMDGPULegalizerInfo::handleD16VData(MachineIRBuilder &B,
+                                             MachineRegisterInfo &MRI,
+                                             Register Reg) const {
+  if (!ST.hasUnpackedD16VMem())
+    return Reg;
+
+  const LLT S16 = LLT::scalar(16);
+  const LLT S32 = LLT::scalar(32);
+  LLT StoreVT = MRI.getType(Reg);
+  assert(StoreVT.isVector() && StoreVT.getElementType() == S16);
+
+  auto Unmerge = B.buildUnmerge(S16, Reg);
+
+  SmallVector<Register, 4> WideRegs;
+  for (int I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
+    WideRegs.push_back(B.buildAnyExt(S32, Unmerge.getReg(I)).getReg(0));
+
+  int NumElts = StoreVT.getNumElements();
+
+  return B.buildBuildVector(LLT::vector(NumElts, S32), WideRegs).getReg(0);
+}
+
+bool AMDGPULegalizerInfo::legalizeRawBufferStore(MachineInstr &MI,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B,
+                                                 bool IsFormat) const {
+  // TODO: Reject f16 format on targets where unsupported.
+  Register VData = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(VData);
+
+  B.setInstr(MI);
+
+  const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
+
+  // Fixup illegal register types for i8 stores.
+  if (Ty == LLT::scalar(8) || Ty == S16) {
+    Register AnyExt = B.buildAnyExt(LLT::scalar(32), VData).getReg(0);
+    MI.getOperand(1).setReg(AnyExt);
+    return true;
+  }
+
+  if (Ty.isVector()) {
+    if (Ty.getElementType() == S16 && Ty.getNumElements() <= 4) {
+      if (IsFormat)
+        MI.getOperand(1).setReg(handleD16VData(B, MRI, VData));
+      return true;
+    }
+
+    return Ty.getElementType() == S32 && Ty.getNumElements() <= 4;
+  }
+
+  return Ty == S32;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -1843,6 +1899,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_raw_buffer_store:
+    return legalizeRawBufferStore(MI, MRI, B, false);
+  case Intrinsic::amdgcn_raw_buffer_store_format:
+    return legalizeRawBufferStore(MI, MRI, B, true);
   default:
     return true;
   }

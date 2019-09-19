@@ -10,5 +10,6 @@ unittest("BitcodeTests") {
   ]
   sources = [
     "BitReaderTest.cpp",
+    "DataLayoutUpgradeTest.cpp",
   ]
 }

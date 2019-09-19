@@ -5068,3 +5068,80 @@ bar:
 exit:
   ret void
 }
+
+define <64 x i1> @mask64_insert(i32 %a) {
+; KNL-LABEL: mask64_insert:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    movw $-4, %cx
+; KNL-NEXT:    kmovw %ecx, %k0
+; KNL-NEXT:    kshiftrw $1, %k0, %k0
+; KNL-NEXT:    kshiftlw $1, %k0, %k0
+; KNL-NEXT:    andl $1, %esi
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    korw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, (%rdi)
+; KNL-NEXT:    movw $-3, 6(%rdi)
+; KNL-NEXT:    movl $-131075, 2(%rdi) ## imm = 0xFFFDFFFD
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: mask64_insert:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kshiftlq $63, %k0, %k0
+; SKX-NEXT:    kshiftrq $63, %k0, %k0
+; SKX-NEXT:    movabsq $-562958543486980, %rax ## imm = 0xFFFDFFFDFFFDFFFC
+; SKX-NEXT:    kmovq %rax, %k1
+; SKX-NEXT:    kshiftrq $1, %k1, %k1
+; SKX-NEXT:    kshiftlq $1, %k1, %k1
+; SKX-NEXT:    korq %k0, %k1, %k0
+; SKX-NEXT:    vpmovm2b %k0, %zmm0
+; SKX-NEXT:    retq
+;
+; AVX512BW-LABEL: mask64_insert:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kshiftlq $63, %k0, %k0
+; AVX512BW-NEXT:    kshiftrq $63, %k0, %k0
+; AVX512BW-NEXT:    movabsq $-562958543486980, %rax ## imm = 0xFFFDFFFDFFFDFFFC
+; AVX512BW-NEXT:    kmovq %rax, %k1
+; AVX512BW-NEXT:    kshiftrq $1, %k1, %k1
+; AVX512BW-NEXT:    kshiftlq $1, %k1, %k1
+; AVX512BW-NEXT:    korq %k0, %k1, %k0
+; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: mask64_insert:
+; AVX512DQ:       ## %bb.0:
+; AVX512DQ-NEXT:    movq %rdi, %rax
+; AVX512DQ-NEXT:    movw $-4, %cx
+; AVX512DQ-NEXT:    kmovw %ecx, %k0
+; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
+; AVX512DQ-NEXT:    andl $1, %esi
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    korw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, (%rdi)
+; AVX512DQ-NEXT:    movw $-3, 6(%rdi)
+; AVX512DQ-NEXT:    movl $-131075, 2(%rdi) ## imm = 0xFFFDFFFD
+; AVX512DQ-NEXT:    retq
+;
+; X86-LABEL: mask64_insert:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    movl $-131076, %eax ## imm = 0xFFFDFFFC
+; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    movl $-131075, %eax ## imm = 0xFFFDFFFD
+; X86-NEXT:    kmovd %eax, %k2
+; X86-NEXT:    kunpckdq %k1, %k2, %k1
+; X86-NEXT:    kshiftrq $1, %k1, %k1
+; X86-NEXT:    kshiftlq $1, %k1, %k1
+; X86-NEXT:    kshiftlq $63, %k0, %k0
+; X86-NEXT:    kshiftrq $63, %k0, %k0
+; X86-NEXT:    korq %k0, %k1, %k0
+; X86-NEXT:    vpmovm2b %k0, %zmm0
+; X86-NEXT:    retl
+  %a_i = trunc i32 %a to i1
+  %maskv = insertelement <64 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %a_i, i32 0
+  ret <64 x i1> %maskv
+}

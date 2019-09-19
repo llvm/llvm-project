@@ -112,7 +112,7 @@ class getVOP3ClampPat<VOPProfile P, SDPatternOperator node> {
 
 class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
   list<dag> ret = [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
-                                        imm:$cbsz, imm:$abid, imm:$blgp))];
+                                        timm:$cbsz, timm:$abid, timm:$blgp))];
 }
 
 class VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0> :
@@ -453,13 +453,13 @@ let FPDPRounding = 1 in {
 def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
 let Uses = [M0, EXEC] in {
 def V_INTERP_P2_F16 : VOP3Interp <"v_interp_p2_f16", VOP3_INTERP16<[f16, f32, i32, f32]>,
-       [(set f16:$vdst, (AMDGPUinterp_p2_f16 f32:$src0, (i32 imm:$attrchan),
-                                                        (i32 imm:$attr),
-                                                        (i32 imm:$src0_modifiers),
+       [(set f16:$vdst, (AMDGPUinterp_p2_f16 f32:$src0, (i32 timm:$attrchan),
+                                                        (i32 timm:$attr),
+                                                        (i32 timm:$src0_modifiers),
                                                         (f32 VRegSrc_32:$src2),
-                                                        (i32 imm:$src2_modifiers),
-                                                        (i1 imm:$high),
-                                                        (i1 imm:$clamp)))]>;
+                                                        (i32 timm:$src2_modifiers),
+                                                        (i1 timm:$high),
+                                                        (i1 timm:$clamp)))]>;
 } // End Uses = [M0, EXEC]
 } // End FPDPRounding = 1
 } // End renamedInGFX9 = 1
@@ -478,21 +478,21 @@ def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f1
 
 let Uses = [M0, EXEC], FPDPRounding = 1 in {
 def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>,
-       [(set f32:$vdst, (AMDGPUinterp_p1ll_f16 f32:$src0, (i32 imm:$attrchan),
-                                                          (i32 imm:$attr),
-                                                          (i32 imm:$src0_modifiers),
-                                                          (i1 imm:$high),
-                                                          (i1 imm:$clamp),
-                                                          (i32 imm:$omod)))]>;
+       [(set f32:$vdst, (AMDGPUinterp_p1ll_f16 f32:$src0, (i32 timm:$attrchan),
+                                                          (i32 timm:$attr),
+                                                          (i32 timm:$src0_modifiers),
+                                                          (i1 timm:$high),
+                                                          (i1 timm:$clamp),
+                                                          (i32 timm:$omod)))]>;
 def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>,
-       [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 imm:$attrchan),
-                                                          (i32 imm:$attr),
-                                                          (i32 imm:$src0_modifiers),
+       [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 timm:$attrchan),
+                                                          (i32 timm:$attr),
+                                                          (i32 timm:$src0_modifiers),
                                                           (f32 VRegSrc_32:$src2),
-                                                          (i32 imm:$src2_modifiers),
-                                                          (i1 imm:$high),
-                                                          (i1 imm:$clamp),
-                                                          (i32 imm:$omod)))]>;
+                                                          (i32 timm:$src2_modifiers),
+                                                          (i1 timm:$high),
+                                                          (i1 timm:$clamp),
+                                                          (i32 timm:$omod)))]>;
 } // End Uses = [M0, EXEC], FPDPRounding = 1
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
@@ -642,11 +642,11 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
   def : GCNPat<
-    (int_amdgcn_permlane16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, imm:$fi, imm:$bc),
+    (int_amdgcn_permlane16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
     (V_PERMLANE16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
   >;
   def : GCNPat<
-    (int_amdgcn_permlanex16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, imm:$fi, imm:$bc),
+    (int_amdgcn_permlanex16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
     (V_PERMLANEX16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
   >;
 } // End SubtargetPredicate = isGFX10Plus

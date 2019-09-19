@@ -1,5 +1,4 @@
 import sys
-import re
 
 InterestingBBs = 0
 input = open(sys.argv[1], "r")

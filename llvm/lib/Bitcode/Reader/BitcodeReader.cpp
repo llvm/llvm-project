@@ -3648,6 +3648,11 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       break;
     }
     Record.clear();
+
+    // Upgrade data layout string.
+    std::string DL = llvm::UpgradeDataLayoutString(
+        TheModule->getDataLayoutStr(), TheModule->getTargetTriple());
+    TheModule->setDataLayout(DL);
   }
 }
 

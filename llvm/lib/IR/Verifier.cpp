@@ -982,6 +982,9 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
            N.getRawVTableHolder());
   AssertDI(!hasConflictingReferenceFlags(N.getFlags()),
            "invalid reference flags", &N);
+  unsigned DIBlockByRefStruct = 1 << 4;
+  AssertDI((N.getFlags() & DIBlockByRefStruct) == 0,
+           "DIBlockByRefStruct on DICompositeType is no longer supported", &N);
 
   if (N.isVector()) {
     const DINodeArray Elements = N.getElements();
@@ -4902,11 +4905,6 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   // This check is redundant with one in visitLocalVariable().
   AssertDI(isType(Var->getRawType()), "invalid type ref", Var,
            Var->getRawType());
-  if (auto *Type = dyn_cast_or_null<DIType>(Var->getRawType()))
-    if (Type->isBlockByrefStruct())
-      AssertDI(DII.getExpression() && DII.getExpression()->getNumElements(),
-               "BlockByRef variable without complex expression", Var, &DII);
-
   verifyFnArgs(DII);
 }
 
