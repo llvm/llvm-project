@@ -138,7 +138,7 @@ LLVMBinaryRef LLVMMachOUniversalBinaryCopyObjectForArch(LLVMBinaryRef BR,
                                                         char **ErrorMessage) {
   auto universal = cast<MachOUniversalBinary>(unwrap(BR));
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
-      universal->getObjectForArch({Arch, ArchLen}));
+      universal->getMachOObjectForArch({Arch, ArchLen}));
   if (!ObjOrErr) {
     *ErrorMessage = strdup(toString(ObjOrErr.takeError()).c_str());
     return nullptr;

@@ -36,6 +36,11 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (ChunkSucessors.size() == Term->getNumSuccessors())
     return;
 
+  bool IsBranch = isa<BranchInst>(Term);
+  Value *Address = nullptr;
+  if (auto IndBI = dyn_cast<IndirectBrInst>(Term))
+    Address = IndBI->getAddress();
+
   Term->eraseFromParent();
 
   if (ChunkSucessors.empty()) {
@@ -43,12 +48,12 @@ static void replaceBranchTerminator(BasicBlock &BB,
     return;
   }
 
-  if (isa<BranchInst>(Term))
+  if (IsBranch)
     BranchInst::Create(ChunkSucessors[0], &BB);
 
   if (auto IndBI = dyn_cast<IndirectBrInst>(Term)) {
     auto NewIndBI =
-        IndirectBrInst::Create(IndBI->getAddress(), ChunkSucessors.size(), &BB);
+        IndirectBrInst::Create(Address, ChunkSucessors.size(), &BB);
     for (auto Dest : ChunkSucessors)
       NewIndBI->addDestination(Dest);
   }
@@ -75,15 +80,14 @@ static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-/// @returns the Module stripped of out-of-chunk functions
 static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
                                          Module *Program) {
-  unsigned I = 0, BBCount = 0;
+  int I = 0, BBCount = 0;
   std::set<BasicBlock *> BBsToKeep;
 
   for (auto &F : *Program)
     for (auto &BB : F)
-      if (I < ChunksToKeep.size()) {
+      if (I < (int)ChunksToKeep.size()) {
         if (ChunksToKeep[I].contains(++BBCount))
           BBsToKeep.insert(&BB);
         if (ChunksToKeep[I].end == BBCount)
@@ -120,7 +124,7 @@ static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
 }
 
 /// Counts the amount of basic blocks and prints their name & respective index
-static unsigned countBasicBlocks(Module *Program) {
+static int countBasicBlocks(Module *Program) {
   // TODO: Silence index with --quiet flag
   outs() << "----------------------------\n";
   int BBCount = 0;
@@ -137,6 +141,6 @@ static unsigned countBasicBlocks(Module *Program) {
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Basic Blocks...\n";
-  unsigned BBCount = countBasicBlocks(Test.getProgram());
+  int BBCount = countBasicBlocks(Test.getProgram());
   runDeltaPass(Test, BBCount, extractBasicBlocksFromModule);
 }

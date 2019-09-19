@@ -14,7 +14,6 @@ For API clients and LLVM developers.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
-   BugpointRedesign
    CodeGenerator
    ExceptionHandling
    AddingConstrainedIntrinsics
@@ -105,9 +104,6 @@ For API clients and LLVM developers.
 :doc:`Bugpoint`
    Automatic bug finder and test-case reducer description and usage
    information.
-
-:doc:`BugpointRedesign`
-   Design doc for a redesign of the Bugpoint tool.
 
 :doc:`BitCodeFormat`
    This describes the file format and encoding used for LLVM "bc" files.

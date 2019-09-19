@@ -133,7 +133,8 @@ TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
     Optional<bool> UserUpperBound, Optional<bool> UserAllowPeeling,
-    Optional<bool> UserAllowProfileBasedPeeling);
+    Optional<bool> UserAllowProfileBasedPeeling,
+    Optional<unsigned> UserFullUnrollMaxCount);
 
 unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
                              bool &NotDuplicatable, bool &Convergent,

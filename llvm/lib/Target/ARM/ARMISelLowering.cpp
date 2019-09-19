@@ -3116,12 +3116,12 @@ ARMTargetLowering::LowerGlobalTLSAddressWindows(SDValue Op,
 
   // Load the current TEB (thread environment block)
   SDValue Ops[] = {Chain,
-                   DAG.getConstant(Intrinsic::arm_mrc, DL, MVT::i32),
-                   DAG.getConstant(15, DL, MVT::i32),
-                   DAG.getConstant(0, DL, MVT::i32),
-                   DAG.getConstant(13, DL, MVT::i32),
-                   DAG.getConstant(0, DL, MVT::i32),
-                   DAG.getConstant(2, DL, MVT::i32)};
+                   DAG.getTargetConstant(Intrinsic::arm_mrc, DL, MVT::i32),
+                   DAG.getTargetConstant(15, DL, MVT::i32),
+                   DAG.getTargetConstant(0, DL, MVT::i32),
+                   DAG.getTargetConstant(13, DL, MVT::i32),
+                   DAG.getTargetConstant(0, DL, MVT::i32),
+                   DAG.getTargetConstant(2, DL, MVT::i32)};
   SDValue CurrentTEB = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
                                    DAG.getVTList(MVT::i32, MVT::Other), Ops);
 
@@ -8898,12 +8898,12 @@ static void ReplaceREADCYCLECOUNTER(SDNode *N,
   // Under Power Management extensions, the cycle-count is:
   //    mrc p15, #0, <Rt>, c9, c13, #0
   SDValue Ops[] = { N->getOperand(0), // Chain
-                    DAG.getConstant(Intrinsic::arm_mrc, DL, MVT::i32),
-                    DAG.getConstant(15, DL, MVT::i32),
-                    DAG.getConstant(0, DL, MVT::i32),
-                    DAG.getConstant(9, DL, MVT::i32),
-                    DAG.getConstant(13, DL, MVT::i32),
-                    DAG.getConstant(0, DL, MVT::i32)
+                    DAG.getTargetConstant(Intrinsic::arm_mrc, DL, MVT::i32),
+                    DAG.getTargetConstant(15, DL, MVT::i32),
+                    DAG.getTargetConstant(0, DL, MVT::i32),
+                    DAG.getTargetConstant(9, DL, MVT::i32),
+                    DAG.getTargetConstant(13, DL, MVT::i32),
+                    DAG.getTargetConstant(0, DL, MVT::i32)
   };
 
   SDValue Cycles32 = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,

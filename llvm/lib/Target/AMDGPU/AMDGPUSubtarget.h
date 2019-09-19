@@ -555,6 +555,10 @@ public:
     return GFX9Insts;
   }
 
+  bool hasScalarMulHiInsts() const {
+    return GFX9Insts;
+  }
+
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
   }
