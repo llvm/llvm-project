@@ -182,9 +182,6 @@ def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
 def warn_drv_ycyu_different_arg_clang_cl : Warning<
   "support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored">,
   InGroup<ClangClPch>;
-def warn_drv_ycyu_no_fi_arg_clang_cl : Warning<
-  "support for '%0' without a corresponding /FI flag not implemented yet; flag ignored">,
-  InGroup<ClangClPch>;
 def warn_drv_yc_multiple_inputs_clang_cl : Warning<
   "support for '/Yc' with more than one source file not implemented yet; flag ignored">,
   InGroup<ClangClPch>;

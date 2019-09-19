@@ -67,18 +67,14 @@
 # CHECK-NEXT:  |      11.   vmovaps	%xmm7, %xmm4
 # CHECK-NEXT:  +----> 12.   vfmadd213ps	%xmm1, %xmm14, %xmm2      ## REGISTER dependency:  %xmm1
 # CHECK-NEXT:  |      13.   vmovaps	%xmm6, %xmm1
-# CHECK-NEXT:  |      14.   vfmadd213ps	%xmm2, %xmm15, %xmm3
-# CHECK-NEXT:  |      15.   vpermilps	$170, %xmm3, %xmm0
+# CHECK-NEXT:  +----> 14.   vfmadd213ps	%xmm2, %xmm15, %xmm3      ## REGISTER dependency:  %xmm2
+# CHECK-NEXT:  +----> 15.   vpermilps	$170, %xmm3, %xmm0                ## REGISTER dependency:  %xmm3
 # CHECK-NEXT:  |      16.   vmovups	%xmm3, (%rdx,%rax)
 # CHECK-NEXT:  |      17.   vpermilps	$255, %xmm3, %xmm2
 # CHECK-NEXT:  |      18.   addq	$16, %rax
 # CHECK-NEXT:  |      19.   decl	%ecx
-# CHECK-NEXT:  |      20.   vmovaps	%xmm0, %xmm3
-# CHECK-NEXT:  |      21.   jne	.LBB0_4
-# CHECK-NEXT:  |
-# CHECK-NEXT:  |    < loop carried >
-# CHECK-NEXT:  |
-# CHECK-NEXT:  +----> 2.    vmulps	-24(%rsp), %xmm7, %xmm8           ## RESOURCE interference:  SKLPort1 [ probability: 45% ]
+# CHECK-NEXT:  +----> 20.   vmovaps	%xmm0, %xmm3                      ## REGISTER dependency:  %xmm0
+# CHECK-NEXT:         21.   jne	.LBB0_4
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

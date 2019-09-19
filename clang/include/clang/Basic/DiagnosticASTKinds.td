@@ -283,7 +283,6 @@ def warn_odr_variable_multiple_def : Warning<
   "external variable %0 defined in multiple translation units">,
   InGroup<ODR>;
 def note_odr_value_here : Note<"declared here with type %0">;
-def note_odr_defined_here : Note<"also defined here">;
 def err_odr_function_type_inconsistent : Error<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;

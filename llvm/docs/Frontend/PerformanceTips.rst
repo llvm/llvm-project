@@ -21,7 +21,8 @@ surprisingly small changes in the source IR can have a large effect on the
 generated code.  
 
 Beyond the specific items on the list below, it's worth noting that the most 
-mature frontend for LLVM is Clang.  As a result, the further your IR gets from what Clang might emit, the less likely it is to be effectively optimized.  It 
+mature frontend for LLVM is Clang.  As a result, the further your IR gets from
+what Clang might emit, the less likely it is to be effectively optimized. It
 can often be useful to write a quick C program with the semantics you're trying
 to model and see what decisions Clang's IRGen makes about what IR to emit.  
 Studying Clang's CodeGen directory can also be a good source of ideas.  Note 
