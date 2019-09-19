@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 
 InterestingInstructions = 0
@@ -9,7 +10,7 @@ for line in input:
     line = line[:i]
   if "%interesting" in line:
     InterestingInstructions += 1
-  print InterestingInstructions
+  print(InterestingInstructions)
 
 if InterestingInstructions == 5:
   sys.exit(0) # interesting!
