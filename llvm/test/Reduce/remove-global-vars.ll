@@ -19,9 +19,7 @@ entry:
   %1 = load i32, i32* @interesting, align 4
   store i32 %1, i32* @uninteresting, align 4
 
-  ; CHECK: %inc = add nsw i32 undef, 1
-  %inc = add nsw i32 %0, 1
-  ; CHECK: store i32 %inc, i32* @interesting, align 4
-  store i32 %inc, i32* @interesting, align 4
+  ; CHECK: store i32 5, i32* @interesting, align 4
+  store i32 5, i32* @interesting, align 4
   ret i32 0
 }

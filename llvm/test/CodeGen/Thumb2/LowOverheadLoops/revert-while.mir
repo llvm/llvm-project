@@ -13,6 +13,9 @@
 # CHECK-NEXT:   tB %bb.3, 14
 
 --- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
   define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) #0 {
   entry:
     %0 = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
@@ -23,15 +26,15 @@
     %scevgep5 = getelementptr i32, i32* %b, i32 -1
     br label %do.body
   
-  do.body:                                          ; preds = %do.body.preheader, %do.body
+  do.body:                                          ; preds = %do.body, %do.body.preheader
     %lsr.iv6 = phi i32* [ %scevgep5, %do.body.preheader ], [ %scevgep7, %do.body ]
     %lsr.iv = phi i32* [ %scevgep2, %do.body.preheader ], [ %scevgep3, %do.body ]
     %1 = phi i32 [ %2, %do.body ], [ %N, %do.body.preheader ]
-    %scevgep8 = getelementptr i32, i32* %lsr.iv6, i32 1
-    %scevgep4 = getelementptr i32, i32* %lsr.iv, i32 1
+    %scevgep = getelementptr i32, i32* %lsr.iv6, i32 1
+    %scevgep1 = getelementptr i32, i32* %lsr.iv, i32 1
     %size = call i32 @llvm.arm.space(i32 4096, i32 undef)
-    %tmp = load i32, i32* %scevgep8, align 4
-    store i32 %tmp, i32* %scevgep4, align 4
+    %tmp = load i32, i32* %scevgep, align 4
+    store i32 %tmp, i32* %scevgep1, align 4
     %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %1, i32 1)
     %3 = icmp ne i32 %2, 0
     %scevgep3 = getelementptr i32, i32* %lsr.iv, i32 1
@@ -51,9 +54,6 @@
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
   
-  ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
-  
   attributes #0 = { "target-features"="+lob" }
   attributes #1 = { nounwind }
   attributes #2 = { noduplicate nounwind }
@@ -67,7 +67,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -107,6 +107,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $r1, $r2, $r3, $r7, $lr
   
     frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -117,6 +118,7 @@ body:             |
   
   bb.1.do.body.preheader:
     successors: %bb.2(0x80000000)
+    liveins: $r1, $r2, $r3
   
     renamable $r0, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14, $noreg
     renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14, $noreg
@@ -124,10 +126,11 @@ body:             |
   
   bb.2.do.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $lr, $r0, $r1
   
     dead renamable $r2 = SPACE 4096, undef renamable $r0
-    renamable $r2, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14, $noreg :: (load 4 from %ir.scevgep8)
-    early-clobber renamable $r1 = t2STR_PRE killed renamable $r2, killed renamable $r1, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
+    renamable $r2, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14, $noreg :: (load 4 from %ir.scevgep)
+    early-clobber renamable $r1 = t2STR_PRE killed renamable $r2, killed renamable $r1, 4, 14, $noreg :: (store 4 into %ir.scevgep1)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14, $noreg
@@ -136,4 +139,3 @@ body:             |
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...
-

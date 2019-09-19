@@ -80,7 +80,7 @@ enum VPTMaskValue {
   TETE  = 15  // 0b1111
 };
 
-unsigned VCMPOpcodeToVPT(unsigned Opcode) {
+static unsigned VCMPOpcodeToVPT(unsigned Opcode) {
   switch (Opcode) {
   case ARM::MVE_VCMPf32:
     return ARM::MVE_VPTv4f32;
@@ -133,9 +133,9 @@ unsigned VCMPOpcodeToVPT(unsigned Opcode) {
   }
 }
 
-MachineInstr *findVCMPToFoldIntoVPST(MachineBasicBlock::iterator MI,
-                                     const TargetRegisterInfo *TRI,
-                                     unsigned &NewOpcode) {
+static MachineInstr *findVCMPToFoldIntoVPST(MachineBasicBlock::iterator MI,
+                                            const TargetRegisterInfo *TRI,
+                                            unsigned &NewOpcode) {
   // Search backwards to the instruction that defines VPR. This may or not
   // be a VCMP, we check that after this loop. If we find another instruction
   // that reads cpsr, we return nullptr.

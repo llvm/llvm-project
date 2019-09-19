@@ -359,6 +359,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
           case BuiltinType::SChar:
           case BuiltinType::UChar:
           case BuiltinType::Char_U:
+          case BuiltinType::Bool:
             return Match;
         }
       return NoMatch;
@@ -386,6 +387,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
           case BuiltinType::SChar:
           case BuiltinType::Char_U:
           case BuiltinType::UChar:
+          case BuiltinType::Bool:
             if (T == C.UnsignedShortTy || T == C.ShortTy)
               return NoMatchPedantic;
             return T == C.UnsignedCharTy || T == C.SignedCharTy ? Match

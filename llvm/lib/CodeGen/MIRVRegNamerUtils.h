@@ -1,3 +1,4 @@
+
 //===------------ MIRVRegNamerUtils.h - MIR VReg Renaming Utilities -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -13,6 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_CODEGEN_MIRVREGNAMERUTILS_H
+#define LLVM_LIB_CODEGEN_MIRVREGNAMERUTILS_H
+
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -23,7 +27,7 @@
 
 #include <queue>
 
-using namespace llvm;
+namespace llvm {
 
 /// NamedVRegCursor - The cursor is an object that keeps track of what the next
 /// vreg name should be. It does book keeping to determine when to skip the
@@ -81,3 +85,7 @@ public:
   // @return changed
   bool renameVRegs(MachineBasicBlock *MBB);
 };
+
+} // namespace llvm
+
+#endif

@@ -188,8 +188,6 @@ public:
                           const TypeSummaryOptions &options,
                           std::string &retval) override;
 
-  void Clear() override;
-
   bool GetDocumentationForItem(const char *item, std::string &dest) override;
 
   bool GetShortHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,

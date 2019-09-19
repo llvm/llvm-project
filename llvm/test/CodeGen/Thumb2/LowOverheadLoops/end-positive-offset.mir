@@ -9,7 +9,10 @@
 # CHECK: bb.2.for.cond.cleanup:
 # CHECK: bb.3.for.header:
 
---- |  
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
   define void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
   entry:
     call void @llvm.set.loop.iterations.i32(i32 %N)
@@ -45,9 +48,11 @@
   }
   
   ; Function Attrs: nounwind
-  declare i32 @llvm.arm.space(i32 immarg, i32) #0 
+  declare i32 @llvm.arm.space(i32 immarg, i32) #0
+  
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #1 
+  declare void @llvm.set.loop.iterations.i32(i32) #1
+  
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
   
@@ -63,7 +68,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: false
+tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:
@@ -128,6 +133,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     successors: %bb.3(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r7, $lr
   
     frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
@@ -184,5 +190,3 @@ body:             |
     tB %bb.1, 14, $noreg
 
 ...
-
-

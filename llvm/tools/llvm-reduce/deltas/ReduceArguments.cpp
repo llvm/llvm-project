@@ -40,10 +40,9 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-/// @returns the Module stripped of out-of-chunk functions
 static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
                                        Module *Program) {
-  unsigned I = 0, ArgCount = 0;
+  int I = 0, ArgCount = 0;
   std::set<Argument *> ArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
@@ -51,7 +50,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
     if (!F.isDeclaration()) {
       Funcs.push_back(&F);
       for (auto &A : F.args())
-        if (I < ChunksToKeep.size()) {
+        if (I < (int)ChunksToKeep.size()) {
           if (ChunksToKeep[I].contains(++ArgCount))
             ArgsToKeep.insert(&A);
           if (ChunksToKeep[I].end == ArgCount)
@@ -121,6 +120,6 @@ static int countArguments(Module *Program) {
 
 void llvm::reduceArgumentsDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Arguments...\n";
-  unsigned ArgCount = countArguments(Test.getProgram());
+  int ArgCount = countArguments(Test.getProgram());
   runDeltaPass(Test, ArgCount, extractArgumentsFromModule);
 }

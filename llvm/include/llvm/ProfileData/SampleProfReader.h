@@ -330,6 +330,10 @@ public:
     return nullptr;
   };
 
+  /// It includes all the names that have samples either in outline instance
+  /// or inline instance.
+  virtual std::vector<StringRef> *getNameTable() { return nullptr; }
+
 protected:
   /// Map every function to its associated profile.
   ///
@@ -386,6 +390,10 @@ public:
 
   /// Read sample profiles from the associated file.
   std::error_code read() override;
+
+  /// It includes all the names that have samples either in outline instance
+  /// or inline instance.
+  virtual std::vector<StringRef> *getNameTable() override { return &NameTable; }
 
 protected:
   /// Read a numeric value of type T from the profile.

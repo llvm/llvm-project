@@ -612,7 +612,8 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
     // strncpy(x, "", y) -> memset(align 1 x, '\0', y)
     CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, 1);
     AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
-    NewCI->getAttributes().addParamAttributes(CI->getContext(), 0, ArgAttrs);
+    NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
+        CI->getContext(), 0, ArgAttrs));
     return Dst;
   }
 
@@ -623,8 +624,6 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
   CallInst *NewCI = B.CreateMemCpy(Dst, 1, Src, 1, ConstantInt::get(DL.getIntPtrType(PT), Len));
- // AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
-//  NewCI->getAttributes().addParamAttributes(CI->getContext(), 0, ArgAttrs);
   NewCI->setAttributes(CI->getAttributes());
   return Dst;
 }
@@ -1259,21 +1258,18 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
   if (!V[0] || (isBinary && !V[1]))
     return nullptr;
 
-  StringRef CalleeNm = CalleeFn->getName();
-  AttributeList CalleeAt = CalleeFn->getAttributes();
-  bool CalleeIn = CalleeFn->isIntrinsic();
-
   // If call isn't an intrinsic, check that it isn't within a function with the
   // same name as the float version of this call, otherwise the result is an
   // infinite loop.  For example, from MinGW-w64:
   //
   // float expf(float val) { return (float) exp((double) val); }
-  if (!CalleeIn) {
-    const Function *Fn = CI->getFunction();
-    StringRef FnName = Fn->getName();
-    if (FnName.back() == 'f' &&
-        FnName.size() == (CalleeNm.size() + 1) &&
-        FnName.startswith(CalleeNm))
+  StringRef CalleeName = CalleeFn->getName();
+  bool IsIntrinsic = CalleeFn->isIntrinsic();
+  if (!IsIntrinsic) {
+    StringRef CallerName = CI->getFunction()->getName();
+    if (!CallerName.empty() && CallerName.back() == 'f' &&
+        CallerName.size() == (CalleeName.size() + 1) &&
+        CallerName.startswith(CalleeName))
       return nullptr;
   }
 
@@ -1283,16 +1279,16 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilder<> &B,
 
   // g((double) float) -> (double) gf(float)
   Value *R;
-  if (CalleeIn) {
+  if (IsIntrinsic) {
     Module *M = CI->getModule();
     Intrinsic::ID IID = CalleeFn->getIntrinsicID();
     Function *Fn = Intrinsic::getDeclaration(M, IID, B.getFloatTy());
     R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
+  } else {
+    AttributeList CalleeAttrs = CalleeFn->getAttributes();
+    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], CalleeName, B, CalleeAttrs)
+                 : emitUnaryFloatFnCall(V[0], CalleeName, B, CalleeAttrs);
   }
-  else
-    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], CalleeNm, B, CalleeAt)
-                 : emitUnaryFloatFnCall(V[0], CalleeNm, B, CalleeAt);
-
   return B.CreateFPExt(R, B.getDoubleTy());
 }
 

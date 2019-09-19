@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-manifest-internal --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=1 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
 
 
 declare void @deref_phi_user(i32* %a);

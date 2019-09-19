@@ -1349,15 +1349,18 @@ void AsmPrinter::emitRemarksSection(Module &M) {
     return;
   remarks::RemarkSerializer &RemarkSerializer = RS->getSerializer();
 
-  StringRef FilenameRef = RS->getFilename();
-  SmallString<128> Filename = FilenameRef;
-  sys::fs::make_absolute(Filename);
-  assert(!Filename.empty() && "The filename can't be empty.");
+  Optional<SmallString<128>> Filename;
+  if (Optional<StringRef> FilenameRef = RS->getFilename()) {
+    Filename = *FilenameRef;
+    sys::fs::make_absolute(*Filename);
+    assert(!Filename->empty() && "The filename can't be empty.");
+  }
 
   std::string Buf;
   raw_string_ostream OS(Buf);
   std::unique_ptr<remarks::MetaSerializer> MetaSerializer =
-      RemarkSerializer.metaSerializer(OS, StringRef(Filename));
+      Filename ? RemarkSerializer.metaSerializer(OS, StringRef(*Filename))
+               : RemarkSerializer.metaSerializer(OS);
   MetaSerializer->emit();
 
   // Switch to the right section: .remarks/__remarks.
@@ -2901,7 +2904,7 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   // Emit an alignment directive for this block, if needed.
   const llvm::Align Align = MBB.getAlignment();
-  if (Align > 1)
+  if (Align != llvm::Align::None())
     EmitAlignment(Align);
   MCCodePaddingContext Context;
   setupCodePaddingContext(MBB, Context);

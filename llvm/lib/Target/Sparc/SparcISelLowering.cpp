@@ -1438,7 +1438,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(Op, MVT::v2i32, Expand);
     }
     // Truncating/extending stores/loads are also not supported.
-    for (MVT VT : MVT::integer_vector_valuetypes()) {
+    for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
       setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i32, Expand);
       setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::v2i32, Expand);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i32, Expand);

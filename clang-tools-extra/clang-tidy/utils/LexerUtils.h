@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 
 namespace clang {
@@ -70,6 +71,11 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
     if (PotentialMatch.isOneOf(TK, TKs...))
       return PotentialMatch.getLocation();
 
+    // If we reach the end of the file, and eof is not the target token, we stop
+    // the loop, otherwise we will get infinite loop (findNextToken will return
+    // eof on eof).
+    if (PotentialMatch.is(tok::eof))
+      return SourceLocation();
     Start = PotentialMatch.getLastLoc();
   }
 }

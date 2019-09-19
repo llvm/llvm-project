@@ -189,6 +189,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Disable use of the `jal` instruction.
   bool UseLongCalls = false;
 
+  // Assume 32-bit GOT.
+  bool UseXGOT = false;
+
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   unsigned stackAlignment;
@@ -322,6 +325,8 @@ public:
   bool useSoftFloat() const { return IsSoftFloat; }
 
   bool useLongCalls() const { return UseLongCalls; }
+
+  bool useXGOT() const { return UseXGOT; }
 
   bool enableLongBranchPass() const {
     return hasStandardEncoding() || inMicroMipsMode() || allowMixed16_32();

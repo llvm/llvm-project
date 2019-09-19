@@ -7387,7 +7387,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         Triple T = MachOObjectFile::getArchTriple(CPUType, CPUSubType, nullptr,
                                                   &ArchFlag);
         Expected<std::unique_ptr<MachOObjectFile>> MachDSYM =
-            UB->getObjectForArch(ArchFlag);
+            UB->getMachOObjectForArch(ArchFlag);
         if (!MachDSYM) {
           reportError(MachDSYM.takeError(), DSYMFile);
           return;

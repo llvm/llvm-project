@@ -251,7 +251,9 @@ multiclass VOP2eInstAliases<VOP2_Pseudo ps, VOP2_Real inst> {
 
 class VOP_MADAK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
-  field dag Ins32 = (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm);
+  field dag Ins32 = !if(!eq(vt.Size, 32),
+                        (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
+                        (ins VCSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
   field bit HasExt = 0;
 
   // Hack to stop printing _e64
@@ -653,7 +655,8 @@ defm V_FMAC_F32 : VOP2Inst <"v_fmac_f32", VOP_MAC_F32>;
 let Constraints = "$vdst = $src2",
       DisableEncoding="$src2",
       isConvertibleToThreeAddress = 1,
-      isCommutable = 1 in {
+      isCommutable = 1,
+      IsDOT = 1 in {
   let SubtargetPredicate = HasDot5Insts in
     defm V_DOT2C_F32_F16 : VOP2Inst_e32<"v_dot2c_f32_f16", VOP_DOT_ACC_F32_V2F16>;
   let SubtargetPredicate = HasDot6Insts in

@@ -1861,7 +1861,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::HalfTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID: {
-    const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV);
+    const auto *CFP = cast<ConstantFP>(CPV);
     Type *Ty = CFP->getType();
     if (Ty == Type::getHalfTy(CPV->getContext())) {
       APInt API = CFP->getValueAPF().bitcastToAPInt();
