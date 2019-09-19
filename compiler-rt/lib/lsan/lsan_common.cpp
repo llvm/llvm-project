@@ -570,11 +570,7 @@ static bool CheckForLeaks() {
   EnsureMainThreadIDIsCorrect();
   CheckForLeaksParam param;
   param.success = false;
-  LockThreadRegistry();
-  LockAllocator();
-  DoStopTheWorld(CheckForLeaksCallback, &param);
-  UnlockAllocator();
-  UnlockThreadRegistry();
+  LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
 
   if (!param.success) {
     Report("LeakSanitizer has encountered a fatal error.\n");
