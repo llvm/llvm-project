@@ -60,15 +60,15 @@ define float @f32_one_step(float %x) #1 {
 ; FMA-RECIP-LABEL: f32_one_step:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
-; FMA-RECIP-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
+; FMA-RECIP-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
+; FMA-RECIP-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
 ; FMA-RECIP-NEXT:    retq
 ;
 ; BDVER2-LABEL: f32_one_step:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; BDVER2-NEXT:    vfnmaddss {{.*}}(%rip), %xmm1, %xmm0, %xmm0
-; BDVER2-NEXT:    vfmaddss %xmm1, %xmm0, %xmm1, %xmm0
+; BDVER2-NEXT:    vfmaddss {{.*}}(%rip), %xmm1, %xmm0, %xmm0
+; BDVER2-NEXT:    vfnmaddss %xmm1, %xmm0, %xmm1, %xmm0
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: f32_one_step:
@@ -94,8 +94,8 @@ define float @f32_one_step(float %x) #1 {
 ; HASWELL-LABEL: f32_one_step:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
-; HASWELL-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
+; HASWELL-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
+; HASWELL-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: f32_one_step:
@@ -111,8 +111,8 @@ define float @f32_one_step(float %x) #1 {
 ; AVX512-LABEL: f32_one_step:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrcpss %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem
-; AVX512-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1
+; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
+; AVX512-NEXT:    vfnmadd132ss {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
 ; AVX512-NEXT:    retq
   %div = fdiv fast float 1.0, %x
   ret float %div

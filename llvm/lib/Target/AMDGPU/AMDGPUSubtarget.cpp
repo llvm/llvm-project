@@ -599,7 +599,7 @@ unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
   if (VGPRs < Granule)
     return MaxWaves;
   unsigned RoundedRegs = ((VGPRs + Granule - 1) / Granule) * Granule;
-  return std::min(getTotalNumVGPRs() / RoundedRegs, MaxWaves);
+  return std::min(std::max(getTotalNumVGPRs() / RoundedRegs, 1u), MaxWaves);
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {

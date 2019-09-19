@@ -20,6 +20,117 @@
 
 namespace llvm {
 
+/// Describes the type of Parameters
+enum class VFParamKind {
+  Vector,            // No semantic information.
+  OMP_Linear,        // declare simd linear(i)
+  OMP_LinearRef,     // declare simd linear(ref(i))
+  OMP_LinearVal,     // declare simd linear(val(i))
+  OMP_LinearUVal,    // declare simd linear(uval(i))
+  OMP_LinearPos,     // declare simd linear(i:c) uniform(c)
+  OMP_LinearValPos,  // declare simd linear(val(i:c)) uniform(c)
+  OMP_LinearRefPos,  // declare simd linear(ref(i:c)) uniform(c)
+  OMP_LinearUValPos, // declare simd linear(uval(i:c)) uniform(c
+  OMP_Uniform,       // declare simd uniform(i)
+  GlobalPredicate,   // Global logical predicate that acts on all lanes
+                     // of the input and output mask concurrently. For
+                     // example, it is implied by the `M` token in the
+                     // Vector Function ABI mangled name.
+  Unknown
+};
+
+/// Describes the type of Instruction Set Architecture
+enum class VFISAKind {
+  AdvancedSIMD, // AArch64 Advanced SIMD (NEON)
+  SVE,          // AArch64 Scalable Vector Extension
+  SSE,          // x86 SSE
+  AVX,          // x86 AVX
+  AVX2,         // x86 AVX2
+  AVX512,       // x86 AVX512
+  Unknown       // Unknown ISA
+};
+
+/// Encapsulates information needed to describe a parameter.
+///
+/// The description of the parameter is not linked directly to
+/// OpenMP or any other vector function description. This structure
+/// is extendible to handle other paradigms that describe vector
+/// functions and their parameters.
+struct VFParameter {
+  unsigned ParamPos;         // Parameter Position in Scalar Function.
+  VFParamKind ParamKind;     // Kind of Parameter.
+  int LinearStepOrPos = 0;   // Step or Position of the Parameter.
+  Align Alignment = Align(); // Optional aligment in bytes, defaulted to 1.
+
+  // Comparison operator.
+  bool operator==(const VFParameter &Other) const {
+    return std::tie(ParamPos, ParamKind, LinearStepOrPos, Alignment) ==
+           std::tie(Other.ParamPos, Other.ParamKind, Other.LinearStepOrPos,
+                    Other.Alignment);
+  }
+};
+
+/// Contains the information about the kind of vectorization
+/// available.
+///
+/// This object in independent on the paradigm used to
+/// represent vector functions. in particular, it is not attached to
+/// any target-specific ABI.
+struct VFShape {
+  unsigned VF;     // Vectorization factor.
+  bool IsScalable; // True if the function is a scalable function.
+  VFISAKind ISA;   // Instruction Set Architecture.
+  SmallVector<VFParameter, 8> Parameters; // List of parameter informations.
+  // Comparison operator.
+  bool operator==(const VFShape &Other) const {
+    return std::tie(VF, IsScalable, ISA, Parameters) ==
+           std::tie(Other.VF, Other.IsScalable, Other.ISA, Other.Parameters);
+  }
+};
+
+/// Holds the VFShape for a specific scalar to vector function mapping.
+struct VFInfo {
+  VFShape Shape;        // Classification of the vector function.
+  StringRef ScalarName; // Scalar Function Name.
+  StringRef VectorName; // Vector Function Name associated to this VFInfo.
+
+  // Comparison operator.
+  bool operator==(const VFInfo &Other) const {
+    return std::tie(Shape, ScalarName, VectorName) ==
+           std::tie(Shape, Other.ScalarName, Other.VectorName);
+  }
+};
+
+namespace VFABI {
+/// Function to contruct a VFInfo out of a mangled names in the
+/// following format:
+///
+/// <VFABI_name>{(<redirection>)}
+///
+/// where <VFABI_name> is the name of the vector function, mangled according
+/// to the rules described in the Vector Function ABI of the target vector
+/// extentsion (or <isa> from now on). The <VFABI_name> is in the following
+/// format:
+///
+/// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
+///
+/// This methods support demangling rules for the following <isa>:
+///
+/// * AArch64: https://developer.arm.com/docs/101129/latest
+///
+/// * x86 (libmvec): https://sourceware.org/glibc/wiki/libmvec and
+///  https://sourceware.org/glibc/wiki/libmvec?action=AttachFile&do=view&target=VectorABI.txt
+///
+///
+///
+/// \param MangledName -> input string in the format
+/// _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)].
+Optional<VFInfo> tryDemangleForVFABI(StringRef MangledName);
+
+/// Retrieve the `VFParamKind` from a string token.
+VFParamKind getVFParamKindFromString(const StringRef Token);
+} // end namespace VFABI
+
 template <typename T> class ArrayRef;
 class DemandedBits;
 class GetElementPtrInst;
