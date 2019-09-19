@@ -72,6 +72,12 @@ function(try_compile_only output)
     endif()
   endforeach()
 
+  # Strip quotes from the compile command, as the compiler is not expecting
+  # quoted arguments (see discussion on D62063 for when this can come up). If
+  # the quotes were there for arugments with spaces in them, the quotes were
+  # not going to help since the string gets split on spaces below.
+  string(REPLACE "\"" "" test_compile_command "${test_compile_command}")
+
   string(REPLACE " " ";" test_compile_command "${test_compile_command}")
 
   execute_process(
