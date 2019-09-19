@@ -116,19 +116,10 @@ void printHelpMessage() {
     outs() << ArHelp;
 }
 
-static unsigned MRILineNumber;
-static bool ParsingMRIScript;
-
 // Show the error message and exit.
 LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
-  if (ParsingMRIScript) {
-    WithColor::error(errs(), ToolName)
-        << "script line " << MRILineNumber << ": " << Error << "\n";
-  } else {
-    WithColor::error(errs(), ToolName) << Error << "\n";
-    printHelpMessage();
-  }
-
+  WithColor::error(errs(), ToolName) << Error << "\n";
+  printHelpMessage();
   exit(1);
 }
 
@@ -968,10 +959,8 @@ static void runMRIScript() {
   const MemoryBuffer &Ref = *Buf.get();
   bool Saved = false;
   std::vector<NewArchiveMember> NewMembers;
-  ParsingMRIScript = true;
 
   for (line_iterator I(Ref, /*SkipBlanks*/ false), E; I != E; ++I) {
-    ++MRILineNumber;
     StringRef Line = *I;
     Line = Line.split(';').first;
     Line = Line.split('*').first;
@@ -1033,9 +1022,7 @@ static void runMRIScript() {
       fail("unknown command: " + CommandStr);
     }
   }
-  
-  ParsingMRIScript = false;
-  
+
   // Nothing to do if not saved.
   if (Saved)
     performOperation(ReplaceOrInsert, &NewMembers);
