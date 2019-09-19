@@ -14,6 +14,7 @@
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
+#include "InstrProfilingPort.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "InstrProfData.inc"
@@ -257,16 +258,25 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t CountersSize = CountersEnd - CountersBegin;
   const uint64_t NamesSize = NamesEnd - NamesBegin;
-  const uint64_t Padding = __llvm_profile_get_num_padding_bytes(NamesSize);
 
   /* Enough zeroes for padding. */
-  const char Zeroes[sizeof(uint64_t)] = {0};
+  unsigned PageSize = getpagesize();
+  char Zeroes[PageSize];
+  memset(Zeroes, 0, PageSize);
 
   /* Create the header. */
   __llvm_profile_header Header;
 
   if (!DataSize)
     return 0;
+
+  /* Determine how much padding is needed before/after the counters and after
+   * the names. */
+  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
+      PaddingBytesAfterNames;
+  __llvm_profile_get_padding_sizes_for_counters(
+      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
 
 /* Initialize header structure.  */
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
@@ -276,11 +286,17 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   ProfDataIOVec IOVec[] = {
       {&Header, sizeof(__llvm_profile_header), 1},
       {DataBegin, sizeof(__llvm_profile_data), DataSize},
+      {Zeroes, sizeof(uint8_t), PaddingBytesBeforeCounters},
       {CountersBegin, sizeof(uint64_t), CountersSize},
+      {Zeroes, sizeof(uint8_t), PaddingBytesAfterCounters},
       {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize},
-      {Zeroes, sizeof(uint8_t), Padding}};
+      {Zeroes, sizeof(uint8_t), PaddingBytesAfterNames}};
   if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
     return -1;
+
+  /* Value profiling is not yet supported in continuous mode. */
+  if (__llvm_profile_is_continuous_mode_enabled())
+    return 0;
 
   return writeValueProfData(Writer, VPDataReader, DataBegin, DataEnd);
 }

@@ -19,6 +19,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
@@ -1110,6 +1111,19 @@ static void addExportedSymbol(ArgStringList &CmdArgs, const char *Symbol) {
   CmdArgs.push_back(Symbol);
 }
 
+/// Add a sectalign directive for \p Segment and \p Section to the maximum
+/// expected page size for Darwin.
+///
+/// On iPhone 6+ the max supported page size is 16K. On macOS, the max is 4K.
+/// Use a common alignment constant (16K) for now, and reduce the alignment on
+/// macOS if it proves important.
+static void addSectalignToPage(const ArgList &Args, ArgStringList &CmdArgs,
+                               StringRef Segment, StringRef Section) {
+  for (const char *A : {"-sectalign", Args.MakeArgString(Segment),
+                        Args.MakeArgString(Section), "0x4000"})
+    CmdArgs.push_back(A);
+}
+
 void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
@@ -1117,11 +1131,13 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   AddLinkRuntimeLib(Args, CmdArgs, "profile",
                     RuntimeLinkOptions(RLO_AlwaysLink | RLO_FirstLink));
 
+  bool ForGCOV = needsGCovInstrumentation(Args);
+
   // If we have a symbol export directive and we're linking in the profile
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
   if (hasExportSymbolDirective(Args)) {
-    if (needsGCovInstrumentation(Args)) {
+    if (ForGCOV) {
       addExportedSymbol(CmdArgs, "___gcov_flush");
       addExportedSymbol(CmdArgs, "_flush_fn_list");
       addExportedSymbol(CmdArgs, "_writeout_fn_list");
@@ -1130,6 +1146,24 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
       addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
     }
     addExportedSymbol(CmdArgs, "_lprofDirMode");
+  }
+
+  // Align __llvm_prf_{cnts,data} sections to the maximum expected page
+  // alignment. This allows profile counters to be mmap()'d to disk. Note that
+  // it's not enough to just page-align __llvm_prf_cnts: the following section
+  // must also be page-aligned so that its data is not clobbered by mmap().
+  //
+  // The section alignment is only needed when continuous profile sync is
+  // enabled, but this is expected to be the default in Xcode. Specifying the
+  // extra alignment also allows the same binary to be used with/without sync
+  // enabled.
+  if (!ForGCOV) {
+    for (auto IPSK : {llvm::IPSK_cnts, llvm::IPSK_data}) {
+      addSectalignToPage(
+          Args, CmdArgs, "__DATA",
+          llvm::getInstrProfSectionName(IPSK, llvm::Triple::MachO,
+                                        /*AddSegmentInfo=*/false));
+    }
   }
 }
 

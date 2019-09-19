@@ -32,6 +32,7 @@
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
+#include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
 /* From where is profile name specified.
@@ -100,6 +101,12 @@ static void setProfileFile(FILE *File) { ProfileFile = File; }
 
 COMPILER_RT_VISIBILITY void __llvm_profile_set_file_object(FILE *File,
                                                            int EnableMerge) {
+  if (__llvm_profile_is_continuous_mode_enabled()) {
+    PROF_WARN("__llvm_profile_set_file_object(fd=%d) not supported, because "
+              "continuous sync mode (%%c) is enabled",
+              fileno(File));
+    return;
+  }
   setProfileFile(File);
   setProfileMergeRequested(EnableMerge);
 }
@@ -347,6 +354,15 @@ static void truncateCurrentFile(void) {
   if (lprofCurFilename.MergePoolSize)
     return;
 
+  /* Only create the profile directory and truncate an existing profile once.
+   * In continuous mode, this is necessary, as the profile is written-to by the
+   * runtime initializer. */
+  const char *lprofInitOnceEnv = "__LLVM_PROFILE_RT_INIT_ONCE";
+  int initialized = getenv(lprofInitOnceEnv) != NULL;
+  if (initialized)
+    return;
+  setenv(lprofInitOnceEnv, lprofInitOnceEnv, 1);
+
   createProfileDir(Filename);
 
   /* Truncate the file.  Later we'll reopen and append. */
@@ -354,6 +370,99 @@ static void truncateCurrentFile(void) {
   if (!File)
     return;
   fclose(File);
+}
+
+static void initializeProfileForContinuousMode(void) {
+#if defined(__Fuchsia__) || defined(_WIN32)
+  PROF_ERR("%s\n", "Continuous mode not yet supported on Fuchsia or Windows.");
+#else // defined(__Fuchsia__) || defined(_WIN32)
+  if (!__llvm_profile_is_continuous_mode_enabled())
+    return;
+
+  /* Get the sizes of various profile data sections. Taken from
+   * __llvm_profile_get_size_for_buffer(). */
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
+  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  const char *NamesBegin = __llvm_profile_begin_names();
+  const char *NamesEnd = __llvm_profile_end_names();
+  const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
+  uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  uint64_t CountersSize = CountersEnd - CountersBegin;
+
+  /* Check that the counter and data sections in this image are page-aligned. */
+  unsigned PageSize = getpagesize();
+  if ((intptr_t)CountersBegin % PageSize != 0) {
+    PROF_ERR("Counters section not page-aligned (start = %p, pagesz = %u).\n",
+             CountersBegin, PageSize);
+    return;
+  }
+  if ((intptr_t)DataBegin % PageSize != 0) {
+    PROF_ERR("Data section not page-aligned (start = %p, pagesz = %u).\n",
+             DataBegin, PageSize);
+    return;
+  }
+
+  /* Open the raw profile in append mode. */
+  int Length = getCurFilenameLength();
+  char *FilenameBuf = (char *)COMPILER_RT_ALLOCA(Length + 1);
+  const char *Filename = getCurFilename(FilenameBuf, 0);
+  if (!Filename)
+    return;
+  FILE *File = fopen(Filename, "a+b");
+  if (!File)
+    return;
+
+  int Fileno = fileno(File);
+
+  /* Check that the offset within the file is page-aligned. */
+  off_t CurrentFileOffset = ftello(File);
+  off_t OffsetModPage = CurrentFileOffset % PageSize;
+  if (OffsetModPage != 0) {
+    PROF_ERR("Continuous counter sync mode is enabled, but raw profile is not"
+             "page-aligned. CurrentFileOffset = %lld, pagesz = %u.\n",
+             CurrentFileOffset, PageSize);
+    return;
+  }
+
+  /* Determine how much padding is needed before/after the counters and after
+   * the names. */
+  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
+      PaddingBytesAfterNames;
+  __llvm_profile_get_padding_sizes_for_counters(
+      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+
+  uint64_t PageAlignedCountersLength =
+      (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters;
+  uint64_t FileOffsetToCounters =
+      CurrentFileOffset + sizeof(__llvm_profile_header) +
+      (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters;
+
+  /* Write the partial profile. This grows the file to a point where the mmap()
+   * can succeed. Leak the file handle, as the file should stay open. */
+  setProfileFile(File);
+  int rc = writeFile(Filename);
+  if (rc)
+    PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
+  setProfileFile(NULL);
+
+  uint64_t *CounterMmap = (uint64_t *)mmap(
+      (void *)CountersBegin, PageAlignedCountersLength, PROT_READ | PROT_WRITE,
+      MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToCounters);
+  if (CounterMmap != CountersBegin) {
+    PROF_ERR(
+        "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
+        "  - CountersBegin: %p\n"
+        "  - PageAlignedCountersLength: %llu\n"
+        "  - Fileno: %d\n"
+        "  - FileOffsetToCounters: %llu\n",
+        strerror(errno), CountersBegin, PageAlignedCountersLength, Fileno,
+        FileOffsetToCounters);
+    return;
+  }
+#endif // defined(__Fuchsia__) || defined(_WIN32)
 }
 
 static const char *DefaultProfileName = "default.profraw";
@@ -419,9 +528,30 @@ static int parseFilenamePattern(const char *FilenamePat,
                       FilenamePat);
             return -1;
           }
+      } else if (FilenamePat[I] == 'c') {
+        if (__llvm_profile_is_continuous_mode_enabled()) {
+          PROF_WARN("%%c specifier can only be specified once in %s.\n",
+                    FilenamePat);
+          return -1;
+        }
+        if (MergingEnabled) {
+          PROF_WARN("%%c specifier can not be used with profile merging (%%m) "
+                    "in %s.\n",
+                    FilenamePat);
+          return -1;
+        }
+
+        __llvm_profile_enable_continuous_mode();
+        I++; /* advance to 'c' */
       } else if (containsMergeSpecifier(FilenamePat, I)) {
         if (MergingEnabled) {
           PROF_WARN("%%m specifier can only be specified once in %s.\n",
+                    FilenamePat);
+          return -1;
+        }
+        if (__llvm_profile_is_continuous_mode_enabled()) {
+          PROF_WARN("%%c specifier can not be used with profile merging (%%m) "
+                    "in %s.\n",
                     FilenamePat);
           return -1;
         }
@@ -447,6 +577,7 @@ static void parseAndSetFilename(const char *FilenamePat,
   const char *OldFilenamePat = lprofCurFilename.FilenamePat;
   ProfileNameSpecifier OldPNS = lprofCurFilename.PNS;
 
+  /* The old profile name specifier takes precedence over the old one. */
   if (PNS < OldPNS)
     return;
 
@@ -475,6 +606,7 @@ static void parseAndSetFilename(const char *FilenamePat,
   }
 
   truncateCurrentFile();
+  initializeProfileForContinuousMode();
 }
 
 /* Return buffer length that is required to store the current profile
@@ -511,7 +643,8 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.MergePoolSize)) {
+        lprofCurFilename.MergePoolSize ||
+        __llvm_profile_is_continuous_mode_enabled())) {
     if (!ForceUseBuf)
       return lprofCurFilename.FilenamePat;
 
@@ -646,6 +779,8 @@ void __llvm_profile_initialize_file(void) {
  */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_set_filename(const char *FilenamePat) {
+  if (__llvm_profile_is_continuous_mode_enabled())
+    return;
   parseAndSetFilename(FilenamePat, PNS_runtime_api, 1);
 }
 
@@ -660,7 +795,7 @@ int __llvm_profile_write_file(void) {
   char *FilenameBuf;
   int PDeathSig = 0;
 
-  if (lprofProfileDumped()) {
+  if (lprofProfileDumped() || __llvm_profile_is_continuous_mode_enabled()) {
     PROF_NOTE("Profile data not written to file: %s.\n", "already written");
     return 0;
   }
