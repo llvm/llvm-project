@@ -216,15 +216,6 @@ public:
   /// Add thrown types.
   void addThrownTypes(DIE &Die, DINodeArray ThrownTypes);
 
-  // FIXME: Should be reformulated in terms of addComplexAddress.
-  /// Start with the address based on the location provided, and generate the
-  /// DWARF information necessary to find the actual Block variable (navigating
-  /// the Block struct) based on the starting location.  Add the DWARF
-  /// information to the die.  Obsolete, please use addComplexAddress instead.
-  void addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
-                            dwarf::Attribute Attribute,
-                            const MachineLocation &Location);
-
   /// Add a new type attribute to the specified entity.
   ///
   /// This takes and attribute parameter because DW_AT_friend attributes are

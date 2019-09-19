@@ -2596,7 +2596,8 @@ static SDValue lowerVECTOR_SHUFFLE_SHF(SDValue Op, EVT ResTy,
 
   SDLoc DL(Op);
   return DAG.getNode(MipsISD::SHF, DL, ResTy,
-                     DAG.getConstant(Imm, DL, MVT::i32), Op->getOperand(0));
+                     DAG.getTargetConstant(Imm, DL, MVT::i32),
+                     Op->getOperand(0));
 }
 
 /// Determine whether a range fits a regular pattern of values.

@@ -1617,14 +1617,29 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (isa<FPMathOperator>(CI))
     MIB->copyIRFlags(CI);
 
-  for (auto &Arg : CI.arg_operands()) {
+  for (auto &Arg : enumerate(CI.arg_operands())) {
     // Some intrinsics take metadata parameters. Reject them.
-    if (isa<MetadataAsValue>(Arg))
+    if (isa<MetadataAsValue>(Arg.value()))
       return false;
-    ArrayRef<Register> VRegs = getOrCreateVRegs(*Arg);
-    if (VRegs.size() > 1)
-      return false;
-    MIB.addUse(VRegs[0]);
+
+    // If this is required to be an immediate, don't materialize it in a
+    // register.
+    if (CI.paramHasAttr(Arg.index(), Attribute::ImmArg)) {
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg.value())) {
+        // imm arguments are more convenient than cimm (and realistically
+        // probably sufficient), so use them.
+        assert(CI->getBitWidth() <= 64 &&
+               "large intrinsic immediates not handled");
+        MIB.addImm(CI->getSExtValue());
+      } else {
+        MIB.addFPImm(cast<ConstantFP>(Arg.value()));
+      }
+    } else {
+      ArrayRef<Register> VRegs = getOrCreateVRegs(*Arg.value());
+      if (VRegs.size() > 1)
+        return false;
+      MIB.addUse(VRegs[0]);
+    }
   }
 
   // Add a MachineMemOperand if it is a target mem intrinsic.

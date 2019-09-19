@@ -4113,3 +4113,23 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
 
   return MDTuple::get(T->getContext(), Ops);
 }
+
+std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
+  std::string AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
+
+  // If X86, and the datalayout matches the expected format, add pointer size
+  // address spaces to the datalayout.
+  Triple::ArchType Arch = Triple(TT).getArch();
+  if ((Arch != llvm::Triple::x86 && Arch != llvm::Triple::x86_64) ||
+      DL.contains(AddrSpaces))
+    return DL;
+
+  SmallVector<StringRef, 4> Groups;
+  Regex R("(e-m:[a-z](-p:32:32)?)(-[if]64:.*$)");
+  if (!R.match(DL, &Groups))
+    return DL;
+
+  SmallString<1024> Buf;
+  std::string Res = (Groups[1] + AddrSpaces + Groups[3]).toStringRef(Buf).str();
+  return Res;
+}

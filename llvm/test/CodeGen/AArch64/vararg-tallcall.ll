@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=aarch64-windows-msvc %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -global-isel -global-isel-abort=2 -verify-machineinstrs -mtriple=aarch64-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -global-isel -global-isel-abort=2 -verify-machineinstrs -mtriple=aarch64-linux-gnu %s -o - | FileCheck %s
 
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
 

@@ -190,6 +190,20 @@ define void @sub_v16i8_i(<16 x i8>* %c, <16 x i8>* %a) nounwind {
   ret void
 }
 
+define void @sub_v16i8_i_negated(<16 x i8>* %c, <16 x i8>* %a) nounwind {
+; ALL-LABEL: sub_v16i8_i_negated:
+; ALL:       # %bb.0:
+; ALL-NEXT:    ld.b $w0, 0($5)
+; ALL-NEXT:    subvi.b $w0, $w0, 1
+; ALL-NEXT:    jr $ra
+; ALL-NEXT:    st.b $w0, 0($4)
+  %1 = load <16 x i8>, <16 x i8>* %a
+  %2 = add <16 x i8> %1, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1,
+              i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <16 x i8> %2, <16 x i8>* %c
+  ret void
+}
+
 define void @sub_v8i16_i(<8 x i16>* %c, <8 x i16>* %a) nounwind {
 ; ALL-LABEL: sub_v8i16_i:
 ; ALL:       # %bb.0:
@@ -200,6 +214,20 @@ define void @sub_v8i16_i(<8 x i16>* %c, <8 x i16>* %a) nounwind {
   %1 = load <8 x i16>, <8 x i16>* %a
   %2 = sub <8 x i16> %1, <i16 1, i16 1, i16 1, i16 1,
               i16 1, i16 1, i16 1, i16 1>
+  store <8 x i16> %2, <8 x i16>* %c
+  ret void
+}
+
+define void @sub_v8i16_i_negated(<8 x i16>* %c, <8 x i16>* %a) nounwind {
+; ALL-LABEL: sub_v8i16_i_negated:
+; ALL:       # %bb.0:
+; ALL-NEXT:    ld.h $w0, 0($5)
+; ALL-NEXT:    subvi.h $w0, $w0, 1
+; ALL-NEXT:    jr $ra
+; ALL-NEXT:    st.h $w0, 0($4)
+  %1 = load <8 x i16>, <8 x i16>* %a
+  %2 = add <8 x i16> %1, <i16 -1, i16 -1, i16 -1, i16 -1,
+              i16 -1, i16 -1, i16 -1, i16 -1>
   store <8 x i16> %2, <8 x i16>* %c
   ret void
 }
@@ -217,6 +245,19 @@ define void @sub_v4i32_i(<4 x i32>* %c, <4 x i32>* %a) nounwind {
   ret void
 }
 
+define void @sub_v4i32_i_negated(<4 x i32>* %c, <4 x i32>* %a) nounwind {
+; ALL-LABEL: sub_v4i32_i_negated:
+; ALL:       # %bb.0:
+; ALL-NEXT:    ld.w $w0, 0($5)
+; ALL-NEXT:    subvi.w $w0, $w0, 1
+; ALL-NEXT:    jr $ra
+; ALL-NEXT:    st.w $w0, 0($4)
+  %1 = load <4 x i32>, <4 x i32>* %a
+  %2 = add <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
+  store <4 x i32> %2, <4 x i32>* %c
+  ret void
+}
+
 define void @sub_v2i64_i(<2 x i64>* %c, <2 x i64>* %a) nounwind {
 ; ALL-LABEL: sub_v2i64_i:
 ; ALL:       # %bb.0:
@@ -226,6 +267,29 @@ define void @sub_v2i64_i(<2 x i64>* %c, <2 x i64>* %a) nounwind {
 ; ALL-NEXT:    st.d $w0, 0($4)
   %1 = load <2 x i64>, <2 x i64>* %a
   %2 = sub <2 x i64> %1, <i64 1, i64 1>
+  store <2 x i64> %2, <2 x i64>* %c
+  ret void
+}
+
+define void @sub_v2i64_i_negated(<2 x i64>* %c, <2 x i64>* %a) nounwind {
+; MIPS-LABEL: sub_v2i64_i_negated:
+; MIPS:       # %bb.0:
+; MIPS-NEXT:    ldi.b $w0, -1
+; MIPS-NEXT:    shf.w $w0, $w0, 177
+; MIPS-NEXT:    ld.d $w1, 0($5)
+; MIPS-NEXT:    addv.d $w0, $w1, $w0
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    st.d $w0, 0($4)
+;
+; MIPSEL-LABEL: sub_v2i64_i_negated:
+; MIPSEL:       # %bb.0:
+; MIPSEL-NEXT:    ldi.b $w0, -1
+; MIPSEL-NEXT:    ld.d $w1, 0($5)
+; MIPSEL-NEXT:    addv.d $w0, $w1, $w0
+; MIPSEL-NEXT:    jr $ra
+; MIPSEL-NEXT:    st.d $w0, 0($4)
+  %1 = load <2 x i64>, <2 x i64>* %a
+  %2 = add <2 x i64> %1, <i64 -1, i64 -1>
   store <2 x i64> %2, <2 x i64>* %c
   ret void
 }

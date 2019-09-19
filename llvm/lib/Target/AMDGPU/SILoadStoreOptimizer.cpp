@@ -183,17 +183,17 @@ private:
   MachineBasicBlock::iterator mergeBufferStorePair(CombineInfo &CI);
 
   void updateBaseAndOffset(MachineInstr &I, unsigned NewBase,
-                           int32_t NewOffset);
-  unsigned computeBase(MachineInstr &MI, const MemAddress &Addr);
-  MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI);
-  Optional<int32_t> extractConstOffset(const MachineOperand &Op);
-  void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr);
+                           int32_t NewOffset) const;
+  unsigned computeBase(MachineInstr &MI, const MemAddress &Addr) const;
+  MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
+  Optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
+  void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
   /// tries to use a base from the nearby instructions that allows it to have
   /// a 13bit constant offset which gets promoted to the immediate.
   bool promoteConstantOffsetToImm(MachineInstr &CI,
                                   MemInfoMap &Visited,
-                                  SmallPtrSet<MachineInstr *, 4> &Promoted);
+                                  SmallPtrSet<MachineInstr *, 4> &Promoted) const;
 
 public:
   static char ID;
@@ -1151,7 +1151,7 @@ SILoadStoreOptimizer::mergeBufferStorePair(CombineInfo &CI) {
 }
 
 MachineOperand
-SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) {
+SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) const {
   APInt V(32, Val, true);
   if (TII->isInlineConstant(V))
     return MachineOperand::CreateImm(Val);
@@ -1168,7 +1168,7 @@ SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) {
 
 // Compute base address using Addr and return the final register.
 unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
-                                           const MemAddress &Addr) {
+                                           const MemAddress &Addr) const {
   MachineBasicBlock *MBB = MI.getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   DebugLoc DL = MI.getDebugLoc();
@@ -1227,13 +1227,13 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 // Update base and offset with the NewBase and NewOffset in MI.
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
                                                unsigned NewBase,
-                                               int32_t NewOffset) {
+                                               int32_t NewOffset) const {
   TII->getNamedOperand(MI, AMDGPU::OpName::vaddr)->setReg(NewBase);
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
 }
 
 Optional<int32_t>
-SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) {
+SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
   if (Op.isImm())
     return Op.getImm();
 
@@ -1259,7 +1259,7 @@ SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) {
 //   %Base:vreg_64 =
 //       REG_SEQUENCE %LO:vgpr_32, %subreg.sub0, %HI:vgpr_32, %subreg.sub1
 void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base,
-                                                      MemAddress &Addr) {
+                                                      MemAddress &Addr) const {
   if (!Base.isReg())
     return;
 
@@ -1314,7 +1314,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
 bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     MachineInstr &MI,
     MemInfoMap &Visited,
-    SmallPtrSet<MachineInstr *, 4> &AnchorList) {
+    SmallPtrSet<MachineInstr *, 4> &AnchorList) const {
 
   if (!(MI.mayLoad() ^ MI.mayStore()))
     return false;
