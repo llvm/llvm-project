@@ -233,6 +233,14 @@ private:
 
   void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderExtractGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+  void renderExtractSLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+  void renderExtractDLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+  void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   bool isInlineImmediate16(int64_t Imm) const;
   bool isInlineImmediate32(int64_t Imm) const;

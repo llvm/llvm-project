@@ -2903,6 +2903,34 @@ void AMDGPUInstructionSelector::renderTruncTImm1(MachineInstrBuilder &MIB,
   MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
+void AMDGPUInstructionSelector::renderExtractGLC(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm() & 1);
+}
+
+void AMDGPUInstructionSelector::renderExtractSLC(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm((MI.getOperand(OpIdx).getImm() >> 1) & 1);
+}
+
+void AMDGPUInstructionSelector::renderExtractDLC(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm((MI.getOperand(OpIdx).getImm() >> 2) & 1);
+}
+
+void AMDGPUInstructionSelector::renderExtractSWZ(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm((MI.getOperand(OpIdx).getImm() >> 3) & 1);
+}
+
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
   return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
 }
