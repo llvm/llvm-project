@@ -17,7 +17,6 @@ using namespace llvm;
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-/// @returns the Module stripped of out-of-chunk functions
 static void extractInstrFromModule(std::vector<Chunk> ChunksToKeep,
                                    Module *Program) {
   int I = 0, InstCount = 0;
