@@ -129,8 +129,9 @@ struct RootRegion {
 InternalMmapVector<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
-// Run stoptheworld while holding any platform-specific locks.
-void DoStopTheWorld(StopTheWorldCallback callback, void* argument);
+// Run stoptheworld while holding any platform-specific locks, as well as the
+// allocator and thread registry locks.
+void LockStuffAndStopTheWorld(StopTheWorldCallback callback, void* argument);
 
 void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
