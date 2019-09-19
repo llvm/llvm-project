@@ -30,17 +30,19 @@ int bar();
 // CHECK-NEXT: #pragma omp declare variant(foofoo<T>) match(unknown={})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<T>) match(unknown={})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<T>) match(unknown={})
+// CHECK-NEXT: #pragma omp declare variant(foofoo<T>) match(unknown={})
 // CHECK-NEXT: template <typename T> T barbar();
 #pragma omp declare variant(foofoo <T>) match(xxx = {})
 #pragma omp declare variant(foofoo <T>) match(xxx = {vvv})
 #pragma omp declare variant(foofoo <T>) match(user = {score(<expr>) : condition(<expr>)})
-#pragma omp declare variant(foofoo <T>) match(user = {score(<expr>) : condition(<expr>)})
+#pragma omp declare variant(foofoo <T>) match(user = {score(<expr>) : condition(<expr>)}, user = {condition(<expr>)})
 #pragma omp declare variant(foofoo <T>) match(user = {condition(<expr>)})
 #pragma omp declare variant(foofoo <T>) match(user = {condition(<expr>)})
 template <typename T>
 T barbar();
 
 // CHECK:      #pragma omp declare variant(foofoo<int>) match(unknown={})
+// CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(unknown={})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(unknown={})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(unknown={})
 // CHECK-NEXT: #pragma omp declare variant(foofoo<int>) match(unknown={})

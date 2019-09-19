@@ -63,11 +63,11 @@ public:
   bool matchCombineCopy(MachineInstr &MI);
   void applyCombineCopy(MachineInstr &MI);
 
-  /// \brief \returns true if \p DefMI precedes \p UseMI or they are the same
+  /// Returns true if \p DefMI precedes \p UseMI or they are the same
   /// instruction. Both must be in the same basic block.
   bool isPredecessor(MachineInstr &DefMI, MachineInstr &UseMI);
 
-  /// \brief \returns true if \p DefMI dominates \p UseMI. By definition an
+  /// Returns true if \p DefMI dominates \p UseMI. By definition an
   /// instruction dominates itself.
   ///
   /// If we haven't been provided with a MachineDominatorTree during

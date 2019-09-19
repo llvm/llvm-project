@@ -53,9 +53,14 @@ public:
   /// @param[in] include_directories
   ///     List of include directories that should be used when parsing the
   ///     expression.
+  ///
+  /// @param[in] filename
+  ///     Name of the source file that should be used when rendering
+  ///     diagnostics (i.e. errors, warnings or notes from Clang).
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                         bool generate_debug_info,
-                        std::vector<std::string> include_directories = {});
+                        std::vector<std::string> include_directories = {},
+                        std::string filename = "<clang expression>");
 
   /// Destructor
   ~ClangExpressionParser() override;
@@ -178,6 +183,8 @@ private:
   std::unique_ptr<ClangASTContext> m_ast_context;
 
   std::vector<std::string> m_include_directories;
+  /// File name used for the user expression.
+  std::string m_filename;
 };
 }
 
