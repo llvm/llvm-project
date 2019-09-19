@@ -2580,7 +2580,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             (Style.PointerAlignment != FormatStyle::PAS_Right &&
              !Line.IsMultiVariableDeclStmt) &&
             Left.Previous &&
-            !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon));
+            !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
+                                    tok::l_square));
   if (Right.is(tok::star) && Left.is(tok::l_paren))
     return false;
   const auto SpaceRequiredForArrayInitializerLSquare =

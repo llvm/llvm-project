@@ -2353,12 +2353,14 @@ and other similar allocation libraries, and are only available in C++.
 array subscript access and structure/union member access are relocatable
 under bpf compile-once run-everywhere framework. Debuginfo (typically
 with ``-g``) is needed, otherwise, the compiler will exit with an error.
+The return type for the intrinsic is the same as the type of the
+argument, and must be a pointer type.
 
 **Syntax**:
 
 .. code-block:: c
 
-  const void * __builtin_preserve_access_index(const void * ptr)
+  PointerT __builtin_preserve_access_index(PointerT ptr)
 
 **Example of Use**:
 

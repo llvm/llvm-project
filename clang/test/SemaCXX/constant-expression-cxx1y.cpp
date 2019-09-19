@@ -810,9 +810,10 @@ namespace StmtExpr {
   }
   static_assert(f(1) == 1, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
-  constexpr int g() { // expected-error {{never produces a constant}}
-    return ({ int n; n; }); // expected-note {{object of type 'int' is not initialized}}
+  constexpr int g() {
+    return ({ int n; n; }); // expected-note {{read of uninitialized object}}
   }
+  static_assert(g() == 0, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   // FIXME: We should handle the void statement expression case.
   constexpr int h() { // expected-error {{never produces a constant}}

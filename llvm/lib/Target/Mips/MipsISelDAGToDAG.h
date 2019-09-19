@@ -125,6 +125,11 @@ private:
   /// starting at bit zero.
   virtual bool selectVSplatMaskR(SDValue N, SDValue &Imm) const;
 
+  /// Convert vector addition with vector subtraction if that allows to encode
+  /// constant as an immediate and thus avoid extra 'ldi' instruction.
+  /// add X, <-1, -1...> --> sub X, <1, 1...>
+  bool selectVecAddAsVecSubIfProfitable(SDNode *Node);
+
   void Select(SDNode *N) override;
 
   virtual bool trySelect(SDNode *Node) = 0;

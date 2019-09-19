@@ -212,40 +212,47 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
     std::string maskStr;
     int opShift;
 
+    unsigned loBit = beginVarBit - N + 1;
+    unsigned hiBit = loBit + N;
+    unsigned loInstBit = beginInstBit - N + 1;
     if (UseAPInt) {
-      unsigned loBit = beginVarBit - N + 1;
-      unsigned hiBit = loBit + N;
-      maskStr = "M" + itostr(bit);
-      Case += "      const APInt " + maskStr + " = APInt::getBitsSet(" +
-              itostr(BitWidth) + ", " + itostr(loBit) + ", " + itostr(hiBit) +
-              ");\n";
+      std::string extractStr;
+      if (N >= 64) {
+        extractStr = "op.extractBits(" + itostr(hiBit - loBit) + ", " +
+                     itostr(loBit) + ")";
+        Case += "      Value.insertBits(" + extractStr + ", " +
+                itostr(loInstBit) + ");\n";
+      } else {
+        extractStr = "op.extractBitsAsZExtValue(" + itostr(hiBit - loBit) +
+                     ", " + itostr(loBit) + ")";
+        Case += "      Value.insertBits(" + extractStr + ", " +
+                itostr(loInstBit) + ", " + itostr(hiBit - loBit) + ");\n";
+      }
     } else {
       uint64_t opMask = ~(uint64_t)0 >> (64 - N);
       opShift = beginVarBit - N + 1;
       opMask <<= opShift;
       maskStr = "UINT64_C(" + utostr(opMask) + ")";
-    }
-    opShift = beginInstBit - beginVarBit;
+      opShift = beginInstBit - beginVarBit;
 
-    if (numOperandLits == 1) {
-      // Because Op may be an APInt, ensure all arithmetic is done in-place
-      // where possible to elide copies.
-      Case += "      op &= " + maskStr + ";\n";
-      if (opShift > 0) {
-        Case += "      op <<= " + itostr(opShift) + ";\n";
-      } else if (opShift < 0) {
-        Case += "      op >>= " + itostr(-opShift) + ";\n";
-      }
-      Case += "      Value |= op;\n";
-    } else {
-      if (opShift > 0) {
-        Case += "      Value |= (op & " + maskStr + ") << " + itostr(opShift) +
-                ";\n";
-      } else if (opShift < 0) {
-        Case += "      Value |= (op & " + maskStr + ") >> " + itostr(-opShift) +
-                ";\n";
+      if (numOperandLits == 1) {
+        Case += "      op &= " + maskStr + ";\n";
+        if (opShift > 0) {
+          Case += "      op <<= " + itostr(opShift) + ";\n";
+        } else if (opShift < 0) {
+          Case += "      op >>= " + itostr(-opShift) + ";\n";
+        }
+        Case += "      Value |= op;\n";
       } else {
-        Case += "      Value |= (op & " + maskStr + ");\n";
+        if (opShift > 0) {
+          Case += "      Value |= (op & " + maskStr + ") << " +
+                  itostr(opShift) + ";\n";
+        } else if (opShift < 0) {
+          Case += "      Value |= (op & " + maskStr + ") >> " +
+                  itostr(-opShift) + ";\n";
+        } else {
+          Case += "      Value |= (op & " + maskStr + ");\n";
+        }
       }
     }
   }
@@ -436,9 +443,12 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "    raw_string_ostream Msg(msg);\n"
     << "    Msg << \"Not supported instr: \" << MI;\n"
     << "    report_fatal_error(Msg.str());\n"
-    << "  }\n"
-    << "  return Value;\n"
-    << "}\n\n";
+    << "  }\n";
+  if (UseAPInt)
+    o << "  Inst = Value;\n";
+  else
+    o << "  return Value;\n";
+  o << "}\n\n";
 
   const auto &All = SubtargetFeatureInfo::getAll(Records);
   std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;

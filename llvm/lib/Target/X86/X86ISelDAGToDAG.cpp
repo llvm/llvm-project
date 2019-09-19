@@ -879,10 +879,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       case ISD::FRINT:      Imm = 0x4; break;
       }
       SDLoc dl(N);
-      SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl,
-                                    N->getValueType(0),
-                                    N->getOperand(0),
-                                    CurDAG->getConstant(Imm, dl, MVT::i8));
+      SDValue Res = CurDAG->getNode(
+          X86ISD::VRNDSCALE, dl, N->getValueType(0), N->getOperand(0),
+          CurDAG->getTargetConstant(Imm, dl, MVT::i8));
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
@@ -5096,10 +5095,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case ISD::FRINT:      Imm = 0x4; break;
     }
     SDLoc dl(Node);
-    SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl,
-                                  Node->getValueType(0),
+    SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl, Node->getValueType(0),
                                   Node->getOperand(0),
-                                  CurDAG->getConstant(Imm, dl, MVT::i8));
+                                  CurDAG->getTargetConstant(Imm, dl, MVT::i8));
     ReplaceNode(Node, Res.getNode());
     SelectCode(Res.getNode());
     return;

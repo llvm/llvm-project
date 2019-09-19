@@ -259,16 +259,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   setMaxAtomicSizeInBitsSupported(64);
 
-  if (Subtarget->hasBulkMemory()) {
-    // Use memory.copy and friends over multiple loads and stores
-    MaxStoresPerMemcpy = 1;
-    MaxStoresPerMemcpyOptSize = 1;
-    MaxStoresPerMemmove = 1;
-    MaxStoresPerMemmoveOptSize = 1;
-    MaxStoresPerMemset = 1;
-    MaxStoresPerMemsetOptSize = 1;
-  }
-
   // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
   // consistent with the f64 and f128 names.
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");

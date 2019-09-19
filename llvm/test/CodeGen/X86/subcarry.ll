@@ -162,3 +162,24 @@ entry:
   %40 = insertvalue %S undef, [4 x i64] %39, 0
   ret %S %40
 }
+
+declare {i64, i1} @llvm.uadd.with.overflow(i64, i64)
+declare {i64, i1} @llvm.usub.with.overflow(i64, i64)
+
+define i64 @sub_from_carry(i64 %x, i64 %y, i64* %valout, i64 %z) {
+; CHECK-LABEL: sub_from_carry:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    movq %rdi, (%rdx)
+; CHECK-NEXT:    adcq $0, %rax
+; CHECK-NEXT:    retq
+  %agg = call {i64, i1} @llvm.uadd.with.overflow(i64 %x, i64 %y)
+  %val = extractvalue {i64, i1} %agg, 0
+  %ov = extractvalue {i64, i1} %agg, 1
+  store i64 %val, i64* %valout, align 4
+  %carry = zext i1 %ov to i64
+  %res = sub i64 %carry, %z
+  ret i64 %res
+}

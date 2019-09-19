@@ -39,7 +39,7 @@ defm MEMORY_INIT :
          (ins i32imm_op:$seg, i32imm_op:$idx, I32:$dest,
               I32:$offset, I32:$size),
          (outs), (ins i32imm_op:$seg, i32imm_op:$idx),
-         [(int_wasm_memory_init (i32 imm:$seg), (i32 imm:$idx), I32:$dest,
+         [(int_wasm_memory_init (i32 timm:$seg), (i32 timm:$idx), I32:$dest,
             I32:$offset, I32:$size
           )],
          "memory.init\t$seg, $idx, $dest, $offset, $size",
@@ -48,7 +48,7 @@ defm MEMORY_INIT :
 let hasSideEffects = 1 in
 defm DATA_DROP :
   BULK_I<(outs), (ins i32imm_op:$seg), (outs), (ins i32imm_op:$seg),
-         [(int_wasm_data_drop (i32 imm:$seg))],
+         [(int_wasm_data_drop (i32 timm:$seg))],
          "data.drop\t$seg", "data.drop\t$seg", 0x09>;
 
 let mayLoad = 1, mayStore = 1 in

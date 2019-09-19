@@ -20,7 +20,6 @@ intermediate LLVM representation.
    HowToCrossCompileLLVM
    GettingStartedVS
    FAQ
-   HowToAddABuilder
    yaml2obj
    MarkdownQuickstartTemplate
    Phabricator
@@ -71,9 +70,6 @@ intermediate LLVM representation.
    Instructions for building the clang front-end from source.
 
    .. __: http://clang.llvm.org/get_started.html
-
-:doc:`HowToAddABuilder`
-   Instructions for adding new builder to LLVM buildbot master.
 
 :doc:`YamlIO`
    A reference guide for using LLVM's YAML I/O library.
