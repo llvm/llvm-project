@@ -1,7 +1,7 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefixes=EG,FUNC %s
+; RUN:  llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
+; RUN:  llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
+; RUN:  llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN:  llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_abs_i32:
 ; GCN: s_abs_i32
@@ -28,7 +28,9 @@ define amdgpu_kernel void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind 
 
 ; EG: MAX_INT
 define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
-  %val = load i32, i32 addrspace(1)* %src, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds i32, i32 addrspace(1)* %src, i32 %tid
+  %val = load i32, i32 addrspace(1)* %gep.in, align 4
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
   %res = select i1 %cond, i32 %val, i32 %neg
@@ -43,7 +45,9 @@ define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 ; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[SRC]], [[NEG]]
 ; GCN: v_mul_lo_u32 v{{[0-9]+}}, [[MAX]], [[MAX]]
 define amdgpu_kernel void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
-  %val = load i32, i32 addrspace(1)* %src, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds i32, i32 addrspace(1)* %src, i32 %tid
+  %val = load i32, i32 addrspace(1)* %gep.in, align 4
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
   %res = select i1 %cond, i32 %val, i32 %neg
@@ -96,7 +100,9 @@ define amdgpu_kernel void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> a
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
   %t0 = insertelement <2 x i32> undef, i32 2, i32 0
   %t1 = insertelement <2 x i32> %t0, i32 2, i32 1
-  %val = load <2 x i32>, <2 x i32> addrspace(1)* %src, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds <2 x i32>, <2 x i32> addrspace(1)* %src, i32 %tid
+  %val = load <2 x i32>, <2 x i32> addrspace(1)* %gep.in, align 4
   %neg = sub <2 x i32> %z1, %val
   %cond = icmp sgt <2 x i32> %val, %neg
   %res = select <2 x i1> %cond, <2 x i32> %val, <2 x i32> %neg
@@ -178,7 +184,9 @@ define amdgpu_kernel void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> a
   %t1 = insertelement <4 x i32> %t0, i32 2, i32 1
   %t2 = insertelement <4 x i32> %t1, i32 2, i32 2
   %t3 = insertelement <4 x i32> %t2, i32 2, i32 3
-  %val = load <4 x i32>, <4 x i32> addrspace(1)* %src, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.in = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %src, i32 %tid
+  %val = load <4 x i32>, <4 x i32> addrspace(1)* %gep.in, align 4
   %neg = sub <4 x i32> %z3, %val
   %cond = icmp sgt <4 x i32> %val, %neg
   %res = select <4 x i1> %cond, <4 x i32> %val, <4 x i32> %neg
@@ -259,3 +267,8 @@ define amdgpu_kernel void @v_min_max_i32_user(i32 addrspace(1)* %out0, i32 addrs
   store volatile i1 %cond0, i1 addrspace(1)* undef
   ret void
 }
+
+declare i32 @llvm.r600.read.tidig.x() #0
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }

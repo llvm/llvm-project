@@ -236,8 +236,9 @@ class DependencyGraph {
   void addDependency(unsigned From, unsigned To,
                      DependencyEdge::Dependency &&DE);
 
+  void pruneEdges(unsigned Iterations);
   void initializeRootSet(SmallVectorImpl<unsigned> &RootSet) const;
-  void propagateThroughEdges(SmallVectorImpl<unsigned> &RootSet);
+  void propagateThroughEdges(SmallVectorImpl<unsigned> &RootSet, unsigned Iterations);
 
 #ifndef NDEBUG
   void dumpDependencyEdge(raw_ostream &OS, const DependencyEdge &DE,
@@ -263,10 +264,11 @@ public:
 
   // Called by the bottleneck analysis at the end of simulation to propagate
   // costs through the edges of the graph, and compute a critical path.
-  void finalizeGraph() {
+  void finalizeGraph(unsigned Iterations) {
     SmallVector<unsigned, 16> RootSet;
+    pruneEdges(Iterations);
     initializeRootSet(RootSet);
-    propagateThroughEdges(RootSet);
+    propagateThroughEdges(RootSet, Iterations);
   }
 
   // Returns a sequence of edges representing the critical sequence based on the

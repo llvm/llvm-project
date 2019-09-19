@@ -221,6 +221,8 @@ public:
     auto Found = std::lower_bound(ProcDesc.begin(), ProcDesc.end(), CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
+
+  virtual unsigned getHwMode() const { return 0; }
 };
 
 } // end namespace llvm

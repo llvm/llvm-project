@@ -2053,7 +2053,7 @@ static void getUsefulBitsForUse(SDNode *UserNode, APInt &UsefulBits,
 }
 
 static void getUsefulBits(SDValue Op, APInt &UsefulBits, unsigned Depth) {
-  if (Depth >= 6)
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
     return;
   // Initialize UsefulBits
   if (!Depth) {

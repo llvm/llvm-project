@@ -17,6 +17,7 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
@@ -26,10 +27,11 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F);
+  bool runImpl(Function &F, const DominatorTree &DT);
 
 private:
-  void findRoots(Function &F, SmallPtrSet<Instruction *, 8> &Roots);
+  void findRoots(Function &F, const DominatorTree &DT,
+                 SmallPtrSet<Instruction *, 8> &Roots);
   void seen(Instruction *I, ConstantRange R);
   ConstantRange badRange();
   ConstantRange unknownRange();
