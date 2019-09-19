@@ -191,11 +191,21 @@ static bool SemaBuiltinAddressof(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
-/// Check the number of arguments, and set the result type to
+/// Check the number of arguments and arg type, and set the result type to
 /// the argument type.
 static bool SemaBuiltinPreserveAI(Sema &S, CallExpr *TheCall) {
   if (checkArgCount(S, TheCall, 1))
     return true;
+
+  // The argument type must be a pointer
+  ExprResult Arg = TheCall->getArg(0);
+  QualType Ty = Arg.get()->getType();
+  if (!Ty->isPointerType()) {
+    S.Diag(Arg.get()->getBeginLoc(),
+           diag::err_builtin_preserve_access_index_invalid_arg)
+        << Ty << Arg.get()->getSourceRange();
+    return true;
+  }
 
   TheCall->setType(TheCall->getArg(0)->getType());
   return false;

@@ -10011,4 +10011,7 @@ def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "__builtin_bit_cast source size does not equal destination size (%0 vs %1)">;
+
+def err_builtin_preserve_access_index_invalid_arg : Error<
+  "__builtin_preserve_access_index argument must a pointer type instead of %0">;
 } // end of sema component.

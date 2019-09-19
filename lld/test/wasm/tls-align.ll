@@ -24,7 +24,7 @@ define i32* @tls2_addr() {
 ; CHECK-NEXT:       Mutable:         true
 ; CHECK-NEXT:       InitExpr:
 ; CHECK-NEXT:         Opcode:          I32_CONST
-; CHECK-NEXT:         Value:           66608
+; CHECK-NEXT:         Value:           66592
 
 ; __tls_base
 ; CHECK-NEXT:     - Index:           1
