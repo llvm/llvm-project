@@ -192,6 +192,17 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
+EncodingInfoByHwMode::EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH) {
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+  for (const HwModeSelect::PairType &P : MS.Items) {
+    assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
+           "Encoding must subclass InstructionEncoding");
+    auto I = Map.insert({P.first, P.second});
+    assert(I.second && "Duplicate entry?");
+    (void)I;
+  }
+}
+
 namespace llvm {
   raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
     T.writeToStream(OS);

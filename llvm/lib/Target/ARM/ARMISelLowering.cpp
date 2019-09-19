@@ -6945,6 +6945,19 @@ static SDValue LowerBUILD_VECTOR_i1(SDValue Op, SelectionDAG &DAG,
   } else
     return SDValue();
 
+  // If this is a single value copied into all lanes (a splat), we can just sign
+  // extend that single value
+  SDValue FirstOp = Op.getOperand(0);
+  if (!isa<ConstantSDNode>(FirstOp) &&
+      std::all_of(std::next(Op->op_begin()), Op->op_end(),
+                  [&FirstOp](SDUse &U) {
+                    return U.get().isUndef() || U.get() == FirstOp;
+                  })) {
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i32, FirstOp,
+                              DAG.getValueType(MVT::i1));
+    return DAG.getNode(ARMISD::PREDICATE_CAST, dl, Op.getValueType(), Ext);
+  }
+
   // First create base with bits set where known
   unsigned Bits32 = 0;
   for (unsigned i = 0; i < NumElts; ++i) {
@@ -6957,7 +6970,6 @@ static SDValue LowerBUILD_VECTOR_i1(SDValue Op, SelectionDAG &DAG,
   }
 
   // Add in unknown nodes
-  // FIXME: Handle splats of the same value better.
   SDValue Base = DAG.getNode(ARMISD::PREDICATE_CAST, dl, VT,
                              DAG.getConstant(Bits32, dl, MVT::i32));
   for (unsigned i = 0; i < NumElts; ++i) {

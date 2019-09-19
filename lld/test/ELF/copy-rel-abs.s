@@ -12,11 +12,14 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t2.o
 # RUN: ld.lld %t2.o %t1.so -o %t2
-# RUN: llvm-objdump -t %t2 | FileCheck %s --implicit-check-not=zed
+# RUN: llvm-objdump -t %t2 | FileCheck %s
 
 # CHECK: SYMBOL TABLE:
+# CHECK-NOT: zed
 # CHECK: .bss.rel.ro {{.*}} foo
+# CHECK-NOT: zed
 # CHECK: .bss.rel.ro {{.*}} bar
+# CHECK-NOT: zed
 
 .global _start
 _start:
