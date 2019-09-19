@@ -8109,6 +8109,22 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     ExprTy = TET->getUnderlyingExpr()->getType();
   }
 
+  // Diagnose attempts to print a boolean value as a character. Unlike other
+  // -Wformat diagnostics, this is fine from a type perspective, but it still
+  // doesn't make sense.
+  if (FS.getConversionSpecifier().getKind() == ConversionSpecifier::cArg &&
+      E->isKnownToHaveBooleanValue()) {
+    const CharSourceRange &CSR =
+        getSpecifierRange(StartSpecifier, SpecifierLen);
+    SmallString<4> FSString;
+    llvm::raw_svector_ostream os(FSString);
+    FS.toString(os);
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_bool_as_character)
+                             << FSString,
+                         E->getExprLoc(), false, CSR);
+    return true;
+  }
+
   const analyze_printf::ArgType::MatchKind Match =
       AT.matchesType(S.Context, ExprTy);
   bool Pedantic = Match == analyze_printf::ArgType::NoMatchPedantic;

@@ -1352,7 +1352,8 @@ public:
   /// would be constexpr.
   bool defaultedDefaultConstructorIsConstexpr() const {
     return data().DefaultedDefaultConstructorIsConstexpr &&
-           (!isUnion() || hasInClassInitializer() || !hasVariantMembers());
+           (!isUnion() || hasInClassInitializer() || !hasVariantMembers() ||
+            getASTContext().getLangOpts().CPlusPlus2a);
   }
 
   /// Determine whether this class has a constexpr default constructor.

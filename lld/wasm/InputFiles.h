@@ -54,7 +54,7 @@ public:
   Kind kind() const { return fileKind; }
 
   // An archive file name if this file is created from an archive.
-  StringRef archiveName;
+  std::string archiveName;
 
   ArrayRef<Symbol *> getSymbols() const { return symbols; }
 

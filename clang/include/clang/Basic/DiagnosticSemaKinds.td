@@ -2444,9 +2444,13 @@ def err_constexpr_local_var_static : Error<
 def err_constexpr_local_var_non_literal_type : Error<
   "variable of non-literal type %1 cannot be defined in a constexpr "
   "%select{function|constructor}0">;
-def err_constexpr_local_var_no_init : Error<
-  "variables defined in a constexpr %select{function|constructor}0 must be "
-  "initialized">;
+def ext_constexpr_local_var_no_init : ExtWarn<
+  "uninitialized variable in a constexpr %select{function|constructor}0 "
+  "is a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_local_var_no_init : Warning<
+  "uninitialized variable in a constexpr %select{function|constructor}0 "
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
 def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constexpr %select{function|constructor}0 never produces a "
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
@@ -2474,7 +2478,7 @@ def note_constexpr_body_previous_return : Note<
 def err_constexpr_function_try_block : Error<
   "function try block not allowed in constexpr %select{function|constructor}0">;
 
-// c++2a function try blocks in constexpr
+// C++2a function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx2a : ExtWarn<
   "function try block in constexpr %select{function|constructor}0 is "
   "a C++2a extension">, InGroup<CXX2a>;
@@ -2483,10 +2487,20 @@ def warn_cxx17_compat_constexpr_function_try_block : Warning<
   "incompatible with C++ standards before C++2a">,
   InGroup<CXXPre2aCompat>, DefaultIgnore;
 
-def err_constexpr_union_ctor_no_init : Error<
-  "constexpr union constructor does not initialize any member">;
-def err_constexpr_ctor_missing_init : Error<
-  "constexpr constructor must initialize all members">;
+def ext_constexpr_union_ctor_no_init : ExtWarn<
+  "constexpr union constructor that does not initialize any member "
+  "is a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_union_ctor_no_init : Warning<
+  "constexpr union constructor that does not initialize any member "
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+def ext_constexpr_ctor_missing_init : ExtWarn<
+  "constexpr constructor that does not initialize all members "
+  "is a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_ctor_missing_init : Warning<
+  "constexpr constructor that does not initialize all members "
+  "is incompatible with C++ standards before C++20">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
 def note_constexpr_ctor_missing_init : Note<
   "member not initialized by constructor">;
 def note_non_literal_no_constexpr_ctors : Note<
@@ -8200,6 +8214,9 @@ def warn_printf_invalid_objc_flag: Warning<
     InGroup<Format>;
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,
+  InGroup<Format>;
+def warn_format_bool_as_character : Warning<
+  "using '%0' format specifier, but argument has boolean value">,
   InGroup<Format>;
 def note_format_string_defined : Note<"format string is defined here">;
 def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
