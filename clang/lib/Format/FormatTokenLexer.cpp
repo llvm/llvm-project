@@ -657,7 +657,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         ++Column;
         break;
       case '\t':
-        Column += Style.TabWidth - Column % Style.TabWidth;
+        Column +=
+            Style.TabWidth - (Style.TabWidth ? Column % Style.TabWidth : 0);
         break;
       case '\\':
         if (i + 1 == e || (Text[i + 1] != '\r' && Text[i + 1] != '\n'))

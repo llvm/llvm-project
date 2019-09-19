@@ -35,12 +35,14 @@ void with_var_schedule() {
 // CHECK: [[CHUNK:%.+]] = load i64, i64* %
 // CHECK: call void {{.+}} @__kmpc_fork_call({{.+}}, i64 [[CHUNK]])
 
+// CHECK: [[UNDEF_A:%.+]] = load double, double* undef
+// CHECK: fadd double 2.000000e+00, [[UNDEF_A]]
 // CHECK: [[CHUNK_VAL:%.+]] = load i8, i8* %
 // CHECK: [[CHUNK_SIZE:%.+]] = sext i8 [[CHUNK_VAL]] to i64
 // CHECK: call void @__kmpc_for_static_init_8u([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%[^,]+]], i32 33, i32* [[IS_LAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]], i64 1, i64 [[CHUNK_SIZE]])
 // CHECK: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
-#pragma omp parallel for schedule(static, char(a))
-  for (unsigned long long i = 1; i < 2; ++i) {
+#pragma omp parallel for schedule(static, char(a)) private(a)
+  for (unsigned long long i = 1; i < 2 + a; ++i) {
   }
 }
 

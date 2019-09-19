@@ -270,14 +270,6 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
 
   // Setting vectorize.width
   if (Attrs.VectorizeWidth > 0) {
-    // This implies vectorize.enable = true, but only add it when it is not
-    // already enabled.
-    if (Attrs.VectorizeEnable != LoopAttributes::Enable)
-      Args.push_back(
-          MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-                            ConstantAsMetadata::get(ConstantInt::get(
-                                llvm::Type::getInt1Ty(Ctx), 1))}));
-
     Metadata *Vals[] = {
         MDString::get(Ctx, "llvm.loop.vectorize.width"),
         ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt32Ty(Ctx),

@@ -16,15 +16,15 @@ int foo(void);
 #pragma omp declare variant(foo) xxx // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
 #pragma omp declare variant(foo) match // expected-error {{expected '(' after 'match'}}
 #pragma omp declare variant(foo) match( // expected-error {{expected context selector in 'match' clause on 'omp declare variant' directive}}
-#pragma omp declare variant(foo) match() // expected-error {{expected context selector in 'match' clause on 'omp declare variant' directive}} expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
-#pragma omp declare variant(foo) match(xxx) // expected-error {{expected '=' after 'xxx' context selector set name on 'omp declare variant' directive}} expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}}
-#pragma omp declare variant(foo) match(xxx=) // expected-error {{expected '{' after '='}} expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
-#pragma omp declare variant(foo) match(xxx=yyy) // expected-error {{expected '{' after '='}} expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
-#pragma omp declare variant(foo) match(xxx=yyy}) // expected-error {{expected '{' after '='}} expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
+#pragma omp declare variant(foo) match() // expected-error {{expected context selector in 'match' clause on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) match(xxx) // expected-error {{expected '=' after 'xxx' context selector set name on 'omp declare variant' directive}}
+#pragma omp declare variant(foo) match(xxx=) // expected-error {{expected '{' after '='}}
+#pragma omp declare variant(foo) match(xxx=yyy) // expected-error {{expected '{' after '='}}
+#pragma omp declare variant(foo) match(xxx=yyy}) // expected-error {{expected '{' after '='}}
 #pragma omp declare variant(foo) match(xxx={) // expected-error {{expected '}'}} expected-note {{to match this '{'}}
 #pragma omp declare variant(foo) match(xxx={})
 #pragma omp declare variant(foo) match(xxx={vvv})
-#pragma omp declare variant(foo) match(xxx={vvv} xxx) // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(xxx={vvv} xxx) // expected-error {{expected ','}} expected-error {{expected '=' after 'xxx' context selector set name on 'omp declare variant' directive}}
 #pragma omp declare variant(foo) match(xxx={vvv}) xxx // expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
 int bar(void);
 

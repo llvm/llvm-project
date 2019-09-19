@@ -25,6 +25,7 @@ namespace clang {
 /// same set of semantic restrictions.
 enum AccessKinds {
   AK_Read,
+  AK_ReadObjectRepresentation,
   AK_Assign,
   AK_Increment,
   AK_Decrement,

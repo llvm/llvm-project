@@ -9877,6 +9877,79 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                Tab);
 }
 
+TEST_F(FormatTest, ZeroTabWidth) {
+  FormatStyle Tab = getLLVMStyleWithColumns(42);
+  Tab.IndentWidth = 8;
+  Tab.UseTab = FormatStyle::UT_Never;
+  Tab.TabWidth = 0;
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  Tab.UseTab = FormatStyle::UT_ForIndentation;
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  Tab.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  EXPECT_EQ("void a(){\n"
+            "    // line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  Tab.UseTab = FormatStyle::UT_Always;
+  EXPECT_EQ("void a(){\n"
+            "// line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+
+  EXPECT_EQ("void a(){\n"
+            "// line starts with '\t'\n"
+            "};",
+            format("void a(){\n"
+                   "\t\t// line starts with '\t'\n"
+                   "};",
+                   Tab));
+}
+
 TEST_F(FormatTest, CalculatesOriginalColumn) {
   EXPECT_EQ("\"qqqqqqqqqqqqqqqqqqqqqqqqqq\\\n"
             "q\"; /* some\n"
@@ -13999,6 +14072,15 @@ TEST_F(FormatTest, TypenameMacros) {
   Macros.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("STACK_OF(int)* a;", Macros);
   verifyFormat("STACK_OF(int*)* a;", Macros);
+}
+
+TEST_F(FormatTest, AmbersandInLamda) {
+  // Test case reported in https://bugs.llvm.org/show_bug.cgi?id=41899
+  FormatStyle AlignStyle = getLLVMStyle();
+  AlignStyle.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("auto lambda = [&a = a]() { a = 2; };", AlignStyle);
+  AlignStyle.PointerAlignment = FormatStyle::PAS_Right;
+  verifyFormat("auto lambda = [&a = a]() { a = 2; };", AlignStyle);
 }
 
 } // end namespace

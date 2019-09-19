@@ -1778,7 +1778,8 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
     case Decl::Decomposition: {
       // C++1y [dcl.constexpr]p3 allows anything except:
       //   a definition of a variable of non-literal type or of static or
-      //   thread storage duration or for which no initialization is performed.
+      //   thread storage duration or [before C++2a] for which no
+      //   initialization is performed.
       const auto *VD = cast<VarDecl>(DclIt);
       if (VD->isThisDeclarationADefinition()) {
         if (VD->isStaticLocal()) {
@@ -1797,11 +1798,16 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         if (!VD->getType()->isDependentType() &&
             !VD->hasInit() && !VD->isCXXForRangeDecl()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
-            SemaRef.Diag(VD->getLocation(),
-                         diag::err_constexpr_local_var_no_init)
-              << isa<CXXConstructorDecl>(Dcl);
+            SemaRef.Diag(
+                VD->getLocation(),
+                SemaRef.getLangOpts().CPlusPlus2a
+                    ? diag::warn_cxx17_compat_constexpr_local_var_no_init
+                    : diag::ext_constexpr_local_var_no_init)
+                << isa<CXXConstructorDecl>(Dcl);
+          } else if (!SemaRef.getLangOpts().CPlusPlus2a) {
+            return false;
           }
-          return false;
+          continue;
         }
       }
       if (Kind == Sema::CheckConstexprKind::Diagnose) {
@@ -1855,6 +1861,11 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
                                           llvm::SmallSet<Decl*, 16> &Inits,
                                           bool &Diagnosed,
                                           Sema::CheckConstexprKind Kind) {
+  // In C++20 onwards, there's nothing to check for validity.
+  if (Kind == Sema::CheckConstexprKind::CheckValid &&
+      SemaRef.getLangOpts().CPlusPlus2a)
+    return true;
+
   if (Field->isInvalidDecl())
     return true;
 
@@ -1873,12 +1884,15 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
   if (!Inits.count(Field)) {
     if (Kind == Sema::CheckConstexprKind::Diagnose) {
       if (!Diagnosed) {
-        SemaRef.Diag(Dcl->getLocation(), diag::err_constexpr_ctor_missing_init);
+        SemaRef.Diag(Dcl->getLocation(),
+                     SemaRef.getLangOpts().CPlusPlus2a
+                         ? diag::warn_cxx17_compat_constexpr_ctor_missing_init
+                         : diag::ext_constexpr_ctor_missing_init);
         Diagnosed = true;
       }
       SemaRef.Diag(Field->getLocation(),
                    diag::note_constexpr_ctor_missing_init);
-    } else {
+    } else if (!SemaRef.getLangOpts().CPlusPlus2a) {
       return false;
     }
   } else if (Field->isAnonymousStructOrUnion()) {
@@ -2121,10 +2135,15 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     if (RD->isUnion()) {
       if (Constructor->getNumCtorInitializers() == 0 &&
           RD->hasVariantMembers()) {
-        if (Kind == Sema::CheckConstexprKind::Diagnose)
-          SemaRef.Diag(Dcl->getLocation(),
-                       diag::err_constexpr_union_ctor_no_init);
-        return false;
+        if (Kind == Sema::CheckConstexprKind::Diagnose) {
+          SemaRef.Diag(
+              Dcl->getLocation(),
+              SemaRef.getLangOpts().CPlusPlus2a
+                  ? diag::warn_cxx17_compat_constexpr_union_ctor_no_init
+                  : diag::ext_constexpr_union_ctor_no_init);
+        } else if (!SemaRef.getLangOpts().CPlusPlus2a) {
+          return false;
+        }
       }
     } else if (!Constructor->isDependentContext() &&
                !Constructor->isDelegatingConstructor()) {
