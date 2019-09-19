@@ -79,10 +79,8 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
                             MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  llvm::StringRef profile = launch_info.GetArguments().GetArgumentAtIndex(1);
-  LLDB_LOG(log, "Profile: {0}", profile.str());
   DpuRank *rank = new DpuRank();
-  bool success = rank->Open(profile);
+  bool success = rank->Open("");
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 
@@ -121,8 +119,7 @@ ProcessDpu::Factory::Attach(
   dpu_id = pid & 0xffff;
 
   char profile[256];
-  sprintf(profile, "fpga/rankPath=/dev/dpu_region%u/dpu_rank%u", region_id,
-          rank_id);
+  sprintf(profile, "rankPath=/dev/dpu_region%u/dpu_rank%u", region_id, rank_id);
 
   DpuRank *rank = new DpuRank();
   bool success = rank->Open(profile);

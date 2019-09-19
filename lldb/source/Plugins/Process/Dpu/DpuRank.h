@@ -55,8 +55,6 @@ public:
                     uint64_t slice_target);
 
 private:
-  dpu_type_t m_type;
-  const char *m_profile;
   dpu_rank_t *m_rank;
   dpu_description_t m_desc;
   int nr_threads;
