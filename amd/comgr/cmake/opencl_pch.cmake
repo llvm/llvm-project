@@ -23,7 +23,7 @@ macro(GENERATE_PCH version)
     COMMAND clang -cc1 -x cl-header -triple amdgcn-amd-amdhsa-opencl
       -Werror -O3 -Dcl_khr_fp64 -Dcl_khr_fp16 -DNDEBUG -cl-std=CL${version}
       -emit-pch -o ${CMAKE_CURRENT_BINARY_DIR}/opencl${version}-c.pch
-      ${OPENCL_C_H}
+      < ${OPENCL_C_H}
     DEPENDS clang ${OPENCL_C_H}
     COMMENT "Generating opencl${version}-c.pch"
   )
