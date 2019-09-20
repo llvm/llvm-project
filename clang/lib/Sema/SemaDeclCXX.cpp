@@ -14185,8 +14185,17 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     if (Converted.isInvalid())
       Failed = true;
 
+    ExprResult FullAssertExpr =
+        ActOnFinishFullExpr(Converted.get(), StaticAssertLoc,
+                            /*DiscardedValue*/ false,
+                            /*IsConstexpr*/ true);
+    if (FullAssertExpr.isInvalid())
+      Failed = true;
+    else
+      AssertExpr = FullAssertExpr.get();
+
     llvm::APSInt Cond;
-    if (!Failed && VerifyIntegerConstantExpression(Converted.get(), &Cond,
+    if (!Failed && VerifyIntegerConstantExpression(AssertExpr, &Cond,
           diag::err_static_assert_expression_is_not_constant,
           /*AllowFold=*/false).isInvalid())
       Failed = true;
@@ -14212,15 +14221,15 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       }
       Failed = true;
     }
+  } else {
+    ExprResult FullAssertExpr = ActOnFinishFullExpr(AssertExpr, StaticAssertLoc,
+                                                    /*DiscardedValue*/false,
+                                                    /*IsConstexpr*/true);
+    if (FullAssertExpr.isInvalid())
+      Failed = true;
+    else
+      AssertExpr = FullAssertExpr.get();
   }
-
-  ExprResult FullAssertExpr = ActOnFinishFullExpr(AssertExpr, StaticAssertLoc,
-                                                  /*DiscardedValue*/false,
-                                                  /*IsConstexpr*/true);
-  if (FullAssertExpr.isInvalid())
-    Failed = true;
-  else
-    AssertExpr = FullAssertExpr.get();
 
   Decl *Decl = StaticAssertDecl::Create(Context, CurContext, StaticAssertLoc,
                                         AssertExpr, AssertMessage, RParenLoc,
