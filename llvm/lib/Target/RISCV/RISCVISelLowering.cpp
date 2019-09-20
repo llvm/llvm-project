@@ -1903,8 +1903,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
     // offsets to even-numbered registered remain 2*XLEN-aligned.
     if (Idx % 2) {
-      FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset - (int)XLenInBytes,
-                                 true);
+      MFI.CreateFixedObject(XLenInBytes, VaArgOffset - (int)XLenInBytes, true);
       VarArgsSaveSize += XLenInBytes;
     }
 

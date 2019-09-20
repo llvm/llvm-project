@@ -22,7 +22,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Program.h"

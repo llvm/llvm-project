@@ -703,7 +703,9 @@ enum IIT_Info {
   IIT_STRUCT8 = 40,
   IIT_F128 = 41,
   IIT_VEC_ELEMENT = 42,
-  IIT_SCALABLE_VEC = 43
+  IIT_SCALABLE_VEC = 43,
+  IIT_SUBDIVIDE2_ARG = 44,
+  IIT_SUBDIVIDE4_ARG = 45
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -868,6 +870,18 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
       DecodeIITType(NextElt, Infos, OutputTable);
     return;
   }
+  case IIT_SUBDIVIDE2_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Subdivide2Argument,
+                                             ArgInfo));
+    return;
+  }
+  case IIT_SUBDIVIDE4_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Subdivide4Argument,
+                                             ArgInfo));
+    return;
+  }
   case IIT_VEC_ELEMENT: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VecElementArgument,
@@ -969,6 +983,14 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     IntegerType *ITy = cast<IntegerType>(Ty);
     assert(ITy->getBitWidth() % 2 == 0);
     return IntegerType::get(Context, ITy->getBitWidth() / 2);
+  }
+  case IITDescriptor::Subdivide2Argument:
+  case IITDescriptor::Subdivide4Argument: {
+    Type *Ty = Tys[D.getArgumentNumber()];
+    VectorType *VTy = dyn_cast<VectorType>(Ty);
+    assert(VTy && "Expected an argument of Vector Type");
+    int SubDivs = D.Kind == IITDescriptor::Subdivide2Argument ? 1 : 2;
+    return VectorType::getSubdividedVectorType(VTy, SubDivs);
   }
   case IITDescriptor::HalfVecArgument:
     return VectorType::getHalfElementsVectorType(cast<VectorType>(
@@ -1268,6 +1290,20 @@ static bool matchIntrinsicType(
         return IsDeferredCheck ? true : DeferCheck(Ty);
       auto *ReferenceType = dyn_cast<VectorType>(ArgTys[D.getArgumentNumber()]);
       return !ReferenceType || Ty != ReferenceType->getElementType();
+    }
+    case IITDescriptor::Subdivide2Argument:
+    case IITDescriptor::Subdivide4Argument: {
+      // If this is a forward reference, defer the check for later.
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return IsDeferredCheck || DeferCheck(Ty);
+
+      Type *NewTy = ArgTys[D.getArgumentNumber()];
+      if (auto *VTy = dyn_cast<VectorType>(NewTy)) {
+        int SubDivs = D.Kind == IITDescriptor::Subdivide2Argument ? 1 : 2;
+        NewTy = VectorType::getSubdividedVectorType(VTy, SubDivs);
+        return Ty != NewTy;
+      }
+      return true;
     }
     case IITDescriptor::ScalableVecArgument: {
       VectorType *VTy = dyn_cast<VectorType>(Ty);

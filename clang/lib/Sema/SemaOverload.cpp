@@ -257,8 +257,18 @@ isPointerConversionToVoidPointer(ASTContext& Context) const {
 
 /// Skip any implicit casts which could be either part of a narrowing conversion
 /// or after one in an implicit conversion.
-static const Expr *IgnoreNarrowingConversion(const Expr *Converted) {
-  while (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Converted)) {
+static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
+                                             const Expr *Converted) {
+  // We can have cleanups wrapping the converted expression; these need to be
+  // preserved so that destructors run if necessary.
+  if (auto *EWC = dyn_cast<ExprWithCleanups>(Converted)) {
+    Expr *Inner =
+        const_cast<Expr *>(IgnoreNarrowingConversion(Ctx, EWC->getSubExpr()));
+    return ExprWithCleanups::Create(Ctx, Inner, EWC->cleanupsHaveSideEffects(),
+                                    EWC->getObjects());
+  }
+
+  while (auto *ICE = dyn_cast<ImplicitCastExpr>(Converted)) {
     switch (ICE->getCastKind()) {
     case CK_NoOp:
     case CK_IntegralCast:
@@ -332,7 +342,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       if (IgnoreFloatToIntegralConversion)
         return NK_Not_Narrowing;
       llvm::APSInt IntConstantValue;
-      const Expr *Initializer = IgnoreNarrowingConversion(Converted);
+      const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
       assert(Initializer && "Unknown conversion expression");
 
       // If it's value-dependent, we can't tell whether it's narrowing.
@@ -370,7 +380,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     if (FromType->isRealFloatingType() && ToType->isRealFloatingType() &&
         Ctx.getFloatingTypeOrder(FromType, ToType) == 1) {
       // FromType is larger than ToType.
-      const Expr *Initializer = IgnoreNarrowingConversion(Converted);
+      const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
 
       // If it's value-dependent, we can't tell whether it's narrowing.
       if (Initializer->isValueDependent())
@@ -416,7 +426,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         (FromSigned && !ToSigned)) {
       // Not all values of FromType can be represented in ToType.
       llvm::APSInt InitializerValue;
-      const Expr *Initializer = IgnoreNarrowingConversion(Converted);
+      const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
 
       // If it's value-dependent, we can't tell whether it's narrowing.
       if (Initializer->isValueDependent())
@@ -5465,6 +5475,14 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   if (Result.isInvalid())
     return Result;
 
+  // C++2a [intro.execution]p5:
+  //   A full-expression is [...] a constant-expression [...]
+  Result =
+      S.ActOnFinishFullExpr(Result.get(), From->getExprLoc(),
+                            /*DiscardedValue=*/false, /*IsConstexpr=*/true);
+  if (Result.isInvalid())
+    return Result;
+
   // Check for a narrowing implicit conversion.
   APValue PreNarrowingValue;
   QualType PreNarrowingType;
@@ -9422,19 +9440,19 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
     const FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
     bool ContainsSameSideCandidate =
         llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
-          // Consider viable function only.
+          // Check viable function only.
           return Cand->Viable && Cand->Function &&
                  S.IdentifyCUDAPreference(Caller, Cand->Function) ==
                      Sema::CFP_SameSide;
         });
     if (ContainsSameSideCandidate) {
-      // Clear viable flag for WrongSide varible candidates.
-      llvm::for_each(Candidates, [&](OverloadCandidate *Cand) {
-        if (Cand->Viable && Cand->Function &&
-            S.IdentifyCUDAPreference(Caller, Cand->Function) ==
-                Sema::CFP_WrongSide)
-          Cand->Viable = false;
-      });
+      auto IsWrongSideCandidate = [&](OverloadCandidate *Cand) {
+        // Check viable function only to avoid unnecessary data copying/moving.
+        return Cand->Viable && Cand->Function &&
+               S.IdentifyCUDAPreference(Caller, Cand->Function) ==
+                   Sema::CFP_WrongSide;
+      };
+      llvm::erase_if(Candidates, IsWrongSideCandidate);
     }
   }
 

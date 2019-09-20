@@ -72,11 +72,11 @@ struct LayoutAlignElem {
   /// Alignment type from \c AlignTypeEnum
   unsigned AlignType : 8;
   unsigned TypeBitWidth : 24;
-  unsigned ABIAlign : 16;
-  unsigned PrefAlign : 16;
+  llvm::Align ABIAlign;
+  llvm::Align PrefAlign;
 
-  static LayoutAlignElem get(AlignTypeEnum align_type, unsigned abi_align,
-                             unsigned pref_align, uint32_t bit_width);
+  static LayoutAlignElem get(AlignTypeEnum align_type, llvm::Align abi_align,
+                             llvm::Align pref_align, uint32_t bit_width);
 
   bool operator==(const LayoutAlignElem &rhs) const;
 };
@@ -88,15 +88,15 @@ struct LayoutAlignElem {
 /// \note The unusual order of elements in the structure attempts to reduce
 /// padding and make the structure slightly more cache friendly.
 struct PointerAlignElem {
-  unsigned ABIAlign;
-  unsigned PrefAlign;
+  llvm::Align ABIAlign;
+  llvm::Align PrefAlign;
   uint32_t TypeByteWidth;
   uint32_t AddressSpace;
   uint32_t IndexWidth;
 
   /// Initializer
-  static PointerAlignElem get(uint32_t AddressSpace, unsigned ABIAlign,
-                              unsigned PrefAlign, uint32_t TypeByteWidth,
+  static PointerAlignElem get(uint32_t AddressSpace, llvm::Align ABIAlign,
+                              llvm::Align PrefAlign, uint32_t TypeByteWidth,
                               uint32_t IndexWidth);
 
   bool operator==(const PointerAlignElem &rhs) const;
@@ -173,12 +173,12 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
-  void setAlignment(AlignTypeEnum align_type, unsigned abi_align,
-                    unsigned pref_align, uint32_t bit_width);
+  void setAlignment(AlignTypeEnum align_type, llvm::Align abi_align,
+                    llvm::Align pref_align, uint32_t bit_width);
   unsigned getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
                             bool ABIAlign, Type *Ty) const;
-  void setPointerAlignment(uint32_t AddrSpace, unsigned ABIAlign,
-                           unsigned PrefAlign, uint32_t TypeByteWidth,
+  void setPointerAlignment(uint32_t AddrSpace, llvm::Align ABIAlign,
+                           llvm::Align PrefAlign, uint32_t TypeByteWidth,
                            uint32_t IndexWidth);
 
   /// Internal helper method that returns requested alignment for type.
@@ -558,7 +558,7 @@ inline LLVMTargetDataRef wrap(const DataLayout *P) {
 /// based on the DataLayout structure.
 class StructLayout {
   uint64_t StructSize;
-  unsigned StructAlignment;
+  llvm::Align StructAlignment;
   unsigned IsPadded : 1;
   unsigned NumElements : 31;
   uint64_t MemberOffsets[1]; // variable sized array!
@@ -568,7 +568,7 @@ public:
 
   uint64_t getSizeInBits() const { return 8 * StructSize; }
 
-  unsigned getAlignment() const { return StructAlignment; }
+  unsigned getAlignment() const { return StructAlignment.value(); }
 
   /// Returns whether the struct has padding or not between its fields.
   /// NB: Padding in nested element is not taken into account.

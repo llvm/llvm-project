@@ -38,7 +38,7 @@ be moved across a volatile load freely, but not an Acquire load.
 
 This document is intended to provide a guide to anyone either writing a frontend
 for LLVM or working on optimization passes for LLVM with a guide for how to deal
-with instructions with special semantics in the presence of concurrency.  This
+with instructions with special semantics in the presence of concurrency. This
 is not intended to be a precise guide to the semantics; the details can get
 extremely complicated and unreadable, and are not usually necessary.
 

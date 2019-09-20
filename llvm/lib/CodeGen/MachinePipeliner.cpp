@@ -326,7 +326,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
 
   LI.LoopInductionVar = nullptr;
   LI.LoopCompare = nullptr;
-  if (TII->analyzeLoop(L, LI.LoopInductionVar, LI.LoopCompare)) {
+  if (!TII->analyzeLoopForPipelining(L.getTopBlock())) {
     LLVM_DEBUG(
         dbgs() << "Unable to analyzeLoop, can NOT pipeline current Loop\n");
     NumFailLoop++;

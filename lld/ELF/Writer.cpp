@@ -1500,6 +1500,12 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
     if (!(sec->flags & SHF_LINK_ORDER))
       continue;
 
+    // The ARM.exidx section use SHF_LINK_ORDER, but we have consolidated
+    // this processing inside the ARMExidxsyntheticsection::finalizeContents().
+    if (!config->relocatable && config->emachine == EM_ARM &&
+        sec->type == SHT_ARM_EXIDX)
+      continue;
+
     // Link order may be distributed across several InputSectionDescriptions
     // but sort must consider them all at once.
     std::vector<InputSection **> scriptSections;
@@ -1509,14 +1515,16 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         for (InputSection *&isec : isd->sections) {
           scriptSections.push_back(&isec);
           sections.push_back(isec);
+
+          InputSection *link = isec->getLinkOrderDep();
+          if (!link->getParent())
+            error(toString(isec) + ": sh_link points to discarded section " +
+                  toString(link));
         }
       }
     }
 
-    // The ARM.exidx section use SHF_LINK_ORDER, but we have consolidated
-    // this processing inside the ARMExidxsyntheticsection::finalizeContents().
-    if (!config->relocatable && config->emachine == EM_ARM &&
-        sec->type == SHT_ARM_EXIDX)
+    if (errorCount())
       continue;
 
     llvm::stable_sort(sections, compareByFilePosition);
@@ -1894,6 +1902,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // SHFLinkOrder processing must be processed after relative section placements are
   // known but before addresses are allocated.
   resolveShfLinkOrder();
+  if (errorCount())
+    return;
 
   // This is used to:
   // 1) Create "thunks":

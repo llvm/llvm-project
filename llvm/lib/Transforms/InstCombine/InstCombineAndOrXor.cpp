@@ -1084,6 +1084,27 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
       return Builder.CreateICmpULE(Base, Offset);
   }
 
+  if (!match(UnsignedICmp,
+             m_c_ICmp(UnsignedPred, m_Specific(Base), m_Specific(Offset))) ||
+      !ICmpInst::isUnsigned(UnsignedPred))
+    return nullptr;
+  if (UnsignedICmp->getOperand(0) != Base)
+    UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
+
+  // Base >=/> Offset && (Base - Offset) != 0  <-->  Base > Offset
+  // (no overflow and not null)
+  if ((UnsignedPred == ICmpInst::ICMP_UGE ||
+       UnsignedPred == ICmpInst::ICMP_UGT) &&
+      EqPred == ICmpInst::ICMP_NE && IsAnd)
+    return Builder.CreateICmpUGT(Base, Offset);
+
+  // Base <=/< Offset || (Base - Offset) == 0  <-->  Base <= Offset
+  // (overflow or null)
+  if ((UnsignedPred == ICmpInst::ICMP_ULE ||
+       UnsignedPred == ICmpInst::ICMP_ULT) &&
+      EqPred == ICmpInst::ICMP_EQ && !IsAnd)
+    return Builder.CreateICmpULE(Base, Offset);
+
   return nullptr;
 }
 
