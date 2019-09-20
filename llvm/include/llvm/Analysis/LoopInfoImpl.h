@@ -200,8 +200,6 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPredecessor() const {
     }
   }
 
-  // Make sure there is only one exit out of the preheader.
-  assert(Out && "Header of loop has no predecessors from outside loop?");
   return Out;
 }
 

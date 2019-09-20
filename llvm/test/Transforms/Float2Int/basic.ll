@@ -328,3 +328,25 @@ define <4 x i16> @neg_vector(<4 x i8> %a) {
   %t2 = fptoui <4 x float> %t1 to <4 x i16>
   ret <4 x i16> %t2
 }
+
+; Don't crash while processing unreachable (non-standard) IR.
+
+define void @PR38502() {
+; CHECK-LABEL: @PR38502(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+; CHECK:       bogusBB:
+; CHECK-NEXT:    [[INC1:%.*]] = fadd double [[INC:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[INC]] = fadd double [[INC1]], 1.000000e+00
+; CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp une double [[INC]], 0.000000e+00
+; CHECK-NEXT:    br label [[BOGUSBB:%.*]]
+;
+entry:
+  ret void
+
+bogusBB:                                          ; preds = %bogusBB
+  %inc1 = fadd double %inc, 1.000000e+00
+  %inc = fadd double %inc1, 1.000000e+00
+  %tobool = fcmp une double %inc, 0.000000e+00
+  br label %bogusBB
+}

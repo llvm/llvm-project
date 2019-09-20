@@ -51,7 +51,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (IsBranch)
     BranchInst::Create(ChunkSucessors[0], &BB);
 
-  if (auto IndBI = dyn_cast<IndirectBrInst>(Term)) {
+  if (Address) {
     auto NewIndBI =
         IndirectBrInst::Create(Address, ChunkSucessors.size(), &BB);
     for (auto Dest : ChunkSucessors)

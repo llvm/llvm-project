@@ -42,15 +42,13 @@ add_custom_target(swig_wrapper ALL DEPENDS
 )
 
 if(NOT LLDB_BUILD_FRAMEWORK)
-  # The path here should match the result of python function
-  # distutils.sysconfig.get_python_lib().
-  if(CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
-    set(swig_python_subdir Lib/site-packages)
+  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+    set(swig_python_subdir site-packages)
   else()
-    set(swig_python_subdir lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})
+    set(swig_python_subdir python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})
   endif()
 
-  set(SWIG_PYTHON_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${swig_python_subdir})
+  set(SWIG_PYTHON_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${swig_python_subdir})
   set(SWIG_INSTALL_DIR lib${LLVM_LIBDIR_SUFFIX})
 
   # Install the LLDB python module

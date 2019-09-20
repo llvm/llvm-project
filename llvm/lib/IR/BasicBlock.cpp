@@ -107,6 +107,13 @@ BasicBlock::instructionsWithoutDebug() {
   return make_filter_range(*this, Fn);
 }
 
+filter_iterator<BasicBlock::const_iterator,
+                std::function<bool(const Instruction &)>>::difference_type
+BasicBlock::sizeWithoutDebug() const {
+  return std::distance(instructionsWithoutDebug().begin(),
+                       instructionsWithoutDebug().end());
+}
+
 void BasicBlock::removeFromParent() {
   getParent()->getBasicBlockList().remove(getIterator());
 }

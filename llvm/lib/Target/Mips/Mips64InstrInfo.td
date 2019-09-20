@@ -16,6 +16,7 @@
 
 // shamt must fit in 6 bits.
 def immZExt6 : ImmLeaf<i32, [{return Imm == (Imm & 0x3f);}]>;
+def timmZExt6 : TImmLeaf<i32, [{return Imm == (Imm & 0x3f);}]>;
 
 // Node immediate fits as 10-bit sign extended on target immediate.
 // e.g. seqi, snei

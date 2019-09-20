@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI,CIVI,GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CI,CIVI,GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI,CIVI,GCN %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CI,CIVI,GCN %s
 
 ; GCN-LABEL: {{^}}s_abs_v2i16:
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
@@ -85,7 +85,7 @@ define amdgpu_kernel void @s_abs_v2i16_2(<2 x i16> addrspace(1)* %out, <2 x i16>
 }
 
 ; GCN-LABEL: {{^}}v_abs_v2i16_2:
-; GFX9: buffer_load_dword [[VAL:v[0-9]+]]
+; GFX9: global_load_dword [[VAL:v[0-9]+]]
 ; GFX9: v_pk_sub_i16 [[SUB:v[0-9]+]], 0, [[VAL]]
 ; GFX9: v_pk_max_i16 [[MAX:v[0-9]+]], [[VAL]], [[SUB]]
 ; GFX9: v_pk_sub_u16 [[ADD:v[0-9]+]], [[MAX]], -2 op_sel_hi:[1,0]
@@ -94,7 +94,9 @@ define amdgpu_kernel void @v_abs_v2i16_2(<2 x i16> addrspace(1)* %out, <2 x i16>
   %z1 = insertelement <2 x i16> %z0, i16 0, i16 1
   %t0 = insertelement <2 x i16> undef, i16 2, i16 0
   %t1 = insertelement <2 x i16> %t0, i16 2, i16 1
-  %val = load <2 x i16>, <2 x i16> addrspace(1)* %src, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.in = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %src, i32 %tid
+  %val = load <2 x i16>, <2 x i16> addrspace(1)* %gep.in, align 4
   %neg = sub <2 x i16> %z1, %val
   %cond = icmp sgt <2 x i16> %val, %neg
   %res = select <2 x i1> %cond, <2 x i16> %val, <2 x i16> %neg
@@ -129,7 +131,7 @@ define amdgpu_kernel void @s_abs_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %
 }
 
 ; GCN-LABEL: {{^}}v_abs_v4i16:
-; GFX9: buffer_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]{{\]}}
+; GFX9: global_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]{{\]}}
 
 ; GFX9-DAG: v_pk_sub_i16 [[SUB0:v[0-9]+]], 0, v[[VAL0]]
 ; GFX9-DAG: v_pk_max_i16 [[MAX0:v[0-9]+]], v[[VAL0]], [[SUB0]]
@@ -147,7 +149,9 @@ define amdgpu_kernel void @v_abs_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> a
   %t1 = insertelement <4 x i16> %t0, i16 2, i16 1
   %t2 = insertelement <4 x i16> %t1, i16 2, i16 2
   %t3 = insertelement <4 x i16> %t2, i16 2, i16 3
-  %val = load <4 x i16>, <4 x i16> addrspace(1)* %src, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.in = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %src, i32 %tid
+  %val = load <4 x i16>, <4 x i16> addrspace(1)* %gep.in, align 4
   %neg = sub <4 x i16> %z3, %val
   %cond = icmp sgt <4 x i16> %val, %neg
   %res = select <4 x i1> %cond, <4 x i16> %val, <4 x i16> %neg

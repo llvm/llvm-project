@@ -165,9 +165,32 @@ void DependencyGraph::dumpDependencyEdge(raw_ostream &OS,
            "Unsupported dependency type!");
     OS << " - RESOURCE MASK: " << DE.ResourceOrRegID;
   }
-  OS << " - CYCLES: " << DE.Cost << '\n';
+  OS << " - COST: " << DE.Cost << '\n';
 }
 #endif // NDEBUG
+
+void DependencyGraph::pruneEdges(unsigned Iterations) {
+  for (DGNode &N : Nodes) {
+    unsigned NumPruned = 0;
+    const unsigned Size = N.OutgoingEdges.size();
+    // Use a cut-off threshold to prune edges with a low frequency.
+    for (unsigned I = 0, E = Size; I < E; ++I) {
+      DependencyEdge &Edge = N.OutgoingEdges[I];
+      if (Edge.Frequency == Iterations)
+        continue;
+      double Factor = (double)Edge.Frequency / Iterations;
+      if (0.10 < Factor)
+        continue;
+      Nodes[Edge.ToIID].NumPredecessors--;
+      std::swap(Edge, N.OutgoingEdges[E - 1]);
+      --E;
+      ++NumPruned;
+    }
+
+    if (NumPruned)
+      N.OutgoingEdges.resize(Size - NumPruned);
+  }
+}
 
 void DependencyGraph::initializeRootSet(
     SmallVectorImpl<unsigned> &RootSet) const {
@@ -179,7 +202,7 @@ void DependencyGraph::initializeRootSet(
 }
 
 void DependencyGraph::propagateThroughEdges(
-    SmallVectorImpl<unsigned> &RootSet) {
+    SmallVectorImpl<unsigned> &RootSet, unsigned Iterations) {
   SmallVector<unsigned, 8> ToVisit;
 
   // A critical sequence is computed as the longest path from a node of the
@@ -189,6 +212,10 @@ void DependencyGraph::propagateThroughEdges(
   // Each node of the graph starts with an initial default cost of zero.  The
   // cost of a node is a measure of criticality: the higher the cost, the bigger
   // is the performance impact.
+  // For register and memory dependencies, the cost is a function of the write
+  // latency as well as the actual delay (in cycles) caused to users.
+  // For processor resource dependencies, the cost is a function of the resource
+  // pressure. Resource interferences with low frequency values are ignored.
   //
   // This algorithm is very similar to a (reverse) Dijkstra.  Every iteration of
   // the inner loop selects (i.e. visits) a node N from a set of `unvisited
@@ -277,6 +304,10 @@ static void printInstruction(formatted_raw_ostream &FOS,
 }
 
 void BottleneckAnalysis::printCriticalSequence(raw_ostream &OS) const {
+  // Early exit if no bottlenecks were found during the simulation.
+  if (!SeenStallCycles || !BPI.PressureIncreaseCycles)
+    return;
+
   SmallVector<const DependencyEdge *, 16> Seq;
   DG.getCriticalSequence(Seq);
   if (Seq.empty())
@@ -432,7 +463,6 @@ void BottleneckAnalysis::addRegisterDep(unsigned From, unsigned To,
   bool IsLoopCarried = From >= To;
   unsigned SourceSize = Source.size();
   if (IsLoopCarried) {
-    Cost *= Iterations / 2;
     DG.addRegisterDep(From, To + SourceSize, RegID, Cost);
     DG.addRegisterDep(From + SourceSize, To + (SourceSize * 2), RegID, Cost);
     return;
@@ -445,7 +475,6 @@ void BottleneckAnalysis::addMemoryDep(unsigned From, unsigned To,
   bool IsLoopCarried = From >= To;
   unsigned SourceSize = Source.size();
   if (IsLoopCarried) {
-    Cost *= Iterations / 2;
     DG.addMemoryDep(From, To + SourceSize, Cost);
     DG.addMemoryDep(From + SourceSize, To + (SourceSize * 2), Cost);
     return;
@@ -458,7 +487,6 @@ void BottleneckAnalysis::addResourceDep(unsigned From, unsigned To,
   bool IsLoopCarried = From >= To;
   unsigned SourceSize = Source.size();
   if (IsLoopCarried) {
-    Cost *= Iterations / 2;
     DG.addResourceDep(From, To + SourceSize, Mask, Cost);
     DG.addResourceDep(From + SourceSize, To + (SourceSize * 2), Mask, Cost);
     return;
@@ -514,7 +542,7 @@ void BottleneckAnalysis::onEvent(const HWInstructionEvent &Event) {
 
   // Check if this is the last simulated instruction.
   if (IID == ((Iterations * Source.size()) - 1))
-    DG.finalizeGraph();
+    DG.finalizeGraph(Iterations);
 }
 
 void BottleneckAnalysis::onEvent(const HWPressureEvent &Event) {
