@@ -55,6 +55,7 @@ StringRef getPlatformName(PlatformKind Platform) {
   case PlatformKind::bridgeOS:
     return "bridgeOS";
   }
+  llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
 }
 
 } // end namespace MachO.
