@@ -74,11 +74,11 @@ protected:
 
 public:
   AttributeCommonInfo(SourceRange AttrRange)
-      : AttrRange(AttrRange), AttrKind(0), SyntaxUsed(0),
+      : AttrRange(AttrRange), ScopeLoc(), AttrKind(0), SyntaxUsed(0),
         SpellingIndex(SpellingNotCalculated) {}
 
   AttributeCommonInfo(SourceLocation AttrLoc)
-      : AttrRange(AttrLoc), AttrKind(0), SyntaxUsed(0),
+      : AttrRange(AttrLoc), ScopeLoc(), AttrKind(0), SyntaxUsed(0),
         SpellingIndex(SpellingNotCalculated) {}
 
   AttributeCommonInfo(const IdentifierInfo *AttrName,
