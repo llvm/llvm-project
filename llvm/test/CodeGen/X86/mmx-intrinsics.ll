@@ -1453,3 +1453,68 @@ define void @test90() {
 }
 
 declare void @llvm.x86.mmx.emms()
+
+define <1 x i64> @test_mm_insert_pi16(<1 x i64> %a.coerce, i32 %d) nounwind {
+; X86-LABEL: test_mm_insert_pi16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
+; X86-NEXT:    pinsrw $2, 16(%ebp), %mm0
+; X86-NEXT:    movq %mm0, (%esp)
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm_insert_pi16:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %mm0
+; X64-NEXT:    pinsrw $2, %esi, %mm0
+; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <1 x i64> %a.coerce to x86_mmx
+  %1 = tail call x86_mmx @llvm.x86.mmx.pinsr.w(x86_mmx %0, i32 %d, i32 2)
+  %2 = bitcast x86_mmx %1 to <1 x i64>
+  ret <1 x i64> %2
+}
+
+declare x86_mmx @llvm.x86.mmx.pinsr.w(x86_mmx, i32, i32 immarg)
+
+define i32 @test_mm_extract_pi16(<1 x i64> %a.coerce) nounwind {
+; X86-LABEL: test_mm_extract_pi16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movq (%esp), %mm0
+; X86-NEXT:    pextrw $2, %mm0, %eax
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm_extract_pi16:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %mm0
+; X64-NEXT:    pextrw $2, %mm0, %eax
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <1 x i64> %a.coerce to x86_mmx
+  %1 = tail call i32 @llvm.x86.mmx.pextr.w(x86_mmx %0, i32 2)
+  ret i32 %1
+}
+
+declare i32 @llvm.x86.mmx.pextr.w(x86_mmx, i32 immarg)

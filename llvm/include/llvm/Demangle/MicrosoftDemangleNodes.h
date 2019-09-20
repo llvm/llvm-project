@@ -303,8 +303,6 @@ struct TypeNode : public Node {
     outputPost(OS, Flags);
   }
 
-  void outputQuals(bool SpaceBefore, bool SpaceAfter) const;
-
   Qualifiers Quals = Q_None;
 };
 
