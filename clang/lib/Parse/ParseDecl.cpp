@@ -4715,8 +4715,10 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     ExprResult AssignedVal;
     EnumAvailabilityDiags.emplace_back(*this);
 
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
     if (TryConsumeToken(tok::equal, EqualLoc)) {
-      AssignedVal = ParseConstantExpression();
+      AssignedVal = ParseConstantExpressionInExprEvalContext();
       if (AssignedVal.isInvalid())
         SkipUntil(tok::comma, tok::r_brace, StopBeforeMatch);
     }

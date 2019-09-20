@@ -764,6 +764,13 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
         BuiltinTable[FctIndex + SignatureIndex];
     ASTContext &Context = S.Context;
 
+    // Ignore this BIF if its version does not match the language options.
+    if (Context.getLangOpts().OpenCLVersion < OpenCLBuiltin.MinVersion)
+      continue;
+    if ((OpenCLBuiltin.MaxVersion != 0) &&
+        (Context.getLangOpts().OpenCLVersion >= OpenCLBuiltin.MaxVersion))
+      continue;
+
     SmallVector<QualType, 1> RetTypes;
     SmallVector<SmallVector<QualType, 1>, 5> ArgTypes;
 

@@ -20,12 +20,13 @@
 //===----------------------------------------------------------------------===//
 // Versions of OpenCL
 class Version<int _Version> {
-  int Version = _Version;
+  int ID = _Version;
 }
-def CL10: Version<100>;
-def CL11: Version<110>;
-def CL12: Version<120>;
-def CL20: Version<200>;
+def CLAll : Version<  0>;
+def CL10  : Version<100>;
+def CL11  : Version<110>;
+def CL12  : Version<120>;
+def CL20  : Version<200>;
 
 // Address spaces
 // Pointer types need to be assigned an address space.
@@ -191,8 +192,13 @@ class Builtin<string _Name, list<Type> _Signature> {
   list<Type> Signature = _Signature;
   // OpenCL Extension to which the function belongs (cl_khr_subgroups, ...)
   string Extension = "";
-  // OpenCL Version to which the function belongs (CL10, ...)
-  Version Version = CL10;
+  // Version of OpenCL from which the function is available (e.g.: CL10).
+  // MinVersion is inclusive.
+  Version MinVersion = CL10;
+  // Version of OpenCL from which the function is not supported anymore.
+  // MaxVersion is exclusive.
+  // CLAll makes the function available for all versions.
+  Version MaxVersion = CLAll;
 }
 
 //===----------------------------------------------------------------------===//
@@ -313,6 +319,137 @@ foreach RType = [Float, Double, Half, Char, UChar, Short,
 }
 
 //--------------------------------------------------------------------
+// OpenCL v1.1 s6.11.1, v1.2 s6.12.1, v2.0 s6.13.1 - Work-item Functions
+// --- Table 7 ---
+def : Builtin<"get_work_dim", [UInt]>;
+foreach name = ["get_global_size", "get_global_id", "get_local_size",
+                "get_local_id", "get_num_groups", "get_group_id",
+                "get_global_offset"] in {
+  def : Builtin<name, [Size, UInt]>;
+}
+
+let MinVersion = CL20 in {
+  def : Builtin<"get_enqueued_local_size", [Size, UInt]>;
+  foreach name = ["get_global_linear_id", "get_local_linear_id"] in {
+    def : Builtin<name, [Size]>;
+  }
+}
+
+//--------------------------------------------------------------------
+// OpenCL v1.1 s6.11.7, v1.2 s6.12.7, v2.0 s6.13.7 - Vector Data Load and Store Functions
+// OpenCL Extension v1.1 s9.3.6 and s9.6.6, v1.2 s9.5.6, v2.0 s9.4.6, v2.0 s5.1.6 and 6.1.6 - Vector Data Load and Store Functions
+// --- Table 15 ---
+// Variants for OpenCL versions below 2.0, using pointers to the global, local
+// and private address spaces.
+let MaxVersion = CL20 in {
+  foreach AS = [GlobalAS, LocalAS, PrivateAS] in {
+    foreach VSize = [2, 3, 4, 8, 16] in {
+      foreach name = ["vload" # VSize] in {
+        def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>]>;
+        def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>]>;
+        def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>]>;
+        def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>]>;
+        def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>]>;
+        def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>]>;
+        def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>]>;
+        def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>]>;
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>]>;
+        def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>]>;
+        def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+      }
+      foreach name = ["vstore" # VSize] in {
+        def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>]>;
+        def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>]>;
+        def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>]>;
+        def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>]>;
+        def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+      }
+      foreach name = ["vloada_half" # VSize] in {
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+      }
+      foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+        foreach name = ["vstorea_half" # VSize # rnd] in {
+          def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
+          def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, AS>]>;
+        }
+      }
+    }
+  }
+}
+// Variants for OpenCL versions above 2.0, using pointers to the generic
+// address space.
+let MinVersion = CL20 in {
+  foreach VSize = [2, 3, 4, 8, 16] in {
+    foreach name = ["vload" # VSize] in {
+      def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, GenericAS>]>;
+      def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, GenericAS>]>;
+      def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, GenericAS>]>;
+      def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, GenericAS>]>;
+      def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, GenericAS>]>;
+      def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, GenericAS>]>;
+      def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, GenericAS>]>;
+      def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, GenericAS>]>;
+      def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, GenericAS>]>;
+      def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, GenericAS>]>;
+      def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
+    }
+    foreach name = ["vstore" # VSize] in {
+      def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
+    }
+    foreach name = ["vloada_half" # VSize] in {
+      def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
+    }
+    foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+      foreach name = ["vstorea_half" # VSize # rnd] in {
+        def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, GenericAS>]>;
+        def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, GenericAS>]>;
+      }
+    }
+  }
+}
+// Variants using pointers to the constant address space.
+foreach VSize = [2, 3, 4, 8, 16] in {
+  foreach name = ["vload" # VSize] in {
+    def : Builtin<name, [VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, ConstantAS>]>;
+    def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, ConstantAS>]>;
+  }
+  foreach name = ["vloada_half" # VSize] in {
+    def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, ConstantAS>]>;
+  }
+  foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+    foreach name = ["vstorea_half" # VSize # rnd] in {
+      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, ConstantAS>]>;
+      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, ConstantAS>]>;
+    }
+  }
+}
+
+//--------------------------------------------------------------------
 // OpenCL v1.1 s6.11.10, v1.2 s6.12.10, v2.0 s6.13.10: Async Copies from Global to Local Memory, Local to Global Memory, and Prefetch
 // OpenCL Extension v2.0 s5.1.7 and s6.1.7: Async Copies from Global to Local Memory, Local to Global Memory, and Prefetch
 // --- Table 18 ---
@@ -348,14 +485,6 @@ foreach Type = [Int, UInt] in {
   foreach name = ["atom_cmpxchg"] in {
     def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type, Type]>;
   }
-}
-
-// OpenCL v1.2 s6.12.1: Work-Item Functions
-def get_work_dim : Builtin<"get_work_dim", [UInt]>;
-foreach name = ["get_global_size", "get_global_id", "get_local_size",
-                "get_local_id", "get_num_groups", "get_group_id",
-                "get_global_offset"] in {
-  def : Builtin<name, [Size, UInt]>;
 }
 
 // OpenCL v1.2 s6.12.2: Math Functions
@@ -511,7 +640,7 @@ foreach aQual = ["WO", "RW"] in {
 
 
 // OpenCL v2.0 s9.17.3: Additions to section 6.13.1: Work-Item Functions
-let Version = CL20 in {
+let MinVersion = CL20 in {
   let Extension = "cl_khr_subgroups" in {
     def get_sub_group_size : Builtin<"get_sub_group_size", [UInt]>;
     def get_max_sub_group_size : Builtin<"get_max_sub_group_size", [UInt]>;

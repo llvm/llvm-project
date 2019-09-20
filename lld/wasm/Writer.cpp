@@ -690,9 +690,8 @@ void Writer::createOutputSegments() {
                      return order(a->name) < order(b->name);
                    });
 
-  for (size_t i = 0; i < segments.size(); ++i) {
+  for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;
-  }
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {

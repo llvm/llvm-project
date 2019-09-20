@@ -246,9 +246,12 @@ static void skipToNewlineRaw(const char *&First, const char *const End) {
 
 static const char *reverseOverSpaces(const char *First, const char *Last) {
   assert(First <= Last);
-  while (First != Last && isHorizontalWhitespace(Last[-1]))
+  const char *PrevLast = Last;
+  while (First != Last && isHorizontalWhitespace(Last[-1])) {
+    PrevLast = Last;
     --Last;
-  return Last;
+  }
+  return PrevLast;
 }
 
 static void skipLineComment(const char *&First, const char *const End) {
