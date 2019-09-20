@@ -33,6 +33,10 @@ class Kitsune(CMakePackage):
         'power'   : 'PowerPC',
     }
 
+    available_target_archs = ('AArch64', 'AMDGPU', 'ARM', 'NVPTX', 'PowerPC', 'Sparc', 'X86',)
+    # Omitting less common targets:
+    # BPF, Hexagon, Lanai, Mips, MSP430, SystemZ, WebAssembly, XCore
+
     # *** Project Variants
 
     # Each project is one that can be enabled in the LLVM_ENABLE_PROJECTS CMake
@@ -123,13 +127,8 @@ class Kitsune(CMakePackage):
         'targets',
         description='Targets to build support for, default targets:'
         '<current arch>, NVPTX, AMDGPU',
-        values=disjoint_sets(
-            ('all', 'default'),
-            ('AArch64', 'AMDGPU', 'ARM', 'BPF',
-             'Hexagon', 'Lanai', 'Mips', 'MSP430',
-             'NVPTX', 'PowerPC', 'Sparc', 'SystemZ',
-             'WebAssembly', 'X86', 'XCore',)
-        ),
+        values=disjoint_sets(('all', 'default'), available_target_archs
+                             ).prohibit_empty_set(),
         default='default'
     )
 
@@ -192,10 +191,14 @@ class Kitsune(CMakePackage):
     conflicts('+clang-tools-extra', when'~clang')
 
 
-        
+
+    # *** Methods
 
     @run_before('cmake')
     def check_darwin_lldb_codesign_requirement(self):
+        """Ensure codesign identity is available for lldb on mac
+        """
+
         if not self.spec.satisfies('+lldb platform=darwin'):
             return
         codesign = which('codesign')
@@ -260,53 +263,61 @@ class Kitsune(CMakePackage):
 
 
         if '+shared_libs' in spec:
-            cmake_args.append('-DBUILD_SHARED_LIBS:Bool=ON')
+            cmake_args.append('-DBUILD_SHARED_LIBS:BOOL=ON')
 
         if '+link_dylib' in spec:
-            cmake_args.append('-DLLVM_LINK_LLVM_DYLIB:Bool=ON')
+            cmake_args.append('-DLLVM_LINK_LLVM_DYLIB:BOOL=ON')
 
         if '+libcxx' in spec:
-            cmake_args.append('-DCLANG_DEFAULT_CXX_STDLIB=libc++')
+            cmake_args.append('-DCLANG_DEFAULT_CXX_STDLIB:STRING=libc++')
 
         if '+polly' in spec:
-            cmake_args.append('-DLLVM_LINK_POLLY_INTO_TOOLS:Bool=ON')
+            cmake_args.append('-DLLVM_LINK_POLLY_INTO_TOOLS:BOOL=ON')
 
-
-        enable_projects=[]
-        for project, desc in projects.items():
-            if '+{}'.format(project) in spec:
-                enable_projects.append(project)
-                       
-        
-        cmake_args.append(
-            '-DLLVM_ENABLE_PROJECTS={}'.format(';'.join(enabled_projects)))
-    
-        
         if '+gold' in spec:
-            cmake_args.append('-DLLVM_BINUTILS_INCDIR=' +
+            cmake_args.append('-DLLVM_BINUTILS_INCDIR:PATH=' +
                               spec['binutils'].prefix.include)
 
         if '+python' in spec and '+lldb' in spec:
-            cmake_args.append('-DLLDB_USE_SYSTEM_SIX:Bool=TRUE')
+            cmake_args.append('-DLLDB_USE_SYSTEM_SIX:BOOL=TRUE')
 
 
-        # all is default on cmake
-        if '+all_targets' not in spec:
-            targets = ['NVPTX', 'AMDGPU']
-            arch = spec.architecture.target
-            target = target_arch_mapping.get(arch.lower())
-            if target:
-                targets.append(target)
+
+        enable_projects=[]
+        for project in projects:
+            if '+{}'.format(project) in spec:
+                enable_projects.append(project)
+        
+        cmake_args.append(
+            '-DLLVM_ENABLE_PROJECTS:STRING={}'.format(';'.join(enabled_projects)))
+
+        
+        # all is default in CMake config, so only mess with args if something
+        # else is specified
+        if 'targets=all' not in spec:
+            targets = []
+            if 'targets=default' in spec:
+                targets.extend(['NVPTX', 'AMDGPU'])
+                arch = spec.architecture.target
+                target = target_arch_mapping.get(arch.lower())
+                if target:
+                    targets.append(target)
+                else:
+                    tty.warn("{} not recognized as LLVM target".format(arch))
             else:
-                tty.warn("{} not recognized as LLVM target".format(arch))
+                for tgt in available_target_archs:
+                    tgt_in_spec = 'targets={}'.format(tgt) in spec
+                    if tgt_in_spec:
+                        targets.append(tgt)
 
             cmake_args.append(
                 '-DLLVM_TARGETS_TO_BUILD:STRING=' + ';'.join(targets))
+            
 
         if spec.satisfies('platform=linux'):
             # set the RPATH to the install path at build time (rather than
             # relinking at install time)
-            cmake_args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH=1')
+            cmake_args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
         return cmake_args
 
     @run_before('build')
