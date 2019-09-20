@@ -7,8 +7,8 @@
 
 ; CHECK: if ({{.*}}) jump
 ; CHECK: [[VREG:v([0-9]+)]]{{.*}} = {{.*}}vmem(r{{[0-9]+}}++#1)
-; CHECK: if ({{.*}}) {{jump|jump:nt}} [[EPLOG1:(.*)]]
-; CHECK: if ({{.*}}) {{jump|jump:nt}} [[EPLOG:(.*)]]
+; CHECK: if ({{.*}}) {{jump|jump:nt|jump:t}} [[EPLOG1:(.*)]]
+; CHECK: if ({{.*}}) {{jump|jump:nt|jump:t}} [[EPLOG:(.*)]]
 ; CHECK: [[EPLOG]]:
 ; CHECK: [[VREG1:v([0-9]+)]] = [[VREG]]
 ; CHECK: [[VREG]] = v{{[0-9]+}}

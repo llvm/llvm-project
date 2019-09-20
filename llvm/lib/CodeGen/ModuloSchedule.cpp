@@ -105,6 +105,9 @@ void ModuloScheduleExpander::expand() {
 }
 
 void ModuloScheduleExpander::generatePipelinedLoop() {
+  LoopInfo = TII->analyzeLoopForPipelining(BB);
+  assert(LoopInfo && "Must be able to analyze loop!");
+
   // Create a new basic block for the kernel and add it to the CFG.
   MachineBasicBlock *KernelBB = MF.CreateMachineBasicBlock(BB->getBasicBlock());
 
@@ -847,10 +850,6 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
                                          MBBVectorTy &EpilogBBs,
                                          ValueMapTy *VRMap) {
   assert(PrologBBs.size() == EpilogBBs.size() && "Prolog/Epilog mismatch");
-  MachineInstr *IndVar;
-  MachineInstr *Cmp;
-  if (TII->analyzeLoop(*Schedule.getLoop(), IndVar, Cmp))
-    llvm_unreachable("Must be able to analyze loop!");
   MachineBasicBlock *LastPro = KernelBB;
   MachineBasicBlock *LastEpi = KernelBB;
 
@@ -858,32 +857,20 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
   // to the first prolog and the last epilog blocks.
   SmallVector<MachineInstr *, 4> PrevInsts;
   unsigned MaxIter = PrologBBs.size() - 1;
-  unsigned LC = UINT_MAX;
-  unsigned LCMin = UINT_MAX;
   for (unsigned i = 0, j = MaxIter; i <= MaxIter; ++i, --j) {
     // Add branches to the prolog that go to the corresponding
     // epilog, and the fall-thru prolog/kernel block.
     MachineBasicBlock *Prolog = PrologBBs[j];
     MachineBasicBlock *Epilog = EpilogBBs[i];
-    // We've executed one iteration, so decrement the loop count and check for
-    // the loop end.
+
     SmallVector<MachineOperand, 4> Cond;
-    // Check if the LOOP0 has already been removed. If so, then there is no need
-    // to reduce the trip count.
-    if (LC != 0)
-      LC = TII->reduceLoopCount(*Prolog, PreheaderBB, IndVar, *Cmp, Cond,
-                                PrevInsts, j, MaxIter);
-
-    // Record the value of the first trip count, which is used to determine if
-    // branches and blocks can be removed for constant trip counts.
-    if (LCMin == UINT_MAX)
-      LCMin = LC;
-
+    Optional<bool> StaticallyGreater =
+        LoopInfo->createTripCountGreaterCondition(j + 1, *Prolog, Cond);
     unsigned numAdded = 0;
-    if (Register::isVirtualRegister(LC)) {
+    if (!StaticallyGreater.hasValue()) {
       Prolog->addSuccessor(Epilog);
       numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
-    } else if (j >= LCMin) {
+    } else if (*StaticallyGreater == false) {
       Prolog->addSuccessor(Epilog);
       Prolog->removeSuccessor(LastPro);
       LastEpi->removeSuccessor(Epilog);
@@ -894,10 +881,12 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
         LastEpi->clear();
         LastEpi->eraseFromParent();
       }
+      if (LastPro == KernelBB) {
+        LoopInfo->disposed();
+        NewKernel = nullptr;
+      }
       LastPro->clear();
       LastPro->eraseFromParent();
-      if (LastPro == KernelBB)
-        NewKernel = nullptr;
     } else {
       numAdded = TII->insertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
       removePhis(Epilog, Prolog);
@@ -908,6 +897,11 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
                                                    E = Prolog->instr_rend();
          I != E && numAdded > 0; ++I, --numAdded)
       updateInstruction(&*I, false, j, 0, VRMap);
+  }
+
+  if (NewKernel) {
+    LoopInfo->setPreheader(PrologBBs[MaxIter]);
+    LoopInfo->adjustTripCount(-(MaxIter + 1));
   }
 }
 

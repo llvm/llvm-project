@@ -5,6 +5,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/JSON.h"
 
 #define DEBUG_TYPE "dwarfdump"
 using namespace llvm;
@@ -92,11 +93,11 @@ struct GlobalStats {
   unsigned CallSiteParamDIEs = 0;
   /// Total byte size of concrete functions. This byte size includes
   /// inline functions contained in the concrete functions.
-  uint64_t FunctionSize = 0;
+  unsigned FunctionSize = 0;
   /// Total byte size of inlined functions. This is the total number of bytes
   /// for the top inline functions within concrete functions. This can help
   /// tune the inline settings when compiling to match user expectations.
-  uint64_t InlineFunctionSize = 0;
+  unsigned InlineFunctionSize = 0;
 };
 
 /// Holds accumulated debug location statistics about local variables and
@@ -449,11 +450,7 @@ static void collectStatsRecursive(DWARFDie Die, uint64_t UnitLowPC, std::string 
 /// Print machine-readable output.
 /// The machine-readable format is single-line JSON output.
 /// \{
-static void printDatum(raw_ostream &OS, const char *Key, StringRef Value) {
-  OS << ",\"" << Key << "\":\"" << Value << '"';
-  LLVM_DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
-}
-static void printDatum(raw_ostream &OS, const char *Key, uint64_t Value) {
+static void printDatum(raw_ostream &OS, const char *Key, json::Value Value) {
   OS << ",\"" << Key << "\":" << Value;
   LLVM_DEBUG(llvm::dbgs() << Key << ": " << Value << '\n');
 }
