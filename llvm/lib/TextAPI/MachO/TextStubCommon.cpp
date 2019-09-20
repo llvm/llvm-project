@@ -41,9 +41,10 @@ void ScalarEnumerationTraits<ObjCConstraintType>::enumeration(
   IO.enumCase(Constraint, "gc", ObjCConstraintType::GC);
 }
 
-void ScalarTraits<PlatformKind>::output(const PlatformKind &Value, void *,
-                                        raw_ostream &OS) {
-  switch (Value) {
+void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
+                                       raw_ostream &OS) {
+  assert(Values.size() == 1U);
+  switch (*Values.begin()) {
   default:
     llvm_unreachable("unexpected platform");
     break;
@@ -64,21 +65,26 @@ void ScalarTraits<PlatformKind>::output(const PlatformKind &Value, void *,
     break;
   }
 }
-StringRef ScalarTraits<PlatformKind>::input(StringRef Scalar, void *,
-                                            PlatformKind &Value) {
-  Value = StringSwitch<PlatformKind>(Scalar)
-              .Case("macosx", PlatformKind::macOS)
-              .Case("ios", PlatformKind::iOS)
-              .Case("watchos", PlatformKind::watchOS)
-              .Case("tvos", PlatformKind::tvOS)
-              .Case("bridgeos", PlatformKind::bridgeOS)
-              .Default(PlatformKind::unknown);
 
-  if (Value == PlatformKind::unknown)
+StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
+                                           PlatformSet &Values) {
+  auto Platform = StringSwitch<PlatformKind>(Scalar)
+                      .Case("unknown", PlatformKind::unknown)
+                      .Case("macosx", PlatformKind::macOS)
+                      .Case("ios", PlatformKind::iOS)
+                      .Case("watchos", PlatformKind::watchOS)
+                      .Case("tvos", PlatformKind::tvOS)
+                      .Case("bridgeos", PlatformKind::bridgeOS)
+                      .Default(PlatformKind::unknown);
+
+  if (Platform == PlatformKind::unknown)
     return "unknown platform";
+
+  Values.insert(Platform);
   return {};
 }
-QuotingType ScalarTraits<PlatformKind>::mustQuote(StringRef) {
+
+QuotingType ScalarTraits<PlatformSet>::mustQuote(StringRef) {
   return QuotingType::None;
 }
 
@@ -166,10 +172,11 @@ StringRef ScalarTraits<UUID>::input(StringRef Scalar, void *, UUID &Value) {
   auto UUID = Split.second.trim();
   if (UUID.empty())
     return "invalid uuid string pair";
-  Value.first = getArchitectureFromName(Arch);
   Value.second = UUID;
+  Value.first = Target{getArchitectureFromName(Arch), PlatformKind::unknown};
   return {};
 }
+
 QuotingType ScalarTraits<UUID>::mustQuote(StringRef) {
   return QuotingType::Single;
 }
