@@ -121,11 +121,13 @@ private:
   // Emit the BuiltinTable table. This table contains all the overloads of
   // each function, and is a struct OpenCLBuiltinDecl.
   // E.g.:
-  // // convert_float2_rtn
-  //   { 58, 2 },
+  // // 891 convert_float2_rtn
+  //   { 58, 2, 100, 0 },
   // This means that the signature of this convert_float2_rtn overload has
   // 1 argument (+1 for the return type), stored at index 58 in
-  // the SignatureTable.
+  // the SignatureTable.  The last two values represent the minimum (1.0) and
+  // maximum (0, meaning no max version) OpenCL version in which this overload
+  // is supported.
   void EmitBuiltinTable();
 
   // Emit a StringMatcher function to check whether a function name is an
@@ -268,6 +270,10 @@ struct OpenCLBuiltinStruct {
   // the SignatureTable represent the complete signature.  The first type at
   // index SigTableIndex is the return type.
   const unsigned NumTypes;
+  // First OpenCL version in which this overload was introduced (e.g. CL20).
+  const unsigned short MinVersion;
+  // First OpenCL version in which this overload was removed (e.g. CL20).
+  const unsigned short MaxVersion;
 };
 
 )";
@@ -400,11 +406,13 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
     OS << "  // " << (Index + 1) << ": " << FOM.first << "\n";
 
     for (const auto &Overload : FOM.second) {
-      OS << "  { "
-         << Overload.second << ", "
-         << Overload.first->getValueAsListOfDefs("Signature").size()
+      OS << "  { " << Overload.second << ", "
+         << Overload.first->getValueAsListOfDefs("Signature").size() << ", "
+         << Overload.first->getValueAsDef("MinVersion")->getValueAsInt("ID")
+         << ", "
+         << Overload.first->getValueAsDef("MaxVersion")->getValueAsInt("ID")
          << " },\n";
-         Index++;
+      Index++;
     }
   }
   OS << "};\n\n";

@@ -223,7 +223,6 @@ void TextNodeDumper::Visit(const Decl *D) {
     return;
   }
 
-  Context = &D->getASTContext();
   {
     ColorScope Color(OS, ShowColors, DeclKindNameColor);
     OS << D->getDeclKindName() << "Decl";
@@ -688,7 +687,7 @@ void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->getResultAPValueKind() != APValue::None) {
     ColorScope Color(OS, ShowColors, ValueColor);
     OS << " ";
-    Node->getAPValueResult().printPretty(OS, *Context, Node->getType());
+    Node->getAPValueResult().dump(OS);
   }
 }
 
