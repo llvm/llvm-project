@@ -550,7 +550,7 @@ private:
   /// Models memory reallocation.
   ///
   /// \param [in] CE The expression that reallocated memory
-  /// \param [in] FreesMemOnFailure Whether if reallocation fails, the supplied
+  /// \param [in] ShouldFreeOnFail Whether if reallocation fails, the supplied
   ///   memory should be freed.
   /// \param [in] State The \c ProgramState right before reallocation.
   /// \param [in] SuffixWithN Whether the reallocation function we're modeling
