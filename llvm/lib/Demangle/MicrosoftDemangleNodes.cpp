@@ -120,8 +120,6 @@ std::string Node::toString(OutputFlags Flags) const {
   return {OS.getBuffer()};
 }
 
-void TypeNode::outputQuals(bool SpaceBefore, bool SpaceAfter) const {}
-
 void PrimitiveTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
   switch (PrimKind) {
     OUTPUT_ENUM_CLASS_VALUE(PrimitiveKind, Void, "void");

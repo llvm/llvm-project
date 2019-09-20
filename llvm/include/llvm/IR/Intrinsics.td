@@ -187,6 +187,12 @@ class LLVMVectorElementType<int num> : LLVMMatchType<num>;
 // vector type, but change the element count to be half as many
 class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 
+// Match the type of another intrinsic parameter that is expected to be a
+// vector type (i.e. <N x iM>) but with each element subdivided to
+// form a vector with more elements that are smaller than the original.
+class LLVMSubdivide2VectorType<int num> : LLVMMatchType<num>;
+class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
+
 def llvm_void_ty       : LLVMType<isVoid>;
 let isAny = 1 in {
   def llvm_any_ty        : LLVMType<Any>;

@@ -655,7 +655,8 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     break;
   default:
-    llvm_unreachable("Unsupported architecture");
+    // Nothing to do.
+    break;
   }
 #undef ELF_RELOC
   IO.enumFallback<Hex32>(Value);

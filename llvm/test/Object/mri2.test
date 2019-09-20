@@ -4,4 +4,4 @@
 ; RUN: echo end >> %t.mri
 
 ; RUN: not llvm-ar -M  < %t.mri 2>&1 | FileCheck %s
-; CHECK: error: editing multiple archives not supported
+; CHECK: error: script line 2: editing multiple archives not supported

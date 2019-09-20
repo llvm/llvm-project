@@ -184,6 +184,11 @@ raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
 
+struct EncodingInfoByHwMode : public InfoByHwMode<Record*> {
+  EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH);
+  EncodingInfoByHwMode() = default;
+};
+
 } // namespace llvm
 
 #endif // LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H

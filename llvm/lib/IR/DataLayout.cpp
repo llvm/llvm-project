@@ -44,7 +44,6 @@ using namespace llvm;
 
 StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
   assert(!ST->isOpaque() && "Cannot get layout of opaque structs");
-  StructAlignment = 0;
   StructSize = 0;
   IsPadded = false;
   NumElements = ST->getNumElements();
@@ -52,10 +51,10 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
   // Loop over each of the elements, placing them in memory.
   for (unsigned i = 0, e = NumElements; i != e; ++i) {
     Type *Ty = ST->getElementType(i);
-    unsigned TyAlign = ST->isPacked() ? 1 : DL.getABITypeAlignment(Ty);
+    const llvm::Align TyAlign(ST->isPacked() ? 1 : DL.getABITypeAlignment(Ty));
 
     // Add padding if necessary to align the data element properly.
-    if ((StructSize & (TyAlign-1)) != 0) {
+    if (!isAligned(TyAlign, StructSize)) {
       IsPadded = true;
       StructSize = alignTo(StructSize, TyAlign);
     }
@@ -67,12 +66,9 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
     StructSize += DL.getTypeAllocSize(Ty); // Consume space for this data item
   }
 
-  // Empty structures have alignment of 1 byte.
-  if (StructAlignment == 0) StructAlignment = 1;
-
   // Add padding to the end of the struct so that it could be put in an array
   // and all array elements would be aligned correctly.
-  if ((StructSize & (StructAlignment-1)) != 0) {
+  if (!isAligned(StructAlignment, StructSize)) {
     IsPadded = true;
     StructSize = alignTo(StructSize, StructAlignment);
   }
@@ -102,9 +98,10 @@ unsigned StructLayout::getElementContainingOffset(uint64_t Offset) const {
 // LayoutAlignElem, LayoutAlign support
 //===----------------------------------------------------------------------===//
 
-LayoutAlignElem
-LayoutAlignElem::get(AlignTypeEnum align_type, unsigned abi_align,
-                     unsigned pref_align, uint32_t bit_width) {
+LayoutAlignElem LayoutAlignElem::get(AlignTypeEnum align_type,
+                                     llvm::Align abi_align,
+                                     llvm::Align pref_align,
+                                     uint32_t bit_width) {
   assert(abi_align <= pref_align && "Preferred alignment worse than ABI!");
   LayoutAlignElem retval;
   retval.AlignType = align_type;
@@ -126,10 +123,11 @@ LayoutAlignElem::operator==(const LayoutAlignElem &rhs) const {
 // PointerAlignElem, PointerAlign support
 //===----------------------------------------------------------------------===//
 
-PointerAlignElem
-PointerAlignElem::get(uint32_t AddressSpace, unsigned ABIAlign,
-                      unsigned PrefAlign, uint32_t TypeByteWidth,
-                      uint32_t IndexWidth) {
+PointerAlignElem PointerAlignElem::get(uint32_t AddressSpace,
+                                       llvm::Align ABIAlign,
+                                       llvm::Align PrefAlign,
+                                       uint32_t TypeByteWidth,
+                                       uint32_t IndexWidth) {
   assert(ABIAlign <= PrefAlign && "Preferred alignment worse than ABI!");
   PointerAlignElem retval;
   retval.AddressSpace = AddressSpace;
@@ -162,18 +160,19 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
 }
 
 static const LayoutAlignElem DefaultAlignments[] = {
-  { INTEGER_ALIGN, 1, 1, 1 },    // i1
-  { INTEGER_ALIGN, 8, 1, 1 },    // i8
-  { INTEGER_ALIGN, 16, 2, 2 },   // i16
-  { INTEGER_ALIGN, 32, 4, 4 },   // i32
-  { INTEGER_ALIGN, 64, 4, 8 },   // i64
-  { FLOAT_ALIGN, 16, 2, 2 },     // half
-  { FLOAT_ALIGN, 32, 4, 4 },     // float
-  { FLOAT_ALIGN, 64, 8, 8 },     // double
-  { FLOAT_ALIGN, 128, 16, 16 },  // ppcf128, quad, ...
-  { VECTOR_ALIGN, 64, 8, 8 },    // v2i32, v1i64, ...
-  { VECTOR_ALIGN, 128, 16, 16 }, // v16i8, v8i16, v4i32, ...
-  { AGGREGATE_ALIGN, 0, 0, 8 }   // struct
+    {INTEGER_ALIGN, 1, llvm::Align(1), llvm::Align(1)},   // i1
+    {INTEGER_ALIGN, 8, llvm::Align(1), llvm::Align(1)},   // i8
+    {INTEGER_ALIGN, 16, llvm::Align(2), llvm::Align(2)},  // i16
+    {INTEGER_ALIGN, 32, llvm::Align(4), llvm::Align(4)},  // i32
+    {INTEGER_ALIGN, 64, llvm::Align(4), llvm::Align(8)},  // i64
+    {FLOAT_ALIGN, 16, llvm::Align(2), llvm::Align(2)},    // half
+    {FLOAT_ALIGN, 32, llvm::Align(4), llvm::Align(4)},    // float
+    {FLOAT_ALIGN, 64, llvm::Align(8), llvm::Align(8)},    // double
+    {FLOAT_ALIGN, 128, llvm::Align(16), llvm::Align(16)}, // ppcf128, quad, ...
+    {VECTOR_ALIGN, 64, llvm::Align(8), llvm::Align(8)},   // v2i32, v1i64, ...
+    {VECTOR_ALIGN, 128, llvm::Align(16),
+     llvm::Align(16)}, // v16i8, v8i16, v4i32, ...
+    {AGGREGATE_ALIGN, 0, llvm::Align(1), llvm::Align(8)} // struct
 };
 
 void DataLayout::reset(StringRef Desc) {
@@ -194,7 +193,7 @@ void DataLayout::reset(StringRef Desc) {
     setAlignment((AlignTypeEnum)E.AlignType, E.ABIAlign, E.PrefAlign,
                  E.TypeBitWidth);
   }
-  setPointerAlignment(0, 8, 8, 8, 8);
+  setPointerAlignment(0, llvm::Align(8), llvm::Align(8), 8, 8);
 
   parseSpecifier(Desc);
 }
@@ -320,8 +319,9 @@ void DataLayout::parseSpecifier(StringRef Desc) {
             report_fatal_error("Invalid index size of 0 bytes");
         }
       }
-      setPointerAlignment(AddrSpace, PointerABIAlign, PointerPrefAlign,
-                          PointerMemSize, IndexSize);
+      setPointerAlignment(AddrSpace, assumeAligned(PointerABIAlign),
+                          assumeAligned(PointerPrefAlign), PointerMemSize,
+                          IndexSize);
       break;
     }
     case 'i':
@@ -349,10 +349,15 @@ void DataLayout::parseSpecifier(StringRef Desc) {
         report_fatal_error(
             "Missing alignment specification in datalayout string");
       Split = split(Rest, ':');
-      unsigned ABIAlign = inBytes(getInt(Tok));
+      const unsigned ABIAlign = inBytes(getInt(Tok));
       if (AlignType != AGGREGATE_ALIGN && !ABIAlign)
         report_fatal_error(
             "ABI alignment specification must be >0 for non-aggregate types");
+
+      if (!isUInt<16>(ABIAlign))
+        report_fatal_error("Invalid ABI alignment, must be a 16bit integer");
+      if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
+        report_fatal_error("Invalid ABI alignment, must be a power of 2");
 
       // Preferred alignment.
       unsigned PrefAlign = ABIAlign;
@@ -361,7 +366,14 @@ void DataLayout::parseSpecifier(StringRef Desc) {
         PrefAlign = inBytes(getInt(Tok));
       }
 
-      setAlignment(AlignType, ABIAlign, PrefAlign, Size);
+      if (!isUInt<16>(PrefAlign))
+        report_fatal_error(
+            "Invalid preferred alignment, must be a 16bit integer");
+      if (PrefAlign != 0 && !isPowerOf2_64(PrefAlign))
+        report_fatal_error("Invalid preferred alignment, must be a power of 2");
+
+      setAlignment(AlignType, assumeAligned(ABIAlign), assumeAligned(PrefAlign),
+                   Size);
 
       break;
     }
@@ -474,20 +486,15 @@ DataLayout::findAlignmentLowerBound(AlignTypeEnum AlignType,
   });
 }
 
-void
-DataLayout::setAlignment(AlignTypeEnum align_type, unsigned abi_align,
-                         unsigned pref_align, uint32_t bit_width) {
+void DataLayout::setAlignment(AlignTypeEnum align_type, llvm::Align abi_align,
+                              llvm::Align pref_align, uint32_t bit_width) {
+  // AlignmentsTy::ABIAlign and AlignmentsTy::PrefAlign were once stored as
+  // uint16_t, it is unclear if there are requirements for alignment to be less
+  // than 2^16 other than storage. In the meantime we leave the restriction as
+  // an assert. See D67400 for context.
+  assert(Log2(abi_align) < 16 && Log2(pref_align) < 16 && "Alignment too big");
   if (!isUInt<24>(bit_width))
     report_fatal_error("Invalid bit width, must be a 24bit integer");
-  if (!isUInt<16>(abi_align))
-    report_fatal_error("Invalid ABI alignment, must be a 16bit integer");
-  if (!isUInt<16>(pref_align))
-    report_fatal_error("Invalid preferred alignment, must be a 16bit integer");
-  if (abi_align != 0 && !isPowerOf2_64(abi_align))
-    report_fatal_error("Invalid ABI alignment, must be a power of 2");
-  if (pref_align != 0 && !isPowerOf2_64(pref_align))
-    report_fatal_error("Invalid preferred alignment, must be a power of 2");
-
   if (pref_align < abi_align)
     report_fatal_error(
         "Preferred alignment cannot be less than the ABI alignment");
@@ -513,8 +520,9 @@ DataLayout::findPointerLowerBound(uint32_t AddressSpace) {
   });
 }
 
-void DataLayout::setPointerAlignment(uint32_t AddrSpace, unsigned ABIAlign,
-                                     unsigned PrefAlign, uint32_t TypeByteWidth,
+void DataLayout::setPointerAlignment(uint32_t AddrSpace, llvm::Align ABIAlign,
+                                     llvm::Align PrefAlign,
+                                     uint32_t TypeByteWidth,
                                      uint32_t IndexWidth) {
   if (PrefAlign < ABIAlign)
     report_fatal_error(
@@ -543,14 +551,14 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
   // the lower_bound will point to when it fails an exact match.
   if (I != Alignments.end() && I->AlignType == (unsigned)AlignType &&
       (I->TypeBitWidth == BitWidth || AlignType == INTEGER_ALIGN))
-    return ABIInfo ? I->ABIAlign : I->PrefAlign;
+    return (ABIInfo ? I->ABIAlign : I->PrefAlign).value();
 
   if (AlignType == INTEGER_ALIGN) {
     // If we didn't have a larger value try the largest value we have.
     if (I != Alignments.begin()) {
       --I; // Go to the previous entry and see if its an integer.
       if (I->AlignType == INTEGER_ALIGN)
-        return ABIInfo ? I->ABIAlign : I->PrefAlign;
+        return (ABIInfo ? I->ABIAlign : I->PrefAlign).value();
     }
   } else if (AlignType == VECTOR_ALIGN) {
     // By default, use natural alignment for vector types. This is consistent
@@ -636,7 +644,7 @@ unsigned DataLayout::getPointerABIAlignment(unsigned AS) const {
     I = findPointerLowerBound(0);
     assert(I->AddressSpace == 0);
   }
-  return I->ABIAlign;
+  return I->ABIAlign.value();
 }
 
 unsigned DataLayout::getPointerPrefAlignment(unsigned AS) const {
@@ -645,7 +653,7 @@ unsigned DataLayout::getPointerPrefAlignment(unsigned AS) const {
     I = findPointerLowerBound(0);
     assert(I->AddressSpace == 0);
   }
-  return I->PrefAlign;
+  return I->PrefAlign.value();
 }
 
 unsigned DataLayout::getPointerSize(unsigned AS) const {

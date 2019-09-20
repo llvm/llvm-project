@@ -220,21 +220,6 @@ static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
 
 int writeTbdStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
                  const StringRef Format, raw_ostream &Out) {
-  auto ArchOrError =
-      [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::Architecture> {
-    switch (T.getArch()) {
-    default:
-      return createStringError(errc::not_supported, "Invalid Architecture.\n");
-    case llvm::Triple::ArchType::x86:
-      return AK_i386;
-    case llvm::Triple::ArchType::x86_64:
-      return AK_x86_64;
-    case llvm::Triple::ArchType::arm:
-      return AK_armv7;
-    case llvm::Triple::ArchType::aarch64:
-      return AK_arm64;
-    }
-  }(T);
 
   auto PlatformKindOrError =
       [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformKind> {
@@ -256,19 +241,15 @@ int writeTbdStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
     return createStringError(errc::not_supported, "Invalid Platform.\n");
   }(T);
 
-  if (!ArchOrError)
-    return -1;
-
   if (!PlatformKindOrError)
     return -1;
 
-  Architecture Arch = ArchOrError.get();
   PlatformKind Plat = PlatformKindOrError.get();
+  TargetList Targets({Target(llvm::MachO::mapToArchitecture(T), Plat)});
 
   InterfaceFile File;
   File.setFileType(FileType::TBD_V3); // Only supporting v3 for now.
-  File.setArchitectures(Arch);
-  File.setPlatform(Plat);
+  File.addTargets(Targets);
 
   for (const auto &Symbol : Symbols) {
     auto Name = Symbol.Name;
@@ -286,9 +267,9 @@ int writeTbdStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
       break;
     }
     if (Symbol.Weak)
-      File.addSymbol(Kind, Name, Arch, SymbolFlags::WeakDefined);
+      File.addSymbol(Kind, Name, Targets, SymbolFlags::WeakDefined);
     else
-      File.addSymbol(Kind, Name, Arch);
+      File.addSymbol(Kind, Name, Targets);
   }
 
   SmallString<4096> Buffer;

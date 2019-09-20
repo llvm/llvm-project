@@ -278,13 +278,13 @@ public:
 
   // Create an array of all -analyzer-config command line options. Sort it in
   // the constructor.
-  std::vector<StringRef> AnalyzerConfigCmdFlags = {
+  std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = {
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
 
 #define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-    CMDFLAG,
+  llvm::StringLiteral(CMDFLAG),
 
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 #undef ANALYZER_OPTION
@@ -415,9 +415,10 @@ inline UserModeKind AnalyzerOptions::getUserMode() const {
 
 inline std::vector<StringRef>
 AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
-  static const StringRef StaticAnalyzerCheckerNames[] = {
+  static constexpr llvm::StringLiteral StaticAnalyzerCheckerNames[] = {
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN) FULLNAME,
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
+  llvm::StringLiteral(FULLNAME),
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
@@ -433,9 +434,9 @@ AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
 
 inline std::vector<StringRef>
 AnalyzerOptions::getRegisteredPackages(bool IncludeExperimental) {
-  static const StringRef StaticAnalyzerPackageNames[] = {
+  static constexpr llvm::StringLiteral StaticAnalyzerPackageNames[] = {
 #define GET_PACKAGES
-#define PACKAGE(FULLNAME) FULLNAME,
+#define PACKAGE(FULLNAME) llvm::StringLiteral(FULLNAME),
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef PACKAGE
 #undef GET_PACKAGES

@@ -64,8 +64,6 @@ def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
-def err_fe_stdout_binary : Error<"unable to change standard output to binary">,
-  DefaultFatal;
 def err_fe_dependency_file_requires_MT : Error<
     "-dependency-file requires at least one -MT or -MQ option">;
 def err_fe_invalid_plugin_name : Error<
@@ -217,10 +215,6 @@ def err_modules_embed_file_not_found :
   DefaultFatal;
 def err_module_header_file_not_found :
   Error<"module header file '%0' not found">, DefaultFatal;
-def err_module_header_file_invalid :
-  Error<"unexpected module header file input '%0'">, DefaultFatal;
-
-def err_interface_stubs : Error<"clang-ifs (-emit-iterface-stubs): %0">;
 
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
