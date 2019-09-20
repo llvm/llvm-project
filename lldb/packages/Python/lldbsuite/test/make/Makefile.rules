@@ -698,7 +698,7 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
 ifeq "$(OS)" "Darwin"
 $(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) -toolchain-stdlib-rpath $(LD_EXTRAS) \
+	$(SWIFTC) $(SWIFTFLAGS) -toolchain-stdlib-rpath $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
@@ -708,9 +708,9 @@ else # OS = Linux
 $(EXE): $(MODULENAME).swiftmodule.o $(OBJECTS)
 	@echo "### Linking" $(EXE)
 ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
-	$(SWIFTC) $(LD_EXTRAS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(SWIFTFLAGS) $(LD_EXTRAS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 else
-	$(SWIFTC) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(SWIFTFLAGS) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 endif
 
 $(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
@@ -795,10 +795,10 @@ endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
-	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
+	$(SWIFTC) $(SWIFTFLAGS) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ \
             $(patsubst %.swiftmodule.o,,$^)
 else
-	$(SWIFTC) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
+	$(SWIFTC) $(SWIFTFLAGS) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
 endif
 ifneq "$(MAKE_DSYM)" "NO"
 ifneq "$(DS)" ""
