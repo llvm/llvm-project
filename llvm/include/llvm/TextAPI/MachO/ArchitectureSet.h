@@ -59,6 +59,10 @@ public:
 
   ArchSetType rawValue() const { return ArchSet; }
 
+  bool hasX86() const {
+    return has(AK_i386) || has(AK_x86_64) || has(AK_x86_64h);
+  }
+
   template <typename Ty>
   class arch_iterator
       : public std::iterator<std::forward_iterator_tag, Architecture, size_t> {

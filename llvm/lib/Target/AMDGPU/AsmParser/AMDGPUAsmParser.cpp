@@ -2017,13 +2017,7 @@ bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
   }
 }
 
-static const StringRef Registers[] = {
-  { "v" },
-  { "s" },
-  { "ttmp" },
-  { "acc" },
-  { "a" },
-};
+static constexpr StringLiteral Registers[] = {"v", "s", "ttmp", "acc", "a"};
 
 bool
 AMDGPUAsmParser::isRegister(const AsmToken &Token,

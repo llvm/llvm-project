@@ -535,7 +535,7 @@ def MMX_PEXTRWrr: MMXIi8<0xC5, MRMSrcReg,
                      (outs GR32orGR64:$dst), (ins VR64:$src1, i32u8imm:$src2),
                      "pextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR32orGR64:$dst, (int_x86_mmx_pextr_w VR64:$src1,
-                                             imm:$src2))]>,
+                                             timm:$src2))]>,
                      Sched<[WriteVecExtract]>;
 let Constraints = "$src1 = $dst" in {
 let Predicates = [HasMMX, HasSSE1] in {
@@ -544,7 +544,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                     (ins VR64:$src1, GR32orGR64:$src2, i32u8imm:$src3),
                     "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                     [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
-                                      GR32orGR64:$src2, imm:$src3))]>,
+                                      GR32orGR64:$src2, timm:$src3))]>,
                     Sched<[WriteVecInsert, ReadDefault, ReadInt2Fpu]>;
 
   def MMX_PINSRWrm : MMXIi8<0xC4, MRMSrcMem,
@@ -553,7 +553,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                    "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                    [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
                                        (i32 (anyext (loadi16 addr:$src2))),
-                                     imm:$src3))]>,
+                                     timm:$src3))]>,
                    Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
 }
 }

@@ -53,11 +53,17 @@ class CONSUMABLE(unconsumed) DestructorTester {
 public:
   DestructorTester();
   DestructorTester(int);
+  DestructorTester(nullptr_t) RETURN_TYPESTATE(unconsumed);
+  DestructorTester(DestructorTester &&);
   
   void operator*() CALLABLE_WHEN("unconsumed");
   
   ~DestructorTester() CALLABLE_WHEN("consumed");
+
 };
+
+void dtByVal(DestructorTester);
+void dtByValMarkUnconsumed(DestructorTester RETURN_TYPESTATE(unconsumed));
 
 void baf0(const ConsumableClass<int>  var);
 void baf1(const ConsumableClass<int> &var);
@@ -118,6 +124,19 @@ void testDestruction() {
   
   return; // expected-warning {{invalid invocation of method '~DestructorTester' on object 'D0' while it is in the 'unconsumed' state}} \
              expected-warning {{invalid invocation of method '~DestructorTester' on object 'D1' while it is in the 'unconsumed' state}}
+}
+
+void testDestructionByVal() {
+  {
+    // both the var and the temporary are consumed:
+    DestructorTester D0(nullptr);
+    dtByVal((DestructorTester &&)D0);
+  }
+  {
+    // the var is consumed but the temporary isn't:
+    DestructorTester D1(nullptr);
+    dtByValMarkUnconsumed((DestructorTester &&)D1); // expected-warning {{invalid invocation of method '~DestructorTester' on a temporary object while it is in the 'unconsumed' state}}
+  }
 }
 
 void testTempValue() {
@@ -413,10 +432,15 @@ void testParamReturnTypestateCallee(bool cond, ConsumableClass<int> &Param RETUR
   Param.consume();
 }
 
+void testRvalueRefParamReturnTypestateCallee(ConsumableClass<int> &&Param RETURN_TYPESTATE(unconsumed)) {
+  Param.unconsume();
+}
+
 void testParamReturnTypestateCaller() {
   ConsumableClass<int> var;
   
   testParamReturnTypestateCallee(true, var);
+  testRvalueRefParamReturnTypestateCallee((ConsumableClass<int> &&)var);
   
   *var;
 }
@@ -479,6 +503,9 @@ void testCallingConventions() {
   *var;
   
   baf2(&var);  
+  *var;
+
+  baf3(var);
   *var;
   
   baf4(var);  

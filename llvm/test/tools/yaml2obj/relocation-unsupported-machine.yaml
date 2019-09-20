@@ -1,0 +1,24 @@
+## Show that yaml2obj is able to write relocations for an unknown e_machine properly.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readelf %t1 --relocations | FileCheck %s
+
+# CHECK: Relocation section '.rela.text' at offset 0x40 contains 2 entries:
+# CHECK:      Offset            Info             Type    Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000001  0000000000000002 Unknown                                 0
+# CHECK-NEXT: 0000000000000003  0000000000000004 Unknown                                 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: 0x1234
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+      - Offset: 0x1
+        Type:   0x2
+      - Offset: 0x3
+        Type:   0x4

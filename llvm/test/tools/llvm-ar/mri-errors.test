@@ -1,0 +1,41 @@
+## Test different MRI comment formats and whitespace.
+
+# RUN: rm -rf %t && mkdir -p %t
+
+# RUN: echo "create %t/mri.ar" > %t/script1.mri
+# RUN: echo "addlib %t/missing.a" >> %t/script1.mri
+
+# RUN: not llvm-ar -M < %t/script1.mri 2>&1 | FileCheck --check-prefix=SCRIPT1 %s
+# SCRIPT1: error: script line 2: could not open library
+
+# RUN: echo "create %t/mri.ar" > %t/script2.mri
+# RUN: echo "addlib %t/bad.a" >> %t/script2.mri
+
+# RUN: echo "bad archive" > %t/bad.a
+
+# RUN: not llvm-ar -M < %t/script2.mri 2>&1 | FileCheck --check-prefix=SCRIPT2 %s
+# SCRIPT2: error: script line 2: could not parse library
+
+# RUN: echo "create %t/mri.ar" > %t/script3.mri
+# RUN: echo "create %t/second.ar" >> %t/script3.mri
+
+# RUN: not llvm-ar -M < %t/script3.mri 2>&1 | FileCheck --check-prefix=SCRIPT3 %s
+# SCRIPT3: error: script line 2: editing multiple archives not supported
+
+# RUN: echo "save" > %t/script4.mri
+# RUN: echo "create %t/mri.ar" >> %t/script4.mri
+
+# RUN: not llvm-ar -M < %t/script4.mri 2>&1 | FileCheck --check-prefix=SCRIPT4 %s
+# SCRIPT4: error: script line 2: file already saved
+
+# RUN: echo "create %t/mri.ar" > %t/script5.mri
+# RUN: echo "bad command" >> %t/script5.mri
+
+# RUN: not llvm-ar -M < %t/script5.mri 2>&1 | FileCheck --check-prefix=SCRIPT5 %s
+# SCRIPT5: error: script line 2: unknown command: bad
+
+# RUN: echo "bad command" | not llvm-ar -M 2>&1 | FileCheck --check-prefix=SCRIPT6 %s
+# SCRIPT6: error: script line 1: unknown command: bad
+
+# RUN: not llvm-ar -M rc %t/mri.ar 2>&1 | FileCheck --check-prefix=SCRIPT7 %s
+# SCRIPT7: error: cannot mix -M and other options

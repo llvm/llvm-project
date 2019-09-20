@@ -760,7 +760,7 @@ static std::tuple<Register, unsigned, MachineInstr *>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (!Def)
-    return {Reg, 0, nullptr};
+    return std::make_tuple(Reg, 0, nullptr);
 
   if (Def->getOpcode() == AMDGPU::G_CONSTANT) {
     unsigned Offset;
@@ -770,21 +770,21 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
     else
       Offset = Op.getCImm()->getZExtValue();
 
-    return {Register(), Offset, Def};
+    return std::make_tuple(Register(), Offset, Def);
   }
 
   int64_t Offset;
   if (Def->getOpcode() == AMDGPU::G_ADD) {
     // TODO: Handle G_OR used for add case
     if (mi_match(Def->getOperand(1).getReg(), MRI, m_ICst(Offset)))
-      return {Def->getOperand(0).getReg(), Offset, Def};
+      return std::make_tuple(Def->getOperand(0).getReg(), Offset, Def);
 
     // FIXME: matcher should ignore copies
     if (mi_match(Def->getOperand(1).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return {Def->getOperand(0).getReg(), Offset, Def};
+      return std::make_tuple(Def->getOperand(0).getReg(), Offset, Def);
   }
 
-  return {Reg, 0, Def};
+  return std::make_tuple(Reg, 0, Def);
 }
 
 static unsigned getBufferStoreOpcode(LLT Ty,
@@ -931,7 +931,7 @@ AMDGPUInstructionSelector::splitBufferOffsets(MachineIRBuilder &B,
     B.setInsertPt(OldMBB, OldInsPt);
   }
 
-  return {BaseReg, ImmOffset, TotalConstOffset};
+  return std::make_tuple(BaseReg, ImmOffset, TotalConstOffset);
 }
 
 bool AMDGPUInstructionSelector::selectStoreIntrinsic(MachineInstr &MI,

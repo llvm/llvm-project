@@ -475,14 +475,40 @@ public:
     return VectorType::get(EltTy, VTy->getElementCount());
   }
 
-  /// This static method is like getInteger except that the element types are
-  /// half as wide as the elements in the input type.
+  // This static method gets a VectorType with the same number of elements as
+  // the input type, and the element type is an integer or float type which
+  // is half as wide as the elements in the input type.
   static VectorType *getTruncatedElementVectorType(VectorType *VTy) {
-    unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
-    assert((EltBits & 1) == 0 &&
-           "Cannot truncate vector element with odd bit-width");
-    Type *EltTy = IntegerType::get(VTy->getContext(), EltBits / 2);
+    Type *EltTy;
+    if (VTy->getElementType()->isFloatingPointTy()) {
+      switch(VTy->getElementType()->getTypeID()) {
+      case DoubleTyID:
+        EltTy = Type::getFloatTy(VTy->getContext());
+        break;
+      case FloatTyID:
+        EltTy = Type::getHalfTy(VTy->getContext());
+        break;
+      default:
+        llvm_unreachable("Cannot create narrower fp vector element type");
+      }
+    } else {
+      unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
+      assert((EltBits & 1) == 0 &&
+             "Cannot truncate vector element with odd bit-width");
+      EltTy = IntegerType::get(VTy->getContext(), EltBits / 2);
+    }
     return VectorType::get(EltTy, VTy->getElementCount());
+  }
+
+  // This static method returns a VectorType with a smaller number of elements
+  // of a larger type than the input element type. For example, a <16 x i8>
+  // subdivided twice would return <4 x i32>
+  static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs) {
+    for (int i = 0; i < NumSubdivs; ++i) {
+      VTy = VectorType::getDoubleElementsVectorType(VTy);
+      VTy = VectorType::getTruncatedElementVectorType(VTy);
+    }
+    return VTy;
   }
 
   /// This static method returns a VectorType with half as many elements as the
