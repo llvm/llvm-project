@@ -136,6 +136,13 @@ class AdvDataFormatterTestCase(TestBase):
         self.expect("frame variable int_array",
                     substrs=['1,2'])
 
+        # Test the patterns are matched in reverse-chronological order.
+        self.runCmd(
+            'type summary add --summary-string \"${var[2-3]}\" "int []"')
+
+        self.expect("frame variable int_array",
+                    substrs=['3,4'])
+
         self.runCmd("type summary clear")
 
         self.runCmd("type summary add -c -x \"i_am_cool \[[0-9]\]\"")

@@ -325,6 +325,7 @@ Clang-Tidy Checks
    objc-avoid-nserror-init
    objc-avoid-spinlock
    objc-forbidden-subclassing
+   objc-missing-hash
    objc-property-declaration
    objc-super-self
    openmp-exception-escape
