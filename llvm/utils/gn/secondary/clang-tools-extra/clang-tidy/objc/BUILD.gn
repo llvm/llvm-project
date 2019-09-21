@@ -14,6 +14,7 @@ static_library("objc") {
     "AvoidNSErrorInitCheck.cpp",
     "AvoidSpinlockCheck.cpp",
     "ForbiddenSubclassingCheck.cpp",
+    "MissingHashCheck.cpp",
     "ObjCTidyModule.cpp",
     "PropertyDeclarationCheck.cpp",
     "SuperSelfCheck.cpp",

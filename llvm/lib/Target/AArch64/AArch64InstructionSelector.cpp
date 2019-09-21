@@ -1018,7 +1018,9 @@ bool AArch64InstructionSelector::selectVectorSHL(
     return false;
 
   unsigned Opc = 0;
-  if (Ty == LLT::vector(4, 32)) {
+  if (Ty == LLT::vector(2, 64)) {
+    Opc = AArch64::USHLv2i64;
+  } else if (Ty == LLT::vector(4, 32)) {
     Opc = AArch64::USHLv4i32;
   } else if (Ty == LLT::vector(2, 32)) {
     Opc = AArch64::USHLv2i32;
@@ -1052,7 +1054,11 @@ bool AArch64InstructionSelector::selectVectorASHR(
   unsigned Opc = 0;
   unsigned NegOpc = 0;
   const TargetRegisterClass *RC = nullptr;
-  if (Ty == LLT::vector(4, 32)) {
+  if (Ty == LLT::vector(2, 64)) {
+    Opc = AArch64::SSHLv2i64;
+    NegOpc = AArch64::NEGv2i64;
+    RC = &AArch64::FPR128RegClass;
+  } else if (Ty == LLT::vector(4, 32)) {
     Opc = AArch64::SSHLv4i32;
     NegOpc = AArch64::NEGv4i32;
     RC = &AArch64::FPR128RegClass;

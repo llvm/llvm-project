@@ -3934,13 +3934,21 @@ class PPCPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineInstr *Loop, *EndLoop, *LoopCount;
   MachineFunction *MF;
   const TargetInstrInfo *TII;
+  int64_t TripCount;
 
 public:
   PPCPipelinerLoopInfo(MachineInstr *Loop, MachineInstr *EndLoop,
                        MachineInstr *LoopCount)
       : Loop(Loop), EndLoop(EndLoop), LoopCount(LoopCount),
         MF(Loop->getParent()->getParent()),
-        TII(MF->getSubtarget().getInstrInfo()) {}
+        TII(MF->getSubtarget().getInstrInfo()) {
+    // Inspect the Loop instruction up-front, as it may be deleted when we call
+    // createTripCountGreaterCondition.
+    if (LoopCount->getOpcode() == PPC::LI8 || LoopCount->getOpcode() == PPC::LI)
+      TripCount = LoopCount->getOperand(1).getImm();
+    else
+      TripCount = -1;
+  }
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
     // Only ignore the terminator.
@@ -3950,9 +3958,7 @@ public:
   Optional<bool>
   createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                   SmallVectorImpl<MachineOperand> &Cond) override {
-    bool IsConstantTripCount =
-        LoopCount->getOpcode() == PPC::LI8 || LoopCount->getOpcode() == PPC::LI;
-    if (!IsConstantTripCount) {
+    if (TripCount == -1) {
       // Since BDZ/BDZ8 that we will insert will also decrease the ctr by 1,
       // so we don't need to generate any thing here.
       Cond.push_back(MachineOperand::CreateImm(0));
@@ -3962,7 +3968,6 @@ public:
       return {};
     }
 
-    int64_t TripCount = LoopCount->getOperand(1).getImm();
     return TripCount > TC;
   }
 

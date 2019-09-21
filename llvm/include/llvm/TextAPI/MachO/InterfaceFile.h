@@ -26,20 +26,12 @@
 #include "llvm/TextAPI/MachO/Architecture.h"
 #include "llvm/TextAPI/MachO/ArchitectureSet.h"
 #include "llvm/TextAPI/MachO/PackedVersion.h"
+#include "llvm/TextAPI/MachO/Platform.h"
 #include "llvm/TextAPI/MachO/Symbol.h"
+#include "llvm/TextAPI/MachO/Target.h"
 
 namespace llvm {
 namespace MachO {
-
-/// Defines the list of MachO platforms.
-enum class PlatformKind : unsigned {
-  unknown,
-  macOS = MachO::PLATFORM_MACOS,
-  iOS = MachO::PLATFORM_IOS,
-  tvOS = MachO::PLATFORM_TVOS,
-  watchOS = MachO::PLATFORM_WATCHOS,
-  bridgeOS = MachO::PLATFORM_BRIDGEOS,
-};
 
 /// Defines a list of Objective-C constraints.
 enum class ObjCConstraintType : unsigned {
@@ -89,29 +81,42 @@ public:
 
   InterfaceFileRef(StringRef InstallName) : InstallName(InstallName) {}
 
-  InterfaceFileRef(StringRef InstallName, ArchitectureSet Archs)
-      : InstallName(InstallName), Architectures(Archs) {}
+  InterfaceFileRef(StringRef InstallName, const TargetList Targets)
+      : InstallName(InstallName), Targets(std::move(Targets)) {}
 
   StringRef getInstallName() const { return InstallName; };
-  void addArchitectures(ArchitectureSet Archs) { Architectures |= Archs; }
-  ArchitectureSet getArchitectures() const { return Architectures; }
-  bool hasArchitecture(Architecture Arch) const {
-    return Architectures.has(Arch);
+
+  void addTarget(const Target &Target);
+  template <typename RangeT> void addTargets(RangeT &&Targets) {
+    for (const auto &Target : Targets)
+      addTarget(Target(Target));
   }
 
+  using const_target_iterator = TargetList::const_iterator;
+  using const_target_range = llvm::iterator_range<const_target_iterator>;
+  const_target_range targets() const { return {Targets}; }
+
+  ArchitectureSet getArchitectures() const {
+    return mapToArchitectureSet(Targets);
+  }
+
+  PlatformSet getPlatforms() const { return mapToPlatformSet(Targets); }
+
   bool operator==(const InterfaceFileRef &O) const {
-    return std::tie(InstallName, Architectures) ==
-           std::tie(O.InstallName, O.Architectures);
+    return std::tie(InstallName, Targets) == std::tie(O.InstallName, O.Targets);
+  }
+
+  bool operator!=(const InterfaceFileRef &O) const {
+    return std::tie(InstallName, Targets) != std::tie(O.InstallName, O.Targets);
   }
 
   bool operator<(const InterfaceFileRef &O) const {
-    return std::tie(InstallName, Architectures) <
-           std::tie(O.InstallName, O.Architectures);
+    return std::tie(InstallName, Targets) < std::tie(O.InstallName, O.Targets);
   }
 
 private:
   std::string InstallName;
-  ArchitectureSet Architectures;
+  TargetList Targets;
 };
 
 } // end namespace MachO.
@@ -170,27 +175,43 @@ public:
   /// \return The file type.
   FileType getFileType() const { return FileKind; }
 
-  /// Set the platform.
-  void setPlatform(PlatformKind Platform_) { Platform = Platform_; }
-
-  /// Get the platform.
-  PlatformKind getPlatform() const { return Platform; }
-
-  /// Specify the set of supported architectures by this file.
-  void setArchitectures(ArchitectureSet Architectures_) {
-    Architectures = Architectures_;
+  /// Get the architectures.
+  ///
+  /// \return The applicable architectures.
+  ArchitectureSet getArchitectures() const {
+    return mapToArchitectureSet(Targets);
   }
 
-  /// Add the set of supported architectures by this file.
-  void addArchitectures(ArchitectureSet Architectures_) {
-    Architectures |= Architectures_;
+  /// Get the platforms.
+  ///
+  /// \return The applicable platforms.
+  PlatformSet getPlatforms() const { return mapToPlatformSet(Targets); }
+
+  /// Set and add target.
+  ///
+  /// \param Target the target to add into.
+  void addTarget(const Target &Target);
+
+  /// Set and add targets.
+  ///
+  /// Add the subset of llvm::triples that is supported by Tapi
+  ///
+  /// \param Targets the collection of targets.
+  template <typename RangeT> void addTargets(RangeT &&Targets) {
+    for (const auto &Target_ : Targets)
+      addTarget(Target(Target_));
   }
 
-  /// Add supported architecture by this file..
-  void addArch(Architecture Arch) { Architectures.set(Arch); }
+  using const_target_iterator = TargetList::const_iterator;
+  using const_target_range = llvm::iterator_range<const_target_iterator>;
+  const_target_range targets() const { return {Targets}; }
 
-  /// Get the set of supported architectures.
-  ArchitectureSet getArchitectures() const { return Architectures; }
+  using const_filtered_target_iterator =
+      llvm::filter_iterator<const_target_iterator,
+                            std::function<bool(const Target &)>>;
+  using const_filtered_target_range =
+      llvm::iterator_range<const_filtered_target_iterator>;
+  const_filtered_target_range targets(ArchitectureSet Archs) const;
 
   /// Set the install name of the library.
   void setInstallName(StringRef InstallName_) { InstallName = InstallName_; }
@@ -244,11 +265,18 @@ public:
   /// Check if this file was generated during InstallAPI.
   bool isInstallAPI() const { return IsInstallAPI; }
 
-  /// Set the parent umbrella framework.
-  void setParentUmbrella(StringRef Parent) { ParentUmbrella = Parent; }
+  /// Set the parent umbrella frameworks.
+  /// \param Target_ The target applicable to Parent
+  /// \param Parent  The name of Parent
+  void addParentUmbrella(const Target &Target_, StringRef Parent);
+  const std::vector<std::pair<Target, std::string>> &umbrellas() const {
+    return ParentUmbrellas;
+  }
 
   /// Get the parent umbrella framework.
-  StringRef getParentUmbrella() const { return ParentUmbrella; }
+  const std::vector<std::pair<Target, std::string>> getParentUmbrellas() const {
+    return ParentUmbrellas;
+  }
 
   /// Add an allowable client.
   ///
@@ -257,9 +285,9 @@ public:
   /// that is being generated needs to match one of the allowable clients or the
   /// linker refuses to link this library.
   ///
-  /// \param Name The name of the client that is allowed to link this library.
-  /// \param Architectures The set of architecture for which this applies.
-  void addAllowableClient(StringRef Name, ArchitectureSet Architectures);
+  /// \param InstallName The name of the client that is allowed to link this library.
+  /// \param Target The target triple for which this applies.
+  void addAllowableClient(StringRef InstallName, const Target &Target);
 
   /// Get the list of allowable clients.
   ///
@@ -271,9 +299,8 @@ public:
   /// Add a re-exported library.
   ///
   /// \param InstallName The name of the library to re-export.
-  /// \param Architectures The set of architecture for which this applies.
-  void addReexportedLibrary(StringRef InstallName,
-                            ArchitectureSet Architectures);
+  /// \param Target The target triple for which this applies.
+  void addReexportedLibrary(StringRef InstallName, const Target &Target);
 
   /// Get the list of re-exported libraries.
   ///
@@ -282,27 +309,27 @@ public:
     return ReexportedLibraries;
   }
 
-  /// Add an architecture/UUID pair.
+  /// Add an Target/UUID pair.
   ///
-  /// \param Arch The architecture for which this applies.
+  /// \param Target The target triple for which this applies.
   /// \param UUID The UUID of the library for the specified architecture.
-  void addUUID(Architecture Arch, StringRef UUID);
+  void addUUID(const Target &Target, StringRef UUID);
 
-  /// Add an architecture/UUID pair.
+  /// Add an Target/UUID pair.
   ///
-  /// \param Arch The architecture for which this applies.
+  /// \param Target The target triple for which this applies.
   /// \param UUID The UUID of the library for the specified architecture.
-  void addUUID(Architecture Arch, uint8_t UUID[16]);
+  void addUUID(const Target &Target, uint8_t UUID[16]);
 
-  /// Get the list of architecture/UUID pairs.
+  /// Get the list of Target/UUID pairs.
   ///
-  /// \return Returns a list of architecture/UUID pairs.
-  const std::vector<std::pair<Architecture, std::string>> &uuids() const {
+  /// \return Returns a list of Target/UUID pairs.
+  const std::vector<std::pair<Target, std::string>> &uuids() const {
     return UUIDs;
   }
 
   /// Add a symbol to the symbols list or extend an existing one.
-  void addSymbol(SymbolKind Kind, StringRef Name, ArchitectureSet Architectures,
+  void addSymbol(SymbolKind Kind, StringRef Name, const TargetList &Targets,
                  SymbolFlags Flags = SymbolFlags::None);
 
   using SymbolMapType = DenseMap<SymbolsMapKey, Symbol *>;
@@ -362,10 +389,9 @@ private:
     return StringRef(reinterpret_cast<const char *>(Ptr), String.size());
   }
 
+  TargetList Targets;
   std::string Path;
   FileType FileKind;
-  PlatformKind Platform;
-  ArchitectureSet Architectures;
   std::string InstallName;
   PackedVersion CurrentVersion;
   PackedVersion CompatibilityVersion;
@@ -374,10 +400,10 @@ private:
   bool IsAppExtensionSafe{false};
   bool IsInstallAPI{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;
-  std::string ParentUmbrella;
+  std::vector<std::pair<Target, std::string>> ParentUmbrellas;
   std::vector<InterfaceFileRef> AllowableClients;
   std::vector<InterfaceFileRef> ReexportedLibraries;
-  std::vector<std::pair<Architecture, std::string>> UUIDs;
+  std::vector<std::pair<Target, std::string>> UUIDs;
   SymbolMapType Symbols;
 };
 

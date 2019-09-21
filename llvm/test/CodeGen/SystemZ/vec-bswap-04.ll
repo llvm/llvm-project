@@ -1,6 +1,6 @@
 ; Test vector extraction of byte-swapped value to memory.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)

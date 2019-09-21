@@ -374,8 +374,8 @@ public:
       return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
-    bool IsInRange = isRV64() ? true : isInt<32>(Imm) || isUInt<32>(Imm);
-    return IsConstantImm && IsInRange && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None &&
+           (isRV64() || (isInt<32>(Imm) || isUInt<32>(Imm)));
   }
 
   bool isUImmLog2XLen() const {

@@ -6,7 +6,7 @@
 
 ; Check CSR split can work properly for tests below.
 
-@a = common dso_local local_unnamed_addr global i32 0, align 4
+@a = dso_local local_unnamed_addr global i32 0, align 4
 
 define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-PWR9-LABEL: test1:
