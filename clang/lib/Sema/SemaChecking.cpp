@@ -4475,7 +4475,15 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
                                          AtomicExpr::AtomicOp Op) {
   CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
   DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+  MultiExprArg Args{TheCall->getArgs(), TheCall->getNumArgs()};
+  return BuildAtomicExpr({TheCall->getBeginLoc(), TheCall->getEndLoc()},
+                         DRE->getSourceRange(), TheCall->getRParenLoc(), Args,
+                         Op);
+}
 
+ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
+                                 SourceLocation RParenLoc, MultiExprArg Args,
+                                 AtomicExpr::AtomicOp Op) {
   // All the non-OpenCL operations take one of the following forms.
   // The OpenCL operations take the __c11 forms with one extra argument for
   // synchronization scope.
@@ -4622,21 +4630,21 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   if (IsOpenCL && Op != AtomicExpr::AO__opencl_atomic_init)
     ++AdjustedNumArgs;
   // Check we have the right number of arguments.
-  if (TheCall->getNumArgs() < AdjustedNumArgs) {
-    Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args)
-        << 0 << AdjustedNumArgs << TheCall->getNumArgs()
-        << TheCall->getCallee()->getSourceRange();
+  if (Args.size() < AdjustedNumArgs) {
+    Diag(CallRange.getEnd(), diag::err_typecheck_call_too_few_args)
+        << 0 << AdjustedNumArgs << static_cast<unsigned>(Args.size())
+        << ExprRange;
     return ExprError();
-  } else if (TheCall->getNumArgs() > AdjustedNumArgs) {
-    Diag(TheCall->getArg(AdjustedNumArgs)->getBeginLoc(),
+  } else if (Args.size() > AdjustedNumArgs) {
+    Diag(Args[AdjustedNumArgs]->getBeginLoc(),
          diag::err_typecheck_call_too_many_args)
-        << 0 << AdjustedNumArgs << TheCall->getNumArgs()
-        << TheCall->getCallee()->getSourceRange();
+        << 0 << AdjustedNumArgs << static_cast<unsigned>(Args.size())
+        << ExprRange;
     return ExprError();
   }
 
   // Inspect the first argument of the atomic operation.
-  Expr *Ptr = TheCall->getArg(0);
+  Expr *Ptr = Args[0];
   ExprResult ConvertedPtr = DefaultFunctionArrayLvalueConversion(Ptr);
   if (ConvertedPtr.isInvalid())
     return ExprError();
@@ -4644,7 +4652,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   Ptr = ConvertedPtr.get();
   const PointerType *pointerType = Ptr->getType()->getAs<PointerType>();
   if (!pointerType) {
-    Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer)
+    Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
         << Ptr->getType() << Ptr->getSourceRange();
     return ExprError();
   }
@@ -4654,13 +4662,13 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   QualType ValType = AtomTy; // 'C'
   if (IsC11) {
     if (!AtomTy->isAtomicType()) {
-      Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_atomic)
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic)
           << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
     if ((Form != Load && Form != LoadCopy && AtomTy.isConstQualified()) ||
         AtomTy.getAddressSpace() == LangAS::opencl_constant) {
-      Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_non_const_atomic)
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_non_const_atomic)
           << (AtomTy.isConstQualified() ? 0 : 1) << Ptr->getType()
           << Ptr->getSourceRange();
       return ExprError();
@@ -4668,7 +4676,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     ValType = AtomTy->getAs<AtomicType>()->getValueType();
   } else if (Form != Load && Form != LoadCopy) {
     if (ValType.isConstQualified()) {
-      Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_non_const_pointer)
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_non_const_pointer)
           << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
@@ -4679,7 +4687,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     // gcc does not enforce these rules for GNU atomics, but we do so for sanity.
     if (IsAddSub && !ValType->isIntegerType()
         && !ValType->isPointerType()) {
-      Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_atomic_int_or_ptr)
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_or_ptr)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
@@ -4687,12 +4695,12 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
       const BuiltinType *BT = ValType->getAs<BuiltinType>();
       if (!BT || (BT->getKind() != BuiltinType::Int &&
                   BT->getKind() != BuiltinType::UInt)) {
-        Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_int32_or_ptr);
+        Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_int32_or_ptr);
         return ExprError();
       }
     }
     if (!IsAddSub && !IsMinMax && !ValType->isIntegerType()) {
-      Diag(DRE->getBeginLoc(), diag::err_atomic_op_bitwise_needs_atomic_int)
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_bitwise_needs_atomic_int)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
@@ -4704,7 +4712,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   } else if (IsN && !ValType->isIntegerType() && !ValType->isPointerType()) {
     // For __atomic_*_n operations, the value type must be a scalar integral or
     // pointer type which is 1, 2, 4, 8 or 16 bytes in length.
-    Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_atomic_int_or_ptr)
+    Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_or_ptr)
         << IsC11 << Ptr->getType() << Ptr->getSourceRange();
     return ExprError();
   }
@@ -4713,7 +4721,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
       !AtomTy->isScalarType()) {
     // For GNU atomics, require a trivially-copyable type. This is not part of
     // the GNU atomics specification, but we enforce it for sanity.
-    Diag(DRE->getBeginLoc(), diag::err_atomic_op_needs_trivial_copy)
+    Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_trivial_copy)
         << Ptr->getType() << Ptr->getSourceRange();
     return ExprError();
   }
@@ -4729,7 +4737,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   case Qualifiers::OCL_Autoreleasing:
     // FIXME: Can this happen? By this point, ValType should be known
     // to be trivially copyable.
-    Diag(DRE->getBeginLoc(), diag::err_arc_atomic_ownership)
+    Diag(ExprRange.getBegin(), diag::err_arc_atomic_ownership)
         << ValType << Ptr->getSourceRange();
     return ExprError();
   }
@@ -4761,14 +4769,14 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   //  - weak flag (always converted to bool)
   //  - memory order (always converted to int)
   //  - scope  (always converted to int)
-  for (unsigned i = 0; i != TheCall->getNumArgs(); ++i) {
+  for (unsigned i = 0; i != Args.size(); ++i) {
     QualType Ty;
     if (i < NumVals[Form] + 1) {
       switch (i) {
       case 0:
         // The first argument is always a pointer. It has a fixed type.
         // It is always dereferenced, a nullptr is undefined.
-        CheckNonNullArgument(*this, TheCall->getArg(i), DRE->getBeginLoc());
+        CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
         // Nothing else to do: we already know all we want about this pointer.
         continue;
       case 1:
@@ -4782,14 +4790,14 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         else if (Form == Copy || Form == Xchg) {
           if (IsPassedByAddress)
             // The value pointer is always dereferenced, a nullptr is undefined.
-            CheckNonNullArgument(*this, TheCall->getArg(i), DRE->getBeginLoc());
+            CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
           Ty = ByValType;
         } else if (Form == Arithmetic)
           Ty = Context.getPointerDiffType();
         else {
-          Expr *ValArg = TheCall->getArg(i);
+          Expr *ValArg = Args[i];
           // The value pointer is always dereferenced, a nullptr is undefined.
-          CheckNonNullArgument(*this, ValArg, DRE->getBeginLoc());
+          CheckNonNullArgument(*this, ValArg, ExprRange.getBegin());
           LangAS AS = LangAS::Default;
           // Keep address space of non-atomic pointer type.
           if (const PointerType *PtrTy =
@@ -4804,7 +4812,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         // The third argument to compare_exchange / GNU exchange is the desired
         // value, either by-value (for the C11 and *_n variant) or as a pointer.
         if (IsPassedByAddress)
-          CheckNonNullArgument(*this, TheCall->getArg(i), DRE->getBeginLoc());
+          CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
         Ty = ByValType;
         break;
       case 3:
@@ -4819,11 +4827,11 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
     InitializedEntity Entity =
         InitializedEntity::InitializeParameter(Context, Ty, false);
-    ExprResult Arg = TheCall->getArg(i);
+    ExprResult Arg = Args[i];
     Arg = PerformCopyInitialization(Entity, SourceLocation(), Arg);
     if (Arg.isInvalid())
       return true;
-    TheCall->setArg(i, Arg.get());
+    Args[i] = Arg.get();
   }
 
   // Permute the arguments into a 'consistent' order.
@@ -4832,36 +4840,36 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   switch (Form) {
   case Init:
     // Note, AtomicExpr::getVal1() has a special case for this atomic.
-    SubExprs.push_back(TheCall->getArg(1)); // Val1
+    SubExprs.push_back(Args[1]); // Val1
     break;
   case Load:
-    SubExprs.push_back(TheCall->getArg(1)); // Order
+    SubExprs.push_back(Args[1]); // Order
     break;
   case LoadCopy:
   case Copy:
   case Arithmetic:
   case Xchg:
-    SubExprs.push_back(TheCall->getArg(2)); // Order
-    SubExprs.push_back(TheCall->getArg(1)); // Val1
+    SubExprs.push_back(Args[2]); // Order
+    SubExprs.push_back(Args[1]); // Val1
     break;
   case GNUXchg:
     // Note, AtomicExpr::getVal2() has a special case for this atomic.
-    SubExprs.push_back(TheCall->getArg(3)); // Order
-    SubExprs.push_back(TheCall->getArg(1)); // Val1
-    SubExprs.push_back(TheCall->getArg(2)); // Val2
+    SubExprs.push_back(Args[3]); // Order
+    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(Args[2]); // Val2
     break;
   case C11CmpXchg:
-    SubExprs.push_back(TheCall->getArg(3)); // Order
-    SubExprs.push_back(TheCall->getArg(1)); // Val1
-    SubExprs.push_back(TheCall->getArg(4)); // OrderFail
-    SubExprs.push_back(TheCall->getArg(2)); // Val2
+    SubExprs.push_back(Args[3]); // Order
+    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(Args[4]); // OrderFail
+    SubExprs.push_back(Args[2]); // Val2
     break;
   case GNUCmpXchg:
-    SubExprs.push_back(TheCall->getArg(4)); // Order
-    SubExprs.push_back(TheCall->getArg(1)); // Val1
-    SubExprs.push_back(TheCall->getArg(5)); // OrderFail
-    SubExprs.push_back(TheCall->getArg(2)); // Val2
-    SubExprs.push_back(TheCall->getArg(3)); // Weak
+    SubExprs.push_back(Args[4]); // Order
+    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(Args[5]); // OrderFail
+    SubExprs.push_back(Args[2]); // Val2
+    SubExprs.push_back(Args[3]); // Weak
     break;
   }
 
@@ -4875,7 +4883,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   }
 
   if (auto ScopeModel = AtomicExpr::getScopeModel(Op)) {
-    auto *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+    auto *Scope = Args[Args.size() - 1];
     llvm::APSInt Result(32);
     if (Scope->isIntegerConstantExpr(Result, Context) &&
         !ScopeModel->isValid(Result.getZExtValue())) {
@@ -4885,9 +4893,8 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     SubExprs.push_back(Scope);
   }
 
-  AtomicExpr *AE =
-      new (Context) AtomicExpr(TheCall->getCallee()->getBeginLoc(), SubExprs,
-                               ResultType, Op, TheCall->getRParenLoc());
+  AtomicExpr *AE = new (Context)
+      AtomicExpr(ExprRange.getBegin(), SubExprs, ResultType, Op, RParenLoc);
 
   if ((Op == AtomicExpr::AO__c11_atomic_load ||
        Op == AtomicExpr::AO__c11_atomic_store ||

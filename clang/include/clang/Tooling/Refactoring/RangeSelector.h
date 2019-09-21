@@ -79,10 +79,19 @@ RangeSelector statements(std::string ID);
 // (all source between the braces).
 RangeSelector initListElements(std::string ID);
 
+/// Given an \IfStmt (bound to \p ID), selects the range of the else branch,
+/// starting from the \c else keyword.
+RangeSelector elseBranch(std::string ID);
+
 /// Selects the range from which `S` was expanded (possibly along with other
 /// source), if `S` is an expansion, and `S` itself, otherwise.  Corresponds to
 /// `SourceManager::getExpansionRange`.
 RangeSelector expansion(RangeSelector S);
+
+/// Chooses between the two selectors, based on whether \p ID is bound in the
+/// match.
+RangeSelector ifBound(std::string ID, RangeSelector TrueSelector,
+                      RangeSelector FalseSelector);
 } // namespace tooling
 } // namespace clang
 

@@ -10255,20 +10255,18 @@ static void diagnoseLogicalNotOnLHSofCheck(Sema &S, ExprResult &LHS,
       << FixItHint::CreateInsertion(SecondClose, ")");
 }
 
-// Get the decl for a simple expression: a reference to a variable,
-// an implicit C++ field reference, or an implicit ObjC ivar reference.
-static ValueDecl *getCompareDecl(Expr *E) {
-  if (DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E))
-    return DR->getDecl();
-  if (ObjCIvarRefExpr *Ivar = dyn_cast<ObjCIvarRefExpr>(E)) {
-    if (Ivar->isFreeIvar())
-      return Ivar->getDecl();
-  }
-  if (MemberExpr *Mem = dyn_cast<MemberExpr>(E)) {
+// Returns true if E refers to a non-weak array.
+static bool checkForArray(const Expr *E) {
+  const ValueDecl *D = nullptr;
+  if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E)) {
+    D = DR->getDecl();
+  } else if (const MemberExpr *Mem = dyn_cast<MemberExpr>(E)) {
     if (Mem->isImplicitAccess())
-      return Mem->getMemberDecl();
+      D = Mem->getMemberDecl();
   }
-  return nullptr;
+  if (!D)
+    return false;
+  return D->getType()->isArrayType() && !D->isWeak();
 }
 
 /// Diagnose some forms of syntactically-obvious tautological comparison.
@@ -10301,8 +10299,6 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   // obvious cases in the definition of the template anyways. The idea is to
   // warn when the typed comparison operator will always evaluate to the same
   // result.
-  ValueDecl *DL = getCompareDecl(LHSStripped);
-  ValueDecl *DR = getCompareDecl(RHSStripped);
 
   // Used for indexing into %select in warn_comparison_always
   enum {
@@ -10311,7 +10307,8 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
     AlwaysFalse,
     AlwaysEqual, // std::strong_ordering::equal from operator<=>
   };
-  if (DL && DR && declaresSameEntity(DL, DR)) {
+
+  if (Expr::isSameComparisonOperand(LHS, RHS)) {
     unsigned Result;
     switch (Opc) {
     case BO_EQ: case BO_LE: case BO_GE:
@@ -10331,9 +10328,7 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
                           S.PDiag(diag::warn_comparison_always)
                               << 0 /*self-comparison*/
                               << Result);
-  } else if (DL && DR &&
-             DL->getType()->isArrayType() && DR->getType()->isArrayType() &&
-             !DL->isWeak() && !DR->isWeak()) {
+  } else if (checkForArray(LHSStripped) && checkForArray(RHSStripped)) {
     // What is it always going to evaluate to?
     unsigned Result;
     switch(Opc) {
