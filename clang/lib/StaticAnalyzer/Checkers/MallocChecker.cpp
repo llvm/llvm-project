@@ -137,8 +137,8 @@ class RefState {
 
   const Stmt *S;
 
-  Kind K : 3;
-  AllocationFamily Family : 3;
+  Kind K;
+  AllocationFamily Family;
 
   RefState(Kind k, const Stmt *s, AllocationFamily family)
       : S(s), K(k), Family(family) {
