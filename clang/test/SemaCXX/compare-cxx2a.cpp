@@ -8,12 +8,18 @@
 #define ASSERT_TYPE(...) static_assert(__is_same(__VA_ARGS__))
 #define ASSERT_EXPR_TYPE(Expr, Expect) static_assert(__is_same(decltype(Expr), Expect));
 
+struct S {
+  static int x[5];
+};
+
 void self_compare() {
   int a;
   int *b = nullptr;
+  S s;
 
   (void)(a <=> a); // expected-warning {{self-comparison always evaluates to 'std::strong_ordering::equal'}}
   (void)(b <=> b); // expected-warning {{self-comparison always evaluates to 'std::strong_ordering::equal'}}
+  (void)(s.x[a] <=> S::x[a]); // expected-warning {{self-comparison always evaluates to 'std::strong_ordering::equal'}}
 }
 
 void test0(long a, unsigned long b) {

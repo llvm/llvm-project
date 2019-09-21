@@ -620,4 +620,17 @@ namespace Uninit {
   constexpr int s1 = switch_var(1);
   constexpr int s2 = switch_var(2);
   static_assert(s1 == 1 && s2 == 2);
+
+  constexpr bool switch_into_init_stmt() {
+    switch (1) {
+      if (int n; false) {
+        for (int m; false;) {
+        case 1:
+          n = m = 1;
+          return n == 1 && m == 1;
+        }
+      }
+    }
+  }
+  static_assert(switch_into_init_stmt());
 }
