@@ -1,4 +1,4 @@
-//-- SystemZScheduleArch13.td - SystemZ Scheduling Definitions ----*- tblgen -*-=//
+//-- SystemZScheduleZ15.td - SystemZ Scheduling Definitions ----*- tblgen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the machine model for Arch13 to support instruction
+// This file defines the machine model for Z15 to support instruction
 // scheduling and other instruction cost heuristics.
 //
 // Pseudos expanded right after isel do not need to be modelled here.
 //
 //===----------------------------------------------------------------------===//
 
-def Arch13Model : SchedMachineModel {
+def Z15Model : SchedMachineModel {
 
     let UnsupportedFeatures = Arch13UnsupportedFeatures.List;
 
@@ -27,7 +27,7 @@ def Arch13Model : SchedMachineModel {
     let MispredictPenalty = 20;
 }
 
-let SchedModel = Arch13Model in  {
+let SchedModel = Z15Model in  {
 // These definitions need the SchedModel value. They could be put in a
 // subtarget common include file, but it seems the include system in Tablegen
 // currently (2016) rejects multiple includes of same file.
@@ -73,43 +73,43 @@ let NumMicroOps = 0 in {
 }
 
 // Execution units.
-def Arch13_FXaUnit     : ProcResource<2>;
-def Arch13_FXbUnit     : ProcResource<2>;
-def Arch13_LSUnit      : ProcResource<2>;
-def Arch13_VecUnit     : ProcResource<2>;
-def Arch13_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
-def Arch13_VBUnit      : ProcResource<2>;
-def Arch13_MCD         : ProcResource<1>;
+def Z15_FXaUnit     : ProcResource<2>;
+def Z15_FXbUnit     : ProcResource<2>;
+def Z15_LSUnit      : ProcResource<2>;
+def Z15_VecUnit     : ProcResource<2>;
+def Z15_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
+def Z15_VBUnit      : ProcResource<2>;
+def Z15_MCD         : ProcResource<1>;
 
 // Subtarget specific definitions of scheduling resources.
 let NumMicroOps = 0 in {
-  def : WriteRes<FXa, [Arch13_FXaUnit]>;
-  def : WriteRes<FXb, [Arch13_FXbUnit]>;
-  def : WriteRes<LSU, [Arch13_LSUnit]>;
-  def : WriteRes<VecBF,  [Arch13_VecUnit]>;
-  def : WriteRes<VecDF,  [Arch13_VecUnit]>;
-  def : WriteRes<VecDFX, [Arch13_VecUnit]>;
-  def : WriteRes<VecMul,  [Arch13_VecUnit]>;
-  def : WriteRes<VecStr,  [Arch13_VecUnit]>;
-  def : WriteRes<VecXsPm, [Arch13_VecUnit]>;
+  def : WriteRes<FXa, [Z15_FXaUnit]>;
+  def : WriteRes<FXb, [Z15_FXbUnit]>;
+  def : WriteRes<LSU, [Z15_LSUnit]>;
+  def : WriteRes<VecBF,  [Z15_VecUnit]>;
+  def : WriteRes<VecDF,  [Z15_VecUnit]>;
+  def : WriteRes<VecDFX, [Z15_VecUnit]>;
+  def : WriteRes<VecMul,  [Z15_VecUnit]>;
+  def : WriteRes<VecStr,  [Z15_VecUnit]>;
+  def : WriteRes<VecXsPm, [Z15_VecUnit]>;
   foreach Num = 2-5 in { let ResourceCycles = [Num] in {
-    def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Arch13_FXaUnit]>;
-    def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Arch13_FXbUnit]>;
-    def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Arch13_LSUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecBF"#Num), [Arch13_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecDF"#Num), [Arch13_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecDFX"#Num), [Arch13_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecMul"#Num), [Arch13_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecStr"#Num), [Arch13_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Arch13_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z15_FXaUnit]>;
+    def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z15_FXbUnit]>;
+    def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z15_LSUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecBF"#Num), [Z15_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecDF"#Num), [Z15_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecDFX"#Num), [Z15_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecMul"#Num), [Z15_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecStr"#Num), [Z15_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z15_VecUnit]>;
   }}
 
-  def : WriteRes<VecFPd,  [Arch13_VecFPdUnit]> { let ResourceCycles = [30]; }
+  def : WriteRes<VecFPd,  [Z15_VecFPdUnit]> { let ResourceCycles = [30]; }
 
-  def : WriteRes<VBU,     [Arch13_VBUnit]>; // Virtual Branching Unit
+  def : WriteRes<VBU,     [Z15_VBUnit]>; // Virtual Branching Unit
 }
 
-def : WriteRes<MCD, [Arch13_MCD]> { let NumMicroOps = 3;
+def : WriteRes<MCD, [Z15_MCD]> { let NumMicroOps = 3;
                                     let BeginGroup  = 1;
                                     let EndGroup    = 1; }
 

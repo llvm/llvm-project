@@ -1257,5 +1257,3 @@ bool TargetInstrInfo::getInsertSubregInputs(
   InsertedReg.SubIdx = (unsigned)MOSubIdx.getImm();
   return true;
 }
-
-TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() {}

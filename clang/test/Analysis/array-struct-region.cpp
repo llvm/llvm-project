@@ -1,20 +1,26 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
 // RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -Wno-tautological-compare\
 // RUN:                    -x c %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
 // RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -Wno-tautological-compare\
 // RUN:                    -x c++ -std=c++14 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
 // RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -Wno-tautological-compare\
 // RUN:                    -x c++ -std=c++17 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
 // RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -Wno-tautological-compare\
 // RUN:                    -DINLINE -x c %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
 // RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -Wno-tautological-compare\
 // RUN:                    -DINLINE -x c++ -std=c++14 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core\
 // RUN:                    -analyzer-checker=debug.ExprInspection -verify\
+// RUN:                    -Wno-tautological-compare\
 // RUN:                    -DINLINE -x c++ -std=c++17 %s
 
 void clang_analyzer_eval(int);

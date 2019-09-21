@@ -1,6 +1,6 @@
-; Test strict conversions between integer and float elements on arch13.
+; Test strict conversions between integer and float elements on z15.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 ; FIXME: llvm.experimental.constrained.[su]itofp does not yet exist
 

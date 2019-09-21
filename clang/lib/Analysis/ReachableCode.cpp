@@ -247,7 +247,7 @@ static bool isConfigurationValue(const Stmt *S,
     }
     case Stmt::UnaryOperatorClass: {
       const UnaryOperator *UO = cast<UnaryOperator>(S);
-      if (UO->getOpcode() != UO_LNot)
+      if (UO->getOpcode() != UO_LNot && UO->getOpcode() != UO_Minus)
         return false;
       bool SilenceableCondValNotSet =
           SilenceableCondVal && SilenceableCondVal->getBegin().isInvalid();

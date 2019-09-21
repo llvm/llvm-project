@@ -30,6 +30,7 @@ static bool supportsX86_64(uint64_t Type) {
   case ELF::R_X86_64_DTPOFF32:
   case ELF::R_X86_64_DTPOFF64:
   case ELF::R_X86_64_PC32:
+  case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_32:
   case ELF::R_X86_64_32S:
     return true;
@@ -47,6 +48,7 @@ static uint64_t resolveX86_64(RelocationRef R, uint64_t S, uint64_t A) {
   case ELF::R_X86_64_DTPOFF64:
     return S + getELFAddend(R);
   case ELF::R_X86_64_PC32:
+  case ELF::R_X86_64_PC64:
     return S + getELFAddend(R) - R.getOffset();
   case ELF::R_X86_64_32:
   case ELF::R_X86_64_32S:

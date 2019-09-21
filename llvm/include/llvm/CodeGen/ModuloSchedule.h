@@ -62,7 +62,6 @@
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <vector>
 
@@ -169,7 +168,6 @@ private:
   MachineBasicBlock *BB;
   MachineBasicBlock *Preheader;
   MachineBasicBlock *NewKernel = nullptr;
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopInfo;
 
   /// Map for each register and the max difference between its uses and def.
   /// The first element in the pair is the max difference in stages. The

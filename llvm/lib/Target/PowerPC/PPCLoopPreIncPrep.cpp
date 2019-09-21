@@ -481,7 +481,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
         if (PtrIP && isa<Instruction>(NewBasePtr) &&
             cast<Instruction>(NewBasePtr)->getParent() == PtrIP->getParent())
           PtrIP = nullptr;
-        else if (isa<PHINode>(PtrIP))
+        else if (PtrIP && isa<PHINode>(PtrIP))
           PtrIP = &*PtrIP->getParent()->getFirstInsertionPt();
         else if (!PtrIP)
           PtrIP = I->Instr;

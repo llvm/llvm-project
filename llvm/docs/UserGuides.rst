@@ -18,8 +18,6 @@ intermediate LLVM representation.
    HowToBuildWithPGO
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
-   GettingStartedVS
-   FAQ
    yaml2obj
    MarkdownQuickstartTemplate
    Phabricator
@@ -53,15 +51,8 @@ intermediate LLVM representation.
 :doc:`HowToCrossCompileLLVM`
    Notes on cross-building and testing LLVM/Clang.
 
-:doc:`GettingStartedVS`
-   An addendum to the main Getting Started guide for those using Visual Studio
-   on Windows.
-
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.
-
-:doc:`FAQ`
-   A list of common questions and problems and their solutions.
 
 :doc:`TestSuiteGuide`
   Describes how to compile and run the test-suite benchmarks.

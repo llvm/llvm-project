@@ -10280,12 +10280,11 @@ multiclass avx512_fp_scalar_imm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               (i32 timm:$src3))>,
                       Sched<[sched]>;
   defm rmi : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                    (ins _.RC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
+                    (ins _.RC:$src1, _.IntScalarMemOp:$src2, i32u8imm:$src3),
                     OpcodeStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
                     (OpNode (_.VT _.RC:$src1),
-                            (_.VT (scalar_to_vector
-                                      (_.ScalarLdFrag addr:$src2))),
-                            (i32 imm:$src3))>,
+                            (_.VT _.ScalarIntMemCPat:$src2),
+                            (i32 timm:$src3))>,
                     Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }

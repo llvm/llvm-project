@@ -102,14 +102,14 @@ define i1 @t5_commutativity1(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %adjusted = add i8 %base, %offset
   call void @use8(i8 %adjusted)
   %not_null = icmp ne i8 %adjusted, 0
-  %no_underflow = icmp ugt i8 %base, %adjusted ; swapped
+  %no_underflow = icmp uge i8 %base, %adjusted ; swapped
   %r = and i1 %not_null, %no_underflow
   ret i1 %r
 }
@@ -118,14 +118,14 @@ define i1 @t6_commutativity3(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[ADJUSTED]], [[BASE]]
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[NO_UNDERFLOW]], [[NOT_NULL]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %adjusted = add i8 %base, %offset
   call void @use8(i8 %adjusted)
   %not_null = icmp ne i8 %adjusted, 0
-  %no_underflow = icmp ugt i8 %base, %adjusted ; swapped
+  %no_underflow = icmp uge i8 %base, %adjusted ; swapped
   %r = and i1 %no_underflow, %not_null ; swapped
   ret i1 %r
 }

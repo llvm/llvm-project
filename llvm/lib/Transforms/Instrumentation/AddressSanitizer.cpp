@@ -1048,7 +1048,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     if (!II.isLifetimeStartOrEnd())
       return;
     // Found lifetime intrinsic, add ASan instrumentation if necessary.
-    ConstantInt *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    auto *Size = cast<ConstantInt>(II.getArgOperand(0));
     // If size argument is undefined, don't do anything.
     if (Size->isMinusOne()) return;
     // Check that size doesn't saturate uint64_t and can
@@ -1790,7 +1790,7 @@ void ModuleAddressSanitizer::createInitializerPoisonCalls(
     // Must have a function or null ptr.
     if (Function *F = dyn_cast<Function>(CS->getOperand(1))) {
       if (F->getName() == kAsanModuleCtorName) continue;
-      ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
+      auto *Priority = cast<ConstantInt>(CS->getOperand(0));
       // Don't instrument CTORs that will run before asan.module_ctor.
       if (Priority->getLimitedValue() <= GetCtorAndDtorPriority(TargetTriple))
         continue;
