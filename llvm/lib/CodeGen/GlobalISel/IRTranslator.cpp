@@ -1564,7 +1564,9 @@ bool IRTranslator::translateCallSite(const ImmutableCallSite &CS,
     Args.push_back(getOrCreateVRegs(*Arg));
   }
 
-  MF->getFrameInfo().setHasCalls(true);
+  // We don't set HasCalls on MFI here yet because call lowering may decide to
+  // optimize into tail calls. Instead, we defer that to selection where a final
+  // scan is done to check if any instructions are calls.
   bool Success =
       CLI->lowerCall(MIRBuilder, CS, Res, Args, SwiftErrorVReg,
                      [&]() { return getOrCreateVReg(*CS.getCalledValue()); });

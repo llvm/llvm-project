@@ -1,6 +1,6 @@
-; Test population-count instruction on arch13
+; Test population-count instruction on z15
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 declare i32 @llvm.ctpop.i32(i32 %a)
 declare i64 @llvm.ctpop.i64(i64 %a)

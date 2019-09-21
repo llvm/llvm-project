@@ -1,6 +1,6 @@
 ; Test loads of byte-swapped vector elements.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 declare <8 x i16> @llvm.bswap.v8i16(<8 x i16>)
 declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)

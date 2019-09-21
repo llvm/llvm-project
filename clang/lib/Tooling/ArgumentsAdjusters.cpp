@@ -57,6 +57,22 @@ ArgumentsAdjuster getClangStripOutputAdjuster() {
   };
 }
 
+ArgumentsAdjuster getClangStripSerializeDiagnosticAdjuster() {
+  return [](const CommandLineArguments &Args, StringRef /*unused*/) {
+    CommandLineArguments AdjustedArgs;
+    for (size_t i = 0, e = Args.size(); i < e; ++i) {
+      StringRef Arg = Args[i];
+      if (Arg == "--serialize-diagnostics") {
+        // Skip the diagnostic output argument.
+        ++i;
+        continue;
+      }
+      AdjustedArgs.push_back(Args[i]);
+    }
+    return AdjustedArgs;
+  };
+}
+
 ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
     CommandLineArguments AdjustedArgs;

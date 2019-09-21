@@ -78,10 +78,6 @@ public:
   ///     otherwise.
   llvm::Error GetError() const;
 
-  bool operator<(const RegularExpression &rhs) const {
-    return GetText() < rhs.GetText();
-  }
-
   bool operator==(const RegularExpression &rhs) const {
     return GetText() == rhs.GetText();
   }

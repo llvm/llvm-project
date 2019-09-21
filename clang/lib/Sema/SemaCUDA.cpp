@@ -396,7 +396,6 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
 
   // We either setting attributes first time, or the inferred ones must match
   // previously set ones.
-  assert(!(HasD || HasH) || (NeedsD == HasD && NeedsH == HasH));
   if (NeedsD && !HasD)
     MemberDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
   if (NeedsH && !HasH)

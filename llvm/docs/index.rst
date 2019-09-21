@@ -21,11 +21,8 @@ Several introductory papers and presentations.
 .. toctree::
    :hidden:
 
-   LangRef
+   FAQ
    Lexicon
-
-:doc:`LangRef`
-  Defines the LLVM intermediate representation.
 
 `Introduction to the LLVM Compiler`__
   Presentation providing a users introduction to LLVM.
@@ -50,9 +47,6 @@ Several introductory papers and presentations.
 
 `Publications mentioning LLVM <http://llvm.org/pubs>`_
    ..
-
-:doc:`Lexicon`
-   Definition of acronyms, terms and concepts used in LLVM.
 
 Documentation
 =============
@@ -83,6 +77,7 @@ Getting Started/Tutorials
 
    GettingStarted
    tutorial/index
+   GettingStartedVS
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
@@ -92,6 +87,10 @@ Getting Started/Tutorials
 :doc:`tutorial/index`
    Tutorials about using LLVM. Includes a tutorial about making a custom
    language with LLVM.
+
+:doc:`GettingStartedVS`
+   An addendum to the main Getting Started guide for those using Visual Studio
+   on Windows.
 
 Reference
 ---------
@@ -104,8 +103,11 @@ LLVM and API reference documentation.
 .. toctree::
    :hidden:
 
+   LangRef
    CommandGuide/index
    TestingGuide
+   CompilerWriterInfo
+   MIRLangRef
 
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
@@ -117,6 +119,13 @@ LLVM and API reference documentation.
 
 :doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
    A reference manual for using the LLVM testing infrastructure.
+
+:doc:`CompilerWriterInfo`
+  A list of helpful links for compiler writers.
+
+:doc:`Machine IR (MIR) Format Reference Manual <MIRLangRef>`
+   A reference manual for the MIR serialization format, which is used to test
+   LLVM's code generation passes.
 
 `Doxygen generated documentation <http://llvm.org/doxygen/>`_
   (`classes <http://llvm.org/doxygen/inherits.html>`_)
@@ -147,6 +156,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    Phabricator
    HowToSubmitABug
    BugLifeCycle
+   CodingStandards
 
 :doc:`Contributing`
    An overview on how to contribute to LLVM.
@@ -168,6 +178,10 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 
 :doc:`BugLifeCycle`
    Describes how bugs are reported, triaged and closed.
+
+:doc:`CodingStandards`
+  Details the LLVM coding standards and provides useful information on writing
+  efficient C++ code.
 
 Development Process
 -------------------

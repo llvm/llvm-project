@@ -96,10 +96,12 @@
 #ifndef LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/PassManager.h"
 
@@ -524,15 +526,25 @@ public:
 struct AnalysisGetter {
   template <typename Analysis>
   typename Analysis::Result *getAnalysis(const Function &F) {
-    if (!FAM)
+    if (!MAM || !F.getParent())
       return nullptr;
-    return &FAM->getResult<Analysis>(const_cast<Function &>(F));
+    auto &FAM = MAM->getResult<FunctionAnalysisManagerModuleProxy>(
+                       const_cast<Module &>(*F.getParent()))
+                    .getManager();
+    return &FAM.getResult<Analysis>(const_cast<Function &>(F));
   }
-  AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
+
+  template <typename Analysis>
+  typename Analysis::Result *getAnalysis(const Module &M) {
+    if (!MAM)
+      return nullptr;
+    return &MAM->getResult<Analysis>(const_cast<Module &>(M));
+  }
+  AnalysisGetter(ModuleAnalysisManager &MAM) : MAM(&MAM) {}
   AnalysisGetter() {}
 
 private:
-  FunctionAnalysisManager *FAM = nullptr;
+  ModuleAnalysisManager *MAM = nullptr;
 };
 
 /// Data structure to hold cached (LLVM-IR) information.
@@ -548,7 +560,20 @@ private:
 /// reusable, it is advised to inherit from the InformationCache and cast the
 /// instance down in the abstract attributes.
 struct InformationCache {
-  InformationCache(const DataLayout &DL, AnalysisGetter &AG) : DL(DL), AG(AG) {}
+  InformationCache(const Module &M, AnalysisGetter &AG)
+      : DL(M.getDataLayout()), AG(AG) {
+
+    CallGraph *CG = AG.getAnalysis<CallGraphAnalysis>(M);
+    if (!CG)
+      return;
+
+    DenseMap<const Function *, unsigned> SccSize;
+    for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
+      for (CallGraphNode *Node : *I)
+        SccSize[Node->getFunction()] = I->size();
+    }
+    SccSizeOpt = std::move(SccSize);
+  }
 
   /// A map type from opcodes to instructions with this opcode.
   using OpcodeInstMapTy = DenseMap<unsigned, SmallVector<Instruction *, 32>>;
@@ -577,6 +602,13 @@ struct InformationCache {
     return AG.getAnalysis<AAManager>(F);
   }
 
+  /// Return SCC size on call graph for function \p F.
+  unsigned getSccSize(const Function &F) {
+    if (!SccSizeOpt.hasValue())
+      return 0;
+    return (SccSizeOpt.getValue())[&F];
+  }
+
   /// Return datalayout used in the module.
   const DataLayout &getDL() { return DL; }
 
@@ -594,13 +626,14 @@ private:
   /// A map from functions to their instructions that may read or write memory.
   FuncRWInstsMapTy FuncRWInstsMap;
 
-  /// A map from functions to their TLI.
-
   /// The datalayout used in the module.
   const DataLayout &DL;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
+
+  /// Cache result for scc size in the call graph
+  Optional<DenseMap<const Function *, unsigned>> SccSizeOpt;
 
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.

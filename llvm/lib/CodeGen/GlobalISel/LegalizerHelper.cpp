@@ -364,8 +364,6 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   const char *Name = TLI.getLibcallName(Libcall);
 
-  MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
-
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(Libcall);
   Info.Callee = MachineOperand::CreateES(Name);
@@ -430,7 +428,6 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   const char *Name = TLI.getLibcallName(RTLibcall);
 
   MIRBuilder.setInstr(MI);
-  MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
 
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);

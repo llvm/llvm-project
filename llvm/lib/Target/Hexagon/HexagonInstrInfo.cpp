@@ -678,11 +678,23 @@ class HexagonPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineInstr *Loop, *EndLoop;
   MachineFunction *MF;
   const HexagonInstrInfo *TII;
+  int64_t TripCount;
+  Register LoopCount;
+  DebugLoc DL;
 
 public:
   HexagonPipelinerLoopInfo(MachineInstr *Loop, MachineInstr *EndLoop)
       : Loop(Loop), EndLoop(EndLoop), MF(Loop->getParent()->getParent()),
-        TII(MF->getSubtarget<HexagonSubtarget>().getInstrInfo()) {}
+        TII(MF->getSubtarget<HexagonSubtarget>().getInstrInfo()),
+        DL(Loop->getDebugLoc()) {
+    // Inspect the Loop instruction up-front, as it may be deleted when we call
+    // createTripCountGreaterCondition.
+    TripCount = Loop->getOpcode() == Hexagon::J2_loop0r
+                    ? -1
+                    : Loop->getOperand(1).getImm();
+    if (TripCount == -1)
+      LoopCount = Loop->getOperand(1).getReg();
+  }
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
     // Only ignore the terminator.
@@ -692,11 +704,10 @@ public:
   Optional<bool>
   createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                   SmallVectorImpl<MachineOperand> &Cond) override {
-    if (Loop->getOpcode() == Hexagon::J2_loop0r) {
-      Register LoopCount = Loop->getOperand(1).getReg();
+    if (TripCount == -1) {
       // Check if we're done with the loop.
       unsigned Done = TII->createVR(MF, MVT::i1);
-      MachineInstr *NewCmp = BuildMI(&MBB, Loop->getDebugLoc(),
+      MachineInstr *NewCmp = BuildMI(&MBB, DL,
                                      TII->get(Hexagon::C2_cmpgtui), Done)
                                  .addReg(LoopCount)
                                  .addImm(TC);
@@ -705,7 +716,6 @@ public:
       return {};
     }
 
-    int64_t TripCount = Loop->getOperand(1).getImm();
     return TripCount > TC;
   }
 

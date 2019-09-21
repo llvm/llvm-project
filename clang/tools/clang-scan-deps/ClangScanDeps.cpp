@@ -266,6 +266,8 @@ int main(int argc, const char **argv) {
         AdjustedArgs.push_back("-Wno-error");
         return AdjustedArgs;
       });
+  AdjustingCompilations->appendArgumentsAdjuster(
+      tooling::getClangStripSerializeDiagnosticAdjuster());
 
   SharedStream Errs(llvm::errs());
   // Print out the dependency results to STDOUT by default.

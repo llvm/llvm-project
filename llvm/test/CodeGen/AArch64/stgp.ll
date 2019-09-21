@@ -65,7 +65,7 @@ entry:
 define void @stgp_alloca(i64 %a, i64 %b) {
 entry:
 ; CHECK-LABEL: stgp_alloca:
-; CHECK: stgp x0, x1, [sp]
+; CHECK: stgp x0, x1, [sp, #-32]!
 ; CHECK: stgp x1, x0, [sp, #16]
 ; CHECK: ret
   %x = alloca i8, i32 32, align 16

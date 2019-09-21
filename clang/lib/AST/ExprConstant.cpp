@@ -4102,10 +4102,6 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   // If we're hunting down a 'case' or 'default' label, recurse through
   // substatements until we hit the label.
   if (Case) {
-    // FIXME: We don't start the lifetime of objects whose initialization we
-    // jump over. However, such objects must be of class type with a trivial
-    // default constructor that initialize all subobjects, so must be empty,
-    // so this almost never matters.
     switch (S->getStmtClass()) {
     case Stmt::CompoundStmtClass:
       // FIXME: Precompute which substatement of a compound statement we
@@ -4131,6 +4127,21 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       // preceded by our switch label.
       BlockScopeRAII Scope(Info);
 
+      // Step into the init statement in case it brings an (uninitialized)
+      // variable into scope.
+      if (const Stmt *Init = IS->getInit()) {
+        EvalStmtResult ESR = EvaluateStmt(Result, Info, Init, Case);
+        if (ESR != ESR_CaseNotFound) {
+          assert(ESR != ESR_Succeeded);
+          return ESR;
+        }
+      }
+
+      // Condition variable must be initialized if it exists.
+      // FIXME: We can skip evaluating the body if there's a condition
+      // variable, as there can't be any case labels within it.
+      // (The same is true for 'for' statements.)
+
       EvalStmtResult ESR = EvaluateStmt(Result, Info, IS->getThen(), Case);
       if (ESR != ESR_CaseNotFound || !IS->getElse())
         return ESR;
@@ -4147,6 +4158,18 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
     case Stmt::ForStmtClass: {
       const ForStmt *FS = cast<ForStmt>(S);
+      BlockScopeRAII Scope(Info);
+
+      // Step into the init statement in case it brings an (uninitialized)
+      // variable into scope.
+      if (const Stmt *Init = FS->getInit()) {
+        EvalStmtResult ESR = EvaluateStmt(Result, Info, Init, Case);
+        if (ESR != ESR_CaseNotFound) {
+          assert(ESR != ESR_Succeeded);
+          return ESR;
+        }
+      }
+
       EvalStmtResult ESR =
           EvaluateLoopBody(Result, Info, FS->getBody(), Case);
       if (ESR != ESR_Continue)

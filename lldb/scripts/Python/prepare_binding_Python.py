@@ -231,11 +231,13 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
     swig_stdout, swig_stderr = process.communicate()
     return_code = process.returncode
     if return_code != 0:
+        swig_stdout = swig_stdout.decode('utf8', errors='replace').rstrip()
+        swig_stderr = swig_stderr.decode('utf8', errors='replace').rstrip()
+        swig_stdout = re.sub(r'^(?=.)', 'stdout: ', swig_stdout, flags=re.MULTILINE)
+        swig_stderr = re.sub(r'^(?=.)', 'stderr: ', swig_stderr, flags=re.MULTILINE)
         logging.error(
-            "swig failed with error code %d: stdout=%s, stderr=%s",
-            return_code,
-            swig_stdout,
-            swig_stderr)
+            "swig failed with error code %d\n%s%s",
+            return_code, swig_stdout, swig_stderr)
         logging.error(
             "command line:\n%s", ' '.join(command))
         sys.exit(return_code)

@@ -1,6 +1,6 @@
 ; Test stores of element-swapped vector elements.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 ; Test v16i8 stores.
 define void @f1(<16 x i8> %val, <16 x i8> *%ptr) {
