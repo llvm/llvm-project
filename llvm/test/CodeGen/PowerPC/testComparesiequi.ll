@@ -7,7 +7,7 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 ; ModuleID = 'ComparisonTestCases/testComparesiequi.c'
 
-@glob = common local_unnamed_addr global i32 0, align 4
+@glob = local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_iequi(i32 zeroext %a, i32 zeroext %b) {

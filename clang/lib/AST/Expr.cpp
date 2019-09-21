@@ -3921,6 +3921,112 @@ bool Expr::refersToGlobalRegisterVar() const {
   return false;
 }
 
+bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
+  E1 = E1->IgnoreParens();
+  E2 = E2->IgnoreParens();
+
+  if (E1->getStmtClass() != E2->getStmtClass())
+    return false;
+
+  switch (E1->getStmtClass()) {
+    default:
+      return false;
+    case CXXThisExprClass:
+      return true;
+    case DeclRefExprClass: {
+      // DeclRefExpr without an ImplicitCastExpr can happen for integral
+      // template parameters.
+      const auto *DRE1 = cast<DeclRefExpr>(E1);
+      const auto *DRE2 = cast<DeclRefExpr>(E2);
+      return DRE1->isRValue() && DRE2->isRValue() &&
+             DRE1->getDecl() == DRE2->getDecl();
+    }
+    case ImplicitCastExprClass: {
+      // Peel off implicit casts.
+      while (true) {
+        const auto *ICE1 = dyn_cast<ImplicitCastExpr>(E1);
+        const auto *ICE2 = dyn_cast<ImplicitCastExpr>(E2);
+        if (!ICE1 || !ICE2)
+          return false;
+        if (ICE1->getCastKind() != ICE2->getCastKind())
+          return false;
+        E1 = ICE1->getSubExpr()->IgnoreParens();
+        E2 = ICE2->getSubExpr()->IgnoreParens();
+        // The final cast must be one of these types.
+        if (ICE1->getCastKind() == CK_LValueToRValue ||
+            ICE1->getCastKind() == CK_ArrayToPointerDecay ||
+            ICE1->getCastKind() == CK_FunctionToPointerDecay) {
+          break;
+        }
+      }
+
+      const auto *DRE1 = dyn_cast<DeclRefExpr>(E1);
+      const auto *DRE2 = dyn_cast<DeclRefExpr>(E2);
+      if (DRE1 && DRE2)
+        return declaresSameEntity(DRE1->getDecl(), DRE2->getDecl());
+
+      const auto *Ivar1 = dyn_cast<ObjCIvarRefExpr>(E1);
+      const auto *Ivar2 = dyn_cast<ObjCIvarRefExpr>(E2);
+      if (Ivar1 && Ivar2) {
+        return Ivar1->isFreeIvar() && Ivar2->isFreeIvar() &&
+               declaresSameEntity(Ivar1->getDecl(), Ivar2->getDecl());
+      }
+
+      const auto *Array1 = dyn_cast<ArraySubscriptExpr>(E1);
+      const auto *Array2 = dyn_cast<ArraySubscriptExpr>(E2);
+      if (Array1 && Array2) {
+        if (!isSameComparisonOperand(Array1->getBase(), Array2->getBase()))
+          return false;
+
+        auto Idx1 = Array1->getIdx();
+        auto Idx2 = Array2->getIdx();
+        const auto Integer1 = dyn_cast<IntegerLiteral>(Idx1);
+        const auto Integer2 = dyn_cast<IntegerLiteral>(Idx2);
+        if (Integer1 && Integer2) {
+          if (!llvm::APInt::isSameValue(Integer1->getValue(),
+                                        Integer2->getValue()))
+            return false;
+        } else {
+          if (!isSameComparisonOperand(Idx1, Idx2))
+            return false;
+        }
+
+        return true;
+      }
+
+      // Walk the MemberExpr chain.
+      while (isa<MemberExpr>(E1) && isa<MemberExpr>(E2)) {
+        const auto *ME1 = cast<MemberExpr>(E1);
+        const auto *ME2 = cast<MemberExpr>(E2);
+        if (!declaresSameEntity(ME1->getMemberDecl(), ME2->getMemberDecl()))
+          return false;
+        if (const auto *D = dyn_cast<VarDecl>(ME1->getMemberDecl()))
+          if (D->isStaticDataMember())
+            return true;
+        E1 = ME1->getBase()->IgnoreParenImpCasts();
+        E2 = ME2->getBase()->IgnoreParenImpCasts();
+      }
+
+      if (isa<CXXThisExpr>(E1) && isa<CXXThisExpr>(E2))
+        return true;
+
+      // A static member variable can end the MemberExpr chain with either
+      // a MemberExpr or a DeclRefExpr.
+      auto getAnyDecl = [](const Expr *E) -> const ValueDecl * {
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+          return DRE->getDecl();
+        if (const auto *ME = dyn_cast<MemberExpr>(E))
+          return ME->getMemberDecl();
+        return nullptr;
+      };
+
+      const ValueDecl *VD1 = getAnyDecl(E1);
+      const ValueDecl *VD2 = getAnyDecl(E2);
+      return declaresSameEntity(VD1, VD2);
+    }
+  }
+}
+
 /// isArrow - Return true if the base expression is a pointer to vector,
 /// return false if the base expression is a vector.
 bool ExtVectorElementExpr::isArrow() const {

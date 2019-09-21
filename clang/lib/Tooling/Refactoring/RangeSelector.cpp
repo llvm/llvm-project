@@ -219,6 +219,9 @@ RangeSelector tooling::name(std::string ID) {
 }
 
 namespace {
+// FIXME: make this available in the public API for users to easily create their
+// own selectors.
+
 // Creates a selector from a range-selection function \p Func, which selects a
 // range that is relative to a bound node id.  \c T is the node type expected by
 // \p Func.
@@ -286,11 +289,32 @@ RangeSelector tooling::initListElements(std::string ID) {
   return RelativeSelector<InitListExpr, getElementsRange>(std::move(ID));
 }
 
+namespace {
+// Returns the range of the else branch, including the `else` keyword.
+CharSourceRange getElseRange(const MatchResult &Result, const IfStmt &S) {
+  return maybeExtendRange(
+      CharSourceRange::getTokenRange(S.getElseLoc(), S.getEndLoc()),
+      tok::TokenKind::semi, *Result.Context);
+}
+} // namespace
+
+RangeSelector tooling::elseBranch(std::string ID) {
+  return RelativeSelector<IfStmt, getElseRange>(std::move(ID));
+}
+
 RangeSelector tooling::expansion(RangeSelector S) {
   return [S](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> SRange = S(Result);
     if (!SRange)
       return SRange.takeError();
     return Result.SourceManager->getExpansionRange(*SRange);
+  };
+}
+
+RangeSelector tooling::ifBound(std::string ID, RangeSelector TrueSelector,
+                               RangeSelector FalseSelector) {
+  return [=](const MatchResult &Result) {
+    auto &Map = Result.Nodes.getMap();
+    return (Map.find(ID) != Map.end() ? TrueSelector : FalseSelector)(Result);
   };
 }

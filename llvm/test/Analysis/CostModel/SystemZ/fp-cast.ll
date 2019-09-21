@@ -1,7 +1,7 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 \
 ; RUN:  | FileCheck %s -check-prefixes=CHECK,Z13
-; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=arch13 \
-; RUN:  | FileCheck %s -check-prefixes=CHECK,AR13
+; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z15 \
+; RUN:  | FileCheck %s -check-prefixes=CHECK,Z15
 ;
 ; Note: The scalarized vector instructions costs are not including any
 ; extracts, due to the undef operands.
@@ -118,7 +118,7 @@ define void @fptosi() {
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v19 = fptosi <2 x double> undef to <2 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v20 = fptosi <2 x float> undef to <2 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 12 for instruction:   %v21 = fptosi <2 x float> undef to <2 x i32>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v21 = fptosi <2 x float> undef to <2 x i32>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v21 = fptosi <2 x float> undef to <2 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v22 = fptosi <2 x float> undef to <2 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v23 = fptosi <2 x float> undef to <2 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v24 = fptosi <4 x fp128> undef to <4 x i64>
@@ -131,7 +131,7 @@ define void @fptosi() {
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v31 = fptosi <4 x double> undef to <4 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 10 for instruction:   %v32 = fptosi <4 x float> undef to <4 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 12 for instruction:   %v33 = fptosi <4 x float> undef to <4 x i32>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v33 = fptosi <4 x float> undef to <4 x i32>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v33 = fptosi <4 x float> undef to <4 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v34 = fptosi <4 x float> undef to <4 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v35 = fptosi <4 x float> undef to <4 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v36 = fptosi <8 x fp128> undef to <8 x i64>
@@ -144,7 +144,7 @@ define void @fptosi() {
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %v43 = fptosi <8 x double> undef to <8 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %v44 = fptosi <8 x float> undef to <8 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 24 for instruction:   %v45 = fptosi <8 x float> undef to <8 x i32>
-; AR13:  Cost Model: Found an estimated cost of 2 for instruction:   %v45 = fptosi <8 x float> undef to <8 x i32>
+; Z15:   Cost Model: Found an estimated cost of 2 for instruction:   %v45 = fptosi <8 x float> undef to <8 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %v46 = fptosi <8 x float> undef to <8 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %v47 = fptosi <8 x float> undef to <8 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v48 = fptosi <16 x double> undef to <16 x i64>
@@ -153,7 +153,7 @@ define void @fptosi() {
 ; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %v51 = fptosi <16 x double> undef to <16 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %v52 = fptosi <16 x float> undef to <16 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 48 for instruction:   %v53 = fptosi <16 x float> undef to <16 x i32>
-; AR13:  Cost Model: Found an estimated cost of 4 for instruction:   %v53 = fptosi <16 x float> undef to <16 x i32>
+; Z15:   Cost Model: Found an estimated cost of 4 for instruction:   %v53 = fptosi <16 x float> undef to <16 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %v54 = fptosi <16 x float> undef to <16 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %v55 = fptosi <16 x float> undef to <16 x i8>
 
@@ -241,7 +241,7 @@ define void @fptoui() {
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v19 = fptoui <2 x double> undef to <2 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v20 = fptoui <2 x float> undef to <2 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 12 for instruction:   %v21 = fptoui <2 x float> undef to <2 x i32>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v21 = fptoui <2 x float> undef to <2 x i32>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v21 = fptoui <2 x float> undef to <2 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v22 = fptoui <2 x float> undef to <2 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v23 = fptoui <2 x float> undef to <2 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v24 = fptoui <4 x fp128> undef to <4 x i64>
@@ -254,7 +254,7 @@ define void @fptoui() {
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v31 = fptoui <4 x double> undef to <4 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 10 for instruction:   %v32 = fptoui <4 x float> undef to <4 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 12 for instruction:   %v33 = fptoui <4 x float> undef to <4 x i32>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v33 = fptoui <4 x float> undef to <4 x i32>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v33 = fptoui <4 x float> undef to <4 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v34 = fptoui <4 x float> undef to <4 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v35 = fptoui <4 x float> undef to <4 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v36 = fptoui <8 x fp128> undef to <8 x i64>
@@ -267,7 +267,7 @@ define void @fptoui() {
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %v43 = fptoui <8 x double> undef to <8 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %v44 = fptoui <8 x float> undef to <8 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 24 for instruction:   %v45 = fptoui <8 x float> undef to <8 x i32>
-; AR13:  Cost Model: Found an estimated cost of 2 for instruction:   %v45 = fptoui <8 x float> undef to <8 x i32>
+; Z15:   Cost Model: Found an estimated cost of 2 for instruction:   %v45 = fptoui <8 x float> undef to <8 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %v46 = fptoui <8 x float> undef to <8 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %v47 = fptoui <8 x float> undef to <8 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v48 = fptoui <16 x double> undef to <16 x i64>
@@ -276,7 +276,7 @@ define void @fptoui() {
 ; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %v51 = fptoui <16 x double> undef to <16 x i8>
 ; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %v52 = fptoui <16 x float> undef to <16 x i64>
 ; Z13:   Cost Model: Found an estimated cost of 48 for instruction:   %v53 = fptoui <16 x float> undef to <16 x i32>
-; AR13:  Cost Model: Found an estimated cost of 4 for instruction:   %v53 = fptoui <16 x float> undef to <16 x i32>
+; Z15:   Cost Model: Found an estimated cost of 4 for instruction:   %v53 = fptoui <16 x float> undef to <16 x i32>
 ; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %v54 = fptoui <16 x float> undef to <16 x i16>
 ; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %v55 = fptoui <16 x float> undef to <16 x i8>
 
@@ -391,7 +391,7 @@ define void @sitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v15 = sitofp <2 x i32> undef to <2 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v16 = sitofp <2 x i32> undef to <2 x double>
 ; Z13:   Cost Model: Found an estimated cost of 14 for instruction:   %v17 = sitofp <2 x i32> undef to <2 x float>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v17 = sitofp <2 x i32> undef to <2 x float>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v17 = sitofp <2 x i32> undef to <2 x float>
 ; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v18 = sitofp <2 x i16> undef to <2 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 9 for instruction:   %v19 = sitofp <2 x i16> undef to <2 x double>
 ; CHECK: Cost Model: Found an estimated cost of 9 for instruction:   %v20 = sitofp <2 x i16> undef to <2 x float>
@@ -404,7 +404,7 @@ define void @sitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 9 for instruction:   %v27 = sitofp <4 x i32> undef to <4 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 13 for instruction:   %v28 = sitofp <4 x i32> undef to <4 x double>
 ; Z13:   Cost Model: Found an estimated cost of 13 for instruction:   %v29 = sitofp <4 x i32> undef to <4 x float>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v29 = sitofp <4 x i32> undef to <4 x float>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v29 = sitofp <4 x i32> undef to <4 x float>
 ; CHECK: Cost Model: Found an estimated cost of 13 for instruction:   %v30 = sitofp <4 x i16> undef to <4 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 17 for instruction:   %v31 = sitofp <4 x i16> undef to <4 x double>
 ; CHECK: Cost Model: Found an estimated cost of 17 for instruction:   %v32 = sitofp <4 x i16> undef to <4 x float>
@@ -417,7 +417,7 @@ define void @sitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 17 for instruction:   %v39 = sitofp <8 x i32> undef to <8 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 25 for instruction:   %v40 = sitofp <8 x i32> undef to <8 x double>
 ; Z13:   Cost Model: Found an estimated cost of 25 for instruction:   %v41 = sitofp <8 x i32> undef to <8 x float>
-; AR13:  Cost Model: Found an estimated cost of 2 for instruction:   %v41 = sitofp <8 x i32> undef to <8 x float>
+; Z15:   Cost Model: Found an estimated cost of 2 for instruction:   %v41 = sitofp <8 x i32> undef to <8 x float>
 ; CHECK: Cost Model: Found an estimated cost of 25 for instruction:   %v42 = sitofp <8 x i16> undef to <8 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 33 for instruction:   %v43 = sitofp <8 x i16> undef to <8 x double>
 ; CHECK: Cost Model: Found an estimated cost of 33 for instruction:   %v44 = sitofp <8 x i16> undef to <8 x float>
@@ -428,7 +428,7 @@ define void @sitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 49 for instruction:   %v49 = sitofp <16 x i64> undef to <16 x float>
 ; CHECK: Cost Model: Found an estimated cost of 49 for instruction:   %v50 = sitofp <16 x i32> undef to <16 x double>
 ; Z13:   Cost Model: Found an estimated cost of 49 for instruction:   %v51 = sitofp <16 x i32> undef to <16 x float>
-; AR13:  Cost Model: Found an estimated cost of 4 for instruction:   %v51 = sitofp <16 x i32> undef to <16 x float>
+; Z15:   Cost Model: Found an estimated cost of 4 for instruction:   %v51 = sitofp <16 x i32> undef to <16 x float>
 ; CHECK: Cost Model: Found an estimated cost of 65 for instruction:   %v52 = sitofp <16 x i16> undef to <16 x double>
 ; CHECK: Cost Model: Found an estimated cost of 65 for instruction:   %v53 = sitofp <16 x i16> undef to <16 x float>
 ; CHECK: Cost Model: Found an estimated cost of 65 for instruction:   %v54 = sitofp <16 x i8> undef to <16 x double>
@@ -513,7 +513,7 @@ define void @uitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v15 = uitofp <2 x i32> undef to <2 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v16 = uitofp <2 x i32> undef to <2 x double>
 ; Z13:   Cost Model: Found an estimated cost of 14 for instruction:   %v17 = uitofp <2 x i32> undef to <2 x float>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v17 = uitofp <2 x i32> undef to <2 x float>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v17 = uitofp <2 x i32> undef to <2 x float>
 ; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v18 = uitofp <2 x i16> undef to <2 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 9 for instruction:   %v19 = uitofp <2 x i16> undef to <2 x double>
 ; CHECK: Cost Model: Found an estimated cost of 9 for instruction:   %v20 = uitofp <2 x i16> undef to <2 x float>
@@ -526,7 +526,7 @@ define void @uitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 9 for instruction:   %v27 = uitofp <4 x i32> undef to <4 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 13 for instruction:   %v28 = uitofp <4 x i32> undef to <4 x double>
 ; Z13:   Cost Model: Found an estimated cost of 13 for instruction:   %v29 = uitofp <4 x i32> undef to <4 x float>
-; AR13:  Cost Model: Found an estimated cost of 1 for instruction:   %v29 = uitofp <4 x i32> undef to <4 x float>
+; Z15:   Cost Model: Found an estimated cost of 1 for instruction:   %v29 = uitofp <4 x i32> undef to <4 x float>
 ; CHECK: Cost Model: Found an estimated cost of 13 for instruction:   %v30 = uitofp <4 x i16> undef to <4 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 17 for instruction:   %v31 = uitofp <4 x i16> undef to <4 x double>
 ; CHECK: Cost Model: Found an estimated cost of 17 for instruction:   %v32 = uitofp <4 x i16> undef to <4 x float>
@@ -539,7 +539,7 @@ define void @uitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 17 for instruction:   %v39 = uitofp <8 x i32> undef to <8 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 25 for instruction:   %v40 = uitofp <8 x i32> undef to <8 x double>
 ; Z13:   Cost Model: Found an estimated cost of 25 for instruction:   %v41 = uitofp <8 x i32> undef to <8 x float>
-; AR13:  Cost Model: Found an estimated cost of 2 for instruction:   %v41 = uitofp <8 x i32> undef to <8 x float>
+; Z15:   Cost Model: Found an estimated cost of 2 for instruction:   %v41 = uitofp <8 x i32> undef to <8 x float>
 ; CHECK: Cost Model: Found an estimated cost of 25 for instruction:   %v42 = uitofp <8 x i16> undef to <8 x fp128>
 ; CHECK: Cost Model: Found an estimated cost of 33 for instruction:   %v43 = uitofp <8 x i16> undef to <8 x double>
 ; CHECK: Cost Model: Found an estimated cost of 33 for instruction:   %v44 = uitofp <8 x i16> undef to <8 x float>
@@ -550,7 +550,7 @@ define void @uitofp() {
 ; CHECK: Cost Model: Found an estimated cost of 49 for instruction:   %v49 = uitofp <16 x i64> undef to <16 x float>
 ; CHECK: Cost Model: Found an estimated cost of 49 for instruction:   %v50 = uitofp <16 x i32> undef to <16 x double>
 ; Z13:   Cost Model: Found an estimated cost of 49 for instruction:   %v51 = uitofp <16 x i32> undef to <16 x float>
-; AR13:  Cost Model: Found an estimated cost of 4 for instruction:   %v51 = uitofp <16 x i32> undef to <16 x float>
+; Z15:   Cost Model: Found an estimated cost of 4 for instruction:   %v51 = uitofp <16 x i32> undef to <16 x float>
 ; CHECK: Cost Model: Found an estimated cost of 65 for instruction:   %v52 = uitofp <16 x i16> undef to <16 x double>
 ; CHECK: Cost Model: Found an estimated cost of 65 for instruction:   %v53 = uitofp <16 x i16> undef to <16 x float>
 ; CHECK: Cost Model: Found an estimated cost of 65 for instruction:   %v54 = uitofp <16 x i8> undef to <16 x double>

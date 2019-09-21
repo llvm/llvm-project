@@ -201,8 +201,22 @@ static bool isNarrowStore(unsigned Opc) {
   }
 }
 
+// These instruction set memory tag and either keep memory contents unchanged or
+// set it to zero, ignoring the address part of the source register.
+static bool isTagStore(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case AArch64::STGOffset:
+  case AArch64::STZGOffset:
+  case AArch64::ST2GOffset:
+  case AArch64::STZ2GOffset:
+    return true;
+  }
+}
+
 // Scaling factor for unscaled load or store.
-static int getMemScale(MachineInstr &MI) {
+static int getMemScale(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Opcode has unknown scale!");
@@ -255,6 +269,11 @@ static int getMemScale(MachineInstr &MI) {
   case AArch64::STURQi:
   case AArch64::LDPQi:
   case AArch64::STPQi:
+  case AArch64::STGOffset:
+  case AArch64::STZGOffset:
+  case AArch64::ST2GOffset:
+  case AArch64::STZ2GOffset:
+  case AArch64::STGPi:
     return 16;
   }
 }
@@ -449,6 +468,16 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
     return AArch64::STPWpre;
   case AArch64::STPXi:
     return AArch64::STPXpre;
+  case AArch64::STGOffset:
+    return AArch64::STGPreIndex;
+  case AArch64::STZGOffset:
+    return AArch64::STZGPreIndex;
+  case AArch64::ST2GOffset:
+    return AArch64::ST2GPreIndex;
+  case AArch64::STZ2GOffset:
+    return AArch64::STZ2GPreIndex;
+  case AArch64::STGPi:
+    return AArch64::STGPpre;
   }
 }
 
@@ -518,6 +547,16 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
     return AArch64::STPWpost;
   case AArch64::STPXi:
     return AArch64::STPXpost;
+  case AArch64::STGOffset:
+    return AArch64::STGPostIndex;
+  case AArch64::STZGOffset:
+    return AArch64::STZGPostIndex;
+  case AArch64::ST2GOffset:
+    return AArch64::ST2GPostIndex;
+  case AArch64::STZ2GOffset:
+    return AArch64::STZ2GPostIndex;
+  case AArch64::STGPi:
+    return AArch64::STGPpost;
   }
 }
 
@@ -536,7 +575,27 @@ static bool isPairedLdSt(const MachineInstr &MI) {
   case AArch64::STPQi:
   case AArch64::STPWi:
   case AArch64::STPXi:
+  case AArch64::STGPi:
     return true;
+  }
+}
+
+// Returns the scale and offset range of pre/post indexed variants of MI.
+static void getPrePostIndexedMemOpInfo(const MachineInstr &MI, int &Scale,
+                                       int &MinOffset, int &MaxOffset) {
+  bool IsPaired = isPairedLdSt(MI);
+  bool IsTagStore = isTagStore(MI);
+  // ST*G and all paired ldst have the same scale in pre/post-indexed variants
+  // as in the "unsigned offset" variant.
+  // All other pre/post indexed ldst instructions are unscaled.
+  Scale = (IsTagStore || IsPaired) ? getMemScale(MI) : 1;
+
+  if (IsPaired) {
+    MinOffset = -64;
+    MaxOffset = 63;
+  } else {
+    MinOffset = -256;
+    MaxOffset = 255;
   }
 }
 
@@ -618,6 +677,11 @@ static bool isMergeableLdStUpdate(MachineInstr &MI) {
   case AArch64::LDRWui:
   case AArch64::LDRHHui:
   case AArch64::LDRBBui:
+  case AArch64::STGOffset:
+  case AArch64::STZGOffset:
+  case AArch64::ST2GOffset:
+  case AArch64::STZ2GOffset:
+  case AArch64::STGPi:
   // Unscaled instructions.
   case AArch64::STURSi:
   case AArch64::STURDi:
@@ -1328,18 +1392,19 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
   unsigned NewOpc = IsPreIdx ? getPreIndexedOpcode(I->getOpcode())
                              : getPostIndexedOpcode(I->getOpcode());
   MachineInstrBuilder MIB;
+  int Scale, MinOffset, MaxOffset;
+  getPrePostIndexedMemOpInfo(*I, Scale, MinOffset, MaxOffset);
   if (!isPairedLdSt(*I)) {
     // Non-paired instruction.
     MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(NewOpc))
               .add(getLdStRegOp(*Update))
               .add(getLdStRegOp(*I))
               .add(getLdStBaseOp(*I))
-              .addImm(Value)
+              .addImm(Value / Scale)
               .setMemRefs(I->memoperands())
               .setMIFlags(I->mergeFlagsWith(*Update));
   } else {
     // Paired instruction.
-    int Scale = getMemScale(*I);
     MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(NewOpc))
               .add(getLdStRegOp(*Update))
               .add(getLdStRegOp(*I, 0))
@@ -1395,28 +1460,21 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
         MI.getOperand(1).getReg() != BaseReg)
       break;
 
-    bool IsPairedInsn = isPairedLdSt(MemMI);
     int UpdateOffset = MI.getOperand(2).getImm();
     if (MI.getOpcode() == AArch64::SUBXri)
       UpdateOffset = -UpdateOffset;
 
-    // For non-paired load/store instructions, the immediate must fit in a
-    // signed 9-bit integer.
-    if (!IsPairedInsn && (UpdateOffset > 255 || UpdateOffset < -256))
+    // The immediate must be a multiple of the scaling factor of the pre/post
+    // indexed instruction.
+    int Scale, MinOffset, MaxOffset;
+    getPrePostIndexedMemOpInfo(MemMI, Scale, MinOffset, MaxOffset);
+    if (UpdateOffset % Scale != 0)
       break;
 
-    // For paired load/store instructions, the immediate must be a multiple of
-    // the scaling factor.  The scaled offset must also fit into a signed 7-bit
-    // integer.
-    if (IsPairedInsn) {
-      int Scale = getMemScale(MemMI);
-      if (UpdateOffset % Scale != 0)
-        break;
-
-      int ScaledOffset = UpdateOffset / Scale;
-      if (ScaledOffset > 63 || ScaledOffset < -64)
-        break;
-    }
+    // Scaled offset must fit in the instruction immediate.
+    int ScaledOffset = UpdateOffset / Scale;
+    if (ScaledOffset > MaxOffset || ScaledOffset < MinOffset)
+      break;
 
     // If we have a non-zero Offset, we check that it matches the amount
     // we're adding to the register.
@@ -1442,13 +1500,19 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   if (MIUnscaledOffset != UnscaledOffset)
     return E;
 
-  // If the base register overlaps a destination register, we can't
-  // merge the update.
-  bool IsPairedInsn = isPairedLdSt(MemMI);
-  for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
-    Register DestReg = getLdStRegOp(MemMI, i).getReg();
-    if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
-      return E;
+  // If the base register overlaps a source/destination register, we can't
+  // merge the update. This does not apply to tag store instructions which
+  // ignore the address part of the source register.
+  // This does not apply to STGPi as well, which does not have unpredictable
+  // behavior in this case unlike normal stores, and always performs writeback
+  // after reading the source register value.
+  if (!isTagStore(MemMI) && MemMI.getOpcode() != AArch64::STGPi) {
+    bool IsPairedInsn = isPairedLdSt(MemMI);
+    for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
+      Register DestReg = getLdStRegOp(MemMI, i).getReg();
+      if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
+        return E;
+    }
   }
 
   // Track which register units have been modified and used between the first
@@ -1496,11 +1560,13 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     return E;
   // If the base register overlaps a destination register, we can't
   // merge the update.
-  bool IsPairedInsn = isPairedLdSt(MemMI);
-  for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
-    Register DestReg = getLdStRegOp(MemMI, i).getReg();
-    if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
-      return E;
+  if (!isTagStore(MemMI)) {
+    bool IsPairedInsn = isPairedLdSt(MemMI);
+    for (unsigned i = 0, e = IsPairedInsn ? 2 : 1; i != e; ++i) {
+      Register DestReg = getLdStRegOp(MemMI, i).getReg();
+      if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
+        return E;
+    }
   }
 
   // Track which register units have been modified and used between the first
@@ -1659,7 +1725,7 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // however, is not, so adjust here.
   int UnscaledOffset = getLdStOffsetOp(MI).getImm() * getMemScale(MI);
 
-  // Look forward to try to find a post-index instruction. For example,
+  // Look forward to try to find a pre-index instruction. For example,
   // ldr x1, [x0, #64]
   // add x0, x0, #64
   //   merged into:

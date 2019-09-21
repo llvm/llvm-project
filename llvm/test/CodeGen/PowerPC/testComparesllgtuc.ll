@@ -6,7 +6,7 @@
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 
-@glob = common local_unnamed_addr global i8 0, align 1
+@glob = local_unnamed_addr global i8 0, align 1
 
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llgtuc(i8 zeroext %a, i8 zeroext %b) {

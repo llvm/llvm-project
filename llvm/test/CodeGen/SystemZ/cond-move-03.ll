@@ -6,7 +6,7 @@
 ;
 ; Run the test again to make sure it still works the same even
 ; in the presence of the select instructions.
-; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=arch13 \
+; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z15 \
 ; RUN:   -no-integrated-as | FileCheck %s
 
 define void @f1(i32 %limit) {

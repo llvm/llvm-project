@@ -2,14 +2,14 @@
 ; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not mod[us][wd]
 
-@mod_resultsw = common local_unnamed_addr global i32 0, align 4
-@mod_resultud = common local_unnamed_addr global i64 0, align 8
-@div_resultsw = common local_unnamed_addr global i32 0, align 4
-@mod_resultuw = common local_unnamed_addr global i32 0, align 4
-@div_resultuw = common local_unnamed_addr global i32 0, align 4
-@div_resultsd = common local_unnamed_addr global i64 0, align 8
-@mod_resultsd = common local_unnamed_addr global i64 0, align 8
-@div_resultud = common local_unnamed_addr global i64 0, align 8
+@mod_resultsw = local_unnamed_addr global i32 0, align 4
+@mod_resultud = local_unnamed_addr global i64 0, align 8
+@div_resultsw = local_unnamed_addr global i32 0, align 4
+@mod_resultuw = local_unnamed_addr global i32 0, align 4
+@div_resultuw = local_unnamed_addr global i32 0, align 4
+@div_resultsd = local_unnamed_addr global i64 0, align 8
+@mod_resultsd = local_unnamed_addr global i64 0, align 8
+@div_resultud = local_unnamed_addr global i64 0, align 8
 
 ; Function Attrs: norecurse nounwind
 define void @modulo_sw(i32 signext %a, i32 signext %b) local_unnamed_addr {
