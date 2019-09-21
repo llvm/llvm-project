@@ -1277,15 +1277,18 @@ bool SwiftASTManipulator::AddExternalVariables(
 static void AppendToCaptures(swift::ASTContext &ast_context,
                              swift::FuncDecl *func_decl,
                              swift::VarDecl *capture_decl) {
-  auto capture_info = func_decl->getCaptureInfo();
-  auto old_captures = capture_info.getCaptures();
+  const auto old_capture_info = func_decl->getCaptureInfo();
+  const auto old_captures = old_capture_info.getCaptures();
   llvm::SmallVector<swift::CapturedValue, 2> captures(old_captures.begin(),
                                                       old_captures.end());
 
   captures.push_back(swift::CapturedValue(capture_decl, 0, swift::SourceLoc()));
-  capture_info.setCaptures(ast_context.AllocateCopy(captures));
-
-  func_decl->setCaptureInfo(capture_info);
+  const auto new_capture_info =
+      swift::CaptureInfo(ast_context, captures,
+                         old_capture_info.getDynamicSelfType(),
+                         old_capture_info.getOpaqueValue(),
+                         old_capture_info.hasGenericParamCaptures());
+  func_decl->setCaptureInfo(new_capture_info);
 }
 
 static swift::VarDecl *FindArgInFunction(swift::ASTContext &ast_context,
