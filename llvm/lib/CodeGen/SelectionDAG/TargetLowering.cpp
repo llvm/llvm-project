@@ -805,6 +805,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
   KnownBits Known2, KnownOut;
   switch (Op.getOpcode()) {
+  case ISD::TargetConstant:
+    llvm_unreachable("Can't simplify this node");
   case ISD::SCALAR_TO_VECTOR: {
     if (!DemandedElts[0])
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));

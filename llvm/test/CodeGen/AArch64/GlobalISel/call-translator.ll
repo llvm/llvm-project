@@ -100,7 +100,6 @@ define {double, i64, i32} @test_struct_return({double, i64, i32}* %addr) {
 }
 
 ; CHECK-LABEL: name: test_arr_call
-; CHECK: hasCalls: true
 ; CHECK: %0:_(p0) = COPY $x0
 ; CHECK: [[LD1:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
 ; CHECK: [[CST1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8

@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -verify-machineinstrs | FileCheck %s
 
-@perm = common local_unnamed_addr global [100 x i64] zeroinitializer, align 8
+@perm = local_unnamed_addr global [100 x i64] zeroinitializer, align 8
 
 define void @sort_basket() local_unnamed_addr {
 entry:

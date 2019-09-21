@@ -1,0 +1,285 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+---
+
+### STG and its offset limits
+
+# CHECK-LABEL: name: test_STG_post
+# CHECK: STGPostIndex $x0, $x0, 7
+name: test_STG_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post_same_reg
+# CHECK: STGPostIndex $x1, $x0, 7
+name: test_STG_post_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    STGOffset $x1, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post_unaligned
+# CHECK:      STGOffset $x0, $x0, 0
+# CHECK-NEXT: ADDXri $x0, 8, 0
+name: test_STG_post_unaligned
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 8, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post2
+# CHECK: STGPostIndex $x0, $x0, -256
+name: test_STG_post2
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 0
+    $x0 = SUBXri $x0, 4096, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post3
+# CHECK:      STGOffset $x0, $x0, 0
+# CHECK-NEXT: SUBXri $x0, 4112, 0
+name: test_STG_post3
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 0
+    $x0 = SUBXri $x0, 4112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post4
+# CHECK: STGPostIndex $x0, $x0, 255
+name: test_STG_post4
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 4080, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post5
+# CHECK:      STGOffset $x0, $x0, 0
+# CHECK-NEXT: ADDXri $x0, 4096, 0
+name: test_STG_post5
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 4096, 0
+    RET_ReallyLR implicit $x0
+...
+
+### The rest of ST*G variants.
+
+# CHECK-LABEL: name: test_STZG_post
+# CHECK: STZGPostIndex $x0, $x0, 7
+name: test_STZG_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STZGOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_ST2G_post
+# CHECK: ST2GPostIndex $x0, $x0, 7
+name: test_ST2G_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    ST2GOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STZ2G_post
+# CHECK: STZ2GPostIndex $x0, $x0, 7
+name: test_STZ2G_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STZ2GOffset $x0, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+### STGP and its offset limits
+
+# CHECK-LABEL: name: test_STGP_post
+# CHECK: STGPpost $x1, $x2, $x0, 7
+name: test_STGP_post
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post2
+# CHECK: STGPpost $x1, $x2, $x0, -64
+name: test_STGP_post2
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    $x0 = SUBXri $x0, 1024, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post3
+# CHECK:      STGPi $x1, $x2, $x0, 0
+# CHECK-NEXT: SUBXri $x0, 1040, 0
+name: test_STGP_post3
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    $x0 = SUBXri $x0, 1040, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post4
+# CHECK: STGPpost $x1, $x2, $x0, 63
+name: test_STGP_post4
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    $x0 = ADDXri $x0, 1008, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post5
+# CHECK:      STGPi $x1, $x2, $x0, 0
+# CHECK-NEXT: ADDXri $x0, 1024, 0
+name: test_STGP_post5
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    $x0 = ADDXri $x0, 1024, 0
+    RET_ReallyLR implicit $x0
+...
+
+### Pre-indexed forms
+
+# CHECK-LABEL: name: test_STG_pre
+# CHECK: STGPreIndex $x0, $x0, 10
+name: test_STG_pre
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGOffset $x0, $x0, 10
+    $x0 = ADDXri $x0, 160, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_pre
+# CHECK: STGPpre $x1, $x2, $x0, 10
+name: test_STGP_pre
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 10
+    $x0 = ADDXri $x0, 160, 0
+    RET_ReallyLR implicit $x0
+...
+
+### Pre-indexed forms with add/sub coming before the store.
+
+# CHECK-LABEL: name: test_STG_pre_back
+# CHECK: STGPreIndex $x0, $x0, 2
+name: test_STG_pre_back
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    $x0 = ADDXri $x0, 32, 0
+    STGOffset $x0, $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_pre_back
+# CHECK: STGPpre $x1, $x2, $x0, -3
+name: test_STGP_pre_back
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    $x0 = SUBXri $x0, 48, 0
+    STGPi $x1, $x2, $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+### STGP with source register == address register
+
+# CHECK-LABEL: name: test_STGP_post_same_reg
+# CHECK: STGPpost $x0, $x0, $x0, 7
+name: test_STGP_post_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGPi $x0, $x0, $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_pre_same_reg
+# CHECK: STGPpre $x0, $x0, $x0, 7
+name: test_STGP_pre_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGPi $x0, $x0, $x0, 7
+    $x0 = ADDXri $x0, 112, 0
+    RET_ReallyLR implicit $x0
+...
+
+# This case can not be merged because the source register is always read before writeback.
+# CHECK-LABEL: name: test_STGP_pre_back_same_reg
+# CHECK:      SUBXri $x0, 48, 0
+# CHECK-NEXT: STGPi $x0, $x0, $x0, 0
+name: test_STGP_pre_back_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    $x0 = SUBXri $x0, 48, 0
+    STGPi $x0, $x0, $x0, 0
+    RET_ReallyLR implicit $x0
+...

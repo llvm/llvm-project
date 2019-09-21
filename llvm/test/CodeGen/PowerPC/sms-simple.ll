@@ -4,7 +4,7 @@
 ; RUN:       | FileCheck %s
 
 @x = dso_local local_unnamed_addr global <{ i32, i32, i32, i32, [1020 x i32] }> <{ i32 1, i32 2, i32 3, i32 4, [1020 x i32] zeroinitializer }>, align 4
-@y = common dso_local global [1024 x i32] zeroinitializer, align 4
+@y = dso_local global [1024 x i32] zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind
 define dso_local i32* @foo() local_unnamed_addr #0 {

@@ -258,7 +258,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
 
-  // On arch13 we have native support for a 64-bit CTPOP.
+  // On z15 we have native support for a 64-bit CTPOP.
   if (Subtarget.hasMiscellaneousExtensions3()) {
     setOperationAction(ISD::CTPOP, MVT::i32, Promote);
     setOperationAction(ISD::CTPOP, MVT::i64, Legal);

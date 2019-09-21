@@ -742,8 +742,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
       MOSymbol = getSymbol(GV);
-      unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
-      GlobalToc = (GVFlags & PPCII::MO_NLP_FLAG);
+      GlobalToc = Subtarget->isGVIndirectSymbol(GV);
     } else if (MO.isCPI()) {
       MOSymbol = GetCPISymbol(MO.getIndex());
     } else if (MO.isJTI()) {
@@ -799,8 +798,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       const GlobalValue *GV = MO.getGlobal();
       MOSymbol = getSymbol(GV);
       LLVM_DEBUG(
-          unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
-          assert((GVFlags & PPCII::MO_NLP_FLAG) &&
+          assert((Subtarget->isGVIndirectSymbol(GV)) &&
                  "LDtocL used on symbol that could be accessed directly is "
                  "invalid. Must match ADDIStocHA8."));
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
@@ -827,8 +825,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     if (MO.isGlobal()) {
       const GlobalValue *GV = MO.getGlobal();
-      LLVM_DEBUG(unsigned char GVFlags = Subtarget->classifyGlobalReference(GV);
-                 assert(!(GVFlags & PPCII::MO_NLP_FLAG) &&
+      LLVM_DEBUG(assert(!(Subtarget->isGVIndirectSymbol(GV)) &&
                         "Interposable definitions must use indirect access."));
       MOSymbol = getSymbol(GV);
     } else if (MO.isCPI()) {

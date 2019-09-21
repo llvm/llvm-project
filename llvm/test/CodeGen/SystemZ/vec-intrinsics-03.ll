@@ -1,6 +1,6 @@
-; Test vector intrinsics added with arch13.
+; Test vector intrinsics added with z15.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 | FileCheck %s
 
 declare <16 x i8> @llvm.s390.vsld(<16 x i8>, <16 x i8>, i32)
 declare <16 x i8> @llvm.s390.vsrd(<16 x i8>, <16 x i8>, i32)

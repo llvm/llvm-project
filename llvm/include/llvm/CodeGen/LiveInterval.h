@@ -189,6 +189,10 @@ namespace llvm {
         return start == Other.start && end == Other.end;
       }
 
+      bool operator!=(const Segment &Other) const {
+        return !(*this == Other);
+      }
+
       void dump() const;
     };
 

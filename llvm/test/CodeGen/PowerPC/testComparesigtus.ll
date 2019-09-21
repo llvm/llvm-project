@@ -6,7 +6,7 @@
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 
-@glob = common local_unnamed_addr global i16 0, align 2
+@glob = local_unnamed_addr global i16 0, align 2
 
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_igtus(i16 zeroext %a, i16 zeroext %b) {

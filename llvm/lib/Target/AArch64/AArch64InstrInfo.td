@@ -7000,5 +7000,114 @@ let AddedComplexity = 10 in {
   def : Pat<(i32 (extractelt (v2i32 V64:$V), (i64 0))), (EXTRACT_SUBREG V64:$V, ssub)>;
 }
 
+// dot_v4i8
+class mul_v4i8<SDPatternOperator ldop> :
+  PatFrag<(ops node:$Rn, node:$Rm, node:$offset),
+          (mul (ldop (add node:$Rn, node:$offset)),
+               (ldop (add node:$Rm, node:$offset)))>;
+class mulz_v4i8<SDPatternOperator ldop> :
+  PatFrag<(ops node:$Rn, node:$Rm),
+          (mul (ldop node:$Rn), (ldop node:$Rm))>;
+
+def load_v4i8 :
+  OutPatFrag<(ops node:$R),
+             (INSERT_SUBREG
+              (v2i32 (IMPLICIT_DEF)),
+               (i32 (COPY_TO_REGCLASS (LDRWui node:$R, (i64 0)), FPR32)),
+              ssub)>;
+
+class dot_v4i8<Instruction DOT, SDPatternOperator ldop> :
+  Pat<(i32 (add (mul_v4i8<ldop> GPR64sp:$Rn, GPR64sp:$Rm, (i64 3)),
+           (add (mul_v4i8<ldop> GPR64sp:$Rn, GPR64sp:$Rm, (i64 2)),
+           (add (mul_v4i8<ldop> GPR64sp:$Rn, GPR64sp:$Rm, (i64 1)),
+                (mulz_v4i8<ldop> GPR64sp:$Rn, GPR64sp:$Rm))))),
+      (EXTRACT_SUBREG (i64 (DOT (DUPv2i32gpr WZR),
+                                (load_v4i8 GPR64sp:$Rn),
+                                (load_v4i8 GPR64sp:$Rm))),
+                      sub_32)>, Requires<[HasDotProd]>;
+
+// dot_v8i8
+class ee_v8i8<SDPatternOperator extend> :
+  PatFrag<(ops node:$V, node:$K),
+          (v4i16 (extract_subvector (v8i16 (extend node:$V)), node:$K))>;
+
+class mul_v8i8<SDPatternOperator mulop, SDPatternOperator extend> :
+  PatFrag<(ops node:$M, node:$N, node:$K),
+          (mulop (v4i16 (ee_v8i8<extend> node:$M, node:$K)),
+                 (v4i16 (ee_v8i8<extend> node:$N, node:$K)))>;
+
+class idot_v8i8<SDPatternOperator mulop, SDPatternOperator extend> :
+  PatFrag<(ops node:$M, node:$N),
+          (i32 (extractelt
+           (v4i32 (AArch64uaddv
+            (add (mul_v8i8<mulop, extend> node:$M, node:$N, (i64 0)),
+                 (mul_v8i8<mulop, extend> node:$M, node:$N, (i64 4))))),
+           (i64 0)))>;
+
+// vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
+def VADDV_32 : OutPatFrag<(ops node:$R), (ADDPv2i32 node:$R, node:$R)>;
+
+class odot_v8i8<Instruction DOT> :
+  OutPatFrag<(ops node:$Vm, node:$Vn),
+             (EXTRACT_SUBREG
+              (VADDV_32
+               (i64 (DOT (DUPv2i32gpr WZR),
+                         (v8i8 node:$Vm),
+                         (v8i8 node:$Vn)))),
+              sub_32)>;
+
+class dot_v8i8<Instruction DOT, SDPatternOperator mulop,
+                    SDPatternOperator extend> :
+  Pat<(idot_v8i8<mulop, extend> V64:$Vm, V64:$Vn),
+      (odot_v8i8<DOT> V64:$Vm, V64:$Vn)>,
+  Requires<[HasDotProd]>;
+
+// dot_v16i8
+class ee_v16i8<SDPatternOperator extend> :
+  PatFrag<(ops node:$V, node:$K1, node:$K2),
+          (v4i16 (extract_subvector
+           (v8i16 (extend
+            (v8i8 (extract_subvector node:$V, node:$K1)))), node:$K2))>;
+
+class mul_v16i8<SDPatternOperator mulop, SDPatternOperator extend> :
+  PatFrag<(ops node:$M, node:$N, node:$K1, node:$K2),
+          (v4i32
+           (mulop (v4i16 (ee_v16i8<extend> node:$M, node:$K1, node:$K2)),
+                  (v4i16 (ee_v16i8<extend> node:$N, node:$K1, node:$K2))))>;
+
+class idot_v16i8<SDPatternOperator m, SDPatternOperator x> :
+  PatFrag<(ops node:$M, node:$N),
+          (i32 (extractelt
+           (v4i32 (AArch64uaddv
+            (add
+             (add (mul_v16i8<m, x> node:$M, node:$N, (i64 0), (i64 0)),
+                  (mul_v16i8<m, x> node:$M, node:$N, (i64 8), (i64 0))),
+             (add (mul_v16i8<m, x> node:$M, node:$N, (i64 0), (i64 4)),
+                  (mul_v16i8<m, x> node:$M, node:$N, (i64 8), (i64 4)))))),
+           (i64 0)))>;
+
+class odot_v16i8<Instruction DOT> :
+  OutPatFrag<(ops node:$Vm, node:$Vn),
+             (i32 (ADDVv4i32v
+              (DOT (DUPv4i32gpr WZR), node:$Vm, node:$Vn)))>;
+
+class dot_v16i8<Instruction DOT, SDPatternOperator mulop,
+                SDPatternOperator extend> :
+  Pat<(idot_v16i8<mulop, extend> V128:$Vm, V128:$Vn),
+      (odot_v16i8<DOT> V128:$Vm, V128:$Vn)>,
+  Requires<[HasDotProd]>;
+
+let AddedComplexity = 10 in {
+  def : dot_v4i8<SDOTv8i8, sextloadi8>;
+  def : dot_v4i8<UDOTv8i8, zextloadi8>;
+  def : dot_v8i8<SDOTv8i8, AArch64smull, sext>;
+  def : dot_v8i8<UDOTv8i8, AArch64umull, zext>;
+  def : dot_v16i8<SDOTv16i8, AArch64smull, sext>;
+  def : dot_v16i8<UDOTv16i8, AArch64umull, zext>;
+
+  // FIXME: add patterns to generate vector by element dot product.
+  // FIXME: add SVE dot-product patterns.
+}
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

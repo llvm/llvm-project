@@ -1,4 +1,6 @@
-# For arch13 only.
+# For z15 only.
+# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=z15 < %s 2> %t
+# RUN: FileCheck < %t %s
 # RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=arch13 < %s 2> %t
 # RUN: FileCheck < %t %s
 
