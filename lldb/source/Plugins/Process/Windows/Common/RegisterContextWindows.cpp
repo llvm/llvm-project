@@ -84,7 +84,7 @@ bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,
   case 1:
   case 2:
   case 4:
-#if defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_AMD64)
   case 8:
 #endif
     break;

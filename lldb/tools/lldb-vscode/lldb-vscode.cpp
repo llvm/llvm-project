@@ -93,8 +93,9 @@ SOCKET AcceptConnection(int portno) {
     } else {
       listen(sockfd, 5);
       socklen_t clilen = sizeof(cli_addr);
-      newsockfd = llvm::sys::RetryAfterSignal(-1, accept,
-          sockfd, (struct sockaddr *)&cli_addr, &clilen);
+      newsockfd =
+          llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
+                                      (struct sockaddr *)&cli_addr, &clilen);
       if (newsockfd < 0)
         if (g_vsc.log)
           *g_vsc.log << "error: accept (" << strerror(errno) << ")"
