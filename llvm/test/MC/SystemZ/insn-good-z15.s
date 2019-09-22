@@ -1,4 +1,6 @@
-# For arch13 and above.
+# For z15 and above.
+# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=z15 -show-encoding %s \
+# RUN:   | FileCheck %s
 # RUN: llvm-mc -triple s390x-linux-gnu -mcpu=arch13 -show-encoding %s \
 # RUN:   | FileCheck %s
 

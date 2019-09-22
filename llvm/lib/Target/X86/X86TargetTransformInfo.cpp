@@ -1566,6 +1566,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i32,  3 },
     { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  3 },
     { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 6 },
+    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i64,  1 }, // PSHUFB
 
     { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    4 },
   };
@@ -1637,6 +1638,9 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i32, 7 },
     { ISD::TRUNCATE,    MVT::v8i16,  MVT::v8i32,  5 },
     { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 10 },
+    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i64,  4 }, // PAND+3*PACKUSWB
+    { ISD::TRUNCATE,    MVT::v2i16,  MVT::v2i64,  2 }, // PSHUFD+PSHUFLW
+    { ISD::TRUNCATE,    MVT::v2i32,  MVT::v2i64,  1 }, // PSHUFD
   };
 
   std::pair<int, MVT> LTSrc = TLI->getTypeLegalizationCost(DL, Src);

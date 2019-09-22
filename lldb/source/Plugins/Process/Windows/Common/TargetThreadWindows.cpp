@@ -21,9 +21,9 @@
 #include "TargetThreadWindows.h"
 
 // TODO support _M_ARM and _M_ARM64
-#if defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_AMD64)
 #include "x64/RegisterContextWindows_x64.h"
-#elif defined(_M_IX86)
+#elif defined(__i386__) || defined(_M_IX86)
 #include "x86/RegisterContextWindows_x86.h"
 #endif
 
@@ -77,7 +77,7 @@ TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
         break;
 
       case llvm::Triple::x86:
-#if defined(_M_IX86)
+#if defined(__i386__) || defined(_M_IX86)
         m_thread_reg_ctx_sp.reset(
             new RegisterContextWindows_x86(*this, concrete_frame_idx));
 #else
@@ -86,7 +86,7 @@ TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
         break;
 
       case llvm::Triple::x86_64:
-#if defined(_M_AMD64)
+#if defined(__x86_64__) || defined(_M_AMD64)
         m_thread_reg_ctx_sp.reset(
             new RegisterContextWindows_x64(*this, concrete_frame_idx));
 #else

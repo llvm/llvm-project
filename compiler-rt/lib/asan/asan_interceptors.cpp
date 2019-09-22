@@ -164,6 +164,11 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
     ASAN_MEMSET_IMPL(ctx, block, c, size);                  \
   } while (false)
 
+#if CAN_SANITIZE_LEAKS
+#define COMMON_INTERCEPTOR_STRERROR()                       \
+  __lsan::ScopedInterceptorDisabler disabler
+#endif
+
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
@@ -560,23 +565,58 @@ INTERCEPTOR(long long, atoll, const char *nptr) {
 }
 #endif  // ASAN_INTERCEPT_ATOLL_AND_STRTOLL
 
-#if ASAN_INTERCEPT___CXA_ATEXIT
+#if ASAN_INTERCEPT___CXA_ATEXIT || ASAN_INTERCEPT_ATEXIT
 static void AtCxaAtexit(void *unused) {
   (void)unused;
   StopInitOrderChecking();
 }
+#endif
 
+#if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
 #if SANITIZER_MAC
   if (UNLIKELY(!asan_inited)) return REAL(__cxa_atexit)(func, arg, dso_handle);
 #endif
   ENSURE_ASAN_INITED();
+#if CAN_SANITIZE_LEAKS
+  __lsan::ScopedInterceptorDisabler disabler;
+#endif
   int res = REAL(__cxa_atexit)(func, arg, dso_handle);
   REAL(__cxa_atexit)(AtCxaAtexit, nullptr, nullptr);
   return res;
 }
 #endif  // ASAN_INTERCEPT___CXA_ATEXIT
+
+#if ASAN_INTERCEPT_ATEXIT
+INTERCEPTOR(int, atexit, void (*func)()) {
+  ENSURE_ASAN_INITED();
+#if CAN_SANITIZE_LEAKS
+  __lsan::ScopedInterceptorDisabler disabler;
+#endif
+  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  int res = REAL(__cxa_atexit)((void (*)(void *a))func, nullptr, nullptr);
+  REAL(__cxa_atexit)(AtCxaAtexit, nullptr, nullptr);
+  return res;
+}
+#endif
+
+#if ASAN_INTERCEPT_PTHREAD_ATFORK
+extern "C" {
+extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
+                           void (*child)());
+};
+
+INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
+            void (*child)()) {
+#if CAN_SANITIZE_LEAKS
+  __lsan::ScopedInterceptorDisabler disabler;
+#endif
+  // REAL(pthread_atfork) cannot be called due to symbol indirections at least
+  // on NetBSD
+  return _pthread_atfork(prepare, parent, child);
+}
+#endif
 
 #if ASAN_INTERCEPT_VFORK
 DEFINE_REAL(int, vfork)
@@ -658,6 +698,14 @@ void InitializeAsanInterceptors() {
   // Intercept atexit function.
 #if ASAN_INTERCEPT___CXA_ATEXIT
   ASAN_INTERCEPT_FUNC(__cxa_atexit);
+#endif
+
+#if ASAN_INTERCEPT_ATEXIT
+  ASAN_INTERCEPT_FUNC(atexit);
+#endif
+
+#if ASAN_INTERCEPT_PTHREAD_ATFORK
+  ASAN_INTERCEPT_FUNC(pthread_atfork);
 #endif
 
 #if ASAN_INTERCEPT_VFORK

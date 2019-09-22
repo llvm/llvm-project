@@ -17,7 +17,9 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -222,6 +224,22 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 #endif
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
+
+  // Determine if there are any calls in this machine function. Ported from
+  // SelectionDAG.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (const auto &MBB : MF) {
+    if (MFI.hasCalls() && MF.hasInlineAsm())
+      break;
+
+    for (const auto &MI : MBB) {
+      if ((MI.isCall() && !MI.isReturn()) || MI.isStackAligningInlineAsm())
+        MFI.setHasCalls(true);
+      if (MI.isInlineAsm())
+        MF.setHasInlineAsm(true);
+    }
+  }
+
 
   LLVM_DEBUG({
     dbgs() << "Rules covered by selecting function: " << MF.getName() << ":";

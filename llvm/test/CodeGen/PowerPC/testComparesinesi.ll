@@ -6,7 +6,7 @@
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s --check-prefix=CHECK-LE \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 
-@glob = common local_unnamed_addr global i32 0, align 4
+@glob = local_unnamed_addr global i32 0, align 4
 
 define signext i32 @test_inesi(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_inesi:

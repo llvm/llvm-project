@@ -99,7 +99,7 @@ html_theme = 'llvm-theme'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = { "nosidebar": True }
+html_theme_options = { "nosidebar": False }
 
 # Add any paths that contain custom themes here, relative to this directory.
 html_theme_path = ["_themes"]
@@ -134,7 +134,14 @@ html_last_updated_fmt = '%Y-%m-%d'
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {'index': 'indexsidebar.html'}
+
+html_sidebars = {
+    '**': [
+        'indexsidebar.html',
+        'sourcelink.html',
+        'searchbox.html',
+    ]
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

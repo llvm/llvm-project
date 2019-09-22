@@ -476,11 +476,11 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   if (!child_processes_inherit) {
     flags |= SOCK_CLOEXEC;
   }
-  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept4,
-      sockfd, addr, addrlen, flags);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(
+      static_cast<NativeSocket>(-1), ::accept4, sockfd, addr, addrlen, flags);
 #else
-  NativeSocket fd = llvm::sys::RetryAfterSignal(-1, ::accept,
-      sockfd, addr, addrlen);
+  NativeSocket fd = llvm::sys::RetryAfterSignal(
+      static_cast<NativeSocket>(-1), ::accept, sockfd, addr, addrlen);
 #endif
   if (fd == kInvalidSocketValue)
     SetLastError(error);

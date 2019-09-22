@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s -mattr=sse2,-slow-unaligned-mem-16 | FileCheck %s --check-prefix=SSE2FAST
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s -mattr=avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s -mattr=avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc -mtriple=x86_64-unknown-unknown < %s -mattr=avx512f | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512F
+; RUN: llc -mtriple=x86_64-unknown-unknown < %s -mattr=avx512bw | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
 
 ; https://llvm.org/bugs/show_bug.cgi?id=27100
 
@@ -227,6 +229,13 @@ define void @memset_16_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: memset_16_nonconst_bytes:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX512-NEXT:    retq
   tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 16, i1 false)
   ret void
 }
@@ -270,6 +279,14 @@ define void @memset_32_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: memset_32_nonconst_bytes:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpbroadcastb %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 32, i1 false)
   ret void
 }
@@ -322,6 +339,15 @@ define void @memset_64_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: memset_64_nonconst_bytes:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpbroadcastb %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqu %ymm0, 32(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 64, i1 false)
   ret void
 }
@@ -390,6 +416,17 @@ define void @memset_128_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: memset_128_nonconst_bytes:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpbroadcastb %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqu %ymm0, 96(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 64(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 32(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 128, i1 false)
   ret void
 }
@@ -455,6 +492,21 @@ define void @memset_256_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: memset_256_nonconst_bytes:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpbroadcastb %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqu %ymm0, 224(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 192(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 160(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 128(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 96(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 64(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, 32(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 256, i1 false)
   ret void
 }

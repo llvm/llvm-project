@@ -1,0 +1,7 @@
+; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.1.output
+; RUN: ls -l %t.1.output |tr -s ' ' |cut -f5 -d ' ' > %t.txt
+; RUN: llvm-profdata show -sample -show-sec-info-only %t.1.output >> %t.txt
+; RUN: FileCheck %s --input-file=%t.txt
+; Check llvm-profdata shows the correct file size.
+; CHECK: [[FILESIZE:.*]]
+; CHECK: [[FILESIZE]]
