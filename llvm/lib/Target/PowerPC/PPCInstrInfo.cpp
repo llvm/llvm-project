@@ -3930,6 +3930,7 @@ bool PPCInstrInfo::isBDNZ(unsigned Opcode) const {
   return (Opcode == (Subtarget.isPPC64() ? PPC::BDNZ8 : PPC::BDNZ));
 }
 
+namespace {
 class PPCPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineInstr *Loop, *EndLoop, *LoopCount;
   MachineFunction *MF;
@@ -3996,6 +3997,7 @@ public:
     LoopCount->eraseFromParent();
   }
 };
+} // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
 PPCInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
