@@ -82,6 +82,11 @@ public:
   /// valid.
   DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
     : Data(Data), IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
+  DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian,
+                uint8_t AddressSize)
+      : Data(StringRef(reinterpret_cast<const char *>(Data.data()),
+                       Data.size())),
+        IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
 
   /// Get the data pointed to by this extractor.
   StringRef getData() const { return Data; }

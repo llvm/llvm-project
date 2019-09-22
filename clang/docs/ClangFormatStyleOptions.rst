@@ -1128,6 +1128,34 @@ the configuration (without a prefix: ``Auto``).
         B
       };
 
+  * ``BS_Whitesmiths`` (in configuration: ``Whitesmiths``)
+    Like ``Allman`` but always indent braces and line up code with braces.
+
+    .. code-block:: c++
+
+      try
+        {
+        foo();
+        }
+      catch ()
+        {
+        }
+      void foo() { bar(); }
+      class foo
+        {
+        };
+      if (foo())
+        {
+        }
+      else
+        {
+        }
+      enum X : int
+        {
+        A,
+        B
+        };
+
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to
     braces of control statements, not to those of class, function
