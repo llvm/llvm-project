@@ -333,6 +333,7 @@ public:
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
   virtual std::vector<StringRef> *getNameTable() { return nullptr; }
+  virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
 protected:
   /// Map every function to its associated profile.
@@ -504,6 +505,12 @@ public:
 
   /// Read sample profiles in extensible format from the associated file.
   std::error_code read() override;
+
+  /// Get the total size of all \p Type sections.
+  uint64_t getSectionSize(SecType Type);
+  /// Get the total size of header and all sections.
+  uint64_t getFileSize();
+  virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
 };
 
 class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {

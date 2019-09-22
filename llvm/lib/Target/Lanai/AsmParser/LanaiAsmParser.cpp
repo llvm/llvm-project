@@ -469,13 +469,14 @@ public:
     else if (isa<LanaiMCExpr>(getImm())) {
 #ifndef NDEBUG
       const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(getImm());
-      assert(SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO);
+      assert(SymbolRefExpr &&
+             SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_LO);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
-      assert(isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
+      assert(BinaryExpr && isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
              cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
                  LanaiMCExpr::VK_Lanai_ABS_LO);
 #endif
@@ -499,13 +500,14 @@ public:
     else if (isa<LanaiMCExpr>(getImm())) {
 #ifndef NDEBUG
       const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(getImm());
-      assert(SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_HI);
+      assert(SymbolRefExpr &&
+             SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_ABS_HI);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
-      assert(isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
+      assert(BinaryExpr && isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
              cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
                  LanaiMCExpr::VK_Lanai_ABS_HI);
 #endif
@@ -544,10 +546,9 @@ public:
     } else if (isa<MCBinaryExpr>(getImm())) {
 #ifndef NDEBUG
       const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(getImm());
-      const LanaiMCExpr *SymbolRefExpr =
-          dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS());
-      assert(SymbolRefExpr &&
-             SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None);
+      assert(BinaryExpr && isa<LanaiMCExpr>(BinaryExpr->getLHS()) &&
+             cast<LanaiMCExpr>(BinaryExpr->getLHS())->getKind() ==
+                 LanaiMCExpr::VK_Lanai_None);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else

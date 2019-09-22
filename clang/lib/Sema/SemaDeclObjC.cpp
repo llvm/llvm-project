@@ -2275,9 +2275,7 @@ static bool isObjCTypeSubstitutable(ASTContext &Context,
   // stricter definition so it is not substitutable for id<A>.
   if (B->isObjCQualifiedIdType()) {
     return A->isObjCQualifiedIdType() &&
-           Context.ObjCQualifiedIdTypesAreCompatible(QualType(A, 0),
-                                                     QualType(B,0),
-                                                     false);
+           Context.ObjCQualifiedIdTypesAreCompatible(A, B, false);
   }
 
   /*

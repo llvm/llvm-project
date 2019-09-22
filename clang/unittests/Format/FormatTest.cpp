@@ -2401,6 +2401,16 @@ TEST_F(FormatTest, FormatTryCatchBraceStyles) {
                "  // something\n"
                "}",
                Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("try\n"
+               "  {\n"
+               "  // something white\n"
+               "  }\n"
+               "catch (...)\n"
+               "  {\n"
+               "  // something white\n"
+               "  }",
+               Style);
   Style.BreakBeforeBraces = FormatStyle::BS_GNU;
   verifyFormat("try\n"
                "  {\n"
@@ -4878,6 +4888,13 @@ TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
                "    int someLongParameter) const\n"
                "{\n"
                "}",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("void someLongFunction(\n"
+               "    int someLongParameter) const\n"
+               "  {\n"
+               "  }",
                Style);
 
   // Unless these are unknown annotations.
@@ -11420,6 +11437,251 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                BreakBeforeBraceShortIfs);
 }
 
+TEST_F(FormatTest, WhitesmithsBraceBreaking) {
+  FormatStyle WhitesmithsBraceStyle = getLLVMStyle();
+  WhitesmithsBraceStyle.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+
+  // Make a few changes to the style for testing purposes
+  WhitesmithsBraceStyle.AllowShortFunctionsOnASingleLine =
+      FormatStyle::SFS_Empty;
+  WhitesmithsBraceStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  WhitesmithsBraceStyle.ColumnLimit = 0;
+
+  // FIXME: this test case can't decide whether there should be a blank line
+  // after the ~D() line or not. It adds one if one doesn't exist in the test
+  // and it removes the line if one exists.
+  /*
+  verifyFormat("class A;\n"
+               "namespace B\n"
+               "  {\n"
+               "class C;\n"
+               "// Comment\n"
+               "class D\n"
+               "  {\n"
+               "public:\n"
+               "  D();\n"
+               "  ~D() {}\n"
+               "private:\n"
+               "  enum E\n"
+               "    {\n"
+               "    F\n"
+               "    }\n"
+               "  };\n"
+               "  } // namespace B\n",
+               WhitesmithsBraceStyle);
+  */
+
+  verifyFormat("namespace a\n"
+               "  {\n"
+               "class A\n"
+               "  {\n"
+               "  void f()\n"
+               "    {\n"
+               "    if (true)\n"
+               "      {\n"
+               "      a();\n"
+               "      b();\n"
+               "      }\n"
+               "    }\n"
+               "  void g()\n"
+               "    {\n"
+               "    return;\n"
+               "    }\n"
+               "  };\n"
+               "struct B\n"
+               "  {\n"
+               "  int x;\n"
+               "  };\n"
+               "  } // namespace a",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void f()\n"
+               "  {\n"
+               "  if (true)\n"
+               "    {\n"
+               "    a();\n"
+               "    }\n"
+               "  else if (false)\n"
+               "    {\n"
+               "    b();\n"
+               "    }\n"
+               "  else\n"
+               "    {\n"
+               "    c();\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void f()\n"
+               "  {\n"
+               "  for (int i = 0; i < 10; ++i)\n"
+               "    {\n"
+               "    a();\n"
+               "    }\n"
+               "  while (false)\n"
+               "    {\n"
+               "    b();\n"
+               "    }\n"
+               "  do\n"
+               "    {\n"
+               "    c();\n"
+               "    } while (false)\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  // FIXME: the block and the break under case 2 in this test don't get indented correctly
+  /*
+  verifyFormat("void switchTest1(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "    case 2:\n"
+               "      {\n"
+               "      }\n"
+               "      break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+  */
+
+  // FIXME: the block and the break under case 2 in this test don't get indented correctly
+  /*
+  verifyFormat("void switchTest2(int a)\n"
+               "  {\n"
+               "  switch (a)\n"
+               "    {\n"
+               "  case 0:\n"
+               "    break;\n"
+               "  case 1:\n"
+               "    {\n"
+               "    break;\n"
+               "    }\n"
+               "  case 2:\n"
+               "    {\n"
+               "    }\n"
+               "    break;\n"
+               "  default:\n"
+               "    break;\n"
+               "    }\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+  */
+
+  verifyFormat("enum X\n"
+               "  {\n"
+               "  Y = 0, // testing\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("enum X\n"
+               "  {\n"
+               "  Y = 0\n"
+               "  }\n",
+               WhitesmithsBraceStyle);
+  verifyFormat("enum X\n"
+               "  {\n"
+               "  Y = 0,\n"
+               "  Z = 1\n"
+               "  };\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("@interface BSApplicationController ()\n"
+               "  {\n"
+               "@private\n"
+               "  id _extraIvar;\n"
+               "  }\n"
+               "@end\n",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("#ifdef _DEBUG\n"
+               "int foo(int i = 0)\n"
+               "#else\n"
+               "int foo(int i = 5)\n"
+               "#endif\n"
+               "  {\n"
+               "  return i;\n"
+               "  }",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void foo() {}\n"
+               "void bar()\n"
+               "#ifdef _DEBUG\n"
+               "  {\n"
+               "  foo();\n"
+               "  }\n"
+               "#else\n"
+               "  {\n"
+               "  }\n"
+               "#endif",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("void foobar()\n"
+               "  {\n"
+               "  int i = 5;\n"
+               "  }\n"
+               "#ifdef _DEBUG\n"
+               "void bar()\n"
+               "  {\n"
+               "  }\n"
+               "#else\n"
+               "void bar()\n"
+               "  {\n"
+               "  foobar();\n"
+               "  }\n"
+               "#endif",
+               WhitesmithsBraceStyle);
+
+  // This shouldn't affect ObjC blocks..
+  verifyFormat("[self doSomeThingWithACompletionHandler:^{\n"
+               "  // ...\n"
+               "  int i;\n"
+               "}];",
+               WhitesmithsBraceStyle);
+  verifyFormat("void (^block)(void) = ^{\n"
+               "  // ...\n"
+               "  int i;\n"
+               "};",
+               WhitesmithsBraceStyle);
+  // .. or dict literals.
+  verifyFormat("void f()\n"
+               "  {\n"
+               "  [object someMethod:@{@\"a\" : @\"b\"}];\n"
+               "  }",
+               WhitesmithsBraceStyle);
+
+  verifyFormat("int f()\n"
+               "  { // comment\n"
+               "  return 42;\n"
+               "  }",
+               WhitesmithsBraceStyle);
+
+  FormatStyle BreakBeforeBraceShortIfs = WhitesmithsBraceStyle;
+  BreakBeforeBraceShortIfs.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_Always;
+  BreakBeforeBraceShortIfs.AllowShortLoopsOnASingleLine = true;
+  verifyFormat("void f(bool b)\n"
+               "  {\n"
+               "  if (b)\n"
+               "    {\n"
+               "    return;\n"
+               "    }\n"
+               "  }\n",
+               BreakBeforeBraceShortIfs);
+  verifyFormat("void f(bool b)\n"
+               "  {\n"
+               "  if (b) return;\n"
+               "  }\n",
+               BreakBeforeBraceShortIfs);
+  verifyFormat("void f(bool b)\n"
+               "  {\n"
+               "  while (b)\n"
+               "    {\n"
+               "    return;\n"
+               "    }\n"
+               "  }\n",
+               BreakBeforeBraceShortIfs);
+}
+
 TEST_F(FormatTest, GNUBraceBreaking) {
   FormatStyle GNUBraceStyle = getLLVMStyle();
   GNUBraceStyle.BreakBeforeBraces = FormatStyle::BS_GNU;
@@ -12097,6 +12359,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::BS_Stroustrup);
   CHECK_PARSE("BreakBeforeBraces: Allman", BreakBeforeBraces,
               FormatStyle::BS_Allman);
+  CHECK_PARSE("BreakBeforeBraces: Whitesmiths", BreakBeforeBraces,
+              FormatStyle::BS_Whitesmiths);
   CHECK_PARSE("BreakBeforeBraces: GNU", BreakBeforeBraces, FormatStyle::BS_GNU);
   CHECK_PARSE("BreakBeforeBraces: WebKit", BreakBeforeBraces,
               FormatStyle::BS_WebKit);

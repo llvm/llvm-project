@@ -294,12 +294,30 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> files) {
   return ret;
 }
 
+// If we don't have any input files, we'll have to rely on the information we
+// can derive from emulation information, since this at least gets us ABI.
+static uint32_t getFlagsFromEmulation() {
+  uint32_t ret = 0;
+
+  if (config->emulation.empty())
+    return 0;
+
+  if (config->ekind == ELF32BEKind || config->ekind == ELF32LEKind) {
+    if (config->mipsN32Abi)
+      ret |= EF_MIPS_ABI2;
+    else
+      ret |= EF_MIPS_ABI_O32;
+  }
+
+  return ret;
+}
+
 template <class ELFT> uint32_t elf::calcMipsEFlags() {
   std::vector<FileFlags> v;
   for (InputFile *f : objectFiles)
     v.push_back({f, cast<ObjFile<ELFT>>(f)->getObj().getHeader()->e_flags});
   if (v.empty())
-    return 0;
+    return getFlagsFromEmulation();
   checkFlags(v);
   return getMiscFlags(v) | getPicFlags(v) | getArchFlags(v);
 }

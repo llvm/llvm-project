@@ -662,8 +662,6 @@ private:
   void reportLeak(SymbolRef Sym, ExplodedNode *N, CheckerContext &C) const;
 };
 
-} // end anonymous namespace
-
 //===----------------------------------------------------------------------===//
 // Definition of MallocBugVisitor.
 //===----------------------------------------------------------------------===//
@@ -792,6 +790,8 @@ private:
     }
   };
 };
+
+} // end anonymous namespace
 
 // A map from the freed symbol to the symbol representing the return value of
 // the free function.
