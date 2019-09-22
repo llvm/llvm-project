@@ -667,6 +667,36 @@ std::error_code SampleProfileReaderExtBinaryBase::readHeader() {
   return sampleprof_error::success;
 }
 
+uint64_t SampleProfileReaderExtBinaryBase::getSectionSize(SecType Type) {
+  for (auto &Entry : SecHdrTable) {
+    if (Entry.Type == Type)
+      return Entry.Size;
+  }
+  return 0;
+}
+
+uint64_t SampleProfileReaderExtBinaryBase::getFileSize() {
+  auto &LastEntry = SecHdrTable.back();
+  return LastEntry.Offset + LastEntry.Size;
+}
+
+bool SampleProfileReaderExtBinaryBase::dumpSectionInfo(raw_ostream &OS) {
+  uint64_t TotalSecsSize = 0;
+  for (auto &Entry : SecHdrTable) {
+    OS << getSecName(Entry.Type) << " - Offset: " << Entry.Offset
+       << ", Size: " << Entry.Size << "\n";
+    TotalSecsSize += getSectionSize(Entry.Type);
+  }
+  uint64_t HeaderSize = SecHdrTable.front().Offset;
+  assert(HeaderSize + TotalSecsSize == getFileSize() &&
+         "Size of 'header + sections' doesn't match the total size of profile");
+
+  OS << "Header Size: " << HeaderSize << "\n";
+  OS << "Total Sections Size: " << TotalSecsSize << "\n";
+  OS << "File Size: " << getFileSize() << "\n";
+  return true;
+}
+
 std::error_code SampleProfileReaderBinary::readMagicIdent() {
   // Read and check the magic identifier.
   auto Magic = readNumber<uint64_t>();

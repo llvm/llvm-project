@@ -674,6 +674,7 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
+namespace {
 class HexagonPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineInstr *Loop, *EndLoop;
   MachineFunction *MF;
@@ -748,6 +749,7 @@ public:
 
   void disposed() override { Loop->eraseFromParent(); }
 };
+} // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
 HexagonInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {

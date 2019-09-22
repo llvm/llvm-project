@@ -1530,10 +1530,38 @@ struct AANoRecurseImpl : public AANoRecurse {
 struct AANoRecurseFunction final : AANoRecurseImpl {
   AANoRecurseFunction(const IRPosition &IRP) : AANoRecurseImpl(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoRecurseImpl::initialize(A);
+    if (const Function *F = getAnchorScope())
+      if (A.getInfoCache().getSccSize(*F) == 1)
+        return;
+    indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Implement this.
-    return indicatePessimisticFixpoint();
+
+    auto CheckForNoRecurse = [&](Instruction &I) {
+      ImmutableCallSite ICS(&I);
+      if (ICS.hasFnAttr(Attribute::NoRecurse))
+        return true;
+
+      const auto &NoRecurseAA =
+          A.getAAFor<AANoRecurse>(*this, IRPosition::callsite_function(ICS));
+      if (!NoRecurseAA.isAssumedNoRecurse())
+        return false;
+
+      // Recursion to the same function
+      if (ICS.getCalledFunction() == getAnchorScope())
+        return false;
+
+      return true;
+    };
+
+    if (!A.checkForAllCallLikeInstructions(CheckForNoRecurse, *this))
+      return indicatePessimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
   }
 
   void trackStatistics() const override { STATS_DECLTRACK_FN_ATTR(norecurse) }
@@ -3934,6 +3962,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "no-return".
   getOrCreateAAFor<AANoReturn>(FPos);
 
+  // Every function might be "no-recurse".
+  getOrCreateAAFor<AANoRecurse>(FPos);
+
   // Every function might be applicable for Heap-To-Stack conversion.
   if (EnableHeapToStack)
     getOrCreateAAFor<AAHeapToStack>(FPos);
@@ -4113,7 +4144,7 @@ static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  InformationCache InfoCache(M.getDataLayout(), AG);
+  InformationCache InfoCache(M, AG);
   Attributor A(InfoCache, DepRecInterval);
 
   for (Function &F : M)
@@ -4149,9 +4180,7 @@ static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
 }
 
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-
-  AnalysisGetter AG(FAM);
+  AnalysisGetter AG(AM);
   if (runAttributorOnModule(M, AG)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
