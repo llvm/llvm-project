@@ -620,12 +620,12 @@ class Value;
   SelectPatternResult matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
                                          Instruction::CastOps *CastOp = nullptr,
                                          unsigned Depth = 0);
+
   inline SelectPatternResult
-  matchSelectPattern(const Value *V, const Value *&LHS, const Value *&RHS,
-                     Instruction::CastOps *CastOp = nullptr) {
-    Value *L = const_cast<Value*>(LHS);
-    Value *R = const_cast<Value*>(RHS);
-    auto Result = matchSelectPattern(const_cast<Value*>(V), L, R);
+  matchSelectPattern(const Value *V, const Value *&LHS, const Value *&RHS) {
+    Value *L = const_cast<Value *>(LHS);
+    Value *R = const_cast<Value *>(RHS);
+    auto Result = matchSelectPattern(const_cast<Value *>(V), L, R);
     LHS = L;
     RHS = R;
     return Result;

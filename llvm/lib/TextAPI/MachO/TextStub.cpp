@@ -399,13 +399,25 @@ template <> struct MappingTraits<const InterfaceFile *> {
       }
     }
 
+    // TBD v1 - TBD v3 files only support one platform and several
+    // architectures. It is possible to have more than one platform for TBD v3
+    // files, but the architectures don't apply to all
+    // platforms, specifically to filter out the i386 slice from
+    // platform macCatalyst.
     TargetList synthesizeTargets(ArchitectureSet Architectures,
-                                 const PlatformSet &Platforms) {
+                                          const PlatformSet &Platforms) {
       TargetList Targets;
 
       for (auto Platform : Platforms) {
-        for (const auto &&Architecture : Architectures)
+        Platform = mapToPlatformKind(Platform, Architectures.hasX86());
+
+        for (const auto &&Architecture : Architectures) {
+          if ((Architecture == AK_i386) &&
+              (Platform == PlatformKind::macCatalyst))
+            continue;
+
           Targets.emplace_back(Architecture, Platform);
+        }
       }
       return Targets;
     }

@@ -16771,7 +16771,8 @@ ARMTargetLowering::getABIAlignmentForCallingConv(Type *ArgTy,
 
   // Avoid over-aligning vector parameters. It would require realigning the
   // stack and waste space for no real benefit.
-  return std::min(DL.getABITypeAlignment(ArgTy), DL.getStackAlignment());
+  return std::min(DL.getABITypeAlignment(ArgTy),
+                  (unsigned)DL.getStackAlignment().value());
 }
 
 /// Return true if a type is an AAPCS-VFP homogeneous aggregate or one of
