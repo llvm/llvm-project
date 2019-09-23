@@ -31,7 +31,7 @@ class StringRef;
 
 namespace lldb_private {
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 typedef SOCKET NativeSocket;
 #else
 typedef int NativeSocket;

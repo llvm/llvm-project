@@ -746,7 +746,6 @@ void Options::HandleOptionArgumentCompletion(
   auto opt_defs = GetDefinitions();
   std::unique_ptr<SearchFilter> filter_up;
 
-  int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
   int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
 
   // See if this is an enumeration type option, and if so complete it here:
