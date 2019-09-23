@@ -25,7 +25,7 @@ if (Qthreads_FOUND)
                          DIRECTORY
                          CACHE)
   set(KITSUNE_ENABLE_QTHREADS TRUE CACHE BOOL "Enable automatic include and library flags for Qthreads.")
-  set(QTHREADS_LINK_LIBS "-lqthreads -lhwloc -lnuma -lpthread" 
+  set(QTHREADS_LINK_LIBS "-lqthread -lhwloc -lnuma -lpthread" 
       CACHE STRING "List of libraries needed for qthreads.")
 else()
   message(STATUS "kitsune: looking for qthreads... NOT FOUND")
