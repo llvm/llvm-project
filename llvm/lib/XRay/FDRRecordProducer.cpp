@@ -130,7 +130,7 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
     R = std::move(BufferExtentsOrError.get());
     assert(R != nullptr);
     assert(isa<BufferExtents>(R.get()));
-    auto BE = dyn_cast<BufferExtents>(R.get());
+    auto BE = cast<BufferExtents>(R.get());
     CurrentBufferBytes = BE->size();
     return std::move(R);
   }

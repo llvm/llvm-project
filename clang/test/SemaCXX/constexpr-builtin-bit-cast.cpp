@@ -220,7 +220,7 @@ void backtrace() {
 void test_array_fill() {
   constexpr unsigned char a[4] = {1, 2};
   constexpr unsigned int i = bit_cast<unsigned int>(a);
-  static_assert(i == LITTLE_END ? 0x00000201 : 0x01020000, "");
+  static_assert(i == LITTLE_END ? 0x00000201 : 0x01020000, ""); // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}
 }
 
 typedef decltype(nullptr) nullptr_t;
