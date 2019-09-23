@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
   char *bufSource1, *bufSource2, *bufInclude;
   size_t sizeSource1, sizeSource2, sizeInclude;
   amd_comgr_data_t dataSource1, dataSource2, dataInclude;
-  amd_comgr_data_set_t dataSetIn, dataSetPCH, dataSetPreproc, dataSetBC,
-      dataSetDevLibs, dataSetLinked, dataSetAsm, dataSetReloc, dataSetExec;
+  amd_comgr_data_set_t dataSetIn, dataSetPCH, dataSetBC, dataSetDevLibs,
+      dataSetLinked, dataSetAsm, dataSetReloc, dataSetExec;
   amd_comgr_action_info_t dataAction;
   amd_comgr_status_t status;
   const char *codeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all"};
@@ -119,29 +119,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  status = amd_comgr_create_data_set(&dataSetPreproc);
-  checkError(status, "amd_comgr_create_data_set");
-
-  status = amd_comgr_do_action(AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR,
-                               dataAction, dataSetPCH, dataSetPreproc);
-  checkError(status, "amd_comgr_do_action");
-
-  status = amd_comgr_action_data_count(dataSetPreproc,
-                                       AMD_COMGR_DATA_KIND_SOURCE, &count);
-  checkError(status, "amd_comgr_action_data_count");
-
-  if (count != 2) {
-    printf("AMD_COMGR_ACTION_PREPROCESS_SOURCE_TO_SOURCE Failed: "
-           "produced %zu source objects (expected 2)\n",
-           count);
-    exit(1);
-  }
-
   status = amd_comgr_create_data_set(&dataSetBC);
   checkError(status, "amd_comgr_create_data_set");
 
   status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
-                               dataAction, dataSetPreproc, dataSetBC);
+                               dataAction, dataSetPCH, dataSetBC);
   checkError(status, "amd_comgr_do_action");
 
   status =
@@ -267,8 +249,6 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_destroy_data_set(dataSetIn);
   checkError(status, "amd_comgr_destroy_data_set");
   status = amd_comgr_destroy_data_set(dataSetPCH);
-  checkError(status, "amd_comgr_destroy_data_set");
-  status = amd_comgr_destroy_data_set(dataSetPreproc);
   checkError(status, "amd_comgr_destroy_data_set");
   status = amd_comgr_destroy_data_set(dataSetBC);
   checkError(status, "amd_comgr_destroy_data_set");
