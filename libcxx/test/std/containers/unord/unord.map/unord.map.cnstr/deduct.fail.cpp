@@ -9,7 +9,7 @@
 // <unordered_map>
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-deduction-guides
-// XFAIL: clang-6, apple-clang-9.0, apple-clang-9.1, apple-clang-10.0
+// XFAIL: clang-6, apple-clang-9.0, apple-clang-9.1, apple-clang-10.0.0
 
 // template<class InputIterator,
 //          class Hash = hash<iter-key-type<InputIterator>>,
