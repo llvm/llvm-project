@@ -293,7 +293,8 @@ void Function::BuildLazyArguments() const {
 
   // Clear the lazy arguments bit.
   unsigned SDC = getSubclassDataFromValue();
-  const_cast<Function*>(this)->setValueSubclassData(SDC &= ~(1<<0));
+  SDC &= ~(1 << 0);
+  const_cast<Function*>(this)->setValueSubclassData(SDC);
   assert(!hasLazyArguments());
 }
 

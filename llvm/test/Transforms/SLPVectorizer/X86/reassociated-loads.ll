@@ -5,36 +5,6 @@ define signext i8 @Foo(<32 x i8>* %__v) {
 ; CHECK-LABEL: @Foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i8>, <32 x i8>* [[__V:%.*]], align 32
-; CHECK-NEXT:    [[ADD_I_1_I:%.*]] = add i8 undef, undef
-; CHECK-NEXT:    [[ADD_I_2_I:%.*]] = add i8 [[ADD_I_1_I]], undef
-; CHECK-NEXT:    [[ADD_I_3_I:%.*]] = add i8 [[ADD_I_2_I]], undef
-; CHECK-NEXT:    [[ADD_I_4_I:%.*]] = add i8 [[ADD_I_3_I]], undef
-; CHECK-NEXT:    [[ADD_I_5_I:%.*]] = add i8 [[ADD_I_4_I]], undef
-; CHECK-NEXT:    [[ADD_I_6_I:%.*]] = add i8 [[ADD_I_5_I]], undef
-; CHECK-NEXT:    [[ADD_I_7_I:%.*]] = add i8 [[ADD_I_6_I]], undef
-; CHECK-NEXT:    [[ADD_I_8_I:%.*]] = add i8 [[ADD_I_7_I]], undef
-; CHECK-NEXT:    [[ADD_I_9_I:%.*]] = add i8 [[ADD_I_8_I]], undef
-; CHECK-NEXT:    [[ADD_I_10_I:%.*]] = add i8 [[ADD_I_9_I]], undef
-; CHECK-NEXT:    [[ADD_I_11_I:%.*]] = add i8 [[ADD_I_10_I]], undef
-; CHECK-NEXT:    [[ADD_I_12_I:%.*]] = add i8 [[ADD_I_11_I]], undef
-; CHECK-NEXT:    [[ADD_I_13_I:%.*]] = add i8 [[ADD_I_12_I]], undef
-; CHECK-NEXT:    [[ADD_I_14_I:%.*]] = add i8 [[ADD_I_13_I]], undef
-; CHECK-NEXT:    [[ADD_I_15_I:%.*]] = add i8 [[ADD_I_14_I]], undef
-; CHECK-NEXT:    [[ADD_I_16_I:%.*]] = add i8 [[ADD_I_15_I]], undef
-; CHECK-NEXT:    [[ADD_I_17_I:%.*]] = add i8 [[ADD_I_16_I]], undef
-; CHECK-NEXT:    [[ADD_I_18_I:%.*]] = add i8 [[ADD_I_17_I]], undef
-; CHECK-NEXT:    [[ADD_I_19_I:%.*]] = add i8 [[ADD_I_18_I]], undef
-; CHECK-NEXT:    [[ADD_I_20_I:%.*]] = add i8 [[ADD_I_19_I]], undef
-; CHECK-NEXT:    [[ADD_I_21_I:%.*]] = add i8 [[ADD_I_20_I]], undef
-; CHECK-NEXT:    [[ADD_I_22_I:%.*]] = add i8 [[ADD_I_21_I]], undef
-; CHECK-NEXT:    [[ADD_I_23_I:%.*]] = add i8 [[ADD_I_22_I]], undef
-; CHECK-NEXT:    [[ADD_I_24_I:%.*]] = add i8 [[ADD_I_23_I]], undef
-; CHECK-NEXT:    [[ADD_I_25_I:%.*]] = add i8 [[ADD_I_24_I]], undef
-; CHECK-NEXT:    [[ADD_I_26_I:%.*]] = add i8 [[ADD_I_25_I]], undef
-; CHECK-NEXT:    [[ADD_I_27_I:%.*]] = add i8 [[ADD_I_26_I]], undef
-; CHECK-NEXT:    [[ADD_I_28_I:%.*]] = add i8 [[ADD_I_27_I]], undef
-; CHECK-NEXT:    [[ADD_I_29_I:%.*]] = add i8 [[ADD_I_28_I]], undef
-; CHECK-NEXT:    [[ADD_I_30_I:%.*]] = add i8 [[ADD_I_29_I]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <32 x i8> [[TMP0]], <32 x i8> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <32 x i8> [[TMP0]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <32 x i8> [[BIN_RDX]], <32 x i8> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -46,7 +16,6 @@ define signext i8 @Foo(<32 x i8>* %__v) {
 ; CHECK-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x i8> [[BIN_RDX6]], <32 x i8> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <32 x i8> [[BIN_RDX6]], [[RDX_SHUF7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[BIN_RDX8]], i32 0
-; CHECK-NEXT:    [[ADD_I_31_I:%.*]] = add i8 [[ADD_I_30_I]], undef
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
 entry:

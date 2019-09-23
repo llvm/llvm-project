@@ -13,3 +13,4 @@ ALL: Relocations [
 ALL: Symbols [
 ALL: ProgramHeaders [
 ALL: Notes [
+ALL: StackSizes [

@@ -344,6 +344,13 @@ multiclass MinMax_pats<InstHexagon PickT, InstHexagon PickS,
            (PickS CmpPred:$Vs, CmpPred:$Vt)>;
 }
 
+// Bitcasts between same-size vector types are no-ops, except for the
+// actual type change.
+multiclass NopCast_pat<ValueType Ty1, ValueType Ty2, RegisterClass RC> {
+  def: Pat<(Ty1 (bitconvert (Ty2 RC:$Val))), (Ty1 RC:$Val)>;
+  def: Pat<(Ty2 (bitconvert (Ty1 RC:$Val))), (Ty2 RC:$Val)>;
+}
+
 
 // Frags for commonly used SDNodes.
 def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
@@ -427,17 +434,18 @@ def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
 def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
 def: Pat<(f64 (bitconvert I64:$v)), (F64:$v)>;
 
-multiclass Cast_pat<ValueType Ta, ValueType Tb, RegisterClass RC> {
-  def: Pat<(Tb (bitconvert (Ta RC:$Rs))), (Tb RC:$Rs)>;
-  def: Pat<(Ta (bitconvert (Tb RC:$Rs))), (Ta RC:$Rs)>;
-}
-
-// Bit convert vector types to integers.
-defm: Cast_pat<v4i8,  i32, IntRegs>;
-defm: Cast_pat<v2i16, i32, IntRegs>;
-defm: Cast_pat<v8i8,  i64, DoubleRegs>;
-defm: Cast_pat<v4i16, i64, DoubleRegs>;
-defm: Cast_pat<v2i32, i64, DoubleRegs>;
+// Bit convert 32- and 64-bit types.
+// All of these are bitcastable to one another: i32, v2i16, v4i8.
+defm: NopCast_pat<i32,   v2i16, IntRegs>;
+defm: NopCast_pat<i32,    v4i8, IntRegs>;
+defm: NopCast_pat<v2i16,  v4i8, IntRegs>;
+// All of these are bitcastable to one another: i64, v2i32, v4i16, v8i8.
+defm: NopCast_pat<i64,   v2i32, DoubleRegs>;
+defm: NopCast_pat<i64,   v4i16, DoubleRegs>;
+defm: NopCast_pat<i64,    v8i8, DoubleRegs>;
+defm: NopCast_pat<v2i32, v4i16, DoubleRegs>;
+defm: NopCast_pat<v2i32,  v8i8, DoubleRegs>;
+defm: NopCast_pat<v4i16,  v8i8, DoubleRegs>;
 
 
 // --(3) Extend/truncate -------------------------------------------------

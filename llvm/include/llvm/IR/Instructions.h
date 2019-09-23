@@ -110,9 +110,13 @@ public:
   /// Return the alignment of the memory that is being allocated by the
   /// instruction.
   unsigned getAlignment() const {
-    return (1u << (getSubclassDataFromInstruction() & 31)) >> 1;
+    if (const auto MA = decodeMaybeAlign(getSubclassDataFromInstruction() & 31))
+      return MA->value();
+    return 0;
   }
+  // FIXME: Remove once migration to llvm::Align is over.
   void setAlignment(unsigned Align);
+  void setAlignment(llvm::MaybeAlign Align);
 
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
@@ -238,10 +242,15 @@ public:
 
   /// Return the alignment of the access that is being performed.
   unsigned getAlignment() const {
-    return (1 << ((getSubclassDataFromInstruction() >> 1) & 31)) >> 1;
+    if (const auto MA =
+            decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31))
+      return MA->value();
+    return 0;
   }
 
+  // FIXME: Remove once migration to llvm::Align is over.
   void setAlignment(unsigned Align);
+  void setAlignment(llvm::MaybeAlign Align);
 
   /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
@@ -363,10 +372,15 @@ public:
 
   /// Return the alignment of the access that is being performed
   unsigned getAlignment() const {
-    return (1 << ((getSubclassDataFromInstruction() >> 1) & 31)) >> 1;
+    if (const auto MA =
+            decodeMaybeAlign((getSubclassDataFromInstruction() >> 1) & 31))
+      return MA->value();
+    return 0;
   }
 
+  // FIXME: Remove once migration to llvm::Align is over.
   void setAlignment(unsigned Align);
+  void setAlignment(llvm::MaybeAlign Align);
 
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {

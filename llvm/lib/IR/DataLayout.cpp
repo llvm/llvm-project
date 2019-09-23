@@ -638,22 +638,22 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
   return L;
 }
 
-unsigned DataLayout::getPointerABIAlignment(unsigned AS) const {
+llvm::Align DataLayout::getPointerABIAlignment(unsigned AS) const {
   PointersTy::const_iterator I = findPointerLowerBound(AS);
   if (I == Pointers.end() || I->AddressSpace != AS) {
     I = findPointerLowerBound(0);
     assert(I->AddressSpace == 0);
   }
-  return I->ABIAlign.value();
+  return I->ABIAlign;
 }
 
-unsigned DataLayout::getPointerPrefAlignment(unsigned AS) const {
+llvm::Align DataLayout::getPointerPrefAlignment(unsigned AS) const {
   PointersTy::const_iterator I = findPointerLowerBound(AS);
   if (I == Pointers.end() || I->AddressSpace != AS) {
     I = findPointerLowerBound(0);
     assert(I->AddressSpace == 0);
   }
-  return I->PrefAlign.value();
+  return I->PrefAlign;
 }
 
 unsigned DataLayout::getPointerSize(unsigned AS) const {
@@ -711,12 +711,11 @@ llvm::Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   switch (Ty->getTypeID()) {
   // Early escape for the non-numeric types.
   case Type::LabelTyID:
-    return llvm::Align(abi_or_pref ? getPointerABIAlignment(0)
-                                   : getPointerPrefAlignment(0));
+    return abi_or_pref ? getPointerABIAlignment(0) : getPointerPrefAlignment(0);
   case Type::PointerTyID: {
     unsigned AS = cast<PointerType>(Ty)->getAddressSpace();
-    return llvm::Align(abi_or_pref ? getPointerABIAlignment(AS)
-                                   : getPointerPrefAlignment(AS));
+    return abi_or_pref ? getPointerABIAlignment(AS)
+                       : getPointerPrefAlignment(AS);
     }
   case Type::ArrayTyID:
     return getAlignment(cast<ArrayType>(Ty)->getElementType(), abi_or_pref);
@@ -762,8 +761,8 @@ unsigned DataLayout::getABITypeAlignment(Type *Ty) const {
 
 /// getABIIntegerTypeAlignment - Return the minimum ABI-required alignment for
 /// an integer type of the specified bitwidth.
-unsigned DataLayout::getABIIntegerTypeAlignment(unsigned BitWidth) const {
-  return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr).value();
+llvm::Align DataLayout::getABIIntegerTypeAlignment(unsigned BitWidth) const {
+  return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr);
 }
 
 unsigned DataLayout::getPrefTypeAlignment(Type *Ty) const {
