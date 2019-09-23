@@ -61,13 +61,13 @@ void test_record() {
 
   constexpr int_splicer splice{0x0C05FEFE, 0xCAFEBABE};
 
-  static_assert(bit_cast<unsigned long long>(splice) == LITTLE_END
-                ? 0xCAFEBABE0C05FEFE
-                : 0x0C05FEFECAFEBABE);
+  static_assert(bit_cast<unsigned long long>(splice) == (LITTLE_END
+                                                             ? 0xCAFEBABE0C05FEFE
+                                                             : 0x0C05FEFECAFEBABE));
 
-  static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == LITTLE_END
-                ? 0x0C05FEFE
-                : 0xCAFEBABE);
+  static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
+                                                                    ? 0x0C05FEFE
+                                                                    : 0xCAFEBABE));
 
   static_assert(round_trip<unsigned long long>(splice));
   static_assert(round_trip<long long>(splice));
@@ -220,7 +220,7 @@ void backtrace() {
 void test_array_fill() {
   constexpr unsigned char a[4] = {1, 2};
   constexpr unsigned int i = bit_cast<unsigned int>(a);
-  static_assert(i == LITTLE_END ? 0x00000201 : 0x01020000, ""); // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}
+  static_assert(i == (LITTLE_END ? 0x00000201 : 0x01020000));
 }
 
 typedef decltype(nullptr) nullptr_t;

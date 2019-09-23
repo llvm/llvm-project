@@ -12,6 +12,7 @@ typedef NonPOD NonPODArMB[10][2];
 
 // PODs
 enum Enum { EV };
+enum SignedEnum : signed int { };
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
 struct IncompleteStruct;
@@ -56,14 +57,14 @@ struct HasInheritedCons : HasDefaultCons { using HasDefaultCons::HasDefaultCons;
 struct HasNoInheritedCons : HasCons {};
 struct HasCopyAssign { HasCopyAssign operator =(const HasCopyAssign&); };
 struct HasMoveAssign { HasMoveAssign operator =(const HasMoveAssign&&); };
-struct HasNoThrowMoveAssign { 
+struct HasNoThrowMoveAssign {
   HasNoThrowMoveAssign& operator=(
     const HasNoThrowMoveAssign&&) throw(); };
-struct HasNoExceptNoThrowMoveAssign { 
+struct HasNoExceptNoThrowMoveAssign {
   HasNoExceptNoThrowMoveAssign& operator=(
-    const HasNoExceptNoThrowMoveAssign&&) noexcept; 
+    const HasNoExceptNoThrowMoveAssign&&) noexcept;
 };
-struct HasThrowMoveAssign { 
+struct HasThrowMoveAssign {
   HasThrowMoveAssign& operator=(const HasThrowMoveAssign&&)
 #if __cplusplus <= 201402L
   throw(POD);
@@ -73,7 +74,7 @@ struct HasThrowMoveAssign {
 };
 
 
-struct HasNoExceptFalseMoveAssign { 
+struct HasNoExceptFalseMoveAssign {
   HasNoExceptFalseMoveAssign& operator=(
     const HasNoExceptFalseMoveAssign&&) noexcept(false); };
 struct HasMoveCtor { HasMoveCtor(const HasMoveCtor&&); };
@@ -82,17 +83,17 @@ struct HasMemberMoveAssign { HasMoveAssign member; };
 struct HasStaticMemberMoveCtor { static HasMoveCtor member; };
 struct HasStaticMemberMoveAssign { static HasMoveAssign member; };
 struct HasMemberThrowMoveAssign { HasThrowMoveAssign member; };
-struct HasMemberNoExceptFalseMoveAssign { 
+struct HasMemberNoExceptFalseMoveAssign {
   HasNoExceptFalseMoveAssign member; };
 struct HasMemberNoThrowMoveAssign { HasNoThrowMoveAssign member; };
-struct HasMemberNoExceptNoThrowMoveAssign { 
+struct HasMemberNoExceptNoThrowMoveAssign {
   HasNoExceptNoThrowMoveAssign member; };
 
-struct HasDefaultTrivialCopyAssign { 
+struct HasDefaultTrivialCopyAssign {
   HasDefaultTrivialCopyAssign &operator=(
-    const HasDefaultTrivialCopyAssign&) = default; 
+    const HasDefaultTrivialCopyAssign&) = default;
 };
-struct TrivialMoveButNotCopy { 
+struct TrivialMoveButNotCopy {
   TrivialMoveButNotCopy &operator=(TrivialMoveButNotCopy&&) = default;
   TrivialMoveButNotCopy &operator=(const TrivialMoveButNotCopy&);
 };
@@ -361,7 +362,7 @@ void is_enum()
 struct FinalClass final {
 };
 
-template<typename T> 
+template<typename T>
 struct PotentiallyFinal { };
 
 template<typename T>
@@ -801,6 +802,7 @@ void is_fundamental()
   int t23[T(__is_fundamental(unsigned long))];
   int t24[T(__is_fundamental(void))];
   int t25[T(__is_fundamental(cvoid))];
+  int t26[T(__is_fundamental(decltype(nullptr)))];
 
   int t30[F(__is_fundamental(Union))];
   int t31[F(__is_fundamental(UnionAr))];
@@ -1419,12 +1421,12 @@ void is_signed()
   int t04[T(__is_signed(short))];
   int t05[T(__is_signed(signed char))];
   int t06[T(__is_signed(wchar_t))];
+  int t07[T(__is_signed(float))];
+  int t08[T(__is_signed(double))];
+  int t09[T(__is_signed(long double))];
 
-  int t10[F(__is_signed(bool))];
-  int t11[F(__is_signed(cvoid))];
-  int t12[F(__is_signed(float))];
-  int t13[F(__is_signed(double))];
-  int t14[F(__is_signed(long double))];
+  int t13[F(__is_signed(bool))];
+  int t14[F(__is_signed(cvoid))];
   int t15[F(__is_signed(unsigned char))];
   int t16[F(__is_signed(unsigned int))];
   int t17[F(__is_signed(unsigned long long))];
@@ -1434,9 +1436,10 @@ void is_signed()
   int t21[F(__is_signed(ClassType))];
   int t22[F(__is_signed(Derives))];
   int t23[F(__is_signed(Enum))];
-  int t24[F(__is_signed(IntArNB))];
-  int t25[F(__is_signed(Union))];
-  int t26[F(__is_signed(UnionAr))];
+  int t24[F(__is_signed(SignedEnum))];
+  int t25[F(__is_signed(IntArNB))];
+  int t26[F(__is_signed(Union))];
+  int t27[F(__is_signed(UnionAr))];
 }
 
 void is_unsigned()
@@ -2005,7 +2008,7 @@ class PrivateCopy {
 };
 
 template<typename T>
-struct X0 { 
+struct X0 {
   template<typename U> X0(const X0<U>&);
 };
 
@@ -2766,7 +2769,7 @@ struct CanBeUniqueIfNoPadding : NotUniqueBecauseTailPadding {
   char b[7];
 };
 
-static_assert(!has_unique_object_representations<NotUniqueBecauseTailPadding>::value, 
+static_assert(!has_unique_object_representations<NotUniqueBecauseTailPadding>::value,
               "non trivial");
 // Can be unique on Itanium, since the is child class' data is 'folded' into the
 // parent's tail padding.

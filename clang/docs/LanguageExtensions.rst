@@ -1161,10 +1161,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_sealed`` (Microsoft):
   Synonym for ``__is_final``.
 * ``__is_signed`` (C++, Embarcadero):
-  Note that this currently returns true for enumeration types if the underlying
-  type is signed, and returns false for floating-point types, in violation of
-  the requirements for ``std::is_signed``. This behavior is likely to change in
-  a future version of Clang.
+  Returns false for enumeration types, and returns true for floating-point types. Note, before Clang 10, returned true for enumeration types if the underlying type was signed, and returned false for floating-point types.
 * ``__is_standard_layout`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_trivial`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_trivially_assignable`` (C++, GNU, Microsoft)
