@@ -3441,8 +3441,9 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
   // hoisting the move immediate would make it worthwhile with a less optimal
   // BEXTR?
-  if (!Subtarget->hasTBM() &&
-      !(Subtarget->hasBMI() && Subtarget->hasFastBEXTR()))
+  bool PreferBEXTR =
+      Subtarget->hasTBM() || (Subtarget->hasBMI() && Subtarget->hasFastBEXTR());
+  if (!PreferBEXTR && !Subtarget->hasBMI2())
     return nullptr;
 
   // Must have a shift right.
@@ -3481,23 +3482,50 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   if (Shift + MaskSize > NVT.getSizeInBits())
     return nullptr;
 
-  SDValue New = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
-  unsigned ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
-  unsigned MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
+  // BZHI, if available, is always fast, unlike BEXTR. But even if we decide
+  // that we can't use BEXTR, it is only worthwhile using BZHI if the mask
+  // does not fit into 32 bits. Load folding is not a sufficient reason.
+  if (!PreferBEXTR && MaskSize <= 32)
+    return nullptr;
 
-  // BMI requires the immediate to placed in a register.
-  if (!Subtarget->hasTBM()) {
-    ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
-    MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+  SDValue Control;
+  unsigned ROpc, MOpc;
+
+  if (!PreferBEXTR) {
+    assert(Subtarget->hasBMI2() && "We must have BMI2's BZHI then.");
+    // If we can't make use of BEXTR then we can't fuse shift+mask stages.
+    // Let's perform the mask first, and apply shift later. Note that we need to
+    // widen the mask to account for the fact that we'll apply shift afterwards!
+    Control = CurDAG->getTargetConstant(Shift + MaskSize, dl, NVT);
+    ROpc = NVT == MVT::i64 ? X86::BZHI64rr : X86::BZHI32rr;
+    MOpc = NVT == MVT::i64 ? X86::BZHI64rm : X86::BZHI32rm;
     unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
-    New = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, New), 0);
+    Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
+  } else {
+    // The 'control' of BEXTR has the pattern of:
+    // [15...8 bit][ 7...0 bit] location
+    // [ bit count][     shift] name
+    // I.e. 0b000000011'00000001 means  (x >> 0b1) & 0b11
+    Control = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
+    if (Subtarget->hasTBM()) {
+      ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
+      MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
+    } else {
+      assert(Subtarget->hasBMI() && "We must have BMI1's BEXTR then.");
+      // BMI requires the immediate to placed in a register.
+      ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
+      MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+      unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
+      Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
+    }
   }
 
   MachineSDNode *NewNode;
   SDValue Input = N0->getOperand(0);
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
   if (tryFoldLoad(Node, N0.getNode(), Input, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
-    SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, New, Input.getOperand(0) };
+    SDValue Ops[] = {
+        Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Control, Input.getOperand(0)};
     SDVTList VTs = CurDAG->getVTList(NVT, MVT::i32, MVT::Other);
     NewNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
     // Update the chain.
@@ -3505,7 +3533,15 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
     // Record the mem-refs
     CurDAG->setNodeMemRefs(NewNode, {cast<LoadSDNode>(Input)->getMemOperand()});
   } else {
-    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, MVT::i32, Input, New);
+    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, MVT::i32, Input, Control);
+  }
+
+  if (!PreferBEXTR) {
+    // We still need to apply the shift.
+    SDValue ShAmt = CurDAG->getTargetConstant(Shift, dl, NVT);
+    unsigned NewOpc = NVT == MVT::i64 ? X86::SHR64ri : X86::SHR32ri;
+    NewNode =
+        CurDAG->getMachineNode(NewOpc, dl, NVT, SDValue(NewNode, 0), ShAmt);
   }
 
   return NewNode;
@@ -4062,12 +4098,18 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   if (CC != ISD::SETEQ && CC != ISD::SETNE)
     return false;
 
-  // See if we're comparing against zero. This should have been canonicalized
-  // to RHS during lowering.
-  if (!ISD::isBuildVectorAllZeros(Setcc.getOperand(1).getNode()))
+  SDValue SetccOp0 = Setcc.getOperand(0);
+  SDValue SetccOp1 = Setcc.getOperand(1);
+
+  // Canonicalize the all zero vector to the RHS.
+  if (ISD::isBuildVectorAllZeros(SetccOp0.getNode()))
+    std::swap(SetccOp0, SetccOp1);
+
+  // See if we're comparing against zero.
+  if (!ISD::isBuildVectorAllZeros(SetccOp1.getNode()))
     return false;
 
-  SDValue N0 = Setcc.getOperand(0);
+  SDValue N0 = SetccOp0;
 
   MVT CmpVT = N0.getSimpleValueType();
   MVT CmpSVT = CmpVT.getVectorElementType();

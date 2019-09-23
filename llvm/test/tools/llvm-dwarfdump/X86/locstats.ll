@@ -1,6 +1,9 @@
 ; RUN: llc -debug-entry-values %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ;
+; RUN: llc -debug-entry-values %s -o %t0.o -filetype=obj \
+; RUN:   | %llvm-locstats %t0.o | FileCheck %s --check-prefix=LOCSTATS
+;
 ; CHECK: "entry value scope bytes covered":5
 ; CHECK: "formal params scope bytes total":20
 ; CHECK: "formal params scope bytes covered":20
@@ -83,6 +86,20 @@
 ; CHECK: "vars (excluding the debug entry values) with 80-89% of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with 90-99% of its scope covered":0
 ; CHECK: "vars (excluding the debug entry values) with 100% of its scope covered":1}
+;
+; Test the llvm-locstats output.
+; LOCSTATS: 0% 1 16%
+; LOCSTATS: 1-9% 0 0%
+; LOCSTATS: 10-19% 0 0%
+; LOCSTATS: 20-29% 0 0%
+; LOCSTATS: 30-39% 0 0%
+; LOCSTATS: 40-49% 0 0%
+; LOCSTATS: 50-59% 1 16%
+; LOCSTATS: 60-69% 0 0%
+; LOCSTATS: 70-79% 0 0%
+; LOCSTATS: 80-89% 1 16%
+; LOCSTATS: 90-99% 0 0%
+; LOCSTATS: 100% 3 50%
 ;
 ; The source code of the test case:
 ; extern void fn3(int *);

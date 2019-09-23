@@ -2722,8 +2722,8 @@ void Verifier::visitPtrToIntInst(PtrToIntInst &I) {
          &I);
 
   if (SrcTy->isVectorTy()) {
-    VectorType *VSrc = dyn_cast<VectorType>(SrcTy);
-    VectorType *VDest = dyn_cast<VectorType>(DestTy);
+    VectorType *VSrc = cast<VectorType>(SrcTy);
+    VectorType *VDest = cast<VectorType>(DestTy);
     Assert(VSrc->getNumElements() == VDest->getNumElements(),
            "PtrToInt Vector width mismatch", &I);
   }
@@ -2747,8 +2747,8 @@ void Verifier::visitIntToPtrInst(IntToPtrInst &I) {
   Assert(SrcTy->isVectorTy() == DestTy->isVectorTy(), "IntToPtr type mismatch",
          &I);
   if (SrcTy->isVectorTy()) {
-    VectorType *VSrc = dyn_cast<VectorType>(SrcTy);
-    VectorType *VDest = dyn_cast<VectorType>(DestTy);
+    VectorType *VSrc = cast<VectorType>(SrcTy);
+    VectorType *VDest = cast<VectorType>(DestTy);
     Assert(VSrc->getNumElements() == VDest->getNumElements(),
            "IntToPtr Vector width mismatch", &I);
   }

@@ -74,3 +74,4 @@ Developer Tools
    llvm-build
    llvm-exegesis
    llvm-pdbutil
+   llvm-locstats

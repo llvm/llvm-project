@@ -655,8 +655,8 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
   llvm::StringRef cur_opt_str = request.GetCursorArgumentPrefix();
 
   for (size_t i = 0; i < opt_element_vector.size(); i++) {
-    int opt_pos = opt_element_vector[i].opt_pos;
-    int opt_arg_pos = opt_element_vector[i].opt_arg_pos;
+    size_t opt_pos = static_cast<size_t>(opt_element_vector[i].opt_pos);
+    size_t opt_arg_pos = static_cast<size_t>(opt_element_vector[i].opt_arg_pos);
     int opt_defs_index = opt_element_vector[i].opt_defs_index;
     if (opt_pos == request.GetCursorIndex()) {
       // We're completing the option itself.
@@ -752,16 +752,9 @@ void Options::HandleOptionArgumentCompletion(
   // See if this is an enumeration type option, and if so complete it here:
 
   const auto &enum_values = opt_defs[opt_defs_index].enum_values;
-  if (!enum_values.empty()) {
-    std::string match_string(
-        request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos),
-        request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos) +
-            request.GetCursorCharPosition());
-
-    for (const auto &enum_value : enum_values) {
+  if (!enum_values.empty())
+    for (const auto &enum_value : enum_values)
       request.TryCompleteCurrentArg(enum_value.string_value);
-    }
-  }
 
   // If this is a source file or symbol type completion, and  there is a -shlib
   // option somewhere in the supplied arguments, then make a search filter for

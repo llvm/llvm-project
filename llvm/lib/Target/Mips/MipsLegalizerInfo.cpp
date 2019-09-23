@@ -122,6 +122,9 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_DYN_STACKALLOC)
       .lowerFor({{p0, s32}});
 
+  getActionDefinitionsBuilder(G_VASTART)
+     .legalFor({p0});
+
   // FP instructions
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64});
@@ -251,6 +254,18 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Trap, TII, TRI, RBI);
+  }
+  case Intrinsic::vacopy: {
+    Register Tmp = MRI.createGenericVirtualRegister(LLT::pointer(0, 32));
+    MachinePointerInfo MPO;
+    MIRBuilder.buildLoad(Tmp, MI.getOperand(2),
+                         *MI.getMF()->getMachineMemOperand(
+                             MPO, MachineMemOperand::MOLoad, 4, 4));
+    MIRBuilder.buildStore(Tmp, MI.getOperand(1),
+                          *MI.getMF()->getMachineMemOperand(
+                              MPO, MachineMemOperand::MOStore, 4, 4));
+    MI.eraseFromParent();
+    return true;
   }
   default:
     break;

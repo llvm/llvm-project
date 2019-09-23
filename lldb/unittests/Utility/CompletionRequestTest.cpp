@@ -14,8 +14,8 @@ using namespace lldb_private;
 TEST(CompletionRequest, Constructor) {
   std::string command = "a bad c";
   const unsigned cursor_pos = 3;
-  const int arg_index = 1;
-  const int arg_cursor_pos = 1;
+  const size_t arg_index = 1;
+  const size_t arg_cursor_pos = 1;
   StringList matches;
   CompletionResult result;
 
@@ -29,6 +29,24 @@ TEST(CompletionRequest, Constructor) {
 
   EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 2u);
   EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(1), "b");
+}
+
+TEST(CompletionRequest, FakeLastArg) {
+  // We insert an empty fake argument into the argument list when the
+  // cursor is after a space.
+  std::string command = "a bad c ";
+  const unsigned cursor_pos = command.size();
+  CompletionResult result;
+
+  CompletionRequest request(command, cursor_pos, result);
+
+  EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
+  EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
+  EXPECT_EQ(request.GetCursorIndex(), 3U);
+  EXPECT_EQ(request.GetCursorCharPosition(), 0U);
+
+  EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 4U);
+  EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(3), "");
 }
 
 TEST(CompletionRequest, TryCompleteCurrentArgGood) {
@@ -71,8 +89,8 @@ TEST(CompletionRequest, TryCompleteCurrentArgMode) {
 TEST(CompletionRequest, ShiftArguments) {
   std::string command = "a bad c";
   const unsigned cursor_pos = 3;
-  const int arg_index = 1;
-  const int arg_cursor_pos = 1;
+  const size_t arg_index = 1;
+  const size_t arg_cursor_pos = 1;
   StringList matches;
   CompletionResult result;
 
