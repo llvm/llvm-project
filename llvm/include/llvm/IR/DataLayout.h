@@ -175,14 +175,14 @@ private:
 
   void setAlignment(AlignTypeEnum align_type, llvm::Align abi_align,
                     llvm::Align pref_align, uint32_t bit_width);
-  unsigned getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
-                            bool ABIAlign, Type *Ty) const;
+  llvm::Align getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
+                               bool ABIAlign, Type *Ty) const;
   void setPointerAlignment(uint32_t AddrSpace, llvm::Align ABIAlign,
                            llvm::Align PrefAlign, uint32_t TypeByteWidth,
                            uint32_t IndexWidth);
 
   /// Internal helper method that returns requested alignment for type.
-  unsigned getAlignment(Type *Ty, bool abi_or_pref) const;
+  llvm::Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
   /// Parses a target data specification string. Assert if the string is
   /// malformed.
@@ -568,7 +568,7 @@ public:
 
   uint64_t getSizeInBits() const { return 8 * StructSize; }
 
-  unsigned getAlignment() const { return StructAlignment.value(); }
+  llvm::Align getAlignment() const { return StructAlignment; }
 
   /// Returns whether the struct has padding or not between its fields.
   /// NB: Padding in nested element is not taken into account.

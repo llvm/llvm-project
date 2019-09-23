@@ -267,7 +267,7 @@ multiclass xopvpcom<bits<8> opc, string Suffix, SDNode OpNode, ValueType vt128,
   def : Pat<(OpNode (load addr:$src2),
                     (vt128 VR128:$src1), timm:$cc),
             (!cast<Instruction>(NAME#"mi") VR128:$src1, addr:$src2,
-                                           (CommuteVPCOMCC imm:$cc))>;
+                                           (CommuteVPCOMCC timm:$cc))>;
 }
 
 defm VPCOMB  : xopvpcom<0xCC, "b", X86vpcom, v16i8, SchedWriteVecALU.XMM>;

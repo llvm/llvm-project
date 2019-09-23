@@ -1097,3 +1097,7 @@ if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(utils/benchmark)
   add_subdirectory(benchmarks)
 endif()
+
+if (LLVM_INCLUDE_UTILS)
+  add_subdirectory(utils/llvm-locstats)
+endif()

@@ -542,23 +542,23 @@ void DataLayout::setPointerAlignment(uint32_t AddrSpace, llvm::Align ABIAlign,
 
 /// getAlignmentInfo - Return the alignment (either ABI if ABIInfo = true or
 /// preferred if ABIInfo = false) the layout wants for the specified datatype.
-unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
-                                      uint32_t BitWidth, bool ABIInfo,
-                                      Type *Ty) const {
+llvm::Align DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
+                                         uint32_t BitWidth, bool ABIInfo,
+                                         Type *Ty) const {
   AlignmentsTy::const_iterator I = findAlignmentLowerBound(AlignType, BitWidth);
   // See if we found an exact match. Of if we are looking for an integer type,
   // but don't have an exact match take the next largest integer. This is where
   // the lower_bound will point to when it fails an exact match.
   if (I != Alignments.end() && I->AlignType == (unsigned)AlignType &&
       (I->TypeBitWidth == BitWidth || AlignType == INTEGER_ALIGN))
-    return (ABIInfo ? I->ABIAlign : I->PrefAlign).value();
+    return ABIInfo ? I->ABIAlign : I->PrefAlign;
 
   if (AlignType == INTEGER_ALIGN) {
     // If we didn't have a larger value try the largest value we have.
     if (I != Alignments.begin()) {
       --I; // Go to the previous entry and see if its an integer.
       if (I->AlignType == INTEGER_ALIGN)
-        return (ABIInfo ? I->ABIAlign : I->PrefAlign).value();
+        return ABIInfo ? I->ABIAlign : I->PrefAlign;
     }
   } else if (AlignType == VECTOR_ALIGN) {
     // By default, use natural alignment for vector types. This is consistent
@@ -566,7 +566,7 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
     unsigned Align = getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
     Align *= cast<VectorType>(Ty)->getNumElements();
     Align = PowerOf2Ceil(Align);
-    return Align;
+    return llvm::Align(Align);
    }
 
   // If we still couldn't find a reasonable default alignment, fall back
@@ -577,7 +577,7 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
   // layout.
   unsigned Align = getTypeStoreSize(Ty);
   Align = PowerOf2Ceil(Align);
-  return Align;
+  return llvm::Align(Align);
 }
 
 namespace {
@@ -704,21 +704,19 @@ unsigned DataLayout::getIndexTypeSizeInBits(Type *Ty) const {
   Get the ABI (\a abi_or_pref == true) or preferred alignment (\a abi_or_pref
   == false) for the requested type \a Ty.
  */
-unsigned DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
+llvm::Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   AlignTypeEnum AlignType;
 
   assert(Ty->isSized() && "Cannot getTypeInfo() on a type that is unsized!");
   switch (Ty->getTypeID()) {
   // Early escape for the non-numeric types.
   case Type::LabelTyID:
-    return (abi_or_pref
-            ? getPointerABIAlignment(0)
-            : getPointerPrefAlignment(0));
+    return llvm::Align(abi_or_pref ? getPointerABIAlignment(0)
+                                   : getPointerPrefAlignment(0));
   case Type::PointerTyID: {
     unsigned AS = cast<PointerType>(Ty)->getAddressSpace();
-    return (abi_or_pref
-            ? getPointerABIAlignment(AS)
-            : getPointerPrefAlignment(AS));
+    return llvm::Align(abi_or_pref ? getPointerABIAlignment(AS)
+                                   : getPointerPrefAlignment(AS));
     }
   case Type::ArrayTyID:
     return getAlignment(cast<ArrayType>(Ty)->getElementType(), abi_or_pref);
@@ -726,11 +724,12 @@ unsigned DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::StructTyID: {
     // Packed structure types always have an ABI alignment of one.
     if (cast<StructType>(Ty)->isPacked() && abi_or_pref)
-      return 1;
+      return llvm::Align::None();
 
     // Get the layout annotation... which is lazily created on demand.
     const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
-    unsigned Align = getAlignmentInfo(AGGREGATE_ALIGN, 0, abi_or_pref, Ty);
+    const llvm::Align Align =
+        getAlignmentInfo(AGGREGATE_ALIGN, 0, abi_or_pref, Ty);
     return std::max(Align, Layout->getAlignment());
   }
   case Type::IntegerTyID:
@@ -758,17 +757,17 @@ unsigned DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 }
 
 unsigned DataLayout::getABITypeAlignment(Type *Ty) const {
-  return getAlignment(Ty, true);
+  return getAlignment(Ty, true).value();
 }
 
 /// getABIIntegerTypeAlignment - Return the minimum ABI-required alignment for
 /// an integer type of the specified bitwidth.
 unsigned DataLayout::getABIIntegerTypeAlignment(unsigned BitWidth) const {
-  return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr);
+  return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr).value();
 }
 
 unsigned DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getAlignment(Ty, false);
+  return getAlignment(Ty, false).value();
 }
 
 IntegerType *DataLayout::getIntPtrType(LLVMContext &C,

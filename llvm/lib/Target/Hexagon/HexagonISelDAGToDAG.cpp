@@ -697,7 +697,7 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
 //
 void HexagonDAGToDAGISel::SelectConstantFP(SDNode *N) {
   SDLoc dl(N);
-  ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N);
+  auto *CN = cast<ConstantFPSDNode>(N);
   APInt A = CN->getValueAPF().bitcastToAPInt();
   if (N->getValueType(0) == MVT::f32) {
     SDValue V = CurDAG->getTargetConstant(A.getZExtValue(), dl, MVT::i32);
