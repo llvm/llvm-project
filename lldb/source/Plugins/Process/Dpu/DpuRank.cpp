@@ -49,16 +49,7 @@ DpuRank::DpuRank() : nr_threads(0), nr_dpus(0), m_lock() { m_rank = NULL; }
 bool DpuRank::Open(llvm::StringRef profile) {
   std::lock_guard<std::mutex> guard(m_lock);
 
-  struct dpu_param_t params;
-  dpu_fill_default_params(&params);
-  params.profile = (char *)profile.str().c_str();
-  char *complete_profile = dpu_build_complete_profile_from_params(&params);
-
-  if (complete_profile == NULL)
-      return false;
-
-  int ret = dpu_get_rank_of_type(HW, complete_profile, &m_rank);
-  free(complete_profile);
+  int ret = dpu_get_rank_of_type(profile.str().c_str(), &m_rank);
   if (ret != DPU_API_SUCCESS)
     return false;
   m_desc = dpu_get_description(m_rank);
