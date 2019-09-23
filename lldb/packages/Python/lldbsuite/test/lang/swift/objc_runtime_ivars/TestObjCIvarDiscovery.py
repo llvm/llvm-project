@@ -31,7 +31,7 @@ class TestObjCIVarDiscovery(TestBase):
     @skipUnlessDarwin
     def test_nodbg(self):
         self.build()
-        shutil.rmtree(self.getBuildArtifact("aTestFramework.framework.dSYM"))
+        shutil.rmtree(self.getBuildArtifact("aTestFramework.framework/Versions/A/aTestFramework.dSYM"))
         self.do_test(False)
 
     @skipUnlessDarwin
