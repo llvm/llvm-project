@@ -14,6 +14,7 @@ add_clang_library(clangToolingRefactoring
   Rename/USRFindingAction.cpp
   Rename/USRLocFinder.cpp
   SourceCode.cpp
+  SourceCodeBuilders.cpp
   Stencil.cpp
   Transformer.cpp
 
