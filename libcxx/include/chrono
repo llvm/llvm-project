@@ -1063,7 +1063,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 #ifndef _LIBCPP_CXX03_LANG
-        duration() = default;
+        duration() noexcept(noexcept(_Rep())) = default;
 #else
         duration() {}
 #endif
