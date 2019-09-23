@@ -564,7 +564,7 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
       select_helper.SetTimeout(*timeout);
 
     select_helper.FDSetRead(handle);
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     // select() won't accept pipes on Windows.  The entire Windows codepath
     // needs to be converted over to using WaitForMultipleObjects and event
     // HANDLEs, but for now at least this will allow ::select() to not return

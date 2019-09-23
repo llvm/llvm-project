@@ -1055,23 +1055,23 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
                                          ICmpInst *UnsignedICmp, bool IsAnd,
                                          const SimplifyQuery &Q,
                                          InstCombiner::BuilderTy &Builder) {
-  Value *Subtracted;
+  Value *ZeroCmpOp;
   ICmpInst::Predicate EqPred;
-  if (!match(ZeroICmp, m_ICmp(EqPred, m_Value(Subtracted), m_Zero())) ||
+  if (!match(ZeroICmp, m_ICmp(EqPred, m_Value(ZeroCmpOp), m_Zero())) ||
       !ICmpInst::isEquality(EqPred))
     return nullptr;
 
   Value *Base, *Offset;
-  if (!match(Subtracted, m_Sub(m_Value(Base), m_Value(Offset))))
+  if (!match(ZeroCmpOp, m_Sub(m_Value(Base), m_Value(Offset))))
     return nullptr;
 
   ICmpInst::Predicate UnsignedPred;
 
-  // Subtracted <  Base && Subtracted != 0  --> Base >  Offset  iff Offset != 0
-  // Subtracted >= Base || Subtracted == 0  --> Base <= Base    iff Offset != 0
+  // ZeroCmpOp <  Base && ZeroCmpOp != 0  --> Base >  Offset  iff Offset != 0
+  // ZeroCmpOp >= Base || ZeroCmpOp == 0  --> Base <= Base    iff Offset != 0
   if (match(UnsignedICmp,
-            m_c_ICmp(UnsignedPred, m_Specific(Subtracted), m_Specific(Base)))) {
-    if (UnsignedICmp->getOperand(0) != Subtracted)
+            m_c_ICmp(UnsignedPred, m_Specific(ZeroCmpOp), m_Specific(Base)))) {
+    if (UnsignedICmp->getOperand(0) != ZeroCmpOp)
       UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
 
     if (UnsignedPred == ICmpInst::ICMP_ULT && IsAnd &&

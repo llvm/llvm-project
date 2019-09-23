@@ -274,6 +274,43 @@ TEST(TBDv3, Platform_bridgeOS) {
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
 }
 
+TEST(TBDv3, Platform_macCatalyst) {
+  static const char tbd_v1_platform_iosmac[] = "--- !tapi-tbd-v3\n"
+                                                 "archs: [ armv7k ]\n"
+                                                 "platform: iosmac\n"
+                                                 "install-name: Test.dylib\n"
+                                                 "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_iosmac, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto Platform = PlatformKind::macCatalyst;
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+}
+
+TEST(TBDv3, Platform_zippered) {
+  static const char tbd_v1_platform_zip[] = "--- !tapi-tbd-v3\n"
+                                                 "archs: [ armv7k ]\n"
+                                                 "platform: zippered\n"
+                                                 "install-name: Test.dylib\n"
+                                                 "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(tbd_v1_platform_zip, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+
+  PlatformSet Platforms;
+  Platforms.insert(PlatformKind::macOS);
+  Platforms.insert(PlatformKind::macCatalyst);
+  EXPECT_EQ(Platforms.size(), File->getPlatforms().size());
+  for (auto Platform : File->getPlatforms())
+	    EXPECT_EQ(Platforms.count(Platform), 1U);
+}
+
 TEST(TBDv3, Swift_1_0) {
   static const char tbd_v1_swift_1_0[] = "--- !tapi-tbd-v3\n"
                                          "archs: [ arm64 ]\n"

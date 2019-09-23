@@ -454,10 +454,6 @@ bool MipsCallLowering::lowerFormalArguments(
   if (F.arg_empty())
     return true;
 
-  if (F.isVarArg()) {
-    return false;
-  }
-
   for (auto &Arg : F.args()) {
     if (!isSupportedType(Arg.getType()))
       return false;
@@ -495,6 +491,40 @@ bool MipsCallLowering::lowerFormalArguments(
   IncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
   if (!Handler.handle(ArgLocs, ArgInfos))
     return false;
+
+  if (F.isVarArg()) {
+    ArrayRef<MCPhysReg> ArgRegs = ABI.GetVarArgRegs();
+    unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+
+    int VaArgOffset;
+    unsigned RegSize = 4;
+    if (ArgRegs.size() == Idx)
+      VaArgOffset = alignTo(CCInfo.getNextStackOffset(), RegSize);
+    else {
+      VaArgOffset =
+          (int)ABI.GetCalleeAllocdArgSizeInBytes(CCInfo.getCallingConv()) -
+          (int)(RegSize * (ArgRegs.size() - Idx));
+    }
+
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    int FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
+    MF.getInfo<MipsFunctionInfo>()->setVarArgsFrameIndex(FI);
+
+    for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += RegSize) {
+      MIRBuilder.getMBB().addLiveIn(ArgRegs[I]);
+
+      MachineInstrBuilder Copy =
+          MIRBuilder.buildCopy(LLT::scalar(RegSize * 8), Register(ArgRegs[I]));
+      FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
+      MachinePointerInfo MPO = MachinePointerInfo::getFixedStack(MF, FI);
+      MachineInstrBuilder FrameIndex =
+          MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI);
+      MachineMemOperand *MMO =
+          MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, RegSize,
+                                  /* Alignment */ RegSize);
+      MIRBuilder.buildStore(Copy, FrameIndex, *MMO);
+    }
+  }
 
   return true;
 }
@@ -566,7 +596,12 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   subTargetRegTypeForCallingConv(F, ArgInfos, OrigArgIndices, Outs);
 
   SmallVector<CCValAssign, 8> ArgLocs;
-  MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
+  bool IsCalleeVarArg = false;
+  if (Info.Callee.isGlobal()) {
+    const Function *CF = static_cast<const Function *>(Info.Callee.getGlobal());
+    IsCalleeVarArg = CF->isVarArg();
+  }
+  MipsCCState CCInfo(F.getCallingConv(), IsCalleeVarArg, MF, ArgLocs,
                      F.getContext());
 
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv), 1);

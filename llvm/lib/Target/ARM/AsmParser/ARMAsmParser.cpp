@@ -11806,19 +11806,19 @@ unsigned ARMAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // immediate in the syntax.
   switch (Kind) {
   default: break;
-  case MCK__35_0:
+  case MCK__HASH_0:
     if (Op.isImm())
       if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm()))
         if (CE->getValue() == 0)
           return Match_Success;
     break;
-  case MCK__35_8:
+  case MCK__HASH_8:
     if (Op.isImm())
       if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm()))
         if (CE->getValue() == 8)
           return Match_Success;
     break;
-  case MCK__35_16:
+  case MCK__HASH_16:
     if (Op.isImm())
       if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm()))
         if (CE->getValue() == 16)

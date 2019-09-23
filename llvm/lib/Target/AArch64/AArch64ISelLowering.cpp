@@ -10332,6 +10332,29 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
     Opcode = AArch64ISD::SQSHLU_I;
     IsRightShift = false;
     break;
+  case Intrinsic::aarch64_neon_sshl:
+  case Intrinsic::aarch64_neon_ushl: {
+    // ushll/ushll2 provide unsigned shifts with immediate operands and
+    // sshll/sshll2 provide signed shifts with immediates, so we have to make
+    // sure we only match patterns here we can later match to them.
+    SDValue Op0 = N->getOperand(1);
+    if (Op0.getNode()->getOpcode() != (IID == Intrinsic::aarch64_neon_ushl
+                                           ? ISD::ZERO_EXTEND
+                                           : ISD::SIGN_EXTEND))
+      return SDValue();
+
+    EVT FromType = Op0.getOperand(0).getValueType();
+    EVT ToType = Op0.getValueType();
+    unsigned FromSize = FromType.getScalarSizeInBits();
+    if (!FromType.isVector() || !ToType.isVector() ||
+        (FromSize != 8 && FromSize != 16 && FromSize != 32) ||
+        2 * FromSize != ToType.getScalarSizeInBits())
+      return SDValue();
+
+    Opcode = AArch64ISD::VSHL;
+    IsRightShift = false;
+    break;
+  }
   }
 
   if (IsRightShift && ShiftAmount <= -1 && ShiftAmount >= -(int)ElemBits) {
@@ -10418,6 +10441,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_sqshlu:
   case Intrinsic::aarch64_neon_srshl:
   case Intrinsic::aarch64_neon_urshl:
+  case Intrinsic::aarch64_neon_sshl:
+  case Intrinsic::aarch64_neon_ushl:
     return tryCombineShiftImm(IID, N, DAG);
   case Intrinsic::aarch64_crc32b:
   case Intrinsic::aarch64_crc32cb:
