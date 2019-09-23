@@ -1,1 +1,0 @@
-class SB { SB(int); };

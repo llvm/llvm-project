@@ -1,1 +1,0 @@
-class SC { SC(int); };
