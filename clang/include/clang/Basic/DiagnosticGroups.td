@@ -501,6 +501,7 @@ def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
 def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
+def IntInBoolContext : DiagGroup<"int-in-bool-context">;
 def TautologicalTypeLimitCompare : DiagGroup<"tautological-type-limit-compare">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
 def TautologicalUnsignedEnumZeroCompare : DiagGroup<"tautological-unsigned-enum-zero-compare">;
@@ -822,6 +823,7 @@ def Most : DiagGroup<"most", [
     Format,
     Implicit,
     InfiniteRecursion,
+    IntInBoolContext,
     MismatchedTags,
     MissingBraces,
     Move,

@@ -5790,6 +5790,9 @@ def warn_precedence_conditional : Warning<
 def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
+def warn_left_shift_in_bool_context : Warning<
+  "converting the result of '<<' to a boolean; did you mean '(%0) != 0'?">,
+  InGroup<IntInBoolContext>;
 def warn_logical_instead_of_bitwise : Warning<
   "use of logical '%0' with constant operand">,
   InGroup<DiagGroup<"constant-logical-operand">>;

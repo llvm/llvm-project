@@ -30,9 +30,9 @@ using internal::BindableMatcher;
 
 struct Function {
   using DeclTy = FunctionDecl;
-  static constexpr auto *Prototype = "void X(int);";
+  static constexpr auto *Prototype = "void X(long);";
   static constexpr auto *ConflictingPrototype = "void X(double);";
-  static constexpr auto *Definition = "void X(int a) {}";
+  static constexpr auto *Definition = "void X(long a) {}";
   static constexpr auto *ConflictingDefinition = "void X(double a) {}";
   BindableMatcher<Decl> getPattern() {
     return functionDecl(hasName("X"), unless(isImplicit()));

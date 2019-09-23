@@ -4605,7 +4605,9 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->hasAttr<FinalAttr>();
     return false;
   case UTT_IsSigned:
-    return T->isSignedIntegerType();
+    // Enum types should always return false.
+    // Floating points should always return true.
+    return !T->isEnumeralType() && (T->isFloatingType() || T->isSignedIntegerType());
   case UTT_IsUnsigned:
     return T->isUnsignedIntegerType();
 

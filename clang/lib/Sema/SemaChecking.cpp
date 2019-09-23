@@ -11256,9 +11256,15 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
   return true;
 }
 
-static void DiagnoseIntInBoolContext(Sema &S, const Expr *E) {
+static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
   E = E->IgnoreParenImpCasts();
   SourceLocation ExprLoc = E->getExprLoc();
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    BinaryOperator::Opcode Opc = BO->getOpcode();
+    if (Opc == BO_Shl)
+      S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context) << E;
+  }
 
   if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
     const auto *LHS = dyn_cast<IntegerLiteral>(CO->getTrueExpr());
@@ -11584,6 +11590,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   DiagnoseNullConversion(S, E, T, CC);
 
   S.DiscardMisalignedMemberAddress(Target, E);
+
+  if (Target->isBooleanType())
+    DiagnoseIntInBoolContext(S, E);
 
   if (!Source->isIntegerType() || !Target->isIntegerType())
     return;
