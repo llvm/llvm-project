@@ -978,7 +978,8 @@ static void readConfigs(opt::InputArgList &args) {
     StringRef s = arg->getValue();
     std::tie(config->ekind, config->emachine, config->osabi) =
         parseEmulation(s);
-    config->mipsN32Abi = (s == "elf32btsmipn32" || s == "elf32ltsmipn32");
+    config->mipsN32Abi =
+        (s.startswith("elf32btsmipn32") || s.startswith("elf32ltsmipn32"));
     config->emulation = s;
   }
 
