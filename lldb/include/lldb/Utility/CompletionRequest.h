@@ -119,6 +119,13 @@ public:
     return GetParsedLine()[GetCursorIndex()];
   }
 
+  /// Drops the first argument from the argument list.
+  void ShiftArguments() {
+    m_cursor_index--;
+    m_parsed_line.Shift();
+    m_partial_parsed_line.Shift();
+  }
+
   void SetCursorIndex(int i) { m_cursor_index = i; }
   int GetCursorIndex() const { return m_cursor_index; }
 
@@ -137,6 +144,24 @@ public:
                      llvm::StringRef description = "",
                      CompletionMode mode = CompletionMode::Normal) {
     m_result.AddResult(completion, description, mode);
+  }
+
+  /// Adds a possible completion string if the completion would complete the
+  /// current argument.
+  ///
+  /// \param match The suggested completion.
+  /// \param description An optional description of the completion string. The
+  ///     description will be displayed to the user alongside the completion.
+  template <CompletionMode M = CompletionMode::Normal>
+  void TryCompleteCurrentArg(llvm::StringRef completion,
+                             llvm::StringRef description = "") {
+    // Trying to rewrite the whole line while checking for the current
+    // argument never makes sense. Completion modes are always hardcoded, so
+    // this can be a static_assert.
+    static_assert(M != CompletionMode::RewriteLine,
+                  "Shouldn't rewrite line with this function");
+    if (completion.startswith(GetCursorArgumentPrefix()))
+      AddCompletion(completion, description, M);
   }
 
   /// Adds multiple possible completion strings.

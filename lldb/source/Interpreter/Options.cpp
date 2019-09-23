@@ -759,10 +759,7 @@ void Options::HandleOptionArgumentCompletion(
             request.GetCursorCharPosition());
 
     for (const auto &enum_value : enum_values) {
-      if (strstr(enum_value.string_value, match_string.c_str()) ==
-          enum_value.string_value) {
-        request.AddCompletion(enum_value.string_value);
-      }
+      request.TryCompleteCurrentArg(enum_value.string_value);
     }
   }
 

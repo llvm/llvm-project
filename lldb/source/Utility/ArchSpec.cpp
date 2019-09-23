@@ -244,17 +244,8 @@ void ArchSpec::ListSupportedArchNames(StringList &list) {
 }
 
 void ArchSpec::AutoComplete(CompletionRequest &request) {
-  if (!request.GetCursorArgumentPrefix().empty()) {
-    for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
-      if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith,
-                      request.GetCursorArgumentPrefix()))
-        request.AddCompletion(g_core_definitions[i].name);
-    }
-  } else {
-    StringList matches;
-    ListSupportedArchNames(matches);
-    request.AddCompletions(matches);
-  }
+  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
+    request.TryCompleteCurrentArg(g_core_definitions[i].name);
 }
 
 #define CPU_ANY (UINT32_MAX)

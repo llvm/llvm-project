@@ -193,6 +193,8 @@ def note_constexpr_baa_insufficient_alignment : Note<
 def note_constexpr_baa_value_insufficient_alignment : Note<
   "value of the aligned pointer (%0) is not a multiple of the asserted %1 "
   "%plural{1:byte|:bytes}1">;
+def note_constexpr_unsupported_destruction : Note<
+  "non-trivial destruction of type %0 in a constant expression is not supported">;
 def note_constexpr_unsupported_unsized_array : Note<
   "array-to-pointer decay of array member without known bound is not supported">;
 def note_constexpr_unsized_array_indexed : Note<

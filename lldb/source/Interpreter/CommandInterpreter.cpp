@@ -1794,8 +1794,7 @@ void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
     CommandObject *command_object =
         GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0));
     if (command_object) {
-      request.GetParsedLine().Shift();
-      request.SetCursorIndex(request.GetCursorIndex() - 1);
+      request.ShiftArguments();
       command_object->HandleCompletion(request);
     }
   }
