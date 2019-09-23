@@ -1,7 +1,9 @@
 # Test that reproducers can deal with .swiftinterface files.
 
 # REQUIRES: system-darwin
-# XFAIL: rdar://problem/55564275
+#
+# rdar://problem/55564275
+# XFAIL: *
 
 # Start clean.
 # RUN: rm -rf %t.build && mkdir %t.build && cd %t.build
