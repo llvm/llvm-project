@@ -12,7 +12,10 @@
 """
 Test `@_implementationOnly import` behind some indirection in a library used by the main executable
 """
-import commands
+try:
+    import commands
+except ImportError:    
+    import subprocess
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
