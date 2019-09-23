@@ -445,6 +445,9 @@ class CXXRecordDecl : public RecordDecl {
     /// or an implicitly declared constexpr default constructor.
     unsigned HasConstexprDefaultConstructor : 1;
 
+    /// True if a defaulted destructor for this class would be constexpr.
+    unsigned DefaultedDestructorIsConstexpr : 1;
+
     /// True when this class contains at least one non-static data
     /// member or base class of non-literal or volatile type.
     unsigned HasNonLiteralTypeFieldsOrBases : 1;
@@ -1441,6 +1444,16 @@ public:
             !(data().HasTrivialSpecialMembers & SMF_MoveAssignment));
   }
 
+  /// Determine whether a defaulted default constructor for this class
+  /// would be constexpr.
+  bool defaultedDestructorIsConstexpr() const {
+    return data().DefaultedDestructorIsConstexpr &&
+           getASTContext().getLangOpts().CPlusPlus2a;
+  }
+
+  /// Determine whether this class has a constexpr destructor.
+  bool hasConstexprDestructor() const;
+
   /// Determine whether this class has a trivial destructor
   /// (C++ [class.dtor]p3)
   bool hasTrivialDestructor() const {
@@ -1532,8 +1545,10 @@ public:
   ///
   /// Only in C++17 and beyond, are lambdas literal types.
   bool isLiteral() const {
-    return hasTrivialDestructor() &&
-           (!isLambda() || getASTContext().getLangOpts().CPlusPlus17) &&
+    ASTContext &Ctx = getASTContext();
+    return (Ctx.getLangOpts().CPlusPlus2a ? hasConstexprDestructor()
+                                          : hasTrivialDestructor()) &&
+           (!isLambda() || Ctx.getLangOpts().CPlusPlus17) &&
            !hasNonLiteralTypeFieldsOrBases() &&
            (isAggregate() || isLambda() ||
             hasConstexprNonCopyMoveConstructor() ||
@@ -2555,9 +2570,9 @@ class CXXConstructorDecl final
 
   ExplicitSpecifier getExplicitSpecifierInternal() const {
     if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
-      return *getCanonicalDecl()->getTrailingObjects<ExplicitSpecifier>();
+      return *getTrailingObjects<ExplicitSpecifier>();
     return ExplicitSpecifier(
-        nullptr, getCanonicalDecl()->CXXConstructorDeclBits.IsSimpleExplicit
+        nullptr, CXXConstructorDeclBits.IsSimpleExplicit
                      ? ExplicitSpecKind::ResolvedTrue
                      : ExplicitSpecKind::ResolvedFalse);
   }
@@ -2598,10 +2613,10 @@ public:
          InheritedConstructor Inherited = InheritedConstructor());
 
   ExplicitSpecifier getExplicitSpecifier() {
-    return getExplicitSpecifierInternal();
+    return getCanonicalDecl()->getExplicitSpecifierInternal();
   }
   const ExplicitSpecifier getExplicitSpecifier() const {
-    return getExplicitSpecifierInternal();
+    return getCanonicalDecl()->getExplicitSpecifierInternal();
   }
 
   /// Return true if the declartion is already resolved to be explicit.
@@ -2802,9 +2817,9 @@ class CXXDestructorDecl : public CXXMethodDecl {
   CXXDestructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                     const DeclarationNameInfo &NameInfo, QualType T,
                     TypeSourceInfo *TInfo, bool isInline,
-                    bool isImplicitlyDeclared)
+                    bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind)
       : CXXMethodDecl(CXXDestructor, C, RD, StartLoc, NameInfo, T, TInfo,
-                      SC_None, isInline, CSK_unspecified, SourceLocation()) {
+                      SC_None, isInline, ConstexprKind, SourceLocation()) {
     setImplicit(isImplicitlyDeclared);
   }
 
@@ -2814,9 +2829,9 @@ public:
   static CXXDestructorDecl *Create(ASTContext &C, CXXRecordDecl *RD,
                                    SourceLocation StartLoc,
                                    const DeclarationNameInfo &NameInfo,
-                                   QualType T, TypeSourceInfo* TInfo,
-                                   bool isInline,
-                                   bool isImplicitlyDeclared);
+                                   QualType T, TypeSourceInfo *TInfo,
+                                   bool isInline, bool isImplicitlyDeclared,
+                                   ConstexprSpecKind ConstexprKind);
   static CXXDestructorDecl *CreateDeserialized(ASTContext & C, unsigned ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);

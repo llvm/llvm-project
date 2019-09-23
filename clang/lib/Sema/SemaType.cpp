@@ -8244,20 +8244,28 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
         return true;
       }
     }
-  } else if (!RD->hasTrivialDestructor()) {
-    // All fields and bases are of literal types, so have trivial destructors.
-    // If this class's destructor is non-trivial it must be user-declared.
+  } else if (getLangOpts().CPlusPlus2a ? !RD->hasConstexprDestructor()
+                                       : !RD->hasTrivialDestructor()) {
+    // All fields and bases are of literal types, so have trivial or constexpr
+    // destructors. If this class's destructor is non-trivial / non-constexpr,
+    // it must be user-declared.
     CXXDestructorDecl *Dtor = RD->getDestructor();
     assert(Dtor && "class has literal fields and bases but no dtor?");
     if (!Dtor)
       return true;
 
-    Diag(Dtor->getLocation(), Dtor->isUserProvided() ?
-         diag::note_non_literal_user_provided_dtor :
-         diag::note_non_literal_nontrivial_dtor) << RD;
-    if (!Dtor->isUserProvided())
-      SpecialMemberIsTrivial(Dtor, CXXDestructor, TAH_IgnoreTrivialABI,
-                             /*Diagnose*/true);
+    if (getLangOpts().CPlusPlus2a) {
+      Diag(Dtor->getLocation(), diag::note_non_literal_non_constexpr_dtor)
+          << RD;
+    } else {
+      Diag(Dtor->getLocation(), Dtor->isUserProvided()
+                                    ? diag::note_non_literal_user_provided_dtor
+                                    : diag::note_non_literal_nontrivial_dtor)
+          << RD;
+      if (!Dtor->isUserProvided())
+        SpecialMemberIsTrivial(Dtor, CXXDestructor, TAH_IgnoreTrivialABI,
+                               /*Diagnose*/ true);
+    }
   }
 
   return true;

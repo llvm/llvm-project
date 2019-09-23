@@ -2147,10 +2147,9 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         Constructor->getConstexprKind());
     Method->setRangeEnd(Constructor->getEndLoc());
   } else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(D)) {
-    Method = CXXDestructorDecl::Create(SemaRef.Context, Record,
-                                       StartLoc, NameInfo, T, TInfo,
-                                       Destructor->isInlineSpecified(),
-                                       false);
+    Method = CXXDestructorDecl::Create(
+        SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
+        Destructor->isInlineSpecified(), false, Destructor->getConstexprKind());
     Method->setRangeEnd(Destructor->getEndLoc());
   } else if (CXXConversionDecl *Conversion = dyn_cast<CXXConversionDecl>(D)) {
     Method = CXXConversionDecl::Create(

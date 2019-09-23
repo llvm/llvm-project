@@ -1590,6 +1590,36 @@ static bool CheckLiteralType(Sema &SemaRef, Sema::CheckConstexprKind Kind,
   llvm_unreachable("unknown CheckConstexprKind");
 }
 
+/// Determine whether a destructor cannot be constexpr due to
+static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
+                                               const CXXDestructorDecl *DD,
+                                               Sema::CheckConstexprKind Kind) {
+  auto Check = [&](SourceLocation Loc, QualType T, const FieldDecl *FD) {
+    const CXXRecordDecl *RD =
+        T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+    if (!RD || RD->hasConstexprDestructor())
+      return true;
+
+    if (Kind == Sema::CheckConstexprKind::Diagnose) {
+      SemaRef.Diag(DD->getLocation(), diag::err_constexpr_dtor_subobject)
+          << DD->getConstexprKind() << !FD
+          << (FD ? FD->getDeclName() : DeclarationName()) << T;
+      SemaRef.Diag(Loc, diag::note_constexpr_dtor_subobject)
+          << !FD << (FD ? FD->getDeclName() : DeclarationName()) << T;
+    }
+    return false;
+  };
+
+  const CXXRecordDecl *RD = DD->getParent();
+  for (const CXXBaseSpecifier &B : RD->bases())
+    if (!Check(B.getBaseTypeLoc(), B.getType(), nullptr))
+      return false;
+  for (const FieldDecl *FD : RD->fields())
+    if (!Check(FD->getLocation(), FD->getType(), FD))
+      return false;
+  return true;
+}
+
 // CheckConstexprParameterTypes - Check whether a function's parameter types
 // are all literal types. If so, return true. If not, produce a suitable
 // diagnostic and return false.
@@ -1645,8 +1675,8 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     //  constraints:
     //  - the class shall not have any virtual base classes;
     //
-    // FIXME: This only applies to constructors, not arbitrary member
-    // functions.
+    // FIXME: This only applies to constructors and destructors, not arbitrary
+    // member functions.
     const CXXRecordDecl *RD = MD->getParent();
     if (RD->getNumVBases()) {
       if (Kind == CheckConstexprKind::CheckValid)
@@ -1697,6 +1727,18 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
                          diag::err_constexpr_non_literal_return,
                          NewFD->isConsteval()))
       return false;
+  }
+
+  if (auto *Dtor = dyn_cast<CXXDestructorDecl>(NewFD)) {
+    // A destructor can be constexpr only if the defaulted destructor could be;
+    // we don't need to check the members and bases if we already know they all
+    // have constexpr destructors.
+    if (!Dtor->getParent()->defaultedDestructorIsConstexpr()) {
+      if (Kind == CheckConstexprKind::CheckValid)
+        return false;
+      if (!CheckConstexprDestructorSubobjects(*this, Dtor, Kind))
+        return false;
+    }
   }
 
   // - each of its parameter types shall be a literal type;
@@ -6535,6 +6577,8 @@ specialMemberIsConstexpr(Sema &S, CXXRecordDecl *ClassDecl,
 
   if (CSM == Sema::CXXDefaultConstructor)
     return ClassDecl->hasConstexprDefaultConstructor();
+  if (CSM == Sema::CXXDestructor)
+    return ClassDecl->hasConstexprDestructor();
 
   Sema::SpecialMemberOverloadResult SMOR =
       lookupCallFromSpecialMember(S, ClassDecl, CSM, Quals, ConstRHS);
@@ -6583,6 +6627,8 @@ static bool defaultedSpecialMemberIsConstexpr(
     break;
 
   case Sema::CXXDestructor:
+    return ClassDecl->defaultedDestructorIsConstexpr();
+
   case Sema::CXXInvalid:
     return false;
   }
@@ -6835,13 +6881,14 @@ void Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD) {
   // Do not apply this rule to members of class templates, since core issue 1358
   // makes such functions always instantiate to constexpr functions. For
   // functions which cannot be constexpr (for non-constructors in C++11 and for
-  // destructors in C++1y), this is checked elsewhere.
+  // destructors in C++14 and C++17), this is checked elsewhere.
   //
   // FIXME: This should not apply if the member is deleted.
   bool Constexpr = defaultedSpecialMemberIsConstexpr(*this, RD, CSM,
                                                      HasConstParam);
-  if ((getLangOpts().CPlusPlus14 ? !isa<CXXDestructorDecl>(MD)
-                                 : isa<CXXConstructorDecl>(MD)) &&
+  if ((getLangOpts().CPlusPlus2a ||
+       (getLangOpts().CPlusPlus14 ? !isa<CXXDestructorDecl>(MD)
+                                  : isa<CXXConstructorDecl>(MD))) &&
       MD->isConstexpr() && !Constexpr &&
       MD->getTemplatedKind() == FunctionDecl::TK_NonTemplate) {
     Diag(MD->getBeginLoc(), MD->isConsteval()
@@ -11467,6 +11514,10 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   if (DSM.isAlreadyBeingDeclared())
     return nullptr;
 
+  bool Constexpr = defaultedSpecialMemberIsConstexpr(*this, ClassDecl,
+                                                     CXXDestructor,
+                                                     false);
+
   // Create the actual destructor declaration.
   CanQualType ClassType
     = Context.getCanonicalType(Context.getTypeDeclType(ClassDecl));
@@ -11474,10 +11525,11 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   DeclarationName Name
     = Context.DeclarationNames.getCXXDestructorName(ClassType);
   DeclarationNameInfo NameInfo(Name, ClassLoc);
-  CXXDestructorDecl *Destructor
-      = CXXDestructorDecl::Create(Context, ClassDecl, ClassLoc, NameInfo,
-                                  QualType(), nullptr, /*isInline=*/true,
-                                  /*isImplicitlyDeclared=*/true);
+  CXXDestructorDecl *Destructor =
+      CXXDestructorDecl::Create(Context, ClassDecl, ClassLoc, NameInfo,
+                                QualType(), nullptr, /*isInline=*/true,
+                                /*isImplicitlyDeclared=*/true,
+                                Constexpr ? CSK_constexpr : CSK_unspecified);
   Destructor->setAccess(AS_public);
   Destructor->setDefaulted();
 

@@ -95,6 +95,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasDefaultedDefaultConstructor(false),
       DefaultedDefaultConstructorIsConstexpr(true),
       HasConstexprDefaultConstructor(false),
+      DefaultedDestructorIsConstexpr(true),
       HasNonLiteralTypeFieldsOrBases(false), ComputedVisibleConversions(false),
       UserProvidedDefaultConstructor(false), DeclaredSpecialMembers(0),
       ImplicitCopyConstructorCanHaveConstParamForVBase(true),
@@ -325,10 +326,12 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       data().IsStandardLayout = false;
       data().IsCXX11StandardLayout = false;
 
-      // C++11 [dcl.constexpr]p4:
-      //   In the definition of a constexpr constructor [...]
-      //    -- the class shall not have any virtual base classes
+      // C++20 [dcl.constexpr]p3:
+      //   In the definition of a constexpr function [...]
+      //    -- if the function is a constructor or destructor,
+      //       its class shall not have any virtual base classes
       data().DefaultedDefaultConstructorIsConstexpr = false;
+      data().DefaultedDestructorIsConstexpr = false;
 
       // C++1z [class.copy]p8:
       //   The implicitly-declared copy constructor for a class X will have
@@ -520,6 +523,19 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().NeedOverloadResolutionForMoveConstructor = true;
     data().NeedOverloadResolutionForDestructor = true;
   }
+
+  // C++2a [dcl.constexpr]p4:
+  //   The definition of a constexpr destructor [shall] satisfy the
+  //   following requirement:
+  //   -- for every subobject of class type or (possibly multi-dimensional)
+  //      array thereof, that class type shall have a constexpr destructor
+  if (!Subobj->hasConstexprDestructor())
+    data().DefaultedDestructorIsConstexpr = false;
+}
+
+bool CXXRecordDecl::hasConstexprDestructor() const {
+  auto *Dtor = getDestructor();
+  return Dtor ? Dtor->isConstexpr() : defaultedDestructorIsConstexpr();
 }
 
 bool CXXRecordDecl::hasAnyDependentBases() const {
@@ -2571,20 +2587,19 @@ CXXDestructorDecl *
 CXXDestructorDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID)
       CXXDestructorDecl(C, nullptr, SourceLocation(), DeclarationNameInfo(),
-                        QualType(), nullptr, false, false);
+                        QualType(), nullptr, false, false, CSK_unspecified);
 }
 
-CXXDestructorDecl *
-CXXDestructorDecl::Create(ASTContext &C, CXXRecordDecl *RD,
-                          SourceLocation StartLoc,
-                          const DeclarationNameInfo &NameInfo,
-                          QualType T, TypeSourceInfo *TInfo,
-                          bool isInline, bool isImplicitlyDeclared) {
+CXXDestructorDecl *CXXDestructorDecl::Create(
+    ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
+    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+    bool isInline, bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXDestructorName &&
          "Name must refer to a destructor");
-  return new (C, RD) CXXDestructorDecl(C, RD, StartLoc, NameInfo, T, TInfo,
-                                       isInline, isImplicitlyDeclared);
+  return new (C, RD)
+      CXXDestructorDecl(C, RD, StartLoc, NameInfo, T, TInfo, isInline,
+                        isImplicitlyDeclared, ConstexprKind);
 }
 
 void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {

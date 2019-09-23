@@ -931,6 +931,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return std::max(State.Stack.back().LastSpace,
                     State.Stack.back().Indent + Style.ContinuationIndentWidth);
 
+  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+      State.Line->First->is(tok::kw_enum))
+    return (Style.IndentWidth * State.Line->First->IndentLevel) +
+           Style.IndentWidth;
+
   if (NextNonComment->is(tok::l_brace) && NextNonComment->BlockKind == BK_Block)
     return Current.NestingLevel == 0 ? State.FirstIndent
                                      : State.Stack.back().Indent;

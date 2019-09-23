@@ -2354,13 +2354,13 @@ array subscript access and structure/union member access are relocatable
 under bpf compile-once run-everywhere framework. Debuginfo (typically
 with ``-g``) is needed, otherwise, the compiler will exit with an error.
 The return type for the intrinsic is the same as the type of the
-argument, and must be a pointer type.
+argument.
 
 **Syntax**:
 
 .. code-block:: c
 
-  PointerT __builtin_preserve_access_index(PointerT ptr)
+  type __builtin_preserve_access_index(type arg)
 
 **Example of Use**:
 
@@ -2375,7 +2375,8 @@ argument, and must be a pointer type.
     } c[4];
   };
   struct t *v = ...;
-  const void *pb =__builtin_preserve_access_index(&v->c[3].b);
+  int *pb =__builtin_preserve_access_index(&v->c[3].b);
+  __builtin_preserve_access_index(v->j);
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

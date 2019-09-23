@@ -8177,10 +8177,10 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     if (DC->isRecord()) {
       R = SemaRef.CheckDestructorDeclarator(D, R, SC);
       CXXRecordDecl *Record = cast<CXXRecordDecl>(DC);
-      CXXDestructorDecl *NewDD =
-          CXXDestructorDecl::Create(SemaRef.Context, Record, D.getBeginLoc(),
-                                    NameInfo, R, TInfo, isInline,
-                                    /*isImplicitlyDeclared=*/false);
+      CXXDestructorDecl *NewDD = CXXDestructorDecl::Create(
+          SemaRef.Context, Record, D.getBeginLoc(), NameInfo, R, TInfo,
+          isInline,
+          /*isImplicitlyDeclared=*/false, ConstexprKind);
 
       // If the destructor needs an implicit exception specification, set it
       // now. FIXME: It'd be nice to be able to create the right type to start
@@ -8789,7 +8789,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // C++11 [dcl.constexpr]p3: functions declared constexpr are required to
       // be either constructors or to return a literal type. Therefore,
       // destructors cannot be declared constexpr.
-      if (isa<CXXDestructorDecl>(NewFD)) {
+      if (isa<CXXDestructorDecl>(NewFD) && !getLangOpts().CPlusPlus2a) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_constexpr_dtor)
             << ConstexprKind;
       }
@@ -10282,7 +10282,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewFD);
   if (!getLangOpts().CPlusPlus14 && MD && MD->isConstexpr() &&
       !MD->isStatic() && !isa<CXXConstructorDecl>(MD) &&
-      !MD->getMethodQualifiers().hasConst()) {
+      !isa<CXXDestructorDecl>(MD) && !MD->getMethodQualifiers().hasConst()) {
     CXXMethodDecl *OldMD = nullptr;
     if (OldDecl)
       OldMD = dyn_cast_or_null<CXXMethodDecl>(OldDecl->getAsFunction());

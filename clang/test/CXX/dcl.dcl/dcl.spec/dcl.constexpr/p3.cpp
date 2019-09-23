@@ -57,7 +57,10 @@ struct T : SS, NonLiteral {
 #ifndef CXX1Y
   // expected-error@-2 {{constexpr function's return type 'void' is not a literal type}}
 #endif
-  constexpr ~T(); // expected-error {{destructor cannot be marked constexpr}}
+  constexpr ~T();
+#ifndef CXX2A
+  // expected-error@-2 {{destructor cannot be declared constexpr}}
+#endif
   typedef NonLiteral F() const;
   constexpr F NonLiteralReturn2; // ok until definition
 
