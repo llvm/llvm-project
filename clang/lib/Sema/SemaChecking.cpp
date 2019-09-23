@@ -4473,7 +4473,8 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
 ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                                  SourceLocation RParenLoc, MultiExprArg Args,
-                                 AtomicExpr::AtomicOp Op) {
+                                 AtomicExpr::AtomicOp Op,
+                                 AtomicArgumentOrder ArgOrder) {
   // All the non-OpenCL operations take one of the following forms.
   // The OpenCL operations take the __c11 forms with one extra argument for
   // synchronization scope.
@@ -4754,19 +4755,56 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     IsPassedByAddress = true;
   }
 
+  SmallVector<Expr *, 5> APIOrderedArgs;
+  if (ArgOrder == Sema::AtomicArgumentOrder::AST) {
+    APIOrderedArgs.push_back(Args[0]);
+    switch (Form) {
+    case Init:
+    case Load:
+      APIOrderedArgs.push_back(Args[1]); // Val1/Order
+      break;
+    case LoadCopy:
+    case Copy:
+    case Arithmetic:
+    case Xchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[1]); // Order
+      break;
+    case GNUXchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[3]); // Val2
+      APIOrderedArgs.push_back(Args[1]); // Order
+      break;
+    case C11CmpXchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[4]); // Val2
+      APIOrderedArgs.push_back(Args[1]); // Order
+      APIOrderedArgs.push_back(Args[3]); // OrderFail
+      break;
+    case GNUCmpXchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[4]); // Val2
+      APIOrderedArgs.push_back(Args[5]); // Weak
+      APIOrderedArgs.push_back(Args[1]); // Order
+      APIOrderedArgs.push_back(Args[3]); // OrderFail
+      break;
+    }
+  } else
+    APIOrderedArgs.append(Args.begin(), Args.end());
+
   // The first argument's non-CV pointer type is used to deduce the type of
   // subsequent arguments, except for:
   //  - weak flag (always converted to bool)
   //  - memory order (always converted to int)
   //  - scope  (always converted to int)
-  for (unsigned i = 0; i != Args.size(); ++i) {
+  for (unsigned i = 0; i != APIOrderedArgs.size(); ++i) {
     QualType Ty;
     if (i < NumVals[Form] + 1) {
       switch (i) {
       case 0:
         // The first argument is always a pointer. It has a fixed type.
         // It is always dereferenced, a nullptr is undefined.
-        CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
+        CheckNonNullArgument(*this, APIOrderedArgs[i], ExprRange.getBegin());
         // Nothing else to do: we already know all we want about this pointer.
         continue;
       case 1:
@@ -4778,14 +4816,16 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         if (Form == Init || (Form == Arithmetic && ValType->isIntegerType()))
           Ty = ValType;
         else if (Form == Copy || Form == Xchg) {
-          if (IsPassedByAddress)
+          if (IsPassedByAddress) {
             // The value pointer is always dereferenced, a nullptr is undefined.
-            CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
+            CheckNonNullArgument(*this, APIOrderedArgs[i],
+                                 ExprRange.getBegin());
+          }
           Ty = ByValType;
         } else if (Form == Arithmetic)
           Ty = Context.getPointerDiffType();
         else {
-          Expr *ValArg = Args[i];
+          Expr *ValArg = APIOrderedArgs[i];
           // The value pointer is always dereferenced, a nullptr is undefined.
           CheckNonNullArgument(*this, ValArg, ExprRange.getBegin());
           LangAS AS = LangAS::Default;
@@ -4802,7 +4842,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         // The third argument to compare_exchange / GNU exchange is the desired
         // value, either by-value (for the C11 and *_n variant) or as a pointer.
         if (IsPassedByAddress)
-          CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
+          CheckNonNullArgument(*this, APIOrderedArgs[i], ExprRange.getBegin());
         Ty = ByValType;
         break;
       case 3:
@@ -4817,11 +4857,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
     InitializedEntity Entity =
         InitializedEntity::InitializeParameter(Context, Ty, false);
-    ExprResult Arg = Args[i];
+    ExprResult Arg = APIOrderedArgs[i];
     Arg = PerformCopyInitialization(Entity, SourceLocation(), Arg);
     if (Arg.isInvalid())
       return true;
-    Args[i] = Arg.get();
+    APIOrderedArgs[i] = Arg.get();
   }
 
   // Permute the arguments into a 'consistent' order.
@@ -4830,36 +4870,36 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   switch (Form) {
   case Init:
     // Note, AtomicExpr::getVal1() has a special case for this atomic.
-    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case Load:
-    SubExprs.push_back(Args[1]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Order
     break;
   case LoadCopy:
   case Copy:
   case Arithmetic:
   case Xchg:
-    SubExprs.push_back(Args[2]); // Order
-    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[2]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case GNUXchg:
     // Note, AtomicExpr::getVal2() has a special case for this atomic.
-    SubExprs.push_back(Args[3]); // Order
-    SubExprs.push_back(Args[1]); // Val1
-    SubExprs.push_back(Args[2]); // Val2
+    SubExprs.push_back(APIOrderedArgs[3]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[2]); // Val2
     break;
   case C11CmpXchg:
-    SubExprs.push_back(Args[3]); // Order
-    SubExprs.push_back(Args[1]); // Val1
-    SubExprs.push_back(Args[4]); // OrderFail
-    SubExprs.push_back(Args[2]); // Val2
+    SubExprs.push_back(APIOrderedArgs[3]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[4]); // OrderFail
+    SubExprs.push_back(APIOrderedArgs[2]); // Val2
     break;
   case GNUCmpXchg:
-    SubExprs.push_back(Args[4]); // Order
-    SubExprs.push_back(Args[1]); // Val1
-    SubExprs.push_back(Args[5]); // OrderFail
-    SubExprs.push_back(Args[2]); // Val2
-    SubExprs.push_back(Args[3]); // Weak
+    SubExprs.push_back(APIOrderedArgs[4]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[5]); // OrderFail
+    SubExprs.push_back(APIOrderedArgs[2]); // Val2
+    SubExprs.push_back(APIOrderedArgs[3]); // Weak
     break;
   }
 

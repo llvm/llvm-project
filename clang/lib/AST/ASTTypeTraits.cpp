@@ -117,6 +117,7 @@ ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
   case OMPC_threadprivate:
   case OMPC_uniform:
   case OMPC_device_type:
+  case OMPC_match:
   case OMPC_unknown:
     llvm_unreachable("unexpected OpenMP clause kind");
   }

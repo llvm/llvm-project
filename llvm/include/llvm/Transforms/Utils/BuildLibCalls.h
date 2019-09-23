@@ -50,6 +50,11 @@ namespace llvm {
   Value *emitStrLen(Value *Ptr, IRBuilder<> &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the strdup function to the builder, for the specified
+  /// pointer. Ptr is required to be some pointer type, and the return value has
+  /// 'i8*' type.
+  Value *emitStrDup(Value *Ptr, IRBuilder<> &B, const TargetLibraryInfo *TLI);
+
   /// Emit a call to the strnlen function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, MaxLen must be of size_t
   /// type, and the return value has 'intptr_t' type.

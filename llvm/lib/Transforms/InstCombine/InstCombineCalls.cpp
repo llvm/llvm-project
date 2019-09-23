@@ -4222,9 +4222,6 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
   if (isAllocationFn(&Call, &TLI))
     annotateAnyAllocSite(Call, &TLI);
 
-  if (isAllocLikeFn(&Call, &TLI))
-    return visitAllocSite(Call);
-
   bool Changed = false;
 
   // Mark any parameters that are known to be non-null with the nonnull
@@ -4354,6 +4351,9 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
     // the fallthrough check.
     if (I) return eraseInstFromFunction(*I);
   }
+
+  if (isAllocLikeFn(&Call, &TLI))
+    return visitAllocSite(Call);
 
   return Changed ? &Call : nullptr;
 }

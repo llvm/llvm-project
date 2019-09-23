@@ -62,6 +62,11 @@ public:
   /// Get or create an IntegerType instance.
   static IntegerType *get(LLVMContext &C, unsigned NumBits);
 
+  /// Returns type twice as wide the input type.
+  IntegerType *getExtendedType() const {
+    return Type::getIntNTy(getContext(), 2 * getScalarSizeInBits());
+  }
+
   /// Get the number of bits in this IntegerType
   unsigned getBitWidth() const { return getSubclassData(); }
 
@@ -470,9 +475,9 @@ public:
   /// This static method is like getInteger except that the element types are
   /// twice as wide as the elements in the input type.
   static VectorType *getExtendedElementVectorType(VectorType *VTy) {
-    unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
-    Type *EltTy = IntegerType::get(VTy->getContext(), EltBits * 2);
-    return VectorType::get(EltTy, VTy->getElementCount());
+    assert(VTy->isIntOrIntVectorTy() && "VTy expected to be a vector of ints.");
+    auto *EltTy = cast<IntegerType>(VTy->getElementType());
+    return VectorType::get(EltTy->getExtendedType(), VTy->getElementCount());
   }
 
   // This static method gets a VectorType with the same number of elements as
@@ -602,6 +607,16 @@ public:
     return T->getTypeID() == PointerTyID;
   }
 };
+
+Type *Type::getExtendedType() const {
+  assert(
+      isIntOrIntVectorTy() &&
+      "Original type expected to be a vector of integers or a scalar integer.");
+  if (auto *VTy = dyn_cast<VectorType>(this))
+    return VectorType::getExtendedElementVectorType(
+        const_cast<VectorType *>(VTy));
+  return cast<IntegerType>(this)->getExtendedType();
+}
 
 unsigned Type::getPointerAddressSpace() const {
   return cast<PointerType>(getScalarType())->getAddressSpace();

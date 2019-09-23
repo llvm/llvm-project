@@ -531,6 +531,19 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilder<> &B) {
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeStrNDup(CallInst *CI, IRBuilder<> &B) {
+  Value *Src = CI->getArgOperand(0);
+  ConstantInt *Size = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+  uint64_t SrcLen = GetStringLength(Src);
+  if (SrcLen && Size) {
+    annotateDereferenceableBytes(CI, 0, SrcLen);
+    if (SrcLen <= Size->getZExtValue() + 1)
+      return emitStrDup(Src, B, TLI);
+  }
+
+  return nullptr;
+}
+
 Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilder<> &B) {
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
   if (Dst == Src) // strcpy(x,x)  -> x
@@ -2713,6 +2726,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeStrLen(CI, Builder);
     case LibFunc_strpbrk:
       return optimizeStrPBrk(CI, Builder);
+    case LibFunc_strndup:
+      return optimizeStrNDup(CI, Builder);
     case LibFunc_strtol:
     case LibFunc_strtod:
     case LibFunc_strtof:
