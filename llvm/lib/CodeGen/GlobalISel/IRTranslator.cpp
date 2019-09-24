@@ -588,8 +588,8 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     Register CondRHS = getOrCreateVReg(*CB.CmpRHS);
     Cond = MIB.buildICmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
   } else {
-    assert(CB.PredInfo.Pred == CmpInst::ICMP_ULE &&
-           "Can only handle ULE ranges");
+    assert(CB.PredInfo.Pred == CmpInst::ICMP_SLE &&
+           "Can only handle SLE ranges");
 
     const APInt& Low = cast<ConstantInt>(CB.CmpLHS)->getValue();
     const APInt& High = cast<ConstantInt>(CB.CmpRHS)->getValue();
@@ -598,7 +598,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     if (cast<ConstantInt>(CB.CmpLHS)->isMinValue(true)) {
       Register CondRHS = getOrCreateVReg(*CB.CmpRHS);
       Cond =
-          MIB.buildICmp(CmpInst::ICMP_ULE, i1Ty, CmpOpReg, CondRHS).getReg(0);
+          MIB.buildICmp(CmpInst::ICMP_SLE, i1Ty, CmpOpReg, CondRHS).getReg(0);
     } else {
       const LLT &CmpTy = MRI->getType(CmpOpReg);
       auto Sub = MIB.buildSub({CmpTy}, CmpOpReg, CondLHS);
@@ -728,7 +728,7 @@ bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
     MHS = nullptr;
   } else {
     // Check I->Low <= Cond <= I->High.
-    Pred = CmpInst::ICMP_ULE;
+    Pred = CmpInst::ICMP_SLE;
     LHS = I->Low;
     MHS = Cond;
     RHS = I->High;
