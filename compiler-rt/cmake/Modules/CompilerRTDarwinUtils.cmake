@@ -1,6 +1,8 @@
 include(CMakeParseArguments)
 include(CompilerRTUtils)
 
+set(CMAKE_LIPO "lipo" CACHE PATH "path to the lipo tool")
+
 # On OS X SDKs can be installed anywhere on the base system and xcode-select can
 # set the default Xcode to use. This function finds the SDKs that are present in
 # the current Xcode.
@@ -244,7 +246,7 @@ function(darwin_lipo_libs name)
   if(LIB_DEPENDS AND LIB_LIPO_FLAGS)
     add_custom_command(OUTPUT ${LIB_OUTPUT_DIR}/lib${name}.a
       COMMAND ${CMAKE_COMMAND} -E make_directory ${LIB_OUTPUT_DIR}
-      COMMAND lipo -output
+      COMMAND ${CMAKE_LIPO} -output
               ${LIB_OUTPUT_DIR}/lib${name}.a
               -create ${LIB_LIPO_FLAGS}
       DEPENDS ${LIB_DEPENDS}
