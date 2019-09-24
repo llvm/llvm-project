@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0.0 |  FileCheck %s
-; RUN: llc < %s -mtriple=arm64-apple-ios7.0.0 -O0 -pass-remarks-missed=gisel* -global-isel-abort=2 |  FileCheck %s --check-prefixes=GISEL,FALLBACK
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0.0 -O0 -pass-remarks-missed=gisel* -global-isel -global-isel-abort=2 |  FileCheck %s --check-prefixes=GISEL,FALLBACK
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 

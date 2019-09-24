@@ -32,15 +32,6 @@
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
-; CHECK-NEXT:       Analysis containing CSE Info
-; CHECK-NEXT:       IRTranslator
-; CHECK-NEXT:       AArch64PreLegalizerCombiner
-; CHECK-NEXT:       Analysis containing CSE Info
-; CHECK-NEXT:       Legalizer
-; CHECK-NEXT:       RegBankSelect
-; CHECK-NEXT:       Localizer
-; CHECK-NEXT:       InstructionSelect
-; CHECK-NEXT:       ResetMachineFunction
 ; CHECK-NEXT:       AArch64 Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
