@@ -160,6 +160,7 @@ private:
   Value *optimizeStrRChr(CallInst *CI, IRBuilder<> &B);
   Value *optimizeStrCmp(CallInst *CI, IRBuilder<> &B);
   Value *optimizeStrNCmp(CallInst *CI, IRBuilder<> &B);
+  Value *optimizeStrNDup(CallInst *CI, IRBuilder<> &B);
   Value *optimizeStrCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeStpCpy(CallInst *CI, IRBuilder<> &B);
   Value *optimizeStrNCpy(CallInst *CI, IRBuilder<> &B);
