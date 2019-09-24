@@ -140,7 +140,7 @@ void checkDiffedHighlights(llvm::StringRef OldCode, llvm::StringRef NewCode) {
   }
   for (auto &LineTokens : ExpectedLines)
     ExpectedLinePairHighlighting.push_back(
-        {LineTokens.first, LineTokens.second});
+        {LineTokens.first, LineTokens.second, /*IsInactive = */ false});
 
   std::vector<LineHighlightings> ActualDiffed =
       diffHighlightings(NewTokens, OldTokens);
@@ -493,11 +493,11 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
 
       #define $Macro[[test]]
       #undef $Macro[[test]]
-      #ifdef $Macro[[test]]
-      #endif
+$InactiveCode[[]]      #ifdef $Macro[[test]]
+$InactiveCode[[]]      #endif
 
-      #if defined($Macro[[test]])
-      #endif
+$InactiveCode[[]]      #if defined($Macro[[test]])
+$InactiveCode[[]]      #endif
     )cpp",
       R"cpp(
       struct $Class[[S]] {
@@ -598,6 +598,33 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[Foo]]<$TemplateParameter[[TT]], $TemplateParameter[[TTs]]...>
           *$Field[[t]];
       }
+    )cpp",
+      // Inactive code highlighting
+      R"cpp(
+      // Code in the preamble.
+      // Inactive lines get an empty InactiveCode token at the beginning.
+$InactiveCode[[]]      #ifdef $Macro[[test]]
+$InactiveCode[[]]      #endif
+
+      // A declaration to cause the preamble to end.
+      int $Variable[[EndPreamble]];
+
+      // Code after the preamble.
+      // Code inside inactive blocks does not get regular highlightings
+      // because it's not part of the AST.
+$InactiveCode[[]]      #ifdef $Macro[[test]]
+$InactiveCode[[]]      int Inactive2;
+$InactiveCode[[]]      #endif
+
+      #ifndef $Macro[[test]]
+      int $Variable[[Active1]];
+      #endif
+
+$InactiveCode[[]]      #ifdef $Macro[[test]]
+$InactiveCode[[]]      int Inactive3;
+$InactiveCode[[]]      #else
+      int $Variable[[Active2]];
+      #endif
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
@@ -665,10 +692,12 @@ TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
        {{HighlightingKind::Variable,
          Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
         {HighlightingKind::Function,
-         Range{CreatePosition(3, 4), CreatePosition(3, 7)}}}},
+         Range{CreatePosition(3, 4), CreatePosition(3, 7)}}},
+       /* IsInactive = */ false},
       {1,
        {{HighlightingKind::Variable,
-         Range{CreatePosition(1, 1), CreatePosition(1, 5)}}}}};
+         Range{CreatePosition(1, 1), CreatePosition(1, 5)}}},
+       /* IsInactive = */ true}};
   std::vector<SemanticHighlightingInformation> ActualResults =
       toSemanticHighlightingInformation(Tokens);
   std::vector<SemanticHighlightingInformation> ExpectedResults = {
