@@ -421,7 +421,7 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
 
 Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   StringRef name = sym.Info.Name;
-  uint32_t flags = sym.Info.Flags;
+  uint32_t flags = sym.Info.Flags | WASM_SYMBOL_UNDEFINED;
 
   switch (sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
@@ -509,6 +509,7 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   bool excludedByComdat = c != -1 && !keptComdats[c];
 
   if (objSym.isUndefined() || excludedByComdat) {
+    flags |= WASM_SYMBOL_UNDEFINED;
     if (objSym.isExecutable())
       return symtab->addUndefinedFunction(name, name, defaultModule, flags, &f,
                                           nullptr, true);

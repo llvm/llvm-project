@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
@@ -19,29 +20,36 @@ class DWARFASTParserClangStub : public DWARFASTParserClang {
 public:
   using DWARFASTParserClang::DWARFASTParserClang;
   using DWARFASTParserClang::LinkDeclContextToDIE;
+
+  std::vector<const clang::DeclContext *> GetDeclContextToDIEMapKeys() {
+    std::vector<const clang::DeclContext *> keys;
+    for (const auto &it : m_decl_ctx_to_die)
+      keys.push_back(it.first);
+    return keys;
+  }
 };
 } // namespace
 
 // If your implementation needs to dereference the dummy pointers we are
 // defining here, causing this test to fail, feel free to delete it.
 TEST(DWARFASTParserClangTests,
-     TestGetDIEForDeclContextReturnsOnlyMatchingEntries) {
+     EnsureAllDIEsInDeclContextHaveBeenParsedParsesOnlyMatchingEntries) {
   ClangASTContext ast_ctx;
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
   DWARFUnit *unit = nullptr;
-  DWARFDIE die1(unit, (DWARFDebugInfoEntry *)1LL);
-  DWARFDIE die2(unit, (DWARFDebugInfoEntry *)2LL);
-  DWARFDIE die3(unit, (DWARFDebugInfoEntry *)3LL);
-  DWARFDIE die4(unit, (DWARFDebugInfoEntry *)4LL);
-  ast_parser.LinkDeclContextToDIE((clang::DeclContext *)1LL, die1);
-  ast_parser.LinkDeclContextToDIE((clang::DeclContext *)2LL, die2);
-  ast_parser.LinkDeclContextToDIE((clang::DeclContext *)2LL, die3);
-  ast_parser.LinkDeclContextToDIE((clang::DeclContext *)3LL, die4);
+  std::vector<DWARFDIE> dies = {DWARFDIE(unit, (DWARFDebugInfoEntry *)1LL),
+                                DWARFDIE(unit, (DWARFDebugInfoEntry *)2LL),
+                                DWARFDIE(unit, (DWARFDebugInfoEntry *)3LL),
+                                DWARFDIE(unit, (DWARFDebugInfoEntry *)4LL)};
+  std::vector<clang::DeclContext *> decl_ctxs = {
+      (clang::DeclContext *)1LL, (clang::DeclContext *)2LL,
+      (clang::DeclContext *)2LL, (clang::DeclContext *)3LL};
+  for (int i = 0; i < 4; ++i)
+    ast_parser.LinkDeclContextToDIE(decl_ctxs[i], dies[i]);
+  ast_parser.EnsureAllDIEsInDeclContextHaveBeenParsed(
+      CompilerDeclContext(nullptr, decl_ctxs[1]));
 
-  auto die_list = ast_parser.GetDIEForDeclContext(
-      CompilerDeclContext(nullptr, (clang::DeclContext *)2LL));
-  ASSERT_EQ(2u, die_list.size());
-  ASSERT_EQ(die2, die_list[0]);
-  ASSERT_EQ(die3, die_list[1]);
+  EXPECT_THAT(ast_parser.GetDeclContextToDIEMapKeys(),
+              testing::UnorderedElementsAre(decl_ctxs[0], decl_ctxs[3]));
 }

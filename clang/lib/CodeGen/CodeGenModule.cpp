@@ -5132,7 +5132,9 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
 // EmitLinkageSpec - Emit all declarations in a linkage spec.
 void CodeGenModule::EmitLinkageSpec(const LinkageSpecDecl *LSD) {
   if (LSD->getLanguage() != LinkageSpecDecl::lang_c &&
-      LSD->getLanguage() != LinkageSpecDecl::lang_cxx) {
+      LSD->getLanguage() != LinkageSpecDecl::lang_cxx &&
+      LSD->getLanguage() != LinkageSpecDecl::lang_cxx_11 &&
+      LSD->getLanguage() != LinkageSpecDecl::lang_cxx_14) {
     ErrorUnsupported(LSD, "linkage spec");
     return;
   }

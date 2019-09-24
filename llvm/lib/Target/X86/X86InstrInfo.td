@@ -2697,12 +2697,12 @@ def SLWPCB64 : I<0x12, MRM1r, (outs GR64:$dst), (ins), "slwpcb\t$dst",
 multiclass lwpins_intr<RegisterClass RC> {
   def rri : Ii32<0x12, MRM0r, (outs), (ins RC:$src0, GR32:$src1, i32imm:$cntl),
                  "lwpins\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
-                 [(set EFLAGS, (X86lwpins RC:$src0, GR32:$src1, imm:$cntl))]>,
+                 [(set EFLAGS, (X86lwpins RC:$src0, GR32:$src1, timm:$cntl))]>,
                  XOP_4V, XOPA;
   let mayLoad = 1 in
   def rmi : Ii32<0x12, MRM0m, (outs), (ins RC:$src0, i32mem:$src1, i32imm:$cntl),
                  "lwpins\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
-                 [(set EFLAGS, (X86lwpins RC:$src0, (loadi32 addr:$src1), imm:$cntl))]>,
+                 [(set EFLAGS, (X86lwpins RC:$src0, (loadi32 addr:$src1), timm:$cntl))]>,
                  XOP_4V, XOPA;
 }
 
@@ -2714,11 +2714,11 @@ let Defs = [EFLAGS] in {
 multiclass lwpval_intr<RegisterClass RC, Intrinsic Int> {
   def rri : Ii32<0x12, MRM1r, (outs), (ins RC:$src0, GR32:$src1, i32imm:$cntl),
                  "lwpval\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
-                 [(Int RC:$src0, GR32:$src1, imm:$cntl)]>, XOP_4V, XOPA;
+                 [(Int RC:$src0, GR32:$src1, timm:$cntl)]>, XOP_4V, XOPA;
   let mayLoad = 1 in
   def rmi : Ii32<0x12, MRM1m, (outs), (ins RC:$src0, i32mem:$src1, i32imm:$cntl),
                  "lwpval\t{$cntl, $src1, $src0|$src0, $src1, $cntl}",
-                 [(Int RC:$src0, (loadi32 addr:$src1), imm:$cntl)]>,
+                 [(Int RC:$src0, (loadi32 addr:$src1), timm:$cntl)]>,
                  XOP_4V, XOPA;
 }
 

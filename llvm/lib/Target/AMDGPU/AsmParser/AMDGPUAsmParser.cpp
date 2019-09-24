@@ -3236,6 +3236,7 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
 
   const int OpIndices[] = { Src0Idx, Src1Idx };
 
+  unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
   uint32_t LiteralValue;
 
@@ -3243,19 +3244,21 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
     if (OpIdx == -1) break;
 
     const MCOperand &MO = Inst.getOperand(OpIdx);
-    if (MO.isImm() &&
-        // Exclude special imm operands (like that used by s_set_gpr_idx_on)
-        AMDGPU::isSISrcOperand(Desc, OpIdx) &&
-        !isInlineConstant(Inst, OpIdx)) {
-      uint32_t Value = static_cast<uint32_t>(MO.getImm());
-      if (NumLiterals == 0 || LiteralValue != Value) {
-        LiteralValue = Value;
-        ++NumLiterals;
+    // Exclude special imm operands (like that used by s_set_gpr_idx_on)
+    if (AMDGPU::isSISrcOperand(Desc, OpIdx)) {
+      if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
+        uint32_t Value = static_cast<uint32_t>(MO.getImm());
+        if (NumLiterals == 0 || LiteralValue != Value) {
+          LiteralValue = Value;
+          ++NumLiterals;
+        }
+      } else if (MO.isExpr()) {
+        ++NumExprs;
       }
     }
   }
 
-  return NumLiterals <= 1;
+  return NumLiterals + NumExprs <= 1;
 }
 
 bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
@@ -3291,6 +3294,7 @@ bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
 
   const int OpIndices[] = { Src0Idx, Src1Idx, Src2Idx };
 
+  unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
   uint32_t LiteralValue;
 
@@ -3298,21 +3302,26 @@ bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
     if (OpIdx == -1) break;
 
     const MCOperand &MO = Inst.getOperand(OpIdx);
-    if (!MO.isImm() || !AMDGPU::isSISrcOperand(Desc, OpIdx))
+    if (!MO.isImm() && !MO.isExpr())
+      continue;
+    if (!AMDGPU::isSISrcOperand(Desc, OpIdx))
       continue;
 
     if (OpIdx == Src2Idx && (Desc.TSFlags & SIInstrFlags::IsMAI) &&
         getFeatureBits()[AMDGPU::FeatureMFMAInlineLiteralBug])
       return false;
 
-    if (!isInlineConstant(Inst, OpIdx)) {
+    if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
       uint32_t Value = static_cast<uint32_t>(MO.getImm());
       if (NumLiterals == 0 || LiteralValue != Value) {
         LiteralValue = Value;
         ++NumLiterals;
       }
+    } else if (MO.isExpr()) {
+      ++NumExprs;
     }
   }
+  NumLiterals += NumExprs;
 
   return !NumLiterals ||
          (NumLiterals == 1 && getFeatureBits()[AMDGPU::FeatureVOP3Literal]);

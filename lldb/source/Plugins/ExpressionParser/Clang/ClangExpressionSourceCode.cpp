@@ -29,9 +29,12 @@
 
 using namespace lldb_private;
 
+#define PREFIX_NAME "<lldb wrapper prefix>"
+
+const llvm::StringRef ClangExpressionSourceCode::g_prefix_file_name = PREFIX_NAME;
+
 const char *ClangExpressionSourceCode::g_expression_prefix =
-    R"(
-#line 1 "<lldb wrapper prefix>"
+"#line 1 \"" PREFIX_NAME R"("
 #ifndef offsetof
 #define offsetof(t, d) __builtin_offsetof(t, d)
 #endif

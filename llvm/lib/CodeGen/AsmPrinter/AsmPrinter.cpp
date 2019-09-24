@@ -1990,10 +1990,10 @@ void AsmPrinter::EmitXXStructorList(const DataLayout &DL, const Constant *List,
   }
 
   // Emit the function pointers in the target-specific order
-  const llvm::Align Align = llvm::Align(DL.getPointerPrefAlignment());
   llvm::stable_sort(Structors, [](const Structor &L, const Structor &R) {
     return L.Priority < R.Priority;
   });
+  const llvm::Align Align = DL.getPointerPrefAlignment();
   for (Structor &S : Structors) {
     const TargetLoweringObjectFile &Obj = getObjFileLowering();
     const MCSymbol *KeySym = nullptr;

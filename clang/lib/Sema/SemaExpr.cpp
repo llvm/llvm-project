@@ -9191,7 +9191,8 @@ static void DiagnoseDivisionSizeofPointerOrArray(Sema &S, Expr *LHS, Expr *RHS,
     }
   } else if (const auto *ArrayTy = S.Context.getAsArrayType(LHSTy)) {
     QualType ArrayElemTy = ArrayTy->getElementType();
-    if (ArrayElemTy->isDependentType() || RHSTy->isDependentType() ||
+    if (ArrayElemTy != S.Context.getBaseElementType(ArrayTy) ||
+        ArrayElemTy->isDependentType() || RHSTy->isDependentType() ||
         S.Context.getTypeSize(ArrayElemTy) == S.Context.getTypeSize(RHSTy))
       return;
     S.Diag(Loc, diag::warn_division_sizeof_array)
@@ -11296,10 +11297,22 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHS.get()->getType()->isVectorType() || RHS.get()->getType()->isVectorType())
     return CheckVectorLogicalOperands(LHS, RHS, Loc);
 
+  bool EnumConstantInBoolContext = false;
+  for (const ExprResult &HS : {LHS, RHS}) {
+    if (const auto *DREHS = dyn_cast<DeclRefExpr>(HS.get())) {
+      const auto *ECDHS = dyn_cast<EnumConstantDecl>(DREHS->getDecl());
+      if (ECDHS && ECDHS->getInitVal() != 0 && ECDHS->getInitVal() != 1)
+        EnumConstantInBoolContext = true;
+    }
+  }
+
+  if (EnumConstantInBoolContext)
+    Diag(Loc, diag::warn_enum_constant_in_bool_context);
+
   // Diagnose cases where the user write a logical and/or but probably meant a
   // bitwise one.  We do this when the LHS is a non-bool integer and the RHS
   // is a constant.
-  if (LHS.get()->getType()->isIntegerType() &&
+  if (!EnumConstantInBoolContext && LHS.get()->getType()->isIntegerType() &&
       !LHS.get()->getType()->isBooleanType() &&
       RHS.get()->getType()->isIntegerType() && !RHS.get()->isValueDependent() &&
       // Don't warn in macros or template instantiations.

@@ -98,33 +98,6 @@ private:
   std::vector<Decl *> TopLevelDecls;
 };
 
-// This collects macro expansions/definitions in the main file.
-// (Contrast with CollectMainFileMacros in Preamble.cpp, which collects macro
-// *definitions* in the preamble region of the main file).
-class CollectMainFileMacros : public PPCallbacks {
-  const SourceManager &SM;
-  std::vector<SourceLocation> &MainFileMacroLocs;
-
-  void addLoc(SourceLocation Loc) {
-    if (!Loc.isMacroID() && isInsideMainFile(Loc, SM))
-      MainFileMacroLocs.push_back(Loc);
-  }
-
-public:
-  CollectMainFileMacros(const SourceManager &SM,
-                        std::vector<SourceLocation> &MainFileMacroLocs)
-      : SM(SM), MainFileMacroLocs(MainFileMacroLocs) {}
-
-  void MacroDefined(const Token &MacroNameTok,
-                    const MacroDirective *MD) override {
-    addLoc(MacroNameTok.getLocation());
-  }
-  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
-                    SourceRange Range, const MacroArgs *Args) override {
-    addLoc(MacroNameTok.getLocation());
-  }
-};
-
 // When using a preamble, only preprocessor events outside its bounds are seen.
 // This is almost what we want: replaying transitive preprocessing wastes time.
 // However this confuses clang-tidy checks: they don't see any #includes!
@@ -362,11 +335,14 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Clang->getPreprocessor().addPPCallbacks(
       collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
-  // Collect the macro expansions in the main file.
-  std::vector<SourceLocation> MainFileMacroExpLocs;
+  // Copy over the macros in the preamble region of the main file, and combine
+  // with non-preamble macros below.
+  MainFileMacros Macros;
+  if (Preamble)
+    Macros = Preamble->Macros;
   Clang->getPreprocessor().addPPCallbacks(
       std::make_unique<CollectMainFileMacros>(Clang->getSourceManager(),
-                                              MainFileMacroExpLocs));
+                                              Clang->getLangOpts(), Macros));
 
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
@@ -420,9 +396,9 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
     Diags.insert(Diags.end(), D.begin(), D.end());
   }
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
-                   std::move(Tokens), std::move(MainFileMacroExpLocs),
-                   std::move(ParsedDecls), std::move(Diags),
-                   std::move(Includes), std::move(CanonIncludes));
+                   std::move(Tokens), std::move(Macros), std::move(ParsedDecls),
+                   std::move(Diags), std::move(Includes),
+                   std::move(CanonIncludes));
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -460,9 +436,7 @@ llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
   return LocalTopLevelDecls;
 }
 
-llvm::ArrayRef<SourceLocation> ParsedAST::getMacros() const {
-  return MacroIdentifierLocs;
-}
+const MainFileMacros &ParsedAST::getMacros() const { return Macros; }
 
 const std::vector<Diag> &ParsedAST::getDiagnostics() const { return Diags; }
 
@@ -509,15 +483,13 @@ const CanonicalIncludes &ParsedAST::getCanonicalIncludes() const {
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
-                     syntax::TokenBuffer Tokens,
-                     std::vector<SourceLocation> MacroIdentifierLocs,
+                     syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, IncludeStructure Includes,
                      CanonicalIncludes CanonIncludes)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Tokens(std::move(Tokens)),
-      MacroIdentifierLocs(std::move(MacroIdentifierLocs)),
-      Diags(std::move(Diags)),
+      Macros(std::move(Macros)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
   assert(this->Clang);

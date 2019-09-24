@@ -22,14 +22,18 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstddef>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -125,6 +129,21 @@ llvm::Error validateEdits(const DraftStore &DraftMgr, const Tweak::Effect &E) {
       llvm::inconvertibleErrorCode(),
       "Files must be saved first: " + LastInvalidFile + " (and " +
           llvm::to_string(InvalidFileCount - 1) + " others)");
+}
+
+// Converts a list of Ranges to a LinkedList of SelectionRange.
+SelectionRange render(const std::vector<Range> &Ranges) {
+  if (Ranges.empty())
+    return {};
+  SelectionRange Result;
+  Result.range = Ranges[0];
+  auto *Next = &Result.parent;
+  for (const auto &R : llvm::make_range(Ranges.begin() + 1, Ranges.end())) {
+    *Next = std::make_unique<SelectionRange>();
+    Next->get()->range = R;
+    Next = &Next->get()->parent;
+  }
+  return Result;
 }
 
 } // namespace
@@ -536,6 +555,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"documentHighlightProvider", true},
             {"hoverProvider", true},
             {"renameProvider", std::move(RenameProvider)},
+            {"selectionRangeProvider", true},
             {"documentSymbolProvider", true},
             {"workspaceSymbolProvider", true},
             {"referencesProvider", true},
@@ -1125,6 +1145,30 @@ void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
                      std::move(Reply));
 }
 
+void ClangdLSPServer::onSelectionRange(
+    const SelectionRangeParams &Params,
+    Callback<std::vector<SelectionRange>> Reply) {
+  if (Params.positions.size() != 1) {
+    elog("{0} positions provided to SelectionRange. Supports exactly one "
+         "position.",
+         Params.positions.size());
+    return Reply(llvm::make_error<LSPError>(
+        "SelectionRange supports exactly one position",
+        ErrorCode::InvalidRequest));
+  }
+  Server->semanticRanges(
+      Params.textDocument.uri.file(), Params.positions[0],
+      [Reply = std::move(Reply)](
+          llvm::Expected<std::vector<Range>> Ranges) mutable {
+        if (!Ranges) {
+          return Reply(Ranges.takeError());
+        }
+        std::vector<SelectionRange> Result;
+        Result.emplace_back(render(std::move(*Ranges)));
+        return Reply(std::move(Result));
+      });
+}
+
 ClangdLSPServer::ClangdLSPServer(
     class Transport &Transp, const FileSystemProvider &FSProvider,
     const clangd::CodeCompleteOptions &CCOpts,
@@ -1167,6 +1211,7 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("textDocument/symbolInfo", &ClangdLSPServer::onSymbolInfo);
   MsgHandler->bind("textDocument/typeHierarchy", &ClangdLSPServer::onTypeHierarchy);
   MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
+  MsgHandler->bind("textDocument/selectionRange", &ClangdLSPServer::onSelectionRange);
   // clang-format on
 }
 

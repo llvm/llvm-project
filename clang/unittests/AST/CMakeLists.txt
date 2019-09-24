@@ -11,6 +11,7 @@ add_clang_unittest(ASTTests
   ASTImporterFixtures.cpp
   ASTImporterTest.cpp
   ASTImporterGenericRedeclTest.cpp
+  ASTImporterODRStrategiesTest.cpp
   ASTImporterVisibilityTest.cpp
   ASTTraverserTest.cpp
   ASTTypeTraitsTest.cpp

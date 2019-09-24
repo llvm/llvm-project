@@ -214,8 +214,7 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   // Remove the one match that we got from calling GetSubcommandObject.
   new_matches.DeleteStringAtIndex(0);
   request.AddCompletions(new_matches);
-  request.GetParsedLine().Shift();
-  request.SetCursorIndex(request.GetCursorIndex() - 1);
+  request.ShiftArguments();
   sub_command_object->HandleCompletion(request);
 }
 

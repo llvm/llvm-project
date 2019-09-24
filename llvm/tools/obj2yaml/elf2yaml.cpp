@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -67,6 +68,10 @@ class ELFDumper {
   Expected<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::Group *> dumpGroup(const Elf_Shdr *Shdr);
   Expected<ELFYAML::MipsABIFlags *> dumpMipsABIFlags(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::StackSizesSection *>
+  dumpStackSizesSection(const Elf_Shdr *Shdr);
+
+  Expected<ELFYAML::Section *> dumpSpecialSection(const Elf_Shdr *Shdr);
 
 public:
   ELFDumper(const object::ELFFile<ELFT> &O);
@@ -284,6 +289,17 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       LLVM_FALLTHROUGH;
     }
     default: {
+      // Recognize some special SHT_PROGBITS sections by name.
+      if (Sec.sh_type == ELF::SHT_PROGBITS) {
+        Expected<ELFYAML::Section *> SpecialSecOrErr = dumpSpecialSection(&Sec);
+        if (!SpecialSecOrErr)
+          return SpecialSecOrErr.takeError();
+        if (*SpecialSecOrErr) {
+          Y->Sections.emplace_back(*SpecialSecOrErr);
+          break;
+        }
+      }
+
       Expected<ELFYAML::RawContentSection *> SecOrErr =
           dumpContentSection(&Sec);
       if (!SecOrErr)
@@ -433,6 +449,18 @@ Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
 }
 
 template <class ELFT>
+Expected<ELFYAML::Section *>
+ELFDumper<ELFT>::dumpSpecialSection(const Elf_Shdr *Shdr) {
+  auto NameOrErr = getUniquedSectionName(Shdr);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+
+  if (ELFYAML::StackSizesSection::nameMatches(*NameOrErr))
+    return dumpStackSizesSection(Shdr);
+  return nullptr;
+}
+
+template <class ELFT>
 Error ELFDumper<ELFT>::dumpCommonRelocationSection(
     const Elf_Shdr *Shdr, ELFYAML::RelocationSection &S) {
   if (Error E = dumpCommonSection(Shdr, S))
@@ -448,6 +476,39 @@ Error ELFDumper<ELFT>::dumpCommonRelocationSection(
   S.RelocatableSec = NameOrErr.get();
 
   return Error::success();
+}
+
+template <class ELFT>
+Expected<ELFYAML::StackSizesSection *>
+ELFDumper<ELFT>::dumpStackSizesSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::StackSizesSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  DataExtractor Data(Content, Obj.isLE(), ELFT::Is64Bits ? 8 : 4);
+
+  std::vector<ELFYAML::StackSizeEntry> Entries;
+  DataExtractor::Cursor Cur(0);
+  while (Cur && Cur.tell() < Content.size()) {
+    uint64_t Address = Data.getAddress(Cur);
+    uint64_t Size = Data.getULEB128(Cur);
+    Entries.push_back({Address, Size});
+  }
+
+  if (Content.empty() || !Cur) {
+    // If .stack_sizes cannot be decoded, we dump it as an array of bytes.
+    consumeError(Cur.takeError());
+    S->Content = yaml::BinaryRef(Content);
+  } else {
+    S->Entries = std::move(Entries);
+  }
+
+  return S.release();
 }
 
 template <class ELFT>

@@ -705,7 +705,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     });
     if (i == sec->sectionCommands.end())
       continue;
-    InputSection *isec = cast<InputSectionDescription>(*i)->sections[0];
+    InputSectionBase *isec = cast<InputSectionDescription>(*i)->sections[0];
 
     // Relocations are not using REL[A] section symbols.
     if (isec->type == SHT_REL || isec->type == SHT_RELA)

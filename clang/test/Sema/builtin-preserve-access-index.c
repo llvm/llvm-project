@@ -4,8 +4,8 @@ const void *invalid1(const int *arg) {
   return __builtin_preserve_access_index(&arg[1], 1); // expected-error {{too many arguments to function call, expected 1, have 2}}
 }
 
-const void *invalid2(const int *arg) {
-  return __builtin_preserve_access_index(1); // expected-error {{__builtin_preserve_access_index argument must a pointer type instead of 'int'}}
+int valid2(void) {
+  return __builtin_preserve_access_index(1);
 }
 
 void *invalid3(const int *arg) {
@@ -28,4 +28,12 @@ struct s { int a; int b; };
 
 int valid7(struct s *arg) {
   return *__builtin_preserve_access_index(&arg->b);
+}
+
+int valid8(struct s *arg) {
+  return __builtin_preserve_access_index(arg->a + arg->b);
+}
+
+int valid9(struct s *arg) {
+  return __builtin_preserve_access_index(({arg->a = 2; arg->b = 3; }));
 }

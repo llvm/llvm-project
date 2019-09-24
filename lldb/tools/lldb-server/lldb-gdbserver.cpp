@@ -108,10 +108,10 @@ static struct option g_long_options[] = {
     {"fd", required_argument, nullptr, 'F'},
     {nullptr, 0, nullptr, 0}};
 
+#ifndef _WIN32
 // Watch for signals
 static int g_sighup_received_count = 0;
 
-#ifndef _WIN32
 static void sighup_handler(MainLoopBase &mainloop) {
   ++g_sighup_received_count;
 

@@ -2730,8 +2730,19 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   if (!MemRuntimeCheck)
     return;
 
-  assert(!BB->getParent()->hasOptSize() &&
-         "Cannot emit memory checks when optimizing for size");
+  if (BB->getParent()->hasOptSize()) {
+    assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
+           "Cannot emit memory checks when optimizing for size, unless forced "
+           "to vectorize.");
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationCodeSize",
+                                        L->getStartLoc(), L->getHeader())
+             << "Code-size may be reduced by not forcing "
+                "vectorization, or by source-code modifications "
+                "eliminating the need for runtime checks "
+                "(e.g., adding 'restrict').";
+    });
+  }
 
   // Create a new block containing the memory check.
   BB->setName("vector.memcheck");
@@ -4167,7 +4178,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
     bool FCmp = (I.getOpcode() == Instruction::FCmp);
-    auto *Cmp = dyn_cast<CmpInst>(&I);
+    auto *Cmp = cast<CmpInst>(&I);
     setDebugLocFromInst(Builder, Cmp);
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *A = getOrCreateVectorValue(Cmp->getOperand(0), Part);

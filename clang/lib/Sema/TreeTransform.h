@@ -3308,14 +3308,14 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildAtomicExpr(SourceLocation BuiltinLoc,
-                               MultiExprArg SubExprs,
+  ExprResult RebuildAtomicExpr(SourceLocation BuiltinLoc, MultiExprArg SubExprs,
                                AtomicExpr::AtomicOp Op,
                                SourceLocation RParenLoc) {
     // Use this for all of the locations, since we don't know the difference
     // between the call and the expr at this point.
     SourceRange Range{BuiltinLoc, RParenLoc};
-    return getSema().BuildAtomicExpr(Range, Range, RParenLoc, SubExprs, Op);
+    return getSema().BuildAtomicExpr(Range, Range, RParenLoc, SubExprs, Op,
+                                     Sema::AtomicArgumentOrder::AST);
   }
 
 private:

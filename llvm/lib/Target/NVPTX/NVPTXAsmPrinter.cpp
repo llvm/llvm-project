@@ -1397,7 +1397,7 @@ static unsigned int getOpenCLAlignment(const DataLayout &DL, Type *Ty) {
 
   auto *FTy = dyn_cast<FunctionType>(Ty);
   if (FTy)
-    return DL.getPointerPrefAlignment();
+    return DL.getPointerPrefAlignment().value();
   return DL.getPrefTypeAlignment(Ty);
 }
 

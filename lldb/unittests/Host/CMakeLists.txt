@@ -2,6 +2,7 @@ set (FILES
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
   FileSystemTest.cpp
+  FileTest.cpp
   HostInfoTest.cpp
   HostTest.cpp
   MainLoopTest.cpp

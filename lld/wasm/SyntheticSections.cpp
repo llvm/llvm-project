@@ -362,26 +362,6 @@ bool DataCountSection::isNeeded() const {
   return numSegments && config->sharedMemory;
 }
 
-static uint32_t getWasmFlags(const Symbol *sym) {
-  uint32_t flags = 0;
-  if (sym->isLocal())
-    flags |= WASM_SYMBOL_BINDING_LOCAL;
-  if (sym->isWeak())
-    flags |= WASM_SYMBOL_BINDING_WEAK;
-  if (sym->isHidden())
-    flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
-  if (sym->isUndefined())
-    flags |= WASM_SYMBOL_UNDEFINED;
-  if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-    if (f->getName() != f->importName)
-      flags |= WASM_SYMBOL_EXPLICIT_NAME;
-  } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
-    if (g->getName() != g->importName)
-      flags |= WASM_SYMBOL_EXPLICIT_NAME;
-  }
-  return flags;
-}
-
 void LinkingSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
@@ -394,7 +374,7 @@ void LinkingSection::writeBody() {
     for (const Symbol *sym : symtabEntries) {
       assert(sym->isDefined() || sym->isUndefined());
       WasmSymbolType kind = sym->getWasmType();
-      uint32_t flags = getWasmFlags(sym);
+      uint32_t flags = sym->getFlags();
 
       writeU8(sub.os, kind, "sym kind");
       writeUleb128(sub.os, flags, "sym flags");

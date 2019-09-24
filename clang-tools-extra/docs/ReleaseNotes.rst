@@ -73,6 +73,12 @@ Improvements to clang-tidy
   Finds instances where variables with static storage are initialized
   dynamically in header files.
 
+- New :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone-infinite-loop>` check.
+
+  Finds obvious infinite loops (loops where the condition variable is not
+  changed at all).
+
 - New :doc:`linuxkernel-must-use-errs
   <clang-tidy/checks/linuxkernel-must-use-errs>` check.
 

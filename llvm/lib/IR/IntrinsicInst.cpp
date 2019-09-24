@@ -67,13 +67,12 @@ int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
   // size 1. During the search, we can skip the prefix that we already know is
   // identical. By using strncmp we consider names with differing suffixes to
   // be part of the equal range.
-  size_t CmpStart = 0;
   size_t CmpEnd = 4; // Skip the "llvm" component.
   const char *const *Low = NameTable.begin();
   const char *const *High = NameTable.end();
   const char *const *LastLow = Low;
   while (CmpEnd < Name.size() && High - Low > 0) {
-    CmpStart = CmpEnd;
+    size_t CmpStart = CmpEnd;
     CmpEnd = Name.find('.', CmpStart + 1);
     CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
     auto Cmp = [CmpStart, CmpEnd](const char *LHS, const char *RHS) {
@@ -107,7 +106,7 @@ Optional<ConstrainedFPIntrinsic::RoundingMode>
 ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = getNumArgOperands();
   Metadata *MD =
-      dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
+      cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return None;
   return StrToRoundingMode(cast<MDString>(MD)->getString());
@@ -153,7 +152,7 @@ Optional<ConstrainedFPIntrinsic::ExceptionBehavior>
 ConstrainedFPIntrinsic::getExceptionBehavior() const {
   unsigned NumOperands = getNumArgOperands();
   Metadata *MD =
-      dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
+      cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
   if (!MD || !isa<MDString>(MD))
     return None;
   return StrToExceptionBehavior(cast<MDString>(MD)->getString());
