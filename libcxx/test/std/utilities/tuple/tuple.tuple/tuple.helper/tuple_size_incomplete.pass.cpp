@@ -14,7 +14,6 @@
 //   struct tuple_size<tuple<Types...>>
 //     : public integral_constant<size_t, sizeof...(Types)> { };
 
-// XFAIL: gcc-4.9
 // UNSUPPORTED: c++98, c++03
 
 #include <tuple>
