@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_OBJCOPY_COPY_CONFIG_H
 #define LLVM_TOOLS_LLVM_OBJCOPY_COPY_CONFIG_H
 
+#include "ELF/ELFConfig.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
@@ -111,17 +112,11 @@ public:
   bool empty() const { return Matchers.empty(); }
 };
 
-struct NewSymbolInfo {
-  StringRef SymbolName;
-  StringRef SectionName;
-  uint64_t Value = 0;
-  uint8_t Type = ELF::STT_NOTYPE;
-  uint8_t Bind = ELF::STB_GLOBAL;
-  uint8_t Visibility = ELF::STV_DEFAULT;
-};
-
 // Configuration for copying/stripping a single file.
 struct CopyConfig {
+  // Format-specific options to be initialized lazily when needed.
+  Optional<elf::ELFCopyConfig> ELF;
+
   // Main input/output options
   StringRef InputFilename;
   FileFormat InputFormat;
@@ -143,12 +138,12 @@ struct CopyConfig {
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;
   DiscardType DiscardMode = DiscardType::None;
-  Optional<uint8_t> NewSymbolVisibility;
+  Optional<StringRef> NewSymbolVisibility;
 
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<NewSymbolInfo> SymbolsToAdd;
+  std::vector<StringRef> SymbolsToAdd;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -194,6 +189,18 @@ struct CopyConfig {
   bool Weaken = false;
   bool DecompressDebugSections = false;
   DebugCompressionType CompressionType = DebugCompressionType::None;
+
+  // parseELFConfig performs ELF-specific command-line parsing. Fills `ELF` on
+  // success or returns an Error otherwise.
+  Error parseELFConfig() {
+    if (!ELF) {
+      Expected<elf::ELFCopyConfig> ELFConfig = elf::parseConfig(*this);
+      if (!ELFConfig)
+        return ELFConfig.takeError();
+      ELF = *ELFConfig;
+    }
+    return Error::success();
+  }
 };
 
 // Configuration for the overall invocation of this tool. When invoked as
