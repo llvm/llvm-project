@@ -402,8 +402,8 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
     return nullptr;
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
-  char name_buffer[64];
-  snprintf(name_buffer, 64, "__lldb_tmp_ret_%d", m_tmpname_idx++);
+  std::string name_buffer;
+  llvm::raw_string_ostream(name_buffer) << "__lldb_tmp_ret_" << m_tmpname_idx++;
   swift::Identifier name = ast_context.getIdentifier(name_buffer);
   swift::Identifier equalequal_name = ast_context.getIdentifier("==");
 
@@ -411,30 +411,26 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   result_loc_info.orig_expr = expr;
 
   swift::DeclContext *new_decl_context = m_function_decl;
-
-  if (m_repl) {
+  if (m_repl)
     new_decl_context = decl_context;
-  }
 
   llvm::SmallVector<swift::ASTNode, 3> body;
   llvm::SmallVector<swift::Expr *, 3> false_body;
   const bool is_static = false;
-  const auto introducer = swift::VarDecl::Introducer::Var;
+  const auto introducer = swift::VarDecl::Introducer::Let;
   const bool is_capture_list = false;
   result_loc_info.tmp_var_decl = new (ast_context) swift::VarDecl(
       is_static, introducer, is_capture_list, source_loc, name,
       new_decl_context);
   result_loc_info.tmp_var_decl->setImplicit();
-  result_loc_info.tmp_var_decl->setAccess(
-      swift::AccessLevel::Internal);
-  result_loc_info.tmp_var_decl->setSetterAccess(
-      swift::AccessLevel::Internal);
+  const auto internal_access = swift::AccessLevel::Internal;
+  result_loc_info.tmp_var_decl->setAccess(internal_access);
+  result_loc_info.tmp_var_decl->setSetterAccess(internal_access);
 
-  swift::NamedPattern *var_pattern =
+  auto *var_pattern =
       new (ast_context) swift::NamedPattern(result_loc_info.tmp_var_decl, true);
 
-  const swift::StaticSpellingKind static_spelling_kind =
-      swift::StaticSpellingKind::KeywordStatic;
+  const auto static_spelling_kind = swift::StaticSpellingKind::KeywordStatic;
   result_loc_info.binding_decl = swift::PatternBindingDecl::createImplicit(
       ast_context, static_spelling_kind, var_pattern, expr, new_decl_context);
   result_loc_info.binding_decl->setStatic(false);
@@ -447,22 +443,21 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
         new (ast_context) swift::ReturnStmt(source_loc, nullptr);
     body.push_back(result_loc_info.return_stmt);
   }
-  swift::IntegerLiteralExpr *one_expr = new (ast_context)
+  auto *one_expr = new (ast_context)
       swift::IntegerLiteralExpr(swift::StringRef("1"), source_loc, true);
   false_body.push_back(one_expr);
-  swift::UnresolvedDeclRefExpr *equalequal_expr = new (ast_context)
-      swift::UnresolvedDeclRefExpr(equalequal_name,
-                                   swift::DeclRefKind::BinaryOperator,
-                                   swift::DeclNameLoc(source_loc));
+  auto *equalequal_expr = new (ast_context) swift::UnresolvedDeclRefExpr(
+      equalequal_name, swift::DeclRefKind::BinaryOperator,
+      swift::DeclNameLoc(source_loc));
   false_body.push_back(equalequal_expr);
-  swift::IntegerLiteralExpr *zero_expr = new (ast_context)
+  auto *zero_expr = new (ast_context)
       swift::IntegerLiteralExpr(swift::StringRef("0"), source_loc, true);
   false_body.push_back(zero_expr);
-  swift::SequenceExpr *zero_equals_one_expr = swift::SequenceExpr::create(
+  auto *zero_equals_one_expr = swift::SequenceExpr::create(
       ast_context, llvm::ArrayRef<swift::Expr *>(false_body));
 
   zero_equals_one_expr->setImplicit();
-  swift::BraceStmt *body_stmt = swift::BraceStmt::create(
+  auto *body_stmt = swift::BraceStmt::create(
       ast_context, source_loc, llvm::ArrayRef<swift::ASTNode>(body), source_loc,
       true);
 
@@ -470,7 +465,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   // statement
   swift::LabeledStmtInfo label_info;
 
-  swift::RepeatWhileStmt *assign_stmt = new (ast_context)
+  auto *assign_stmt = new (ast_context)
       swift::RepeatWhileStmt(label_info, source_loc, zero_equals_one_expr,
                              source_loc, body_stmt, true);
   result_loc_info.wrapper_stmt = assign_stmt;
