@@ -105,16 +105,26 @@ using namespace lldb_private;
 class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks {
   ClangModulesDeclVendor &m_decl_vendor;
   ClangPersistentVariables &m_persistent_vars;
+  clang::SourceManager &m_source_mgr;
   StreamString m_error_stream;
   bool m_has_errors = false;
 
 public:
   LLDBPreprocessorCallbacks(ClangModulesDeclVendor &decl_vendor,
-                            ClangPersistentVariables &persistent_vars)
-      : m_decl_vendor(decl_vendor), m_persistent_vars(persistent_vars) {}
+                            ClangPersistentVariables &persistent_vars,
+                            clang::SourceManager &source_mgr)
+      : m_decl_vendor(decl_vendor), m_persistent_vars(persistent_vars),
+        m_source_mgr(source_mgr) {}
 
   void moduleImport(SourceLocation import_location, clang::ModuleIdPath path,
                     const clang::Module * /*null*/) override {
+    // Ignore modules that are imported in the wrapper code as these are not
+    // loaded by the user.
+    llvm::StringRef filename =
+        m_source_mgr.getPresumedLoc(import_location).getFilename();
+    if (filename == ClangExpressionSourceCode::g_prefix_file_name)
+      return;
+
     SourceModule module;
 
     for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
@@ -231,38 +241,23 @@ static void SetupModuleHeaderPaths(CompilerInstance *compiler,
   search_opts.ModuleCachePath = module_cache.str();
   LLDB_LOG(log, "Using module cache path: {0}", module_cache.c_str());
 
-  FileSpec clang_resource_dir = GetClangResourceDir();
-  std::string resource_dir = clang_resource_dir.GetPath();
-  if (FileSystem::Instance().IsDirectory(resource_dir)) {
-    search_opts.ResourceDir = resource_dir;
-    std::string resource_include = resource_dir + "/include";
-    search_opts.AddPath(resource_include, frontend::System, false, true);
-
-    LLDB_LOG(log, "Added resource include dir: {0}", resource_include);
-  }
+  search_opts.ResourceDir = GetClangResourceDir().GetPath();
 
   search_opts.ImplicitModuleMaps = true;
-
-  std::vector<std::string> system_include_directories =
-      target_sp->GetPlatform()->GetSystemIncludeDirectories(
-          lldb::eLanguageTypeC_plus_plus);
-
-  for (const std::string &include_dir : system_include_directories) {
-    search_opts.AddPath(include_dir, frontend::System, false, true);
-
-    LLDB_LOG(log, "Added system include dir: {0}", include_dir);
-  }
 }
 
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
 
-ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
-    bool generate_debug_info, std::vector<std::string> include_directories, std::string filename)
+ClangExpressionParser::ClangExpressionParser(
+    ExecutionContextScope *exe_scope, Expression &expr,
+    bool generate_debug_info, std::vector<std::string> include_directories,
+    std::string filename)
     : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr),
-      m_include_directories(std::move(include_directories)), m_filename(std::move(filename)) {
+      m_include_directories(std::move(include_directories)),
+      m_filename(std::move(filename)) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   // We can't compile expressions without a target.  So if the exe_scope is
@@ -572,8 +567,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope, E
         llvm::cast<ClangPersistentVariables>(
             target_sp->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeC));
-    std::unique_ptr<PPCallbacks> pp_callbacks(
-        new LLDBPreprocessorCallbacks(*decl_vendor, *clang_persistent_vars));
+    std::unique_ptr<PPCallbacks> pp_callbacks(new LLDBPreprocessorCallbacks(
+        *decl_vendor, *clang_persistent_vars, m_compiler->getSourceManager()));
     m_pp_callbacks =
         static_cast<LLDBPreprocessorCallbacks *>(pp_callbacks.get());
     m_compiler->getPreprocessor().addPPCallbacks(std::move(pp_callbacks));

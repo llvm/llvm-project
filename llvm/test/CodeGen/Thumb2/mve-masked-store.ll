@@ -521,15 +521,11 @@ define arm_aapcs_vfpcc void @masked_v2i64(<2 x i64> *%dest, <2 x i64> %a) {
 ; CHECK-LE-NEXT:    bfi r3, r1, #0, #1
 ; CHECK-LE-NEXT:    and r1, r3, #3
 ; CHECK-LE-NEXT:    lsls r2, r3, #31
-; CHECK-LE-NEXT:    ittt ne
-; CHECK-LE-NEXT:    vmovne r2, s1
-; CHECK-LE-NEXT:    vmovne r3, s0
-; CHECK-LE-NEXT:    strdne r3, r2, [r0]
+; CHECK-LE-NEXT:    it ne
+; CHECK-LE-NEXT:    vstrne d0, [r0]
 ; CHECK-LE-NEXT:    lsls r1, r1, #30
-; CHECK-LE-NEXT:    ittt mi
-; CHECK-LE-NEXT:    vmovmi r1, s3
-; CHECK-LE-NEXT:    vmovmi r2, s2
-; CHECK-LE-NEXT:    strdmi r2, r1, [r0, #8]
+; CHECK-LE-NEXT:    it mi
+; CHECK-LE-NEXT:    vstrmi d1, [r0, #8]
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -558,25 +554,11 @@ define arm_aapcs_vfpcc void @masked_v2i64(<2 x i64> *%dest, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    bfi r3, r1, #0, #1
 ; CHECK-BE-NEXT:    and r1, r3, #3
 ; CHECK-BE-NEXT:    lsls r2, r3, #31
-; CHECK-BE-NEXT:    bne .LBB19_3
-; CHECK-BE-NEXT:  @ %bb.1: @ %else
+; CHECK-BE-NEXT:    it ne
+; CHECK-BE-NEXT:    vstrne d0, [r0]
 ; CHECK-BE-NEXT:    lsls r1, r1, #30
-; CHECK-BE-NEXT:    bmi .LBB19_4
-; CHECK-BE-NEXT:  .LBB19_2: @ %else2
-; CHECK-BE-NEXT:    add sp, #4
-; CHECK-BE-NEXT:    bx lr
-; CHECK-BE-NEXT:  .LBB19_3: @ %cond.store
-; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vmov r2, s5
-; CHECK-BE-NEXT:    vmov r3, s4
-; CHECK-BE-NEXT:    strd r3, r2, [r0]
-; CHECK-BE-NEXT:    lsls r1, r1, #30
-; CHECK-BE-NEXT:    bpl .LBB19_2
-; CHECK-BE-NEXT:  .LBB19_4: @ %cond.store1
-; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vmov r1, s7
-; CHECK-BE-NEXT:    vmov r2, s6
-; CHECK-BE-NEXT:    strd r2, r1, [r0, #8]
+; CHECK-BE-NEXT:    it mi
+; CHECK-BE-NEXT:    vstrmi d1, [r0, #8]
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    bx lr
 entry:

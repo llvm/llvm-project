@@ -990,6 +990,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   else if (LangOpts.getStackProtector() == LangOptions::SSPReq)
     Builder.defineMacro("__SSP_ALL__", "3");
 
+  // Define a macro that exists only when using the static analyzer.
+  if (FEOpts.ProgramAction == frontend::RunAnalysis)
+    Builder.defineMacro("__clang_analyzer__");
+
   if (LangOpts.FastRelaxedMath)
     Builder.defineMacro("__FAST_RELAXED_MATH__");
 

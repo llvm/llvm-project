@@ -13,10 +13,10 @@ DESCRIPTION
 
 :program:`llvm-strip` is a tool to strip sections and symbols from object files.
 If no other stripping or remove options are specified, :option:`--strip-all`
-will be enabled by default.
+will be enabled.
 
-The input files are modified in-place. If "-" is specified for the input file,
-the input is read from the program's standard input stream.
+By default, the input files are modified in-place. If "-" is specified for the
+input file, the input is read from the program's standard input stream.
 
 If the input is an archive, any requested operations will be applied to each
 archive member individually.
@@ -129,8 +129,8 @@ them.
 
 .. option:: --allow-broken-links
 
- Allow llvm-strip to remove sections even if it would leave invalid section
- references. Any invalid sh_link fields will be set to zero.
+ Allow :program:`llvm-strip` to remove sections even if it would leave invalid
+ section references. Any invalid sh_link fields will be set to zero.
 
 .. option:: --discard-locals, -X
 

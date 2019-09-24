@@ -31,20 +31,30 @@
 #define SIGKILL 9
 #define SIGSTOP 20
 
-#if defined(_MSC_VER)
+#ifndef S_IRUSR
 #define S_IRUSR S_IREAD  /* read, user */
 #define S_IWUSR S_IWRITE /* write, user */
 #define S_IXUSR 0        /* execute, user */
 #endif
+#ifndef S_IRGRP
 #define S_IRGRP 0 /* read, group */
 #define S_IWGRP 0 /* write, group */
 #define S_IXGRP 0 /* execute, group */
+#endif
+#ifndef S_IROTH
 #define S_IROTH 0 /* read, others */
 #define S_IWOTH 0 /* write, others */
 #define S_IXOTH 0 /* execute, others */
+#endif
+#ifndef S_IRWXU
 #define S_IRWXU 0
+#endif
+#ifndef S_IRWXG
 #define S_IRWXG 0
+#endif
+#ifndef S_IRWXO
 #define S_IRWXO 0
+#endif
 
 #if HAVE_SYS_TYPES_H
 // pyconfig.h typedefs this.  We require python headers to be included before

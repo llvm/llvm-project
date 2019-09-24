@@ -747,6 +747,7 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
       Constant *V2Element = ConstantExpr::getExtractElement(V2,
                                                     ConstantInt::get(Ty, i));
       Constant *Cond = dyn_cast<Constant>(CondV->getOperand(i));
+      if (!Cond) break;
       if (V1Element == V2Element) {
         V = V1Element;
       } else if (isa<UndefValue>(Cond)) {

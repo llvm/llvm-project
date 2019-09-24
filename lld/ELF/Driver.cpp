@@ -1889,8 +1889,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
            "feature detected");
   }
 
-  // This adds a .comment section containing a version string. We have to add it
-  // before mergeSections because the .comment section is a mergeable section.
+  // This adds a .comment section containing a version string.
   if (!config->relocatable)
     inputSections.push_back(createCommentSection());
 
@@ -1902,7 +1901,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   splitSections<ELFT>();
   markLive<ELFT>();
   demoteSharedSymbols();
-  mergeSections();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -1925,6 +1923,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Input sections that were not handled by scripts are called "orphans", and
   // they are assigned to output sections by the default rule. Process that.
   script->addOrphanSections();
+
+  // Migrate InputSectionDescription::sectionBases to sections. This includes
+  // merging MergeInputSections into a single MergeSyntheticSection. From this
+  // point onwards InputSectionDescription::sections should be used instead of
+  // sectionBases.
+  for (BaseCommand *base : script->sectionCommands)
+    if (auto *sec = dyn_cast<OutputSection>(base))
+      sec->finalizeInputSections();
+  llvm::erase_if(inputSections,
+                 [](InputSectionBase *s) { return isa<MergeInputSection>(s); });
 
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.

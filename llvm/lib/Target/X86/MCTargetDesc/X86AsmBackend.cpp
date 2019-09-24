@@ -557,7 +557,7 @@ protected:
 
         // If the frame pointer is other than esp/rsp, we do not have a way to
         // generate a compact unwinding representation, so bail out.
-        if (MRI.getLLVMRegNum(Inst.getRegister(), true) !=
+        if (*MRI.getLLVMRegNum(Inst.getRegister(), true) !=
             (Is64Bit ? X86::RBP : X86::EBP))
           return 0;
 
@@ -605,7 +605,7 @@ protected:
           // unwind encoding.
           return CU::UNWIND_MODE_DWARF;
 
-        unsigned Reg = MRI.getLLVMRegNum(Inst.getRegister(), true);
+        unsigned Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         SavedRegs[SavedRegIdx++] = Reg;
         StackAdjust += OffsetSize;
         InstrOffset += PushInstrSize(Reg);

@@ -182,8 +182,8 @@ them.
 
 .. option:: --allow-broken-links
 
- Allow llvm-objcopy to remove sections even if it would leave invalid section
- references. Any invalid sh_link fields will be set to zero.
+ Allow :program:`llvm-objcopy` to remove sections even if it would leave invalid
+ section references. Any invalid sh_link fields will be set to zero.
 
 .. option:: --build-id-link-dir <dir>
 

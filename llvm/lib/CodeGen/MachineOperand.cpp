@@ -429,12 +429,10 @@ static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
     return;
   }
 
-  int Reg = TRI->getLLVMRegNum(DwarfReg, true);
-  if (Reg == -1) {
+  if (Optional<unsigned> Reg = TRI->getLLVMRegNum(DwarfReg, true))
+    OS << printReg(*Reg, TRI);
+  else
     OS << "<badreg>";
-    return;
-  }
-  OS << printReg(Reg, TRI);
 }
 
 static void printIRBlockReference(raw_ostream &OS, const BasicBlock &BB,
