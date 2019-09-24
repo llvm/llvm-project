@@ -33,32 +33,36 @@ class TestSwiftConditionalBreakpoint(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    def check_x_and_y(self, frame, x, y):
+        x_var = frame.FindVariable("x")
+        y_var = frame.FindVariable("y")
+        
+        lldbutil.check_variable(self, x_var, value=x)
+        lldbutil.check_variable(self, y_var, value=y)
+        
     def break_commands(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
-        exe_name = self.getBuildArtifact("a.out")
-        self.runCmd("file %s"%(exe_name), CURRENT_EXECUTABLE_SET)
-        bkno = lldbutil.run_break_set_by_source_regexp(
-            self, "Set breakpoint here")
-        self.runCmd('breakpoint modify ' + str(bkno) + ' -c x==y')
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift"))
 
-        self.runCmd("run", RUN_SUCCEEDED)
+        bkpt.SetCondition("x==y")
+        
+        threads = lldbutil.continue_to_breakpoint(process, bkpt)
+        self.assertEqual(len(threads), 1, "Hit conditional breakpoint - first time")
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.check_x_and_y(threads[0].frames[0], '5', '5')
+        
+        threads = lldbutil.continue_to_breakpoint(process, bkpt)
+        self.assertEqual(len(threads), 1, "Hit conditional breakpoint - second time")
 
-        self.expect("frame var x y", substrs=['x = 5', 'y = 5'])
+        self.check_x_and_y(threads[0].frames[0], '6', '6')
 
-        self.runCmd("continue", RUN_SUCCEEDED)
+        bkpt.SetCondition('x>y')
 
-        self.expect("frame var x y", substrs=['x = 6', 'y = 6'])
+        threads = lldbutil.continue_to_breakpoint(process, bkpt)
+        self.assertEqual(len(threads), 1, "Hit conditional breakpoint - third time")
 
-        self.runCmd('breakpoint modify ' + str(bkno) + ' -c x>y')
-
-        self.runCmd("continue", RUN_SUCCEEDED)
-
-        self.expect("frame var x y", substrs=['x = 3', 'y = 1'])
+        self.check_x_and_y(threads[0].frames[0], '3', '1')
 
 if __name__ == '__main__':
     import atexit
