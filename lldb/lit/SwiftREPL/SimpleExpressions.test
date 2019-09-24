@@ -39,7 +39,7 @@ names
 // CHECK-NEXT: }
 
 Array(names.lazy.reversed())
-// CHECK: $R5: [String] = 5 values {
+// CHECK: $R5: [ReversedCollection<LazySequence<[String]>>.Element] = 5 values {
 // CHECK-NEXT:   [0] = "Ewa"
 // CHECK-NEXT:   [1] = "Daniella"
 // CHECK-NEXT:   [2] = "Chris"
