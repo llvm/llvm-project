@@ -11296,44 +11296,39 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
   return true;
 }
 
+static const IntegerLiteral *getIntegerLiteral(Expr *E) {
+  const auto *IL = dyn_cast<IntegerLiteral>(E);
+  if (!IL) {
+    if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_Minus)
+        return dyn_cast<IntegerLiteral>(UO->getSubExpr());
+    }
+  }
+
+  return IL;
+}
+
 static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
   E = E->IgnoreParenImpCasts();
   SourceLocation ExprLoc = E->getExprLoc();
 
   if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
     BinaryOperator::Opcode Opc = BO->getOpcode();
-    if (Opc == BO_Shl)
+    // Do not diagnose unsigned shifts.
+    if (Opc == BO_Shl && E->getType()->isSignedIntegerType())
       S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context) << E;
   }
 
   if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
-    const auto *LHS = dyn_cast<IntegerLiteral>(CO->getTrueExpr());
-    if (!LHS) {
-      if (auto *UO = dyn_cast<UnaryOperator>(CO->getTrueExpr())) {
-        if (UO->getOpcode() == UO_Minus)
-          LHS = dyn_cast<IntegerLiteral>(UO->getSubExpr());
-        if (!LHS)
-          return;
-      } else {
-        return;
-      }
-    }
-
-    const auto *RHS = dyn_cast<IntegerLiteral>(CO->getFalseExpr());
-    if (!RHS) {
-      if (auto *UO = dyn_cast<UnaryOperator>(CO->getFalseExpr())) {
-        if (UO->getOpcode() == UO_Minus)
-          RHS = dyn_cast<IntegerLiteral>(UO->getSubExpr());
-        if (!RHS)
-          return;
-      } else {
-        return;
-      }
-    }
-
+    const auto *LHS = getIntegerLiteral(CO->getTrueExpr());
+    if (!LHS)
+      return;
+    const auto *RHS = getIntegerLiteral(CO->getFalseExpr());
+    if (!RHS)
+      return;
     if ((LHS->getValue() == 0 || LHS->getValue() == 1) &&
         (RHS->getValue() == 0 || RHS->getValue() == 1))
-      // Do not diagnose common idioms
+      // Do not diagnose common idioms.
       return;
     if (LHS->getValue() != 0 && LHS->getValue() != 0)
       S.Diag(ExprLoc, diag::warn_integer_constants_in_conditional_always_true);
