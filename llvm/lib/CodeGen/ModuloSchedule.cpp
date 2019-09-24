@@ -1301,6 +1301,7 @@ void KernelRewriter::rewrite() {
     if (!FirstMI)
       FirstMI = MI;
   }
+  assert(FirstMI && "Failed to find first MI in schedule");
 
   // At this point all of the scheduled instructions are between FirstMI
   // and the end of the block. Kill from the first non-phi to FirstMI.

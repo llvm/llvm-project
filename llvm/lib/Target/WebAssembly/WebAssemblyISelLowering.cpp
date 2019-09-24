@@ -1358,7 +1358,16 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
   // Use a splat for the initial vector
-  SDValue Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+  SDValue Result;
+  // Possibly a load_splat
+  LoadSDNode *SplattedLoad;
+  if (Subtarget->hasUnimplementedSIMD128() &&
+      (SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
+      SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
+    Result = DAG.getNode(WebAssemblyISD::LOAD_SPLAT, DL, VecT, SplatValue);
+  } else {
+    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+  }
   // Add replace_lane instructions for other values
   for (size_t I = 0; I < Lanes; ++I) {
     const SDValue &Lane = Op->getOperand(I);

@@ -26,12 +26,7 @@ public:
 
   class ReadStringAndDumpToStreamOptions {
   public:
-    ReadStringAndDumpToStreamOptions()
-        : m_location(0), m_process_sp(), m_stream(nullptr), m_prefix_token(),
-          m_suffix_token(), m_quote('"'), m_source_size(0),
-          m_needs_zero_termination(true), m_escape_non_printables(true),
-          m_ignore_max_length(false), m_zero_is_terminator(true),
-          m_language_type(lldb::eLanguageTypeUnknown) {}
+    ReadStringAndDumpToStreamOptions() = default;
 
     ReadStringAndDumpToStreamOptions(ValueObject &valobj);
 
@@ -128,24 +123,23 @@ public:
     }
 
     lldb::LanguageType GetLanguage() const
-
     {
       return m_language_type;
     }
 
   private:
-    uint64_t m_location;
+    uint64_t m_location = 0;
     lldb::ProcessSP m_process_sp;
-    Stream *m_stream;
+    Stream *m_stream = nullptr;
     std::string m_prefix_token;
     std::string m_suffix_token;
-    char m_quote;
-    uint32_t m_source_size;
-    bool m_needs_zero_termination;
-    bool m_escape_non_printables;
-    bool m_ignore_max_length;
-    bool m_zero_is_terminator;
-    lldb::LanguageType m_language_type;
+    char m_quote = '"';
+    uint32_t m_source_size = 0;
+    bool m_needs_zero_termination = true;
+    bool m_escape_non_printables = true;
+    bool m_ignore_max_length = false;
+    bool m_zero_is_terminator = true;
+    lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
   };
 
   class ReadBufferAndDumpToStreamOptions {

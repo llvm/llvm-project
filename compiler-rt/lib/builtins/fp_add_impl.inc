@@ -94,7 +94,7 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
   const unsigned int align = aExponent - bExponent;
   if (align) {
     if (align < typeWidth) {
-      const bool sticky = bSignificand << (typeWidth - align);
+      const bool sticky = (bSignificand << (typeWidth - align)) != 0;
       bSignificand = bSignificand >> align | sticky;
     } else {
       bSignificand = 1; // Set the sticky bit.  b is known to be non-zero.
@@ -133,7 +133,7 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
     // The result is denormal before rounding.  The exponent is zero and we
     // need to shift the significand.
     const int shift = 1 - aExponent;
-    const bool sticky = aSignificand << (typeWidth - shift);
+    const bool sticky = (aSignificand << (typeWidth - shift)) != 0;
     aSignificand = aSignificand >> shift | sticky;
     aExponent = 0;
   }

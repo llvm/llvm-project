@@ -191,21 +191,11 @@ static bool SemaBuiltinAddressof(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
-/// Check the number of arguments and arg type, and set the result type to
+/// Check the number of arguments and set the result type to
 /// the argument type.
 static bool SemaBuiltinPreserveAI(Sema &S, CallExpr *TheCall) {
   if (checkArgCount(S, TheCall, 1))
     return true;
-
-  // The argument type must be a pointer
-  ExprResult Arg = TheCall->getArg(0);
-  QualType Ty = Arg.get()->getType();
-  if (!Ty->isPointerType()) {
-    S.Diag(Arg.get()->getBeginLoc(),
-           diag::err_builtin_preserve_access_index_invalid_arg)
-        << Ty << Arg.get()->getSourceRange();
-    return true;
-  }
 
   TheCall->setType(TheCall->getArg(0)->getType());
   return false;
@@ -4483,7 +4473,8 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
 ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                                  SourceLocation RParenLoc, MultiExprArg Args,
-                                 AtomicExpr::AtomicOp Op) {
+                                 AtomicExpr::AtomicOp Op,
+                                 AtomicArgumentOrder ArgOrder) {
   // All the non-OpenCL operations take one of the following forms.
   // The OpenCL operations take the __c11 forms with one extra argument for
   // synchronization scope.
@@ -4764,19 +4755,56 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     IsPassedByAddress = true;
   }
 
+  SmallVector<Expr *, 5> APIOrderedArgs;
+  if (ArgOrder == Sema::AtomicArgumentOrder::AST) {
+    APIOrderedArgs.push_back(Args[0]);
+    switch (Form) {
+    case Init:
+    case Load:
+      APIOrderedArgs.push_back(Args[1]); // Val1/Order
+      break;
+    case LoadCopy:
+    case Copy:
+    case Arithmetic:
+    case Xchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[1]); // Order
+      break;
+    case GNUXchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[3]); // Val2
+      APIOrderedArgs.push_back(Args[1]); // Order
+      break;
+    case C11CmpXchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[4]); // Val2
+      APIOrderedArgs.push_back(Args[1]); // Order
+      APIOrderedArgs.push_back(Args[3]); // OrderFail
+      break;
+    case GNUCmpXchg:
+      APIOrderedArgs.push_back(Args[2]); // Val1
+      APIOrderedArgs.push_back(Args[4]); // Val2
+      APIOrderedArgs.push_back(Args[5]); // Weak
+      APIOrderedArgs.push_back(Args[1]); // Order
+      APIOrderedArgs.push_back(Args[3]); // OrderFail
+      break;
+    }
+  } else
+    APIOrderedArgs.append(Args.begin(), Args.end());
+
   // The first argument's non-CV pointer type is used to deduce the type of
   // subsequent arguments, except for:
   //  - weak flag (always converted to bool)
   //  - memory order (always converted to int)
   //  - scope  (always converted to int)
-  for (unsigned i = 0; i != Args.size(); ++i) {
+  for (unsigned i = 0; i != APIOrderedArgs.size(); ++i) {
     QualType Ty;
     if (i < NumVals[Form] + 1) {
       switch (i) {
       case 0:
         // The first argument is always a pointer. It has a fixed type.
         // It is always dereferenced, a nullptr is undefined.
-        CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
+        CheckNonNullArgument(*this, APIOrderedArgs[i], ExprRange.getBegin());
         // Nothing else to do: we already know all we want about this pointer.
         continue;
       case 1:
@@ -4788,14 +4816,16 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         if (Form == Init || (Form == Arithmetic && ValType->isIntegerType()))
           Ty = ValType;
         else if (Form == Copy || Form == Xchg) {
-          if (IsPassedByAddress)
+          if (IsPassedByAddress) {
             // The value pointer is always dereferenced, a nullptr is undefined.
-            CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
+            CheckNonNullArgument(*this, APIOrderedArgs[i],
+                                 ExprRange.getBegin());
+          }
           Ty = ByValType;
         } else if (Form == Arithmetic)
           Ty = Context.getPointerDiffType();
         else {
-          Expr *ValArg = Args[i];
+          Expr *ValArg = APIOrderedArgs[i];
           // The value pointer is always dereferenced, a nullptr is undefined.
           CheckNonNullArgument(*this, ValArg, ExprRange.getBegin());
           LangAS AS = LangAS::Default;
@@ -4812,7 +4842,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         // The third argument to compare_exchange / GNU exchange is the desired
         // value, either by-value (for the C11 and *_n variant) or as a pointer.
         if (IsPassedByAddress)
-          CheckNonNullArgument(*this, Args[i], ExprRange.getBegin());
+          CheckNonNullArgument(*this, APIOrderedArgs[i], ExprRange.getBegin());
         Ty = ByValType;
         break;
       case 3:
@@ -4827,11 +4857,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
     InitializedEntity Entity =
         InitializedEntity::InitializeParameter(Context, Ty, false);
-    ExprResult Arg = Args[i];
+    ExprResult Arg = APIOrderedArgs[i];
     Arg = PerformCopyInitialization(Entity, SourceLocation(), Arg);
     if (Arg.isInvalid())
       return true;
-    Args[i] = Arg.get();
+    APIOrderedArgs[i] = Arg.get();
   }
 
   // Permute the arguments into a 'consistent' order.
@@ -4840,36 +4870,36 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   switch (Form) {
   case Init:
     // Note, AtomicExpr::getVal1() has a special case for this atomic.
-    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case Load:
-    SubExprs.push_back(Args[1]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Order
     break;
   case LoadCopy:
   case Copy:
   case Arithmetic:
   case Xchg:
-    SubExprs.push_back(Args[2]); // Order
-    SubExprs.push_back(Args[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[2]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case GNUXchg:
     // Note, AtomicExpr::getVal2() has a special case for this atomic.
-    SubExprs.push_back(Args[3]); // Order
-    SubExprs.push_back(Args[1]); // Val1
-    SubExprs.push_back(Args[2]); // Val2
+    SubExprs.push_back(APIOrderedArgs[3]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[2]); // Val2
     break;
   case C11CmpXchg:
-    SubExprs.push_back(Args[3]); // Order
-    SubExprs.push_back(Args[1]); // Val1
-    SubExprs.push_back(Args[4]); // OrderFail
-    SubExprs.push_back(Args[2]); // Val2
+    SubExprs.push_back(APIOrderedArgs[3]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[4]); // OrderFail
+    SubExprs.push_back(APIOrderedArgs[2]); // Val2
     break;
   case GNUCmpXchg:
-    SubExprs.push_back(Args[4]); // Order
-    SubExprs.push_back(Args[1]); // Val1
-    SubExprs.push_back(Args[5]); // OrderFail
-    SubExprs.push_back(Args[2]); // Val2
-    SubExprs.push_back(Args[3]); // Weak
+    SubExprs.push_back(APIOrderedArgs[4]); // Order
+    SubExprs.push_back(APIOrderedArgs[1]); // Val1
+    SubExprs.push_back(APIOrderedArgs[5]); // OrderFail
+    SubExprs.push_back(APIOrderedArgs[2]); // Val2
+    SubExprs.push_back(APIOrderedArgs[3]); // Weak
     break;
   }
 
@@ -11266,6 +11296,54 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
   return true;
 }
 
+static const IntegerLiteral *getIntegerLiteral(Expr *E) {
+  const auto *IL = dyn_cast<IntegerLiteral>(E);
+  if (!IL) {
+    if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_Minus)
+        return dyn_cast<IntegerLiteral>(UO->getSubExpr());
+    }
+  }
+
+  return IL;
+}
+
+static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  SourceLocation ExprLoc = E->getExprLoc();
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    BinaryOperator::Opcode Opc = BO->getOpcode();
+    Expr::EvalResult Result;
+    // Do not diagnose unsigned shifts.
+    if (Opc == BO_Shl) {
+      const auto *LHS = getIntegerLiteral(BO->getLHS());
+      const auto *RHS = getIntegerLiteral(BO->getRHS());
+      if (LHS && LHS->getValue() == 0)
+        S.Diag(ExprLoc, diag::warn_left_shift_always) << 0;
+      else if (RHS && RHS->getValue().isNonNegative() &&
+               E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects))
+        S.Diag(ExprLoc, diag::warn_left_shift_always)
+            << (Result.Val.getInt() != 0);
+      else if (E->getType()->isSignedIntegerType())
+        S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context) << E;
+    }
+  }
+
+  if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
+    const auto *LHS = getIntegerLiteral(CO->getTrueExpr());
+    const auto *RHS = getIntegerLiteral(CO->getFalseExpr());
+    if (!LHS || !RHS)
+      return;
+    if ((LHS->getValue() == 0 || LHS->getValue() == 1) &&
+        (RHS->getValue() == 0 || RHS->getValue() == 1))
+      // Do not diagnose common idioms.
+      return;
+    if (LHS->getValue() != 0 && LHS->getValue() != 0)
+      S.Diag(ExprLoc, diag::warn_integer_constants_in_conditional_always_true);
+  }
+}
+
 static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
                                     SourceLocation CC,
                                     bool *ICContext = nullptr,
@@ -11557,6 +11635,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   S.DiscardMisalignedMemberAddress(Target, E);
 
+  if (Target->isBooleanType())
+    DiagnoseIntInBoolContext(S, E);
+
   if (!Source->isIntegerType() || !Target->isIntegerType())
     return;
 
@@ -11717,6 +11798,9 @@ static void CheckConditionalOperator(Sema &S, ConditionalOperator *E,
   bool Suspicious = false;
   CheckConditionalOperand(S, E->getTrueExpr(), T, CC, Suspicious);
   CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
+
+  if (T->isBooleanType())
+    DiagnoseIntInBoolContext(S, E);
 
   // If -Wconversion would have warned about either of the candidates
   // for a signedness conversion to the context type...

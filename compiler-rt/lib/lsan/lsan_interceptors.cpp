@@ -375,7 +375,8 @@ extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
 INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
             void (*child)()) {
   __lsan::ScopedInterceptorDisabler disabler;
-  // REAL(pthread_atfork) cannot be called due to symbol indirections at least on NetBSD
+  // REAL(pthread_atfork) cannot be called due to symbol indirections at least
+  // on NetBSD
   return _pthread_atfork(prepare, parent, child);
 }
 #define LSAN_MAYBE_INTERCEPT_PTHREAD_ATFORK INTERCEPT_FUNCTION(pthread_atfork)

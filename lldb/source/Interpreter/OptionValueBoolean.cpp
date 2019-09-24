@@ -82,8 +82,6 @@ void OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,
   if (request.GetCursorArgumentPrefix().empty())
     entries = entries.take_front(2);
 
-  for (auto entry : entries) {
-    if (entry.startswith_lower(request.GetCursorArgumentPrefix()))
-      request.AddCompletion(entry);
-  }
+  for (auto entry : entries)
+    request.TryCompleteCurrentArg(entry);
 }

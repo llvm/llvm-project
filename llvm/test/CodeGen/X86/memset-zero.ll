@@ -752,8 +752,7 @@ define void @memset_64(i8* %a) nounwind  {
 ; KNL-LABEL: memset_64:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; KNL-NEXT:    vmovups %ymm0, 32(%rdi)
-; KNL-NEXT:    vmovups %ymm0, (%rdi)
+; KNL-NEXT:    vmovups %zmm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 64, i1 false)
@@ -819,8 +818,7 @@ define void @memset_64_align64(i8* %a) nounwind  {
 ; KNL-LABEL: memset_64_align64:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; KNL-NEXT:    vmovaps %ymm0, 32(%rdi)
-; KNL-NEXT:    vmovaps %ymm0, (%rdi)
+; KNL-NEXT:    vmovaps %zmm0, (%rdi)
 ; KNL-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* align 64 %a, i8 0, i64 64, i1 false)

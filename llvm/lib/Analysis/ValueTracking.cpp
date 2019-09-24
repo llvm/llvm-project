@@ -1055,7 +1055,7 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
     break;
   }
   case Instruction::Select: {
-    const Value *LHS, *RHS;
+    const Value *LHS = nullptr, *RHS = nullptr;
     SelectPatternFlavor SPF = matchSelectPattern(I, LHS, RHS).Flavor;
     if (SelectPatternResult::isMinOrMax(SPF)) {
       computeKnownBits(RHS, Known, Depth + 1, Q);
@@ -2307,7 +2307,7 @@ static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
          cast<Operator>(Select)->getOpcode() == Instruction::Select &&
          "Input should be a Select!");
 
-  const Value *LHS, *RHS, *LHS2, *RHS2;
+  const Value *LHS = nullptr, *RHS = nullptr;
   SelectPatternFlavor SPF = matchSelectPattern(Select, LHS, RHS).Flavor;
   if (SPF != SPF_SMAX && SPF != SPF_SMIN)
     return false;
@@ -2315,6 +2315,7 @@ static bool isSignedMinMaxClamp(const Value *Select, const Value *&In,
   if (!match(RHS, m_APInt(CLow)))
     return false;
 
+  const Value *LHS2 = nullptr, *RHS2 = nullptr;
   SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor;
   if (getInverseMinMaxFlavor(SPF) != SPF2)
     return false;
@@ -4575,12 +4576,12 @@ static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
   // TODO: Allow FP min/max with nnan/nsz.
   assert(CmpInst::isIntPredicate(Pred) && "Expected integer comparison");
 
-  Value *A, *B;
+  Value *A = nullptr, *B = nullptr;
   SelectPatternResult L = matchSelectPattern(TVal, A, B, nullptr, Depth + 1);
   if (!SelectPatternResult::isMinOrMax(L.Flavor))
     return {SPF_UNKNOWN, SPNB_NA, false};
 
-  Value *C, *D;
+  Value *C = nullptr, *D = nullptr;
   SelectPatternResult R = matchSelectPattern(FVal, C, D, nullptr, Depth + 1);
   if (L.Flavor != R.Flavor)
     return {SPF_UNKNOWN, SPNB_NA, false};
@@ -5631,7 +5632,7 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
 
 static void setLimitsForSelectPattern(const SelectInst &SI, APInt &Lower,
                                       APInt &Upper, const InstrInfoQuery &IIQ) {
-  const Value *LHS, *RHS;
+  const Value *LHS = nullptr, *RHS = nullptr;
   SelectPatternResult R = matchSelectPattern(&SI, LHS, RHS);
   if (R.Flavor == SPF_UNKNOWN)
     return;

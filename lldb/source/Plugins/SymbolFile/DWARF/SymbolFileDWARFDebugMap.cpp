@@ -652,6 +652,14 @@ bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
   return false;
 }
 
+void SymbolFileDWARFDebugMap::ForEachExternalModule(
+    CompileUnit &comp_unit, llvm::function_ref<void(ModuleSP)> f) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
+  if (oso_dwarf)
+    oso_dwarf->ForEachExternalModule(comp_unit, f);
+}
+
 bool SymbolFileDWARFDebugMap::ParseSupportFiles(CompileUnit &comp_unit,
                                                 FileSpecList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());

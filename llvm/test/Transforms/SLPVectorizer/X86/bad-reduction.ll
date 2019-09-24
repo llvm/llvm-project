@@ -30,12 +30,6 @@ define i64 @load_bswap(%v8i8* %p) {
 ; CHECK-NEXT:    [[SH4:%.*]] = shl nuw nsw i64 [[Z4]], 24
 ; CHECK-NEXT:    [[SH5:%.*]] = shl nuw nsw i64 [[Z5]], 16
 ; CHECK-NEXT:    [[SH6:%.*]] = shl nuw nsw i64 [[Z6]], 8
-; CHECK-NEXT:    [[OR01:%.*]] = or i64 undef, undef
-; CHECK-NEXT:    [[OR012:%.*]] = or i64 [[OR01]], undef
-; CHECK-NEXT:    [[OR0123:%.*]] = or i64 [[OR012]], undef
-; CHECK-NEXT:    [[OR01234:%.*]] = or i64 [[OR0123]], [[SH4]]
-; CHECK-NEXT:    [[OR012345:%.*]] = or i64 [[OR01234]], [[SH5]]
-; CHECK-NEXT:    [[OR0123456:%.*]] = or i64 [[OR012345]], [[SH6]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i64> [[TMP4]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i64> [[BIN_RDX]], <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -45,7 +39,6 @@ define i64 @load_bswap(%v8i8* %p) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], [[SH5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP7]], [[SH6]]
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = or i64 [[TMP8]], [[Z7]]
-; CHECK-NEXT:    [[OR01234567:%.*]] = or i64 [[OR0123456]], [[Z7]]
 ; CHECK-NEXT:    ret i64 [[OP_EXTRA]]
 ;
   %g0 = getelementptr inbounds %v8i8, %v8i8* %p, i64 0, i32 0
@@ -108,12 +101,6 @@ define i64 @load_bswap_nop_shift(%v8i8* %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw <8 x i64> [[TMP3]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 8, i64 0>
-; CHECK-NEXT:    [[OR01:%.*]] = or i64 undef, undef
-; CHECK-NEXT:    [[OR012:%.*]] = or i64 [[OR01]], undef
-; CHECK-NEXT:    [[OR0123:%.*]] = or i64 [[OR012]], undef
-; CHECK-NEXT:    [[OR01234:%.*]] = or i64 [[OR0123]], undef
-; CHECK-NEXT:    [[OR012345:%.*]] = or i64 [[OR01234]], undef
-; CHECK-NEXT:    [[OR0123456:%.*]] = or i64 [[OR012345]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i64> [[TMP4]], <8 x i64> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <8 x i64> [[TMP4]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i64> [[BIN_RDX]], <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -121,7 +108,6 @@ define i64 @load_bswap_nop_shift(%v8i8* %p) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i64> [[BIN_RDX2]], <8 x i64> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = or <8 x i64> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[OR01234567:%.*]] = or i64 [[OR0123456]], undef
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %g0 = getelementptr inbounds %v8i8, %v8i8* %p, i64 0, i32 0
@@ -196,12 +182,6 @@ define i64 @load64le(i8* %arg) {
 ; CHECK-NEXT:    [[S5:%.*]] = shl nuw nsw i64 [[Z5]], 40
 ; CHECK-NEXT:    [[S6:%.*]] = shl nuw nsw i64 [[Z6]], 48
 ; CHECK-NEXT:    [[S7:%.*]] = shl nuw i64 [[Z7]], 56
-; CHECK-NEXT:    [[O1:%.*]] = or i64 undef, [[Z0]]
-; CHECK-NEXT:    [[O2:%.*]] = or i64 [[O1]], undef
-; CHECK-NEXT:    [[O3:%.*]] = or i64 [[O2]], undef
-; CHECK-NEXT:    [[O4:%.*]] = or i64 [[O3]], undef
-; CHECK-NEXT:    [[O5:%.*]] = or i64 [[O4]], [[S5]]
-; CHECK-NEXT:    [[O6:%.*]] = or i64 [[O5]], [[S6]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i64> [[TMP4]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i64> [[BIN_RDX]], <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -211,7 +191,6 @@ define i64 @load64le(i8* %arg) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], [[S6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP7]], [[S7]]
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = or i64 [[TMP8]], [[Z0]]
-; CHECK-NEXT:    [[O7:%.*]] = or i64 [[O6]], [[S7]]
 ; CHECK-NEXT:    ret i64 [[OP_EXTRA]]
 ;
   %g1 = getelementptr inbounds i8, i8* %arg, i64 1
@@ -272,12 +251,6 @@ define i64 @load64le_nop_shift(i8* %arg) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, <8 x i8>* [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw <8 x i64> [[TMP3]], <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
-; CHECK-NEXT:    [[O1:%.*]] = or i64 undef, undef
-; CHECK-NEXT:    [[O2:%.*]] = or i64 [[O1]], undef
-; CHECK-NEXT:    [[O3:%.*]] = or i64 [[O2]], undef
-; CHECK-NEXT:    [[O4:%.*]] = or i64 [[O3]], undef
-; CHECK-NEXT:    [[O5:%.*]] = or i64 [[O4]], undef
-; CHECK-NEXT:    [[O6:%.*]] = or i64 [[O5]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i64> [[TMP4]], <8 x i64> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <8 x i64> [[TMP4]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i64> [[BIN_RDX]], <8 x i64> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -285,7 +258,6 @@ define i64 @load64le_nop_shift(i8* %arg) {
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i64> [[BIN_RDX2]], <8 x i64> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = or <8 x i64> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[O7:%.*]] = or i64 [[O6]], undef
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %g1 = getelementptr inbounds i8, i8* %arg, i64 1

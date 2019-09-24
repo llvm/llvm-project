@@ -718,9 +718,8 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
     break;
     case ISD::LOAD:
     {
-      const LoadSDNode * L = dyn_cast<LoadSDNode>(N);
-      if (L->getMemOperand()->getAddrSpace()
-      == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+      if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
+          AMDGPUAS::CONSTANT_ADDRESS_32BIT)
         return true;
       return false;
     }

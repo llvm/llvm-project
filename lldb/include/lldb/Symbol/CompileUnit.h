@@ -225,6 +225,14 @@ public:
 
   DebugMacros *GetDebugMacros();
 
+  /// Apply a lambda to each external lldb::Module referenced by this
+  /// compilation unit. Recursively also descends into the referenced external
+  /// modules of any encountered compilation unit.
+  ///
+  /// \param[in] lambda
+  ///     The lambda that should be applied to every module.
+  void ForEachExternalModule(llvm::function_ref<void(lldb::ModuleSP)> f);
+
   /// Get the compile unit's support file list.
   ///
   /// The support file list is used by the line table, and any objects that

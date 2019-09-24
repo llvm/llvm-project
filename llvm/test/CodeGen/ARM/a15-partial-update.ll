@@ -56,6 +56,11 @@ ret:
   ret void
 }
 
+; If minimizing size, that overrides perf, so no extra vmov.f64 here.
+
+; TODO: This (and above) could use a splat load to remove the false
+;       dependence with no extra instruction.
+
 define void @t2_minsize(<4 x i8> *%in, <4 x i8> *%out, i32 %n) minsize {
 ; CHECK-LABEL: t2_minsize:
 ; CHECK:       @ %bb.0: @ %entry
@@ -63,7 +68,6 @@ define void @t2_minsize(<4 x i8> *%in, <4 x i8> *%out, i32 %n) minsize {
 ; CHECK-NEXT:    add r1, r1, #4
 ; CHECK-NEXT:  .LBB2_1: @ %loop
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov.f64 d16, #5.000000e-01
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    vmovl.u8 q8, d16
 ; CHECK-NEXT:    vuzp.8 d16, d18

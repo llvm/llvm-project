@@ -1043,9 +1043,9 @@ bool PythonFile::GetUnderlyingFile(File &file) const {
   file.Close();
   // We don't own the file descriptor returned by this function, make sure the
   // File object knows about that.
-  file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), false);
   PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
-  file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
+  auto options = PythonFile::GetOptionsFromMode(py_mode.GetString());
+  file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), options, false);
   return file.IsValid();
 }
 

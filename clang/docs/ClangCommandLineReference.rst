@@ -86,8 +86,6 @@ Pass <arg> to the target offloading toolchain identified by <triple>.
 
 Run the static analyzer
 
-.. option:: --analyze-auto
-
 .. option:: --analyzer-no-default-checks
 
 .. option:: --analyzer-output<arg>

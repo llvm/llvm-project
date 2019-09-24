@@ -108,8 +108,7 @@ void OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
   if (!request.GetCursorArgumentPrefix().empty()) {
     for (size_t i = 0; i < num_enumerators; ++i) {
       llvm::StringRef name = m_enumerations.GetCStringAtIndex(i).GetStringRef();
-      if (name.startswith(request.GetCursorArgumentPrefix()))
-        request.AddCompletion(name);
+      request.TryCompleteCurrentArg(name);
     }
     return;
   }

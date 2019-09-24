@@ -43,18 +43,11 @@ llvm::Expected<Location> symbolToLocation(const Symbol &Sym,
                                           llvm::StringRef HintPath) {
   // Prefer the definition over e.g. a function declaration in a header
   auto &CD = Sym.Definition ? Sym.Definition : Sym.CanonicalDeclaration;
-  auto Uri = URI::parse(CD.FileURI);
-  if (!Uri) {
-    return llvm::make_error<llvm::StringError>(
-        formatv("Could not parse URI '{0}' for symbol '{1}'.", CD.FileURI,
-                Sym.Name),
-        llvm::inconvertibleErrorCode());
-  }
-  auto Path = URI::resolve(*Uri, HintPath);
+  auto Path = URI::resolve(CD.FileURI, HintPath);
   if (!Path) {
     return llvm::make_error<llvm::StringError>(
-        formatv("Could not resolve path for URI '{0}' for symbol '{1}'.",
-                Uri->toString(), Sym.Name),
+        formatv("Could not resolve path for symbol '{0}': {1}",
+                Sym.Name, llvm::toString(Path.takeError())),
         llvm::inconvertibleErrorCode());
   }
   Location L;

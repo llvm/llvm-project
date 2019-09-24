@@ -579,7 +579,7 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
   else
 #endif
   {
-#ifdef _MSC_VER
+#ifdef _WIN32
     const char *prompt = GetPrompt();
     if (prompt) {
       // Back up over previous prompt using Windows API
@@ -594,7 +594,7 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
     }
 #endif
     IOHandler::PrintAsync(stream, s, len);
-#ifdef _MSC_VER
+#ifdef _WIN32
     if (prompt)
       IOHandler::PrintAsync(GetOutputStreamFile().get(), prompt,
                             strlen(prompt));

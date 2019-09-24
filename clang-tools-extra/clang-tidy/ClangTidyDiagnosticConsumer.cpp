@@ -551,9 +551,7 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
     return;
   }
 
-  StringRef FileName = File->tryGetRealPathName();
-  if (FileName.empty())
-    FileName = File->getName();
+  StringRef FileName(File->getName());
   LastErrorRelatesToUserCode = LastErrorRelatesToUserCode ||
                                Sources.isInMainFile(Location) ||
                                getHeaderFilter()->match(FileName);

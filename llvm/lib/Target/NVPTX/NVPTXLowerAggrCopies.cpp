@@ -103,7 +103,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
   // Do the transformation of an aggr load/copy/set to a loop
   //
   for (LoadInst *LI : AggrLoads) {
-    StoreInst *SI = dyn_cast<StoreInst>(*LI->user_begin());
+    auto *SI = cast<StoreInst>(*LI->user_begin());
     Value *SrcAddr = LI->getOperand(0);
     Value *DstAddr = SI->getOperand(1);
     unsigned NumLoads = DL.getTypeStoreSize(LI->getType());

@@ -543,7 +543,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
 bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
                                      unsigned ImmOpNum) {
   bool Changed = false;
-  unsigned OpStart;
+  unsigned OpStart = 0;
   unsigned OpEnd = OldMI->getNumOperands();
   MachineBasicBlock *BB = OldMI->getParent();
   auto UsePos = MachineBasicBlock::iterator(OldMI);

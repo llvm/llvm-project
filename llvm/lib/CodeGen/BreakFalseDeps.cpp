@@ -177,6 +177,7 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
   assert(!MI->isDebugInstr() && "Won't process debug values");
 
   // Break dependence on undef uses. Do this before updating LiveRegs below.
+  // This can remove a false dependence with no additional instructions.
   unsigned OpNum;
   unsigned Pref = TII->getUndefRegClearance(*MI, OpNum, TRI);
   if (Pref) {
@@ -187,6 +188,11 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
     if (!HadTrueDependency && shouldBreakDependence(MI, OpNum, Pref))
       UndefReads.push_back(std::make_pair(MI, OpNum));
   }
+
+  // The code below allows the target to create a new instruction to break the
+  // dependence. That opposes the goal of minimizing size, so bail out now.
+  if (MF->getFunction().hasMinSize())
+    return;
 
   const MCInstrDesc &MCID = MI->getDesc();
   for (unsigned i = 0,
@@ -206,6 +212,11 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
 
 void BreakFalseDeps::processUndefReads(MachineBasicBlock *MBB) {
   if (UndefReads.empty())
+    return;
+
+  // The code below allows the target to create a new instruction to break the
+  // dependence. That opposes the goal of minimizing size, so bail out now.
+  if (MF->getFunction().hasMinSize())
     return;
 
   // Collect this block's live out register units.

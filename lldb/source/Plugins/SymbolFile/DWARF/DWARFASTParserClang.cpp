@@ -2183,15 +2183,16 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   return false;
 }
 
-std::vector<DWARFDIE> DWARFASTParserClang::GetDIEForDeclContext(
+void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(
     lldb_private::CompilerDeclContext decl_context) {
-  std::vector<DWARFDIE> result;
   auto opaque_decl_ctx =
       (clang::DeclContext *)decl_context.GetOpaqueDeclContext();
   for (auto it = m_decl_ctx_to_die.find(opaque_decl_ctx);
-       it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx; it++)
-    result.push_back(it->second);
-  return result;
+       it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx;
+       it = m_decl_ctx_to_die.erase(it))
+    for (DWARFDIE decl = it->second.GetFirstChild(); decl;
+         decl = decl.GetSibling())
+      GetClangDeclForDIE(decl);
 }
 
 CompilerDecl DWARFASTParserClang::GetDeclForUIDFromDWARF(const DWARFDIE &die) {

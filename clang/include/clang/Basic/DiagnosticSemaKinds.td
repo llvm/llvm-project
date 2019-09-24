@@ -2366,7 +2366,13 @@ def err_constexpr_tag : Error<
   "%select{class|struct|interface|union|enum}0 "
   "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
-  "destructor cannot be marked %sub{select_constexpr_spec_kind}0">;
+  "destructor cannot be declared %sub{select_constexpr_spec_kind}0">;
+def err_constexpr_dtor_subobject : Error<
+  "destructor cannot be declared %sub{select_constexpr_spec_kind}0 because "
+  "%select{data member %2|base class %3}1 does not have a "
+  "constexpr destructor">;
+def note_constexpr_dtor_subobject : Note<
+  "%select{data member %1|base class %2}0 declared here">;
 def err_constexpr_wrong_decl_kind : Error<
   "%sub{select_constexpr_spec_kind}0 can only be used "
   "in %select{|variable and function|function|variable}0 declarations">;
@@ -2507,6 +2513,8 @@ def note_non_literal_user_provided_dtor : Note<
   "%0 is not literal because it has a user-provided destructor">;
 def note_non_literal_nontrivial_dtor : Note<
   "%0 is not literal because it has a non-trivial destructor">;
+def note_non_literal_non_constexpr_dtor : Note<
+  "%0 is not literal because its destructor is not constexpr">;
 def note_non_literal_lambda : Note<
   "lambda closure types are non-literal types before C++17">;
 def warn_private_extern : Warning<
@@ -5712,6 +5720,12 @@ def warn_precedence_conditional : Warning<
 def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
+def warn_enum_constant_in_bool_context : Warning<
+  "converting the enum constant to a boolean">,
+  InGroup<IntInBoolContext>, DefaultIgnore;
+def warn_left_shift_in_bool_context : Warning<
+  "converting the result of '<<' to a boolean; did you mean '(%0) != 0'?">,
+  InGroup<IntInBoolContext>, DefaultIgnore;
 def warn_logical_instead_of_bitwise : Warning<
   "use of logical '%0' with constant operand">,
   InGroup<DiagGroup<"constant-logical-operand">>;
@@ -6137,8 +6151,20 @@ def warn_out_of_range_compare : Warning<
   InGroup<TautologicalOutOfRangeCompare>;
 def warn_tautological_bool_compare : Warning<warn_out_of_range_compare.Text>,
   InGroup<TautologicalConstantCompare>;
+def warn_integer_constants_in_conditional_always_true : Warning<
+  "converting the result of '?:' with integer constants to a boolean always "
+  "evaluates to 'true'">,
+  InGroup<TautologicalConstantCompare>;
+def warn_left_shift_always : Warning<
+  "converting the result of '<<' to a boolean always evaluates "
+  "to %select{false|true}0">,
+  InGroup<TautologicalConstantCompare>;
 def warn_comparison_of_mixed_enum_types : Warning<
   "comparison of two values with different enumeration types"
+  "%diff{ ($ and $)|}0,1">,
+  InGroup<EnumCompare>;
+def warn_conditional_mixed_enum_types : Warning<
+  "enumeration type mismatch in conditional expression"
   "%diff{ ($ and $)|}0,1">,
   InGroup<EnumCompare>;
 def warn_comparison_of_mixed_enum_types_switch : Warning<
@@ -9917,7 +9943,4 @@ def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "__builtin_bit_cast source size does not equal destination size (%0 vs %1)">;
-
-def err_builtin_preserve_access_index_invalid_arg : Error<
-  "__builtin_preserve_access_index argument must a pointer type instead of %0">;
 } // end of sema component.

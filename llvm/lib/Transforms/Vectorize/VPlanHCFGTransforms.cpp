@@ -21,7 +21,7 @@ void VPlanHCFGTransforms::VPInstructionsToVPRecipes(
     LoopVectorizationLegality::InductionList *Inductions,
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
 
-  VPRegionBlock *TopRegion = dyn_cast<VPRegionBlock>(Plan->getEntry());
+  auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
   ReversePostOrderTraversal<VPBlockBase *> RPOT(TopRegion->getEntry());
 
   // Condition bit VPValues get deleted during transformation to VPRecipes.

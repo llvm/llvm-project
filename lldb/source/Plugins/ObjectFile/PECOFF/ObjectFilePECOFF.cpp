@@ -195,7 +195,11 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     specs.Append(module_spec);
     break;
   case MachineArmNt:
-    spec.SetTriple("arm-pc-windows");
+    spec.SetTriple("armv7-pc-windows");
+    specs.Append(module_spec);
+    break;
+  case MachineArm64:
+    spec.SetTriple("aarch64-unknown-windows");
     specs.Append(module_spec);
     break;
   default:
@@ -1200,6 +1204,7 @@ ArchSpec ObjectFilePECOFF::GetArchitecture() {
   case llvm::COFF::IMAGE_FILE_MACHINE_ARM:
   case llvm::COFF::IMAGE_FILE_MACHINE_ARMNT:
   case llvm::COFF::IMAGE_FILE_MACHINE_THUMB:
+  case llvm::COFF::IMAGE_FILE_MACHINE_ARM64:
     ArchSpec arch;
     arch.SetArchitecture(eArchTypeCOFF, machine, LLDB_INVALID_CPUTYPE,
                          IsWindowsSubsystem() ? llvm::Triple::Win32

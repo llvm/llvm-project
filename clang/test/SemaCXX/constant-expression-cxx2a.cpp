@@ -6,6 +6,10 @@ namespace std {
   struct type_info;
 };
 
+// Helper to print out values for debugging.
+constexpr void not_defined();
+template<typename T> constexpr void print(T) { not_defined(); }
+
 namespace ThreeWayComparison {
   struct A {
     int n;
@@ -219,15 +223,19 @@ static_assert(for_range_init());
 namespace Virtual {
   struct NonZeroOffset { int padding = 123; };
 
+  constexpr void assert(bool b) { if (!b) throw 0; }
+
   // Ensure that we pick the right final overrider during construction.
   struct A {
     virtual constexpr char f() const { return 'A'; }
     char a = f();
+    constexpr ~A() { assert(f() == 'A'); }
   };
   struct NoOverrideA : A {};
   struct B : NonZeroOffset, NoOverrideA {
     virtual constexpr char f() const { return 'B'; }
     char b = f();
+    constexpr ~B() { assert(f() == 'B'); }
   };
   struct NoOverrideB : B {};
   struct C : NonZeroOffset, A {
@@ -236,12 +244,15 @@ namespace Virtual {
     char c = ((A*)this)->f();
     char ba = pba->f();
     constexpr C(A *pba) : pba(pba) {}
+    constexpr ~C() { assert(f() == 'C'); }
   };
   struct D : NonZeroOffset, NoOverrideB, C { // expected-warning {{inaccessible}}
     virtual constexpr char f() const { return 'D'; }
     char d = f();
     constexpr D() : C((B*)this) {}
+    constexpr ~D() { assert(f() == 'D'); }
   };
+  constexpr int n = (D(), 0);
   constexpr D d;
   static_assert(((B&)d).a == 'A');
   static_assert(((C&)d).a == 'A');
@@ -633,4 +644,112 @@ namespace Uninit {
     }
   }
   static_assert(switch_into_init_stmt());
+}
+
+namespace dtor {
+  void lifetime_extension() {
+    struct X { constexpr ~X() {} };
+    X &&a = X();
+  }
+
+  template<typename T> constexpr T &&ref(T &&t) { return (T&&)t; }
+
+  struct Buf {
+    char buf[64];
+    int n = 0;
+    constexpr void operator+=(char c) { buf[n++] = c; }
+    constexpr bool operator==(const char *str) const {
+      return str[n] == 0 && __builtin_memcmp(str, buf, n) == 0;
+    }
+    constexpr bool operator!=(const char *str) const { return !operator==(str); }
+  };
+
+  struct A {
+    constexpr A(Buf &buf, char c) : buf(buf), c(c) { buf += c; }
+    constexpr ~A() { buf += c; }
+    constexpr operator bool() const { return true; }
+    Buf &buf;
+    char c;
+  };
+
+  constexpr bool dtor_calls_dtor() {
+    union U {
+      constexpr U(Buf &buf) : u(buf, 'u') { buf += 'U'; }
+      constexpr ~U() { u.buf += 'U'; }
+      A u, v;
+    };
+
+    struct B : A {
+      A c, &&d, e;
+      union {
+        A f;
+      };
+      U u;
+      constexpr B(Buf &buf)
+          : A(buf, 'a'), c(buf, 'c'), d(ref(A(buf, 'd'))), e(A(buf, 'e')), f(buf, 'f'), u(buf) {
+        buf += 'b';
+      }
+      constexpr ~B() {
+        buf += 'b';
+      }
+    };
+
+    Buf buf;
+    {
+      B b(buf);
+      if (buf != "acddefuUb")
+        return false;
+    }
+    if (buf != "acddefuUbbUeca")
+      return false;
+    return true;
+  }
+  static_assert(dtor_calls_dtor());
+
+  constexpr void abnormal_termination(Buf &buf) {
+    struct Indestructible {
+      constexpr ~Indestructible(); // not defined
+    };
+
+    A a(buf, 'a');
+    A(buf, 'b');
+    int n = 0;
+    for (A &&c = A(buf, 'c'); A d = A(buf, 'd'); A(buf, 'e')) {
+      switch (A f(buf, 'f'); A g = A(buf, 'g')) { // expected-warning {{boolean}}
+      case false: {
+        A x(buf, 'x');
+      }
+
+      case true: {
+        A h(buf, 'h');
+        switch (n++) {
+        case 0:
+          break;
+        case 1:
+          continue;
+        case 2:
+          return;
+        }
+        break;
+      }
+
+      default:
+        Indestructible indest;
+      }
+
+      A j = (A(buf, 'i'), A(buf, 'j'));
+    }
+  }
+
+  constexpr bool check_abnormal_termination() {
+    Buf buf = {};
+    abnormal_termination(buf);
+    return buf ==
+      "abbc"
+        "dfgh" /*break*/ "hgfijijeed"
+        "dfgh" /*continue*/ "hgfeed"
+        "dfgh" /*return*/ "hgfd"
+      "ca";
+  }
+  static_assert(check_abnormal_termination());
 }

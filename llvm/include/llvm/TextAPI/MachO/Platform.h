@@ -25,11 +25,16 @@ enum class PlatformKind : unsigned {
   iOS = MachO::PLATFORM_IOS,
   tvOS = MachO::PLATFORM_TVOS,
   watchOS = MachO::PLATFORM_WATCHOS,
-  bridgeOS = MachO::PLATFORM_BRIDGEOS
+  bridgeOS = MachO::PLATFORM_BRIDGEOS,
+  macCatalyst = MachO::PLATFORM_MACCATALYST,
+  iOSSimulator = MachO::PLATFORM_IOSSIMULATOR,
+  tvOSSimulator = MachO::PLATFORM_TVOSSIMULATOR,
+  watchOSSimulator = MachO::PLATFORM_WATCHOSSIMULATOR
 };
 
 using PlatformSet = SmallSet<PlatformKind, 3>;
 
+PlatformKind mapToPlatformKind(PlatformKind Platform, bool WantSim);
 PlatformKind mapToPlatformKind(const Triple &Target);
 PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets);
 StringRef getPlatformName(PlatformKind Platform);

@@ -91,13 +91,14 @@ int File::GetDescriptor() const {
   return kInvalidDescriptor;
 }
 
-IOObject::WaitableHandle File::GetWaitableHandle() { return m_descriptor; }
+IOObject::WaitableHandle File::GetWaitableHandle() { return GetDescriptor(); }
 
-void File::SetDescriptor(int fd, bool transfer_ownership) {
+void File::SetDescriptor(int fd, uint32_t options, bool transfer_ownership) {
   if (IsValid())
     Close();
   m_descriptor = fd;
   m_should_close_fd = transfer_ownership;
+  m_options = options;
 }
 
 FILE *File::GetStream() {

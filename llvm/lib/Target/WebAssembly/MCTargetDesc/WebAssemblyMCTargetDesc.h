@@ -191,6 +191,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32_S:
   case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64:
   case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64_S:
+  case WebAssembly::LOAD_SPLAT_v8x16:
+  case WebAssembly::LOAD_SPLAT_v8x16_S:
     return 0;
   case WebAssembly::LOAD16_S_I32:
   case WebAssembly::LOAD16_S_I32_S:
@@ -240,6 +242,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32_S:
   case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64:
   case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64_S:
+  case WebAssembly::LOAD_SPLAT_v16x8:
+  case WebAssembly::LOAD_SPLAT_v16x8_S:
     return 1;
   case WebAssembly::LOAD_I32:
   case WebAssembly::LOAD_I32_S:
@@ -295,6 +299,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   case WebAssembly::ATOMIC_NOTIFY_S:
   case WebAssembly::ATOMIC_WAIT_I32:
   case WebAssembly::ATOMIC_WAIT_I32_S:
+  case WebAssembly::LOAD_SPLAT_v32x4:
+  case WebAssembly::LOAD_SPLAT_v32x4_S:
     return 2;
   case WebAssembly::LOAD_I64:
   case WebAssembly::LOAD_I64_S:
@@ -324,6 +330,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_S:
   case WebAssembly::ATOMIC_WAIT_I64:
   case WebAssembly::ATOMIC_WAIT_I64_S:
+  case WebAssembly::LOAD_SPLAT_v64x2:
+  case WebAssembly::LOAD_SPLAT_v64x2_S:
     return 3;
   case WebAssembly::LOAD_v16i8:
   case WebAssembly::LOAD_v16i8_S:

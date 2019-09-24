@@ -175,14 +175,14 @@ private:
 
   void setAlignment(AlignTypeEnum align_type, llvm::Align abi_align,
                     llvm::Align pref_align, uint32_t bit_width);
-  unsigned getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
-                            bool ABIAlign, Type *Ty) const;
+  llvm::Align getAlignmentInfo(AlignTypeEnum align_type, uint32_t bit_width,
+                               bool ABIAlign, Type *Ty) const;
   void setPointerAlignment(uint32_t AddrSpace, llvm::Align ABIAlign,
                            llvm::Align PrefAlign, uint32_t TypeByteWidth,
                            uint32_t IndexWidth);
 
   /// Internal helper method that returns requested alignment for type.
-  unsigned getAlignment(Type *Ty, bool abi_or_pref) const;
+  llvm::Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
   /// Parses a target data specification string. Assert if the string is
   /// malformed.
@@ -266,7 +266,11 @@ public:
     return StackNaturalAlign && (Align > StackNaturalAlign);
   }
 
-  unsigned getStackAlignment() const { return StackNaturalAlign ? StackNaturalAlign->value() : 0; }
+  llvm::Align getStackAlignment() const {
+    assert(StackNaturalAlign && "StackNaturalAlign must be defined");
+    return *StackNaturalAlign;
+  }
+
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
 
   /// Returns the alignment of function pointers, which may or may not be
@@ -345,12 +349,12 @@ public:
   }
 
   /// Layout pointer alignment
-  unsigned getPointerABIAlignment(unsigned AS) const;
+  llvm::Align getPointerABIAlignment(unsigned AS) const;
 
   /// Return target's alignment for stack-based pointers
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
-  unsigned getPointerPrefAlignment(unsigned AS = 0) const;
+  llvm::Align getPointerPrefAlignment(unsigned AS = 0) const;
 
   /// Layout pointer size
   /// FIXME: The defaults need to be removed once all of
@@ -486,7 +490,7 @@ public:
 
   /// Returns the minimum ABI-required alignment for an integer type of
   /// the specified bitwidth.
-  unsigned getABIIntegerTypeAlignment(unsigned BitWidth) const;
+  llvm::Align getABIIntegerTypeAlignment(unsigned BitWidth) const;
 
   /// Returns the preferred stack/global alignment for the specified
   /// type.
@@ -568,7 +572,7 @@ public:
 
   uint64_t getSizeInBits() const { return 8 * StructSize; }
 
-  unsigned getAlignment() const { return StructAlignment.value(); }
+  llvm::Align getAlignment() const { return StructAlignment; }
 
   /// Returns whether the struct has padding or not between its fields.
   /// NB: Padding in nested element is not taken into account.

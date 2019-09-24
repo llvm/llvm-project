@@ -12,7 +12,7 @@
 
 // PCH:
 // RUN: %clang_cc1 -triple %itanium_abi_triple -x c++ -std=c++11  -debugger-tuning=lldb -emit-pch -fmodule-format=obj -I %S/Inputs -o %t.pch %S/Inputs/DebugCXX.h -mllvm -debug-only=pchcontainer &>%t-pch.ll
-// RUN: cat %t-pch.ll | FileCheck %s
+// RUN: cat %t-pch.ll | FileCheck --check-prefix=CHECK-CXX %s
 // RUN: cat %t-pch.ll | FileCheck --check-prefix=CHECK-NEG %s
 
 #ifdef MODULES
@@ -23,6 +23,7 @@
 // CHECK-MOD: distinct !DICompileUnit(language: DW_LANG_{{.*}}C_plus_plus,
 
 // CHECK: distinct !DICompileUnit(language: DW_LANG_{{.*}}C_plus_plus,
+// CHECK-CXX: distinct !DICompileUnit(language: DW_LANG_C_plus_plus_11,
 // CHECK-SAME:                    isOptimized: false,
 // CHECK-NOT:                     splitDebugFilename:
 // CHECK-SAME:                    dwoId:

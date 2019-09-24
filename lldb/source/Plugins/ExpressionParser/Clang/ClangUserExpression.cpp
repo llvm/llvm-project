@@ -25,6 +25,7 @@
 #include "ClangExpressionParser.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
+#include "CppModuleConfiguration.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -433,48 +434,59 @@ static bool SupportsCxxModuleImport(lldb::LanguageType language) {
   }
 }
 
-std::vector<std::string>
-ClangUserExpression::GetModulesToImport(ExecutionContext &exe_ctx) {
+/// Utility method that puts a message into the expression log and
+/// returns an invalid module configuration.
+static CppModuleConfiguration LogConfigError(const std::string &msg) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  LLDB_LOG(log, "[C++ module config] {0}", msg);
+  return CppModuleConfiguration();
+}
 
-  if (!SupportsCxxModuleImport(Language()))
-    return {};
+CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
+                                       ExecutionContext &exe_ctx) {
+  // Don't do anything if this is not a C++ module configuration.
+  if (!SupportsCxxModuleImport(language))
+    return LogConfigError("Language doesn't support C++ modules");
 
   Target *target = exe_ctx.GetTargetPtr();
-  if (!target || !target->GetEnableImportStdModule())
-    return {};
+  if (!target)
+    return LogConfigError("No target");
+
+  if (!target->GetEnableImportStdModule())
+    return LogConfigError("Importing std module not enabled in settings");
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   if (!frame)
-    return {};
+    return LogConfigError("No frame");
 
   Block *block = frame->GetFrameBlock();
   if (!block)
-    return {};
+    return LogConfigError("No block");
 
   SymbolContext sc;
   block->CalculateSymbolContext(&sc);
   if (!sc.comp_unit)
-    return {};
+    return LogConfigError("Couldn't calculate symbol context");
 
-  if (log) {
-    for (const SourceModule &m : sc.comp_unit->GetImportedModules()) {
-      LLDB_LOG(log, "Found module in compile unit: {0:$[.]} - include dir: {1}",
-                  llvm::make_range(m.path.begin(), m.path.end()), m.search_path);
+  // Build a list of files we need to analyze to build the configuration.
+  FileSpecList files;
+  for (const FileSpec &f : sc.comp_unit->GetSupportFiles())
+    files.AppendIfUnique(f);
+  // We also need to look at external modules in the case of -gmodules as they
+  // contain the support files for libc++ and the C library.
+  sc.comp_unit->ForEachExternalModule([&files](lldb::ModuleSP module) {
+    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i) {
+      const FileSpecList &support_files =
+          module->GetCompileUnitAtIndex(i)->GetSupportFiles();
+      for (const FileSpec &f : support_files) {
+        files.AppendIfUnique(f);
+      }
     }
-  }
-
-  for (const SourceModule &m : sc.comp_unit->GetImportedModules())
-    m_include_directories.emplace_back(m.search_path.GetCString());
-
-  // Check if we imported 'std' or any of its submodules.
-  // We currently don't support importing any other modules in the expression
-  // parser.
-  for (const SourceModule &m : sc.comp_unit->GetImportedModules())
-    if (!m.path.empty() && m.path.front() == "std")
-      return {"std"};
-
-  return {};
+  });
+  // Try to create a configuration from the files. If there is no valid
+  // configuration possible with the files, this just returns an invalid
+  // configuration.
+  return CppModuleConfiguration(files);
 }
 
 bool ClangUserExpression::PrepareForParsing(
@@ -502,14 +514,21 @@ bool ClangUserExpression::PrepareForParsing(
 
   SetupDeclVendor(exe_ctx, m_target);
 
-  std::vector<std::string> used_modules = GetModulesToImport(exe_ctx);
-  m_imported_cpp_modules = !used_modules.empty();
+  CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
+  llvm::ArrayRef<std::string> imported_modules =
+      module_config.GetImportedModules();
+  m_imported_cpp_modules = !imported_modules.empty();
+  m_include_directories = module_config.GetIncludeDirs();
 
   LLDB_LOG(log, "List of imported modules in expression: {0}",
-           llvm::make_range(used_modules.begin(), used_modules.end()));
+           llvm::make_range(imported_modules.begin(), imported_modules.end()));
+  LLDB_LOG(log, "List of include directories gathered for modules: {0}",
+           llvm::make_range(m_include_directories.begin(),
+                            m_include_directories.end()));
 
   UpdateLanguageForExpr();
-  CreateSourceCode(diagnostic_manager, exe_ctx, used_modules, for_completion);
+  CreateSourceCode(diagnostic_manager, exe_ctx, imported_modules,
+                   for_completion);
   return true;
 }
 

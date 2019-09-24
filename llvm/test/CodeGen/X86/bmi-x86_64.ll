@@ -86,9 +86,9 @@ define i64 @bextr64d(i64 %a) {
 ;
 ; BMI2-SLOW-LABEL: bextr64d:
 ; BMI2-SLOW:       # %bb.0: # %entry
-; BMI2-SLOW-NEXT:    shrq $2, %rdi
-; BMI2-SLOW-NEXT:    movb $33, %al
+; BMI2-SLOW-NEXT:    movl $35, %eax
 ; BMI2-SLOW-NEXT:    bzhiq %rax, %rdi, %rax
+; BMI2-SLOW-NEXT:    shrq $2, %rax
 ; BMI2-SLOW-NEXT:    retq
 ;
 ; BEXTR-FAST-LABEL: bextr64d:
@@ -97,6 +97,34 @@ define i64 @bextr64d(i64 %a) {
 ; BEXTR-FAST-NEXT:    bextrq %rax, %rdi, %rax
 ; BEXTR-FAST-NEXT:    retq
 entry:
+  %shr = lshr i64 %a, 2
+  %and = and i64 %shr, 8589934591
+  ret i64 %and
+}
+
+define i64 @bextr64d_load(i64* %aptr) {
+; BMI1-SLOW-LABEL: bextr64d_load:
+; BMI1-SLOW:       # %bb.0: # %entry
+; BMI1-SLOW-NEXT:    movq (%rdi), %rax
+; BMI1-SLOW-NEXT:    shrq $2, %rax
+; BMI1-SLOW-NEXT:    movl $8448, %ecx # imm = 0x2100
+; BMI1-SLOW-NEXT:    bextrq %rcx, %rax, %rax
+; BMI1-SLOW-NEXT:    retq
+;
+; BMI2-SLOW-LABEL: bextr64d_load:
+; BMI2-SLOW:       # %bb.0: # %entry
+; BMI2-SLOW-NEXT:    movl $35, %eax
+; BMI2-SLOW-NEXT:    bzhiq %rax, (%rdi), %rax
+; BMI2-SLOW-NEXT:    shrq $2, %rax
+; BMI2-SLOW-NEXT:    retq
+;
+; BEXTR-FAST-LABEL: bextr64d_load:
+; BEXTR-FAST:       # %bb.0: # %entry
+; BEXTR-FAST-NEXT:    movl $8450, %eax # imm = 0x2102
+; BEXTR-FAST-NEXT:    bextrq %rax, (%rdi), %rax
+; BEXTR-FAST-NEXT:    retq
+entry:
+  %a = load i64, i64* %aptr, align 8
   %shr = lshr i64 %a, 2
   %and = and i64 %shr, 8589934591
   ret i64 %and

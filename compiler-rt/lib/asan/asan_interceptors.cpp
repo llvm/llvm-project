@@ -612,7 +612,8 @@ INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
 #if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler disabler;
 #endif
-  // REAL(pthread_atfork) cannot be called due to symbol indirections at least on NetBSD
+  // REAL(pthread_atfork) cannot be called due to symbol indirections at least
+  // on NetBSD
   return _pthread_atfork(prepare, parent, child);
 }
 #endif
