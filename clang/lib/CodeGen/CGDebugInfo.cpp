@@ -561,6 +561,10 @@ void CGDebugInfo::CreateCompileUnit() {
   if (LO.CPlusPlus) {
     if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
+    else if (LO.CPlusPlus14)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
+    else if (LO.CPlusPlus11)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
     else
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
   } else if (LO.ObjC) {
@@ -878,6 +882,8 @@ llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
 static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
   switch (TheCU->getSourceLanguage()) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
+  case llvm::dwarf::DW_LANG_C_plus_plus_11:
+  case llvm::dwarf::DW_LANG_C_plus_plus_14:
     return true;
   case llvm::dwarf::DW_LANG_ObjC_plus_plus:
     return isa<CXXRecordDecl>(TD) || isa<EnumDecl>(TD);

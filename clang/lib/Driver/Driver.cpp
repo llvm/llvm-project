@@ -287,8 +287,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_iterface_stubs)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT__analyze,
-                                        options::OPT__analyze_auto)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
@@ -3503,7 +3502,7 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_rewrite_legacy_objc))
       return C.MakeAction<CompileJobAction>(Input,
                                             types::TY_RewrittenLegacyObjC);
-    if (Args.hasArg(options::OPT__analyze, options::OPT__analyze_auto))
+    if (Args.hasArg(options::OPT__analyze))
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT__migrate))
       return C.MakeAction<MigrateJobAction>(Input, types::TY_Remap);

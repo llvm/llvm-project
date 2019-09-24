@@ -7,6 +7,8 @@
 #define TWO 2
 
 #define SHIFT(l, r) l << r
+#define MM a << a
+#define AF 1 << 7
 
 #ifdef __cplusplus
 typedef bool boolean;
@@ -20,14 +22,24 @@ enum num {
   two,
 };
 
-int test(int a, enum num n) {
+int test(int a, unsigned b, enum num n) {
   boolean r;
-  r = (1 << 3); // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << 3) != 0'?}}
-  r = TWO << 7; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << 7) != 0'?}}
+  r = a << a; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << a) != 0'?}}
+  r = MM; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << a) != 0'?}}
+  r = (1 << 7); // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << 7) != 0'?}}
+  r = 2UL << 2;
+  r = 2 << b; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << b) != 0'?}}
+  r = (unsigned)(2 << b); 
+  r = b << 7;
+  r = (1 << a); // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
+  r = TWO << a; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << a) != 0'?}}
   r = a << 7;   // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << 7) != 0'?}}
   r = ONE << a; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
-  if (TWO << 4) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << 4) != 0'?}}
+  if (TWO << a) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << a) != 0'?}}
     return a;
+
+  for (a = 0; 1 << a; a++) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
+    ; 
 
   if (a << TWO) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << 2) != 0'?}}
     return a;

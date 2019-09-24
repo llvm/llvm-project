@@ -5792,10 +5792,10 @@ def note_precedence_conditional_first : Note<
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
-  InGroup<IntInBoolContext>;
+  InGroup<IntInBoolContext>, DefaultIgnore;
 def warn_left_shift_in_bool_context : Warning<
   "converting the result of '<<' to a boolean; did you mean '(%0) != 0'?">,
-  InGroup<IntInBoolContext>;
+  InGroup<IntInBoolContext>, DefaultIgnore;
 def warn_logical_instead_of_bitwise : Warning<
   "use of logical '%0' with constant operand">,
   InGroup<DiagGroup<"constant-logical-operand">>;
