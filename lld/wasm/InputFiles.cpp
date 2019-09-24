@@ -165,10 +165,15 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
   case R_WASM_TABLE_INDEX_SLEB:
-  case R_WASM_TABLE_INDEX_REL_SLEB:
+  case R_WASM_TABLE_INDEX_REL_SLEB: {
     if (!getFunctionSymbol(reloc.Index)->hasTableIndex())
       return 0;
-    return getFunctionSymbol(reloc.Index)->getTableIndex();
+    uint32_t index = getFunctionSymbol(reloc.Index)->getTableIndex();
+    if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB)
+      index -= config->tableBase;
+    return index;
+
+  }
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_LEB:
