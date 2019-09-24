@@ -23,6 +23,9 @@ class ExecutionContext;
 
 class ClangExpressionSourceCode : public ExpressionSourceCode {
 public:
+  /// The file name we use for the wrapper code that we inject before
+  /// the user expression.
+  static const llvm::StringRef g_prefix_file_name;
   static const char *g_expression_prefix;
 
   static ClangExpressionSourceCode *CreateWrapped(llvm::StringRef filename,

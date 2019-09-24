@@ -245,7 +245,7 @@ static __inline void wideLeftShift(rep_t *hi, rep_t *lo, int count) {
 static __inline void wideRightShiftWithSticky(rep_t *hi, rep_t *lo,
                                               unsigned int count) {
   if (count < typeWidth) {
-    const bool sticky = *lo << (typeWidth - count);
+    const bool sticky = (*lo << (typeWidth - count)) != 0;
     *lo = *hi << (typeWidth - count) | *lo >> count | sticky;
     *hi = *hi >> count;
   } else if (count < 2 * typeWidth) {

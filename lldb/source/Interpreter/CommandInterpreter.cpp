@@ -1756,7 +1756,7 @@ void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
 
   // For any of the command completions a unique match will be a complete word.
 
-  if (request.GetPartialParsedLine().GetArgumentCount() == 0) {
+  if (request.GetParsedLine().GetArgumentCount() == 0) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
     StringList new_matches, descriptions;

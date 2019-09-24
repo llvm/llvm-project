@@ -113,8 +113,6 @@ public:
 
   Args &GetParsedLine() { return m_parsed_line; }
 
-  const Args &GetPartialParsedLine() const { return m_partial_parsed_line; }
-
   const Args::ArgEntry &GetParsedArg() {
     return GetParsedLine()[GetCursorIndex()];
   }
@@ -123,7 +121,6 @@ public:
   void ShiftArguments() {
     m_cursor_index--;
     m_parsed_line.Shift();
-    m_partial_parsed_line.Shift();
   }
 
   void SetCursorIndex(size_t i) { m_cursor_index = i; }
@@ -206,8 +203,6 @@ private:
   unsigned m_raw_cursor_pos;
   /// The command line parsed as arguments.
   Args m_parsed_line;
-  /// The command line until the cursor position parsed as arguments.
-  Args m_partial_parsed_line;
   /// The index of the argument in which the completion cursor is.
   size_t m_cursor_index;
   /// The cursor position in the argument indexed by m_cursor_index.

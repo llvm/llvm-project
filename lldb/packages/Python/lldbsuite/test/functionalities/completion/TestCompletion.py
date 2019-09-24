@@ -102,6 +102,38 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('plugin load ', [])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_enable(self):
+        self.completions_match('log enable ',
+                               ['dwarf',
+                                'gdb-remote',
+                                'kdp-remote',
+                                'lldb'])
+        self.complete_from_to('log enable ll', ['lldb'])
+        self.complete_from_to('log enable lldb al', ['all'])
+        self.complete_from_to('log enable lldb sym', ['symbol'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_enable(self):
+        self.completions_match('log disable ',
+                               ['dwarf',
+                                'gdb-remote',
+                                'kdp-remote',
+                                'lldb'])
+        self.complete_from_to('log disable ll', ['lldb'])
+        self.complete_from_to('log disable lldb al', ['all'])
+        self.complete_from_to('log disable lldb sym', ['symbol'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_list(self):
+        self.completions_match('log list ',
+                               ['dwarf',
+                                'gdb-remote',
+                                'kdp-remote',
+                                'lldb'])
+        self.complete_from_to('log list ll', ['lldb'])
+        self.complete_from_to('log list lldb dwa', ['dwarf'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_quoted_command(self):
         self.complete_from_to('"set',
                               ['"settings" '])

@@ -105,16 +105,26 @@ using namespace lldb_private;
 class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks {
   ClangModulesDeclVendor &m_decl_vendor;
   ClangPersistentVariables &m_persistent_vars;
+  clang::SourceManager &m_source_mgr;
   StreamString m_error_stream;
   bool m_has_errors = false;
 
 public:
   LLDBPreprocessorCallbacks(ClangModulesDeclVendor &decl_vendor,
-                            ClangPersistentVariables &persistent_vars)
-      : m_decl_vendor(decl_vendor), m_persistent_vars(persistent_vars) {}
+                            ClangPersistentVariables &persistent_vars,
+                            clang::SourceManager &source_mgr)
+      : m_decl_vendor(decl_vendor), m_persistent_vars(persistent_vars),
+        m_source_mgr(source_mgr) {}
 
   void moduleImport(SourceLocation import_location, clang::ModuleIdPath path,
                     const clang::Module * /*null*/) override {
+    // Ignore modules that are imported in the wrapper code as these are not
+    // loaded by the user.
+    llvm::StringRef filename =
+        m_source_mgr.getPresumedLoc(import_location).getFilename();
+    if (filename == ClangExpressionSourceCode::g_prefix_file_name)
+      return;
+
     SourceModule module;
 
     for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
@@ -572,8 +582,8 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope, E
         llvm::cast<ClangPersistentVariables>(
             target_sp->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeC));
-    std::unique_ptr<PPCallbacks> pp_callbacks(
-        new LLDBPreprocessorCallbacks(*decl_vendor, *clang_persistent_vars));
+    std::unique_ptr<PPCallbacks> pp_callbacks(new LLDBPreprocessorCallbacks(
+        *decl_vendor, *clang_persistent_vars, m_compiler->getSourceManager()));
     m_pp_callbacks =
         static_cast<LLDBPreprocessorCallbacks *>(pp_callbacks.get());
     m_compiler->getPreprocessor().addPPCallbacks(std::move(pp_callbacks));

@@ -21,17 +21,16 @@ CompletionRequest::CompletionRequest(llvm::StringRef command_line,
   // We parse the argument up to the cursor, so the last argument in
   // parsed_line is the one containing the cursor, and the cursor is after the
   // last character.
-  m_parsed_line = Args(command_line);
   llvm::StringRef partial_command(command_line.substr(0, raw_cursor_pos));
-  m_partial_parsed_line = Args(partial_command);
+  m_parsed_line = Args(partial_command);
 
-  if (m_partial_parsed_line.GetArgumentCount() == 0) {
+  if (GetParsedLine().GetArgumentCount() == 0) {
     m_cursor_index = 0;
     m_cursor_char_position = 0;
   } else {
-    m_cursor_index = m_partial_parsed_line.GetArgumentCount() - 1U;
+    m_cursor_index = GetParsedLine().GetArgumentCount() - 1U;
     m_cursor_char_position =
-        strlen(m_partial_parsed_line.GetArgumentAtIndex(m_cursor_index));
+        strlen(GetParsedLine().GetArgumentAtIndex(m_cursor_index));
   }
 
   // The cursor is after a space but the space is not part of the argument.
@@ -40,7 +39,6 @@ CompletionRequest::CompletionRequest(llvm::StringRef command_line,
   if (partial_command.endswith(" ") &&
       !GetCursorArgumentPrefix().endswith(" ")) {
     m_parsed_line.AppendArgument(llvm::StringRef());
-    m_partial_parsed_line.AppendArgument(llvm::StringRef());
     // Set the cursor to the start of the fake argument.
     m_cursor_index++;
     m_cursor_char_position = 0;

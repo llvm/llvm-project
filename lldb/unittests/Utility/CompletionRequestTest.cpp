@@ -27,8 +27,8 @@ TEST(CompletionRequest, Constructor) {
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
   EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
 
-  EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 2u);
-  EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(1), "b");
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 2u);
+  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(1), "b");
 }
 
 TEST(CompletionRequest, FakeLastArg) {
@@ -45,8 +45,8 @@ TEST(CompletionRequest, FakeLastArg) {
   EXPECT_EQ(request.GetCursorIndex(), 3U);
   EXPECT_EQ(request.GetCursorCharPosition(), 0U);
 
-  EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 4U);
-  EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(3), "");
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 4U);
+  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(3), "");
 }
 
 TEST(CompletionRequest, TryCompleteCurrentArgGood) {
@@ -102,8 +102,8 @@ TEST(CompletionRequest, ShiftArguments) {
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
   EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
 
-  EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 2u);
-  EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(1), "b");
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 2u);
+  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(1), "b");
 
   // Shift away the 'a' argument.
   request.ShiftArguments();
@@ -117,8 +117,8 @@ TEST(CompletionRequest, ShiftArguments) {
 
   // Partially parsed line and cursor should be updated.
   EXPECT_EQ(request.GetCursorIndex(), arg_index - 1U);
-  EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 1u);
-  EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(0), "b");
+  EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 1u);
+  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(0), "b");
 }
 
 TEST(CompletionRequest, DuplicateFiltering) {
