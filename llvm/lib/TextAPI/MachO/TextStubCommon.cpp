@@ -43,6 +43,17 @@ void ScalarEnumerationTraits<ObjCConstraintType>::enumeration(
 
 void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
                                        raw_ostream &OS) {
+
+  const auto *Ctx = reinterpret_cast<TextAPIContext *>(IO);
+  assert((!Ctx || Ctx && Ctx->FileKind != FileType::Invalid) &&
+         "File type is not set in context");
+
+  if ( Ctx && Ctx->FileKind == TBD_V3 && Values.count(PlatformKind::macOS) &&
+      Values.count(PlatformKind::macCatalyst) ) {
+    OS << "zippered";
+    return;
+  }
+
   assert(Values.size() == 1U);
   switch (*Values.begin()) {
   default:
@@ -68,6 +79,19 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
 
 StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
                                            PlatformSet &Values) {
+  const auto *Ctx = reinterpret_cast<TextAPIContext *>(IO);
+  assert((!Ctx || Ctx && Ctx->FileKind != FileType::Invalid) &&
+         "File type is not set in context");
+
+  if (Scalar == "zippered") {
+    if (Ctx && Ctx->FileKind == FileType::TBD_V3) {
+      Values.insert(PlatformKind::macOS);
+      Values.insert(PlatformKind::macCatalyst);
+      return {};
+    }
+    return "invalid platform";
+  }
+
   auto Platform = StringSwitch<PlatformKind>(Scalar)
                       .Case("unknown", PlatformKind::unknown)
                       .Case("macosx", PlatformKind::macOS)
@@ -75,7 +99,12 @@ StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
                       .Case("watchos", PlatformKind::watchOS)
                       .Case("tvos", PlatformKind::tvOS)
                       .Case("bridgeos", PlatformKind::bridgeOS)
+                      .Case("iosmac", PlatformKind::macCatalyst)
                       .Default(PlatformKind::unknown);
+
+  if (Platform == PlatformKind::macCatalyst)
+    if (Ctx && Ctx->FileKind != FileType::TBD_V3)
+      return "invalid platform";
 
   if (Platform == PlatformKind::unknown)
     return "unknown platform";

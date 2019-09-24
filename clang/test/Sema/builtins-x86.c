@@ -185,3 +185,19 @@ __m256i test_mm256_shrdi_epi16(__m256i __A, __m256i __B) {
 __m128i test_mm128_shrdi_epi16(__m128i __A, __m128i __B) {
   return __builtin_ia32_vpshrdw128(__A, __B, 1024); // expected-error {{argument value 1024 is outside the valid range [0, 255]}}
 }
+
+unsigned char test_lwpins32(unsigned int data2, unsigned int data1, unsigned int flags) {
+  return __builtin_ia32_lwpins32(data2, data1, flags); // expected-error {{argument to '__builtin_ia32_lwpins32' must be a constant integer}}
+}
+
+void test_lwpval32(unsigned int data2, unsigned int data1, unsigned int flags) {
+  __builtin_ia32_lwpval32(data2, data1, flags); // expected-error {{argument to '__builtin_ia32_lwpval32' must be a constant integer}}
+}
+
+unsigned char test_lwpins64(unsigned long long data2, unsigned long long data1, unsigned int flags) {
+  return __builtin_ia32_lwpins64(data2, data1, flags); // expected-error {{argument to '__builtin_ia32_lwpins64' must be a constant integer}}
+}
+
+void test_lwpval64(unsigned long long data2, unsigned long long data1, unsigned int flags) {
+  __builtin_ia32_lwpval64(data2, data1, flags); // expected-error {{argument to '__builtin_ia32_lwpval64' must be a constant integer}}
+}

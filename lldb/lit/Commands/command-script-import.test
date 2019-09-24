@@ -1,3 +1,4 @@
+# REQUIRES: python
 # RUN: echo 'b main' > %t.in
 # RUN: echo 'run' >> %t.in
 # RUN: echo 'command script import %S/Inputs/frame.py' >> %t.in

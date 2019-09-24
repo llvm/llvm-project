@@ -34,6 +34,9 @@ entry:
   ret i32 ptrtoint ([3 x i8]* @data_comdat to i32)
 }
 
+; Test that __attribute__(used) (i.e NO_STRIP) is preserved in the relocated symbol table
+@llvm.used = appending global [1 x i8*] [i8* bitcast (i32 ()* @my_func to i8*)], section "llvm.metadata"
+
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
 ; CHECK-NEXT:   Version:         0x00000001
@@ -188,7 +191,7 @@ entry:
 ; NORMAL-NEXT:      - Index:           3
 ; NORMAL-NEXT:        Kind:            FUNCTION
 ; NORMAL-NEXT:        Name:            my_func
-; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN ]
+; NORMAL-NEXT:        Flags:           [ VISIBILITY_HIDDEN, NO_STRIP ]
 ; NORMAL-NEXT:        Function:        4
 ; NORMAL-NEXT:      - Index:           4
 ; NORMAL-NEXT:        Kind:            FUNCTION

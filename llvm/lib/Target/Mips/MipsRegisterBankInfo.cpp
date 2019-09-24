@@ -403,6 +403,7 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_SREM:
   case G_UREM:
   case G_BRINDIRECT:
+  case G_VASTART:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     break;
   case G_LOAD: {

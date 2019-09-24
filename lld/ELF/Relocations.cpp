@@ -567,10 +567,16 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
   bool isRO = isReadOnly<ELFT>(ss);
   BssSection *sec =
       make<BssSection>(isRO ? ".bss.rel.ro" : ".bss", symSize, ss.alignment);
-  if (isRO)
-    in.bssRelRo->getParent()->addSection(sec);
-  else
-    in.bss->getParent()->addSection(sec);
+  OutputSection *osec = (isRO ? in.bssRelRo : in.bss)->getParent();
+
+  // At this point, sectionBases has been migrated to sections. Append sec to
+  // sections.
+  if (osec->sectionCommands.empty() ||
+      !isa<InputSectionDescription>(osec->sectionCommands.back()))
+    osec->sectionCommands.push_back(make<InputSectionDescription>(""));
+  auto *isd = cast<InputSectionDescription>(osec->sectionCommands.back());
+  isd->sections.push_back(sec);
+  osec->commitSection(sec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly

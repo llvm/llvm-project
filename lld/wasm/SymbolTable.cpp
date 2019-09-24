@@ -401,6 +401,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
   LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << name << " ["
                     << (sig ? toString(*sig) : "none")
                     << "] IsCalledDirectly:" << isCalledDirectly << "\n");
+  assert(flags & WASM_SYMBOL_UNDEFINED);
 
   Symbol *s;
   bool wasInserted;
@@ -443,6 +444,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
 Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
                                       InputFile *file) {
   LLVM_DEBUG(dbgs() << "addUndefinedData: " << name << "\n");
+  assert(flags & WASM_SYMBOL_UNDEFINED);
 
   Symbol *s;
   bool wasInserted;
@@ -464,6 +466,7 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name, StringRef importName,
                                         InputFile *file,
                                         const WasmGlobalType *type) {
   LLVM_DEBUG(dbgs() << "addUndefinedGlobal: " << name << "\n");
+  assert(flags & WASM_SYMBOL_UNDEFINED);
 
   Symbol *s;
   bool wasInserted;

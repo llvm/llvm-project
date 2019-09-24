@@ -179,7 +179,6 @@ private:
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
 
-  std::vector<std::string> GetModulesToImport(ExecutionContext &exe_ctx);
   void CreateSourceCode(DiagnosticManager &diagnostic_manager,
                         ExecutionContext &exe_ctx,
                         std::vector<std::string> modules_to_import,

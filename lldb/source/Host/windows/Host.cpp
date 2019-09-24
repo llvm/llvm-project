@@ -56,6 +56,10 @@ bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
     triple.setArch(llvm::Triple::x86_64);
   else if (machineType == 0x14c)
     triple.setArch(llvm::Triple::x86);
+  else if (machineType == 0x1c4)
+    triple.setArch(llvm::Triple::arm);
+  else if (machineType == 0xaa64)
+    triple.setArch(llvm::Triple::aarch64);
 
   return true;
 }

@@ -8,8 +8,8 @@
 # RUN: %lldb -x -b -s %S/Inputs/FileCapture.in -o 'reproducer dump -p files' --capture --capture-path %t.repro %t/reproducer.out
 
 # RUN: %lldb -b -o 'reproducer dump -p files -f %t.repro' | FileCheck %s --check-prefix FILES
-# FILES: 'reproducer.out'
-# FILES: 'FileCapture.in'
+# FILES-DAG: 'reproducer.out'
+# FILES-DAG: 'FileCapture.in'
 
 # RUN: %lldb -b -o 'reproducer dump -p version -f %t.repro' | FileCheck %s --check-prefix VERSION
 # VERSION: lldb version

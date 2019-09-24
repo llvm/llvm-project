@@ -21,7 +21,7 @@ StreamFile::StreamFile(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
     : Stream(flags, addr_size, byte_order), m_file() {}
 
 StreamFile::StreamFile(int fd, bool transfer_ownership)
-    : Stream(), m_file(fd, transfer_ownership) {}
+    : Stream(), m_file(fd, File::eOpenOptionWrite, transfer_ownership) {}
 
 StreamFile::StreamFile(FILE *fh, bool transfer_ownership)
     : Stream(), m_file(fh, transfer_ownership) {}

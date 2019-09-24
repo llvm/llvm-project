@@ -26,21 +26,18 @@ void test(void) {
   int a11 = sizeof(arr2) / (sizeof(unsigned));
   int a12 = sizeof(arr) / (sizeof(short));
 
-  int arr4[10][12];                         // expected-note 3 {{array 'arr4' declared here}}
-  int b1 = sizeof(arr4) / sizeof(arr2[12]); // expected-warning {{expression does not compute the number of elements in this array; element type is 'int [12]', not 'unsigned long long'}}
-  // expected-note@-1 {{place parentheses around the 'sizeof (arr2[12])' expression to silence this warning}}
-  int b2 = sizeof(arr4) / sizeof(int *); // expected-warning {{expression does not compute the number of elements in this array; element type is 'int [12]', not 'int *'}}
-  // expected-note@-1 {{place parentheses around the 'sizeof(int *)' expression to silence this warning}}
-  int b3 = sizeof(arr4) / sizeof(short *); // expected-warning {{expression does not compute the number of elements in this array; element type is 'int [12]', not 'short *'}}
-  // expected-note@-1 {{place parentheses around the 'sizeof(short *)' expression to silence this warning}}
-
-  int arr5[][5] = { // expected-note 2 {{array 'arr5' declared here}}
+  int arr4[10][12];
+  int b1 = sizeof(arr4) / sizeof(arr2[12]);
+  int b2 = sizeof(arr4) / sizeof(int *);
+  int b3 = sizeof(arr4) / sizeof(short *);
+  int arr5[][5] = {
       {1, 2, 3, 4, 5},
       {6, 7, 8, 9, 0},
   };
   int c1 = sizeof(arr5) / sizeof(*arr5);
-  int c2 = sizeof(arr5) / sizeof(**arr5); // expected-warning {{expression does not compute the number of elements in this array; element type is 'int [5]', not 'int'}}
-  // expected-note@-1 {{place parentheses around the 'sizeof (**arr5)' expression to silence this warning}}
-  int c3 = sizeof(arr5) / sizeof(int); // expected-warning {{expression does not compute the number of elements in this array; element type is 'int [5]', not 'int'}}
-  // expected-note@-1 {{place parentheses around the 'sizeof(int)' expression to silence this warning}}
+  int c2 = sizeof(arr5) / sizeof(**arr5);
+  int c3 = sizeof(arr5) / sizeof(int);
+
+  float m[4][4];
+  int d1 = sizeof(m) / sizeof(**m);
 }

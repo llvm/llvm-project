@@ -401,7 +401,7 @@ void ConstantHoistingPass::collectConstantCandidates(
     return;
 
   // Get offset from the base GV.
-  PointerType *GVPtrTy = dyn_cast<PointerType>(BaseGV->getType());
+  PointerType *GVPtrTy = cast<PointerType>(BaseGV->getType());
   IntegerType *PtrIntTy = DL->getIntPtrType(*Ctx, GVPtrTy->getAddressSpace());
   APInt Offset(DL->getTypeSizeInBits(PtrIntTy), /*val*/0, /*isSigned*/true);
   auto *GEPO = cast<GEPOperator>(ConstExpr);

@@ -457,6 +457,23 @@ TEST(TBDv2, UnknownPlatform) {
             errorMessage);
 }
 
+TEST(TBDv2, InvalidPlatform) {
+  static const char tbd_v2_file_invalid_platform[] =
+      "--- !tapi-tbd-v2\n"
+      "archs: [ i386 ]\n"
+      "platform: iosmac\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  auto Result = TextAPIReader::get(
+      MemoryBufferRef(tbd_v2_file_invalid_platform, "Test.tbd"));
+  EXPECT_FALSE(!!Result);
+  auto errorMessage = toString(Result.takeError());
+  EXPECT_EQ("malformed file\nTest.tbd:3:11: error: invalid platform\nplatform: "
+            "iosmac\n          ^~~~~~\n",
+            errorMessage);
+}
+
 TEST(TBDv2, MalformedFile1) {
   static const char malformed_file1[] = "--- !tapi-tbd-v2\n"
                                         "archs: [ arm64 ]\n"

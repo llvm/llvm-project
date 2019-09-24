@@ -308,10 +308,8 @@ void CommandCompletions::SettingsNames(CommandInterpreter &interpreter,
     }
   }
 
-  for (const std::string &s : g_property_names) {
-    if (llvm::StringRef(s).startswith(request.GetCursorArgumentPrefix()))
-      request.AddCompletion(s);
-  }
+  for (const std::string &s : g_property_names)
+    request.TryCompleteCurrentArg(s);
 }
 
 void CommandCompletions::PlatformPluginNames(CommandInterpreter &interpreter,

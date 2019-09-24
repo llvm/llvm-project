@@ -17,6 +17,20 @@
 namespace llvm {
 namespace MachO {
 
+PlatformKind mapToPlatformKind(PlatformKind Platform, bool WantSim) {
+  switch (Platform) {
+  default:
+    return Platform;
+  case PlatformKind::iOS:
+    return WantSim ? PlatformKind::iOSSimulator : PlatformKind::iOS;
+  case PlatformKind::tvOS:
+    return WantSim ? PlatformKind::tvOSSimulator : PlatformKind::tvOS;
+  case PlatformKind::watchOS:
+    return WantSim ? PlatformKind::watchOSSimulator : PlatformKind::watchOS;
+  }
+  llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
+}
+
 PlatformKind mapToPlatformKind(const Triple &Target) {
   switch (Target.getOS()) {
   default:
@@ -24,13 +38,20 @@ PlatformKind mapToPlatformKind(const Triple &Target) {
   case Triple::MacOSX:
     return PlatformKind::macOS;
   case Triple::IOS:
+    if (Target.isSimulatorEnvironment())
+      return PlatformKind::iOSSimulator;
+    if (Target.getEnvironment() == Triple::MacABI)
+      return PlatformKind::macCatalyst;
     return PlatformKind::iOS;
   case Triple::TvOS:
-    return PlatformKind::tvOS;
+    return Target.isSimulatorEnvironment() ? PlatformKind::tvOSSimulator
+                                           : PlatformKind::tvOS;
   case Triple::WatchOS:
-    return PlatformKind::watchOS;
+    return Target.isSimulatorEnvironment() ? PlatformKind::watchOSSimulator
+                                           : PlatformKind::watchOS;
     // TODO: add bridgeOS once in llvm::Triple
   }
+  llvm_unreachable("Unknown Target Triple");
 }
 
 PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets) {
@@ -54,6 +75,14 @@ StringRef getPlatformName(PlatformKind Platform) {
     return "watchOS";
   case PlatformKind::bridgeOS:
     return "bridgeOS";
+  case PlatformKind::macCatalyst:
+    return "macCatalyst";
+  case PlatformKind::iOSSimulator:
+    return "iOS Simulator";
+  case PlatformKind::tvOSSimulator:
+    return "tvOS Simulator";
+  case PlatformKind::watchOSSimulator:
+    return "watchOS Simulator";
   }
   llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
 }

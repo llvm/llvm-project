@@ -4829,7 +4829,7 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
   StringRef FileStr = Obj->getFileName();
   for (const SectionRef &Sec : Obj->sections()) {
     StringRef SectionName = getSectionName(Sec);
-    if (!SectionName.startswith(".stack_sizes"))
+    if (SectionName != ".stack_sizes")
       continue;
     PrintHeader();
     const Elf_Shdr *ElfSec = Obj->getSection(Sec.getRawDataRefImpl());
@@ -4879,7 +4879,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
 
     // A stack size section that we haven't encountered yet is mapped to the
     // null section until we find its corresponding relocation section.
-    if (SectionName.startswith(".stack_sizes"))
+    if (SectionName == ".stack_sizes")
       if (StackSizeRelocMap.count(Sec) == 0) {
         StackSizeRelocMap[Sec] = NullSection;
         continue;
@@ -4900,7 +4900,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
       consumeError(ContentsSectionNameOrErr.takeError());
       continue;
     }
-    if (!ContentsSectionNameOrErr->startswith(".stack_sizes"))
+    if (*ContentsSectionNameOrErr != ".stack_sizes")
       continue;
     // Insert a mapping from the stack sizes section to its relocation section.
     StackSizeRelocMap[Obj->toSectionRef(ContentsSec)] = Sec;
@@ -5891,13 +5891,18 @@ void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printStackSizes(const ELFObjectFile<ELFT> *Obj) {
-  W.printString(
-      "Dumping of stack sizes in LLVM style is not implemented yet\n");
+  ListScope L(W, "StackSizes");
+  if (Obj->isRelocatableObject())
+    this->printRelocatableStackSizes(Obj, []() {});
+  else
+    this->printNonRelocatableStackSizes(Obj, []() {});
 }
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printStackSizeEntry(uint64_t Size, StringRef FuncName) {
-  // FIXME: Implement this function for LLVM-style dumping.
+  DictScope D(W, "Entry");
+  W.printString("Function", FuncName);
+  W.printHex("Size", Size);
 }
 
 template <class ELFT>

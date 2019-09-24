@@ -1,11 +1,9 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s
-; With the hot cutoff being set to 600000, the inline instance of _Z3sumii
-; in main is neither hot nor cold. Check it will still be inlined when
-; profile-sample-accurate is enabled, and check _Z3sumii's function entry
-; count won't be initialized to 0 because it shows up in the profile as
-; inline instance.
-
+; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list.text %S/Inputs/profsampleacc.extbinary.afdo -o %t.symlist.afdo
+; RUN: opt < %s -sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=PROFSYMLIST
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=PROFSYMLIST
+;
 ; Original C++ test case
 ;
 ; #include <stdio.h>
@@ -24,7 +22,13 @@
 ;
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-; CHECK: define i32 @_Z3sumii{{.*}}!prof ![[UNKNOWN_ID:[0-9]+]]
+; Check _Z3sumii's function entry count will be intialized to 0 if no profile
+; symbol list is available.
+; If symbol list is available, _Z3sumii's function entry count will be
+; initialized to -1 if it shows up in the profile.
+;
+; CHECK: define i32 @_Z3sumii{{.*}}!prof ![[ZERO_ID:[0-9]+]]
+; PROFSYMLIST: define i32 @_Z3sumii{{.*}}!prof ![[UNKNOWN_ID:[0-9]+]]
 ; Function Attrs: nounwind uwtable
 define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !4 {
 entry:
@@ -60,10 +64,15 @@ while.body:                                       ; preds = %while.cond
   %cmp1 = icmp ne i32 %1, 100, !dbg !16
   br i1 %cmp1, label %if.then, label %if.else, !dbg !16
 
-; Check _Z3sumii is inlined at this callsite.
+; With the hot cutoff being set to 600000, the inline instance of _Z3sumii
+; in main is neither hot nor cold. Check it will still be inlined when
+; profile-sample-accurate is enabled.
 ; CHECK: if.then:
 ; CHECK-NOT: call i32 @_Z3sumii
 ; CHECK: if.else:
+; PROFSYMLIST: if.then:
+; PROFSYMLIST-NOT: call i32 @_Z3sumii
+; PROFSYMLIST: if.else:
 if.then:                                          ; preds = %while.body
   %2 = load i32, i32* %i, align 4, !dbg !18
   %3 = load i32, i32* %s, align 4, !dbg !18
@@ -90,7 +99,8 @@ declare i32 @printf(i8*, ...) #2
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-; CHECK: ![[UNKNOWN_ID]] = !{!"function_entry_count", i64 -1}
+; CHECK: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
+; PROFSYMLIST: ![[UNKNOWN_ID]] = !{!"function_entry_count", i64 -1}
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}

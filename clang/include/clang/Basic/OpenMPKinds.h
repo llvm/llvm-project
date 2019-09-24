@@ -36,6 +36,7 @@ enum OpenMPClauseKind {
   OMPC_threadprivate,
   OMPC_uniform,
   OMPC_device_type,
+  OMPC_match,
   OMPC_unknown
 };
 

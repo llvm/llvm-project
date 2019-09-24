@@ -1480,7 +1480,10 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::TRUNCATE,    MVT::v4i8,  MVT::v4i64,  4 },
     { ISD::TRUNCATE,    MVT::v4i16, MVT::v4i64,  4 },
     { ISD::TRUNCATE,    MVT::v4i32, MVT::v4i64,  4 },
+    { ISD::TRUNCATE,    MVT::v8i8,  MVT::v8i64, 11 },
+    { ISD::TRUNCATE,    MVT::v8i16, MVT::v8i64,  9 },
     { ISD::TRUNCATE,    MVT::v8i32, MVT::v8i64,  9 },
+    { ISD::TRUNCATE,    MVT::v16i8, MVT::v16i64, 11 },
 
     { ISD::SINT_TO_FP,  MVT::v4f32, MVT::v4i1,  3 },
     { ISD::SINT_TO_FP,  MVT::v4f64, MVT::v4i1,  3 },
@@ -1629,9 +1632,12 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32,  3 },
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  5 },
 
+    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i16,  2 }, // PAND+PACKUSWB
     { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i16,  4 },
     { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i16,  2 },
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 3 },
+    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i32,  3 }, // PAND+3*PACKUSWB
+    { ISD::TRUNCATE,    MVT::v2i16,  MVT::v2i32,  1 },
     { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i32,  3 },
     { ISD::TRUNCATE,    MVT::v4i16,  MVT::v4i32,  3 },
     { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i32,  4 },

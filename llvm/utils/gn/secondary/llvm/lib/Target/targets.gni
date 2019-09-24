@@ -5,6 +5,25 @@ declare_args() {
   llvm_targets_to_build = "host"
 }
 
+# FIXME: Port the remaining targets.
+llvm_all_targets = [
+  "AArch64",
+  "AMDGPU",
+  "ARM",
+  "AVR",
+  "BPF",
+  "Hexagon",
+  "Lanai",
+  "Mips",
+  "NVPTX",
+  "PowerPC",
+  "RISCV",
+  "Sparc",
+  "SystemZ",
+  "WebAssembly",
+  "X86",
+]
+
 if (llvm_targets_to_build == "host") {
   if (host_cpu == "arm64") {
     llvm_targets_to_build = [ "AArch64" ]
@@ -18,24 +37,7 @@ if (llvm_targets_to_build == "host") {
     assert(false, "add your host_cpu above")
   }
 } else if (llvm_targets_to_build == "all") {
-  # FIXME: Port the remaining targets.
-  llvm_targets_to_build = [
-    "AArch64",
-    "AMDGPU",
-    "ARM",
-    "AVR",
-    "BPF",
-    "Hexagon",
-    "Lanai",
-    "Mips",
-    "NVPTX",
-    "PowerPC",
-    "RISCV",
-    "Sparc",
-    "SystemZ",
-    "WebAssembly",
-    "X86",
-  ]
+  llvm_targets_to_build = llvm_all_targets
 }
 
 # Validate that llvm_targets_to_build is set to a list of valid targets,
@@ -65,8 +67,13 @@ foreach(target, llvm_targets_to_build) {
              target == "RISCV" || target == "Sparc" || target == "SystemZ") {
     # Nothing to do.
   } else {
-    # FIXME: Port the remaining targets.
-    assert(false, "Unknown target '$target'.")
+    all_targets_string = ""
+    foreach(target, llvm_all_targets) {
+      all_targets_string += "$0x0a    " + target
+    }
+    assert(false,
+           "Unknown target '$target' in llvm_targets_to_build. " +
+               "Known targets:" + all_targets_string)
   }
 }
 

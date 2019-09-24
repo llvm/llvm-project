@@ -5535,43 +5535,43 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   switch (Kind) {
   default:
     return Match_InvalidOperand;
-  case MCK__35_0:
+  case MCK__HASH_0:
     ExpectedVal = 0;
     break;
-  case MCK__35_1:
+  case MCK__HASH_1:
     ExpectedVal = 1;
     break;
-  case MCK__35_12:
+  case MCK__HASH_12:
     ExpectedVal = 12;
     break;
-  case MCK__35_16:
+  case MCK__HASH_16:
     ExpectedVal = 16;
     break;
-  case MCK__35_2:
+  case MCK__HASH_2:
     ExpectedVal = 2;
     break;
-  case MCK__35_24:
+  case MCK__HASH_24:
     ExpectedVal = 24;
     break;
-  case MCK__35_3:
+  case MCK__HASH_3:
     ExpectedVal = 3;
     break;
-  case MCK__35_32:
+  case MCK__HASH_32:
     ExpectedVal = 32;
     break;
-  case MCK__35_4:
+  case MCK__HASH_4:
     ExpectedVal = 4;
     break;
-  case MCK__35_48:
+  case MCK__HASH_48:
     ExpectedVal = 48;
     break;
-  case MCK__35_6:
+  case MCK__HASH_6:
     ExpectedVal = 6;
     break;
-  case MCK__35_64:
+  case MCK__HASH_64:
     ExpectedVal = 64;
     break;
-  case MCK__35_8:
+  case MCK__HASH_8:
     ExpectedVal = 8;
     break;
   }

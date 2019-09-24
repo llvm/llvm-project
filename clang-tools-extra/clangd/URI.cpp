@@ -183,6 +183,17 @@ llvm::Expected<URI> URI::parse(llvm::StringRef OrigUri) {
   return U;
 }
 
+llvm::Expected<std::string> URI::resolve(llvm::StringRef FileURI,
+                                         llvm::StringRef HintPath) {
+  auto Uri = URI::parse(FileURI);
+  if (!Uri)
+    return Uri.takeError();
+  auto Path = URI::resolve(*Uri, HintPath);
+  if (!Path)
+    return Path.takeError();
+  return *Path;
+}
+
 llvm::Expected<URI> URI::create(llvm::StringRef AbsolutePath,
                                 llvm::StringRef Scheme) {
   if (!llvm::sys::path::is_absolute(AbsolutePath))

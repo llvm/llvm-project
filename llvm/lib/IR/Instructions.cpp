@@ -1245,12 +1245,19 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
 }
 
 void AllocaInst::setAlignment(unsigned Align) {
-  assert((Align & (Align-1)) == 0 && "Alignment is not a power of 2!");
-  assert(Align <= MaximumAlignment &&
+  setAlignment(llvm::MaybeAlign(Align));
+}
+
+void AllocaInst::setAlignment(llvm::MaybeAlign Align) {
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~31) |
-                             (Log2_32(Align) + 1));
-  assert(getAlignment() == Align && "Alignment representation error!");
+                             encode(Align));
+  if (Align)
+    assert(getAlignment() == Align->value() &&
+           "Alignment representation error!");
+  else
+    assert(getAlignment() == 0 && "Alignment representation error!");
 }
 
 bool AllocaInst::isArrayAllocation() const {
@@ -1333,12 +1340,19 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
 }
 
 void LoadInst::setAlignment(unsigned Align) {
-  assert((Align & (Align-1)) == 0 && "Alignment is not a power of 2!");
-  assert(Align <= MaximumAlignment &&
+  setAlignment(llvm::MaybeAlign(Align));
+}
+
+void LoadInst::setAlignment(llvm::MaybeAlign Align) {
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
-                             ((Log2_32(Align)+1)<<1));
-  assert(getAlignment() == Align && "Alignment representation error!");
+                             (encode(Align) << 1));
+  if (Align)
+    assert(getAlignment() == Align->value() &&
+           "Alignment representation error!");
+  else
+    assert(getAlignment() == 0 && "Alignment representation error!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1413,12 +1427,19 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
 }
 
 void StoreInst::setAlignment(unsigned Align) {
-  assert((Align & (Align-1)) == 0 && "Alignment is not a power of 2!");
-  assert(Align <= MaximumAlignment &&
+  setAlignment(llvm::MaybeAlign(Align));
+}
+
+void StoreInst::setAlignment(llvm::MaybeAlign Align) {
+  assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   setInstructionSubclassData((getSubclassDataFromInstruction() & ~(31 << 1)) |
-                             ((Log2_32(Align)+1) << 1));
-  assert(getAlignment() == Align && "Alignment representation error!");
+                             (encode(Align) << 1));
+  if (Align)
+    assert(getAlignment() == Align->value() &&
+           "Alignment representation error!");
+  else
+    assert(getAlignment() == 0 && "Alignment representation error!");
 }
 
 //===----------------------------------------------------------------------===//

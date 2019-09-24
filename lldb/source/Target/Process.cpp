@@ -4299,9 +4299,10 @@ public:
   IOHandlerProcessSTDIO(Process *process, int write_fd)
       : IOHandler(process->GetTarget().GetDebugger(),
                   IOHandler::Type::ProcessIO),
-        m_process(process), m_write_file(write_fd, false) {
+        m_process(process),
+        m_write_file(write_fd, File::eOpenOptionWrite, false) {
     m_pipe.CreateNew(false);
-    m_read_file.SetDescriptor(GetInputFD(), false);
+    m_read_file.SetDescriptor(GetInputFD(), File::eOpenOptionRead, false);
   }
 
   ~IOHandlerProcessSTDIO() override = default;

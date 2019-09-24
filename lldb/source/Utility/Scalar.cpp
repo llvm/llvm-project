@@ -434,7 +434,7 @@ Scalar::Type Scalar::GetBestTypeForBitSize(size_t bit_size, bool sign) {
     if (bit_size <= 512) return Scalar::e_uint512;
   }
   return Scalar::e_void;
-};
+}
 
 void Scalar::TruncOrExtendTo(Scalar::Type type, uint16_t bits) {
   switch (type) {

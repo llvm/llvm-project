@@ -1102,8 +1102,9 @@ public:
 
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
+MergeSyntheticSection *createMergeSynthetic(StringRef name, uint32_t type,
+                                            uint64_t flags, uint32_t alignment);
 template <class ELFT> void splitSections();
-void mergeSections();
 
 template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);

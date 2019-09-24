@@ -37,16 +37,6 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
   return (~Known0.Zero & ~Known1.Zero) == 0;
 }]>;
 
-// GlobalAddresses are conceptually unsigned values, so we can also fold them
-// into immediate values as long as the add is 'nuw'.
-// TODO: We'd like to also match GA offsets but there are cases where the
-// register can have a negative value. Find out what more we can do.
-def regPlusGA : PatFrag<(ops node:$addr, node:$off),
-                        (add node:$addr, node:$off),
-                        [{
-  return N->getFlags().hasNoUnsignedWrap();
-}]>;
-
 // We don't need a regPlusES because external symbols never have constant
 // offsets folded into them, so we can just use add.
 
@@ -92,15 +82,6 @@ def : LoadPatImmOff<i32, load, or_is_add, LOAD_I32>;
 def : LoadPatImmOff<i64, load, or_is_add, LOAD_I64>;
 def : LoadPatImmOff<f32, load, or_is_add, LOAD_F32>;
 def : LoadPatImmOff<f64, load, or_is_add, LOAD_F64>;
-
-class LoadPatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
-  Pat<(ty (kind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)))),
-      (inst 0, tglobaladdr:$off, I32:$addr)>, Requires<[IsNotPIC]>;
-
-def : LoadPatGlobalAddr<i32, load, LOAD_I32>;
-def : LoadPatGlobalAddr<i64, load, LOAD_I64>;
-def : LoadPatGlobalAddr<f32, load, LOAD_F32>;
-def : LoadPatGlobalAddr<f64, load, LOAD_F64>;
 
 // Select loads with just a constant offset.
 class LoadPatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
@@ -167,18 +148,6 @@ def : LoadPatImmOff<i64, zextloadi16, or_is_add, LOAD16_U_I64>;
 def : LoadPatImmOff<i64, sextloadi32, or_is_add, LOAD32_S_I64>;
 def : LoadPatImmOff<i64, zextloadi32, or_is_add, LOAD32_U_I64>;
 
-def : LoadPatGlobalAddr<i32, sextloadi8, LOAD8_S_I32>;
-def : LoadPatGlobalAddr<i32, zextloadi8, LOAD8_U_I32>;
-def : LoadPatGlobalAddr<i32, sextloadi16, LOAD16_S_I32>;
-def : LoadPatGlobalAddr<i32, zextloadi8, LOAD16_U_I32>;
-
-def : LoadPatGlobalAddr<i64, sextloadi8, LOAD8_S_I64>;
-def : LoadPatGlobalAddr<i64, zextloadi8, LOAD8_U_I64>;
-def : LoadPatGlobalAddr<i64, sextloadi16, LOAD16_S_I64>;
-def : LoadPatGlobalAddr<i64, zextloadi16, LOAD16_U_I64>;
-def : LoadPatGlobalAddr<i64, sextloadi32, LOAD32_S_I64>;
-def : LoadPatGlobalAddr<i64, zextloadi32, LOAD32_U_I64>;
-
 // Select extending loads with just a constant offset.
 def : LoadPatOffsetOnly<i32, sextloadi8, LOAD8_S_I32>;
 def : LoadPatOffsetOnly<i32, zextloadi8, LOAD8_U_I32>;
@@ -224,11 +193,6 @@ def : LoadPatImmOff<i32, extloadi16, or_is_add, LOAD16_U_I32>;
 def : LoadPatImmOff<i64, extloadi8, or_is_add, LOAD8_U_I64>;
 def : LoadPatImmOff<i64, extloadi16, or_is_add, LOAD16_U_I64>;
 def : LoadPatImmOff<i64, extloadi32, or_is_add, LOAD32_U_I64>;
-def : LoadPatGlobalAddr<i32, extloadi8, LOAD8_U_I32>;
-def : LoadPatGlobalAddr<i32, extloadi16, LOAD16_U_I32>;
-def : LoadPatGlobalAddr<i64, extloadi8, LOAD8_U_I64>;
-def : LoadPatGlobalAddr<i64, extloadi16, LOAD16_U_I64>;
-def : LoadPatGlobalAddr<i64, extloadi32, LOAD32_U_I64>;
 
 // Select "don't care" extending loads with just a constant offset.
 def : LoadPatOffsetOnly<i32, extloadi8, LOAD8_U_I32>;
@@ -282,15 +246,6 @@ def : StorePatImmOff<i64, store, or_is_add, STORE_I64>;
 def : StorePatImmOff<f32, store, or_is_add, STORE_F32>;
 def : StorePatImmOff<f64, store, or_is_add, STORE_F64>;
 
-class StorePatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
-  Pat<(kind ty:$val,
-            (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off))),
-      (inst 0, tglobaladdr:$off, I32:$addr, ty:$val)>, Requires<[IsNotPIC]>;
-def : StorePatGlobalAddr<i32, store, STORE_I32>;
-def : StorePatGlobalAddr<i64, store, STORE_I64>;
-def : StorePatGlobalAddr<f32, store, STORE_F32>;
-def : StorePatGlobalAddr<f64, store, STORE_F64>;
-
 // Select stores with just a constant offset.
 class StorePatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
   Pat<(kind ty:$val, imm:$off), (inst 0, imm:$off, (CONST_I32 0), ty:$val)>;
@@ -332,12 +287,6 @@ def : StorePatImmOff<i32, truncstorei16, or_is_add, STORE16_I32>;
 def : StorePatImmOff<i64, truncstorei8, or_is_add, STORE8_I64>;
 def : StorePatImmOff<i64, truncstorei16, or_is_add, STORE16_I64>;
 def : StorePatImmOff<i64, truncstorei32, or_is_add, STORE32_I64>;
-
-def : StorePatGlobalAddr<i32, truncstorei8, STORE8_I32>;
-def : StorePatGlobalAddr<i32, truncstorei16, STORE16_I32>;
-def : StorePatGlobalAddr<i64, truncstorei8, STORE8_I64>;
-def : StorePatGlobalAddr<i64, truncstorei16, STORE16_I64>;
-def : StorePatGlobalAddr<i64, truncstorei32, STORE32_I64>;
 
 // Select truncating stores with just a constant offset.
 def : StorePatOffsetOnly<i32, truncstorei8, STORE8_I32>;

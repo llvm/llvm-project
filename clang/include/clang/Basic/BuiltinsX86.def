@@ -751,8 +751,8 @@ TARGET_BUILTIN(__builtin_ia32_bextri_u32, "UiUiIUi", "nc", "tbm")
 // LWP
 TARGET_BUILTIN(__builtin_ia32_llwpcb, "vv*", "n", "lwp")
 TARGET_BUILTIN(__builtin_ia32_slwpcb, "v*", "n", "lwp")
-TARGET_BUILTIN(__builtin_ia32_lwpins32, "UcUiUiUi", "n", "lwp")
-TARGET_BUILTIN(__builtin_ia32_lwpval32, "vUiUiUi", "n", "lwp")
+TARGET_BUILTIN(__builtin_ia32_lwpins32, "UcUiUiIUi", "n", "lwp")
+TARGET_BUILTIN(__builtin_ia32_lwpval32, "vUiUiIUi", "n", "lwp")
 
 // SHA
 TARGET_BUILTIN(__builtin_ia32_sha1rnds4, "V4iV4iV4iIc", "ncV:128:", "sha")
