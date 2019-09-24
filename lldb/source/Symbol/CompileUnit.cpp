@@ -353,6 +353,11 @@ const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
   return m_imported_modules;
 }
 
+void CompileUnit::ForEachExternalModule(llvm::function_ref<void(ModuleSP)> f) {
+  if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+    symfile->ForEachExternalModule(*this, f);
+}
+
 const FileSpecList &CompileUnit::GetSupportFiles() {
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {

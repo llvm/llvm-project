@@ -10,7 +10,7 @@
 
 // template <class... Types> class tuple;
 
-// constexpr tuple();
+// explicit(see-below) constexpr tuple();
 
 // UNSUPPORTED: c++98, c++03
 

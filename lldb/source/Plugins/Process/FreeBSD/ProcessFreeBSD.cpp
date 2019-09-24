@@ -977,7 +977,7 @@ Status ProcessFreeBSD::SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
   Breakpoint *const sw_step_break =
       m_process->GetTarget().CreateBreakpoint(addr, true, false).get();
   sw_step_break->SetCallback(SingleStepBreakpointHit, this, true);
-  sw_step_break->SetBreakpointKind("software-signle-step");
+  sw_step_break->SetBreakpointKind("software-single-step");
 
   LLDB_LOGF(log, "ProcessFreeBSD::%s addr = 0x%" PRIx64 " -- SUCCESS",
             __FUNCTION__, addr);
