@@ -3896,8 +3896,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_municode))
     CmdArgs.push_back("-DUNICODE");
 
-  if (isa<AnalyzeJobAction>(JA))
+  if (isa<AnalyzeJobAction>(JA)) {
     RenderAnalyzerOptions(Args, CmdArgs, Triple, Input);
+    CmdArgs.push_back("-D__clang_analyzer__");
+  }
 
   // Enable compatilibily mode to avoid analyzer-config related errors.
   // Since we can't access frontend flags through hasArg, let's manually iterate

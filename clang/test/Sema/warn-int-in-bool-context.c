@@ -14,7 +14,13 @@ typedef bool boolean;
 typedef _Bool boolean;
 #endif
 
-int test(int a) {
+enum num {
+  zero,
+  one,
+  two,
+};
+
+int test(int a, enum num n) {
   boolean r;
   r = (1 << 3); // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << 3) != 0'?}}
   r = TWO << 7; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << 7) != 0'?}}
@@ -24,6 +30,26 @@ int test(int a) {
     return a;
 
   if (a << TWO) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(a << 2) != 0'?}}
+    return a;
+
+  if (n || two)
+    // expected-warning@-1 {{converting the enum constant to a boolean}}
+    return a;
+
+  if (n == one || two)
+    // expected-warning@-1 {{converting the enum constant to a boolean}}
+    return a;
+
+  if (r && two)
+    // expected-warning@-1 {{converting the enum constant to a boolean}}
+    return a;
+
+  if (two && r)
+    // expected-warning@-1 {{converting the enum constant to a boolean}}
+    return a;
+
+  if (n == one && two)
+    // expected-warning@-1 {{converting the enum constant to a boolean}}
     return a;
 
   // Don't warn in macros.

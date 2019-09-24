@@ -4179,10 +4179,10 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
 }
 
 static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
+  unsigned NumArgs = Call.getNumArgOperands();
   ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
-  ConstantInt *Op1C = (Call.getNumArgOperands() == 1)
-                          ? nullptr
-                          : dyn_cast<ConstantInt>(Call.getOperand(1));
+  ConstantInt *Op1C =
+      (NumArgs == 1) ? nullptr : dyn_cast<ConstantInt>(Call.getOperand(1));
   // Bail out if the allocation size is zero.
   if ((Op0C && Op0C->isNullValue()) || (Op1C && Op1C->isNullValue()))
     return;
@@ -4208,12 +4208,21 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
       Call.addAttribute(AttributeList::ReturnIndex,
                         Attribute::getWithDereferenceableOrNullBytes(
                             Call.getContext(), Size.getZExtValue()));
-  } else if (isStrdupLikeFn(&Call, TLI) && Call.getNumArgOperands() == 1) {
-    // TODO: handle strndup
-    if (uint64_t Len = GetStringLength(Call.getOperand(0)))
-      Call.addAttribute(
-          AttributeList::ReturnIndex,
-          Attribute::getWithDereferenceableOrNullBytes(Call.getContext(), Len));
+  } else if (isStrdupLikeFn(&Call, TLI)) {
+    uint64_t Len = GetStringLength(Call.getOperand(0));
+    if (Len) {
+      // strdup
+      if (NumArgs == 1)
+        Call.addAttribute(AttributeList::ReturnIndex,
+                          Attribute::getWithDereferenceableOrNullBytes(
+                              Call.getContext(), Len));
+      // strndup
+      else if (NumArgs == 2 && Op1C)
+        Call.addAttribute(
+            AttributeList::ReturnIndex,
+            Attribute::getWithDereferenceableOrNullBytes(
+                Call.getContext(), std::min(Len, Op1C->getZExtValue() + 1)));
+    }
   }
 }
 

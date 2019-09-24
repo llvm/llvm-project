@@ -18,7 +18,7 @@ define i8* @test1() {
 
 define i8* @test2() {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strndup(i8* dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i64 0, i64 0), i32 4)
+; CHECK-NEXT:    [[RET:%.*]] = call dereferenceable_or_null(5) i8* @strndup(i8* dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i64 0, i64 0), i32 4)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0

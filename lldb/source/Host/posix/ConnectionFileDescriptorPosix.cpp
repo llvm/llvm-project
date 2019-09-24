@@ -86,8 +86,8 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(bool child_processes_inherit)
 ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
     : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
       m_waiting_for_accept(false), m_child_processes_inherit(false) {
-  m_write_sp = std::make_shared<File>(fd, owns_fd);
-  m_read_sp = std::make_shared<File>(fd, false);
+  m_write_sp = std::make_shared<File>(fd, File::eOpenOptionWrite, owns_fd);
+  m_read_sp = std::make_shared<File>(fd, File::eOpenOptionRead, false);
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION |
                                                   LIBLLDB_LOG_OBJECT));
@@ -218,8 +218,10 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
             m_read_sp = std::move(tcp_socket);
             m_write_sp = m_read_sp;
           } else {
-            m_read_sp = std::make_shared<File>(fd, false);
-            m_write_sp = std::make_shared<File>(fd, false);
+            m_read_sp =
+                std::make_shared<File>(fd, File::eOpenOptionRead, false);
+            m_write_sp =
+                std::make_shared<File>(fd, File::eOpenOptionWrite, false);
           }
           m_uri = *addr;
           return eConnectionStatusSuccess;
@@ -268,8 +270,8 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
           ::fcntl(fd, F_SETFL, flags);
         }
       }
-      m_read_sp = std::make_shared<File>(fd, true);
-      m_write_sp = std::make_shared<File>(fd, false);
+      m_read_sp = std::make_shared<File>(fd, File::eOpenOptionRead, true);
+      m_write_sp = std::make_shared<File>(fd, File::eOpenOptionWrite, false);
       return eConnectionStatusSuccess;
     }
 #endif

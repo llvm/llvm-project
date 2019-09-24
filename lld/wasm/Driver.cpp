@@ -441,10 +441,8 @@ static Symbol *handleUndefined(StringRef name) {
 
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
-  auto *sym =
-      cast<UndefinedGlobal>(symtab->addUndefinedGlobal(name, name,
-                                                       defaultModule, 0,
-                                                       nullptr, type));
+  auto *sym = cast<UndefinedGlobal>(symtab->addUndefinedGlobal(
+      name, name, defaultModule, WASM_SYMBOL_UNDEFINED, nullptr, type));
   config->allowUndefinedSymbols.insert(sym->getName());
   sym->isUsedInRegularObj = true;
   return sym;
@@ -582,7 +580,8 @@ struct WrappedSymbol {
 };
 
 static Symbol *addUndefined(StringRef name) {
-  return symtab->addUndefinedFunction(name, "", "", 0, nullptr, nullptr, false);
+  return symtab->addUndefinedFunction(name, "", "", WASM_SYMBOL_UNDEFINED,
+                                      nullptr, nullptr, false);
 }
 
 // Handles -wrap option.

@@ -75,7 +75,7 @@ let isBranch = 1, isTerminator = 1, Uses = [EFLAGS], SchedRW = [WriteJump],
   def JCC_1 : Ii8PCRel <0x70, AddCCFrm, (outs),
                         (ins brtarget8:$dst, ccode:$cond),
                         "j${cond}\t$dst",
-                        [(X86brcond bb:$dst, imm:$cond, EFLAGS)]>;
+                        [(X86brcond bb:$dst, timm:$cond, EFLAGS)]>;
   let hasSideEffects = 0 in {
     def JCC_2 : Ii16PCRel<0x80, AddCCFrm, (outs),
                           (ins brtarget16:$dst, ccode:$cond),

@@ -239,7 +239,7 @@ define i32 @test9(i8** %esc) {
 
 define i32 @test10(i8** %esc) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @strndup(i8* dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 3) #0
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(4) i8* @strndup(i8* dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 3) #0
 ; CHECK-NEXT:    store i8* [[CALL]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 4
 ;

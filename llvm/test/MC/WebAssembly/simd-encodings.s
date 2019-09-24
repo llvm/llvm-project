@@ -463,6 +463,18 @@ main:
     # CHECK: f64x2.convert_i64x2_u # encoding: [0xfd,0xb2,0x01]
     f64x2.convert_i64x2_u
 
+    # CHECK: v8x16.load_splat 48 # encoding: [0xfd,0xc2,0x01,0x00,0x30]
+    v8x16.load_splat 48
+
+    # CHECK: v16x8.load_splat 48 # encoding: [0xfd,0xc3,0x01,0x01,0x30]
+    v16x8.load_splat 48
+
+    # CHECK: v32x4.load_splat 48 # encoding: [0xfd,0xc4,0x01,0x02,0x30]
+    v32x4.load_splat 48
+
+    # CHECK: v64x2.load_splat 48 # encoding: [0xfd,0xc5,0x01,0x03,0x30]
+    v64x2.load_splat 48
+
     # CHECK: i8x16.narrow_i16x8_s # encoding: [0xfd,0xc6,0x01]
     i8x16.narrow_i16x8_s
 

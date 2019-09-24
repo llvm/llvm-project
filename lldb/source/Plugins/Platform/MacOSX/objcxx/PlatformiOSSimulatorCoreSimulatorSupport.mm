@@ -425,11 +425,16 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
           }
         }
         Status posix_error;
+        int oflag = file_action->GetActionArgument();
         int created_fd =
-            open(file_spec.GetPath().c_str(), file_action->GetActionArgument(),
-                 S_IRUSR | S_IWUSR);
+            open(file_spec.GetPath().c_str(), oflag, S_IRUSR | S_IWUSR);
         if (created_fd >= 0) {
-          file.SetDescriptor(created_fd, true);
+          uint32_t file_options = 0;
+          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
+            file_options |= File::eOpenOptionRead;
+          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
+            file_options |= File::eOpenOptionWrite;
+          file.SetDescriptor(created_fd, file_options, true);
           [options setValue:[NSNumber numberWithInteger:created_fd] forKey:key];
           return error; // Success
         } else {

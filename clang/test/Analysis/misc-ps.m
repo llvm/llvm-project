@@ -2,10 +2,6 @@
 // RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,alpha.core,osx.cocoa.AtSync -analyzer-store=region -verify -fblocks -Wno-unreachable-code -Wno-null-dereference -Wno-objc-root-class %s
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.core,osx.cocoa.AtSync -analyzer-store=region -verify -fblocks -Wno-unreachable-code -Wno-null-dereference -Wno-objc-root-class %s
 
-#ifndef __clang_analyzer__
-#error __clang_analyzer__ not defined
-#endif
-
 typedef struct objc_ivar *Ivar;
 typedef struct objc_selector *SEL;
 typedef signed char BOOL;
