@@ -585,6 +585,8 @@ public:
       LinkageLabel = "extern \"C\" {}";
       break;
     case LinkageSpecDecl::lang_cxx:
+    case LinkageSpecDecl::lang_cxx_11:
+    case LinkageSpecDecl::lang_cxx_14:
       LinkageLabel = "extern \"C++\" {}";
       break;
     }
