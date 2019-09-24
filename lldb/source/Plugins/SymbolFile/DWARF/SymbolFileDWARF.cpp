@@ -847,6 +847,18 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
   return functions_added;
 }
 
+void SymbolFileDWARF::ForEachExternalModule(
+    CompileUnit &comp_unit, llvm::function_ref<void(ModuleSP)> f) {
+  UpdateExternalModuleListIfNeeded();
+
+  for (auto &p : m_external_type_modules) {
+    ModuleSP module = p.second;
+    f(module);
+    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i)
+      module->GetCompileUnitAtIndex(i)->ForEachExternalModule(f);
+  }
+}
+
 bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
                                         FileSpecList &support_files) {
   if (!comp_unit.GetLineTable())

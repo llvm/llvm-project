@@ -19,6 +19,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ClangPersistentVariables.cpp
   ClangUserExpression.cpp
   ClangUtilityFunction.cpp
+  CppModuleConfiguration.cpp
   IRForTarget.cpp
   IRDynamicChecks.cpp
 

@@ -1,4 +1,3 @@
 USE_LIBCPP := 1
-CXXFLAGS += $(MANDATORY_CXXMODULE_BUILD_CFLAGS)
 CXX_SOURCES := main.cpp
 include Makefile.rules
