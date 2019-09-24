@@ -42,13 +42,13 @@ Variable::Variable(
     const lldb::SymbolFileTypeSP &symfile_type_sp, ValueType scope,
     SymbolContextScope *context, const RangeList &scope_range,
     Declaration *decl_ptr, const DWARFExpression &location, bool external,
-    bool artificial, bool static_member)
+    bool artificial, bool static_member, bool constant)
     : UserID(uid), m_name(name), m_mangled(ConstString(mangled)),
       m_symfile_type_sp(symfile_type_sp), m_scope(scope),
       m_owner_scope(context), m_scope_range(scope_range),
       m_declaration(decl_ptr), m_location(location), m_external(external),
       m_artificial(artificial), m_loc_is_const_data(false),
-      m_static_member(static_member) {}
+      m_static_member(static_member), m_constant(constant) {}
 
 // Destructor
 Variable::~Variable() {}

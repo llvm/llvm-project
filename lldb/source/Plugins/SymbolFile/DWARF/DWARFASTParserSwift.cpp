@@ -99,6 +99,13 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         case DW_AT_byte_size:
           dwarf_byte_size = form_value.Unsigned();
           break;
+        case DW_AT_type:
+          if (die.Tag() == DW_TAG_const_type)
+            // This is how let bindings are represented. This doesn't
+            // change the underlying Swift type.
+            return ParseTypeFromDWARF(sc, die.GetReferencedDIE(attr),
+                                      log, type_is_new_ptr);
+          break;
         default:
           break;
         }

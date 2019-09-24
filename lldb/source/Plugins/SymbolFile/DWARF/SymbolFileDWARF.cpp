@@ -3678,10 +3678,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                type_sp->GetType()->GetByteSize().getValueOr(0),
                                die.GetCU()->GetAddressByteSize());
 
+        // Swift let-bindings are marked by a DW_TAG_const_type.
+        bool is_constant = false;
+        if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
+          DWARFDIE type_die = die.GetReferencedDIE(llvm::dwarf::DW_AT_type);
+          if (type_die && type_die.Tag() == llvm::dwarf::DW_TAG_const_type)
+            is_constant = true;
+        }
+
         var_sp = std::make_shared<Variable>(
             die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
             scope_ranges, &decl, location, is_external, is_artificial,
-            is_static_member);
+            is_static_member, is_constant);
 
         var_sp->SetLocationIsConstantValueData(location_is_const_value_data);
       } else {

@@ -811,7 +811,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.str().c_str(), global_name.c_str(), type_sp,
       scope, comp_unit.get(), ranges, &decl, location, is_external, false,
-      false);
+      false, false);
   var_sp->SetLocationIsConstantValueData(false);
 
   return var_sp;
@@ -839,7 +839,7 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), constant.Name.str().c_str(), global_name.c_str(),
       type_sp, eValueTypeVariableGlobal, module.get(), ranges, &decl, location,
-      false, false, false);
+      false, false, false, true);
   var_sp->SetLocationIsConstantValueData(true);
   return var_sp;
 }
@@ -1371,7 +1371,7 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
       comp_unit_sp.get(), *var_info.ranges, &decl, *var_info.location, false,
-      false, false);
+      false, false, false);
 
   if (!is_param)
     m_ast->GetOrCreateVariableDecl(scope_id, var_id);

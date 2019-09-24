@@ -708,7 +708,9 @@ static void AddVariableInfo(
       new VariableMetadataVariable(variable_sp));
   SwiftASTManipulator::VariableInfo variable_info(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
-      metadata_sp, swift::VarDecl::Introducer::Var);
+      metadata_sp,
+      variable_sp->IsConstant() ? swift::VarDecl::Introducer::Let
+                                : swift::VarDecl::Introducer::Var);
 
   local_variables.push_back(variable_info);
   processed_variables.insert(overridden_name);
