@@ -101,12 +101,156 @@ struct Config {
   LipoAction ActionToPerform;
 };
 
-struct Slice {
-  const MachOObjectFile *ObjectFile;
-  // Requires Alignment field to store slice alignment values from universal
-  // binaries. Also needed to order the slices using compareSlices, so the total
+// For compatibility with cctools lipo, a file's alignment is calculated as the
+// minimum aligment of all segments. For object files, the file's alignment is
+// the maximum alignment of its sections.
+static uint32_t calculateFileAlignment(const MachOObjectFile &O) {
+  uint32_t P2CurrentAlignment;
+  uint32_t P2MinAlignment = MachOUniversalBinary::MaxSectionAlignment;
+  const bool Is64Bit = O.is64Bit();
+
+  for (const auto &LC : O.load_commands()) {
+    if (LC.C.cmd != (Is64Bit ? MachO::LC_SEGMENT_64 : MachO::LC_SEGMENT))
+      continue;
+    if (O.getHeader().filetype == MachO::MH_OBJECT) {
+      unsigned NumberOfSections =
+          (Is64Bit ? O.getSegment64LoadCommand(LC).nsects
+                   : O.getSegmentLoadCommand(LC).nsects);
+      P2CurrentAlignment = NumberOfSections ? 2 : P2MinAlignment;
+      for (unsigned SI = 0; SI < NumberOfSections; ++SI) {
+        P2CurrentAlignment = std::max(P2CurrentAlignment,
+                                      (Is64Bit ? O.getSection64(LC, SI).align
+                                               : O.getSection(LC, SI).align));
+      }
+    } else {
+      P2CurrentAlignment =
+          countTrailingZeros(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
+                                     : O.getSegmentLoadCommand(LC).vmaddr);
+    }
+    P2MinAlignment = std::min(P2MinAlignment, P2CurrentAlignment);
+  }
+  // return a value >= 4 byte aligned, and less than MachO MaxSectionAlignment
+  return std::max(
+      static_cast<uint32_t>(2),
+      std::min(P2MinAlignment, static_cast<uint32_t>(
+                                   MachOUniversalBinary::MaxSectionAlignment)));
+}
+
+static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
+  switch (ObjectFile->getHeader().cputype) {
+  case MachO::CPU_TYPE_I386:
+  case MachO::CPU_TYPE_X86_64:
+  case MachO::CPU_TYPE_POWERPC:
+  case MachO::CPU_TYPE_POWERPC64:
+    return 12; // log2 value of page size(4k) for x86 and PPC
+  case MachO::CPU_TYPE_ARM:
+  case MachO::CPU_TYPE_ARM64:
+  case MachO::CPU_TYPE_ARM64_32:
+    return 14; // log2 value of page size(16k) for Darwin ARM
+  default:
+    return calculateFileAlignment(*ObjectFile);
+  }
+}
+
+class Slice {
+  const Binary *B;
+  uint32_t CPUType;
+  uint32_t CPUSubType;
+  std::string ArchName;
+
+  // P2Alignment field stores slice alignment values from universal
+  // binaries. This is also needed to order the slices so the total
   // file size can be calculated before creating the output buffer.
-  uint32_t Alignment;
+  uint32_t P2Alignment;
+
+public:
+  Slice(const MachOObjectFile *O, uint32_t Align)
+      : B(O), CPUType(O->getHeader().cputype),
+        CPUSubType(O->getHeader().cpusubtype),
+        ArchName(O->getArchTriple().getArchName()), P2Alignment(Align) {}
+
+  explicit Slice(const MachOObjectFile *O) : Slice(O, calculateAlignment(O)){};
+
+  explicit Slice(const Archive *A) : B(A) {
+    Error Err = Error::success();
+    std::unique_ptr<MachOObjectFile> FO = nullptr;
+    for (const Archive::Child &Child : A->children(Err)) {
+      Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
+      if (!ChildOrErr)
+        reportError(A->getFileName(), ChildOrErr.takeError());
+      Binary *Bin = ChildOrErr.get().get();
+      if (Bin->isMachOUniversalBinary())
+        reportError(("archive member " + Bin->getFileName() +
+                     " is a fat file (not allowed in an archive)")
+                        .str());
+      if (!Bin->isMachO())
+        reportError(("archive member " + Bin->getFileName() +
+                     " is not a MachO file (not allowed in an archive)"));
+      MachOObjectFile *O = cast<MachOObjectFile>(Bin);
+      if (FO &&
+          std::tie(FO->getHeader().cputype, FO->getHeader().cpusubtype) !=
+              std::tie(O->getHeader().cputype, O->getHeader().cpusubtype)) {
+        reportError(("archive member " + O->getFileName() + " cputype (" +
+                     Twine(O->getHeader().cputype) + ") and cpusubtype(" +
+                     Twine(O->getHeader().cpusubtype) +
+                     ") does not match previous archive members cputype (" +
+                     Twine(FO->getHeader().cputype) + ") and cpusubtype(" +
+                     Twine(FO->getHeader().cpusubtype) +
+                     ") (all members must match) " + FO->getFileName())
+                        .str());
+      }
+      if (!FO) {
+        ChildOrErr.get().release();
+        FO.reset(O);
+      }
+    }
+    if (Err)
+      reportError(A->getFileName(), std::move(Err));
+    if (!FO)
+      reportError(("empty archive with no architecture specification: " +
+                   A->getFileName() + " (can't determine architecture for it)")
+                      .str());
+    CPUType = FO->getHeader().cputype;
+    CPUSubType = FO->getHeader().cpusubtype;
+    ArchName = FO->getArchTriple().getArchName();
+    // Replicate the behavior of cctools lipo.
+    P2Alignment = FO->is64Bit() ? 3 : 2;
+  }
+
+  void setP2Alignment(uint32_t Align) { P2Alignment = Align; }
+
+  const Binary *getBinary() const { return B; }
+
+  uint32_t getCPUType() const { return CPUType; }
+
+  uint32_t getCPUSubType() const { return CPUSubType; }
+
+  uint32_t getP2Alignment() const { return P2Alignment; }
+
+  uint64_t getCPUID() const {
+    return static_cast<uint64_t>(CPUType) << 32 | CPUSubType;
+  }
+
+  std::string getArchString() const {
+    if (!ArchName.empty())
+      return ArchName;
+    return ("unknown(" + Twine(CPUType) + "," +
+            Twine(CPUSubType & ~MachO::CPU_SUBTYPE_MASK) + ")")
+        .str();
+  }
+
+  friend bool operator<(const Slice &Lhs, const Slice &Rhs) {
+    if (Lhs.CPUType == Rhs.CPUType)
+      return Lhs.CPUSubType < Rhs.CPUSubType;
+    // force arm64-family to follow after all other slices for
+    // compatibility with cctools lipo
+    if (Lhs.CPUType == MachO::CPU_TYPE_ARM64)
+      return false;
+    if (Rhs.CPUType == MachO::CPU_TYPE_ARM64)
+      return true;
+    // Sort by alignment to minimize file size
+    return Lhs.P2Alignment < Rhs.P2Alignment;
+  }
 };
 
 } // end namespace
@@ -281,11 +425,8 @@ readInputBinaries(ArrayRef<std::string> InputFiles) {
     Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(InputFile);
     if (!BinaryOrErr)
       reportError(InputFile, BinaryOrErr.takeError());
-    // TODO: Add compatibility for archive files
-    if (BinaryOrErr->getBinary()->isArchive())
-      reportError("File " + InputFile +
-                  " is an archive file and is not yet supported.");
-    if (!BinaryOrErr->getBinary()->isMachO() &&
+    if (!BinaryOrErr->getBinary()->isArchive() &&
+        !BinaryOrErr->getBinary()->isMachO() &&
         !BinaryOrErr->getBinary()->isMachOUniversalBinary())
       reportError("File " + InputFile + " has unsupported binary format");
     InputBinaries.push_back(std::move(*BinaryOrErr));
@@ -306,8 +447,9 @@ static void verifyArch(ArrayRef<OwningBinary<Binary>> InputBinaries,
   if (auto UO =
           dyn_cast<MachOUniversalBinary>(InputBinaries.front().getBinary())) {
     for (StringRef Arch : VerifyArchList) {
-      auto ObjForArch = UO->getObjectForArch(Arch);
-      if (!ObjForArch)
+      Expected<MachOUniversalBinary::ObjectForArch> Obj =
+          UO->getObjectForArch(Arch);
+      if (!Obj)
         exit(EXIT_FAILURE);
     }
   } else if (auto O =
@@ -322,34 +464,29 @@ static void verifyArch(ArrayRef<OwningBinary<Binary>> InputBinaries,
   exit(EXIT_SUCCESS);
 }
 
-// Returns a string of the given Object file's architecture type
-// Unknown architectures formatted unknown(CPUType,CPUSubType) for compatibility
-// with cctools lipo
-static std::string getArchString(const MachOObjectFile &ObjectFile) {
-  const Triple T = ObjectFile.getArchTriple();
-  const StringRef ObjectArch = T.getArchName();
-  if (!ObjectArch.empty())
-    return ObjectArch;
-  return ("unknown(" + Twine(ObjectFile.getHeader().cputype) + "," +
-          Twine(ObjectFile.getHeader().cpusubtype & ~MachO::CPU_SUBTYPE_MASK) +
-          ")")
-      .str();
-}
-
 static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
   // Prints trailing space for compatibility with cctools lipo.
   if (auto UO = dyn_cast<MachOUniversalBinary>(Binary)) {
     for (const auto &O : UO->objects()) {
-      Expected<std::unique_ptr<MachOObjectFile>> BinaryOrError =
+      Expected<std::unique_ptr<MachOObjectFile>> MachOObjOrError =
           O.getAsObjectFile();
-      if (!BinaryOrError)
-        reportError(Binary->getFileName(), BinaryOrError.takeError());
-      OS << getArchString(*BinaryOrError.get().get()) << " ";
+      if (MachOObjOrError) {
+        OS << Slice(MachOObjOrError->get()).getArchString() << " ";
+        continue;
+      }
+      Expected<std::unique_ptr<Archive>> ArchiveOrError = O.getAsArchive();
+      if (ArchiveOrError) {
+        consumeError(MachOObjOrError.takeError());
+        OS << Slice(ArchiveOrError->get()).getArchString() << " ";
+        continue;
+      }
+      consumeError(ArchiveOrError.takeError());
+      reportError(Binary->getFileName(), MachOObjOrError.takeError());
     }
     OS << "\n";
     return;
   }
-  OS << getArchString(*cast<MachOObjectFile>(Binary)) << " \n";
+  OS << Slice(cast<MachOObjectFile>(Binary)).getArchString() << " \n";
 }
 
 LLVM_ATTRIBUTE_NORETURN
@@ -399,21 +536,23 @@ static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
   auto *UO = cast<MachOUniversalBinary>(InputBinaries.front().getBinary());
   Expected<std::unique_ptr<MachOObjectFile>> Obj =
       UO->getMachOObjectForArch(ThinArchType);
-  if (!Obj)
+  Expected<std::unique_ptr<Archive>> Ar = UO->getArchiveForArch(ThinArchType);
+  if (!Obj && !Ar)
     reportError("fat input file " + UO->getFileName() +
                 " does not contain the specified architecture " + ThinArchType +
                 " to thin it to");
-
+  Binary *B = Obj ? static_cast<Binary *>(Obj->get())
+                  : static_cast<Binary *>(Ar->get());
   Expected<std::unique_ptr<FileOutputBuffer>> OutFileOrError =
       FileOutputBuffer::create(OutputFileName,
-                               Obj.get()->getMemoryBufferRef().getBufferSize(),
+                               B->getMemoryBufferRef().getBufferSize(),
                                sys::fs::can_execute(UO->getFileName())
                                    ? FileOutputBuffer::F_executable
                                    : 0);
   if (!OutFileOrError)
     reportError(OutputFileName, OutFileOrError.takeError());
-  std::copy(Obj.get()->getMemoryBufferRef().getBufferStart(),
-            Obj.get()->getMemoryBufferRef().getBufferEnd(),
+  std::copy(B->getMemoryBufferRef().getBufferStart(),
+            B->getMemoryBufferRef().getBufferEnd(),
             OutFileOrError.get()->getBufferStart());
   if (Error E = OutFileOrError.get()->commit())
     reportError(OutputFileName, std::move(E));
@@ -421,98 +560,24 @@ static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
 }
 
 static void checkArchDuplicates(const ArrayRef<Slice> &Slices) {
-  DenseMap<uint64_t, const MachOObjectFile *> CPUIds;
-  auto CPUIDForSlice = [](const Slice &S) {
-    return static_cast<uint64_t>(S.ObjectFile->getHeader().cputype) << 32 |
-           S.ObjectFile->getHeader().cpusubtype;
-  };
+  DenseMap<uint64_t, const Binary *> CPUIds;
   for (const auto &S : Slices) {
-    auto Entry = CPUIds.try_emplace(CPUIDForSlice(S), S.ObjectFile);
+    auto Entry = CPUIds.try_emplace(S.getCPUID(), S.getBinary());
     if (!Entry.second)
       reportError(Entry.first->second->getFileName() + " and " +
-                  S.ObjectFile->getFileName() + " have the same architecture " +
-                  getArchString(*S.ObjectFile) +
+                  S.getBinary()->getFileName() +
+                  " have the same architecture " + S.getArchString() +
                   " and therefore cannot be in the same universal binary");
   }
 }
 
-// For compatibility with cctools lipo, alignment is calculated as the minimum
-// aligment of all segments. Each segments's alignment is the maximum alignment
-// from its sections
-static uint32_t calculateSegmentAlignment(const MachOObjectFile &O) {
-  uint32_t P2CurrentAlignment;
-  uint32_t P2MinAlignment = MachOUniversalBinary::MaxSectionAlignment;
-  const bool Is64Bit = O.is64Bit();
-
-  for (const auto &LC : O.load_commands()) {
-    if (LC.C.cmd != (Is64Bit ? MachO::LC_SEGMENT_64 : MachO::LC_SEGMENT))
-      continue;
-    if (O.getHeader().filetype == MachO::MH_OBJECT) {
-      unsigned NumberOfSections =
-          (Is64Bit ? O.getSegment64LoadCommand(LC).nsects
-                   : O.getSegmentLoadCommand(LC).nsects);
-      P2CurrentAlignment = NumberOfSections ? 2 : P2MinAlignment;
-      for (unsigned SI = 0; SI < NumberOfSections; ++SI) {
-        P2CurrentAlignment = std::max(P2CurrentAlignment,
-                                      (Is64Bit ? O.getSection64(LC, SI).align
-                                               : O.getSection(LC, SI).align));
-      }
-    } else {
-      P2CurrentAlignment =
-          countTrailingZeros(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
-                                     : O.getSegmentLoadCommand(LC).vmaddr);
-    }
-    P2MinAlignment = std::min(P2MinAlignment, P2CurrentAlignment);
-  }
-  // return a value >= 4 byte aligned, and less than MachO MaxSectionAlignment
-  return std::max(
-      static_cast<uint32_t>(2),
-      std::min(P2MinAlignment, static_cast<uint32_t>(
-                                   MachOUniversalBinary::MaxSectionAlignment)));
-}
-
-static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
-  switch (ObjectFile->getHeader().cputype) {
-  case MachO::CPU_TYPE_I386:
-  case MachO::CPU_TYPE_X86_64:
-  case MachO::CPU_TYPE_POWERPC:
-  case MachO::CPU_TYPE_POWERPC64:
-    return 12; // log2 value of page size(4k) for x86 and PPC
-  case MachO::CPU_TYPE_ARM:
-  case MachO::CPU_TYPE_ARM64:
-  case MachO::CPU_TYPE_ARM64_32:
-    return 14; // log2 value of page size(16k) for Darwin ARM
-  default:
-    return calculateSegmentAlignment(*ObjectFile);
-  }
-}
-
-// This function replicates ordering from cctools lipo for consistency
-static bool compareSlices(const Slice &Lhs, const Slice &Rhs) {
-  if (Lhs.ObjectFile->getHeader().cputype ==
-      Rhs.ObjectFile->getHeader().cputype)
-    return Lhs.ObjectFile->getHeader().cpusubtype <
-           Rhs.ObjectFile->getHeader().cpusubtype;
-
-  // force arm64-family to follow after all other slices for compatibility
-  // with cctools lipo
-  if (Lhs.ObjectFile->getHeader().cputype == MachO::CPU_TYPE_ARM64)
-    return false;
-  if (Rhs.ObjectFile->getHeader().cputype == MachO::CPU_TYPE_ARM64)
-    return true;
-
-  // Sort by alignment to minimize file size
-  return Lhs.Alignment < Rhs.Alignment;
-}
-
 template <typename Range>
-static void
-updateSegmentAlignments(Range &Slices,
-                        const StringMap<const uint32_t> &Alignments) {
+static void updateAlignments(Range &Slices,
+                             const StringMap<const uint32_t> &Alignments) {
   for (auto &Slice : Slices) {
-    auto Alignment = Alignments.find(getArchString(*Slice.ObjectFile));
+    auto Alignment = Alignments.find(Slice.getArchString());
     if (Alignment != Alignments.end())
-      Slice.Alignment = Alignment->second;
+      Slice.setP2Alignment(Alignment->second);
   }
 }
 
@@ -520,7 +585,7 @@ static void checkUnusedAlignments(ArrayRef<Slice> Slices,
                                   const StringMap<const uint32_t> &Alignments) {
   auto HasArch = [&](StringRef Arch) {
     return llvm::find_if(Slices, [Arch](Slice S) {
-             return getArchString(*S.ObjectFile) == Arch;
+             return S.getArchString() == Arch;
            }) != Slices.end();
   };
   for (StringRef Arch : Alignments.keys())
@@ -546,15 +611,17 @@ static SmallVector<Slice, 2> buildSlices(
         if (!BinaryOrError)
           reportError(InputBinary->getFileName(), BinaryOrError.takeError());
         ExtractedObjects.push_back(std::move(BinaryOrError.get()));
-        Slices.push_back(Slice{ExtractedObjects.back().get(), O.getAlign()});
+        Slices.emplace_back(ExtractedObjects.back().get(), O.getAlign());
       }
     } else if (auto O = dyn_cast<MachOObjectFile>(InputBinary)) {
-      Slices.push_back(Slice{O, calculateAlignment(O)});
+      Slices.emplace_back(O);
+    } else if (auto A = dyn_cast<Archive>(InputBinary)) {
+      Slices.emplace_back(A);
     } else {
       llvm_unreachable("Unexpected binary format");
     }
   }
-  updateSegmentAlignments(Slices, Alignments);
+  updateAlignments(Slices, Alignments);
   return Slices;
 }
 
@@ -564,22 +631,20 @@ buildFatArchList(ArrayRef<Slice> Slices) {
   uint64_t Offset =
       sizeof(MachO::fat_header) + Slices.size() * sizeof(MachO::fat_arch);
 
-  for (size_t Index = 0, Size = Slices.size(); Index < Size; ++Index) {
-    Offset = alignTo(Offset, 1ull << Slices[Index].Alignment);
-    const MachOObjectFile *ObjectFile = Slices[Index].ObjectFile;
+  for (const auto &S : Slices) {
+    Offset = alignTo(Offset, 1ull << S.getP2Alignment());
     if (Offset > UINT32_MAX)
       reportError("fat file too large to be created because the offset "
                   "field in struct fat_arch is only 32-bits and the offset " +
-                  Twine(Offset) + " for " + ObjectFile->getFileName() +
-                  " for architecture " + getArchString(*ObjectFile) +
-                  "exceeds that.");
+                  Twine(Offset) + " for " + S.getBinary()->getFileName() +
+                  " for architecture " + S.getArchString() + "exceeds that.");
 
     MachO::fat_arch FatArch;
-    FatArch.cputype = ObjectFile->getHeader().cputype;
-    FatArch.cpusubtype = ObjectFile->getHeader().cpusubtype;
+    FatArch.cputype = S.getCPUType();
+    FatArch.cpusubtype = S.getCPUSubType();
     FatArch.offset = Offset;
-    FatArch.size = ObjectFile->getMemoryBufferRef().getBufferSize();
-    FatArch.align = Slices[Index].Alignment;
+    FatArch.size = S.getBinary()->getMemoryBufferRef().getBufferSize();
+    FatArch.align = S.getP2Alignment();
     Offset += FatArch.size;
     FatArchList.push_back(FatArch);
   }
@@ -592,11 +657,11 @@ static void createUniversalBinary(SmallVectorImpl<Slice> &Slices,
   FatHeader.magic = MachO::FAT_MAGIC;
   FatHeader.nfat_arch = Slices.size();
 
-  stable_sort(Slices, compareSlices);
+  stable_sort(Slices);
   SmallVector<MachO::fat_arch, 2> FatArchList = buildFatArchList(Slices);
 
   const bool IsExecutable = any_of(Slices, [](Slice S) {
-    return sys::fs::can_execute(S.ObjectFile->getFileName());
+    return sys::fs::can_execute(S.getBinary()->getFileName());
   });
   const uint64_t OutputFileSize =
       FatArchList.back().offset + FatArchList.back().size;
@@ -614,7 +679,7 @@ static void createUniversalBinary(SmallVectorImpl<Slice> &Slices,
   std::memcpy(OutFile->getBufferStart(), &FatHeader, sizeof(MachO::fat_header));
 
   for (size_t Index = 0, Size = Slices.size(); Index < Size; ++Index) {
-    MemoryBufferRef BufferRef = Slices[Index].ObjectFile->getMemoryBufferRef();
+    MemoryBufferRef BufferRef = Slices[Index].getBinary()->getMemoryBufferRef();
     std::copy(BufferRef.getBufferStart(), BufferRef.getBufferEnd(),
               OutFile->getBufferStart() + FatArchList[Index].offset);
   }
@@ -674,17 +739,16 @@ buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
                   " for replacement file: " + ReplacementBinary->getFileName() +
                   " does not match the file's architecture");
 
-    auto Entry =
-        Slices.try_emplace(ReplacementArch, Slice{O, calculateAlignment(O)});
+    auto Entry = Slices.try_emplace(ReplacementArch, Slice(O));
     if (!Entry.second)
       reportError("-replace " + ReplacementArch +
                   " <file_name> specified multiple times: " +
-                  Entry.first->second.ObjectFile->getFileName() + ", " +
+                  Entry.first->second.getBinary()->getFileName() + ", " +
                   O->getFileName());
   }
   auto SlicesMapRange = map_range(
       Slices, [](StringMapEntry<Slice> &E) -> Slice & { return E.getValue(); });
-  updateSegmentAlignments(SlicesMapRange, Alignments);
+  updateAlignments(SlicesMapRange, Alignments);
   return Slices;
 }
 
@@ -714,7 +778,7 @@ static void replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
       buildSlices(InputBinaries, Alignments, ExtractedObjects);
 
   for (auto &Slice : Slices) {
-    auto It = ReplacementSlices.find(getArchString(*Slice.ObjectFile));
+    auto It = ReplacementSlices.find(Slice.getArchString());
     if (It != ReplacementSlices.end()) {
       Slice = It->second;
       ReplacementSlices.erase(It); // only keep remaining replacing arch_types

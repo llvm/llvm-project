@@ -1770,27 +1770,32 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   if (ProfSampleAccEnabled) {
     // PSL -- profile symbol list include all the symbols in sampled binary.
     // It is used to prevent new functions to be treated as cold.
-    // If ProfileSampleAccurate is true or F has profile-sample-accurate
-    // attribute, and if there is no profile symbol list read in, initialize
-    // all the function entry counts to 0; if there is profile symbol list, only
-    // initialize the entry count to 0 when current function is in the list.
-    if (!PSL || PSL->contains(F.getName()))
-      initialEntryCount = 0;
+    if (PSL) {
+      // Profile symbol list is available, initialize the entry count to 0
+      // only for functions in the list.
+      if (PSL->contains(F.getName()))
+        initialEntryCount = 0;
 
-    // When ProfileSampleAccurate is true, function without sample will be
-    // regarded as cold. To minimize the potential negative performance
-    // impact it could have, we want to be a little conservative here
-    // saying if a function shows up in the profile, no matter as outline
-    // function, inline instance or call targets, treat the function as not
-    // being cold. This will handle the cases such as most callsites of a
-    // function are inlined in sampled binary but not inlined in current
-    // build (because of source code drift, imprecise debug information, or
-    // the callsites are all cold individually but not cold accumulatively...),
-    // so the outline function showing up as cold in sampled binary will
-    // actually not be cold after current build.
-    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    if (NamesInProfile.count(CanonName))
-      initialEntryCount = -1;
+      // When ProfileSampleAccurate is true, function without sample will be
+      // regarded as cold. To minimize the potential negative performance
+      // impact it could have, we want to be a little conservative here
+      // saying if a function shows up in the profile, no matter as outline
+      // function, inline instance or call targets, treat the function as not
+      // being cold. This will handle the cases such as most callsites of a
+      // function are inlined in sampled binary but not inlined in current
+      // build (because of source code drift, imprecise debug information, or
+      // the callsites are all cold individually but not cold
+      // accumulatively...), so the outline function showing up as cold in
+      // sampled binary will actually not be cold after current build.
+      StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+      if (NamesInProfile.count(CanonName))
+        initialEntryCount = -1;
+    } else {
+      // If there is no profile symbol list available, initialize all the
+      // function entry counts to 0. It means all the functions without
+      // profile will be regarded as cold.
+      initialEntryCount = 0;
+    }
   }
 
   F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
