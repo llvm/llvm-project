@@ -132,16 +132,18 @@ static Error deepWriteArchive(StringRef ArcName,
 
 /// The function executeObjcopyOnIHex does the dispatch based on the format
 /// of the output specified by the command line options.
-static Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
+static Error executeObjcopyOnIHex(CopyConfig &Config, MemoryBuffer &In,
                                   Buffer &Out) {
   // TODO: support output formats other than ELF.
+  if (Error E = Config.parseELFConfig())
+    return E;
   return elf::executeObjcopyOnIHex(Config, In, Out);
 }
 
 /// The function executeObjcopyOnRawBinary does the dispatch based on the format
 /// of the output specified by the command line options.
-static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
-                                       MemoryBuffer &In, Buffer &Out) {
+static Error executeObjcopyOnRawBinary(CopyConfig &Config, MemoryBuffer &In,
+                                       Buffer &Out) {
   switch (Config.OutputFormat) {
   case FileFormat::ELF:
   // FIXME: Currently, we call elf::executeObjcopyOnRawBinary even if the
@@ -150,6 +152,8 @@ static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+    if (Error E = Config.parseELFConfig())
+      return E;
     return elf::executeObjcopyOnRawBinary(Config, In, Out);
   }
 
@@ -158,11 +162,13 @@ static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
 /// of the input binary (ELF, MachO or COFF).
-static Error executeObjcopyOnBinary(const CopyConfig &Config,
-                                    object::Binary &In, Buffer &Out) {
-  if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In))
+static Error executeObjcopyOnBinary(CopyConfig &Config, object::Binary &In,
+                                    Buffer &Out) {
+  if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In)) {
+    if (Error E = Config.parseELFConfig())
+      return E;
     return elf::executeObjcopyOnBinary(Config, *ELFBinary, Out);
-  else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In))
+  } else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In))
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
   else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In))
     return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
@@ -171,8 +177,7 @@ static Error executeObjcopyOnBinary(const CopyConfig &Config,
                              "unsupported object file format");
 }
 
-static Error executeObjcopyOnArchive(const CopyConfig &Config,
-                                     const Archive &Ar) {
+static Error executeObjcopyOnArchive(CopyConfig &Config, const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -248,7 +253,7 @@ static Error restoreStatOnFile(StringRef Filename,
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
-static Error executeObjcopy(const CopyConfig &Config) {
+static Error executeObjcopy(CopyConfig &Config) {
   sys::fs::file_status Stat;
   if (Config.InputFilename != "-") {
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
@@ -257,7 +262,7 @@ static Error executeObjcopy(const CopyConfig &Config) {
     Stat.permissions(static_cast<sys::fs::perms>(0777));
   }
 
-  typedef Error (*ProcessRawFn)(const CopyConfig &, MemoryBuffer &, Buffer &);
+  using ProcessRawFn = Error (*)(CopyConfig &, MemoryBuffer &, Buffer &);
   ProcessRawFn ProcessRaw;
   switch (Config.InputFormat) {
   case FileFormat::Binary:
@@ -336,7 +341,7 @@ int main(int argc, char **argv) {
                           WithColor::error(errs(), ToolName));
     return 1;
   }
-  for (const CopyConfig &CopyConfig : DriverConfig->CopyConfigs) {
+  for (CopyConfig &CopyConfig : DriverConfig->CopyConfigs) {
     if (Error E = executeObjcopy(CopyConfig)) {
       logAllUnhandledErrors(std::move(E), WithColor::error(errs(), ToolName));
       return 1;

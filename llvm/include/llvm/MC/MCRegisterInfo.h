@@ -395,13 +395,9 @@ public:
   /// debugging info.
   int getDwarfRegNum(MCRegister RegNum, bool isEH) const;
 
-  /// Map a dwarf register back to a target register.
-  int getLLVMRegNum(unsigned RegNum, bool isEH) const;
-
-  /// Map a DWARF EH register back to a target register (same as
-  /// getLLVMRegNum(RegNum, true)) but return -1 if there is no mapping,
-  /// rather than asserting that there must be one.
-  int getLLVMRegNumFromEH(unsigned RegNum) const;
+  /// Map a dwarf register back to a target register. Returns None is there is
+  /// no mapping.
+  Optional<unsigned> getLLVMRegNum(unsigned RegNum, bool isEH) const;
 
   /// Map a target EH register number to an equivalent DWARF register
   /// number.
