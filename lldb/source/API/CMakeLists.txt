@@ -109,6 +109,11 @@ add_lldb_library(liblldb SHARED
   ${option_install_prefix}
 )
 
+foreach (t ${LLVM_TARGETS_TO_BUILD})
+  set_property(SOURCE SystemInitializerFull.cpp APPEND PROPERTY
+    COMPILE_DEFINITIONS "LLVM_TARGET_${t}_BUILT")
+endforeach()
+
 if (MSVC)
   set_source_files_properties(SBReproducer.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()

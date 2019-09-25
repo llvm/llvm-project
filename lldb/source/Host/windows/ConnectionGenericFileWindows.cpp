@@ -245,13 +245,11 @@ finish:
 
   IncrementFilePointer(return_info.GetBytes());
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log) {
-    LLDB_LOGF(log,
-              "%p ConnectionGenericFile::Read()  handle = %p, dst = %p, "
-              "dst_len = %zu) => %zu, error = %s",
-              this, m_file, dst, dst_len, return_info.GetBytes(),
-              return_info.GetError().AsCString());
-  }
+  LLDB_LOGF(log,
+            "%p ConnectionGenericFile::Read()  handle = %p, dst = %p, "
+            "dst_len = %zu) => %zu, error = %s",
+            static_cast<void *>(this), m_file, dst, dst_len,
+            return_info.GetBytes(), return_info.GetError().AsCString());
 
   return return_info.GetBytes();
 }
@@ -296,13 +294,11 @@ finish:
 
   IncrementFilePointer(return_info.GetBytes());
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log) {
-    LLDB_LOGF(log,
-              "%p ConnectionGenericFile::Write()  handle = %p, src = %p, "
-              "src_len = %zu) => %zu, error = %s",
-              this, m_file, src, src_len, return_info.GetBytes(),
-              return_info.GetError().AsCString());
-  }
+  LLDB_LOGF(log,
+            "%p ConnectionGenericFile::Write()  handle = %p, src = %p, "
+            "src_len = %zu) => %zu, error = %s",
+            static_cast<void *>(this), m_file, src, src_len,
+            return_info.GetBytes(), return_info.GetError().AsCString());
   return return_info.GetBytes();
 }
 

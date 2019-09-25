@@ -3,6 +3,7 @@ add_lldb_unittest(ExpressionTests
   DiagnosticManagerTest.cpp
   DWARFExpressionTest.cpp
   SwiftParserTest.cpp
+  CppModuleConfigurationTest.cpp
 
   LINK_LIBS
     lldbCore

@@ -8261,7 +8261,8 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
             getASTContext()->DeclarationNames.getCXXDestructorName(
                 getASTContext()->getCanonicalType(record_qual_type)),
             clang::SourceLocation()),
-        method_qual_type, nullptr, is_inline, is_artificial);
+        method_qual_type, nullptr, is_inline, is_artificial,
+          ConstexprSpecKind::CSK_unspecified);
     cxx_method_decl = cxx_dtor_decl;
   } else if (decl_name == cxx_record_decl->getDeclName()) {
     cxx_ctor_decl = clang::CXXConstructorDecl::Create(
@@ -8332,8 +8333,8 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(*getASTContext()));
 
   if (mangled_name != nullptr) {
-    cxx_method_decl->addAttr(
-        clang::AsmLabelAttr::CreateImplicit(*getASTContext(), mangled_name));
+    cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
+        *getASTContext(), mangled_name, /*literal=*/false));
   }
 
   // Populate the method decl with parameter decls

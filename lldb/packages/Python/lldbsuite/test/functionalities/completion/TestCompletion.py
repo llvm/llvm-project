@@ -102,6 +102,27 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('plugin load ', [])
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_enable(self):
+        self.complete_from_to('log enable ll', ['lldb'])
+        self.complete_from_to('log enable dw', ['dwarf'])
+        self.complete_from_to('log enable lldb al', ['all'])
+        self.complete_from_to('log enable lldb sym', ['symbol'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_enable(self):
+        self.complete_from_to('log disable ll', ['lldb'])
+        self.complete_from_to('log disable dw', ['dwarf'])
+        self.complete_from_to('log disable lldb al', ['all'])
+        self.complete_from_to('log disable lldb sym', ['symbol'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_list(self):
+        self.complete_from_to('log list ll', ['lldb'])
+        self.complete_from_to('log list dw', ['dwarf'])
+        self.complete_from_to('log list ll', ['lldb'])
+        self.complete_from_to('log list lldb dwa', ['dwarf'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_quoted_command(self):
         self.complete_from_to('"set',
                               ['"settings" '])

@@ -436,11 +436,10 @@ Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
 
   Status error;
   if (!File::DescriptorIsValid(descriptor)) {
-    File.SetDescriptor(descriptor, false);
+    File.SetDescriptor(-1, options, false);
     error.SetErrorToErrno();
   } else {
-    File.SetDescriptor(descriptor, should_close_fd);
-    File.SetOptions(options);
+    File.SetDescriptor(descriptor, options, should_close_fd);
   }
   return error;
 }

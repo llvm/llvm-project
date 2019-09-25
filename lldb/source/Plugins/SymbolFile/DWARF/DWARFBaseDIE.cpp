@@ -30,7 +30,7 @@ dw_tag_t DWARFBaseDIE::Tag() const {
   if (m_die)
     return m_die->Tag();
   else
-    return 0;
+    return llvm::dwarf::DW_TAG_null;
 }
 
 const char *DWARFBaseDIE::GetTagAsCString() const {

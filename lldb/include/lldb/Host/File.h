@@ -64,9 +64,9 @@ public:
         m_is_real_terminal(eLazyBoolCalculate),
         m_supports_colors(eLazyBoolCalculate) {}
 
-  File(int fd, bool transfer_ownership)
+  File(int fd, uint32_t options, bool transfer_ownership)
       : IOObject(eFDTypeFile, transfer_ownership), m_descriptor(fd),
-        m_stream(kInvalidStream), m_options(0), m_own_stream(false),
+        m_stream(kInvalidStream), m_options(options), m_own_stream(false),
         m_is_interactive(eLazyBoolCalculate),
         m_is_real_terminal(eLazyBoolCalculate),
         m_supports_colors(eLazyBoolCalculate) {}
@@ -126,7 +126,7 @@ public:
 
   WaitableHandle GetWaitableHandle() override;
 
-  void SetDescriptor(int fd, bool transfer_ownership);
+  void SetDescriptor(int fd, uint32_t options, bool transfer_ownership);
 
   FILE *GetStream();
 
@@ -332,8 +332,6 @@ public:
   size_t Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   size_t PrintfVarArg(const char *format, va_list args);
-
-  void SetOptions(uint32_t options) { m_options = options; }
 
   static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
 

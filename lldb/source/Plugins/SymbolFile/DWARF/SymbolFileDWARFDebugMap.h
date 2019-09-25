@@ -54,6 +54,10 @@ public:
 
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
 
+  void
+  ForEachExternalModule(lldb_private::CompileUnit &comp_unit,
+                        llvm::function_ref<void(lldb::ModuleSP)> f) override;
+
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
                          lldb_private::FileSpecList &support_files) override;
 

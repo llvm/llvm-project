@@ -20,6 +20,7 @@ class TestFrameGuessLanguage(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(compiler="clang", compiler_version=['<', '10.0'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37658")
     def test_guess_language(self):
         """Test GuessLanguage for C and C++."""
@@ -74,12 +75,14 @@ class TestFrameGuessLanguage(TestBase):
         thread = threads[0]
 
         c_frame_language = lldb.eLanguageTypeC99
+        cxx_frame_language = lldb.eLanguageTypeC_plus_plus_11
         # gcc emits DW_LANG_C89 even if -std=c99 was specified
         if "gcc" in self.getCompiler():
             c_frame_language = lldb.eLanguageTypeC89
+            cxx_frame_language = lldb.eLanguageTypeC_plus_plus
 
         self.check_language(thread, 0, c_frame_language)
-        self.check_language(thread, 1, lldb.eLanguageTypeC_plus_plus)
+        self.check_language(thread, 1, cxx_frame_language)
         self.check_language(thread, 2, lldb.eLanguageTypeC_plus_plus)
 
 

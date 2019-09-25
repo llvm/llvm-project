@@ -28,6 +28,7 @@
 #include "Plugins/ABI/SysV-ppc64/ABISysV_ppc64.h"
 #include "Plugins/ABI/SysV-s390x/ABISysV_s390x.h"
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
+#include "Plugins/ABI/Windows-x86_64/ABIWindows_x86_64.h"
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Architecture/PPC64/ArchitecturePPC64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
@@ -144,19 +145,34 @@ llvm::Error SystemInitializerTest::Initialize() {
 
   ClangASTContext::Initialize();
 
-  ABIMacOSX_i386::Initialize();
-  ABIMacOSX_arm::Initialize();
+#ifdef LLVM_TARGET_AArch64_BUILT
   ABIMacOSX_arm64::Initialize();
-  ABISysV_arm::Initialize();
   ABISysV_arm64::Initialize();
+#endif
+#ifdef LLVM_TARGET_ARM_BUILT
+  ABIMacOSX_arm::Initialize();
+  ABISysV_arm::Initialize();
+#endif
+#ifdef LLVM_TARGET_Hexagon_BUILT
   ABISysV_hexagon::Initialize();
-  ABISysV_i386::Initialize();
-  ABISysV_x86_64::Initialize();
-  ABISysV_ppc::Initialize();
-  ABISysV_ppc64::Initialize();
+#endif
+#ifdef LLVM_TARGET_Mips_BUILT
   ABISysV_mips::Initialize();
   ABISysV_mips64::Initialize();
+#endif
+#ifdef LLVM_TARGET_PowerPC_BUILT
+  ABISysV_ppc::Initialize();
+  ABISysV_ppc64::Initialize();
+#endif
+#ifdef LLVM_TARGET_SystemZ_BUILT
   ABISysV_s390x::Initialize();
+#endif
+#ifdef LLVM_TARGET_X86_BUILT
+  ABIMacOSX_i386::Initialize();
+  ABISysV_i386::Initialize();
+  ABISysV_x86_64::Initialize();
+  ABIWindows_x86_64::Initialize();
+#endif
 
   ArchitectureArm::Initialize();
   ArchitecturePPC64::Initialize();
@@ -246,19 +262,35 @@ void SystemInitializerTest::Terminate() {
 
   ClangASTContext::Terminate();
 
-  ABIMacOSX_i386::Terminate();
-  ABIMacOSX_arm::Terminate();
+#ifdef LLVM_TARGET_AArch64_BUILT
   ABIMacOSX_arm64::Terminate();
-  ABISysV_arm::Terminate();
   ABISysV_arm64::Terminate();
+#endif
+#ifdef LLVM_TARGET_ARM_BUILT
+  ABIMacOSX_arm::Terminate();
+  ABISysV_arm::Terminate();
+#endif
+#ifdef LLVM_TARGET_Hexagon_BUILT
   ABISysV_hexagon::Terminate();
-  ABISysV_i386::Terminate();
-  ABISysV_x86_64::Terminate();
-  ABISysV_ppc::Terminate();
-  ABISysV_ppc64::Terminate();
+#endif
+#ifdef LLVM_TARGET_Mips_BUILT
   ABISysV_mips::Terminate();
   ABISysV_mips64::Terminate();
+#endif
+#ifdef LLVM_TARGET_PowerPC_BUILT
+  ABISysV_ppc::Terminate();
+  ABISysV_ppc64::Terminate();
+#endif
+#ifdef LLVM_TARGET_SystemZ_BUILT
   ABISysV_s390x::Terminate();
+#endif
+#ifdef LLVM_TARGET_X86_BUILT
+  ABIMacOSX_i386::Terminate();
+  ABISysV_i386::Terminate();
+  ABISysV_x86_64::Terminate();
+  ABIWindows_x86_64::Terminate();
+#endif
+
   DisassemblerLLVMC::Terminate();
 
   JITLoaderGDB::Terminate();

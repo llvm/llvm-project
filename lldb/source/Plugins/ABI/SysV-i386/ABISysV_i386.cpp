@@ -198,7 +198,8 @@ ABISP
 ABISysV_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   if (arch.GetTriple().getVendor() != llvm::Triple::Apple) {
     if (arch.GetTriple().getArch() == llvm::Triple::x86) {
-      return ABISP(new ABISysV_i386(process_sp));
+      return ABISP(
+          new ABISysV_i386(std::move(process_sp), MakeMCRegisterInfo(arch)));
     }
   }
   return ABISP();

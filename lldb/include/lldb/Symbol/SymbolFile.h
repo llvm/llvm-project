@@ -124,6 +124,9 @@ public:
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
+  virtual void
+  ForEachExternalModule(CompileUnit &comp_unit,
+                        llvm::function_ref<void(lldb::ModuleSP)> f) {}
   virtual bool ParseSupportFiles(CompileUnit &comp_unit,
                                  FileSpecList &support_files) = 0;
   virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
