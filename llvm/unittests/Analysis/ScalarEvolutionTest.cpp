@@ -1745,4 +1745,186 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   });
 }
 
+// Test expansion of nested addrecs in CanonicalMode.
+// Expanding nested addrecs in canonical mode requiers a canonical IV of a
+// type wider than the type of the addrec itself. Currently, SCEVExpander
+// just falls back to literal mode for nested addrecs.
+TEST_F(ScalarEvolutionsTest, SCEVExpandNonAffineAddRec) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  // Expand the addrec produced by GetAddRec into a loop without a canonical IV.
+  auto TestNoCanonicalIV = [&](std::function<const SCEVAddRecExpr *(
+                                   ScalarEvolution & SE, Loop * L)> GetAddRec) {
+    std::unique_ptr<Module> M =
+        parseAssemblyString("define i32 @test(i32 %limit) { "
+                            "entry: "
+                            "  br label %loop "
+                            "loop: "
+                            "  %i = phi i32 [ 1, %entry ], [ %i.inc, %loop ] "
+                            "  %i.inc = add nsw i32 %i, 1 "
+                            "  %cont = icmp slt i32 %i.inc, %limit "
+                            "  br i1 %cont, label %loop, label %exit "
+                            "exit: "
+                            "  ret i32 %i.inc "
+                            "}",
+                            Err, C);
+
+    assert(M && "Could not parse module?");
+    assert(!verifyModule(*M) && "Must have been well formed!");
+
+    runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+      auto &I = GetInstByName(F, "i");
+      auto *Loop = LI.getLoopFor(I.getParent());
+      EXPECT_FALSE(Loop->getCanonicalInductionVariable());
+
+      auto *AR = GetAddRec(SE, Loop);
+      EXPECT_FALSE(AR->isAffine());
+
+      SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+      auto *InsertAt = I.getNextNode();
+      Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
+      auto *ExpandedAR = SE.getSCEV(V);
+      // Check that the expansion happened literally.
+      EXPECT_EQ(AR, ExpandedAR);
+    });
+  };
+
+  // Expand the addrec produced by GetAddRec into a loop with a canonical IV
+  // which is narrower than addrec type.
+  auto TestNarrowCanonicalIV = [&](
+      std::function<const SCEVAddRecExpr *(ScalarEvolution & SE, Loop * L)>
+          GetAddRec) {
+    std::unique_ptr<Module> M = parseAssemblyString(
+        "define i32 @test(i32 %limit) { "
+        "entry: "
+        "  br label %loop "
+        "loop: "
+        "  %i = phi i32 [ 1, %entry ], [ %i.inc, %loop ] "
+        "  %canonical.iv = phi i8 [ 0, %entry ], [ %canonical.iv.inc, %loop ] "
+        "  %i.inc = add nsw i32 %i, 1 "
+        "  %canonical.iv.inc = add i8 %canonical.iv, 1 "
+        "  %cont = icmp slt i32 %i.inc, %limit "
+        "  br i1 %cont, label %loop, label %exit "
+        "exit: "
+        "  ret i32 %i.inc "
+        "}",
+        Err, C);
+
+    assert(M && "Could not parse module?");
+    assert(!verifyModule(*M) && "Must have been well formed!");
+
+    runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+      auto &I = GetInstByName(F, "i");
+
+      auto *LoopHeaderBB = I.getParent();
+      auto *Loop = LI.getLoopFor(LoopHeaderBB);
+      PHINode *CanonicalIV = Loop->getCanonicalInductionVariable();
+      EXPECT_EQ(CanonicalIV, &GetInstByName(F, "canonical.iv"));
+
+      auto *AR = GetAddRec(SE, Loop);
+      EXPECT_FALSE(AR->isAffine());
+
+      unsigned ExpectedCanonicalIVWidth = SE.getTypeSizeInBits(AR->getType());
+      unsigned CanonicalIVBitWidth =
+          cast<IntegerType>(CanonicalIV->getType())->getBitWidth();
+      EXPECT_LT(CanonicalIVBitWidth, ExpectedCanonicalIVWidth);
+
+      SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+      auto *InsertAt = I.getNextNode();
+      Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
+      auto *ExpandedAR = SE.getSCEV(V);
+      // Check that the expansion happened literally.
+      EXPECT_EQ(AR, ExpandedAR);
+    });
+  };
+
+  // Expand the addrec produced by GetAddRec into a loop with a canonical IV
+  // of addrec width.
+  auto TestMatchingCanonicalIV = [&](
+      std::function<const SCEVAddRecExpr *(ScalarEvolution & SE, Loop * L)>
+          GetAddRec,
+      unsigned ARBitWidth) {
+    auto ARBitWidthTypeStr = "i" + std::to_string(ARBitWidth);
+    std::unique_ptr<Module> M = parseAssemblyString(
+        "define i32 @test(i32 %limit) { "
+        "entry: "
+        "  br label %loop "
+        "loop: "
+        "  %i = phi i32 [ 1, %entry ], [ %i.inc, %loop ] "
+        "  %canonical.iv = phi " + ARBitWidthTypeStr +
+            " [ 0, %entry ], [ %canonical.iv.inc, %loop ] "
+        "  %i.inc = add nsw i32 %i, 1 "
+        "  %canonical.iv.inc = add " + ARBitWidthTypeStr +
+            " %canonical.iv, 1 "
+        "  %cont = icmp slt i32 %i.inc, %limit "
+        "  br i1 %cont, label %loop, label %exit "
+        "exit: "
+        "  ret i32 %i.inc "
+        "}",
+        Err, C);
+
+    assert(M && "Could not parse module?");
+    assert(!verifyModule(*M) && "Must have been well formed!");
+
+    runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+      auto &I = GetInstByName(F, "i");
+      auto &CanonicalIV = GetInstByName(F, "canonical.iv");
+
+      auto *LoopHeaderBB = I.getParent();
+      auto *Loop = LI.getLoopFor(LoopHeaderBB);
+      EXPECT_EQ(&CanonicalIV, Loop->getCanonicalInductionVariable());
+      unsigned CanonicalIVBitWidth =
+          cast<IntegerType>(CanonicalIV.getType())->getBitWidth();
+
+      auto *AR = GetAddRec(SE, Loop);
+      EXPECT_FALSE(AR->isAffine());
+      EXPECT_EQ(ARBitWidth, SE.getTypeSizeInBits(AR->getType()));
+      EXPECT_EQ(CanonicalIVBitWidth, ARBitWidth);
+
+      SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+      auto *InsertAt = I.getNextNode();
+      Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
+      auto *ExpandedAR = SE.getSCEV(V);
+      // Check that the expansion happened literally.
+      EXPECT_EQ(AR, ExpandedAR);
+    });
+  };
+
+  unsigned ARBitWidth = 16;
+  Type *ARType = IntegerType::get(C, ARBitWidth);
+
+  // Expand {5,+,1,+,1}
+  auto GetAR3 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
+    SmallVector<const SCEV *, 3> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                        SE.getOne(ARType), SE.getOne(ARType)};
+    return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
+  };
+  TestNoCanonicalIV(GetAR3);
+  TestNarrowCanonicalIV(GetAR3);
+  TestMatchingCanonicalIV(GetAR3, ARBitWidth);
+
+  // Expand {5,+,1,+,1,+,1}
+  auto GetAR4 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
+    SmallVector<const SCEV *, 4> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                        SE.getOne(ARType), SE.getOne(ARType),
+                                        SE.getOne(ARType)};
+    return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
+  };
+  TestNoCanonicalIV(GetAR4);
+  TestNarrowCanonicalIV(GetAR4);
+  TestMatchingCanonicalIV(GetAR4, ARBitWidth);
+
+  // Expand {5,+,1,+,1,+,1,+,1}
+  auto GetAR5 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
+    SmallVector<const SCEV *, 5> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                        SE.getOne(ARType), SE.getOne(ARType),
+                                        SE.getOne(ARType), SE.getOne(ARType)};
+    return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
+  };
+  TestNoCanonicalIV(GetAR5);
+  TestNarrowCanonicalIV(GetAR5);
+  TestMatchingCanonicalIV(GetAR5, ARBitWidth);
+}
+
 }  // end namespace llvm

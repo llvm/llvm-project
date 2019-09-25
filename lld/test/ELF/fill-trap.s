@@ -12,6 +12,11 @@
 # RUN: llvm-readobj -l %t | FileCheck %s --check-prefixes=CHECK,PAD
 # RUN: od -Ax -x -N16 -j0x1ff0 %t | FileCheck %s --check-prefix=FILL
 
+## -z separate-loadable-segments pads all segments, including the text segment.
+# RUN: ld.lld %t.o -z separate-loadable-segments -o %t
+# RUN: llvm-readobj -l %t | FileCheck %s --check-prefixes=CHECK,PAD
+# RUN: od -Ax -x -N16 -j0x1ff0 %t | FileCheck %s --check-prefix=FILL
+
 # RUN: ld.lld %t.o -z separate-code -z noseparate-code -o %t
 # RUN: llvm-readobj -l %t | FileCheck %s --check-prefixes=CHECK,NOPAD
 

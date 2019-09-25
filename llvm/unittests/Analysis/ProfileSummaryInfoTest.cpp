@@ -137,6 +137,18 @@ TEST_F(ProfileSummaryInfoTest, TestCommon) {
   EXPECT_FALSE(PSI.isColdCount(100));
   EXPECT_FALSE(PSI.isHotCount(100));
 
+  EXPECT_TRUE(PSI.isHotCountNthPercentile(990000, 400));
+  EXPECT_FALSE(PSI.isHotCountNthPercentile(990000, 100));
+  EXPECT_FALSE(PSI.isHotCountNthPercentile(990000, 2));
+
+  EXPECT_TRUE(PSI.isHotCountNthPercentile(999999, 400));
+  EXPECT_TRUE(PSI.isHotCountNthPercentile(999999, 100));
+  EXPECT_FALSE(PSI.isHotCountNthPercentile(999999, 2));
+
+  EXPECT_FALSE(PSI.isHotCountNthPercentile(10000, 400));
+  EXPECT_FALSE(PSI.isHotCountNthPercentile(10000, 100));
+  EXPECT_FALSE(PSI.isHotCountNthPercentile(10000, 2));
+
   EXPECT_TRUE(PSI.isFunctionEntryHot(F));
   EXPECT_FALSE(PSI.isFunctionEntryHot(G));
   EXPECT_FALSE(PSI.isFunctionEntryHot(H));
@@ -159,6 +171,21 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
   EXPECT_TRUE(PSI.isHotBlock(BB1, &BFI));
   EXPECT_FALSE(PSI.isHotBlock(BB2, &BFI));
   EXPECT_TRUE(PSI.isHotBlock(BB3, &BFI));
+
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
+
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, &BB0, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB1, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB2, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB3, &BFI));
+
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB3, &BFI));
 
   CallSite CS1(BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
@@ -191,6 +218,21 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   EXPECT_TRUE(PSI.isHotBlock(BB1, &BFI));
   EXPECT_FALSE(PSI.isHotBlock(BB2, &BFI));
   EXPECT_TRUE(PSI.isHotBlock(BB3, &BFI));
+
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
+
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, &BB0, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB1, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB2, &BFI));
+  EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB3, &BFI));
+
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB3, &BFI));
 
   CallSite CS1(BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();

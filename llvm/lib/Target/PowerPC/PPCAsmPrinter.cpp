@@ -649,16 +649,19 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
   }
   case PPC::LWZtoc: {
-    // Transform %r3 = LWZtoc @min1, %r2
+    assert(!isDarwin && "TOC is an ELF/XCOFF construct.");
+
+    // Transform %rN = LWZtoc @op1, %r2
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
-    // Change the opcode to LWZ, and the global address operand to be a
-    // reference to the GOT entry we will synthesize later.
+    // Change the opcode to LWZ.
     TmpInst.setOpcode(PPC::LWZ);
-    const MachineOperand &MO = MI->getOperand(1);
 
-    // Map symbol -> label of TOC entry
-    assert(MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress());
+    const MachineOperand &MO = MI->getOperand(1);
+    assert(MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() &&
+           "Unexpected operand type for LWZtoc pseudo.");
+
+    // Map the operand to its corresponding MCSymbol.
     MCSymbol *MOSymbol = nullptr;
     if (MO.isGlobal())
       MOSymbol = getSymbol(MO.getGlobal());
@@ -669,23 +672,43 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     else if (MO.isBlockAddress())
       MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
 
-    if (PL == PICLevel::SmallPIC) {
+    const bool IsAIX = TM.getTargetTriple().isOSAIX();
+
+    // Create a reference to the GOT entry for the symbol. The GOT entry will be
+    // synthesized later.
+    if (PL == PICLevel::SmallPIC && !IsAIX) {
       const MCExpr *Exp =
         MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_GOT,
                                 OutContext);
       TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
-    } else {
-      MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
-
-      const MCExpr *Exp =
-        MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None,
-                                OutContext);
-      const MCExpr *PB =
-        MCSymbolRefExpr::create(OutContext.getOrCreateSymbol(Twine(".LTOC")),
-                                                             OutContext);
-      Exp = MCBinaryExpr::createSub(Exp, PB, OutContext);
-      TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
     }
+
+    // Otherwise use the TOC. 'TOCEntry' is a local symbol used to reference
+    // the storage allocated in the TOC which contains the address of
+    // 'MOSymbol'. Said TOC entry will be synthesized later.
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
+    const MCExpr *Exp =
+        MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None, OutContext);
+
+    // AIX uses the local symbol directly for the operand; that the symbol is
+    // accessed toc-relative is implicit.
+    if (IsAIX) {
+      assert(
+          TM.getCodeModel() == CodeModel::Small &&
+          "This pseudo should only be selected for 32-bit small code model.");
+      TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
+
+    // Create an explicit subtract expression between the local symbol and
+    // '.LTOC' to manifest the toc-relative offset.
+    const MCExpr *PB = MCSymbolRefExpr::create(
+        OutContext.getOrCreateSymbol(Twine(".LTOC")), OutContext);
+    Exp = MCBinaryExpr::createSub(Exp, PB, OutContext);
+    TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }

@@ -39,7 +39,7 @@ OPTIONS
 
  Include ELF common symbol sizes in bss size for ``berkeley`` output format, or
  as a separate section entry for ``sysv`` output. If not specified, these
- symbols are not ignored.
+ symbols are ignored.
 
 .. option:: -d
 

@@ -1,5 +1,5 @@
 CXX_SOURCES := main.cpp
-LD_EXTRAS += -Wl,--build-id=none
+LD_EXTRAS := -Wl,--build-id=none
 
 all: stripped.out
 

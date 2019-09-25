@@ -52,6 +52,15 @@ private:
   // because the number of profile counts required to reach the hot
   // percentile is above a huge threshold.
   Optional<bool> HasHugeWorkingSetSize;
+  // True if the working set size of the code is considered large,
+  // because the number of profile counts required to reach the hot
+  // percentile is above a large threshold.
+  Optional<bool> HasLargeWorkingSetSize;
+  // Compute the threshold for a given cutoff.
+  Optional<uint64_t> computeThreshold(int PercentileCutoff);
+  // The map that caches the threshold values. The keys are the percentile
+  // cutoff values and the values are the corresponding threshold values.
+  DenseMap<int, uint64_t> ThresholdCache;
 
 public:
   ProfileSummaryInfo(Module &M) : M(M) {}
@@ -96,6 +105,8 @@ public:
                                      bool AllowSynthetic = false);
   /// Returns true if the working set size of the code is considered huge.
   bool hasHugeWorkingSetSize();
+  /// Returns true if the working set size of the code is considered large.
+  bool hasLargeWorkingSetSize();
   /// Returns true if \p F has hot function entry.
   bool isFunctionEntryHot(const Function *F);
   /// Returns true if \p F contains hot code.
@@ -104,14 +115,26 @@ public:
   bool isFunctionEntryCold(const Function *F);
   /// Returns true if \p F contains only cold code.
   bool isFunctionColdInCallGraph(const Function *F, BlockFrequencyInfo &BFI);
+  /// Returns true if \p F contains hot code with regard to a given hot
+  /// percentile cutoff value.
+  bool isFunctionHotInCallGraphNthPercentile(int PercentileCutoff,
+                                             const Function *F,
+                                             BlockFrequencyInfo &BFI);
   /// Returns true if count \p C is considered hot.
   bool isHotCount(uint64_t C);
   /// Returns true if count \p C is considered cold.
   bool isColdCount(uint64_t C);
+  /// Returns true if count \p C is considered hot with regard to a given
+  /// hot percentile cutoff value.
+  bool isHotCountNthPercentile(int PercentileCutoff, uint64_t C);
   /// Returns true if BasicBlock \p BB is considered hot.
   bool isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI);
   /// Returns true if BasicBlock \p BB is considered cold.
   bool isColdBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI);
+  /// Returns true if BasicBlock \p BB is considered hot with regard to a given
+  /// hot percentile cutoff value.
+  bool isHotBlockNthPercentile(int PercentileCutoff,
+                               const BasicBlock *BB, BlockFrequencyInfo *BFI);
   /// Returns true if CallSite \p CS is considered hot.
   bool isHotCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
   /// Returns true if Callsite \p CS is considered cold.

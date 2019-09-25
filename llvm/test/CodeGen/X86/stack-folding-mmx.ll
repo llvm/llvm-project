@@ -96,9 +96,67 @@ define x86_mmx @stack_fold_cvttps2pi(<4 x float> %a0) {
 declare x86_mmx @llvm.x86.sse.cvttps2pi(<4 x float>) nounwind readnone
 
 ; TODO stack_fold_movd_load
-; TODO stack_fold_movd_store
+
+; padd forces execution on mmx
+define i32 @stack_fold_movd_store(x86_mmx %a0) nounwind {
+; CHECK-LABEL: stack_fold_movd_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    paddb %mm0, %mm0
+; CHECK-NEXT:    movd %mm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+  %1 = call x86_mmx @llvm.x86.mmx.padd.b(x86_mmx %a0, x86_mmx %a0)
+  %2 = bitcast x86_mmx %1 to <2 x i32>
+  %3 = extractelement <2 x i32> %2, i32 0
+  %4 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  ret i32 %3
+}
+
 ; TODO stack_fold_movq_load
-; TODO stack_fold_movq_store
+
+; padd forces execution on mmx
+define i64 @stack_fold_movq_store(x86_mmx %a0) nounwind {
+; CHECK-LABEL: stack_fold_movq_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    paddb %mm0, %mm0
+; CHECK-NEXT:    movq %mm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+  %1 = call x86_mmx @llvm.x86.mmx.padd.b(x86_mmx %a0, x86_mmx %a0)
+  %2 = bitcast x86_mmx %1 to i64
+  %3 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  ret i64 %2
+}
 
 define x86_mmx @stack_fold_pabsb(x86_mmx %a0) {
 ; CHECK-LABEL: stack_fold_pabsb:
