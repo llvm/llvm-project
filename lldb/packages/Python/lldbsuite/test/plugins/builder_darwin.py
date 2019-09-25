@@ -46,7 +46,7 @@ def construct_triple(platform_name, architecture):
 
     # Grab the current SDK version number, which will be used in the triple.
     version_output = subprocess.check_output(
-        ["xcrun", "--sdk", sdk_name, "--show-sdk-version"]).rstrip()
+        ["xcrun", "--sdk", sdk_name, "--show-sdk-version"]).rstrip().decode('utf-8')
     if version_output is None:
         return None
 
