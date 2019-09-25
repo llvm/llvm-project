@@ -92,7 +92,8 @@ public:
     CompilerType m_type;
     swift::Identifier m_name;
     swift::VarDecl *m_decl = nullptr;
-    swift::VarDecl::Introducer m_var_introducer = swift::VarDecl::Introducer::Var;
+    swift::VarDecl::Introducer m_var_introducer =
+        swift::VarDecl::Introducer::Var;
     bool m_is_capture_list = false;
 
   public:
@@ -122,17 +123,17 @@ protected:
 
   bool m_repl = false;
 
-  swift::FuncDecl *m_function_decl =
-      nullptr; // the function containing the expression's code
-  swift::FuncDecl *m_wrapper_decl =
-      nullptr; // the wrapper that invokes the right generic function.
-  swift::ExtensionDecl *m_extension_decl =
-      nullptr; // the extension m_function_decl lives in, if it's a method.
-  swift::DoCatchStmt *m_do_stmt =
-      nullptr; // the do{}catch(){} statement whose body is the main body.
-  swift::CatchStmt *m_catch_stmt =
-      nullptr; // the body of the catch - we patch the assignment there to
-               // capture any error thrown.
+  /// The function containing the expression's code.
+  swift::FuncDecl *m_function_decl = nullptr;
+  /// The wrapper that invokes the right generic function.
+  swift::FuncDecl *m_wrapper_decl = nullptr;
+  /// The extension m_function_decl lives in, if it's a method.
+  swift::ExtensionDecl *m_extension_decl = nullptr;
+  /// The do{}catch(){} statement whose body is the main body.
+  swift::DoCatchStmt *m_do_stmt = nullptr;
+  /// The body of the catch - we patch the assignment there to capture
+  /// any error thrown.
+  swift::CatchStmt *m_catch_stmt = nullptr;
 };
 
 class SwiftASTManipulator : public SwiftASTManipulatorBase {
@@ -198,27 +199,22 @@ private:
       swift::DeclContext *decl_context);
 
   struct ResultLocationInfo {
-    swift::VarDecl
-        *tmp_var_decl; // This points to the first stage tmp result decl
-    swift::RepeatWhileStmt
-        *wrapper_stmt; // This is the RepeatWhile statement that we make up.
-    swift::PatternBindingDecl
-        *binding_decl;      // This is the expression returned by this block
-    swift::Expr *orig_expr; // This is the original expression that we resolved
-                            // to this type
-    swift::ReturnStmt *return_stmt; // If this block does a return, this is the
-                                    // return statement
-    const swift::SourceLoc source_loc; // This is the source location of this
-                                       // return in the overall expression.
+    /// This points to the first stage tmp result decl.
+    swift::VarDecl *tmp_var_decl = nullptr;
+    /// This is the RepeatWhile statement that we make up.
+    swift::RepeatWhileStmt *wrapper_stmt = nullptr;
+    /// This is the expression returned by this block.
+    swift::PatternBindingDecl *binding_decl = nullptr;
+    /// This is the original expression that we resolved to this type.
+    swift::Expr *orig_expr = nullptr;
+    /// If this block does a return, this is the return statement.
+    swift::ReturnStmt *return_stmt = nullptr;
+    /// This is the source location of this return in the overall
+    /// expression.
+    const swift::SourceLoc source_loc;
 
     ResultLocationInfo(const swift::SourceLoc &in_source_loc)
-        : tmp_var_decl(nullptr), wrapper_stmt(nullptr), binding_decl(nullptr),
-          orig_expr(nullptr), return_stmt(nullptr), source_loc(in_source_loc) {}
-
-    ResultLocationInfo(const ResultLocationInfo &rhs)
-        : tmp_var_decl(rhs.tmp_var_decl), wrapper_stmt(rhs.wrapper_stmt),
-          binding_decl(rhs.binding_decl), orig_expr(rhs.orig_expr),
-          return_stmt(rhs.return_stmt), source_loc(rhs.source_loc) {}
+        : source_loc(in_source_loc) {}
   };
 
   void InsertResult(swift::VarDecl *result_var, swift::Type &result_type,
