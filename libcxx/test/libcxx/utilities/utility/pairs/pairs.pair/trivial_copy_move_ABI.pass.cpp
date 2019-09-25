@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The test fails due to the missing is_trivially_constructible intrinsic.
+// XFAIL: gcc-4.9
+
 // <utility>
 
 // template <class T1, class T2> struct pair
