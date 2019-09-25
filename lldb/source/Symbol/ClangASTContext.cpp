@@ -8332,8 +8332,8 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(*getASTContext()));
 
   if (mangled_name != nullptr) {
-    cxx_method_decl->addAttr(
-        clang::AsmLabelAttr::CreateImplicit(*getASTContext(), mangled_name));
+    cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
+        *getASTContext(), mangled_name, /*literal=*/false));
   }
 
   // Populate the method decl with parameter decls
