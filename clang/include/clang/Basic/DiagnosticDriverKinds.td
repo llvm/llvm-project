@@ -474,23 +474,23 @@ def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 def warn_kokkos_missing_build_params : Warning<
   "'-fkokkos' mode enabled but build configuration missing details for "
   "automatic argument generation. Target-centric link arguments must be"
-  "provided on command line.">; 
+  "provided on command line.">, InGroup<UnknownRuntime>; 
 def warn_cilkrts_missing_build_params : Warning<
   "'-ftapir=cilk' enabled but build configuration missing details for "
   "automatic argument generation. Target-centric link arguments must be"
-  "provided on command line.">; 
+  "provided on command line.">, InGroup<UnknownRuntime>; 
 def warn_qthreads_missing_build_params : Warning<
   "'-ftapir=qthreads' enabled but build configuration missing details for "
   "automatic argument generation. Target-centric link arguments must be"
-  "provided on command line.">; 
+  "provided on command line.">, InGroup<UnknownRuntime>; 
 def warn_realm_missing_build_params : Warning<
   "'-ftapir=realm' enabled but build configuration missing details for "
   "automatic argument generation. Target-centric link arguments must be"
-  "provided on command line.">; 
+  "provided on command line.">, InGroup<UnknownRuntime>; 
 def warn_cuda_missing_build_params : Warning<
   "'-ftapir=cuda' enabled but build configuration missing details for "
   "automatic argument generation. Target-centric link arguments must be"
-  "provided on command line.">; 
+  "provided on command line.">, InGroup<UnknownRuntime>; 
 // -----+
 
 }
