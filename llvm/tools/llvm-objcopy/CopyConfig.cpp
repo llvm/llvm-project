@@ -386,7 +386,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
                            .Case("ihex", FileFormat::IHex)
                            .Default(FileFormat::Unspecified);
 
-  if (opt::Arg *A = InputArgs.getLastArg(OBJCOPY_new_symbol_visibility))
+  if (InputArgs.hasArg(OBJCOPY_new_symbol_visibility))
     Config.NewSymbolVisibility =
         InputArgs.getLastArgValue(OBJCOPY_new_symbol_visibility);
 

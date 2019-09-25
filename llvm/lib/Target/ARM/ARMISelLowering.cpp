@@ -898,10 +898,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SHL);
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SRA);
-    setTargetDAGCombine(ISD::SIGN_EXTEND);
-    setTargetDAGCombine(ISD::ZERO_EXTEND);
-    setTargetDAGCombine(ISD::ANY_EXTEND);
-    setTargetDAGCombine(ISD::STORE);
     setTargetDAGCombine(ISD::FP_TO_SINT);
     setTargetDAGCombine(ISD::FP_TO_UINT);
     setTargetDAGCombine(ISD::FDIV);
@@ -922,6 +918,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::BUILD_VECTOR);
     setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
     setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
+    setTargetDAGCombine(ISD::STORE);
+    setTargetDAGCombine(ISD::SIGN_EXTEND);
+    setTargetDAGCombine(ISD::ZERO_EXTEND);
+    setTargetDAGCombine(ISD::ANY_EXTEND);
   }
 
   if (!Subtarget->hasFP64()) {
@@ -13120,95 +13120,161 @@ static SDValue PerformLOADCombine(SDNode *N,
   return SDValue();
 }
 
+// Optimize trunc store (of multiple scalars) to shuffle and store.  First,
+// pack all of the elements in one place.  Next, store to memory in fewer
+// chunks.
+SDValue PerformTruncatingStoreCombine(StoreSDNode *St, SelectionDAG &DAG) {
+  SDValue StVal = St->getValue();
+  EVT VT = StVal.getValueType();
+  if (!St->isTruncatingStore() || !VT.isVector())
+    return SDValue();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT StVT = St->getMemoryVT();
+  unsigned NumElems = VT.getVectorNumElements();
+  assert(StVT != VT && "Cannot truncate to the same type");
+  unsigned FromEltSz = VT.getScalarSizeInBits();
+  unsigned ToEltSz = StVT.getScalarSizeInBits();
+
+  // From, To sizes and ElemCount must be pow of two
+  if (!isPowerOf2_32(NumElems * FromEltSz * ToEltSz))
+    return SDValue();
+
+  // We are going to use the original vector elt for storing.
+  // Accumulated smaller vector elements must be a multiple of the store size.
+  if (0 != (NumElems * FromEltSz) % ToEltSz)
+    return SDValue();
+
+  unsigned SizeRatio = FromEltSz / ToEltSz;
+  assert(SizeRatio * NumElems * ToEltSz == VT.getSizeInBits());
+
+  // Create a type on which we perform the shuffle.
+  EVT WideVecVT = EVT::getVectorVT(*DAG.getContext(), StVT.getScalarType(),
+                                   NumElems * SizeRatio);
+  assert(WideVecVT.getSizeInBits() == VT.getSizeInBits());
+
+  SDLoc DL(St);
+  SDValue WideVec = DAG.getNode(ISD::BITCAST, DL, WideVecVT, StVal);
+  SmallVector<int, 8> ShuffleVec(NumElems * SizeRatio, -1);
+  for (unsigned i = 0; i < NumElems; ++i)
+    ShuffleVec[i] = DAG.getDataLayout().isBigEndian() ? (i + 1) * SizeRatio - 1
+                                                      : i * SizeRatio;
+
+  // Can't shuffle using an illegal type.
+  if (!TLI.isTypeLegal(WideVecVT))
+    return SDValue();
+
+  SDValue Shuff = DAG.getVectorShuffle(
+      WideVecVT, DL, WideVec, DAG.getUNDEF(WideVec.getValueType()), ShuffleVec);
+  // At this point all of the data is stored at the bottom of the
+  // register. We now need to save it to mem.
+
+  // Find the largest store unit
+  MVT StoreType = MVT::i8;
+  for (MVT Tp : MVT::integer_valuetypes()) {
+    if (TLI.isTypeLegal(Tp) && Tp.getSizeInBits() <= NumElems * ToEltSz)
+      StoreType = Tp;
+  }
+  // Didn't find a legal store type.
+  if (!TLI.isTypeLegal(StoreType))
+    return SDValue();
+
+  // Bitcast the original vector into a vector of store-size units
+  EVT StoreVecVT =
+      EVT::getVectorVT(*DAG.getContext(), StoreType,
+                       VT.getSizeInBits() / EVT(StoreType).getSizeInBits());
+  assert(StoreVecVT.getSizeInBits() == VT.getSizeInBits());
+  SDValue ShuffWide = DAG.getNode(ISD::BITCAST, DL, StoreVecVT, Shuff);
+  SmallVector<SDValue, 8> Chains;
+  SDValue Increment = DAG.getConstant(StoreType.getSizeInBits() / 8, DL,
+                                      TLI.getPointerTy(DAG.getDataLayout()));
+  SDValue BasePtr = St->getBasePtr();
+
+  // Perform one or more big stores into memory.
+  unsigned E = (ToEltSz * NumElems) / StoreType.getSizeInBits();
+  for (unsigned I = 0; I < E; I++) {
+    SDValue SubVec = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, StoreType,
+                                 ShuffWide, DAG.getIntPtrConstant(I, DL));
+    SDValue Ch =
+        DAG.getStore(St->getChain(), DL, SubVec, BasePtr, St->getPointerInfo(),
+                     St->getAlignment(), St->getMemOperand()->getFlags());
+    BasePtr =
+        DAG.getNode(ISD::ADD, DL, BasePtr.getValueType(), BasePtr, Increment);
+    Chains.push_back(Ch);
+  }
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+}
+
+// Try taking a single vector store from an truncate (which would otherwise turn
+// into an expensive buildvector) and splitting it into a series of narrowing
+// stores.
+SDValue PerformSplittingToNarrowingStores(StoreSDNode *St, SelectionDAG &DAG) {
+  if (!St->isSimple() || St->isTruncatingStore() || !St->isUnindexed())
+    return SDValue();
+  SDValue Trunc = St->getValue();
+  if (Trunc->getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+  EVT FromVT = Trunc->getOperand(0).getValueType();
+  EVT ToVT = Trunc.getValueType();
+  if (!ToVT.isVector())
+    return SDValue();
+  assert(FromVT.getVectorNumElements() == ToVT.getVectorNumElements());
+  EVT ToEltVT = ToVT.getVectorElementType();
+  EVT FromEltVT = FromVT.getVectorElementType();
+
+  unsigned NumElements = 0;
+  if (FromEltVT == MVT::i32 && (ToEltVT == MVT::i16 || ToEltVT == MVT::i8))
+    NumElements = 4;
+  if (FromEltVT == MVT::i16 && ToEltVT == MVT::i8)
+    NumElements = 8;
+  if (NumElements == 0 || FromVT.getVectorNumElements() == NumElements ||
+      FromVT.getVectorNumElements() % NumElements != 0)
+    return SDValue();
+
+  SDLoc DL(St);
+  // Details about the old store
+  SDValue Ch = St->getChain();
+  SDValue BasePtr = St->getBasePtr();
+  unsigned Alignment = St->getOriginalAlignment();
+  MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
+  AAMDNodes AAInfo = St->getAAInfo();
+
+  EVT NewFromVT = EVT::getVectorVT(*DAG.getContext(), FromEltVT, NumElements);
+  EVT NewToVT = EVT::getVectorVT(*DAG.getContext(), ToEltVT, NumElements);
+
+  SmallVector<SDValue, 4> Stores;
+  for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
+    unsigned NewOffset = i * NumElements * ToEltVT.getSizeInBits() / 8;
+    SDValue NewPtr = DAG.getObjectPtrOffset(DL, BasePtr, NewOffset);
+
+    SDValue Extract =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewFromVT, Trunc.getOperand(0),
+                    DAG.getConstant(i * NumElements, DL, MVT::i32));
+    SDValue Store = DAG.getTruncStore(
+        Ch, DL, Extract, NewPtr, St->getPointerInfo().getWithOffset(NewOffset),
+        NewToVT, Alignment, MMOFlags, AAInfo);
+    Stores.push_back(Store);
+  }
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Stores);
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const ARMSubtarget *Subtarget) {
   StoreSDNode *St = cast<StoreSDNode>(N);
   if (St->isVolatile())
     return SDValue();
-
-  // Optimize trunc store (of multiple scalars) to shuffle and store.  First,
-  // pack all of the elements in one place.  Next, store to memory in fewer
-  // chunks.
   SDValue StVal = St->getValue();
   EVT VT = StVal.getValueType();
-  if (St->isTruncatingStore() && VT.isVector()) {
-    SelectionDAG &DAG = DCI.DAG;
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    EVT StVT = St->getMemoryVT();
-    unsigned NumElems = VT.getVectorNumElements();
-    assert(StVT != VT && "Cannot truncate to the same type");
-    unsigned FromEltSz = VT.getScalarSizeInBits();
-    unsigned ToEltSz = StVT.getScalarSizeInBits();
 
-    // From, To sizes and ElemCount must be pow of two
-    if (!isPowerOf2_32(NumElems * FromEltSz * ToEltSz)) return SDValue();
+  if (Subtarget->hasNEON())
+    if (SDValue Store = PerformTruncatingStoreCombine(St, DCI.DAG))
+      return Store;
 
-    // We are going to use the original vector elt for storing.
-    // Accumulated smaller vector elements must be a multiple of the store size.
-    if (0 != (NumElems * FromEltSz) % ToEltSz) return SDValue();
-
-    unsigned SizeRatio  = FromEltSz / ToEltSz;
-    assert(SizeRatio * NumElems * ToEltSz == VT.getSizeInBits());
-
-    // Create a type on which we perform the shuffle.
-    EVT WideVecVT = EVT::getVectorVT(*DAG.getContext(), StVT.getScalarType(),
-                                     NumElems*SizeRatio);
-    assert(WideVecVT.getSizeInBits() == VT.getSizeInBits());
-
-    SDLoc DL(St);
-    SDValue WideVec = DAG.getNode(ISD::BITCAST, DL, WideVecVT, StVal);
-    SmallVector<int, 8> ShuffleVec(NumElems * SizeRatio, -1);
-    for (unsigned i = 0; i < NumElems; ++i)
-      ShuffleVec[i] = DAG.getDataLayout().isBigEndian()
-                          ? (i + 1) * SizeRatio - 1
-                          : i * SizeRatio;
-
-    // Can't shuffle using an illegal type.
-    if (!TLI.isTypeLegal(WideVecVT)) return SDValue();
-
-    SDValue Shuff = DAG.getVectorShuffle(WideVecVT, DL, WideVec,
-                                DAG.getUNDEF(WideVec.getValueType()),
-                                ShuffleVec);
-    // At this point all of the data is stored at the bottom of the
-    // register. We now need to save it to mem.
-
-    // Find the largest store unit
-    MVT StoreType = MVT::i8;
-    for (MVT Tp : MVT::integer_valuetypes()) {
-      if (TLI.isTypeLegal(Tp) && Tp.getSizeInBits() <= NumElems * ToEltSz)
-        StoreType = Tp;
-    }
-    // Didn't find a legal store type.
-    if (!TLI.isTypeLegal(StoreType))
-      return SDValue();
-
-    // Bitcast the original vector into a vector of store-size units
-    EVT StoreVecVT = EVT::getVectorVT(*DAG.getContext(),
-            StoreType, VT.getSizeInBits()/EVT(StoreType).getSizeInBits());
-    assert(StoreVecVT.getSizeInBits() == VT.getSizeInBits());
-    SDValue ShuffWide = DAG.getNode(ISD::BITCAST, DL, StoreVecVT, Shuff);
-    SmallVector<SDValue, 8> Chains;
-    SDValue Increment = DAG.getConstant(StoreType.getSizeInBits() / 8, DL,
-                                        TLI.getPointerTy(DAG.getDataLayout()));
-    SDValue BasePtr = St->getBasePtr();
-
-    // Perform one or more big stores into memory.
-    unsigned E = (ToEltSz*NumElems)/StoreType.getSizeInBits();
-    for (unsigned I = 0; I < E; I++) {
-      SDValue SubVec = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                                   StoreType, ShuffWide,
-                                   DAG.getIntPtrConstant(I, DL));
-      SDValue Ch = DAG.getStore(St->getChain(), DL, SubVec, BasePtr,
-                                St->getPointerInfo(), St->getAlignment(),
-                                St->getMemOperand()->getFlags());
-      BasePtr = DAG.getNode(ISD::ADD, DL, BasePtr.getValueType(), BasePtr,
-                            Increment);
-      Chains.push_back(Ch);
-    }
-    return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
-  }
+  if (Subtarget->hasMVEIntegerOps())
+    if (SDValue NewToken = PerformSplittingToNarrowingStores(St, DCI.DAG))
+      return NewToken;
 
   if (!ISD::isNormalStore(St))
     return SDValue();
@@ -13260,7 +13326,7 @@ static SDValue PerformSTORECombine(SDNode *N,
   }
 
   // If this is a legal vector store, try to combine it into a VST1_UPD.
-  if (ISD::isNormalStore(N) && VT.isVector() &&
+  if (Subtarget->hasNEON() && ISD::isNormalStore(N) && VT.isVector() &&
       DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return CombineBaseUpdate(N, DCI);
 
@@ -13628,6 +13694,71 @@ static SDValue PerformShiftCombine(SDNode *N,
   return SDValue();
 }
 
+// Look for a sign/zero extend of a larger than legal load. This can be split
+// into two extending loads, which are simpler to deal with than an arbitrary
+// sign extend.
+SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::LOAD)
+    return SDValue();
+  LoadSDNode *LD = cast<LoadSDNode>(N0.getNode());
+  if (!LD->isSimple() || !N0.hasOneUse() || LD->isIndexed() ||
+      LD->getExtensionType() != ISD::NON_EXTLOAD)
+    return SDValue();
+  EVT FromVT = LD->getValueType(0);
+  EVT ToVT = N->getValueType(0);
+  if (!ToVT.isVector())
+    return SDValue();
+  assert(FromVT.getVectorNumElements() == ToVT.getVectorNumElements());
+  EVT ToEltVT = ToVT.getVectorElementType();
+  EVT FromEltVT = FromVT.getVectorElementType();
+
+  unsigned NumElements = 0;
+  if (ToEltVT == MVT::i32 && (FromEltVT == MVT::i16 || FromEltVT == MVT::i8))
+    NumElements = 4;
+  if (ToEltVT == MVT::i16 && FromEltVT == MVT::i8)
+    NumElements = 8;
+  if (NumElements == 0 ||
+      FromVT.getVectorNumElements() == NumElements ||
+      FromVT.getVectorNumElements() % NumElements != 0 ||
+      !isPowerOf2_32(NumElements))
+    return SDValue();
+
+  SDLoc DL(LD);
+  // Details about the old load
+  SDValue Ch = LD->getChain();
+  SDValue BasePtr = LD->getBasePtr();
+  unsigned Alignment = LD->getOriginalAlignment();
+  MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
+  AAMDNodes AAInfo = LD->getAAInfo();
+
+  ISD::LoadExtType NewExtType =
+      N->getOpcode() == ISD::SIGN_EXTEND ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+  SDValue Offset = DAG.getUNDEF(BasePtr.getValueType());
+  EVT NewFromVT = FromVT.getHalfNumVectorElementsVT(*DAG.getContext());
+  EVT NewToVT = ToVT.getHalfNumVectorElementsVT(*DAG.getContext());
+  unsigned NewOffset = NewFromVT.getSizeInBits() / 8;
+  SDValue NewPtr = DAG.getObjectPtrOffset(DL, BasePtr, NewOffset);
+
+  // Split the load in half, each side of which is extended separately. This
+  // is good enough, as legalisation will take it from there. They are either
+  // already legal or they will be split further into something that is
+  // legal.
+  SDValue NewLoad1 =
+      DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, BasePtr, Offset,
+                  LD->getPointerInfo(), NewFromVT, Alignment, MMOFlags, AAInfo);
+  SDValue NewLoad2 =
+      DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
+                  LD->getPointerInfo().getWithOffset(NewOffset), NewFromVT,
+                  Alignment, MMOFlags, AAInfo);
+
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                 SDValue(NewLoad1.getNode(), 1),
+                                 SDValue(NewLoad2.getNode(), 1));
+  DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewChain);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, ToVT, NewLoad1, NewLoad2);
+}
+
 /// PerformExtendCombine - Target-specific DAG combining for ISD::SIGN_EXTEND,
 /// ISD::ZERO_EXTEND, and ISD::ANY_EXTEND.
 static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
@@ -13664,6 +13795,10 @@ static SDValue PerformExtendCombine(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(Opc, SDLoc(N), VT, Vec, Lane);
     }
   }
+
+  if (ST->hasMVEIntegerOps())
+    if (SDValue NewLoad = PerformSplittingToWideningLoad(N, DAG))
+      return NewLoad;
 
   return SDValue();
 }
@@ -14170,7 +14305,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::BFI:     return PerformBFICombine(N, DCI);
   case ARMISD::VMOVRRD: return PerformVMOVRRDCombine(N, DCI, Subtarget);
   case ARMISD::VMOVDRR: return PerformVMOVDRRCombine(N, DCI.DAG);
-  case ISD::STORE:      return PerformSTORECombine(N, DCI);
+  case ISD::STORE:      return PerformSTORECombine(N, DCI, Subtarget);
   case ISD::BUILD_VECTOR: return PerformBUILD_VECTORCombine(N, DCI, Subtarget);
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);
   case ISD::VECTOR_SHUFFLE: return PerformVECTOR_SHUFFLECombine(N, DCI.DAG);

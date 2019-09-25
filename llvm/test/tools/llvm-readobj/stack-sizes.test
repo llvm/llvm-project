@@ -163,7 +163,7 @@ Sections:
     Size:    16
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
-    Size:    1
+    Content: "00"
     Link:    .text
   - Name:    .rela.stack_sizes
     Type:    SHT_RELA
@@ -468,7 +468,8 @@ Sections:
     Size: 16
   - Name: .stack_sizes
     Type: SHT_PROGBITS
-    Size: 9
+    Entries:
+      - Size: 0
     Link: .text
   - Name: .rela.stack_sizes
     Type: SHT_RELA
@@ -504,8 +505,8 @@ Sections:
     Size: 8
   - Name: .stack_sizes
     Type: SHT_PROGBITS
-    Size: 16
     Link: .text
+    Entries: []
   - Name: .rela.stack_sizes
     Type: SHT_RELA
     Info: .stack_sizes

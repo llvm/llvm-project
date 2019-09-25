@@ -522,7 +522,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
-    Regex vldRegex("^arm\\.neon\\.vld([1234]|[234]lane)\\.v[a-z0-9]*$");
+    static const Regex vldRegex("^arm\\.neon\\.vld([1234]|[234]lane)\\.v[a-z0-9]*$");
     if (vldRegex.match(Name)) {
       auto fArgs = F->getFunctionType()->params();
       SmallVector<Type *, 4> Tys(fArgs.begin(), fArgs.end());
@@ -533,7 +533,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                "llvm." + Name + ".p0i8", F->getParent());
       return true;
     }
-    Regex vstRegex("^arm\\.neon\\.vst([1234]|[234]lane)\\.v[a-z0-9]*$");
+    static const Regex vstRegex("^arm\\.neon\\.vst([1234]|[234]lane)\\.v[a-z0-9]*$");
     if (vstRegex.match(Name)) {
       static const Intrinsic::ID StoreInts[] = {Intrinsic::arm_neon_vst1,
                                                 Intrinsic::arm_neon_vst2,
@@ -598,7 +598,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
   case 'e': {
     SmallVector<StringRef, 2> Groups;
-    Regex R("^experimental.vector.reduce.([a-z]+)\\.[fi][0-9]+");
+    static const Regex R("^experimental.vector.reduce.([a-z]+)\\.[fi][0-9]+");
     if (R.match(Name, &Groups)) {
       Intrinsic::ID ID = Intrinsic::not_intrinsic;
       if (Groups[1] == "fadd")

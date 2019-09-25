@@ -45,11 +45,11 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
                                        raw_ostream &OS) {
 
   const auto *Ctx = reinterpret_cast<TextAPIContext *>(IO);
-  assert((!Ctx || Ctx && Ctx->FileKind != FileType::Invalid) &&
+  assert((!Ctx || Ctx->FileKind != FileType::Invalid) &&
          "File type is not set in context");
 
-  if ( Ctx && Ctx->FileKind == TBD_V3 && Values.count(PlatformKind::macOS) &&
-      Values.count(PlatformKind::macCatalyst) ) {
+  if (Ctx && Ctx->FileKind == TBD_V3 && Values.count(PlatformKind::macOS) &&
+      Values.count(PlatformKind::macCatalyst)) {
     OS << "zippered";
     return;
   }
@@ -80,7 +80,7 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
 StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
                                            PlatformSet &Values) {
   const auto *Ctx = reinterpret_cast<TextAPIContext *>(IO);
-  assert((!Ctx || Ctx && Ctx->FileKind != FileType::Invalid) &&
+  assert((!Ctx || Ctx->FileKind != FileType::Invalid) &&
          "File type is not set in context");
 
   if (Scalar == "zippered") {
