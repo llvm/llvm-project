@@ -170,6 +170,11 @@ static cl::opt<bool>
                          cl::desc("reverse the CSR restore sequence"),
                          cl::init(false), cl::Hidden);
 
+static cl::opt<bool> StackTaggingMergeSetTag(
+    "stack-tagging-merge-settag",
+    cl::desc("merge settag instruction in function epilog"), cl::init(true),
+    cl::Hidden);
+
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
 /// This is the biggest offset to the stack pointer we can encode in aarch64
@@ -478,6 +483,39 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     return false;
 
   return true;
+}
+
+bool AArch64FrameLowering::shouldCombineCSRLocalStackBumpInEpilogue(
+    MachineBasicBlock &MBB, unsigned StackBumpBytes) const {
+  if (!shouldCombineCSRLocalStackBump(*MBB.getParent(), StackBumpBytes))
+    return false;
+
+  if (MBB.empty())
+    return true;
+
+  // Disable combined SP bump if the last instruction is an MTE tag store. It
+  // is almost always better to merge SP adjustment into those instructions.
+  MachineBasicBlock::iterator LastI = MBB.getFirstTerminator();
+  MachineBasicBlock::iterator Begin = MBB.begin();
+  while (LastI != Begin) {
+    --LastI;
+    if (LastI->isTransient())
+      continue;
+    if (!LastI->getFlag(MachineInstr::FrameDestroy))
+      break;
+  }
+  switch (LastI->getOpcode()) {
+  case AArch64::STGloop:
+  case AArch64::STZGloop:
+  case AArch64::STGOffset:
+  case AArch64::STZGOffset:
+  case AArch64::ST2GOffset:
+  case AArch64::STZ2GOffset:
+    return false;
+  default:
+    return true;
+  }
+  llvm_unreachable("unreachable");
 }
 
 // Given a load or a store instruction, generate an appropriate unwinding SEH
@@ -1459,7 +1497,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // function.
   if (MF.hasEHFunclets())
     AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
-  bool CombineSPBump = shouldCombineCSRLocalStackBump(MF, NumBytes);
+  bool CombineSPBump = shouldCombineCSRLocalStackBumpInEpilogue(MBB, NumBytes);
   // Assume we can't combine the last pop with the sp restore.
 
   if (!CombineSPBump && PrologueSaveSize != 0) {
@@ -2637,9 +2675,399 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
       .addImm(0);
 }
 
-/// For Win64 AArch64 EH, the offset to the Unwind object is from the SP before
-/// the update.  This is easily retrieved as it is exactly the offset that is set
-/// in processFunctionBeforeFrameFinalized.
+namespace {
+struct TagStoreInstr {
+  MachineInstr *MI;
+  int64_t Offset, Size;
+  explicit TagStoreInstr(MachineInstr *MI, int64_t Offset, int64_t Size)
+      : MI(MI), Offset(Offset), Size(Size) {}
+};
+
+class TagStoreEdit {
+  MachineFunction *MF;
+  MachineBasicBlock *MBB;
+  MachineRegisterInfo *MRI;
+  // Tag store instructions that are being replaced.
+  SmallVector<TagStoreInstr, 8> TagStores;
+  // Combined memref arguments of the above instructions.
+  SmallVector<MachineMemOperand *, 8> CombinedMemRefs;
+
+  // Replace allocation tags in [FrameReg + FrameRegOffset, FrameReg +
+  // FrameRegOffset + Size) with the address tag of SP.
+  Register FrameReg;
+  StackOffset FrameRegOffset;
+  int64_t Size;
+  // If not None, move FrameReg to (FrameReg + FrameRegUpdate) at the end.
+  Optional<int64_t> FrameRegUpdate;
+  // MIFlags for any FrameReg updating instructions.
+  unsigned FrameRegUpdateFlags;
+
+  // Use zeroing instruction variants.
+  bool ZeroData;
+  DebugLoc DL;
+
+  void emitUnrolled(MachineBasicBlock::iterator InsertI);
+  void emitLoop(MachineBasicBlock::iterator InsertI);
+
+public:
+  TagStoreEdit(MachineBasicBlock *MBB, bool ZeroData)
+      : MBB(MBB), ZeroData(ZeroData) {
+    MF = MBB->getParent();
+    MRI = &MF->getRegInfo();
+  }
+  // Add an instruction to be replaced. Instructions must be added in the
+  // ascending order of Offset, and have to be adjacent.
+  void addInstruction(TagStoreInstr I) {
+    assert((TagStores.empty() ||
+            TagStores.back().Offset + TagStores.back().Size == I.Offset) &&
+           "Non-adjacent tag store instructions.");
+    TagStores.push_back(I);
+  }
+  void clear() { TagStores.clear(); }
+  // Emit equivalent code at the given location, and erase the current set of
+  // instructions. May skip if the replacement is not profitable. May invalidate
+  // the input iterator and replace it with a valid one.
+  void emitCode(MachineBasicBlock::iterator &InsertI,
+                const AArch64FrameLowering *TFI, bool IsLast);
+};
+
+void TagStoreEdit::emitUnrolled(MachineBasicBlock::iterator InsertI) {
+  const AArch64InstrInfo *TII =
+      MF->getSubtarget<AArch64Subtarget>().getInstrInfo();
+
+  const int64_t kMinOffset = -256 * 16;
+  const int64_t kMaxOffset = 255 * 16;
+
+  Register BaseReg = FrameReg;
+  int64_t BaseRegOffsetBytes = FrameRegOffset.getBytes();
+  if (BaseRegOffsetBytes < kMinOffset ||
+      BaseRegOffsetBytes + (Size - Size % 32) > kMaxOffset) {
+    Register ScratchReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+    emitFrameOffset(*MBB, InsertI, DL, ScratchReg, BaseReg,
+                    {BaseRegOffsetBytes, MVT::i8}, TII);
+    BaseReg = ScratchReg;
+    BaseRegOffsetBytes = 0;
+  }
+
+  MachineInstr *LastI = nullptr;
+  while (Size) {
+    int64_t InstrSize = (Size > 16) ? 32 : 16;
+    unsigned Opcode =
+        InstrSize == 16
+            ? (ZeroData ? AArch64::STZGOffset : AArch64::STGOffset)
+            : (ZeroData ? AArch64::STZ2GOffset : AArch64::ST2GOffset);
+    MachineInstr *I = BuildMI(*MBB, InsertI, DL, TII->get(Opcode))
+                          .addReg(AArch64::SP)
+                          .addReg(BaseReg)
+                          .addImm(BaseRegOffsetBytes / 16)
+                          .setMemRefs(CombinedMemRefs);
+    // A store to [BaseReg, #0] should go last for an opportunity to fold the
+    // final SP adjustment in the epilogue.
+    if (BaseRegOffsetBytes == 0)
+      LastI = I;
+    BaseRegOffsetBytes += InstrSize;
+    Size -= InstrSize;
+  }
+
+  if (LastI)
+    MBB->splice(InsertI, MBB, LastI);
+}
+
+void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
+  const AArch64InstrInfo *TII =
+      MF->getSubtarget<AArch64Subtarget>().getInstrInfo();
+
+  Register BaseReg = FrameRegUpdate
+                         ? FrameReg
+                         : MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+  Register SizeReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+
+  emitFrameOffset(*MBB, InsertI, DL, BaseReg, FrameReg, FrameRegOffset, TII);
+
+  int64_t LoopSize = Size;
+  // If the loop size is not a multiple of 32, split off one 16-byte store at
+  // the end to fold BaseReg update into.
+  if (FrameRegUpdate && *FrameRegUpdate)
+    LoopSize -= LoopSize % 32;
+  MachineInstr *LoopI =
+      BuildMI(*MBB, InsertI, DL,
+              TII->get(ZeroData ? AArch64::STZGloop : AArch64::STGloop))
+          .addDef(SizeReg)
+          .addDef(BaseReg)
+          .addImm(LoopSize)
+          .addReg(BaseReg)
+          .setMemRefs(CombinedMemRefs);
+  if (FrameRegUpdate)
+    LoopI->setFlags(FrameRegUpdateFlags);
+
+  int64_t ExtraBaseRegUpdate =
+      FrameRegUpdate ? (*FrameRegUpdate - FrameRegOffset.getBytes() - Size) : 0;
+  if (LoopSize < Size) {
+    assert(FrameRegUpdate);
+    assert(Size - LoopSize == 16);
+    // Tag 16 more bytes at BaseReg and update BaseReg.
+    BuildMI(*MBB, InsertI, DL,
+            TII->get(ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex))
+        .addDef(BaseReg)
+        .addReg(BaseReg)
+        .addReg(BaseReg)
+        .addImm(1 + ExtraBaseRegUpdate / 16)
+        .setMemRefs(CombinedMemRefs)
+        .setMIFlags(FrameRegUpdateFlags);
+  } else if (ExtraBaseRegUpdate) {
+    // Update BaseReg.
+    BuildMI(
+        *MBB, InsertI, DL,
+        TII->get(ExtraBaseRegUpdate > 0 ? AArch64::ADDXri : AArch64::SUBXri))
+        .addDef(BaseReg)
+        .addReg(BaseReg)
+        .addImm(std::abs(ExtraBaseRegUpdate))
+        .addImm(0)
+        .setMIFlags(FrameRegUpdateFlags);
+  }
+}
+
+// Check if *II is a register update that can be merged into STGloop that ends
+// at (Reg + Size). RemainingOffset is the required adjustment to Reg after the
+// end of the loop.
+bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
+                       int64_t Size, int64_t *TotalOffset) {
+  MachineInstr &MI = *II;
+  if ((MI.getOpcode() == AArch64::ADDXri ||
+       MI.getOpcode() == AArch64::SUBXri) &&
+      MI.getOperand(0).getReg() == Reg && MI.getOperand(1).getReg() == Reg) {
+    unsigned Shift = AArch64_AM::getShiftValue(MI.getOperand(3).getImm());
+    int64_t Offset = MI.getOperand(2).getImm() << Shift;
+    if (MI.getOpcode() == AArch64::SUBXri)
+      Offset = -Offset;
+    int64_t AbsPostOffset = std::abs(Offset - Size);
+    const int64_t kMaxOffset =
+        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
+    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
+      *TotalOffset = Offset;
+      return true;
+    }
+  }
+  return false;
+}
+
+void mergeMemRefs(const SmallVectorImpl<TagStoreInstr> &TSE,
+                  SmallVectorImpl<MachineMemOperand *> &MemRefs) {
+  MemRefs.clear();
+  for (auto &TS : TSE) {
+    MachineInstr *MI = TS.MI;
+    // An instruction without memory operands may access anything. Be
+    // conservative and return an empty list.
+    if (MI->memoperands_empty()) {
+      MemRefs.clear();
+      return;
+    }
+    MemRefs.append(MI->memoperands_begin(), MI->memoperands_end());
+  }
+}
+
+void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
+                            const AArch64FrameLowering *TFI, bool IsLast) {
+  if (TagStores.empty())
+    return;
+  TagStoreInstr &FirstTagStore = TagStores[0];
+  TagStoreInstr &LastTagStore = TagStores[TagStores.size() - 1];
+  Size = LastTagStore.Offset - FirstTagStore.Offset + LastTagStore.Size;
+  DL = TagStores[0].MI->getDebugLoc();
+
+  unsigned Reg;
+  FrameRegOffset = TFI->resolveFrameOffsetReference(
+      *MF, FirstTagStore.Offset, false /*isFixed*/, false /*isSVE*/, Reg,
+      /*PreferFP=*/false, /*ForSimm=*/true);
+  FrameReg = Reg;
+  FrameRegUpdate = None;
+
+  mergeMemRefs(TagStores, CombinedMemRefs);
+
+  LLVM_DEBUG(dbgs() << "Replacing adjacent STG instructions:\n";
+             for (const auto &Instr
+                  : TagStores) { dbgs() << "  " << *Instr.MI; });
+
+  // Size threshold where a loop becomes shorter than a linear sequence of
+  // tagging instructions.
+  const int kSetTagLoopThreshold = 176;
+  if (Size < kSetTagLoopThreshold) {
+    if (TagStores.size() < 2)
+      return;
+    emitUnrolled(InsertI);
+  } else {
+    MachineInstr *UpdateInstr = nullptr;
+    int64_t TotalOffset;
+    if (IsLast) {
+      // See if we can merge base register update into the STGloop.
+      // This is done in AArch64LoadStoreOptimizer for "normal" stores,
+      // but STGloop is way too unusual for that, and also it only
+      // realistically happens in function epilogue. Also, STGloop is expanded
+      // before that pass.
+      if (InsertI != MBB->end() &&
+          canMergeRegUpdate(InsertI, FrameReg, FrameRegOffset.getBytes() + Size,
+                            &TotalOffset)) {
+        UpdateInstr = &*InsertI++;
+        LLVM_DEBUG(dbgs() << "Folding SP update into loop:\n  "
+                          << *UpdateInstr);
+      }
+    }
+
+    if (!UpdateInstr && TagStores.size() < 2)
+      return;
+
+    if (UpdateInstr) {
+      FrameRegUpdate = TotalOffset;
+      FrameRegUpdateFlags = UpdateInstr->getFlags();
+    }
+    emitLoop(InsertI);
+    if (UpdateInstr)
+      UpdateInstr->eraseFromParent();
+  }
+
+  for (auto &TS : TagStores)
+    TS.MI->eraseFromParent();
+}
+
+bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
+                                        int64_t &Size, bool &ZeroData) {
+  MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  unsigned Opcode = MI.getOpcode();
+  ZeroData = (Opcode == AArch64::STZGloop || Opcode == AArch64::STZGOffset ||
+              Opcode == AArch64::STZ2GOffset);
+
+  if (Opcode == AArch64::STGloop || Opcode == AArch64::STZGloop) {
+    if (!MI.getOperand(0).isDead() || !MI.getOperand(1).isDead())
+      return false;
+    if (!MI.getOperand(2).isImm() || !MI.getOperand(3).isFI())
+      return false;
+    Offset = MFI.getObjectOffset(MI.getOperand(3).getIndex());
+    Size = MI.getOperand(2).getImm();
+    return true;
+  }
+
+  if (Opcode == AArch64::STGOffset || Opcode == AArch64::STZGOffset)
+    Size = 16;
+  else if (Opcode == AArch64::ST2GOffset || Opcode == AArch64::STZ2GOffset)
+    Size = 32;
+  else
+    return false;
+
+  if (MI.getOperand(0).getReg() != AArch64::SP || !MI.getOperand(1).isFI())
+    return false;
+
+  Offset = MFI.getObjectOffset(MI.getOperand(1).getIndex()) +
+           16 * MI.getOperand(2).getImm();
+  return true;
+}
+
+// Detect a run of memory tagging instructions for adjacent stack frame slots,
+// and replace them with a shorter instruction sequence:
+// * replace STG + STG with ST2G
+// * replace STGloop + STGloop with STGloop
+// This code needs to run when stack slot offsets are already known, but before
+// FrameIndex operands in STG instructions are eliminated.
+MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
+                                                const AArch64FrameLowering *TFI,
+                                                RegScavenger *RS) {
+  bool FirstZeroData;
+  int64_t Size, Offset;
+  MachineInstr &MI = *II;
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineBasicBlock::iterator NextI = ++II;
+  if (&MI == &MBB->instr_back())
+    return II;
+  if (!isMergeableStackTaggingInstruction(MI, Offset, Size, FirstZeroData))
+    return II;
+
+  SmallVector<TagStoreInstr, 4> Instrs;
+  Instrs.emplace_back(&MI, Offset, Size);
+
+  constexpr int kScanLimit = 10;
+  int Count = 0;
+  for (MachineBasicBlock::iterator E = MBB->end();
+       NextI != E && Count < kScanLimit; ++NextI) {
+    MachineInstr &MI = *NextI;
+    bool ZeroData;
+    int64_t Size, Offset;
+    // Collect instructions that update memory tags with a FrameIndex operand
+    // and (when applicable) constant size, and whose output registers are dead
+    // (the latter is almost always the case in practice). Since these
+    // instructions effectively have no inputs or outputs, we are free to skip
+    // any non-aliasing instructions in between without tracking used registers.
+    if (isMergeableStackTaggingInstruction(MI, Offset, Size, ZeroData)) {
+      if (ZeroData != FirstZeroData)
+        break;
+      Instrs.emplace_back(&MI, Offset, Size);
+      continue;
+    }
+
+    // Only count non-transient, non-tagging instructions toward the scan
+    // limit.
+    if (!MI.isTransient())
+      ++Count;
+
+    // Just in case, stop before the epilogue code starts.
+    if (MI.getFlag(MachineInstr::FrameSetup) ||
+        MI.getFlag(MachineInstr::FrameDestroy))
+      break;
+
+    // Reject anything that may alias the collected instructions.
+    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects())
+      break;
+  }
+
+  // New code will be inserted after the last tagging instruction we've found.
+  MachineBasicBlock::iterator InsertI = Instrs.back().MI;
+  InsertI++;
+
+  llvm::stable_sort(Instrs,
+                    [](const TagStoreInstr &Left, const TagStoreInstr &Right) {
+                      return Left.Offset < Right.Offset;
+                    });
+
+  // Make sure that we don't have any overlapping stores.
+  int64_t CurOffset = Instrs[0].Offset;
+  for (auto &Instr : Instrs) {
+    if (CurOffset > Instr.Offset)
+      return NextI;
+    CurOffset = Instr.Offset + Instr.Size;
+  }
+
+  // Find contiguous runs of tagged memory and emit shorter instruction
+  // sequencies for them when possible.
+  TagStoreEdit TSE(MBB, FirstZeroData);
+  Optional<int64_t> EndOffset;
+  for (auto &Instr : Instrs) {
+    if (EndOffset && *EndOffset != Instr.Offset) {
+      // Found a gap.
+      TSE.emitCode(InsertI, TFI, /*IsLast = */ false);
+      TSE.clear();
+    }
+
+    TSE.addInstruction(Instr);
+    EndOffset = Instr.Offset + Instr.Size;
+  }
+
+  TSE.emitCode(InsertI, TFI, /*IsLast = */ true);
+
+  return InsertI;
+}
+} // namespace
+
+void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS = nullptr) const {
+  if (StackTaggingMergeSetTag)
+    for (auto &BB : MF)
+      for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();)
+        II = tryMergeAdjacentSTG(II, this, RS);
+}
+
+/// For Win64 AArch64 EH, the offset to the Unwind object is from the SP
+/// before the update.  This is easily retrieved as it is exactly the offset
+/// that is set in processFunctionBeforeFrameFinalized.
 int AArch64FrameLowering::getFrameIndexReferencePreferSP(
     const MachineFunction &MF, int FI, unsigned &FrameReg,
     bool IgnoreSPUpdates) const {

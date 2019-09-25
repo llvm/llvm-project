@@ -3458,6 +3458,8 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   case AArch64::ST1Fourv1d:
   case AArch64::IRG:
   case AArch64::IRGstack:
+  case AArch64::STGloop:
+  case AArch64::STZGloop:
     return AArch64FrameOffsetCannotUpdate;
   }
 

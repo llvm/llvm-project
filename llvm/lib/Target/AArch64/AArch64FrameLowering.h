@@ -77,6 +77,10 @@ public:
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                              RegScavenger *RS) const override;
 
+  void
+  processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
+                                            RegScavenger *RS) const override;
+
   unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const override;
 
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
@@ -107,6 +111,8 @@ private:
   int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
+  bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
+                                                unsigned StackBumpBytes) const;
 };
 
 } // End llvm namespace

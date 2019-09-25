@@ -64,8 +64,8 @@ entry:
 define void @stg17(i8* %p) {
 entry:
 ; CHECK-LABEL: stg17:
-; CHECK: mov  {{(w|x)}}[[R:[0-9]+]], #256
 ; CHECK: stg x0, [x0], #16
+; CHECK: mov  {{(w|x)}}[[R:[0-9]+]], #256
 ; CHECK: st2g x0, [x0], #32
 ; CHECK: sub  x[[R]], x[[R]], #32
 ; CHECK: cbnz x[[R]],
@@ -87,8 +87,8 @@ entry:
 define void @stzg17(i8* %p) {
 entry:
 ; CHECK-LABEL: stzg17:
-; CHECK: mov  {{w|x}}[[R:[0-9]+]], #256
 ; CHECK: stzg x0, [x0], #16
+; CHECK: mov  {{w|x}}[[R:[0-9]+]], #256
 ; CHECK: stz2g x0, [x0], #32
 ; CHECK: sub  x[[R]], x[[R]], #32
 ; CHECK: cbnz x[[R]],
@@ -110,10 +110,10 @@ entry:
 define void @stg_alloca5() {
 entry:
 ; CHECK-LABEL: stg_alloca5:
-; CHECK: stg  sp, [sp, #64]
-; CHECK: st2g sp, [sp, #32]
-; CHECK: st2g sp, [sp]
-; CHECK: ret
+; CHECK:         st2g    sp, [sp, #32]
+; CHECK-NEXT:    stg     sp, [sp, #64]
+; CHECK-NEXT:    st2g    sp, [sp], #80
+; CHECK-NEXT:    ret
   %a = alloca i8, i32 80, align 16
   call void @llvm.aarch64.settag(i8* %a, i64 80)
   ret void
@@ -122,12 +122,11 @@ entry:
 define void @stg_alloca17() {
 entry:
 ; CHECK-LABEL: stg_alloca17:
-; CHECK: mov [[P:x[0-9]+]], sp
-; CHECK: stg [[P]], {{\[}}[[P]]{{\]}}, #16
 ; CHECK: mov  {{w|x}}[[R:[0-9]+]], #256
-; CHECK: st2g [[P]], {{\[}}[[P]]{{\]}}, #32
+; CHECK: st2g sp, [sp], #32
 ; CHECK: sub  x[[R]], x[[R]], #32
 ; CHECK: cbnz x[[R]],
+; CHECK: stg sp, [sp], #16
 ; CHECK: ret
   %a = alloca i8, i32 272, align 16
   call void @llvm.aarch64.settag(i8* %a, i64 272)
