@@ -277,11 +277,11 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     DataExtractor data(buffer, count, process->GetByteOrder(), ptrSize);
 
     StringPrinter::ReadBufferAndDumpToStreamOptions options(read_options);
-    options.SetData(data)
-        .SetStream(&stream)
-        .SetSourceSize(count)
-        .SetBinaryZeroIsTerminator(false)
-        .SetLanguage(lldb::eLanguageTypeSwift);
+    options.SetData(data);
+    options.SetStream(&stream);
+    options.SetSourceSize(count);
+    options.SetBinaryZeroIsTerminator(false);
+    options.SetLanguage(lldb::eLanguageTypeSwift);
 
     return StringPrinter::ReadBufferAndDumpToStream<
         StringPrinter::StringElementType::UTF8>(options);
@@ -699,12 +699,12 @@ bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
     return false;
 
   StringPrinter::ReadStringAndDumpToStreamOptions read_options;
-  read_options.SetLocation(ptr_value)
-      .SetProcessSP(valobj.GetProcessSP())
-      .SetStream(&stream)
-      .SetQuote('"')
-      .SetNeedsZeroTermination(true)
-      .SetLanguage(lldb::eLanguageTypeSwift);
+  read_options.SetLocation(ptr_value);
+  read_options.SetProcessSP(valobj.GetProcessSP());
+  read_options.SetStream(&stream);
+  read_options.SetQuote('"');
+  read_options.SetNeedsZeroTermination(true);
+  read_options.SetLanguage(lldb::eLanguageTypeSwift);
 
   return StringPrinter::ReadStringAndDumpToStream<
       StringPrinter::StringElementType::ASCII>(read_options);

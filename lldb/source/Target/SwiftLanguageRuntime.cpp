@@ -421,8 +421,9 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
 
   lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions
       dump_options;
-  dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(
-      nullptr);
+  dump_options.SetEscapeNonPrintables(false);
+  dump_options.SetQuote('\0');
+  dump_options.SetPrefixToken(nullptr);
   if (lldb_private::formatters::swift::String_SummaryProvider(
           *result_sp.get(), str, TypeSummaryOptions()
                                      .SetLanguage(lldb::eLanguageTypeSwift)
