@@ -5,4 +5,5 @@ NO_TEST_COMMON_H := 1
 
 CXXFLAGS += -I $(SRCDIR)/root/usr/include/c++/include/ -I $(SRCDIR)/root/usr/include/ -nostdinc -nostdinc++ -nostdlib++
 CXX_SOURCES := main.cpp
+
 include Makefile.rules

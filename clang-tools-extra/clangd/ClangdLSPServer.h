@@ -107,6 +107,8 @@ private:
   void onChangeConfiguration(const DidChangeConfigurationParams &);
   void onSymbolInfo(const TextDocumentPositionParams &,
                     Callback<std::vector<SymbolDetails>>);
+  void onSelectionRange(const SelectionRangeParams &,
+                        Callback<std::vector<SelectionRange>>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
