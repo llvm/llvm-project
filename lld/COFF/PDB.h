@@ -29,8 +29,8 @@ void createPDB(SymbolTable *symtab,
                llvm::ArrayRef<uint8_t> sectionTable,
                llvm::codeview::DebugInfo *buildId);
 
-std::pair<llvm::StringRef, uint32_t> getFileLine(const SectionChunk *c,
-                                                 uint32_t addr);
+std::pair<llvm::StringRef, uint32_t> getFileLineCodeView(const SectionChunk *c,
+                                                         uint32_t addr);
 }
 }
 
