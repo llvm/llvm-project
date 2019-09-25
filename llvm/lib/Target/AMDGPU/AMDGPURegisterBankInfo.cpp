@@ -352,7 +352,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
       { { AMDGPU::SGPRRegBankID }, 1 }
     };
 
-    return addMappingFromTable<1>(MI, MRI, { 0 }, Table);
+    return addMappingFromTable<1>(MI, MRI, {{ 0 }}, Table);
   }
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:

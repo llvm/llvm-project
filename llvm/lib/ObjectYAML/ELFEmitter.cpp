@@ -440,19 +440,20 @@ static size_t findFirstNonGlobal(ArrayRef<ELFYAML::Symbol> Symbols) {
   return Symbols.size();
 }
 
-static uint64_t writeRawSectionData(raw_ostream &OS,
-                                    const ELFYAML::RawContentSection &RawSec) {
+static uint64_t writeContent(raw_ostream &OS,
+                             const Optional<yaml::BinaryRef> &Content,
+                             const Optional<llvm::yaml::Hex64> &Size) {
   size_t ContentSize = 0;
-  if (RawSec.Content) {
-    RawSec.Content->writeAsBinary(OS);
-    ContentSize = RawSec.Content->binary_size();
+  if (Content) {
+    Content->writeAsBinary(OS);
+    ContentSize = Content->binary_size();
   }
 
-  if (!RawSec.Size)
+  if (!Size)
     return ContentSize;
 
-  OS.write_zeros(*RawSec.Size - ContentSize);
-  return *RawSec.Size;
+  OS.write_zeros(*Size - ContentSize);
+  return *Size;
 }
 
 template <class ELFT>
@@ -554,7 +555,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     assert(Symbols.empty());
-    SHeader.sh_size = writeRawSectionData(OS, *RawSec);
+    SHeader.sh_size = writeContent(OS, RawSec->Content, RawSec->Size);
     return;
   }
 
@@ -579,7 +580,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 
   auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   if (RawSec && (RawSec->Content || RawSec->Size)) {
-    SHeader.sh_size = writeRawSectionData(OS, *RawSec);
+    SHeader.sh_size = writeContent(OS, RawSec->Content, RawSec->Size);
   } else {
     STB.write(OS);
     SHeader.sh_size = STB.getSize();
@@ -675,7 +676,7 @@ void ELFState<ELFT>::writeSectionContent(
     ContiguousBlobAccumulator &CBA) {
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-  SHeader.sh_size = writeRawSectionData(OS, Section);
+  SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
 
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
@@ -795,9 +796,8 @@ void ELFState<ELFT>::writeSectionContent(
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
 
-  if (Section.Content) {
-    Section.Content->writeAsBinary(OS);
-    SHeader.sh_size = Section.Content->binary_size();
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
   }
 

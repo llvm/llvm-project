@@ -597,3 +597,29 @@ Symbols:
     Value:   0x10
     Type:    STT_FUNC
     Binding: STB_GLOBAL
+
+## Check that we report an error when we are unable to resolve a relocation for a given ELF architecture.
+## Here we have a 64-bit relocation used in a 32-bit object.
+
+# RUN: yaml2obj --docnum=12 %s > %t17
+# RUN: not llvm-readelf --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
+# RUN: not llvm-readobj --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
+
+# UNSUPPRELOC2: error: '[[FILE]]': unsupported relocation type in section .rela.stack_sizes: R_X86_64_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Content: "00"
+  - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Info: .stack_sizes
+    Relocations:
+      - Offset: 0
+        Type:   R_X86_64_64

@@ -171,6 +171,7 @@ struct Section {
 
 struct StackSizesSection : Section {
   Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
   Optional<std::vector<StackSizeEntry>> Entries;
 
   StackSizesSection() : Section(SectionKind::StackSizes) {}

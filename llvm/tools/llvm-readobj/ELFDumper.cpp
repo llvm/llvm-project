@@ -4935,7 +4935,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     auto Contents = unwrapOrError(this->FileName, StackSizesSec.getContents());
     DataExtractor Data(Contents, Obj->isLittleEndian(), sizeof(Elf_Addr));
     for (const RelocationRef &Reloc : RelocSec.relocations()) {
-      if (!IsSupportedFn(Reloc.getType()))
+      if (!IsSupportedFn || !IsSupportedFn(Reloc.getType()))
         reportError(createStringError(
                         object_error::parse_failed,
                         "unsupported relocation type in section %s: %s",

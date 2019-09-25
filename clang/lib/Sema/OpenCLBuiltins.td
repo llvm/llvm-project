@@ -593,6 +593,31 @@ foreach aQual = ["WO", "RW"] in {
   def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Float]>;
 }
 
+// --- Table 25: Image Query Functions ---
+foreach aQual = ["RO", "WO", "RW"] in {
+  foreach imgTy = [Image1d, Image1dBuffer, Image2d, Image3d,
+                   Image1dArray, Image2dArray, Image2dDepth,
+                   Image2dArrayDepth] in {
+    foreach name = ["get_image_width", "get_image_channel_data_type",
+                    "get_image_channel_order"] in {
+      def : Builtin<name, [Int, ImageType<imgTy, aQual>]>;
+    }
+  }
+  foreach imgTy = [Image2d, Image3d, Image2dArray, Image2dDepth,
+                   Image2dArrayDepth] in {
+    def : Builtin<"get_image_height", [Int, ImageType<imgTy, aQual>]>;
+  }
+  def : Builtin<"get_image_depth", [Int, ImageType<Image3d, aQual>]>;
+  foreach imgTy = [Image2d, Image2dArray, Image2dDepth,
+                   Image2dArrayDepth] in {
+    def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>]>;
+  }
+  def : Builtin<"get_image_dim", [VectorType<Int, 4>, ImageType<Image3d, aQual>]>;
+  foreach imgTy = [Image1dArray, Image2dArray, Image2dArrayDepth] in {
+    def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>]>;
+  }
+}
+
 // OpenCL extension v2.0 s5.1.9: Built-in Image Read Functions
 // --- Table 8 ---
 foreach aQual = ["RO"] in {
