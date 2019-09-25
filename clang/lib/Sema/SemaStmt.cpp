@@ -3510,6 +3510,14 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
       return true;
   }
 
+  // CUDA: Kernel function must have 'void' return type.
+  if (getLangOpts().CUDA)
+    if (FD->hasAttr<CUDAGlobalAttr>() && !Deduced->isVoidType()) {
+      Diag(FD->getLocation(), diag::err_kern_type_not_void_return)
+          << FD->getType() << FD->getSourceRange();
+      return true;
+    }
+
   //  If a function with a declared return type that contains a placeholder type
   //  has multiple return statements, the return type is deduced for each return
   //  statement. [...] if the type deduced is not the same in each deduction,
