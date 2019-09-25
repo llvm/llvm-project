@@ -118,8 +118,10 @@ if(CMAKE_HOST_APPLE)
       COMMENT "Copying the system debugserver to LLDB's binaries directory for testing.")
     # The custom target for the system debugserver has no install target, so we
     # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.
-    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS debugserver)
-    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} PARENT_SCOPE)
+    if (LLVM_DISTRIBUTION_COMPONENTS)
+      list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS debugserver)
+      set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} PARENT_SCOPE)
+    endif()
     message(STATUS "LLDB tests use out-of-tree debugserver: ${system_debugserver_path}")
     list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
   elseif(TARGET debugserver)
