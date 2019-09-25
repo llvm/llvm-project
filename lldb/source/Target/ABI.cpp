@@ -15,6 +15,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Log.h"
+#include "llvm/Support/TargetRegistry.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -209,4 +211,21 @@ bool ABI::GetFallbackRegisterLocation(
   }
 
   return false;
+}
+
+std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &arch) {
+  std::string triple = arch.GetTriple().getTriple();
+  std::string lookup_error;
+  const llvm::Target *target =
+      llvm::TargetRegistry::lookupTarget(triple, lookup_error);
+  if (!target) {
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS),
+             "Failed to create an llvm target for {0}: {1}", triple,
+             lookup_error);
+    return nullptr;
+  }
+  std::unique_ptr<llvm::MCRegisterInfo> info_up(
+      target->createMCRegInfo(triple));
+  assert(info_up);
+  return info_up;
 }

@@ -52,6 +52,7 @@ unittest("ClangdTests") {
     "FunctionTests.cpp",
     "FuzzyMatchTests.cpp",
     "GlobalCompilationDatabaseTests.cpp",
+    "HeaderSourceSwitchTests.cpp",
     "HeadersTests.cpp",
     "IndexActionTests.cpp",
     "IndexTests.cpp",

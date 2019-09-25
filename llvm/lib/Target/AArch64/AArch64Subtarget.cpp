@@ -96,13 +96,13 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case ExynosM1:
     MaxInterleaveFactor = 4;
-    MaxJumpTableSize = 8;
+    MaxJumpTableTargets = 8;
     PrefFunctionLogAlignment = 4;
     PrefLoopLogAlignment = 3;
     break;
   case ExynosM3:
     MaxInterleaveFactor = 4;
-    MaxJumpTableSize = 20;
+    MaxJumpTableTargets = 20;
     PrefFunctionLogAlignment = 5;
     PrefLoopLogAlignment = 4;
     break;

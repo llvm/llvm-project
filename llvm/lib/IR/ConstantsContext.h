@@ -480,14 +480,16 @@ struct ConstantExprKeyType {
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0), Ops(Operands),
-        Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()) {}
+        Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()),
+        ExplicitTy(nullptr) {}
 
   ConstantExprKeyType(const ConstantExpr *CE,
                       SmallVectorImpl<Constant *> &Storage)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
         SubclassData(CE->isCompare() ? CE->getPredicate() : 0),
-        Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()) {
+        Indexes(CE->hasIndices() ? CE->getIndices() : ArrayRef<unsigned>()),
+        ExplicitTy(nullptr) {
     assert(Storage.empty() && "Expected empty storage");
     for (unsigned I = 0, E = CE->getNumOperands(); I != E; ++I)
       Storage.push_back(CE->getOperand(I));
@@ -676,9 +678,9 @@ public:
     /// Hash once, and reuse it for the lookup and the insertion if needed.
     LookupKeyHashed Lookup(MapInfo::getHashValue(Key), Key);
 
-    auto I = Map.find_as(Lookup);
-    if (I != Map.end())
-      return *I;
+    auto ItMap = Map.find_as(Lookup);
+    if (ItMap != Map.end())
+      return *ItMap;
 
     // Update to the new value.  Optimize for the case when we have a single
     // operand that we're changing, but handle bulk updates efficiently.

@@ -9,6 +9,9 @@
 
 #include "Selection.h"
 #include "TestTU.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
@@ -462,6 +465,223 @@ TEST_F(TargetDeclTest, ObjC) {
   )cpp";
   // FIXME: there's no AST node corresponding to 'Foo', so we're stuck.
   EXPECT_DECLS("ObjCObjectTypeLoc");
+}
+
+class FindExplicitReferencesTest : public ::testing::Test {
+protected:
+  struct AllRefs {
+    std::string AnnotatedCode;
+    std::string DumpedReferences;
+  };
+
+  /// Parses \p Code, finds function '::foo' and annotates its body with results
+  /// of findExplicitReferecnces.
+  /// See actual tests for examples of annotation format.
+  AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
+    TestTU TU;
+    TU.Code = Code;
+
+    auto AST = TU.build();
+    auto &Func = llvm::cast<FunctionDecl>(findDecl(AST, "foo"));
+
+    std::vector<ReferenceLoc> Refs;
+    findExplicitReferences(Func.getBody(), [&Refs](ReferenceLoc R) {
+      Refs.push_back(std::move(R));
+    });
+
+    auto &SM = AST.getSourceManager();
+    llvm::sort(Refs, [&](const ReferenceLoc &L, const ReferenceLoc &R) {
+      return SM.isBeforeInTranslationUnit(L.NameLoc, R.NameLoc);
+    });
+
+    std::string AnnotatedCode;
+    unsigned NextCodeChar = 0;
+    for (unsigned I = 0; I < Refs.size(); ++I) {
+      auto &R = Refs[I];
+
+      SourceLocation Pos = R.NameLoc;
+      assert(Pos.isValid());
+      if (Pos.isMacroID()) // FIXME: figure out how to show macro locations.
+        Pos = SM.getExpansionLoc(Pos);
+      assert(Pos.isFileID());
+
+      FileID File;
+      unsigned Offset;
+      std::tie(File, Offset) = SM.getDecomposedLoc(Pos);
+      if (File == SM.getMainFileID()) {
+        // Print the reference in a source code.
+        assert(NextCodeChar <= Offset);
+        AnnotatedCode += Code.substr(NextCodeChar, Offset - NextCodeChar);
+        AnnotatedCode += "$" + std::to_string(I) + "^";
+
+        NextCodeChar = Offset;
+      }
+    }
+    AnnotatedCode += Code.substr(NextCodeChar);
+
+    std::string DumpedReferences;
+    for (unsigned I = 0; I < Refs.size(); ++I)
+      DumpedReferences += llvm::formatv("{0}: {1}\n", I, Refs[I]);
+
+    return AllRefs{std::move(AnnotatedCode), std::move(DumpedReferences)};
+  }
+};
+
+TEST_F(FindExplicitReferencesTest, All) {
+  std::pair</*Code*/ llvm::StringRef, /*References*/ llvm::StringRef> Cases[] =
+      {
+          // Simple expressions.
+          {R"cpp(
+        int global;
+        int func();
+        void foo(int param) {
+          $0^global = $1^param + $2^func();
+        }
+        )cpp",
+           "0: targets = {global}\n"
+           "1: targets = {param}\n"
+           "2: targets = {func}\n"},
+          {R"cpp(
+        struct X { int a; };
+        void foo(X x) {
+          $0^x.$1^a = 10;
+        }
+        )cpp",
+           "0: targets = {x}\n"
+           "1: targets = {X::a}\n"},
+          // Namespaces and aliases.
+          {R"cpp(
+          namespace ns {}
+          namespace alias = ns;
+          void foo() {
+            using namespace $0^ns;
+            using namespace $1^alias;
+          }
+        )cpp",
+           "0: targets = {ns}\n"
+           "1: targets = {alias}\n"},
+          // Using declarations.
+          {R"cpp(
+          namespace ns { int global; }
+          void foo() {
+            using $0^ns::$1^global;
+          }
+        )cpp",
+           "0: targets = {ns}\n"
+           "1: targets = {ns::global}, qualifier = 'ns::'\n"},
+          // Simple types.
+          {R"cpp(
+         struct Struct { int a; };
+         using Typedef = int;
+         void foo() {
+           $0^Struct x;
+           $1^Typedef y;
+           static_cast<$2^Struct*>(0);
+         }
+       )cpp",
+           "0: targets = {Struct}\n"
+           "1: targets = {Typedef}\n"
+           "2: targets = {Struct}\n"},
+          // Name qualifiers.
+          {R"cpp(
+         namespace a { namespace b { struct S { typedef int type; }; } }
+         void foo() {
+           $0^a::$1^b::$2^S x;
+           using namespace $3^a::$4^b;
+           $5^S::$6^type y;
+         }
+        )cpp",
+           "0: targets = {a}\n"
+           "1: targets = {a::b}, qualifier = 'a::'\n"
+           "2: targets = {a::b::S}, qualifier = 'a::b::'\n"
+           "3: targets = {a}\n"
+           "4: targets = {a::b}, qualifier = 'a::'\n"
+           "5: targets = {a::b::S}\n"
+           "6: targets = {a::b::S::type}, qualifier = 'struct S::'\n"},
+          // Simple templates.
+          {R"cpp(
+          template <class T> struct vector { using value_type = T; };
+          template <> struct vector<bool> { using value_type = bool; };
+          void foo() {
+            $0^vector<int> vi;
+            $1^vector<bool> vb;
+          }
+        )cpp",
+           "0: targets = {vector<int>}\n"
+           "1: targets = {vector<bool>}\n"},
+          // FIXME: Fix 'allTargetDecls' to return alias template and re-enable.
+          // Template type aliases.
+          //   {R"cpp(
+          //   template <class T> struct vector { using value_type = T; };
+          //   template <> struct vector<bool> { using value_type = bool; };
+          //   template <class T> using valias = vector<T>;
+          //   void foo() {
+          //     $0^valias<int> vi;
+          //     $1^valias<bool> vb;
+          //   }
+          // )cpp",
+          //    "0: targets = {valias}\n"
+          //    "1: targets = {valias}\n"},
+
+          // MemberExpr should know their using declaration.
+          {R"cpp(
+            struct X { void func(int); }
+            struct Y : X {
+              using X::func;
+            };
+            void foo(Y y) {
+              $0^y.$1^func(1);
+            }
+        )cpp",
+           "0: targets = {y}\n"
+           "1: targets = {Y::func}\n"},
+          // DeclRefExpr should know their using declaration.
+          {R"cpp(
+            namespace ns { void bar(int); }
+            using ns::bar;
+
+            void foo() {
+              $0^bar(10);
+            }
+        )cpp",
+           "0: targets = {bar}\n"},
+          // References from a macro.
+          {R"cpp(
+            #define FOO a
+            #define BAR b
+
+            void foo(int a, int b) {
+              $0^FOO+$1^BAR;
+            }
+        )cpp",
+           "0: targets = {a}\n"
+           "1: targets = {b}\n"},
+          // No references from implicit nodes.
+          {R"cpp(
+            struct vector {
+              int *begin();
+              int *end();
+            };
+
+            void foo() {
+              for (int x : $0^vector()) {
+                $1^x = 10;
+              }
+            }
+        )cpp",
+           "0: targets = {vector}\n"
+           "1: targets = {x}\n"},
+      };
+
+  for (const auto &C : Cases) {
+    llvm::StringRef ExpectedCode = C.first;
+    llvm::StringRef ExpectedRefs = C.second;
+
+    auto Actual =
+        annotateReferencesInFoo(llvm::Annotations(ExpectedCode).code());
+    EXPECT_EQ(ExpectedCode, Actual.AnnotatedCode);
+    EXPECT_EQ(ExpectedRefs, Actual.DumpedReferences) << ExpectedCode;
+  }
 }
 
 } // namespace

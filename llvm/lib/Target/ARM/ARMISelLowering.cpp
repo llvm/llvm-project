@@ -6011,7 +6011,7 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
     // If the shift amount is greater than 32 or has a greater bitwidth than 64
     // then do the default optimisation
     if (ShAmt->getValueType(0).getSizeInBits() > 64 ||
-        (Con && Con->getZExtValue() >= 32))
+        (Con && (Con->getZExtValue() == 0 || Con->getZExtValue() >= 32)))
       return SDValue();
 
     // Extract the lower 32 bits of the shift amount if it's not an i32

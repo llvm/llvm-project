@@ -1326,7 +1326,8 @@ ABIMacOSX_arm::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   if (vendor_type == llvm::Triple::Apple) {
     if ((arch_type == llvm::Triple::arm) ||
         (arch_type == llvm::Triple::thumb)) {
-      return ABISP(new ABIMacOSX_arm(process_sp));
+      return ABISP(
+          new ABIMacOSX_arm(std::move(process_sp), MakeMCRegisterInfo(arch)));
     }
   }
 

@@ -1092,7 +1092,8 @@ ABISP
 ABIWindows_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   if (arch.GetTriple().getArch() == llvm::Triple::x86_64 &&
       arch.GetTriple().isOSWindows()) {
-    return ABISP(new ABIWindows_x86_64(process_sp));
+    return ABISP(
+        new ABIWindows_x86_64(std::move(process_sp), MakeMCRegisterInfo(arch)));
   }
   return ABISP();
 }

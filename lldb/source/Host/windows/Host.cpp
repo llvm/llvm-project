@@ -22,7 +22,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 
-#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/ConvertUTF.h"
 
 // Windows includes
@@ -53,13 +52,13 @@ bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   triple.setVendor(llvm::Triple::PC);
   triple.setOS(llvm::Triple::Win32);
   triple.setArch(llvm::Triple::UnknownArch);
-  if (machineType == llvm::COFF::IMAGE_FILE_MACHINE_AMD64)
+  if (machineType == 0x8664)
     triple.setArch(llvm::Triple::x86_64);
-  else if (machineType == llvm::COFF::IMAGE_FILE_MACHINE_I386)
+  else if (machineType == 0x14c)
     triple.setArch(llvm::Triple::x86);
-  else if (machineType == llvm::COFF::IMAGE_FILE_MACHINE_ARMNT)
+  else if (machineType == 0x1c4)
     triple.setArch(llvm::Triple::arm);
-  else if (machineType == llvm::COFF::IMAGE_FILE_MACHINE_ARM64)
+  else if (machineType == 0xaa64)
     triple.setArch(llvm::Triple::aarch64);
 
   return true;

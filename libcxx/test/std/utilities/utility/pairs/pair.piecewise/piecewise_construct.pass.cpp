@@ -12,7 +12,7 @@
 
 // template <class T1, class T2> struct pair
 
-// struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
+// struct piecewise_construct_t { };
 // constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
 #include <utility>

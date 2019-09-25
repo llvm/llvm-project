@@ -97,7 +97,9 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  ABISysV_hexagon(lldb::ProcessSP process_sp) : lldb_private::ABI(process_sp) {
+  ABISysV_hexagon(lldb::ProcessSP process_sp,
+                  std::unique_ptr<llvm::MCRegisterInfo> info_up)
+      : lldb_private::ABI(std::move(process_sp), std::move(info_up)) {
     // Call CreateInstance instead.
   }
 };

@@ -352,20 +352,28 @@ Clangd will assume the compile command is ``clang $FLAGS some_file.cc``.
 Creating this file by hand is a reasonable place to start if your project is
 quite simple.
 
-Project-wide Index
-==================
+Background Indexing
+===================
 
-By default clangd only has a view on symbols coming from files you are
-currently editing. You can extend this view to whole project by providing a
-project-wide index to clangd.  There are two ways to do this.
+clangd builds an incremental index of your project (all files listed in the
+compilation database). The index improves code navigation features (go-to-definition,
+find-references) and code completion.
 
-- Pass an experimental `-background-index` command line argument.  With
-  this feature enabled, clangd incrementally builds an index of projects
-  that you work on and uses the just-built index automatically.
+- clangd only uses idle cores to build the index, you can limit the total
+  amount of cores by passing the `-j=<number>` flag;
+- the index is saved to the ``.clangd/index`` in the project root; index shards
+  for common headers e.g. STL will be stored in `$HOME/.clangd/index`;
+- background indexing can be disabled by the ``--background-index=false`` flag;
+  Note that, disabling background-index will limit clangd's knowledge about your
+  codebase to files you are currently editing.
 
-- Generate an index file using `clangd-indexer
-  <https://github.com/llvm/llvm-project/blob/master/clang-tools-extra/clangd/indexer/IndexerMain.cpp>`__
-  Then you can pass generated index file to clangd using
-  `-index-file=/path/to/index_file`.  *Note that clangd-indexer isn't
-  included alongside clangd in the Debian clang-tools package. You will
-  likely have to build it from source to use this option.*
+Build Index Manually
+====================
+
+**DISCLAIMER: This is mainly for clangd developers.**
+
+There is a `clangd-indexer <https://github.com/llvm/llvm-project/blob/master/clang-tools-extra/clangd/indexer/IndexerMain.cpp>`__
+which generates an index file for your project. To use the index, pass the flag
+`-index=file=/path/to/index_file` to clangd. *Note that clangd-indexer isn't
+included alongside clangd in the Debian clang-tools package. You will likely
+have to build it from source to use this option.*

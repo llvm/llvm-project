@@ -192,7 +192,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
     *offset_ptr = offset;
     return true;
   } else {
-    m_tag = 0;
+    m_tag = llvm::dwarf::DW_TAG_null;
     m_has_children = false;
     return true; // NULL debug tag entry
   }
