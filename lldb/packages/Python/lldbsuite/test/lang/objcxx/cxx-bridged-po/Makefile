@@ -1,4 +1,4 @@
 OBJCXX_SOURCES := main.mm
-LDFLAGS = $(CFLAGS) -lobjc -framework CoreFoundation
+LD_EXTRAS := -lobjc -framework CoreFoundation
 
 include Makefile.rules

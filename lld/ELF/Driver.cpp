@@ -380,16 +380,30 @@ static bool getZFlag(opt::InputArgList &args, StringRef k1, StringRef k2,
   return Default;
 }
 
+static SeparateSegmentKind getZSeparate(opt::InputArgList &args) {
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (v == "noseparate-code")
+      return SeparateSegmentKind::None;
+    if (v == "separate-code")
+      return SeparateSegmentKind::Code;
+    if (v == "separate-loadable-segments")
+      return SeparateSegmentKind::Loadable;
+  }
+  return SeparateSegmentKind::None;
+}
+
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
          s == "execstack" || s == "global" || s == "hazardplt" ||
          s == "ifunc-noplt" || s == "initfirst" || s == "interpose" ||
          s == "keep-text-section-prefix" || s == "lazy" || s == "muldefs" ||
-         s == "separate-code" || s == "nocombreloc" || s == "nocopyreloc" ||
-         s == "nodefaultlib" || s == "nodelete" || s == "nodlopen" ||
-         s == "noexecstack" || s == "nokeep-text-section-prefix" ||
-         s == "norelro" || s == "noseparate-code" || s == "notext" ||
-         s == "now" || s == "origin" || s == "relro" || s == "retpolineplt" ||
+         s == "separate-code" || s == "separate-loadable-segments" ||
+         s == "nocombreloc" || s == "nocopyreloc" || s == "nodefaultlib" ||
+         s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
+         s == "nokeep-text-section-prefix" || s == "norelro" ||
+         s == "noseparate-code" || s == "notext" || s == "now" ||
+         s == "origin" || s == "relro" || s == "retpolineplt" ||
          s == "rodynamic" || s == "text" || s == "undefs" || s == "wxneeded" ||
          s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
          s.startswith("stack-size=");
@@ -757,6 +771,12 @@ static bool getCompressDebugSections(opt::InputArgList &args) {
   return true;
 }
 
+static StringRef getAliasSpelling(opt::Arg *arg) {
+  if (const opt::Arg *alias = arg->getAlias())
+    return alias->getSpelling();
+  return arg->getSpelling();
+}
+
 static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
                                                         unsigned id) {
   auto *arg = args.getLastArg(id);
@@ -766,7 +786,7 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
   StringRef s = arg->getValue();
   std::pair<StringRef, StringRef> ret = s.split(';');
   if (ret.second.empty())
-    error(arg->getSpelling() + " expects 'old;new' format, but got " + s);
+    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
   return ret;
 }
 
@@ -858,7 +878,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoNewPassManager = args.hasArg(OPT_lto_new_pass_manager);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
-  config->ltoObjPath = args.getLastArgValue(OPT_plugin_opt_obj_path_eq);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->mapFile = args.getLastArgValue(OPT_Map);
@@ -903,17 +923,15 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
-  config->thinLTOEmitImportsFiles =
-      args.hasArg(OPT_plugin_opt_thinlto_emit_imports_files);
-  config->thinLTOIndexOnly = args.hasArg(OPT_plugin_opt_thinlto_index_only) ||
-                             args.hasArg(OPT_plugin_opt_thinlto_index_only_eq);
-  config->thinLTOIndexOnlyArg =
-      args.getLastArgValue(OPT_plugin_opt_thinlto_index_only_eq);
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   config->thinLTOJobs = args::getInteger(args, OPT_thinlto_jobs, -1u);
   config->thinLTOObjectSuffixReplace =
-      getOldNewOptions(args, OPT_plugin_opt_thinlto_object_suffix_replace_eq);
+      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
   config->thinLTOPrefixReplace =
-      getOldNewOptions(args, OPT_plugin_opt_thinlto_prefix_replace_eq);
+      getOldNewOptions(args, OPT_thinlto_prefix_replace_eq);
   config->trace = args.hasArg(OPT_trace);
   config->undefined = args::getStrings(args, OPT_undefined);
   config->undefinedVersion =
@@ -946,7 +964,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zRelro = getZFlag(args, "relro", "norelro", true);
   config->zRetpolineplt = hasZOption(args, "retpolineplt");
   config->zRodynamic = hasZOption(args, "rodynamic");
-  config->zSeparateCode = getZFlag(args, "separate-code", "noseparate-code", false);
+  config->zSeparate = getZSeparate(args);
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");

@@ -463,8 +463,6 @@ public:
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
 
-  virtual void ResetOutputFileHandle(FILE *new_fh) {} // By default, do nothing.
-
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
 protected:

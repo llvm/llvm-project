@@ -11321,7 +11321,8 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
       const auto *RHS = getIntegerLiteral(BO->getRHS());
       if (LHS && LHS->getValue() == 0)
         S.Diag(ExprLoc, diag::warn_left_shift_always) << 0;
-      else if (RHS && RHS->getValue().isNonNegative() &&
+      else if (!E->isValueDependent() && LHS && RHS &&
+               RHS->getValue().isNonNegative() &&
                E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects))
         S.Diag(ExprLoc, diag::warn_left_shift_always)
             << (Result.Val.getInt() != 0);

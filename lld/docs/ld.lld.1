@@ -591,18 +591,21 @@ Force load of all members in a static library.
 Use wrapper functions for symbol.
 .It Fl z Ar option
 Linker option extensions.
-.Bl -tag -width indent
+.Bl -tag -width indent -compact
+.Pp
 .It Cm execstack
 Make the main stack executable.
 Stack permissions are recorded in the
 .Dv PT_GNU_STACK
 segment.
+.Pp
 .It Cm global
 Sets the
 .Dv DF_1_GLOBAL flag in the
 .Dv DYNAMIC
 section.
 Different loaders can decide how to handle this flag on their own.
+.Pp
 .It Cm ifunc-noplt
 Do not emit PLT entries for ifunc symbols.
 Instead, emit text relocations referencing the resolver.
@@ -611,64 +614,78 @@ environments where text relocations do not have the usual drawbacks.
 This option must be combined with the
 .Fl z Li notext
 option.
+.Pp
 .It Cm initfirst
 Sets the
 .Dv DF_1_INITFIRST
 flag to indicate the module should be initialized first.
+.Pp
 .It Cm interpose
 Set the
 .Dv DF_1_INTERPOSE
 flag to indicate to the runtime linker that the object is an interposer.
 During symbol resolution interposers are searched after the application
 but before other dependencies.
+.Pp
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.
 The first definition will be used.
 This is a synonym for
 .Fl -allow-multiple-definition.
+.Pp
 .It Cm nocombreloc
 Disable combining and sorting multiple relocation sections.
+.Pp
 .It Cm nocopyreloc
 Disable the creation of copy relocations.
+.Pp
 .It Cm nodefaultlib
 Set the
 .Dv DF_1_NODEFLIB
 flag to indicate that default library search paths should be ignored.
+.Pp
 .It Cm nodelete
 Set the
 .Dv DF_1_NODELETE
 flag to indicate that the object cannot be unloaded from a process.
+.Pp
 .It Cm nodlopen
 Set the
 .Dv DF_1_NOOPEN
 flag to indicate that the object may not be opened by
 .Xr dlopen 3 .
+.Pp
 .It Cm norelro
 Do not indicate that portions of the object shold be mapped read-only
 after initial relocation processing.
 The object will omit the
 .Dv PT_GNU_RELRO
 segment.
+.Pp
 .It Cm notext
 Allow relocations against read-only segments.
 Sets the
 .Dv DT_TEXTREL flag in the
 .Dv DYNAMIC
 section.
+.Pp
 .It Cm now
 Set the
 .Dv DF_BIND_NOW
 flag to indicate that the run-time loader should perform all relocation
 processing as part of object initialization.
 By default relocations may be performed on demand.
+.Pp
 .It Cm origin
 Set the
 .Dv DF_ORIGIN
 flag to indicate that the object requires
 $ORIGIN
 processing.
+.Pp
 .It Cm retpolineplt
 Emit retpoline format PLT entries as a mitigation for CVE-2017-5715.
+.Pp
 .It Cm rodynamic
 Make the
 .Li .dynamic
@@ -676,6 +693,18 @@ section read-only.
 The
 .Dv DT_DEBUG
 tag will not be emitted.
+.Pp
+.It Cm separate-loadable-segments
+.It Cm separate-code
+.It Cm noseparate-code
+Specify whether two adjacent PT_LOAD segments are allowed to overlap in pages.
+.Cm noseparate-code
+(default) allows overlap.
+.Cm separate-code
+allows overlap between two executable segments, or two non-executable segments.
+.Cm separate-loadable-segments
+disallows overlap.
+.Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to
 .Ar size .
@@ -683,9 +712,11 @@ The stack size is recorded as the size of the
 .Ar size .
 .Dv PT_GNU_STACK
 program segment.
+.Pp
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.
+.Pp
 .It Cm wxneeded
 Create a
 .Dv PT_OPENBSD_WXNEEDED

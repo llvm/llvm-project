@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cassert>
 #include <climits>
+#include <memory>
 
 #include "test_macros.h"
 
@@ -189,11 +190,6 @@ struct cpp03_overload_allocator : bare_allocator<T>
     }
 };
 template <class T> bool cpp03_overload_allocator<T>::construct_called = false;
-
-
-#if TEST_STD_VER >= 11
-
-#include <memory>
 
 template <class T, class = std::integral_constant<size_t, 0> > class min_pointer;
 template <class T, class ID> class min_pointer<const T, ID>;
@@ -461,7 +457,5 @@ public:
     friend bool operator==(explicit_allocator, explicit_allocator) {return true;}
     friend bool operator!=(explicit_allocator x, explicit_allocator y) {return !(x == y);}
 };
-
-#endif  // TEST_STD_VER >= 11
 
 #endif  // MIN_ALLOCATOR_H

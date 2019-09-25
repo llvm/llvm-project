@@ -1,4 +1,4 @@
 C_SOURCES := main.c
-CFLAGS_EXTRAS = -mthumb
+CFLAGS_EXTRAS := -mthumb
 
 include Makefile.rules

@@ -509,8 +509,8 @@ void Writer::calculateExports() {
     out.exportSec->exports.push_back(
         WasmExport{functionTableName, WASM_EXTERNAL_TABLE, 0});
 
-  unsigned fakeGlobalIndex = out.importSec->getNumImportedGlobals() +
-                             out.globalSec->inputGlobals.size();
+  unsigned globalIndex =
+      out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
   for (Symbol *sym : symtab->getSymbols()) {
     if (!sym->isExported())
@@ -536,8 +536,8 @@ void Writer::calculateExports() {
       export_ = {name, WASM_EXTERNAL_EVENT, e->getEventIndex()};
     } else {
       auto *d = cast<DefinedData>(sym);
-      out.globalSec->definedFakeGlobals.emplace_back(d);
-      export_ = {name, WASM_EXTERNAL_GLOBAL, fakeGlobalIndex++};
+      out.globalSec->dataAddressGlobals.push_back(d);
+      export_ = {name, WASM_EXTERNAL_GLOBAL, globalIndex++};
     }
 
     LLVM_DEBUG(dbgs() << "Export: " << name << "\n");
@@ -1035,7 +1035,7 @@ void Writer::run() {
 
   if (errorHandler().verbose) {
     log("Defined Functions: " + Twine(out.functionSec->inputFunctions.size()));
-    log("Defined Globals  : " + Twine(out.globalSec->inputGlobals.size()));
+    log("Defined Globals  : " + Twine(out.globalSec->numGlobals()));
     log("Defined Events   : " + Twine(out.eventSec->inputEvents.size()));
     log("Function Imports : " +
         Twine(out.importSec->getNumImportedFunctions()));

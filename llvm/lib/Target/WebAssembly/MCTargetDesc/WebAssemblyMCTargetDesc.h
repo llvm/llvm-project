@@ -333,30 +333,10 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   case WebAssembly::LOAD_SPLAT_v64x2:
   case WebAssembly::LOAD_SPLAT_v64x2_S:
     return 3;
-  case WebAssembly::LOAD_v16i8:
-  case WebAssembly::LOAD_v16i8_S:
-  case WebAssembly::LOAD_v8i16:
-  case WebAssembly::LOAD_v8i16_S:
-  case WebAssembly::LOAD_v4i32:
-  case WebAssembly::LOAD_v4i32_S:
-  case WebAssembly::LOAD_v2i64:
-  case WebAssembly::LOAD_v2i64_S:
-  case WebAssembly::LOAD_v4f32:
-  case WebAssembly::LOAD_v4f32_S:
-  case WebAssembly::LOAD_v2f64:
-  case WebAssembly::LOAD_v2f64_S:
-  case WebAssembly::STORE_v16i8:
-  case WebAssembly::STORE_v16i8_S:
-  case WebAssembly::STORE_v8i16:
-  case WebAssembly::STORE_v8i16_S:
-  case WebAssembly::STORE_v4i32:
-  case WebAssembly::STORE_v4i32_S:
-  case WebAssembly::STORE_v2i64:
-  case WebAssembly::STORE_v2i64_S:
-  case WebAssembly::STORE_v4f32:
-  case WebAssembly::STORE_v4f32_S:
-  case WebAssembly::STORE_v2f64:
-  case WebAssembly::STORE_v2f64_S:
+  case WebAssembly::LOAD_V128:
+  case WebAssembly::LOAD_V128_S:
+  case WebAssembly::STORE_V128:
+  case WebAssembly::STORE_V128_S:
     return 4;
   default:
     return -1;

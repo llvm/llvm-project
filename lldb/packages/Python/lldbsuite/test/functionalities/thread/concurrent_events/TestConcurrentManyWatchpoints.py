@@ -16,6 +16,7 @@ class ConcurrentManyWatchpoints(ConcurrentEventsBase):
     @skipIf(triple='^mips')
     @expectedFailureNetBSD
     @add_test_categories(["watchpoint"])
+    @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 watchpoints from 100 threads."""
         self.build(dictionary=self.getBuildFlags())
