@@ -40,24 +40,20 @@ def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 //===----------------------------------------------------------------------===//
 
 // Load: v128.load
-multiclass SIMDLoad<ValueType vec_t> {
-  let mayLoad = 1, UseNamedOperandTable = 1 in
-  defm LOAD_#vec_t :
-    SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-           (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           "v128.load\t$dst, ${off}(${addr})$p2align",
-           "v128.load\t$off$p2align", 0>;
-}
-
-foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-defm "" : SIMDLoad<vec_t>;
+let mayLoad = 1, UseNamedOperandTable = 1 in
+defm LOAD_V128 :
+  SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+         (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+         "v128.load\t$dst, ${off}(${addr})$p2align",
+         "v128.load\t$off$p2align", 0>;
 
 // Def load and store patterns from WebAssemblyInstrMemory.td for vector types
-def : LoadPatNoOffset<vec_t, load, !cast<NI>("LOAD_"#vec_t)>;
-def : LoadPatImmOff<vec_t, load, regPlusImm, !cast<NI>("LOAD_"#vec_t)>;
-def : LoadPatImmOff<vec_t, load, or_is_add, !cast<NI>("LOAD_"#vec_t)>;
-def : LoadPatOffsetOnly<vec_t, load, !cast<NI>("LOAD_"#vec_t)>;
-def : LoadPatGlobalAddrOffOnly<vec_t, load, !cast<NI>("LOAD_"#vec_t)>;
+foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
+def : LoadPatNoOffset<vec_t, load, LOAD_V128>;
+def : LoadPatImmOff<vec_t, load, regPlusImm, LOAD_V128>;
+def : LoadPatImmOff<vec_t, load, or_is_add, LOAD_V128>;
+def : LoadPatOffsetOnly<vec_t, load, LOAD_V128>;
+def : LoadPatGlobalAddrOffOnly<vec_t, load, LOAD_V128>;
 }
 
 // vNxM.load_splat
@@ -109,24 +105,20 @@ def : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
 }
 
 // Store: v128.store
-multiclass SIMDStore<ValueType vec_t> {
-  let mayStore = 1, UseNamedOperandTable = 1 in
-  defm STORE_#vec_t :
-    SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr, V128:$vec),
-           (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           "v128.store\t${off}(${addr})$p2align, $vec",
-           "v128.store\t$off$p2align", 1>;
-}
+let mayStore = 1, UseNamedOperandTable = 1 in
+defm STORE_V128 :
+  SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr, V128:$vec),
+         (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+         "v128.store\t${off}(${addr})$p2align, $vec",
+         "v128.store\t$off$p2align", 1>;
 
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-defm "" : SIMDStore<vec_t>;
-
 // Def load and store patterns from WebAssemblyInstrMemory.td for vector types
-def : StorePatNoOffset<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
-def : StorePatImmOff<vec_t, store, regPlusImm, !cast<NI>("STORE_"#vec_t)>;
-def : StorePatImmOff<vec_t, store, or_is_add, !cast<NI>("STORE_"#vec_t)>;
-def : StorePatOffsetOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
-def : StorePatGlobalAddrOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
+def : StorePatNoOffset<vec_t, store, STORE_V128>;
+def : StorePatImmOff<vec_t, store, regPlusImm, STORE_V128>;
+def : StorePatImmOff<vec_t, store, or_is_add, STORE_V128>;
+def : StorePatOffsetOnly<vec_t, store, STORE_V128>;
+def : StorePatGlobalAddrOffOnly<vec_t, store, STORE_V128>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,7 +128,7 @@ def : StorePatGlobalAddrOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 // Constant: v128.const
 multiclass ConstVec<ValueType vec_t, dag ops, dag pat, string args> {
   let isMoveImm = 1, isReMaterializable = 1,
-      Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
+      Predicates = [HasUnimplementedSIMD128] in
   defm CONST_V128_#vec_t : SIMD_I<(outs V128:$dst), ops, (outs), ops,
                                   [(set V128:$dst, (vec_t pat))],
                                   "v128.const\t$dst, "#args,
@@ -332,7 +324,7 @@ multiclass ExtractLaneExtended<string sign, bits<32> baseInst> {
 }
 
 defm "" : ExtractLaneExtended<"_s", 5>;
-let Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
+let Predicates = [HasUnimplementedSIMD128] in
 defm "" : ExtractLaneExtended<"_u", 6>;
 defm "" : ExtractLane<v4i32, "i32x4", LaneIdx4, I32, 13>;
 defm "" : ExtractLane<v2i64, "i64x2", LaneIdx2, I64, 16>;
@@ -701,7 +693,7 @@ defm ABS : SIMDUnaryFP<fabs, "abs", 149>;
 defm NEG : SIMDUnaryFP<fneg, "neg", 150>;
 
 // Square root: sqrt
-let Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
+let Predicates = [HasUnimplementedSIMD128] in
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 151>;
 
 //===----------------------------------------------------------------------===//
@@ -725,7 +717,7 @@ let isCommutable = 1 in
 defm MUL : SIMDBinaryFP<fmul, "mul", 156>;
 
 // Division: div
-let Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
+let Predicates = [HasUnimplementedSIMD128] in
 defm DIV : SIMDBinaryFP<fdiv, "div", 157>;
 
 // NaN-propagating minimum: min
@@ -818,6 +810,7 @@ def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
 //===----------------------------------------------------------------------===//
 // Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
 //===----------------------------------------------------------------------===//
+
 multiclass SIMDQFM<ValueType vec_t, string vec, bits<32> baseInst> {
   defm QFMA_#vec_t :
     SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),

@@ -3951,10 +3951,21 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::experimental_gc_relocate: {
+    auto &GCR = *cast<GCRelocateInst>(II);
+
+    // If we have two copies of the same pointer in the statepoint argument
+    // list, canonicalize to one.  This may let us common gc.relocates.
+    if (GCR.getBasePtr() == GCR.getDerivedPtr() &&
+        GCR.getBasePtrIndex() != GCR.getDerivedPtrIndex()) {
+      auto *OpIntTy = GCR.getOperand(2)->getType();
+      II->setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
+      return II;
+    }
+    
     // Translate facts known about a pointer before relocating into
     // facts about the relocate value, while being careful to
     // preserve relocation semantics.
-    Value *DerivedPtr = cast<GCRelocateInst>(II)->getDerivedPtr();
+    Value *DerivedPtr = GCR.getDerivedPtr();
 
     // Remove the relocation if unused, note that this check is required
     // to prevent the cases below from looping forever.

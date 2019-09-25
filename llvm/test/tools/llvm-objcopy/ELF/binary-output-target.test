@@ -105,3 +105,12 @@
 # CHECK-NEXT:     SectionHeaderCount: 4
 # CHECK-NEXT:     StringTableSectionIndex:
 # CHECK-NEXT:   }
+
+## ELFOSABI_NONE = ELFOSABI_SYSV = 0 is the default.
+## "-freebsd" suffixed target name can change the field to ELFOSABI_FREEBSD.
+
+## Many uses of objcopy use no spaces in the flags, make sure that also works.
+# RUN: llvm-objcopy -Ibinary -O elf64-x86-64-freebsd %t.txt %t.freebsd.o
+# RUN: llvm-readobj --file-headers %t.freebsd.o | FileCheck %s --check-prefixes=FREEBSD
+
+# FREEBSD: OS/ABI: FreeBSD

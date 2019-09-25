@@ -209,7 +209,7 @@ static cl::opt<bool> EnableSyntheticCounts(
     cl::desc("Run synthetic function entry count generation "
              "pass"));
 
-static Regex DefaultAliasRegex(
+static const Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
 // This option is used in simplifying testing SampleFDO optimizations for

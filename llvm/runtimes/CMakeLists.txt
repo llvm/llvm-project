@@ -460,6 +460,11 @@ else() # if this is included from LLVM's CMake
       endif()
     endforeach()
 
+    if(NOT RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+      string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
+      list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
+    endif()
+
     if(target IN_LIST LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
       list(APPEND EXTRA_ARGS STRIP_TOOL ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link)
     endif()
@@ -482,7 +487,6 @@ else() # if this is included from LLVM's CMake
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         -DLLVM_RUNTIMES_TARGET=${name}
                                         ${${name}_extra_args}
-                             PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                              TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
                              EXTRA_TARGETS ${${name}_extra_targets}
                                            ${${name}_test_targets}

@@ -4178,7 +4178,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
     bool FCmp = (I.getOpcode() == Instruction::FCmp);
-    auto *Cmp = dyn_cast<CmpInst>(&I);
+    auto *Cmp = cast<CmpInst>(&I);
     setDebugLocFromInst(Builder, Cmp);
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *A = getOrCreateVectorValue(Cmp->getOperand(0), Part);
