@@ -609,8 +609,6 @@ ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
   return std::make_shared<ScriptInterpreterPythonImpl>(debugger);
 }
 
-void ScriptInterpreterPythonImpl::ResetOutputFileHandle(FILE *fh) {}
-
 void ScriptInterpreterPythonImpl::LeaveSession() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
   if (log)

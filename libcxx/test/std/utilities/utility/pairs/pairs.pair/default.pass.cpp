@@ -10,12 +10,7 @@
 
 // template <class T1, class T2> struct pair
 
-// constexpr pair();
-
-// This test doesn't pass due to a constexpr bug in GCC 4.9 that fails
-// to initialize any type without a user provided constructor in a constant
-// expression (e.g. float).
-// XFAIL: gcc-4.9
+// explicit(see-below) constexpr pair();
 
 // NOTE: The SFINAE on the default constructor is tested in
 //       default-sfinae.pass.cpp

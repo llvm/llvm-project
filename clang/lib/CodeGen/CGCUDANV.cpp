@@ -236,7 +236,8 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
 
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
-                         CudaFeature::CUDA_USES_NEW_LAUNCH))
+                         CudaFeature::CUDA_USES_NEW_LAUNCH) ||
+      CGF.getLangOpts().HIPUseNewLaunchAPI)
     emitDeviceStubBodyNew(CGF, Args);
   else
     emitDeviceStubBodyLegacy(CGF, Args);
@@ -264,14 +265,18 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
 
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
 
-  // Lookup cudaLaunchKernel function.
+  // Lookup cudaLaunchKernel/hipLaunchKernel function.
   // cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
   //                              void **args, size_t sharedMem,
   //                              cudaStream_t stream);
+  // hipError_t hipLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
+  //                            void **args, size_t sharedMem,
+  //                            hipStream_t stream);
   TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
   DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
+  auto LaunchKernelName = addPrefixToName("LaunchKernel");
   IdentifierInfo &cudaLaunchKernelII =
-      CGM.getContext().Idents.get("cudaLaunchKernel");
+      CGM.getContext().Idents.get(LaunchKernelName);
   FunctionDecl *cudaLaunchKernelFD = nullptr;
   for (const auto &Result : DC->lookup(&cudaLaunchKernelII)) {
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(Result))
@@ -280,7 +285,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
 
   if (cudaLaunchKernelFD == nullptr) {
     CGM.Error(CGF.CurFuncDecl->getLocation(),
-              "Can't find declaration for cudaLaunchKernel()");
+              "Can't find declaration for " + LaunchKernelName);
     return;
   }
   // Create temporary dim3 grid_dim, block_dim.
@@ -301,7 +306,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                                /*ShmemSize=*/ShmemSize.getType(),
                                /*Stream=*/Stream.getType()},
                               /*isVarArg=*/false),
-      "__cudaPopCallConfiguration");
+      addUnderscoredPrefixToName("PopCallConfiguration"));
 
   CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn,
                               {GridDim.getPointer(), BlockDim.getPointer(),
@@ -329,7 +334,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeFunctionDeclaration(cudaLaunchKernelFD);
   llvm::FunctionCallee cudaLaunchKernelFn =
-      CGM.CreateRuntimeFunction(FTy, "cudaLaunchKernel");
+      CGM.CreateRuntimeFunction(FTy, LaunchKernelName);
   CGF.EmitCall(FI, CGCallee::forDirect(cudaLaunchKernelFn), ReturnValueSlot(),
                LaunchKernelArgs);
   CGF.EmitBranch(EndBlock);

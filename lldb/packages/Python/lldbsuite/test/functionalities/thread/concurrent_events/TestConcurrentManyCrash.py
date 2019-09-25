@@ -15,6 +15,7 @@ class ConcurrentManyCrash(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
     @expectedFailureNetBSD
+    @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 threads that cause a segfault."""
         self.build(dictionary=self.getBuildFlags())

@@ -15,10 +15,6 @@
 // (except clang-3.6 which temporarily enabled sized-deallocation)
 // UNSUPPORTED: clang, apple-clang
 
-// NOTE: GCC 4.9.1 does not support sized-deallocation in C++14. However
-// GCC 5.1 does.
-// XFAIL: gcc-4.7, gcc-4.8, gcc-4.9
-
 #include <new>
 #include <cstddef>
 #include <cstdlib>

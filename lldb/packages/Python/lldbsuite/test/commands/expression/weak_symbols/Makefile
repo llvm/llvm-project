@@ -1,4 +1,4 @@
-CFLAGS_EXTRAS += -std=c99
+CFLAGS_EXTRAS := -std=c99
 LD_FLAGS := -dynamiclib
 include Makefile.rules
 
