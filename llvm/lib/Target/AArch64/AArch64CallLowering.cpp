@@ -464,6 +464,13 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
+/// Returns a pair containing the fixed CCAssignFn and the vararg CCAssignFn for
+/// CC.
+static std::pair<CCAssignFn *, CCAssignFn *>
+getAssignFnsForCC(CallingConv::ID CC, const AArch64TargetLowering &TLI) {
+  return {TLI.CCAssignFnForCall(CC, false), TLI.CCAssignFnForCall(CC, true)};
+}
+
 bool AArch64CallLowering::doCallerAndCalleePassArgsTheSameWay(
     CallLoweringInfo &Info, MachineFunction &MF,
     SmallVectorImpl<ArgInfo> &InArgs) const {
@@ -477,11 +484,19 @@ bool AArch64CallLowering::doCallerAndCalleePassArgsTheSameWay(
 
   // Check if the caller and callee will handle arguments in the same way.
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-  CCAssignFn *CalleeAssignFn = TLI.CCAssignFnForCall(CalleeCC, Info.IsVarArg);
-  CCAssignFn *CallerAssignFn =
-      TLI.CCAssignFnForCall(CallerCC, CallerF.isVarArg());
+  CCAssignFn *CalleeAssignFnFixed;
+  CCAssignFn *CalleeAssignFnVarArg;
+  std::tie(CalleeAssignFnFixed, CalleeAssignFnVarArg) =
+      getAssignFnsForCC(CalleeCC, TLI);
 
-  if (!resultsCompatible(Info, MF, InArgs, *CalleeAssignFn, *CallerAssignFn))
+  CCAssignFn *CallerAssignFnFixed;
+  CCAssignFn *CallerAssignFnVarArg;
+  std::tie(CallerAssignFnFixed, CallerAssignFnVarArg) =
+      getAssignFnsForCC(CallerCC, TLI);
+
+  if (!resultsCompatible(Info, MF, InArgs, *CalleeAssignFnFixed,
+                         *CalleeAssignFnVarArg, *CallerAssignFnFixed,
+                         *CallerAssignFnVarArg))
     return false;
 
   // Make sure that the caller and callee preserve all of the same registers.
@@ -508,12 +523,15 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
   CallingConv::ID CallerCC = CallerF.getCallingConv();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
 
+  CCAssignFn *AssignFnFixed;
+  CCAssignFn *AssignFnVarArg;
+  std::tie(AssignFnFixed, AssignFnVarArg) = getAssignFnsForCC(CalleeCC, TLI);
+
   // We have outgoing arguments. Make sure that we can tail call with them.
   SmallVector<CCValAssign, 16> OutLocs;
   CCState OutInfo(CalleeCC, false, MF, OutLocs, CallerF.getContext());
 
-  if (!analyzeArgInfo(OutInfo, OutArgs,
-                      *TLI.CCAssignFnForCall(CalleeCC, Info.IsVarArg))) {
+  if (!analyzeArgInfo(OutInfo, OutArgs, *AssignFnFixed, *AssignFnVarArg)) {
     LLVM_DEBUG(dbgs() << "... Could not analyze call operands.\n");
     return false;
   }
@@ -741,10 +759,9 @@ bool AArch64CallLowering::lowerTailCall(
 
   // Find out which ABI gets to decide where things go.
   CallingConv::ID CalleeCC = Info.CallConv;
-  CCAssignFn *AssignFnFixed =
-      TLI.CCAssignFnForCall(CalleeCC, /*IsVarArg=*/false);
-  CCAssignFn *AssignFnVarArg =
-      TLI.CCAssignFnForCall(CalleeCC, /*IsVarArg=*/true);
+  CCAssignFn *AssignFnFixed;
+  CCAssignFn *AssignFnVarArg;
+  std::tie(AssignFnFixed, AssignFnVarArg) = getAssignFnsForCC(CalleeCC, TLI);
 
   MachineInstrBuilder CallSeqStart;
   if (!IsSibCall)
@@ -787,8 +804,7 @@ bool AArch64CallLowering::lowerTailCall(
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
     SmallVector<CCValAssign, 16> OutLocs;
     CCState OutInfo(CalleeCC, false, MF, OutLocs, F.getContext());
-    analyzeArgInfo(OutInfo, OutArgs,
-                   *TLI.CCAssignFnForCall(CalleeCC, Info.IsVarArg));
+    analyzeArgInfo(OutInfo, OutArgs, *AssignFnFixed, *AssignFnVarArg);
 
     // The callee will pop the argument stack as a tail call. Thus, we must
     // keep it 16-byte aligned.
@@ -879,10 +895,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return lowerTailCall(MIRBuilder, Info, OutArgs);
 
   // Find out which ABI gets to decide where things go.
-  CCAssignFn *AssignFnFixed =
-      TLI.CCAssignFnForCall(Info.CallConv, /*IsVarArg=*/false);
-  CCAssignFn *AssignFnVarArg =
-      TLI.CCAssignFnForCall(Info.CallConv, /*IsVarArg=*/true);
+  CCAssignFn *AssignFnFixed;
+  CCAssignFn *AssignFnVarArg;
+  std::tie(AssignFnFixed, AssignFnVarArg) =
+      getAssignFnsForCC(Info.CallConv, TLI);
 
   MachineInstrBuilder CallSeqStart;
   CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);

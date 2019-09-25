@@ -159,7 +159,7 @@ public:
 };
 
 class TypeAttributeImpl : public EnumAttributeImpl {
-  virtual void anchor();
+  void anchor() override;
 
   Type *Ty;
 

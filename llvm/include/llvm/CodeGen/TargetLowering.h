@@ -1022,8 +1022,10 @@ public:
   }
 
   /// Return true if lowering to a jump table is suitable for a set of case
-  /// clusters which may contain \p NumCases cases, \p Range range of values.
-  virtual bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
+  /// clusters which may contain \p NumCases cases, \p Range range of values,
+  /// \p NumTargets targets.
+  virtual bool isSuitableForJumpTable(const SwitchInst *SI,
+                                      uint64_t NumCases, uint64_t NumTargets,
                                       uint64_t Range) const {
     // FIXME: This function check the maximum table size and density, but the
     // minimum size is not checked. It would be nice if the minimum size is
@@ -1032,14 +1034,14 @@ public:
     // getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
     const bool OptForSize = SI->getParent()->getParent()->hasOptSize();
     const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
-    const unsigned MaxJumpTableSize = getMaximumJumpTableSize();
-    
-    // Check whether the number of cases is small enough and
+    const unsigned MaxJumpTableTargets = getMaximumJumpTableTargets();
+
+    // Check whether the number of targets is small enough and
     // the range is dense enough for a jump table.
-    if ((OptForSize || Range <= MaxJumpTableSize) &&
-        (NumCases * 100 >= Range * MinDensity)) {
+    if ((OptForSize || NumTargets <= MaxJumpTableTargets) &&
+        NumCases * 100 >= Range * MinDensity)
       return true;
-    }
+
     return false;
   }
 
@@ -1542,9 +1544,8 @@ public:
   /// Return lower limit of the density in a jump table.
   unsigned getMinimumJumpTableDensity(bool OptForSize) const;
 
-  /// Return upper limit for number of entries in a jump table.
-  /// Zero if no limit.
-  unsigned getMaximumJumpTableSize() const;
+  /// Return upper limit for number of targets in a jump table.
+  unsigned getMaximumJumpTableTargets() const;
 
   virtual bool isJumpTableRelative() const {
     return TM.isPositionIndependent();
@@ -1951,9 +1952,8 @@ protected:
   /// Indicate the minimum number of blocks to generate jump tables.
   void setMinimumJumpTableEntries(unsigned Val);
 
-  /// Indicate the maximum number of entries in jump tables.
-  /// Set to zero to generate unlimited jump tables.
-  void setMaximumJumpTableSize(unsigned);
+  /// Indicate the maximum number of targets in jump tables.
+  void setMaximumJumpTableTargets(unsigned);
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.

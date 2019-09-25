@@ -4629,31 +4629,48 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     case bitc::FUNC_CODE_INST_PHI: { // PHI: [ty, val0,bb0, ...]
-      if (Record.size() < 1 || ((Record.size()-1)&1))
+      if (Record.size() < 1)
         return error("Invalid record");
+      // The first record specifies the type.
       FullTy = getFullyStructuredTypeByID(Record[0]);
       Type *Ty = flattenPointerTypes(FullTy);
       if (!Ty)
         return error("Invalid record");
 
-      PHINode *PN = PHINode::Create(Ty, (Record.size()-1)/2);
+      // Phi arguments are pairs of records of [value, basic block].
+      // There is an optional final record for fast-math-flags if this phi has a
+      // floating-point type.
+      size_t NumArgs = (Record.size() - 1) / 2;
+      if ((Record.size() - 1) % 2 == 1 && !Ty->isFloatingPointTy())
+        return error("Invalid record");
+
+      PHINode *PN = PHINode::Create(Ty, NumArgs);
       InstructionList.push_back(PN);
 
-      for (unsigned i = 0, e = Record.size()-1; i != e; i += 2) {
+      for (unsigned i = 0; i != NumArgs; i++) {
         Value *V;
         // With the new function encoding, it is possible that operands have
         // negative IDs (for forward references).  Use a signed VBR
         // representation to keep the encoding small.
         if (UseRelativeIDs)
-          V = getValueSigned(Record, 1+i, NextValueNo, Ty);
+          V = getValueSigned(Record, i * 2 + 1, NextValueNo, Ty);
         else
-          V = getValue(Record, 1+i, NextValueNo, Ty);
-        BasicBlock *BB = getBasicBlock(Record[2+i]);
+          V = getValue(Record, i * 2 + 1, NextValueNo, Ty);
+        BasicBlock *BB = getBasicBlock(Record[i * 2 + 2]);
         if (!V || !BB)
           return error("Invalid record");
         PN->addIncoming(V, BB);
       }
       I = PN;
+
+      // If there are an even number of records, the final record must be FMF.
+      if (Record.size() % 2 == 0) {
+        assert(isa<FPMathOperator>(I) && "Unexpected phi type");
+        FastMathFlags FMF = getDecodedFastMathFlags(Record[Record.size() - 1]);
+        if (FMF.any())
+          I->setFastMathFlags(FMF);
+      }
+
       break;
     }
 

@@ -15,8 +15,8 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/MCRegisterInfo.h"
 
-// forward define the llvm::Type class
 namespace llvm {
 class Type;
 }
@@ -124,6 +124,8 @@ public:
     return pc;
   }
 
+  llvm::MCRegisterInfo &GetMCRegisterInfo() { return *m_mc_register_info_up; }
+
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 
   bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
@@ -136,13 +138,19 @@ public:
   static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
 
 protected:
-  // Classes that inherit from ABI can see and modify these
-  ABI(lldb::ProcessSP process_sp) {
-    if (process_sp.get())
-        m_process_wp = process_sp;
+  ABI(lldb::ProcessSP process_sp, std::unique_ptr<llvm::MCRegisterInfo> info_up)
+      : m_process_wp(process_sp), m_mc_register_info_up(std::move(info_up)) {
+    assert(m_mc_register_info_up && "ABI must have MCRegisterInfo");
   }
 
+  /// Utility function to construct a MCRegisterInfo using the ArchSpec triple.
+  /// Plugins wishing to customize the construction can construct the
+  /// MCRegisterInfo themselves.
+  static std::unique_ptr<llvm::MCRegisterInfo>
+  MakeMCRegisterInfo(const ArchSpec &arch);
+
   lldb::ProcessWP m_process_wp;
+  std::unique_ptr<llvm::MCRegisterInfo> m_mc_register_info_up;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ABI);

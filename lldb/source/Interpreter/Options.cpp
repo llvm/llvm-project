@@ -698,7 +698,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           request.AddCompletion("--" + long_option.str(), opt.usage_text);
           return true;
         } else
-          request.AddCompletion(request.GetCursorArgument());
+          request.AddCompletion(request.GetCursorArgumentPrefix());
         return true;
       } else {
         // FIXME - not handling wrong options yet:
@@ -720,11 +720,8 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
     } else if (opt_arg_pos == request.GetCursorIndex()) {
       // Okay the cursor is on the completion of an argument. See if it has a
       // completion, otherwise return no matches.
-
-      CompletionRequest subrequest = request;
-      subrequest.SetCursorCharPosition(subrequest.GetCursorArgument().size());
       if (opt_defs_index != -1) {
-        HandleOptionArgumentCompletion(subrequest, opt_element_vector, i,
+        HandleOptionArgumentCompletion(request, opt_element_vector, i,
                                        interpreter);
         return true;
       } else {

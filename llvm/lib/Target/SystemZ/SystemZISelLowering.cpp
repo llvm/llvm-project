@@ -6563,19 +6563,17 @@ static bool isSelectPseudo(MachineInstr &MI) {
 
 // Helper function, which inserts PHI functions into SinkMBB:
 //   %Result(i) = phi [ %FalseValue(i), FalseMBB ], [ %TrueValue(i), TrueMBB ],
-// where %FalseValue(i) and %TrueValue(i) are taken from the consequent Selects
-// in [MIItBegin, MIItEnd) range.
-static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
-                                 MachineBasicBlock::iterator MIItEnd,
+// where %FalseValue(i) and %TrueValue(i) are taken from Selects.
+static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
                                  MachineBasicBlock *TrueMBB,
                                  MachineBasicBlock *FalseMBB,
                                  MachineBasicBlock *SinkMBB) {
   MachineFunction *MF = TrueMBB->getParent();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
-  unsigned CCValid = MIItBegin->getOperand(3).getImm();
-  unsigned CCMask = MIItBegin->getOperand(4).getImm();
-  DebugLoc DL = MIItBegin->getDebugLoc();
+  MachineInstr *FirstMI = Selects.front();
+  unsigned CCValid = FirstMI->getOperand(3).getImm();
+  unsigned CCMask = FirstMI->getOperand(4).getImm();
 
   MachineBasicBlock::iterator SinkInsertionPoint = SinkMBB->begin();
 
@@ -6587,16 +6585,15 @@ static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
   // destination registers, and the registers that went into the PHI.
   DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
 
-  for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd;
-       MIIt = skipDebugInstructionsForward(++MIIt, MIItEnd)) {
-    Register DestReg = MIIt->getOperand(0).getReg();
-    Register TrueReg = MIIt->getOperand(1).getReg();
-    Register FalseReg = MIIt->getOperand(2).getReg();
+  for (auto MI : Selects) {
+    Register DestReg = MI->getOperand(0).getReg();
+    Register TrueReg = MI->getOperand(1).getReg();
+    Register FalseReg = MI->getOperand(2).getReg();
 
     // If this Select we are generating is the opposite condition from
     // the jump we generated, then we have to swap the operands for the
     // PHI that is going to be generated.
-    if (MIIt->getOperand(4).getImm() == (CCValid ^ CCMask))
+    if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
     if (RegRewriteTable.find(TrueReg) != RegRewriteTable.end())
@@ -6605,6 +6602,7 @@ static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
     if (RegRewriteTable.find(FalseReg) != RegRewriteTable.end())
       FalseReg = RegRewriteTable[FalseReg].second;
 
+    DebugLoc DL = MI->getDebugLoc();
     BuildMI(*SinkMBB, SinkInsertionPoint, DL, TII->get(SystemZ::PHI), DestReg)
       .addReg(TrueReg).addMBB(TrueMBB)
       .addReg(FalseReg).addMBB(FalseMBB);
@@ -6620,36 +6618,61 @@ static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
 MachineBasicBlock *
 SystemZTargetLowering::emitSelect(MachineInstr &MI,
                                   MachineBasicBlock *MBB) const {
+  assert(isSelectPseudo(MI) && "Bad call to emitSelect()");
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
 
   unsigned CCValid = MI.getOperand(3).getImm();
   unsigned CCMask = MI.getOperand(4).getImm();
-  DebugLoc DL = MI.getDebugLoc();
 
   // If we have a sequence of Select* pseudo instructions using the
   // same condition code value, we want to expand all of them into
   // a single pair of basic blocks using the same condition.
-  MachineInstr *LastMI = &MI;
-  MachineBasicBlock::iterator NextMIIt = skipDebugInstructionsForward(
-      std::next(MachineBasicBlock::iterator(MI)), MBB->end());
-
-  if (isSelectPseudo(MI))
-    while (NextMIIt != MBB->end() && isSelectPseudo(*NextMIIt) &&
-           NextMIIt->getOperand(3).getImm() == CCValid &&
-           (NextMIIt->getOperand(4).getImm() == CCMask ||
-            NextMIIt->getOperand(4).getImm() == (CCValid ^ CCMask))) {
-      LastMI = &*NextMIIt;
-      NextMIIt = skipDebugInstructionsForward(++NextMIIt, MBB->end());
+  SmallVector<MachineInstr*, 8> Selects;
+  SmallVector<MachineInstr*, 8> DbgValues;
+  Selects.push_back(&MI);
+  unsigned Count = 0;
+  for (MachineBasicBlock::iterator NextMIIt =
+         std::next(MachineBasicBlock::iterator(MI));
+       NextMIIt != MBB->end(); ++NextMIIt) {
+    if (NextMIIt->definesRegister(SystemZ::CC))
+      break;
+    if (isSelectPseudo(*NextMIIt)) {
+      assert(NextMIIt->getOperand(3).getImm() == CCValid &&
+             "Bad CCValid operands since CC was not redefined.");
+      if (NextMIIt->getOperand(4).getImm() == CCMask ||
+          NextMIIt->getOperand(4).getImm() == (CCValid ^ CCMask)) {
+        Selects.push_back(&*NextMIIt);
+        continue;
+      }
+      break;
     }
+    bool User = false;
+    for (auto SelMI : Selects)
+      if (NextMIIt->readsVirtualRegister(SelMI->getOperand(0).getReg())) {
+        User = true;
+        break;
+      }
+    if (NextMIIt->isDebugInstr()) {
+      if (User) {
+        assert(NextMIIt->isDebugValue() && "Unhandled debug opcode.");
+        DbgValues.push_back(&*NextMIIt);
+      }
+    }
+    else if (User || ++Count > 20)
+      break;
+  }
 
+  MachineInstr *LastMI = Selects.back();
+  bool CCKilled =
+      (LastMI->killsRegister(SystemZ::CC) || checkCCKill(*LastMI, MBB));
   MachineBasicBlock *StartMBB = MBB;
-  MachineBasicBlock *JoinMBB  = splitBlockBefore(MI, MBB);
+  MachineBasicBlock *JoinMBB  = splitBlockAfter(LastMI, MBB);
   MachineBasicBlock *FalseMBB = emitBlockAfter(StartMBB);
 
   // Unless CC was killed in the last Select instruction, mark it as
   // live-in to both FalseMBB and JoinMBB.
-  if (!LastMI->killsRegister(SystemZ::CC) && !checkCCKill(*LastMI, JoinMBB)) {
+  if (!CCKilled) {
     FalseMBB->addLiveIn(SystemZ::CC);
     JoinMBB->addLiveIn(SystemZ::CC);
   }
@@ -6658,7 +6681,7 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   //   BRC CCMask, JoinMBB
   //   # fallthrough to FalseMBB
   MBB = StartMBB;
-  BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+  BuildMI(MBB, MI.getDebugLoc(), TII->get(SystemZ::BRC))
     .addImm(CCValid).addImm(CCMask).addMBB(JoinMBB);
   MBB->addSuccessor(JoinMBB);
   MBB->addSuccessor(FalseMBB);
@@ -6672,12 +6695,14 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   //   %Result = phi [ %FalseReg, FalseMBB ], [ %TrueReg, StartMBB ]
   //  ...
   MBB = JoinMBB;
-  MachineBasicBlock::iterator MIItBegin = MachineBasicBlock::iterator(MI);
-  MachineBasicBlock::iterator MIItEnd = skipDebugInstructionsForward(
-      std::next(MachineBasicBlock::iterator(LastMI)), MBB->end());
-  createPHIsForSelects(MIItBegin, MIItEnd, StartMBB, FalseMBB, MBB);
+  createPHIsForSelects(Selects, StartMBB, FalseMBB, MBB);
+  for (auto SelMI : Selects)
+    SelMI->eraseFromParent();
 
-  MBB->erase(MIItBegin, MIItEnd);
+  MachineBasicBlock::iterator InsertPos = MBB->getFirstNonPHI();
+  for (auto DbgMI : DbgValues)
+    MBB->splice(InsertPos, StartMBB, DbgMI);
+
   return JoinMBB;
 }
 

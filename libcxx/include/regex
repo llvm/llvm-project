@@ -169,15 +169,15 @@ public:
     // assign:
     basic_regex& assign(const basic_regex& that);
     basic_regex& assign(basic_regex&& that) noexcept;
-    basic_regex& assign(const charT* ptr, flag_type f = regex_constants::ECMAScript);
-    basic_regex& assign(const charT* p, size_t len, flag_type f);
+    basic_regex& assign(const charT* ptr,           flag_type f = regex_constants::ECMAScript);
+    basic_regex& assign(const charT* p, size_t len, flag_type f = regex_constants::ECMAScript);
     template <class string_traits, class A>
         basic_regex& assign(const basic_string<charT, string_traits, A>& s,
-                            flag_type f = regex_constants::ECMAScript);
+                                                    flag_type f = regex_constants::ECMAScript);
     template <class InputIterator>
         basic_regex& assign(InputIterator first, InputIterator last,
-                            flag_type f = regex_constants::ECMAScript);
-    basic_regex& assign(initializer_list<charT>, flag_type = regex_constants::ECMAScript);
+                                                    flag_type f = regex_constants::ECMAScript);
+    basic_regex& assign(initializer_list<charT>,    flag_type f = regex_constants::ECMAScript);
 
     // const operations:
     unsigned mark_count() const;
@@ -2617,7 +2617,7 @@ public:
     basic_regex& assign(const value_type* __p, flag_type __f = regex_constants::ECMAScript)
         {return assign(__p, __p + __traits_.length(__p), __f);}
     _LIBCPP_INLINE_VISIBILITY
-    basic_regex& assign(const value_type* __p, size_t __len, flag_type __f)
+    basic_regex& assign(const value_type* __p, size_t __len, flag_type __f = regex_constants::ECMAScript)
         {return assign(__p, __p + __len, __f);}
     template <class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY

@@ -300,7 +300,8 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
       ReduxDesc = isRecurrenceInstr(Cur, Kind, ReduxDesc, HasFunNoNaNAttr);
       if (!ReduxDesc.isRecurrence())
         return false;
-      if (isa<FPMathOperator>(ReduxDesc.getPatternInst()))
+      // FIXME: FMF is allowed on phi, but propagation is not handled correctly.
+      if (isa<FPMathOperator>(ReduxDesc.getPatternInst()) && !IsAPhi)
         FMF &= ReduxDesc.getPatternInst()->getFastMathFlags();
     }
 

@@ -647,11 +647,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(
       llvm::Align(1ULL << STI.getPrefFunctionLogAlignment()));
 
-  // Only change the limit for entries in a jump table if specified by
+  // Only change the limit for targets in a jump table if specified by
   // the sub target, but not at the command line.
-  unsigned MaxJT = STI.getMaximumJumpTableSize();
-  if (MaxJT && getMaximumJumpTableSize() == UINT_MAX)
-    setMaximumJumpTableSize(MaxJT);
+  if (getMaximumJumpTableTargets() == UINT_MAX)
+    setMaximumJumpTableTargets(STI.getMaximumJumpTableTargets());
 
   setHasExtractBitsInsn(true);
 
@@ -10333,28 +10332,13 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
     IsRightShift = false;
     break;
   case Intrinsic::aarch64_neon_sshl:
-  case Intrinsic::aarch64_neon_ushl: {
-    // ushll/ushll2 provide unsigned shifts with immediate operands and
-    // sshll/sshll2 provide signed shifts with immediates, so we have to make
-    // sure we only match patterns here we can later match to them.
-    SDValue Op0 = N->getOperand(1);
-    if (Op0.getNode()->getOpcode() != (IID == Intrinsic::aarch64_neon_ushl
-                                           ? ISD::ZERO_EXTEND
-                                           : ISD::SIGN_EXTEND))
-      return SDValue();
-
-    EVT FromType = Op0.getOperand(0).getValueType();
-    EVT ToType = Op0.getValueType();
-    unsigned FromSize = FromType.getScalarSizeInBits();
-    if (!FromType.isVector() || !ToType.isVector() ||
-        (FromSize != 8 && FromSize != 16 && FromSize != 32) ||
-        2 * FromSize != ToType.getScalarSizeInBits())
-      return SDValue();
-
+  case Intrinsic::aarch64_neon_ushl:
+    // For positive shift amounts we can use SHL, as ushl/sshl perform a regular
+    // left shift for positive shift amounts. Below, we only replace the current
+    // node with VSHL, if this condition is met.
     Opcode = AArch64ISD::VSHL;
     IsRightShift = false;
     break;
-  }
   }
 
   if (IsRightShift && ShiftAmount <= -1 && ShiftAmount >= -(int)ElemBits) {

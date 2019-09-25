@@ -54,10 +54,62 @@ static inline kmp_depnode_t *__kmp_node_ref(kmp_depnode_t *node) {
 
 enum { KMP_DEPHASH_OTHER_SIZE = 97, KMP_DEPHASH_MASTER_SIZE = 997 };
 
+size_t sizes[] = { 997, 2003, 4001, 8191, 16001, 32003, 64007, 131071, 270029 };
+const size_t MAX_GEN = 8;
+
 static inline kmp_int32 __kmp_dephash_hash(kmp_intptr_t addr, size_t hsize) {
   // TODO alternate to try: set = (((Addr64)(addrUsefulBits * 9.618)) %
   // m_num_sets );
   return ((addr >> 6) ^ (addr >> 2)) % hsize;
+}
+
+static kmp_dephash_t *__kmp_dephash_extend(kmp_info_t *thread,
+                                           kmp_dephash_t *current_dephash) {
+  kmp_dephash_t *h;
+
+  size_t gen = current_dephash->generation + 1;
+  if (gen >= MAX_GEN)
+    return current_dephash;
+  size_t new_size = sizes[gen];
+
+  kmp_int32 size_to_allocate =
+      new_size * sizeof(kmp_dephash_entry_t *) + sizeof(kmp_dephash_t);
+
+#if USE_FAST_MEMORY
+  h = (kmp_dephash_t *)__kmp_fast_allocate(thread, size_to_allocate);
+#else
+  h = (kmp_dephash_t *)__kmp_thread_malloc(thread, size_to_allocate);
+#endif
+
+  h->size = new_size;
+  h->nelements = current_dephash->nelements;
+  h->buckets = (kmp_dephash_entry **)(h + 1);
+  h->generation = gen;
+
+  // insert existing elements in the new table
+  for (size_t i = 0; i < current_dephash->size; i++) {
+    kmp_dephash_entry_t *next;
+    for (kmp_dephash_entry_t *entry = current_dephash->buckets[i]; entry; entry = next) {
+      next = entry->next_in_bucket;
+      // Compute the new hash using the new size, and insert the entry in
+      // the new bucket.
+      kmp_int32 new_bucket = __kmp_dephash_hash(entry->addr, h->size);
+      if (entry->next_in_bucket) {
+        h->nconflicts++;
+      }
+      entry->next_in_bucket = h->buckets[new_bucket];
+      h->buckets[new_bucket] = entry;
+    }
+  }
+
+  // Free old hash table
+#if USE_FAST_MEMORY
+  __kmp_fast_free(thread, current_dephash);
+#else
+  __kmp_thread_free(thread, current_dephash);
+#endif
+
+  return h;
 }
 
 static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
@@ -81,10 +133,9 @@ static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
 #endif
   h->size = h_size;
 
-#ifdef KMP_DEBUG
+  h->generation = 0;
   h->nelements = 0;
   h->nconflicts = 0;
-#endif
   h->buckets = (kmp_dephash_entry **)(h + 1);
 
   for (size_t i = 0; i < h_size; i++)
@@ -97,7 +148,13 @@ static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
 #define ENTRY_LAST_MTXS 1
 
 static kmp_dephash_entry *
-__kmp_dephash_find(kmp_info_t *thread, kmp_dephash_t *h, kmp_intptr_t addr) {
+__kmp_dephash_find(kmp_info_t *thread, kmp_dephash_t **hash, kmp_intptr_t addr) {
+  kmp_dephash_t *h = *hash;
+  if (h->nelements != 0
+      && h->nconflicts/h->size >= 1) {
+    *hash = __kmp_dephash_extend(thread, h);
+    h = *hash;
+  }
   kmp_int32 bucket = __kmp_dephash_hash(addr, h->size);
 
   kmp_dephash_entry_t *entry;
@@ -122,11 +179,9 @@ __kmp_dephash_find(kmp_info_t *thread, kmp_dephash_t *h, kmp_intptr_t addr) {
     entry->mtx_lock = NULL;
     entry->next_in_bucket = h->buckets[bucket];
     h->buckets[bucket] = entry;
-#ifdef KMP_DEBUG
     h->nelements++;
     if (entry->next_in_bucket)
       h->nconflicts++;
-#endif
   }
   return entry;
 }
@@ -232,7 +287,7 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
 
 template <bool filter>
 static inline kmp_int32
-__kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
+__kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t **hash,
                    bool dep_barrier, kmp_int32 ndeps,
                    kmp_depend_info_t *dep_list, kmp_task_t *task) {
   KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d dependencies : "
@@ -352,7 +407,7 @@ __kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
 
 // returns true if the task has any outstanding dependence
 static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
-                             kmp_task_t *task, kmp_dephash_t *hash,
+                             kmp_task_t *task, kmp_dephash_t **hash,
                              bool dep_barrier, kmp_int32 ndeps,
                              kmp_depend_info_t *dep_list,
                              kmp_int32 ndeps_noalias,
@@ -552,7 +607,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
     __kmp_init_node(node);
     new_taskdata->td_depnode = node;
 
-    if (__kmp_check_deps(gtid, node, new_task, current_task->td_dephash,
+    if (__kmp_check_deps(gtid, node, new_task, &current_task->td_dephash,
                          NO_DEP_BARRIER, ndeps, dep_list, ndeps_noalias,
                          noalias_dep_list)) {
       KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d task had blocking "
@@ -633,7 +688,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
   kmp_depnode_t node = {0};
   __kmp_init_node(&node);
 
-  if (!__kmp_check_deps(gtid, &node, NULL, current_task->td_dephash,
+  if (!__kmp_check_deps(gtid, &node, NULL, &current_task->td_dephash,
                         DEP_BARRIER, ndeps, dep_list, ndeps_noalias,
                         noalias_dep_list)) {
     KA_TRACE(10, ("__kmpc_omp_wait_deps(exit): T#%d has no blocking "

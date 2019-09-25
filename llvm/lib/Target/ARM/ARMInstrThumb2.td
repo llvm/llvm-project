@@ -45,7 +45,8 @@ def mve_shift_imm : AsmOperandClass {
   let RenderMethod = "addImmOperands";
   let DiagnosticString = "operand must be an immediate in the range [1,32]";
 }
-def long_shift : Operand<i32> {
+def long_shift : Operand<i32>,
+                 ImmLeaf<i32, [{ return Imm > 0 && Imm <= 32; }]> {
   let ParserMatchClass = mve_shift_imm;
   let DecoderMethod = "DecodeLongShiftOperand";
 }

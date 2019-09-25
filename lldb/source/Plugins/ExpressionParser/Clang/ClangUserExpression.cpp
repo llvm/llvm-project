@@ -600,7 +600,10 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         size_t fixed_end;
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
-        if (m_source_code->GetOriginalBodyBounds(fixed_expression, m_expr_lang,
+        // Retrieve the original expression in case we don't have a top level
+        // expression (which has no surrounding source code).
+        if (m_source_code &&
+            m_source_code->GetOriginalBodyBounds(fixed_expression, m_expr_lang,
                                                  fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);

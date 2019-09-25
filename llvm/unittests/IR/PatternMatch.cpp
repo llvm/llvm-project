@@ -1045,6 +1045,34 @@ TEST_F(PatternMatchTest, FloatingPointFNeg) {
   EXPECT_FALSE(match(V3, m_FNeg(m_Value(Match))));
 }
 
+TEST_F(PatternMatchTest, CondBranchTest) {
+  BasicBlock *TrueBB = BasicBlock::Create(Ctx, "TrueBB", F);
+  BasicBlock *FalseBB = BasicBlock::Create(Ctx, "FalseBB", F);
+  Value *Br1 = IRB.CreateCondBr(IRB.getTrue(), TrueBB, FalseBB);
+
+  EXPECT_TRUE(match(Br1, m_Br(m_Value(), m_BasicBlock(), m_BasicBlock())));
+
+  BasicBlock *A, *B;
+  EXPECT_TRUE(match(Br1, m_Br(m_Value(), m_BasicBlock(A), m_BasicBlock(B))));
+  EXPECT_EQ(TrueBB, A);
+  EXPECT_EQ(FalseBB, B);
+
+  EXPECT_FALSE(
+      match(Br1, m_Br(m_Value(), m_SpecificBB(FalseBB), m_BasicBlock())));
+  EXPECT_FALSE(
+      match(Br1, m_Br(m_Value(), m_BasicBlock(), m_SpecificBB(TrueBB))));
+  EXPECT_FALSE(
+      match(Br1, m_Br(m_Value(), m_SpecificBB(FalseBB), m_BasicBlock(TrueBB))));
+  EXPECT_TRUE(
+      match(Br1, m_Br(m_Value(), m_SpecificBB(TrueBB), m_BasicBlock(FalseBB))));
+
+  // Check we can use m_Deferred with branches.
+  EXPECT_FALSE(match(Br1, m_Br(m_Value(), m_BasicBlock(A), m_Deferred(A))));
+  Value *Br2 = IRB.CreateCondBr(IRB.getTrue(), TrueBB, TrueBB);
+  A = nullptr;
+  EXPECT_TRUE(match(Br2, m_Br(m_Value(), m_BasicBlock(A), m_Deferred(A))));
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,

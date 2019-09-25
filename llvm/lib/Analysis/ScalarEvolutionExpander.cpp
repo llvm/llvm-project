@@ -2105,11 +2105,10 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
   for (BasicBlock *BB : ExitingBlocks) {
     ICmpInst::Predicate Pred;
     Instruction *LHS, *RHS;
-    BasicBlock *TrueBB, *FalseBB;
 
     if (!match(BB->getTerminator(),
                m_Br(m_ICmp(Pred, m_Instruction(LHS), m_Instruction(RHS)),
-                    TrueBB, FalseBB)))
+                    m_BasicBlock(), m_BasicBlock())))
       continue;
 
     if (SE.getSCEV(LHS) == S && SE.DT.dominates(LHS, At))

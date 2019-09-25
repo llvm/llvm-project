@@ -200,7 +200,7 @@ protected:
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
   unsigned PrefFunctionLogAlignment = 0;
   unsigned PrefLoopLogAlignment = 0;
-  unsigned MaxJumpTableSize = 0;
+  unsigned MaxJumpTableTargets = UINT_MAX;
   unsigned WideningBaseCost = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
@@ -364,7 +364,7 @@ public:
   }
   unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
 
-  unsigned getMaximumJumpTableSize() const { return MaxJumpTableSize; }
+  unsigned getMaximumJumpTableTargets() const { return MaxJumpTableTargets; }
 
   unsigned getWideningBaseCost() const { return WideningBaseCost; }
 
