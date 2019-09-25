@@ -1,0 +1,3 @@
+breakpoint set -n breakpoint_fct
+process launch
+dpu_attach dpu
