@@ -23,7 +23,7 @@ def get_python_relative_libdir():
     # right answer always.
     arch_specific_libdir = distutils.sysconfig.get_python_lib(True, False)
     split_libdir = arch_specific_libdir.split(os.sep)
-    lib_re = re.compile(r"^lib.+$")
+    lib_re = re.compile(r"^lib.*$")
 
     for i in range(len(split_libdir)):
         match = lib_re.match(split_libdir[i])
