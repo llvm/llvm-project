@@ -133,6 +133,14 @@ LIT can also filter based on test name.
    > ./bin/llvm-lit -sv tools/lldb/lit --filter CommandScriptImmediateOutput
 
 
+It is also possible to forward arguments to dotest.py by passing ``--param`` to
+lit and setting a value for ``dotest-args``.
+
+::
+
+   > ./bin/llvm-lit -sv tools/lldb/lit --param dotest-args='-C gcc'
+
+
 Running the Test Suite Remotely
 -------------------------------
 

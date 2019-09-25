@@ -195,8 +195,7 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
       if (cmd_obj != nullptr) {
         if (request.GetParsedLine().GetArgumentCount() != 1) {
           request.GetParsedLine().Shift();
-          request.SetCursorCharPosition(0);
-          request.GetParsedLine().AppendArgument(llvm::StringRef());
+          request.AppendEmptyArgument();
           cmd_obj->HandleCompletion(request);
         }
       }
