@@ -17,14 +17,14 @@
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Refactoring/MatchConsumer.h"
 #include "llvm/Support/Error.h"
 #include <functional>
 #include <string>
 
 namespace clang {
 namespace tooling {
-using RangeSelector = std::function<Expected<CharSourceRange>(
-    const ast_matchers::MatchFinder::MatchResult &)>;
+using RangeSelector = MatchConsumer<CharSourceRange>;
 
 inline RangeSelector charRange(CharSourceRange R) {
   return [R](const ast_matchers::MatchFinder::MatchResult &)
@@ -87,11 +87,6 @@ RangeSelector elseBranch(std::string ID);
 /// source), if `S` is an expansion, and `S` itself, otherwise.  Corresponds to
 /// `SourceManager::getExpansionRange`.
 RangeSelector expansion(RangeSelector S);
-
-/// Chooses between the two selectors, based on whether \p ID is bound in the
-/// match.
-RangeSelector ifBound(std::string ID, RangeSelector TrueSelector,
-                      RangeSelector FalseSelector);
 } // namespace tooling
 } // namespace clang
 

@@ -395,9 +395,11 @@ static void instantiateOMPDeclareVariantAttr(
   if (!DeclVarData)
     return;
   // Instantiate the attribute.
+  Sema::OpenMPDeclareVariantCtsSelectorData Data(
+      Attr.getCtxSelectorSet(), Attr.getCtxSelector(), Attr.getImplVendor());
   S.ActOnOpenMPDeclareVariantDirective(DeclVarData.getValue().first,
                                        DeclVarData.getValue().second,
-                                       Attr.getRange());
+                                       Attr.getRange(), Data);
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(

@@ -58,6 +58,8 @@ struct IncludeStyle {
     std::string Regex;
     /// The priority to assign to this category.
     int Priority;
+    /// The custom priority to sort before grouping.
+    int SortPriority;
     bool operator==(const IncludeCategory &Other) const {
       return Regex == Other.Regex && Priority == Other.Priority;
     }

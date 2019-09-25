@@ -310,11 +310,3 @@ RangeSelector tooling::expansion(RangeSelector S) {
     return Result.SourceManager->getExpansionRange(*SRange);
   };
 }
-
-RangeSelector tooling::ifBound(std::string ID, RangeSelector TrueSelector,
-                               RangeSelector FalseSelector) {
-  return [=](const MatchResult &Result) {
-    auto &Map = Result.Nodes.getMap();
-    return (Map.find(ID) != Map.end() ? TrueSelector : FalseSelector)(Result);
-  };
-}

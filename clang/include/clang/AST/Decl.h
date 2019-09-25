@@ -310,6 +310,14 @@ public:
   void printQualifiedName(raw_ostream &OS) const;
   void printQualifiedName(raw_ostream &OS, const PrintingPolicy &Policy) const;
 
+  /// Print only the nested name specifier part of a fully-qualified name,
+  /// including the '::' at the end. E.g.
+  ///    when `printQualifiedName(D)` prints "A::B::i",
+  ///    this function prints "A::B::".
+  void printNestedNameSpecifier(raw_ostream &OS) const;
+  void printNestedNameSpecifier(raw_ostream &OS,
+                                const PrintingPolicy &Policy) const;
+
   // FIXME: Remove string version.
   std::string getQualifiedNameAsString() const;
 
