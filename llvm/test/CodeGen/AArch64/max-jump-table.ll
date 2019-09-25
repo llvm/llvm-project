@@ -1,9 +1,9 @@
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40                         -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK0  < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=4  -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=8  -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-size=16 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK16 < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1         -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM1 < %t
-; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m3         -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM3 < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40                            -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK0  < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-targets=4  -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK4  < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-targets=8  -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK8  < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -max-jump-table-targets=16 -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECK16 < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m1            -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM1 < %t
+; RUN: llc %s -O2 -print-machineinstrs -mtriple=aarch64-linux-gnu -jump-table-density=40 -mcpu=exynos-m3            -o /dev/null 2> %t; FileCheck %s --check-prefixes=CHECK,CHECKM3 < %t
 
 declare void @ext(i32, i32)
 
@@ -86,11 +86,11 @@ entry:
 ; CHECK0-NOT:   %jump-table.1:
 ; CHECK4-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
 ; CHECK4-NOT:   %jump-table.1:
-; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
+; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECK8-NOT:   %jump-table.1:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECK16-NOT:  %jump-table.1:
-; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
+; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECKM1-NOT:  %jump-table.1:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECKM3-NOT:  %jump-table.1:
@@ -102,6 +102,7 @@ bb3: tail call void @ext(i32 4, i32 3) br label %return
 bb4: tail call void @ext(i32 3, i32 4) br label %return
 bb5: tail call void @ext(i32 2, i32 5) br label %return
 bb6: tail call void @ext(i32 1, i32 6) br label %return
+
 return: ret void
 }
 
@@ -131,14 +132,13 @@ entry:
 ; CHECK4-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
 ; CHECK4-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8
 ; CHECK4-NOT:   %jump-table.2:
-; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECK8-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
+; CHECK8-NEXT:  %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
 ; CHECK8-NOT:   %jump-table.2:
-; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
-; CHECK16-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
-; CHECK16-NOT:  %jump-table.2:
-; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECKM1-NEXT: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
+; CHECK16-NOT:  %jump-table.1:
+; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
+; CHECKM1-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
 ; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
 ; CHECKM3-NOT:  %jump-table.1:
@@ -185,15 +185,15 @@ entry:
 ; CHECK0-NOT:   %jump-table.1:
 ; CHECK4-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
 ; CHECK4-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8
-; CHECK4-NOT:   %jump-table.2:
-; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECK8-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECK4-NEXT:  %jump-table.2: %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
+; CHECK4-NOT:   %jump-table.3:
+; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8
+; CHECK8-NEXT:  %jump-table.1: %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
 ; CHECK8-NOT:   %jump-table.2:
-; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
-; CHECK16-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
-; CHECK16-NOT:  %jump-table.2:
-; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECKM1-NEXT: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
+; CHECK16-NOT:  %jump-table.1:
+; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8
+; CHECKM1-NEXT: %jump-table.1: %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
 ; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
 ; CHECKM3-NOT:  %jump-table.1:

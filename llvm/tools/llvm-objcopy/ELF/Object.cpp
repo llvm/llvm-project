@@ -397,7 +397,7 @@ void SectionWriter::visit(const OwnedDataSection &Sec) {
   llvm::copy(Sec.Data, Out.getBufferStart() + Sec.Offset);
 }
 
-static constexpr std::array<uint8_t, 4> ZlibGnuMagic = {'Z', 'L', 'I', 'B'};
+static constexpr std::array<uint8_t, 4> ZlibGnuMagic = {{'Z', 'L', 'I', 'B'}};
 
 static bool isDataGnuCompressed(ArrayRef<uint8_t> Data) {
   return Data.size() > ZlibGnuMagic.size() &&

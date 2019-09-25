@@ -4688,6 +4688,26 @@ void GNUStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
   OS << "printELFLinkerOptions not implemented!\n";
 }
 
+// Used for printing section names in places where possible errors can be
+// ignored.
+static StringRef getSectionName(const SectionRef &Sec) {
+  Expected<StringRef> NameOrErr = Sec.getName();
+  if (NameOrErr)
+    return *NameOrErr;
+  consumeError(NameOrErr.takeError());
+  return "<?>";
+}
+
+// Used for printing symbol names in places where possible errors can be
+// ignored.
+static std::string getSymbolName(const ELFSymbolRef &Sym) {
+  Expected<StringRef> NameOrErr = Sym.getName();
+  if (NameOrErr)
+    return maybeDemangle(*NameOrErr);
+  consumeError(NameOrErr.takeError());
+  return "<?>";
+}
+
 template <class ELFT>
 void DumpStyle<ELFT>::printFunctionStackSize(
     const ELFObjectFile<ELFT> *Obj, uint64_t SymValue, SectionRef FunctionSec,
@@ -4712,18 +4732,12 @@ void DumpStyle<ELFT>::printFunctionStackSize(
 
   std::string FuncName = "?";
   // A valid SymbolRef has a non-null object file pointer.
-  if (FuncSym.BasicSymbolRef::getObject()) {
-    // Extract the symbol name.
-    Expected<StringRef> FuncNameOrErr = FuncSym.getName();
-    if (FuncNameOrErr)
-      FuncName = maybeDemangle(*FuncNameOrErr);
-    else
-      consumeError(FuncNameOrErr.takeError());
-  } else {
+  if (FuncSym.BasicSymbolRef::getObject())
+    FuncName = getSymbolName(FuncSym);
+  else
     reportWarning(
         createError("could not identify function symbol for stack size entry"),
         Obj->getFileName());
-  }
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
@@ -4765,23 +4779,17 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
     // Ensure that the relocation symbol is in the function section, i.e. the
     // section where the functions whose stack sizes we are reporting are
     // located.
-    StringRef SymName = "?";
-    Expected<StringRef> NameOrErr = RelocSym->getName();
-    if (NameOrErr)
-      SymName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
     auto SectionOrErr = RelocSym->getSection();
     if (!SectionOrErr) {
       reportWarning(
-          createError("cannot identify the section for relocation symbol " +
-                      SymName),
+          createError("cannot identify the section for relocation symbol '" +
+                      getSymbolName(*RelocSym) + "'"),
           FileStr);
       consumeError(SectionOrErr.takeError());
     } else if (*SectionOrErr != FunctionSec) {
-      reportWarning(createError("relocation symbol " + SymName +
-                                " is not in the expected section"),
+      reportWarning(createError("relocation symbol '" +
+                                getSymbolName(*RelocSym) +
+                                "' is not in the expected section"),
                     FileStr);
       // Pretend that the symbol is in the correct section and report its
       // stack size anyway.
@@ -4808,16 +4816,6 @@ void DumpStyle<ELFT>::printStackSize(const ELFObjectFile<ELFT> *Obj,
   uint64_t SymValue = Resolver(Reloc, RelocSymValue, Addend);
   this->printFunctionStackSize(Obj, SymValue, FunctionSec, StackSizeSectionName,
                                Data, &Offset);
-}
-
-// Used for printing section names in places where possible errors can be
-// ignored.
-static StringRef getSectionName(const SectionRef &Sec) {
-  Expected<StringRef> NameOrErr = Sec.getName();
-  if (NameOrErr)
-    return *NameOrErr;
-  consumeError(NameOrErr.takeError());
-  return "<?>";
 }
 
 template <class ELFT>
@@ -4935,7 +4933,7 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     auto Contents = unwrapOrError(this->FileName, StackSizesSec.getContents());
     DataExtractor Data(Contents, Obj->isLittleEndian(), sizeof(Elf_Addr));
     for (const RelocationRef &Reloc : RelocSec.relocations()) {
-      if (!IsSupportedFn(Reloc.getType()))
+      if (!IsSupportedFn || !IsSupportedFn(Reloc.getType()))
         reportError(createStringError(
                         object_error::parse_failed,
                         "unsupported relocation type in section %s: %s",

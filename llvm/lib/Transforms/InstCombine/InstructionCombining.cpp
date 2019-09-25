@@ -2557,9 +2557,7 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
 Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
   // Change br (not X), label True, label False to: br X, label False, True
   Value *X = nullptr;
-  BasicBlock *TrueDest;
-  BasicBlock *FalseDest;
-  if (match(&BI, m_Br(m_Not(m_Value(X)), TrueDest, FalseDest)) &&
+  if (match(&BI, m_Br(m_Not(m_Value(X)), m_BasicBlock(), m_BasicBlock())) &&
       !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.setCondition(X);
@@ -2577,8 +2575,8 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
 
   // Canonicalize, for example, icmp_ne -> icmp_eq or fcmp_one -> fcmp_oeq.
   CmpInst::Predicate Pred;
-  if (match(&BI, m_Br(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), TrueDest,
-                      FalseDest)) &&
+  if (match(&BI, m_Br(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())),
+                      m_BasicBlock(), m_BasicBlock())) &&
       !isCanonicalPredicate(Pred)) {
     // Swap destinations and condition.
     CmpInst *Cond = cast<CmpInst>(BI.getCondition());

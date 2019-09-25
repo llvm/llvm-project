@@ -12,7 +12,8 @@ imm3
 
 A bit mask which indicates request permissions.
 
-This operand must be specified as an :ref:`integer_number<amdgpu_synid_integer_number>`. The value is truncated to 7 bits, but only 3 low bits are significant.
+This operand must be specified as an :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`.
+The value is truncated to 7 bits, but only 3 low bits are significant.
 
     ============ ==============================
     Bit Number   Description

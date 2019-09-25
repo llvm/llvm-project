@@ -1779,9 +1779,7 @@ void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
         look_for_subcommand = true;
         new_matches.DeleteStringAtIndex(0);
         new_descriptions.DeleteStringAtIndex(0);
-        request.GetParsedLine().AppendArgument(llvm::StringRef());
-        request.SetCursorIndex(request.GetCursorIndex() + 1U);
-        request.SetCursorCharPosition(0);
+        request.AppendEmptyArgument();
       }
     }
     request.AddCompletions(new_matches, new_descriptions);

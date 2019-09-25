@@ -773,3 +773,26 @@ define <8 x float> @splat0_fdiv_const_op0_v8f32(<8 x float> %vx) {
   %r = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
   ret <8 x float> %r
 }
+
+define <4 x float> @multi_use_binop(<4 x float> %x, <4 x float> %y) {
+; SSE-LABEL: multi_use_binop:
+; SSE:       # %bb.0:
+; SSE-NEXT:    mulps %xmm1, %xmm0
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    addps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: multi_use_binop:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,1,2,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %mul = fmul <4 x float> %x, %y
+  %mul0 = shufflevector <4 x float> %mul, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 0>
+  %mul1 = shufflevector <4 x float> %mul, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 1>
+  %r = fadd <4 x float> %mul0, %mul1
+  ret <4 x float> %r
+}

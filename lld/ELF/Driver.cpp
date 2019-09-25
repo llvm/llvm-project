@@ -380,16 +380,30 @@ static bool getZFlag(opt::InputArgList &args, StringRef k1, StringRef k2,
   return Default;
 }
 
+static SeparateSegmentKind getZSeparate(opt::InputArgList &args) {
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (v == "noseparate-code")
+      return SeparateSegmentKind::None;
+    if (v == "separate-code")
+      return SeparateSegmentKind::Code;
+    if (v == "separate-loadable-segments")
+      return SeparateSegmentKind::Loadable;
+  }
+  return SeparateSegmentKind::None;
+}
+
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
          s == "execstack" || s == "global" || s == "hazardplt" ||
          s == "ifunc-noplt" || s == "initfirst" || s == "interpose" ||
          s == "keep-text-section-prefix" || s == "lazy" || s == "muldefs" ||
-         s == "separate-code" || s == "nocombreloc" || s == "nocopyreloc" ||
-         s == "nodefaultlib" || s == "nodelete" || s == "nodlopen" ||
-         s == "noexecstack" || s == "nokeep-text-section-prefix" ||
-         s == "norelro" || s == "noseparate-code" || s == "notext" ||
-         s == "now" || s == "origin" || s == "relro" || s == "retpolineplt" ||
+         s == "separate-code" || s == "separate-loadable-segments" ||
+         s == "nocombreloc" || s == "nocopyreloc" || s == "nodefaultlib" ||
+         s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
+         s == "nokeep-text-section-prefix" || s == "norelro" ||
+         s == "noseparate-code" || s == "notext" || s == "now" ||
+         s == "origin" || s == "relro" || s == "retpolineplt" ||
          s == "rodynamic" || s == "text" || s == "undefs" || s == "wxneeded" ||
          s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
          s.startswith("stack-size=");
@@ -950,7 +964,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zRelro = getZFlag(args, "relro", "norelro", true);
   config->zRetpolineplt = hasZOption(args, "retpolineplt");
   config->zRodynamic = hasZOption(args, "rodynamic");
-  config->zSeparateCode = getZFlag(args, "separate-code", "noseparate-code", false);
+  config->zSeparate = getZSeparate(args);
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");

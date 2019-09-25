@@ -448,7 +448,8 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   return &MI;
 }
 
-bool PPCInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
+bool PPCInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                         unsigned &SrcOpIdx1,
                                          unsigned &SrcOpIdx2) const {
   // For VSX A-Type FMA instructions, it is the first two operands that can be
   // commuted, however, because the non-encoded tied input operand is listed

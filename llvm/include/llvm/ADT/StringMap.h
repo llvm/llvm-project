@@ -391,6 +391,16 @@ public:
     return try_emplace(KV.first, std::move(KV.second));
   }
 
+  /// Inserts an element or assigns to the current element if the key already
+  /// exists. The return type is the same as try_emplace.
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(StringRef Key, V &&Val) {
+    auto Ret = try_emplace(Key, std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+
   /// Emplace a new element for the specified key into the map if the key isn't
   /// already in the map. The bool component of the returned pair is true
   /// if and only if the insertion takes place, and the iterator component of

@@ -1034,13 +1034,16 @@ TEST(InstructionsTest, SkipDebug) {
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
 }
 
-TEST(InstructionsTest, PhiIsNotFPMathOperator) {
+TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
   LLVMContext Context;
   IRBuilder<> Builder(Context);
   MDBuilder MDHelper(Context);
-  Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
+  Instruction *I = Builder.CreatePHI(Builder.getInt32Ty(), 0);
   EXPECT_FALSE(isa<FPMathOperator>(I));
   I->deleteValue();
+  Instruction *FP = Builder.CreatePHI(Builder.getDoubleTy(), 0);
+  EXPECT_TRUE(isa<FPMathOperator>(FP));
+  FP->deleteValue();
 }
 
 TEST(InstructionsTest, FNegInstruction) {

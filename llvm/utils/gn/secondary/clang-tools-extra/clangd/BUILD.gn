@@ -90,6 +90,7 @@ static_library("clangd") {
     "FormattedString.cpp",
     "FuzzyMatch.cpp",
     "GlobalCompilationDatabase.cpp",
+    "HeaderSourceSwitch.cpp",
     "Headers.cpp",
     "IncludeFixer.cpp",
     "JSONTransport.cpp",

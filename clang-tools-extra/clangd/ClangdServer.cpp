@@ -11,6 +11,7 @@
 #include "FindSymbols.h"
 #include "Format.h"
 #include "FormattedString.h"
+#include "HeaderSourceSwitch.h"
 #include "Headers.h"
 #include "Logger.h"
 #include "ParsedAST.h"
@@ -449,60 +450,7 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
 }
 
 llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
-
-  llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
-                                        ".c++", ".m", ".mm"};
-  llvm::StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
-
-  llvm::StringRef PathExt = llvm::sys::path::extension(Path);
-
-  // Lookup in a list of known extensions.
-  auto SourceIter =
-      llvm::find_if(SourceExtensions, [&PathExt](PathRef SourceExt) {
-        return SourceExt.equals_lower(PathExt);
-      });
-  bool IsSource = SourceIter != std::end(SourceExtensions);
-
-  auto HeaderIter =
-      llvm::find_if(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
-        return HeaderExt.equals_lower(PathExt);
-      });
-
-  bool IsHeader = HeaderIter != std::end(HeaderExtensions);
-
-  // We can only switch between the known extensions.
-  if (!IsSource && !IsHeader)
-    return None;
-
-  // Array to lookup extensions for the switch. An opposite of where original
-  // extension was found.
-  llvm::ArrayRef<llvm::StringRef> NewExts;
-  if (IsSource)
-    NewExts = HeaderExtensions;
-  else
-    NewExts = SourceExtensions;
-
-  // Storage for the new path.
-  llvm::SmallString<128> NewPath = llvm::StringRef(Path);
-
-  // Instance of vfs::FileSystem, used for file existence checks.
-  auto FS = FSProvider.getFileSystem();
-
-  // Loop through switched extension candidates.
-  for (llvm::StringRef NewExt : NewExts) {
-    llvm::sys::path::replace_extension(NewPath, NewExt);
-    if (FS->exists(NewPath))
-      return NewPath.str().str(); // First str() to convert from SmallString to
-                                  // StringRef, second to convert from StringRef
-                                  // to std::string
-
-    // Also check NewExt in upper-case, just in case.
-    llvm::sys::path::replace_extension(NewPath, NewExt.upper());
-    if (FS->exists(NewPath))
-      return NewPath.str().str();
-  }
-
-  return None;
+  return getCorrespondingHeaderOrSource(Path, FSProvider.getFileSystem());
 }
 
 llvm::Expected<tooling::Replacements>

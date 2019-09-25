@@ -14,18 +14,21 @@ Bits of a hardware register being accessed.
 
 The bits of this operand have the following meaning:
 
-    ============ ===================================
-    Bits         Description
-    ============ ===================================
-    5:0          Register *id*.
-    10:6         First bit *offset* (0..31).
-    15:11        *Size* in bits (1..32).
-    ============ ===================================
+    ======= ===================== ============
+    Bits    Description           Value Range
+    ======= ===================== ============
+    5:0     Register *id*.        0..63
+    10:6    First bit *offset*.   0..31
+    15:11   *Size* in bits.       1..32
+    ======= ===================== ============
 
-This operand may be specified as a positive 16-bit :ref:`integer_number<amdgpu_synid_integer_number>` or using the syntax described below.
+This operand may be specified as one of the following:
+
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
+* An *hwreg* value described below.
 
     ==================================== ============================================================================
-    Syntax                               Description
+    Hwreg Value Syntax                   Description
     ==================================== ============================================================================
     hwreg({0..63})                       All bits of a register indicated by its *id*.
     hwreg(<*name*>)                      All bits of a register indicated by its *name*.
@@ -33,7 +36,8 @@ This operand may be specified as a positive 16-bit :ref:`integer_number<amdgpu_s
     hwreg(<*name*>, {0..31}, {1..32})    Register bits indicated by register *name*, first bit *offset* and *size*.
     ==================================== ============================================================================
 
-Register *id*, *offset* and *size* must be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`.
+Numeric values may be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`
+or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
 Defined register *names* include:
 
@@ -54,7 +58,16 @@ Examples:
 
 .. parsed-literal::
 
-    s_getreg_b32 s2, 0x6
+    reg = 1
+    offset = 2
+    size = 4
+    hwreg_enc = reg | (offset << 6) | ((size - 1) << 11)
+
+    s_getreg_b32 s2, 0x1881
+    s_getreg_b32 s2, hwreg_enc                     // the same as above
+    s_getreg_b32 s2, hwreg(1, 2, 4)                // the same as above
+    s_getreg_b32 s2, hwreg(reg, offset, size)      // the same as above
+
     s_getreg_b32 s2, hwreg(15)
     s_getreg_b32 s2, hwreg(51, 1, 31)
     s_getreg_b32 s2, hwreg(HW_REG_LDS_ALLOC, 0, 1)
