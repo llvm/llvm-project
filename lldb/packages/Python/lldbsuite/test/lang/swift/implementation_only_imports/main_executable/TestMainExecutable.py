@@ -12,10 +12,6 @@
 """
 Test `@_implementationOnly import` in the main executable
 """
-try:
-    import commands
-except ImportError:    
-    import subprocess
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
