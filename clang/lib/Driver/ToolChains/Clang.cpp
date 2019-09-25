@@ -4795,6 +4795,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -cl options to -cc1
   RenderOpenCLOptions(Args, CmdArgs);
 
+  if (Args.hasFlag(options::OPT_fhip_new_launch_api,
+                   options::OPT_fno_hip_new_launch_api, false))
+    CmdArgs.push_back("-fhip-new-launch-api");
+
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));

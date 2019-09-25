@@ -11314,17 +11314,27 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
 
   if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
     BinaryOperator::Opcode Opc = BO->getOpcode();
+    Expr::EvalResult Result;
     // Do not diagnose unsigned shifts.
-    if (Opc == BO_Shl && E->getType()->isSignedIntegerType())
-      S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context) << E;
+    if (Opc == BO_Shl) {
+      const auto *LHS = getIntegerLiteral(BO->getLHS());
+      const auto *RHS = getIntegerLiteral(BO->getRHS());
+      if (LHS && LHS->getValue() == 0)
+        S.Diag(ExprLoc, diag::warn_left_shift_always) << 0;
+      else if (!E->isValueDependent() && LHS && RHS &&
+               RHS->getValue().isNonNegative() &&
+               E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects))
+        S.Diag(ExprLoc, diag::warn_left_shift_always)
+            << (Result.Val.getInt() != 0);
+      else if (E->getType()->isSignedIntegerType())
+        S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context) << E;
+    }
   }
 
   if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
     const auto *LHS = getIntegerLiteral(CO->getTrueExpr());
-    if (!LHS)
-      return;
     const auto *RHS = getIntegerLiteral(CO->getFalseExpr());
-    if (!RHS)
+    if (!LHS || !RHS)
       return;
     if ((LHS->getValue() == 0 || LHS->getValue() == 1) &&
         (RHS->getValue() == 0 || RHS->getValue() == 1))
