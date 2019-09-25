@@ -13,6 +13,9 @@
 // pair(pair const&) = default;
 // pair(pair&&) = default;
 
+// Doesn't pass due to use of is_trivially_* trait.
+// XFAIL: gcc-4.9
+
 #include <utility>
 #include <cassert>
 

@@ -144,11 +144,7 @@ public:
 
   class ReadBufferAndDumpToStreamOptions {
   public:
-    ReadBufferAndDumpToStreamOptions()
-        : m_data(), m_stream(nullptr), m_prefix_token(), m_suffix_token(),
-          m_quote('"'), m_source_size(0), m_escape_non_printables(true),
-          m_zero_is_terminator(true), m_is_truncated(false),
-          m_language_type(lldb::eLanguageTypeUnknown) {}
+    ReadBufferAndDumpToStreamOptions() = default;
 
     ReadBufferAndDumpToStreamOptions(ValueObject &valobj);
 
@@ -241,15 +237,15 @@ public:
 
   private:
     DataExtractor m_data;
-    Stream *m_stream;
+    Stream *m_stream = nullptr;
     std::string m_prefix_token;
     std::string m_suffix_token;
-    char m_quote;
-    uint32_t m_source_size;
-    bool m_escape_non_printables;
-    bool m_zero_is_terminator;
-    bool m_is_truncated;
-    lldb::LanguageType m_language_type;
+    char m_quote = '"';
+    uint32_t m_source_size = 0;
+    bool m_escape_non_printables = true;
+    bool m_zero_is_terminator = true;
+    bool m_is_truncated = false;
+    lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
   };
 
   // I can't use a std::unique_ptr for this because the Deleter is a template
