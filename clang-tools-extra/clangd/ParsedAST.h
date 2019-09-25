@@ -21,6 +21,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PARSEDAST_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PARSEDAST_H
 
+#include "CollectMacros.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "Headers.h"
@@ -89,10 +90,9 @@ public:
   const IncludeStructure &getIncludeStructure() const;
   const CanonicalIncludes &getCanonicalIncludes() const;
 
-  /// Gets all macro locations (definition, expansions) present in the main
-  /// file.
-  /// NOTE: macros inside the preamble are not included.
-  llvm::ArrayRef<SourceLocation> getMacros() const;
+  /// Gets all macro references (definition, expansions) present in the main
+  /// file, including those in the preamble region.
+  const MainFileMacros &getMacros() const;
   /// Tokens recorded while parsing the main file.
   /// (!) does not have tokens from the preamble.
   const syntax::TokenBuffer &getTokens() const { return Tokens; }
@@ -101,9 +101,9 @@ private:
   ParsedAST(std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action, syntax::TokenBuffer Tokens,
-            std::vector<SourceLocation> MainFileMacroExpLocs,
-            std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
-            IncludeStructure Includes, CanonicalIncludes CanonIncludes);
+            MainFileMacros Macros, std::vector<Decl *> LocalTopLevelDecls,
+            std::vector<Diag> Diags, IncludeStructure Includes,
+            CanonicalIncludes CanonIncludes);
 
   // In-memory preambles must outlive the AST, it is important that this member
   // goes before Clang and Action.
@@ -121,10 +121,8 @@ private:
   ///   - Does not have spelled or expanded tokens for files from preamble.
   syntax::TokenBuffer Tokens;
 
-  /// The start locations of all macro definitions/expansions spelled **after**
-  /// preamble.
-  /// Does not include locations from inside other macro expansions.
-  std::vector<SourceLocation> MacroIdentifierLocs;
+  /// All macro definitions and expansions in the main file.
+  MainFileMacros Macros;
   // Data, stored after parsing.
   std::vector<Diag> Diags;
   // Top-level decls inside the current file. Not that this does not include

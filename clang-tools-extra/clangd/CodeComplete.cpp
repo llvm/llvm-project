@@ -1030,8 +1030,8 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
       PP.getIdentifierTable().getExternalIdentifierLookup();
   if (!PreambleIdentifiers || !PreambleMacros)
     return;
-  for (const auto &MacroName : Preamble.MainFileMacros)
-    if (auto *II = PreambleIdentifiers->get(MacroName))
+  for (const auto &MacroName : Preamble.Macros.Names)
+    if (auto *II = PreambleIdentifiers->get(MacroName.getKey()))
       if (II->isOutOfDate())
         PreambleMacros->updateOutOfDateIdentifier(*II);
 }
