@@ -851,11 +851,6 @@ void Debugger::SetOutputFileHandle(FILE *fh, bool tranfer_ownership) {
   if (!out_file.IsValid())
     out_file.SetStream(stdout, false);
 
-  // Do not create the ScriptInterpreter just for setting the output file
-  // handle as the constructor will know how to do the right thing on its own.
-  if (ScriptInterpreter *script_interpreter =
-          GetScriptInterpreter(/*can_create=*/false))
-    script_interpreter->ResetOutputFileHandle(fh);
 }
 
 void Debugger::SetErrorFileHandle(FILE *fh, bool tranfer_ownership) {

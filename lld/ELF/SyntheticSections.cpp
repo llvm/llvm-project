@@ -3160,17 +3160,23 @@ static InputSection *findExidxSection(InputSection *isec) {
   return nullptr;
 }
 
+static bool isValidExidxSectionDep(InputSection *isec) {
+  return (isec->flags & SHF_ALLOC) && (isec->flags & SHF_EXECINSTR) &&
+         isec->getSize() > 0;
+}
+
 bool ARMExidxSyntheticSection::addSection(InputSection *isec) {
   if (isec->type == SHT_ARM_EXIDX) {
-    exidxSections.push_back(isec);
-    return true;
+    if (InputSection* dep = isec->getLinkOrderDep())
+      if (isValidExidxSectionDep(dep)) {
+        exidxSections.push_back(isec);
+        return true;
+      }
+    return false;
   }
 
-  if ((isec->flags & SHF_ALLOC) && (isec->flags & SHF_EXECINSTR) &&
-      isec->getSize() > 0) {
+  if (isValidExidxSectionDep(isec)) {
     executableSections.push_back(isec);
-    if (empty && findExidxSection(isec))
-      empty = false;
     return false;
   }
 
@@ -3335,6 +3341,12 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
   uint64_t p = getVA() + offset;
   target->relocateOne(buf + offset, R_ARM_PREL31, s - p);
   assert(size == offset + 8);
+}
+
+bool ARMExidxSyntheticSection::isNeeded() const {
+  return llvm::find_if(exidxSections, [](InputSection *isec) {
+           return isec->isLive();
+         }) != exidxSections.end();
 }
 
 bool ARMExidxSyntheticSection::classof(const SectionBase *d) {

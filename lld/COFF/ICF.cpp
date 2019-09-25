@@ -13,7 +13,7 @@
 //
 // On Windows, ICF is enabled by default.
 //
-// See ELF/ICF.cpp for the details about the algortihm.
+// See ELF/ICF.cpp for the details about the algorithm.
 //
 //===----------------------------------------------------------------------===//
 

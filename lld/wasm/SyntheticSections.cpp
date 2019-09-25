@@ -103,9 +103,9 @@ uint32_t ImportSection::getNumImports() const {
 
 void ImportSection::addGOTEntry(Symbol *sym) {
   assert(!isSealed);
-  LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   if (sym->hasGOTIndex())
     return;
+  LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   sym->setGOTIndex(numImportedGlobals++);
   gotSymbols.push_back(sym);
 }
@@ -244,15 +244,21 @@ void GlobalSection::assignIndexes() {
   uint32_t globalIndex = out.importSec->getNumImportedGlobals();
   for (InputGlobal *g : inputGlobals)
     g->setGlobalIndex(globalIndex++);
-  for (Symbol *sym : gotSymbols)
+  for (Symbol *sym : staticGotSymbols)
     sym->setGOTIndex(globalIndex++);
+  isSealed = true;
 }
 
-void GlobalSection::addDummyGOTEntry(Symbol *sym) {
-  LLVM_DEBUG(dbgs() << "addDummyGOTEntry: " << toString(*sym) << "\n");
-  if (sym->hasGOTIndex())
+void GlobalSection::addStaticGOTEntry(Symbol *sym) {
+  assert(!isSealed);
+  if (sym->requiresGOT)
     return;
-  gotSymbols.push_back(sym);
+  LLVM_DEBUG(dbgs() << "addStaticGOTEntry: " << sym->getName() << " "
+                    << toString(sym->kind()) << "\n");
+  sym->requiresGOT = true;
+  if (auto *F = dyn_cast<FunctionSymbol>(sym))
+    out.elemSec->addEntry(F);
+  staticGotSymbols.push_back(sym);
 }
 
 void GlobalSection::writeBody() {
@@ -261,26 +267,27 @@ void GlobalSection::writeBody() {
   writeUleb128(os, numGlobals(), "global count");
   for (InputGlobal *g : inputGlobals)
     writeGlobal(os, g->global);
-  for (const DefinedData *sym : definedFakeGlobals) {
+  for (const Symbol *sym : staticGotSymbols) {
+    WasmGlobal global;
+    global.Type = {WASM_TYPE_I32, false};
+    global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    if (auto *d = dyn_cast<DefinedData>(sym))
+      global.InitExpr.Value.Int32 = d->getVirtualAddress();
+    else if (auto *f = cast<FunctionSymbol>(sym))
+      global.InitExpr.Value.Int32 = f->getTableIndex();
+    writeGlobal(os, global);
+  }
+  for (const DefinedData *sym : dataAddressGlobals) {
     WasmGlobal global;
     global.Type = {WASM_TYPE_I32, false};
     global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     global.InitExpr.Value.Int32 = sym->getVirtualAddress();
     writeGlobal(os, global);
   }
-  for (const Symbol *sym : gotSymbols) {
-    WasmGlobal global;
-    global.Type = {WASM_TYPE_I32, false};
-    global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    if (auto *d = dyn_cast<DefinedData>(sym))
-      global.InitExpr.Value.Int32 = d->getVirtualAddress();
-    else if (auto *f = cast<DefinedFunction>(sym))
-      global.InitExpr.Value.Int32 = f->getTableIndex();
-    writeGlobal(os, global);
-  }
 }
 
 void GlobalSection::addGlobal(InputGlobal *global) {
+  assert(!isSealed);
   if (!global->live)
     return;
   inputGlobals.push_back(global);

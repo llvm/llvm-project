@@ -820,7 +820,8 @@ void Sema::inheritCUDATargetAttrs(FunctionDecl *FD,
 
 std::string Sema::getCudaConfigureFuncName() const {
   if (getLangOpts().HIP)
-    return "hipConfigureCall";
+    return getLangOpts().HIPUseNewLaunchAPI ? "__hipPushCallConfiguration"
+                                            : "hipConfigureCall";
 
   // New CUDA kernel launch sequence.
   if (CudaFeatureEnabled(Context.getTargetInfo().getSDKVersion(),

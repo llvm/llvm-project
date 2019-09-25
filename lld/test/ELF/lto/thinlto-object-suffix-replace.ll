@@ -21,6 +21,11 @@
 ; RUN: --plugin-opt=thinlto-object-suffix-replace=".thinlink.bc;.o" \
 ; RUN: -shared %t1.thinlink.bc -o %t3
 ; RUN: diff %t1.o.thinlto.bc.orig %t1.o.thinlto.bc
+; Also check that this works without the --plugin-opt= prefix.
+; RUN: ld.lld -thinlto-index-only \
+; RUN: -thinlto-object-suffix-replace=".thinlink.bc;.o" \
+; RUN: -shared %t1.thinlink.bc -o %t3
+; RUN: diff %t1.o.thinlto.bc.orig %t1.o.thinlto.bc
 
 ; Ensure lld generates error if object suffix replace option does not have 'old;new' format
 ; RUN: rm -f %t1.o.thinlto.bc

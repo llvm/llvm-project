@@ -757,6 +757,12 @@ static bool getCompressDebugSections(opt::InputArgList &args) {
   return true;
 }
 
+static StringRef getAliasSpelling(opt::Arg *arg) {
+  if (const opt::Arg *alias = arg->getAlias())
+    return alias->getSpelling();
+  return arg->getSpelling();
+}
+
 static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
                                                         unsigned id) {
   auto *arg = args.getLastArg(id);
@@ -766,7 +772,7 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
   StringRef s = arg->getValue();
   std::pair<StringRef, StringRef> ret = s.split(';');
   if (ret.second.empty())
-    error(arg->getSpelling() + " expects 'old;new' format, but got " + s);
+    error(getAliasSpelling(arg) + " expects 'old;new' format, but got " + s);
   return ret;
 }
 
@@ -858,7 +864,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoNewPassManager = args.hasArg(OPT_lto_new_pass_manager);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
-  config->ltoObjPath = args.getLastArgValue(OPT_plugin_opt_obj_path_eq);
+  config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->mapFile = args.getLastArgValue(OPT_Map);
@@ -903,17 +909,15 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
-  config->thinLTOEmitImportsFiles =
-      args.hasArg(OPT_plugin_opt_thinlto_emit_imports_files);
-  config->thinLTOIndexOnly = args.hasArg(OPT_plugin_opt_thinlto_index_only) ||
-                             args.hasArg(OPT_plugin_opt_thinlto_index_only_eq);
-  config->thinLTOIndexOnlyArg =
-      args.getLastArgValue(OPT_plugin_opt_thinlto_index_only_eq);
+  config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
+  config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
+                             args.hasArg(OPT_thinlto_index_only_eq);
+  config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   config->thinLTOJobs = args::getInteger(args, OPT_thinlto_jobs, -1u);
   config->thinLTOObjectSuffixReplace =
-      getOldNewOptions(args, OPT_plugin_opt_thinlto_object_suffix_replace_eq);
+      getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
   config->thinLTOPrefixReplace =
-      getOldNewOptions(args, OPT_plugin_opt_thinlto_prefix_replace_eq);
+      getOldNewOptions(args, OPT_thinlto_prefix_replace_eq);
   config->trace = args.hasArg(OPT_trace);
   config->undefined = args::getStrings(args, OPT_undefined);
   config->undefinedVersion =
