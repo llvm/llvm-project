@@ -131,6 +131,36 @@ SystemInitializerFull::SystemInitializerFull() {}
 
 SystemInitializerFull::~SystemInitializerFull() {}
 
+#define LLDB_PROCESS_AArch64(op)                                               \
+  ABIMacOSX_arm64::op();                                                       \
+  ABISysV_arm64::op();
+#define LLDB_PROCESS_ARM(op)                                                   \
+  ABIMacOSX_arm::op();                                                         \
+  ABISysV_arm::op();
+#define LLDB_PROCESS_Hexagon(op) ABISysV_hexagon::op();
+#define LLDB_PROCESS_Mips(op)                                                  \
+  ABISysV_mips::op();                                                          \
+  ABISysV_mips64::op();
+#define LLDB_PROCESS_PowerPC(op)                                               \
+  ABISysV_ppc::op();                                                          \
+  ABISysV_ppc64::op();
+#define LLDB_PROCESS_SystemZ(op) ABISysV_s390x::op();
+#define LLDB_PROCESS_X86(op)                                                   \
+  ABIMacOSX_i386::op();                                                        \
+  ABISysV_i386::op();                                                          \
+  ABISysV_x86_64::op();                                                        \
+  ABIWindows_x86_64::op();
+
+#define LLDB_PROCESS_AMDGPU(op)
+#define LLDB_PROCESS_BPF(op)
+#define LLDB_PROCESS_Lanai(op)
+#define LLDB_PROCESS_MSP430(op)
+#define LLDB_PROCESS_NVPTX(op)
+#define LLDB_PROCESS_RISCV(op)
+#define LLDB_PROCESS_Sparc(op)
+#define LLDB_PROCESS_WebAssembly(op)
+#define LLDB_PROCESS_XCore(op)
+
 llvm::Error SystemInitializerFull::Initialize() {
   if (auto e = SystemInitializerCommon::Initialize())
     return e;
@@ -174,34 +204,8 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   ClangASTContext::Initialize();
 
-#ifdef LLVM_TARGET_AArch64_BUILT
-  ABIMacOSX_arm64::Initialize();
-  ABISysV_arm64::Initialize();
-#endif
-#ifdef LLVM_TARGET_ARM_BUILT
-  ABIMacOSX_arm::Initialize();
-  ABISysV_arm::Initialize();
-#endif
-#ifdef LLVM_TARGET_Hexagon_BUILT
-  ABISysV_hexagon::Initialize();
-#endif
-#ifdef LLVM_TARGET_Mips_BUILT
-  ABISysV_mips::Initialize();
-  ABISysV_mips64::Initialize();
-#endif
-#ifdef LLVM_TARGET_PowerPC_BUILT
-  ABISysV_ppc::Initialize();
-  ABISysV_ppc64::Initialize();
-#endif
-#ifdef LLVM_TARGET_SystemZ_BUILT
-  ABISysV_s390x::Initialize();
-#endif
-#ifdef LLVM_TARGET_X86_BUILT
-  ABIMacOSX_i386::Initialize();
-  ABISysV_i386::Initialize();
-  ABISysV_x86_64::Initialize();
-  ABIWindows_x86_64::Initialize();
-#endif
+#define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Initialize)
+#include "llvm/Config/Targets.def"
 
   ArchitectureArm::Initialize();
   ArchitectureMips::Initialize();
@@ -302,34 +306,8 @@ void SystemInitializerFull::Terminate() {
   ArchitectureMips::Terminate();
   ArchitecturePPC64::Terminate();
 
-#ifdef LLVM_TARGET_AArch64_BUILT
-  ABIMacOSX_arm64::Terminate();
-  ABISysV_arm64::Terminate();
-#endif
-#ifdef LLVM_TARGET_ARM_BUILT
-  ABIMacOSX_arm::Terminate();
-  ABISysV_arm::Terminate();
-#endif
-#ifdef LLVM_TARGET_Hexagon_BUILT
-  ABISysV_hexagon::Terminate();
-#endif
-#ifdef LLVM_TARGET_Mips_BUILT
-  ABISysV_mips::Terminate();
-  ABISysV_mips64::Terminate();
-#endif
-#ifdef LLVM_TARGET_PowerPC_BUILT
-  ABISysV_ppc::Terminate();
-  ABISysV_ppc64::Terminate();
-#endif
-#ifdef LLVM_TARGET_SystemZ_BUILT
-  ABISysV_s390x::Terminate();
-#endif
-#ifdef LLVM_TARGET_X86_BUILT
-  ABIMacOSX_i386::Terminate();
-  ABISysV_i386::Terminate();
-  ABISysV_x86_64::Terminate();
-  ABIWindows_x86_64::Terminate();
-#endif
+#define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Terminate)
+#include "llvm/Config/Targets.def"
 
   DisassemblerLLVMC::Terminate();
 
