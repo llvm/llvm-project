@@ -5141,16 +5141,11 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
     return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
   };
 
-  // For scalars, SimplifyICmpInst should have already handled
-  // the edge cases for us, so we just assert on them.
-  // For vectors, we must handle the edge cases.
-  if (isa<ConstantInt>(C)) {
-    // A <= MAX -> TRUE ; A >= MIN -> TRUE
-    assert(ConstantIsOk(cast<ConstantInt>(C)));
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+    // Bail out if the constant can't be safely incremented/decremented.
+    if (!ConstantIsOk(CI))
+      return llvm::None;
   } else if (Type->isVectorTy()) {
-    // TODO? If the edge cases for vectors were guaranteed to be handled as they
-    // are for scalar, we could remove the min/max checks. However, to do that,
-    // we would have to use insertelement/shufflevector to replace edge values.
     unsigned NumElts = Type->getVectorNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = C->getAggregateElement(i);

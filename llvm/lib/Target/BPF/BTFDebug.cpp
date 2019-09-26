@@ -1154,12 +1154,8 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar && GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
-        MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
-        DIType *Ty = dyn_cast<DIType>(MDN);
-        std::string TypeName = Ty->getName();
-        int64_t Imm = AccessOffsets[GVar->getName().str()];
-
         // Emit "mov ri, <imm>" for abstract member accesses.
+        int64_t Imm = AccessOffsets[GVar->getName().str()];
         OutMI.setOpcode(BPF::MOV_ri);
         OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
         OutMI.addOperand(MCOperand::createImm(Imm));

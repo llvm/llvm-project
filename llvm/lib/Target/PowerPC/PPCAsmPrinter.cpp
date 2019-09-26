@@ -685,15 +685,16 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       return;
     }
 
-    // Otherwise use the TOC. 'TOCEntry' is a local symbol used to reference
-    // the storage allocated in the TOC which contains the address of
+    // Otherwise use the TOC. 'TOCEntry' is a label used to reference the
+    // storage allocated in the TOC which contains the address of
     // 'MOSymbol'. Said TOC entry will be synthesized later.
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
     const MCExpr *Exp =
         MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None, OutContext);
 
-    // AIX uses the local symbol directly for the operand; that the symbol is
-    // accessed toc-relative is implicit.
+    // AIX uses the label directly as the lwz displacement operand for
+    // references into the toc section. The displacement value will be generated
+    // relative to the toc-base.
     if (IsAIX) {
       assert(
           TM.getCodeModel() == CodeModel::Small &&

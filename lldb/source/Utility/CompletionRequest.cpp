@@ -35,14 +35,10 @@ CompletionRequest::CompletionRequest(llvm::StringRef command_line,
 
   // The cursor is after a space but the space is not part of the argument.
   // Let's add an empty fake argument to the end to make sure the completion
-  // code Note: The space could be part of the last argument when it's quoted.
+  // code. Note: The space could be part of the last argument when it's quoted.
   if (partial_command.endswith(" ") &&
-      !GetCursorArgumentPrefix().endswith(" ")) {
-    m_parsed_line.AppendArgument(llvm::StringRef());
-    // Set the cursor to the start of the fake argument.
-    m_cursor_index++;
-    m_cursor_char_position = 0;
-  }
+      !GetCursorArgumentPrefix().endswith(" "))
+    AppendEmptyArgument();
 }
 
 std::string CompletionResult::Completion::GetUniqueKey() const {

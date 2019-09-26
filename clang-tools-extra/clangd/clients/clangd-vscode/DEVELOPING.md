@@ -48,6 +48,6 @@ please contact clangd-dev@lists.llvm.org.
   # For the first time, you need to login in the account. vsce will ask you for
     the Personal Access Token, and remember it for future commands.
   $ vsce login llvm-vs-code-extensions
-  # Make sure the screenshots in the readme are rendered in VSCode marketplace.
-  $ vsce publish --baseImagesUrl https://raw.githubusercontent.com/llvm/llvm-project/master/clang-tools-extra/clangd/clients/clangd-vscode/
+  # Publish the extension to the VSCode marketplace.
+  $ npm run publish
 ```

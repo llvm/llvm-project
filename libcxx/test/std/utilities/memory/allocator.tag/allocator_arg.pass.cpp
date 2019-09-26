@@ -8,7 +8,7 @@
 
 // <memory>
 
-// struct allocator_arg_t { };
+// struct allocator_arg_t { explicit allocator_arg_t() = default; };
 // const allocator_arg_t allocator_arg = allocator_arg_t();
 
 #include <memory>
@@ -21,5 +21,5 @@ int main(int, char**)
 {
     test(std::allocator_arg);
 
-  return 0;
+    return 0;
 }

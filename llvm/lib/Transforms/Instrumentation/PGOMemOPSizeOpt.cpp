@@ -374,8 +374,8 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
         Ctx, Twine("MemOP.Case.") + Twine(SizeId), &Func, DefaultBB);
     Instruction *NewInst = MI->clone();
     // Fix the argument.
-    MemIntrinsic * MemI = dyn_cast<MemIntrinsic>(NewInst);
-    IntegerType *SizeType = dyn_cast<IntegerType>(MemI->getLength()->getType());
+    auto *MemI = cast<MemIntrinsic>(NewInst);
+    auto *SizeType = dyn_cast<IntegerType>(MemI->getLength()->getType());
     assert(SizeType && "Expected integer type size argument.");
     ConstantInt *CaseSizeId = ConstantInt::get(SizeType, SizeId);
     MemI->setLength(CaseSizeId);

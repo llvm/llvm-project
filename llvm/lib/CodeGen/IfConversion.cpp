@@ -569,6 +569,9 @@ bool IfConverter::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
                                 bool FalseBranch, unsigned &Dups,
                                 BranchProbability Prediction) const {
   Dups = 0;
+  if (TrueBBI.BB == FalseBBI.BB)
+    return false;
+
   if (TrueBBI.IsBeingAnalyzed || TrueBBI.IsDone)
     return false;
 

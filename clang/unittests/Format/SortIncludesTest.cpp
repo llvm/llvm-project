@@ -519,7 +519,7 @@ TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
 }
 
 TEST_F(SortIncludesTest, NegativePriorities) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0}, {".*", 1, 0}};
   EXPECT_EQ("#include \"important_os_header.h\"\n"
             "#include \"c_main.h\"\n"
             "#include \"a_other.h\"\n",
@@ -539,7 +539,7 @@ TEST_F(SortIncludesTest, NegativePriorities) {
 }
 
 TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0}, {".*", 1, 0}};
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
 
   EXPECT_EQ("#include \"important_os_header.h\"\n"

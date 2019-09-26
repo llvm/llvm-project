@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -DNO_HEADER
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -finclude-default-header
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 // expected-no-diagnostics
@@ -99,6 +99,7 @@ kernel void basic_subgroup(global uint *out) {
   out[0] = get_sub_group_size();
 #if __OPENCL_C_VERSION__ < CL_VERSION_2_0
 // expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
+// expected-error@-3{{implicit conversion changes signedness: 'int' to 'uint' (aka 'unsigned int')}}
 #endif
 }
 

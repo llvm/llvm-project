@@ -183,12 +183,6 @@ bool Instruction::hasAliasingImplicitRegisters() const {
   return ImplDefRegs.anyCommon(ImplUseRegs);
 }
 
-bool Instruction::hasAliasingImplicitRegistersThrough(
-    const Instruction &OtherInstr) const {
-  return ImplDefRegs.anyCommon(OtherInstr.ImplUseRegs) &&
-         OtherInstr.ImplDefRegs.anyCommon(ImplUseRegs);
-}
-
 bool Instruction::hasAliasingRegistersThrough(
     const Instruction &OtherInstr) const {
   return AllDefRegs.anyCommon(OtherInstr.AllUseRegs) &&
