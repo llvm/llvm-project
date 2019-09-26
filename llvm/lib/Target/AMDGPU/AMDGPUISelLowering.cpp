@@ -681,8 +681,9 @@ bool AMDGPUTargetLowering::isLoadBitCastBeneficial(EVT LoadTy, EVT CastTy,
     return false;
 
   bool Fast = false;
-  return allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), CastTy,
-                            MMO, &Fast) && Fast;
+  return allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                        CastTy, MMO, &Fast) &&
+         Fast;
 }
 
 // SI+ has instructions for cttz / ctlz for 32-bit values. This is probably also

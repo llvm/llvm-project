@@ -4952,7 +4952,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
   if (LDST->getMemoryVT().getSizeInBits() < MemVT.getSizeInBits())
     return false;
 
-  // Ensure that this isn't going to produce an unsupported unaligned access.
+  // Ensure that this isn't going to produce an unsupported memory access.
   if (ShAmt &&
       !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
                               LDST->getAddressSpace(), ShAmt / 8,

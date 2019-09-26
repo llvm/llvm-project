@@ -11136,6 +11136,7 @@ defm VPSRLDQ : avx512_shift_packed_all<0x73, X86vshrdq, MRM3r, MRM3m, "vpsrldq",
 multiclass avx512_psadbw_packed<bits<8> opc, SDNode OpNode,
                                 string OpcodeStr, X86FoldableSchedWrite sched,
                                 X86VectorVTInfo _dst, X86VectorVTInfo _src> {
+  let isCommutable = 1 in
   def rr : AVX512BI<opc, MRMSrcReg,
              (outs _dst.RC:$dst), (ins _src.RC:$src1, _src.RC:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),

@@ -93,6 +93,9 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
 /// This always returns a non-null constant, but it may be a
 /// ConstantExpr if unfoldable.
 Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
+  assert(CastInst::castIsValid(Instruction::BitCast, C, DestTy) &&
+         "Invalid constantexpr bitcast!");
+
   // Catch the obvious splat cases.
   if (C->isNullValue() && !DestTy->isX86_MMXTy())
     return Constant::getNullValue(DestTy);
@@ -521,8 +524,23 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
       return nullptr;
 
     C = FoldBitCast(C, MapTy->getPointerTo(AS), DL);
-    if (Constant *Res = FoldReinterpretLoadFromConstPtr(C, MapTy, DL))
-      return FoldBitCast(Res, LoadTy, DL);
+    if (Constant *Res = FoldReinterpretLoadFromConstPtr(C, MapTy, DL)) {
+      if (Res->isNullValue() && !LoadTy->isX86_MMXTy())
+        // Materializing a zero can be done trivially without a bitcast
+        return Constant::getNullValue(LoadTy);
+      Type *CastTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy) : LoadTy;
+      Res = FoldBitCast(Res, CastTy, DL);
+      if (LoadTy->isPtrOrPtrVectorTy()) {
+        // For vector of pointer, we needed to first convert to a vector of integer, then do vector inttoptr
+        if (Res->isNullValue() && !LoadTy->isX86_MMXTy())
+          return Constant::getNullValue(LoadTy);
+        if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
+          // Be careful not to replace a load of an addrspace value with an inttoptr here
+          return nullptr;
+        Res = ConstantExpr::getCast(Instruction::IntToPtr, Res, LoadTy);
+      }
+      return Res;
+    }
     return nullptr;
   }
 

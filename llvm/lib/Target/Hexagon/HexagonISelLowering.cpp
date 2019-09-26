@@ -2673,7 +2673,8 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     DoDefault = true;
 
   if (!AlignLoads) {
-    if (allowsMemoryAccess(Ctx, DL, LN->getMemoryVT(), *LN->getMemOperand()))
+    if (allowsMemoryAccessForAlignment(Ctx, DL, LN->getMemoryVT(),
+                                       *LN->getMemOperand()))
       return Op;
     DoDefault = true;
   }
@@ -2681,7 +2682,8 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     // The PartTy is the equivalent of "getLoadableTypeOfSize(HaveAlign)".
     MVT PartTy = HaveAlign <= 8 ? MVT::getIntegerVT(8 * HaveAlign)
                                 : MVT::getVectorVT(MVT::i8, HaveAlign);
-    DoDefault = allowsMemoryAccess(Ctx, DL, PartTy, *LN->getMemOperand());
+    DoDefault =
+        allowsMemoryAccessForAlignment(Ctx, DL, PartTy, *LN->getMemOperand());
   }
   if (DoDefault) {
     std::pair<SDValue, SDValue> P = expandUnalignedLoad(LN, DAG);

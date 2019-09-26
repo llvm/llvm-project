@@ -197,6 +197,9 @@
 #ifndef OPENMP_DECLARE_VARIANT_CLAUSE
 #define OPENMP_DECLARE_VARIANT_CLAUSE(Name)
 #endif
+#ifndef OPENMP_MATCH_KIND
+#define OPENMP_MATCH_KIND(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -965,6 +968,11 @@ OPENMP_DEVICE_TYPE_KIND(any)
 // Clauses allowed for OpenMP directive 'declare variant'.
 OPENMP_DECLARE_VARIANT_CLAUSE(match)
 
+// Context selectors for 'match' clause.
+// TODO: add other context selectors.
+OPENMP_MATCH_KIND(implementation)
+
+#undef OPENMP_MATCH_KIND
 #undef OPENMP_DECLARE_VARIANT_CLAUSE
 #undef OPENMP_DEVICE_TYPE_KIND
 #undef OPENMP_ALLOCATE_CLAUSE

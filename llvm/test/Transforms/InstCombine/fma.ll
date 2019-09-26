@@ -460,8 +460,7 @@ entry:
 define <2 x double> @fma_const_fmul_zero(<2 x double> %b) {
 ; CHECK-LABEL: @fma_const_fmul_zero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> zeroinitializer, <2 x double> <double 0x4131233302898702, double 0x40C387800000D6C0>, <2 x double> [[B:%.*]])
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    ret <2 x double> [[B:%.*]]
 ;
 entry:
   %res = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 0.0, double 0.0>, <2 x double> <double 1123123.0099110012314, double 9999.0000001>, <2 x double> %b)
@@ -481,7 +480,7 @@ entry:
 define <2 x double> @fma_const_fmul_one(<2 x double> %b) {
 ; CHECK-LABEL: @fma_const_fmul_one(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call nnan nsz <2 x double> @llvm.fma.v2f64(<2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x double> <double 0x4131233302898702, double 0x40C387800000D6C0>, <2 x double> [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = fadd nnan nsz <2 x double> [[B:%.*]], <double 0x4131233302898702, double 0x40C387800000D6C0>
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
 entry:
