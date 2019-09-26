@@ -98,8 +98,6 @@ protected:
 
   lldb_private::CommandReturnObject &ref() const;
 
-  void SetLLDBObjectPtr(lldb_private::CommandReturnObject *ptr);
-
 private:
   std::unique_ptr<lldb_private::CommandReturnObject> m_opaque_up;
 };
