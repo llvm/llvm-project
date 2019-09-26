@@ -429,7 +429,6 @@ protected:
         result.AppendMessage(stream.GetString());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
         result.SetDidChangeProcessState(true);
-        result.SetAbnormalStopWasExpected(true);
       } else {
         result.AppendError(
             "no error returned from Target::Attach, and target has no process");
