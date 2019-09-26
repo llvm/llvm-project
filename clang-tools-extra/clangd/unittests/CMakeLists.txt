@@ -46,6 +46,7 @@ add_unittest(ClangdUnitTests ClangdTests
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
+  HeaderSourceSwitchTests.cpp
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp

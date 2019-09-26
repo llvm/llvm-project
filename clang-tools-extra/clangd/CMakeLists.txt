@@ -56,6 +56,7 @@ add_clang_library(clangDaemon
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp
+  HeaderSourceSwitch.cpp
   IncludeFixer.cpp
   JSONTransport.cpp
   Logger.cpp
