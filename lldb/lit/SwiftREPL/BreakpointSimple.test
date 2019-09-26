@@ -1,3 +1,4 @@
+// REQUIRES: rdar55750240
 // Test that we can set breakpoints in the REPL.
 
 // RUN: %lldb --repl < %s | FileCheck %s
