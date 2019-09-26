@@ -12,7 +12,6 @@
 """
 Test `@_implementationOnly import` in the main executable
 """
-import commands
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
