@@ -13,8 +13,9 @@
 // [simd.class]
 // template <class U, class Flags> simd(const U* mem, Flags f);
 
-#include <cstdint>
 #include <experimental/simd>
+#include <cstdint>
+#include <cassert>
 
 #include "test_macros.h"
 
