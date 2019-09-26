@@ -11,7 +11,7 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+xop,+avx | FileCheck %s -check-prefixes=CHECK,AVX,XOPAVX1
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+xop,+avx2 | FileCheck %s -check-prefixes=CHECK,AVX,XOPAVX2
 ;
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SSE,SLM
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mcpu=btver2 | FileCheck %s --check-prefixes=BTVER2
 
@@ -268,6 +268,29 @@ define i32 @cmp_int_eq(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'cmp_int_eq'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp eq i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp eq <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp eq <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp eq <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp eq <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp eq i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp eq <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp eq <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp eq <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp eq <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp eq i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp eq <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp eq <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp eq <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp eq <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp eq i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'cmp_int_eq'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp eq i8 undef, undef
@@ -573,6 +596,29 @@ define i32 @cmp_int_ne(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; SLM-LABEL: 'cmp_int_ne'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ne <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ne <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ne <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ne i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ne <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ne <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ne <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ne <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ne i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ne <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ne <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; BTVER2-LABEL: 'cmp_int_ne'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ne i8 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ne <16 x i8> undef, undef
@@ -876,6 +922,29 @@ define i32 @cmp_int_sge(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'cmp_int_sge'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sge <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sge <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sge <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sge <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sge i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sge <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sge <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sge <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sge <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sge i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sge <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sge <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'cmp_int_sge'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sge i8 undef, undef
@@ -1181,6 +1250,29 @@ define i32 @cmp_int_uge(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; SLM-LABEL: 'cmp_int_uge'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp uge i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp uge <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp uge <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp uge <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp uge <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp uge i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp uge <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp uge <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp uge <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp uge <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp uge i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp uge <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp uge <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp uge <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp uge <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; BTVER2-LABEL: 'cmp_int_uge'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp uge i8 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp uge <16 x i8> undef, undef
@@ -1484,6 +1576,29 @@ define i32 @cmp_int_sgt(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'cmp_int_sgt'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sgt i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp sgt <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp sgt <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp sgt <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp sgt <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sgt i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp sgt <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp sgt <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp sgt <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp sgt <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sgt i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp sgt <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp sgt <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sgt <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sgt <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sgt i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'cmp_int_sgt'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sgt i8 undef, undef
@@ -1789,6 +1904,29 @@ define i32 @cmp_int_ugt(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; SLM-LABEL: 'cmp_int_ugt'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ugt <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ugt <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ugt <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ugt i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ugt <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ugt <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ugt <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ugt <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ugt i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ugt <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ugt <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; BTVER2-LABEL: 'cmp_int_ugt'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ugt i8 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ugt <16 x i8> undef, undef
@@ -2092,6 +2230,29 @@ define i32 @cmp_int_sle(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'cmp_int_sle'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp sle <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp sle <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp sle <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp sle <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp sle i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp sle <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp sle <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp sle <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp sle <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp sle i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp sle <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp sle <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'cmp_int_sle'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp sle i8 undef, undef
@@ -2397,6 +2558,29 @@ define i32 @cmp_int_ule(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; SLM-LABEL: 'cmp_int_ule'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ule i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ule <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = icmp ule <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = icmp ule <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128I8 = icmp ule <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ule i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I16 = icmp ule <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = icmp ule <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = icmp ule <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64I16 = icmp ule <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ule i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = icmp ule <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = icmp ule <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ule <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ule <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; BTVER2-LABEL: 'cmp_int_ule'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ule i8 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I8 = icmp ule <16 x i8> undef, undef
@@ -2701,6 +2885,29 @@ define i32 @cmp_int_slt(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+; SLM-LABEL: 'cmp_int_slt'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp slt i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp slt <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = icmp slt <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = icmp slt <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V128I8 = icmp slt <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp slt i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = icmp slt <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = icmp slt <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = icmp slt <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I16 = icmp slt <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp slt i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = icmp slt <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = icmp slt <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp slt <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp slt <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp slt i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
 ; BTVER2-LABEL: 'cmp_int_slt'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp slt i8 undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = icmp slt <16 x i8> undef, undef
@@ -3004,6 +3211,29 @@ define i32 @cmp_int_ult(i32 %arg) {
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SLM-LABEL: 'cmp_int_ult'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = icmp ult <16 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = icmp ult <32 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = icmp ult <64 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V128I8 = icmp ult <128 x i8> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = icmp ult i16 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = icmp ult <8 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = icmp ult <16 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = icmp ult <32 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64I16 = icmp ult <64 x i16> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = icmp ult i32 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = icmp ult <4 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = icmp ult <8 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
+; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'cmp_int_ult'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = icmp ult i8 undef, undef
