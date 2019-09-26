@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/Refactoring/MatchConsumer.h"
 #include "clang/Tooling/Refactoring/RangeSelector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -174,6 +175,10 @@ inline StencilPart ifBound(llvm::StringRef Id, llvm::StringRef TrueText,
                            llvm::StringRef FalseText) {
   return ifBound(Id, text(TrueText), text(FalseText));
 }
+
+/// Wraps a MatchConsumer in a StencilPart, so that it can be used in a Stencil.
+/// This supports user-defined extensions to the Stencil language.
+StencilPart run(MatchConsumer<std::string> C);
 
 /// For debug use only; semantics are not guaranteed.
 ///

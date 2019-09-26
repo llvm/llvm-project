@@ -786,12 +786,72 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
       LinModifiers, Steps, SourceRange(Loc, EndLoc));
 }
 
+/// Parse context selector for 'implementation' selector set:
+/// 'vendor' '(' <vendor> ')'
+static void
+parseImplementationSelector(Parser &P,
+                            Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
+  const Token &Tok = P.getCurToken();
+  // Parse inner context selector set name, if any.
+  if (!Tok.is(tok::identifier)) {
+    P.Diag(Tok.getLocation(), diag::warn_omp_declare_variant_cs_name_expected)
+        << "implementation";
+    // Skip until either '}', ')', or end of directive.
+    while (!P.SkipUntil(tok::r_brace, tok::r_paren,
+                        tok::annot_pragma_openmp_end, Parser::StopBeforeMatch))
+      ;
+    return;
+  }
+  SmallString<16> Buffer;
+  StringRef CtxSelectorName = P.getPreprocessor().getSpelling(Tok, Buffer);
+  OMPDeclareVariantAttr::CtxSelectorType CSKind =
+      OMPDeclareVariantAttr::CtxUnknown;
+  (void)OMPDeclareVariantAttr::ConvertStrToCtxSelectorType(CtxSelectorName,
+                                                           CSKind);
+  (void)P.ConsumeToken();
+  switch (CSKind) {
+  case OMPDeclareVariantAttr::CtxVendor: {
+    // Parse '('.
+    BalancedDelimiterTracker T(P, tok::l_paren, tok::annot_pragma_openmp_end);
+    (void)T.expectAndConsume(diag::err_expected_lparen_after,
+                             CtxSelectorName.data());
+    // Parse <vendor>.
+    StringRef VendorName;
+    if (Tok.is(tok::identifier)) {
+      VendorName = P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
+      (void)P.ConsumeToken();
+    } else {
+      P.Diag(Tok.getLocation(), diag::err_omp_declare_variant_item_expected)
+          << "vendor identifier" << "vendor" << "implementation";
+    }
+    // Parse ')'.
+    (void)T.consumeClose();
+    if (!VendorName.empty())
+      Data.ImplVendor = VendorName;
+    break;
+  }
+  case OMPDeclareVariantAttr::CtxUnknown:
+    P.Diag(Tok.getLocation(), diag::warn_omp_declare_variant_cs_name_expected)
+        << "implementation";
+    // Skip until either '}', ')', or end of directive.
+    while (!P.SkipUntil(tok::r_brace, tok::r_paren,
+                        tok::annot_pragma_openmp_end, Parser::StopBeforeMatch))
+      ;
+    return;
+  }
+  Data.CtxSet = OMPDeclareVariantAttr::CtxSetImplementation;
+  Data.Ctx = CSKind;
+}
+
 /// Parses clauses for 'declare variant' directive.
 /// clause:
 /// <selector_set_name> '=' '{' <context_selectors> '}'
 /// [ ',' <selector_set_name> '=' '{' <context_selectors> '}' ]
 bool Parser::parseOpenMPContextSelectors(
-    SourceLocation Loc, llvm::function_ref<void(SourceRange)> Callback) {
+    SourceLocation Loc,
+    llvm::function_ref<void(SourceRange,
+                            const Sema::OpenMPDeclareVariantCtsSelectorData &)>
+        Callback) {
   do {
     // Parse inner context selector set name.
     if (!Tok.is(tok::identifier)) {
@@ -800,30 +860,43 @@ bool Parser::parseOpenMPContextSelectors(
       return true;
     }
     SmallString<16> Buffer;
-    StringRef CtxSelectorName = PP.getSpelling(Tok, Buffer);
+    StringRef CtxSelectorSetName = PP.getSpelling(Tok, Buffer);
     // Parse '='.
     (void)ConsumeToken();
     if (Tok.isNot(tok::equal)) {
       Diag(Tok.getLocation(), diag::err_omp_declare_variant_equal_expected)
-          << CtxSelectorName;
+          << CtxSelectorSetName;
       return true;
     }
     (void)ConsumeToken();
     // TBD: add parsing of known context selectors.
     // Unknown selector - just ignore it completely.
+    Sema::OpenMPDeclareVariantCtsSelectorData Data;
     {
       // Parse '{'.
       BalancedDelimiterTracker TBr(*this, tok::l_brace,
                                    tok::annot_pragma_openmp_end);
       if (TBr.expectAndConsume(diag::err_expected_lbrace_after, "="))
         return true;
-      while (!SkipUntil(tok::r_brace, tok::r_paren,
-                        tok::annot_pragma_openmp_end, StopBeforeMatch))
-        ;
+      OMPDeclareVariantAttr::CtxSelectorSetType CSSKind =
+          OMPDeclareVariantAttr::CtxSetUnknown;
+      (void)OMPDeclareVariantAttr::ConvertStrToCtxSelectorSetType(
+          CtxSelectorSetName, CSSKind);
+      switch (CSSKind) {
+      case OMPDeclareVariantAttr::CtxSetImplementation:
+        parseImplementationSelector(*this, Data);
+        break;
+      case OMPDeclareVariantAttr::CtxSetUnknown:
+        // Skip until either '}', ')', or end of directive.
+        while (!SkipUntil(tok::r_brace, tok::r_paren,
+                          tok::annot_pragma_openmp_end, StopBeforeMatch))
+          ;
+        break;
+      }
       // Parse '}'.
       (void)TBr.consumeClose();
     }
-    Callback(SourceRange(Loc, Tok.getLocation()));
+    Callback(SourceRange(Loc, Tok.getLocation()), Data);
     // Consume ','
     if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end))
       (void)ExpectAndConsume(tok::comma);
@@ -888,11 +961,15 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   }
 
   // Parse inner context selectors.
-  if (!parseOpenMPContextSelectors(Loc, [this, &DeclVarData](SourceRange SR) {
-        if (DeclVarData.hasValue())
-          Actions.ActOnOpenMPDeclareVariantDirective(
-              DeclVarData.getValue().first, DeclVarData.getValue().second, SR);
-      })) {
+  if (!parseOpenMPContextSelectors(
+          Loc, [this, &DeclVarData](
+                   SourceRange SR,
+                   const Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
+            if (DeclVarData.hasValue())
+              Actions.ActOnOpenMPDeclareVariantDirective(
+                  DeclVarData.getValue().first, DeclVarData.getValue().second,
+                  SR, Data);
+          })) {
     // Parse ')'.
     (void)T.consumeClose();
     // Need to check for extra tokens.

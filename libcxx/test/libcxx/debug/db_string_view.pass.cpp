@@ -26,6 +26,11 @@ void test_null_argument() {
   EXPECT_DEATH(std::string_view(nullptr));
   EXPECT_DEATH(std::string_view(NULL));
   EXPECT_DEATH(std::string_view(static_cast<const char*>(0)));
+  {
+    std::string_view v;
+    EXPECT_DEATH(((void)(v == nullptr)));
+    EXPECT_DEATH(((void)(nullptr == v)));
+  }
 }
 
 int main(int, char**)

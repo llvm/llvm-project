@@ -14,8 +14,8 @@ declare void @llvm.assume(i1)
 ; If we are checking that we either did not get null or got no overflow,
 ; this is tautological and is always true.
 
-define i1 @t1(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t1(
+define i1 @commutativity0(i8 %base, i8 %offset) {
+; CHECK-LABEL: @commutativity0(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[BASE]], [[OFFSET]]
@@ -33,28 +33,8 @@ define i1 @t1(i8 %base, i8 %offset) {
   %r = or i1 %not_null, %no_underflow
   ret i1 %r
 }
-define i1 @t1_strict_bad(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t1_strict_bad(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %adjusted = sub i8 %base, %offset
-  call void @use8(i8 %adjusted)
-  %no_underflow = icmp ugt i8 %base, %offset ; but not for non-strict predicate
-  call void @use1(i1 %no_underflow)
-  %not_null = icmp ne i8 %adjusted, 0
-  call void @use1(i1 %not_null)
-  %r = or i1 %not_null, %no_underflow
-  ret i1 %r
-}
-define i1 @t1_commutativity(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t1_commutativity(
+define i1 @commutativity1(i8 %base, i8 %offset) {
+; CHECK-LABEL: @commutativity1(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[OFFSET]], [[BASE]]
@@ -65,82 +45,18 @@ define i1 @t1_commutativity(i8 %base, i8 %offset) {
 ;
   %adjusted = sub i8 %base, %offset
   call void @use8(i8 %adjusted)
-  %no_underflow = icmp ule i8 %offset, %base
+  %no_underflow = icmp ule i8 %offset, %base ; swapped
   call void @use1(i1 %no_underflow)
   %not_null = icmp ne i8 %adjusted, 0
   call void @use1(i1 %not_null)
   %r = or i1 %not_null, %no_underflow
   ret i1 %r
 }
-
-; Likewise, if we are checking that we both got null and overflow happened,
-; it makes no sense and is always false.
-
-define i1 @t2(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t2(
+define i1 @commutativity2(i8 %base, i8 %offset) {
+; CHECK-LABEL: @commutativity2(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
-; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
-; CHECK-NEXT:    [[NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    call void @use1(i1 [[NULL]])
-; CHECK-NEXT:    ret i1 false
-;
-  %adjusted = sub i8 %base, %offset
-  call void @use8(i8 %adjusted)
-  %underflow = icmp ult i8 %base, %offset
-  call void @use1(i1 %underflow)
-  %null = icmp eq i8 %adjusted, 0
-  call void @use1(i1 %null)
-  %r = and i1 %null, %underflow
-  ret i1 %r
-}
-define i1 @t2_nonstrict_bad(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t2_nonstrict_bad(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp uge i8 [[ADJUSTED]], [[BASE]]
-; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
-; CHECK-NEXT:    [[NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    call void @use1(i1 [[NULL]])
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NULL]], [[UNDERFLOW]]
-; CHECK-NEXT:    ret i1 [[R]]
-;
-  %adjusted = sub i8 %base, %offset
-  call void @use8(i8 %adjusted)
-  %underflow = icmp uge i8 %adjusted, %base ; but not for non-strict predicate
-  call void @use1(i1 %underflow)
-  %null = icmp eq i8 %adjusted, 0
-  call void @use1(i1 %null)
-  %r = and i1 %null, %underflow
-  ret i1 %r
-}
-define i1 @t2_commutativity(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t2_commutativity(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[UNDERFLOW:%.*]] = icmp ugt i8 [[OFFSET]], [[BASE]]
-; CHECK-NEXT:    call void @use1(i1 [[UNDERFLOW]])
-; CHECK-NEXT:    [[NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
-; CHECK-NEXT:    call void @use1(i1 [[NULL]])
-; CHECK-NEXT:    ret i1 false
-;
-  %adjusted = sub i8 %base, %offset
-  call void @use8(i8 %adjusted)
-  %underflow = icmp ugt i8 %offset, %base
-  call void @use1(i1 %underflow)
-  %null = icmp eq i8 %adjusted, 0
-  call void @use1(i1 %null)
-  %r = and i1 %null, %underflow
-  ret i1 %r
-}
-
-; Overflow OR not zero => always true
-define i1 @t3(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t3(
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
-; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[BASE]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
@@ -148,31 +64,276 @@ define i1 @t3(i8 %base, i8 %offset) {
 ;
   %adjusted = sub i8 %base, %offset
   call void @use8(i8 %adjusted)
-  %no_underflow = icmp ule i8 %base, %offset
+  %no_underflow = icmp uge i8 %base, %offset
   call void @use1(i1 %no_underflow)
   %not_null = icmp ne i8 %adjusted, 0
   call void @use1(i1 %not_null)
-  %r = or i1 %not_null, %no_underflow
+  %r = or i1 %no_underflow, %not_null ; swapped
   ret i1 %r
 }
 
-; No overflow and zero => always false
-define i1 @t4(i8 %base, i8 %offset) {
-; CHECK-LABEL: @t4(
+define i1 @commutativity3(i8 %base, i8 %offset) {
+; CHECK-LABEL: @commutativity3(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    ret i1 true
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %no_underflow = icmp ule i8 %offset, %base ; swapped
+  call void @use1(i1 %no_underflow)
+  %not_null = icmp ne i8 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %r = or i1 %no_underflow, %not_null ; swapped
+  ret i1 %r
+}
+
+;-------------------------------------------------------------------------------
+
+define i1 @exaustive_t0_no_underflow(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t0_no_underflow(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ult i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t1_not_null(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t1_not_null(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    ret i1 [[NOT_NULL]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ult i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t2_false(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t2_false(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    ret i1 false
 ;
   %adjusted = sub i8 %base, %offset
   call void @use8(i8 %adjusted)
-  %no_underflow = icmp ugt i8 %base, %offset
-  call void @use1(i1 %no_underflow)
   %not_null = icmp eq i8 %adjusted, 0
-  call void @use1(i1 %not_null)
-  %r = and i1 %not_null, %no_underflow
+  %no_underflow = icmp ult i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t3_bad(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t3_bad(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[NO_UNDERFLOW]], [[NOT_NULL]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp ult i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t4_no_underflow(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t4_no_underflow(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ugt i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t5_not_null(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t5_not_null(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    ret i1 [[NOT_NULL]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ugt i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t6_false(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t6_false(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    ret i1 false
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp ugt i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t7_bad(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t7_bad(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ugt i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[NO_UNDERFLOW]], [[NOT_NULL]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp ugt i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t8_bad(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t8_bad(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NO_UNDERFLOW]], [[NOT_NULL]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t9_true(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t9_true(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    ret i1 true
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t10_not_null(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t10_not_null(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    ret i1 [[NOT_NULL]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t11_no_underflow(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t11_no_underflow(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t12_bad(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t12_bad(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NO_UNDERFLOW]], [[NOT_NULL]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp uge i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t13_true(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t13_true(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    ret i1 true
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp uge i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t14_not_null(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t14_not_null(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    ret i1 [[NOT_NULL]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp uge i8 %base, %offset
+  %r = and i1 %no_underflow, %not_null
+  ret i1 %r
+}
+
+define i1 @exaustive_t15_no_underflow(i8 %base, i8 %offset) {
+; CHECK-LABEL: @exaustive_t15_no_underflow(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp uge i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    ret i1 [[NO_UNDERFLOW]]
+;
+  %adjusted = sub i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp uge i8 %base, %offset
+  %r = or i1 %no_underflow, %not_null
   ret i1 %r
 }

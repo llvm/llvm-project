@@ -29,24 +29,8 @@ using stencil::access;
 using stencil::cat;
 using stencil::dPrint;
 using stencil::ifBound;
+using stencil::run;
 using stencil::text;
-
-// In tests, we can't directly match on llvm::Expected since its accessors
-// mutate the object. So, we collapse it to an Optional.
-static llvm::Optional<std::string> toOptional(llvm::Expected<std::string> V) {
-  if (V)
-    return *V;
-  ADD_FAILURE() << "Losing error in conversion to IsSomething: "
-                << llvm::toString(V.takeError());
-  return llvm::None;
-}
-
-// A very simple matcher for llvm::Optional values.
-MATCHER_P(IsSomething, ValueMatcher, "") {
-  if (!arg)
-    return false;
-  return ::testing::ExplainMatchResult(ValueMatcher, *arg, result_listener);
-}
 
 // Create a valid translation-unit from a statement.
 static std::string wrapSnippet(StringRef StatementCode) {
@@ -151,8 +135,8 @@ TEST_F(StencilTest, SingleStatement) {
   // Invert the if-then-else.
   auto Stencil = cat("if (!", node(Condition), ") ", statement(Else), " else ",
                      statement(Then));
-  EXPECT_THAT(toOptional(Stencil.eval(StmtMatch->Result)),
-              IsSomething(Eq("if (!true) return 0; else return 1;")));
+  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+                       HasValue("if (!true) return 0; else return 1;"));
 }
 
 TEST_F(StencilTest, SingleStatementCallOperator) {
@@ -170,8 +154,8 @@ TEST_F(StencilTest, SingleStatementCallOperator) {
   // Invert the if-then-else.
   Stencil S = cat("if (!", node(Condition), ") ", statement(Else), " else ",
                   statement(Then));
-  EXPECT_THAT(toOptional(S(StmtMatch->Result)),
-              IsSomething(Eq("if (!true) return 0; else return 1;")));
+  EXPECT_THAT_EXPECTED(S(StmtMatch->Result),
+                       HasValue("if (!true) return 0; else return 1;"));
 }
 
 TEST_F(StencilTest, UnboundNode) {
@@ -300,6 +284,15 @@ TEST_F(StencilTest, AccessOpImplicitThis) {
   EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue("field"));
 }
 
+TEST_F(StencilTest, RunOp) {
+  StringRef Id = "id";
+  auto SimpleFn = [Id](const MatchResult &R) {
+    return std::string(R.Nodes.getNodeAs<Stmt>(Id) != nullptr ? "Bound"
+                                                              : "Unbound");
+  };
+  testExpr(Id, "3;", cat(run(SimpleFn)), "Bound");
+}
+
 TEST(StencilEqualityTest, Equality) {
   auto Lhs = cat("foo", dPrint("dprint_id"));
   auto Rhs = cat("foo", dPrint("dprint_id"));
@@ -322,6 +315,14 @@ TEST(StencilEqualityTest, InEqualityDifferentSizes) {
 TEST(StencilEqualityTest, InEqualitySelection) {
   auto S1 = cat(node("node"));
   auto S2 = cat(node("node"));
+  EXPECT_NE(S1, S2);
+}
+
+// `run` is opaque.
+TEST(StencilEqualityTest, InEqualityRun) {
+  auto F = [](const MatchResult &R) { return "foo"; };
+  auto S1 = cat(run(F));
+  auto S2 = cat(run(F));
   EXPECT_NE(S1, S2);
 }
 } // namespace

@@ -1107,21 +1107,6 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
   if (!match(ZeroCmpOp, m_Sub(m_Value(Base), m_Value(Offset))))
     return nullptr;
 
-  // ZeroCmpOp <  Base && ZeroCmpOp != 0  --> Base >  Offset  iff Offset != 0
-  // ZeroCmpOp >= Base || ZeroCmpOp == 0  --> Base <= Base    iff Offset != 0
-  if (match(UnsignedICmp,
-            m_c_ICmp(UnsignedPred, m_Specific(ZeroCmpOp), m_Specific(Base)))) {
-    if (UnsignedICmp->getOperand(0) != ZeroCmpOp)
-      UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
-
-    if (UnsignedPred == ICmpInst::ICMP_ULT && IsAnd &&
-        EqPred == ICmpInst::ICMP_NE && IsKnownNonZero(Offset))
-      return Builder.CreateICmpUGT(Base, Offset);
-    if (UnsignedPred == ICmpInst::ICMP_UGE && !IsAnd &&
-        EqPred == ICmpInst::ICMP_EQ && IsKnownNonZero(Offset))
-      return Builder.CreateICmpULE(Base, Offset);
-  }
-
   if (!match(UnsignedICmp,
              m_c_ICmp(UnsignedPred, m_Specific(Base), m_Specific(Offset))) ||
       !ICmpInst::isUnsigned(UnsignedPred))
@@ -1142,6 +1127,16 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
        UnsignedPred == ICmpInst::ICMP_ULT) &&
       EqPred == ICmpInst::ICMP_EQ && !IsAnd)
     return Builder.CreateICmpULE(Base, Offset);
+
+  // Base <= Offset && (Base - Offset) != 0  -->  Base < Offset
+  if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
+      IsAnd)
+    return Builder.CreateICmpULT(Base, Offset);
+
+  // Base > Offset || (Base - Offset) == 0  -->  Base >= Offset
+  if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
+      !IsAnd)
+    return Builder.CreateICmpUGE(Base, Offset);
 
   return nullptr;
 }

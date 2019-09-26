@@ -71,11 +71,19 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
     // Recurse to get the values in our predecessors for placement of a
     // potential phi node. This will insert phi nodes if we cycle in order to
     // break the cycle and have an operand.
-    for (auto *Pred : predecessors(BB))
-      if (MSSA->DT->isReachableFromEntry(Pred))
-        PhiOps.push_back(getPreviousDefFromEnd(Pred, CachedPreviousDef));
-      else
+    bool UniqueIncomingAccess = true;
+    MemoryAccess *SingleAccess = nullptr;
+    for (auto *Pred : predecessors(BB)) {
+      if (MSSA->DT->isReachableFromEntry(Pred)) {
+        auto *IncomingAccess = getPreviousDefFromEnd(Pred, CachedPreviousDef);
+        if (!SingleAccess)
+          SingleAccess = IncomingAccess;
+        else if (IncomingAccess != SingleAccess)
+          UniqueIncomingAccess = false;
+        PhiOps.push_back(IncomingAccess);
+      } else
         PhiOps.push_back(MSSA->getLiveOnEntryDef());
+    }
 
     // Now try to simplify the ops to avoid placing a phi.
     // This may return null if we never created a phi yet, that's okay
@@ -84,7 +92,9 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
     // See if we can avoid the phi by simplifying it.
     auto *Result = tryRemoveTrivialPhi(Phi, PhiOps);
     // If we couldn't simplify, we may have to create a phi
-    if (Result == Phi) {
+    if (Result == Phi && UniqueIncomingAccess && SingleAccess)
+      Result = SingleAccess;
+    else if (Result == Phi && !(UniqueIncomingAccess && SingleAccess)) {
       if (!Phi)
         Phi = MSSA->createMemoryPhi(BB);
 
@@ -315,8 +325,8 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
 
   SmallVector<WeakVH, 8> FixupList(InsertedPHIs.begin(), InsertedPHIs.end());
 
-  SmallPtrSet<BasicBlock *, 2> DefiningBlocks;
-
+  // Remember the index where we may insert new phis.
+  unsigned NewPhiIndex = InsertedPHIs.size();
   if (!DefBeforeSameBlock) {
     // If there was a local def before us, we must have the same effect it
     // did. Because every may-def is the same, any phis/etc we would create, it
@@ -335,49 +345,51 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     auto Iter = MD->getDefsIterator();
     ++Iter;
     auto IterEnd = MSSA->getBlockDefs(MD->getBlock())->end();
-    if (Iter == IterEnd)
+    if (Iter == IterEnd) {
+      SmallPtrSet<BasicBlock *, 2> DefiningBlocks;
       DefiningBlocks.insert(MD->getBlock());
+      for (const auto &VH : InsertedPHIs)
+        if (const auto *RealPHI = cast_or_null<MemoryPhi>(VH))
+          DefiningBlocks.insert(RealPHI->getBlock());
+      ForwardIDFCalculator IDFs(*MSSA->DT);
+      SmallVector<BasicBlock *, 32> IDFBlocks;
+      IDFs.setDefiningBlocks(DefiningBlocks);
+      IDFs.calculate(IDFBlocks);
+      SmallVector<AssertingVH<MemoryPhi>, 4> NewInsertedPHIs;
+      for (auto *BBIDF : IDFBlocks) {
+        auto *MPhi = MSSA->getMemoryAccess(BBIDF);
+        if (!MPhi) {
+          MPhi = MSSA->createMemoryPhi(BBIDF);
+          NewInsertedPHIs.push_back(MPhi);
+        }
+        // Add the phis created into the IDF blocks to NonOptPhis, so they are
+        // not optimized out as trivial by the call to getPreviousDefFromEnd
+        // below. Once they are complete, all these Phis are added to the
+        // FixupList, and removed from NonOptPhis inside fixupDefs(). Existing
+        // Phis in IDF may need fixing as well, and potentially be trivial
+        // before this insertion, hence add all IDF Phis. See PR43044.
+        NonOptPhis.insert(MPhi);
+      }
+      for (auto &MPhi : NewInsertedPHIs) {
+        auto *BBIDF = MPhi->getBlock();
+        for (auto *Pred : predecessors(BBIDF)) {
+          DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> CachedPreviousDef;
+          MPhi->addIncoming(getPreviousDefFromEnd(Pred, CachedPreviousDef),
+                            Pred);
+        }
+      }
 
+      // Re-take the index where we're adding the new phis, because the above
+      // call to getPreviousDefFromEnd, may have inserted into InsertedPHIs.
+      NewPhiIndex = InsertedPHIs.size();
+      for (auto &MPhi : NewInsertedPHIs) {
+        InsertedPHIs.push_back(&*MPhi);
+        FixupList.push_back(&*MPhi);
+      }
+    }
     FixupList.push_back(MD);
   }
 
-  ForwardIDFCalculator IDFs(*MSSA->DT);
-  SmallVector<BasicBlock *, 32> IDFBlocks;
-  for (const auto &VH : InsertedPHIs)
-    if (const auto *RealPHI = cast_or_null<MemoryPhi>(VH))
-      DefiningBlocks.insert(RealPHI->getBlock());
-  IDFs.setDefiningBlocks(DefiningBlocks);
-  IDFs.calculate(IDFBlocks);
-  SmallVector<AssertingVH<MemoryPhi>, 4> NewInsertedPHIs;
-  for (auto *BBIDF : IDFBlocks) {
-    auto *MPhi = MSSA->getMemoryAccess(BBIDF);
-    if (!MPhi) {
-      MPhi = MSSA->createMemoryPhi(BBIDF);
-      NewInsertedPHIs.push_back(MPhi);
-    }
-    // Add the phis created into the IDF blocks to NonOptPhis, so they are not
-    // optimized out as trivial by the call to getPreviousDefFromEnd below. Once
-    // they are complete, all these Phis are added to the FixupList, and removed
-    // from NonOptPhis inside fixupDefs(). Existing Phis in IDF may need fixing
-    // as well, and potentially be trivial before this insertion, hence add all
-    // IDF Phis. See PR43044.
-    NonOptPhis.insert(MPhi);
-  }
-
-  for (auto &MPhi : NewInsertedPHIs) {
-    auto *BBIDF = MPhi->getBlock();
-    for (auto *Pred : predecessors(BBIDF)) {
-      DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> CachedPreviousDef;
-      MPhi->addIncoming(getPreviousDefFromEnd(Pred, CachedPreviousDef), Pred);
-    }
-  }
-
-  // Remember the index where we may insert new phis.
-  unsigned NewPhiIndex = InsertedPHIs.size();
-  for (auto &MPhi : NewInsertedPHIs) {
-    InsertedPHIs.push_back(&*MPhi);
-    FixupList.push_back(&*MPhi);
-  }
   // Remember the index where we stopped inserting new phis above, since the
   // fixupDefs call in the loop below may insert more, that are already minimal.
   unsigned NewPhiIndexEnd = InsertedPHIs.size();

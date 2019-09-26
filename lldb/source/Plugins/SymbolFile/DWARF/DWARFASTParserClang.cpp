@@ -3277,6 +3277,8 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
         array_info.element_orders.push_back(num_elements);
       }
     } break;
+    default:
+      break;
     }
   }
   return array_info;

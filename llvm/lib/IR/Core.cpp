@@ -3527,6 +3527,47 @@ static LLVMAtomicOrdering mapToLLVMOrdering(AtomicOrdering Ordering) {
   llvm_unreachable("Invalid AtomicOrdering value!");
 }
 
+static AtomicRMWInst::BinOp mapFromLLVMRMWBinOp(LLVMAtomicRMWBinOp BinOp) {
+  switch (BinOp) {
+    case LLVMAtomicRMWBinOpXchg: return AtomicRMWInst::Xchg;
+    case LLVMAtomicRMWBinOpAdd: return AtomicRMWInst::Add;
+    case LLVMAtomicRMWBinOpSub: return AtomicRMWInst::Sub;
+    case LLVMAtomicRMWBinOpAnd: return AtomicRMWInst::And;
+    case LLVMAtomicRMWBinOpNand: return AtomicRMWInst::Nand;
+    case LLVMAtomicRMWBinOpOr: return AtomicRMWInst::Or;
+    case LLVMAtomicRMWBinOpXor: return AtomicRMWInst::Xor;
+    case LLVMAtomicRMWBinOpMax: return AtomicRMWInst::Max;
+    case LLVMAtomicRMWBinOpMin: return AtomicRMWInst::Min;
+    case LLVMAtomicRMWBinOpUMax: return AtomicRMWInst::UMax;
+    case LLVMAtomicRMWBinOpUMin: return AtomicRMWInst::UMin;
+    case LLVMAtomicRMWBinOpFAdd: return AtomicRMWInst::FAdd;
+    case LLVMAtomicRMWBinOpFSub: return AtomicRMWInst::FSub;
+  }
+
+  llvm_unreachable("Invalid LLVMAtomicRMWBinOp value!");
+}
+
+static LLVMAtomicRMWBinOp mapToLLVMRMWBinOp(AtomicRMWInst::BinOp BinOp) {
+  switch (BinOp) {
+    case AtomicRMWInst::Xchg: return LLVMAtomicRMWBinOpXchg;
+    case AtomicRMWInst::Add: return LLVMAtomicRMWBinOpAdd;
+    case AtomicRMWInst::Sub: return LLVMAtomicRMWBinOpSub;
+    case AtomicRMWInst::And: return LLVMAtomicRMWBinOpAnd;
+    case AtomicRMWInst::Nand: return LLVMAtomicRMWBinOpNand;
+    case AtomicRMWInst::Or: return LLVMAtomicRMWBinOpOr;
+    case AtomicRMWInst::Xor: return LLVMAtomicRMWBinOpXor;
+    case AtomicRMWInst::Max: return LLVMAtomicRMWBinOpMax;
+    case AtomicRMWInst::Min: return LLVMAtomicRMWBinOpMin;
+    case AtomicRMWInst::UMax: return LLVMAtomicRMWBinOpUMax;
+    case AtomicRMWInst::UMin: return LLVMAtomicRMWBinOpUMin;
+    case AtomicRMWInst::FAdd: return LLVMAtomicRMWBinOpFAdd;
+    case AtomicRMWInst::FSub: return LLVMAtomicRMWBinOpFSub;
+    default: break;
+  }
+
+  llvm_unreachable("Invalid AtomicRMWBinOp value!");
+}
+
 // TODO: Should this and other atomic instructions support building with
 // "syncscope"?
 LLVMValueRef LLVMBuildFence(LLVMBuilderRef B, LLVMAtomicOrdering Ordering,
@@ -3602,14 +3643,30 @@ LLVMBool LLVMGetVolatile(LLVMValueRef MemAccessInst) {
   Value *P = unwrap<Value>(MemAccessInst);
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
     return LI->isVolatile();
-  return cast<StoreInst>(P)->isVolatile();
+  if (StoreInst *SI = dyn_cast<StoreInst>(P))
+    return SI->isVolatile();
+  if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(P))
+    return AI->isVolatile();
+  return cast<AtomicCmpXchgInst>(P)->isVolatile();
 }
 
 void LLVMSetVolatile(LLVMValueRef MemAccessInst, LLVMBool isVolatile) {
   Value *P = unwrap<Value>(MemAccessInst);
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
     return LI->setVolatile(isVolatile);
-  return cast<StoreInst>(P)->setVolatile(isVolatile);
+  if (StoreInst *SI = dyn_cast<StoreInst>(P))
+    return SI->setVolatile(isVolatile);
+  if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(P))
+    return AI->setVolatile(isVolatile);
+  return cast<AtomicCmpXchgInst>(P)->setVolatile(isVolatile);
+}
+
+LLVMBool LLVMGetWeak(LLVMValueRef CmpXchgInst) {
+  return unwrap<AtomicCmpXchgInst>(CmpXchgInst)->isWeak();
+}
+
+void LLVMSetWeak(LLVMValueRef CmpXchgInst, LLVMBool isWeak) {
+  return unwrap<AtomicCmpXchgInst>(CmpXchgInst)->setWeak(isWeak);
 }
 
 LLVMAtomicOrdering LLVMGetOrdering(LLVMValueRef MemAccessInst) {
@@ -3617,8 +3674,10 @@ LLVMAtomicOrdering LLVMGetOrdering(LLVMValueRef MemAccessInst) {
   AtomicOrdering O;
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
     O = LI->getOrdering();
+  else if (StoreInst *SI = dyn_cast<StoreInst>(P))
+    O = SI->getOrdering();
   else
-    O = cast<StoreInst>(P)->getOrdering();
+    O = cast<AtomicRMWInst>(P)->getOrdering();
   return mapToLLVMOrdering(O);
 }
 
@@ -3629,6 +3688,14 @@ void LLVMSetOrdering(LLVMValueRef MemAccessInst, LLVMAtomicOrdering Ordering) {
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
     return LI->setOrdering(O);
   return cast<StoreInst>(P)->setOrdering(O);
+}
+
+LLVMAtomicRMWBinOp LLVMGetAtomicRMWBinOp(LLVMValueRef Inst) {
+  return mapToLLVMRMWBinOp(unwrap<AtomicRMWInst>(Inst)->getOperation());
+}
+
+void LLVMSetAtomicRMWBinOp(LLVMValueRef Inst, LLVMAtomicRMWBinOp BinOp) {
+  unwrap<AtomicRMWInst>(Inst)->setOperation(mapFromLLVMRMWBinOp(BinOp));
 }
 
 /*--.. Casts ...............................................................--*/
@@ -3849,20 +3916,7 @@ LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
                                LLVMValueRef PTR, LLVMValueRef Val,
                                LLVMAtomicOrdering ordering,
                                LLVMBool singleThread) {
-  AtomicRMWInst::BinOp intop;
-  switch (op) {
-    case LLVMAtomicRMWBinOpXchg: intop = AtomicRMWInst::Xchg; break;
-    case LLVMAtomicRMWBinOpAdd: intop = AtomicRMWInst::Add; break;
-    case LLVMAtomicRMWBinOpSub: intop = AtomicRMWInst::Sub; break;
-    case LLVMAtomicRMWBinOpAnd: intop = AtomicRMWInst::And; break;
-    case LLVMAtomicRMWBinOpNand: intop = AtomicRMWInst::Nand; break;
-    case LLVMAtomicRMWBinOpOr: intop = AtomicRMWInst::Or; break;
-    case LLVMAtomicRMWBinOpXor: intop = AtomicRMWInst::Xor; break;
-    case LLVMAtomicRMWBinOpMax: intop = AtomicRMWInst::Max; break;
-    case LLVMAtomicRMWBinOpMin: intop = AtomicRMWInst::Min; break;
-    case LLVMAtomicRMWBinOpUMax: intop = AtomicRMWInst::UMax; break;
-    case LLVMAtomicRMWBinOpUMin: intop = AtomicRMWInst::UMin; break;
-  }
+  AtomicRMWInst::BinOp intop = mapFromLLVMRMWBinOp(op);
   return wrap(unwrap(B)->CreateAtomicRMW(intop, unwrap(PTR), unwrap(Val),
     mapFromLLVMOrdering(ordering), singleThread ? SyncScope::SingleThread
                                                 : SyncScope::System));

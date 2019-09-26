@@ -576,6 +576,8 @@ struct FunCloner {
         LLVMValueRef Ptr = CloneValue(LLVMGetOperand(Src, 0));
         Dst = LLVMBuildLoad(Builder, Ptr, Name);
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
+        LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
+        LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         break;
       }
       case LLVMStore: {
@@ -583,6 +585,8 @@ struct FunCloner {
         LLVMValueRef Ptr = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildStore(Builder, Val, Ptr);
         LLVMSetAlignment(Dst, LLVMGetAlignment(Src));
+        LLVMSetOrdering(Dst, LLVMGetOrdering(Src));
+        LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
         break;
       }
       case LLVMGetElementPtr: {
@@ -597,6 +601,17 @@ struct FunCloner {
           Dst = LLVMBuildGEP(Builder, Ptr, Idx.data(), NumIdx, Name);
         break;
       }
+      case LLVMAtomicRMW: {
+        LLVMValueRef Ptr = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMAtomicRMWBinOp BinOp = LLVMGetAtomicRMWBinOp(Src);
+        LLVMAtomicOrdering Ord = LLVMGetOrdering(Src);
+        LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
+        Dst = LLVMBuildAtomicRMW(Builder, BinOp, Ptr, Val, Ord, SingleThread);
+        LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
+        LLVMSetValueName2(Dst, Name, NameLen);
+        break;
+      }
       case LLVMAtomicCmpXchg: {
         LLVMValueRef Ptr = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef Cmp = CloneValue(LLVMGetOperand(Src, 1));
@@ -607,7 +622,11 @@ struct FunCloner {
 
         Dst = LLVMBuildAtomicCmpXchg(Builder, Ptr, Cmp, New, Succ, Fail,
                                      SingleThread);
-      } break;
+        LLVMSetVolatile(Dst, LLVMGetVolatile(Src));
+        LLVMSetWeak(Dst, LLVMGetWeak(Src));
+        LLVMSetValueName2(Dst, Name, NameLen);
+        break;
+      }
       case LLVMBitCast: {
         LLVMValueRef V = CloneValue(LLVMGetOperand(Src, 0));
         Dst = LLVMBuildBitCast(Builder, V, CloneType(Src), Name);
