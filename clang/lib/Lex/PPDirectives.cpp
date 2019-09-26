@@ -1714,11 +1714,11 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
     SourceLocation FilenameLoc, CharSourceRange FilenameRange,
     const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
     bool &IsMapped, const DirectoryLookup *LookupFrom,
-    const FileEntry *LookupFromFile, SmallString<128> &NormalizedPath,
+    const FileEntry *LookupFromFile, StringRef LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
   Optional<FileEntryRef> File = LookupFile(
-      FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
+      FilenameLoc, LookupFilename,
       isAngled, LookupFrom, LookupFromFile, CurDir,
       Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
       &SuggestedModule, &IsMapped, &IsFrameworkFound);
@@ -1737,7 +1737,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
         // Try the lookup again, skipping the cache.
         Optional<FileEntryRef> File = LookupFile(
             FilenameLoc,
-            LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
+            LookupFilename, isAngled,
             LookupFrom, LookupFromFile, CurDir, nullptr, nullptr,
             &SuggestedModule, &IsMapped, /*IsFrameworkFound=*/nullptr,
             /*SkipCache*/ true);
@@ -1755,7 +1755,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
   // provide the user with a possible fixit.
   if (isAngled) {
     Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
+        FilenameLoc, LookupFilename,
         false, LookupFrom, LookupFromFile, CurDir,
         Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
         &SuggestedModule, &IsMapped,
@@ -1911,11 +1911,13 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     llvm::sys::path::native(NormalizedPath);
 #endif
   }
+  StringRef LookupFilename =
+      LangOpts.MSVCCompat ? StringRef(NormalizedPath) : Filename;
 
   Optional<FileEntryRef> File = LookupHeaderIncludeOrImport(
       CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
       IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
-      NormalizedPath, RelativePath, SearchPath, SuggestedModule, isAngled);
+      LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
 
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
     if (File && isPCHThroughHeader(&File->getFileEntry()))
@@ -2057,10 +2059,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // Notify the callback object that we've seen an inclusion directive.
     // FIXME: Use a different callback for a pp-import?
     Callbacks->InclusionDirective(
-        HashLoc, IncludeTok,
-        LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
-        FilenameRange, File ? &File->getFileEntry() : nullptr, SearchPath,
-        RelativePath, Action == Import ? SuggestedModule.getModule() : nullptr,
+        HashLoc, IncludeTok, LookupFilename, isAngled, FilenameRange,
+        File ? &File->getFileEntry() : nullptr, SearchPath, RelativePath,
+        Action == Import ? SuggestedModule.getModule() : nullptr,
         FileCharacter);
     if (Action == Skip && File)
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
@@ -2083,7 +2084,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       !IsMapped && !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
-    StringRef Name = LangOpts.MSVCCompat ? NormalizedPath.str() : Filename;
+    StringRef Name = LookupFilename;
     StringRef RealPathName = File->getFileEntry().tryGetRealPathName();
     SmallVector<StringRef, 16> Components(llvm::sys::path::begin(Name),
                                           llvm::sys::path::end(Name));

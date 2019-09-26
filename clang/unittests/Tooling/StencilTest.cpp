@@ -29,6 +29,7 @@ using stencil::access;
 using stencil::cat;
 using stencil::dPrint;
 using stencil::ifBound;
+using stencil::run;
 using stencil::text;
 
 // Create a valid translation-unit from a statement.
@@ -283,6 +284,15 @@ TEST_F(StencilTest, AccessOpImplicitThis) {
   EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue("field"));
 }
 
+TEST_F(StencilTest, RunOp) {
+  StringRef Id = "id";
+  auto SimpleFn = [Id](const MatchResult &R) {
+    return std::string(R.Nodes.getNodeAs<Stmt>(Id) != nullptr ? "Bound"
+                                                              : "Unbound");
+  };
+  testExpr(Id, "3;", cat(run(SimpleFn)), "Bound");
+}
+
 TEST(StencilEqualityTest, Equality) {
   auto Lhs = cat("foo", dPrint("dprint_id"));
   auto Rhs = cat("foo", dPrint("dprint_id"));
@@ -305,6 +315,14 @@ TEST(StencilEqualityTest, InEqualityDifferentSizes) {
 TEST(StencilEqualityTest, InEqualitySelection) {
   auto S1 = cat(node("node"));
   auto S2 = cat(node("node"));
+  EXPECT_NE(S1, S2);
+}
+
+// `run` is opaque.
+TEST(StencilEqualityTest, InEqualityRun) {
+  auto F = [](const MatchResult &R) { return "foo"; };
+  auto S1 = cat(run(F));
+  auto S2 = cat(run(F));
   EXPECT_NE(S1, S2);
 }
 } // namespace
