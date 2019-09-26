@@ -24,9 +24,4 @@ add_lldb_tool(lldb-test
     Support
   )
   
-foreach (t ${LLVM_TARGETS_TO_BUILD})
-  set_property(SOURCE SystemInitializerTest.cpp APPEND PROPERTY
-    COMPILE_DEFINITIONS "LLVM_TARGET_${t}_BUILT")
-endforeach()
-
 include_directories(${LLDB_SOURCE_DIR}/source)

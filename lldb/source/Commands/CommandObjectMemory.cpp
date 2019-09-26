@@ -765,8 +765,8 @@ protected:
     m_prev_varobj_options = m_varobj_options;
     m_prev_compiler_type = compiler_type;
 
-    StreamFile outfile_stream;
-    Stream *output_stream = nullptr;
+    std::unique_ptr<Stream> output_stream_storage;
+    Stream *output_stream_p = nullptr;
     const FileSpec &outfile_spec =
         m_outfile_options.GetFile().GetCurrentValue();
 
@@ -779,12 +779,14 @@ protected:
       if (append)
         open_options |= File::eOpenOptionAppend;
 
-      Status error = FileSystem::Instance().Open(outfile_stream.GetFile(),
-                                                 outfile_spec, open_options);
-      if (error.Success()) {
+      auto outfile = FileSystem::Instance().Open(outfile_spec, open_options);
+
+      if (outfile) {
+        auto outfile_stream_up =
+            std::make_unique<StreamFile>(std::move(outfile.get()));
         if (m_memory_options.m_output_as_binary) {
           const size_t bytes_written =
-              outfile_stream.Write(data_sp->GetBytes(), bytes_read);
+              outfile_stream_up->Write(data_sp->GetBytes(), bytes_read);
           if (bytes_written > 0) {
             result.GetOutputStream().Printf(
                 "%zi bytes %s to '%s'\n", bytes_written,
@@ -800,16 +802,19 @@ protected:
         } else {
           // We are going to write ASCII to the file just point the
           // output_stream to our outfile_stream...
-          output_stream = &outfile_stream;
+          output_stream_storage = std::move(outfile_stream_up);
+          output_stream_p = output_stream_storage.get();
         }
       } else {
-        result.AppendErrorWithFormat("Failed to open file '%s' for %s.\n",
+        result.AppendErrorWithFormat("Failed to open file '%s' for %s:\n",
                                      path.c_str(), append ? "append" : "write");
+
+        result.AppendError(llvm::toString(outfile.takeError()));
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
-      output_stream = &result.GetOutputStream();
+      output_stream_p = &result.GetOutputStream();
     }
 
     ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
@@ -829,7 +834,7 @@ protected:
           DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
               eLanguageRuntimeDescriptionDisplayVerbosityFull, format));
 
-          valobj_sp->Dump(*output_stream, options);
+          valobj_sp->Dump(*output_stream_p, options);
         } else {
           result.AppendErrorWithFormat(
               "failed to create a value object for: (%s) %s\n",
@@ -869,13 +874,13 @@ protected:
       }
     }
 
-    assert(output_stream);
+    assert(output_stream_p);
     size_t bytes_dumped = DumpDataExtractor(
-        data, output_stream, 0, format, item_byte_size, item_count,
+        data, output_stream_p, 0, format, item_byte_size, item_count,
         num_per_line / target->GetArchitecture().GetDataByteSize(), addr, 0, 0,
         exe_scope);
     m_next_addr = addr + bytes_dumped;
-    output_stream->EOL();
+    output_stream_p->EOL();
     return true;
   }
 

@@ -63,11 +63,14 @@
 #include "lldb/Utility/Args.h"
 
 #include "lldb/Target/Process.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/UnixSignals.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
@@ -2144,6 +2147,45 @@ PlatformSP CommandInterpreter::GetPlatform(bool prefer_target_platform) {
   return platform_sp;
 }
 
+bool CommandInterpreter::DidProcessStopAbnormally() const {
+  TargetSP target_sp = m_debugger.GetTargetList().GetSelectedTarget();
+  if (!target_sp)
+    return false;
+
+  ProcessSP process_sp(target_sp->GetProcessSP());
+  if (!process_sp)
+    return false;
+
+  if (eStateStopped != process_sp->GetState())
+    return false;
+
+  for (const auto &thread_sp : process_sp->GetThreadList().Threads()) {
+    StopInfoSP stop_info = thread_sp->GetStopInfo();
+    if (!stop_info)
+      return false;
+
+    const StopReason reason = stop_info->GetStopReason();
+    if (reason == eStopReasonException || reason == eStopReasonInstrumentation)
+      return true;
+
+    if (reason == eStopReasonSignal) {
+      const auto stop_signal = static_cast<int32_t>(stop_info->GetValue());
+      UnixSignalsSP signals_sp = process_sp->GetUnixSignals();
+      if (!signals_sp || !signals_sp->SignalIsValid(stop_signal))
+        // The signal is unknown, treat it as abnormal.
+        return true;
+
+      const auto sigint_num = signals_sp->GetSignalNumberFromName("SIGINT");
+      const auto sigstop_num = signals_sp->GetSignalNumberFromName("SIGSTOP");
+      if ((stop_signal != sigint_num) && (stop_signal != sigstop_num))
+        // The signal very likely implies a crash.
+        return true;
+    }
+  }
+
+  return false;
+}
+
 void CommandInterpreter::HandleCommands(const StringList &commands,
                                         ExecutionContext *override_context,
                                         CommandInterpreterRunOptions &options,
@@ -2254,38 +2296,22 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     }
 
     // Also check for "stop on crash here:
-    bool should_stop = false;
-    if (tmp_result.GetDidChangeProcessState() && options.GetStopOnCrash()) {
-      TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
-      if (target_sp) {
-        ProcessSP process_sp(target_sp->GetProcessSP());
-        if (process_sp) {
-          for (ThreadSP thread_sp : process_sp->GetThreadList().Threads()) {
-            StopReason reason = thread_sp->GetStopReason();
-            if (reason == eStopReasonSignal || reason == eStopReasonException ||
-                reason == eStopReasonInstrumentation) {
-              should_stop = true;
-              break;
-            }
-          }
-        }
-      }
-      if (should_stop) {
-        if (idx != num_lines - 1)
-          result.AppendErrorWithFormat(
-              "Aborting reading of commands after command #%" PRIu64
-              ": '%s' stopped with a signal or exception.\n",
-              (uint64_t)idx + 1, cmd);
-        else
-          result.AppendMessageWithFormat(
-              "Command #%" PRIu64 " '%s' stopped with a signal or exception.\n",
-              (uint64_t)idx + 1, cmd);
+    if (tmp_result.GetDidChangeProcessState() && options.GetStopOnCrash() &&
+        DidProcessStopAbnormally()) {
+      if (idx != num_lines - 1)
+        result.AppendErrorWithFormat(
+            "Aborting reading of commands after command #%" PRIu64
+            ": '%s' stopped with a signal or exception.\n",
+            (uint64_t)idx + 1, cmd);
+      else
+        result.AppendMessageWithFormat(
+            "Command #%" PRIu64 " '%s' stopped with a signal or exception.\n",
+            (uint64_t)idx + 1, cmd);
 
-        result.SetStatus(tmp_result.GetStatus());
-        m_debugger.SetAsyncExecution(old_async_execution);
+      result.SetStatus(tmp_result.GetStatus());
+      m_debugger.SetAsyncExecution(old_async_execution);
 
-        return;
-      }
+      return;
     }
   }
 
@@ -2318,18 +2344,17 @@ void CommandInterpreter::HandleCommandsFromFile(
     return;
   }
 
-  StreamFileSP input_file_sp(new StreamFile());
   std::string cmd_file_path = cmd_file.GetPath();
-  Status error = FileSystem::Instance().Open(input_file_sp->GetFile(), cmd_file,
-                                             File::eOpenOptionRead);
 
-  if (error.Fail()) {
-    result.AppendErrorWithFormat(
-        "error: an error occurred read file '%s': %s\n", cmd_file_path.c_str(),
-        error.AsCString());
+  auto file = FileSystem::Instance().Open(cmd_file, File::eOpenOptionRead);
+  if (!file) {
+    result.AppendErrorWithFormatv(
+        "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
+        llvm::fmt_consume(file.takeError()));
     result.SetStatus(eReturnStatusFailed);
     return;
   }
+  auto input_file_sp = std::make_shared<StreamFile>(std::move(file.get()));
 
   Debugger &debugger = GetDebugger();
 
@@ -2773,27 +2798,10 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   // Finally, if we're going to stop on crash, check that here:
   if (!m_quit_requested && result.GetDidChangeProcessState() &&
-      io_handler.GetFlags().Test(eHandleCommandFlagStopOnCrash)) {
-    bool should_stop = false;
-    TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
-    if (target_sp) {
-      ProcessSP process_sp(target_sp->GetProcessSP());
-      if (process_sp) {
-        for (ThreadSP thread_sp : process_sp->GetThreadList().Threads()) {
-          StopReason reason = thread_sp->GetStopReason();
-          if ((reason == eStopReasonSignal || reason == eStopReasonException ||
-               reason == eStopReasonInstrumentation) &&
-              !result.GetAbnormalStopWasExpected()) {
-            should_stop = true;
-            break;
-          }
-        }
-      }
-    }
-    if (should_stop) {
-      io_handler.SetIsDone(true);
-      m_stopped_for_crash = true;
-    }
+      io_handler.GetFlags().Test(eHandleCommandFlagStopOnCrash) &&
+      DidProcessStopAbnormally()) {
+    io_handler.SetIsDone(true);
+    m_stopped_for_crash = true;
   }
 }
 
