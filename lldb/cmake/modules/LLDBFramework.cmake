@@ -121,10 +121,12 @@ if(NOT IOS)
     COMMENT "LLDB.framework: copy clang vendor-specific headers"
   )
 
-  add_custom_command(TARGET liblldb POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${SWIFT_BINARY_DIR}/lib/swift
-            $<TARGET_FILE_DIR:liblldb>/Resources/Swift
-    COMMENT "LLDB.framework: copy Swift vendor-specific headers"
-  )
+  if(LLDB_FRAMEWORK_COPY_SWIFT_RESOURCES)
+    add_custom_command(TARGET liblldb POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+              ${SWIFT_BINARY_DIR}/lib/swift
+              $<TARGET_FILE_DIR:liblldb>/Resources/Swift
+      COMMENT "LLDB.framework: copy Swift vendor-specific headers"
+    )
+  endif()
 endif()
