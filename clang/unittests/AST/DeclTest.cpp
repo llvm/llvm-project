@@ -145,7 +145,8 @@ TEST(Decl, AsmLabelAttr) {
 
   // Mangle the decl names.
   std::string MangleF, MangleG;
-  MangleContext *MC = ItaniumMangleContext::create(Ctx, Diags);
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
   {
     llvm::raw_string_ostream OS_F(MangleF);
     llvm::raw_string_ostream OS_G(MangleG);
