@@ -513,7 +513,7 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 }
 
 void Fuzzer::CrashOnOverwrittenData() {
-  Printf("==%d== ERROR: libFuzzer: fuzz target overwrites it's const input\n",
+  Printf("==%d== ERROR: libFuzzer: fuzz target overwrites its const input\n",
          GetPid());
   DumpCurrentUnit("crash-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
