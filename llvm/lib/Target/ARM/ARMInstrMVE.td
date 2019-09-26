@@ -453,16 +453,16 @@ def MVE_ASRLr   : MVE_ScalarShiftDRegReg<"asrl",    0b1,  [(set tGPREven:$RdaLo,
                                         tGPROdd:$RdaHi_src, rGPR:$Rm))]>;
 def MVE_ASRLi   : MVE_ScalarShiftDRegImm<"asrl",    0b10, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMasrl tGPREven:$RdaLo_src,
-                                        tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
+                                        tGPROdd:$RdaHi_src, (i32 long_shift:$imm)))]>;
 def MVE_LSLLr   : MVE_ScalarShiftDRegReg<"lsll",    0b0,  [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMlsll tGPREven:$RdaLo_src,
                                         tGPROdd:$RdaHi_src, rGPR:$Rm))]>;
 def MVE_LSLLi   : MVE_ScalarShiftDRegImm<"lsll",    0b00, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMlsll tGPREven:$RdaLo_src,
-                                        tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
+                                        tGPROdd:$RdaHi_src, (i32 long_shift:$imm)))]>;
 def MVE_LSRL    : MVE_ScalarShiftDRegImm<"lsrl",    0b01, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMlsrl tGPREven:$RdaLo_src,
-                                        tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
+                                        tGPROdd:$RdaHi_src, (i32 long_shift:$imm)))]>;
 
 def MVE_SQRSHRL : MVE_ScalarShiftDRegRegWithSat<"sqrshrl", 0b1>;
 def MVE_SQSHLL  : MVE_ScalarShiftDRegImm<"sqshll",  0b11, 0b1>;

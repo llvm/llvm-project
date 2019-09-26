@@ -50,4 +50,13 @@ entry:
   ret void
 }
 
+; Functions without 'interrupt' attribute don't get a vector section.
+; CHECK-NOT: __interrupt_vector
+; CHECK-LABEL: NMI:
+; CHECK: reti
+define msp430_intrcc void @NMI() #1 {
+  ret void
+}
+
 attributes #0 = { noinline nounwind optnone "interrupt"="2" }
+attributes #1 = { noinline nounwind optnone }

@@ -5367,7 +5367,7 @@ multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
 
 multiclass avx_fp_unop_rm<bits<8> opcss, bits<8> opcsd,
                           string OpcodeStr, X86FoldableSchedWrite sched> {
-let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
+let ExeDomain = SSEPackedSingle, hasSideEffects = 0, isCodeGenOnly = 1 in {
   def SSr : SS4AIi8<opcss, MRMSrcReg,
         (outs FR32:$dst), (ins FR32:$src1, FR32:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
@@ -5382,7 +5382,7 @@ let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
         []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
 } // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
-let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
+let ExeDomain = SSEPackedDouble, hasSideEffects = 0, isCodeGenOnly = 1 in {
   def SDr : SS4AIi8<opcsd, MRMSrcReg,
         (outs FR64:$dst), (ins FR64:$src1, FR64:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
@@ -5400,7 +5400,7 @@ let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
 
 multiclass sse41_fp_unop_s<bits<8> opcss, bits<8> opcsd,
                            string OpcodeStr, X86FoldableSchedWrite sched> {
-let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
+let ExeDomain = SSEPackedSingle, hasSideEffects = 0, isCodeGenOnly = 1 in {
   def SSr : SS4AIi8<opcss, MRMSrcReg,
                     (outs FR32:$dst), (ins FR32:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
@@ -5415,7 +5415,7 @@ let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
                     []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
 } // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
-let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
+let ExeDomain = SSEPackedDouble, hasSideEffects = 0, isCodeGenOnly = 1 in {
   def SDr : SS4AIi8<opcsd, MRMSrcReg,
                     (outs FR64:$dst), (ins FR64:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
@@ -5435,7 +5435,7 @@ multiclass sse41_fp_binop_s<bits<8> opcss, bits<8> opcsd,
                             string OpcodeStr, X86FoldableSchedWrite sched,
                             ValueType VT32, ValueType VT64,
                             SDNode OpNode, bit Is2Addr = 1> {
-let ExeDomain = SSEPackedSingle, isCodeGenOnly = 1 in {
+let ExeDomain = SSEPackedSingle in {
   def SSr_Int : SS4AIi8<opcss, MRMSrcReg,
         (outs VR128:$dst), (ins VR128:$src1, VR128:$src2, i32u8imm:$src3),
         !if(Is2Addr,
@@ -5458,7 +5458,7 @@ let ExeDomain = SSEPackedSingle, isCodeGenOnly = 1 in {
         Sched<[sched.Folded, sched.ReadAfterFold]>;
 } // ExeDomain = SSEPackedSingle, isCodeGenOnly = 1
 
-let ExeDomain = SSEPackedDouble, isCodeGenOnly = 1 in {
+let ExeDomain = SSEPackedDouble in {
   def SDr_Int : SS4AIi8<opcsd, MRMSrcReg,
         (outs VR128:$dst), (ins VR128:$src1, VR128:$src2, i32u8imm:$src3),
         !if(Is2Addr,

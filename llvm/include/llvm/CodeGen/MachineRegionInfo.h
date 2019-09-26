@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-struct MachinePostDominatorTree;
+class MachinePostDominatorTree;
 class MachineRegion;
 class MachineRegionNode;
 class MachineRegionInfo;

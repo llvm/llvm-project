@@ -340,7 +340,7 @@ bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
   return true;
 }
 
-static StringRef dropUniqueSuffix(StringRef S) {
+StringRef llvm::ELFYAML::dropUniqueSuffix(StringRef S) {
   size_t SuffixPos = S.rfind(" [");
   if (SuffixPos == StringRef::npos)
     return S;
@@ -371,7 +371,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     assert(Sec && "It can't be null unless it is an implicit section. But all "
                   "implicit sections should already have been handled above.");
 
-    SHeader.sh_name = DotShStrtab.getOffset(dropUniqueSuffix(Sec->Name));
+    SHeader.sh_name =
+        DotShStrtab.getOffset(ELFYAML::dropUniqueSuffix(Sec->Name));
     SHeader.sh_type = Sec->Type;
     if (Sec->Flags)
       SHeader.sh_flags = *Sec->Flags;
@@ -440,19 +441,20 @@ static size_t findFirstNonGlobal(ArrayRef<ELFYAML::Symbol> Symbols) {
   return Symbols.size();
 }
 
-static uint64_t writeRawSectionData(raw_ostream &OS,
-                                    const ELFYAML::RawContentSection &RawSec) {
+static uint64_t writeContent(raw_ostream &OS,
+                             const Optional<yaml::BinaryRef> &Content,
+                             const Optional<llvm::yaml::Hex64> &Size) {
   size_t ContentSize = 0;
-  if (RawSec.Content) {
-    RawSec.Content->writeAsBinary(OS);
-    ContentSize = RawSec.Content->binary_size();
+  if (Content) {
+    Content->writeAsBinary(OS);
+    ContentSize = Content->binary_size();
   }
 
-  if (!RawSec.Size)
+  if (!Size)
     return ContentSize;
 
-  OS.write_zeros(*RawSec.Size - ContentSize);
-  return *RawSec.Size;
+  OS.write_zeros(*Size - ContentSize);
+  return *Size;
 }
 
 template <class ELFT>
@@ -472,7 +474,7 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
     if (Sym.NameIndex)
       Symbol.st_name = *Sym.NameIndex;
     else if (!Sym.Name.empty())
-      Symbol.st_name = Strtab.getOffset(dropUniqueSuffix(Sym.Name));
+      Symbol.st_name = Strtab.getOffset(ELFYAML::dropUniqueSuffix(Sym.Name));
 
     Symbol.setBindingAndType(Sym.Binding, Sym.Type);
     if (!Sym.Section.empty())
@@ -554,7 +556,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     assert(Symbols.empty());
-    SHeader.sh_size = writeRawSectionData(OS, *RawSec);
+    SHeader.sh_size = writeContent(OS, RawSec->Content, RawSec->Size);
     return;
   }
 
@@ -579,7 +581,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
 
   auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   if (RawSec && (RawSec->Content || RawSec->Size)) {
-    SHeader.sh_size = writeRawSectionData(OS, *RawSec);
+    SHeader.sh_size = writeContent(OS, RawSec->Content, RawSec->Size);
   } else {
     STB.write(OS);
     SHeader.sh_size = STB.getSize();
@@ -675,7 +677,7 @@ void ELFState<ELFT>::writeSectionContent(
     ContiguousBlobAccumulator &CBA) {
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-  SHeader.sh_size = writeRawSectionData(OS, Section);
+  SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
 
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
@@ -795,9 +797,8 @@ void ELFState<ELFT>::writeSectionContent(
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
 
-  if (Section.Content) {
-    Section.Content->writeAsBinary(OS);
-    SHeader.sh_size = Section.Content->binary_size();
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
     return;
   }
 
@@ -962,7 +963,7 @@ template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
     if (Name.empty())
       continue;
 
-    DotShStrtab.add(dropUniqueSuffix(Name));
+    DotShStrtab.add(ELFYAML::dropUniqueSuffix(Name));
     if (!SN2I.addName(Name, I))
       reportError("repeated section name: '" + Name +
                   "' at YAML section number " + Twine(I));
@@ -987,12 +988,12 @@ template <class ELFT> void ELFState<ELFT>::buildSymbolIndexes() {
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
   // Add the regular symbol names to .strtab section.
   for (const ELFYAML::Symbol &Sym : Doc.Symbols)
-    DotStrtab.add(dropUniqueSuffix(Sym.Name));
+    DotStrtab.add(ELFYAML::dropUniqueSuffix(Sym.Name));
   DotStrtab.finalize();
 
   // Add the dynamic symbol names to .dynstr section.
   for (const ELFYAML::Symbol &Sym : Doc.DynamicSymbols)
-    DotDynstr.add(dropUniqueSuffix(Sym.Name));
+    DotDynstr.add(ELFYAML::dropUniqueSuffix(Sym.Name));
 
   // SHT_GNU_verdef and SHT_GNU_verneed sections might also
   // add strings to .dynstr section.

@@ -1,13 +1,16 @@
 # Check that the backend can handle consecutive select instructions also in
-# the presence of DEBUG_VALUE machine instructions.
+# the presence of DEBUG_VALUE machine instructions, which should be moved.
 #
-# RUN: llc %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z13 \
-# RUN:   -start-before=finalize-isel -o - 2>&1 | FileCheck %s
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=finalize-isel \
+# RUN:   -o - 2>&1 | FileCheck %s
 #
-# CHECK-LABEL: %bb.1:
-# CHECK:       ldr
-# CHECK-NEXT:  ldr
-# CHECK-NEXT:  ldr
+# CHECK-LABEL: bb.1 (%ir-block.0):
+# CHECK-NEXT: %5:fp32bit = PHI %1, %bb.0, %2, %bb.2
+# CHECK-NEXT: %6:fp32bit = PHI %3, %bb.0, %4, %bb.2
+# CHECK-NEXT: %7:fp32bit = PHI %1, %bb.0, %4, %bb.2
+# CHECK-NEXT: DBG_VALUE %5, $noreg, !5, !DIExpression(), debug-location !9
+# CHECK-NEXT: DBG_VALUE %6, $noreg, !5, !DIExpression(), debug-location !9
+# CHECK-NEXT: %8:fp32bit = AEBR %5, killed %6, implicit-def dead $cc, implicit $fpc
 
 --- |
   ; ModuleID = 'tc.ll'

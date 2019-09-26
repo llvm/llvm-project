@@ -282,7 +282,7 @@ bool TargetInstrInfo::fixCommutedOpIndices(unsigned &ResultIdx1,
   return true;
 }
 
-bool TargetInstrInfo::findCommutedOpIndices(MachineInstr &MI,
+bool TargetInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
                                             unsigned &SrcOpIdx1,
                                             unsigned &SrcOpIdx2) const {
   assert(!MI.isBundle() &&

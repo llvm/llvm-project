@@ -220,7 +220,8 @@ protected:
   ///
   /// Used to check if arguments are suitable for tail call lowering.
   bool analyzeArgInfo(CCState &CCState, SmallVectorImpl<ArgInfo> &Args,
-                      CCAssignFn &Fn) const;
+                      CCAssignFn &AssignFnFixed,
+                      CCAssignFn &AssignFnVarArg) const;
 
   /// \returns True if the calling convention for a callee and its caller pass
   /// results in the same way. Typically used for tail call eligibility checks.
@@ -228,12 +229,18 @@ protected:
   /// \p Info is the CallLoweringInfo for the call.
   /// \p MF is the MachineFunction for the caller.
   /// \p InArgs contains the results of the call.
-  /// \p CalleeAssignFn is the CCAssignFn to be used for the callee.
-  /// \p CallerAssignFn is the CCAssignFn to be used for the caller.
+  /// \p CalleeAssignFnFixed is the CCAssignFn to be used for the callee for
+  /// fixed arguments.
+  /// \p CalleeAssignFnVarArg is similar, but for varargs.
+  /// \p CallerAssignFnFixed is the CCAssignFn to be used for the caller for
+  /// fixed arguments.
+  /// \p CallerAssignFnVarArg is similar, but for varargs.
   bool resultsCompatible(CallLoweringInfo &Info, MachineFunction &MF,
                          SmallVectorImpl<ArgInfo> &InArgs,
-                         CCAssignFn &CalleeAssignFn,
-                         CCAssignFn &CallerAssignFn) const;
+                         CCAssignFn &CalleeAssignFnFixed,
+                         CCAssignFn &CalleeAssignFnVarArg,
+                         CCAssignFn &CallerAssignFnFixed,
+                         CCAssignFn &CallerAssignFnVarArg) const;
 
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}

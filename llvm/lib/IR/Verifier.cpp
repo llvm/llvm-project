@@ -2504,6 +2504,15 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
         Assert(CBI.getOperand(i) != CBI.getOperand(j),
                "Duplicate callbr destination!", &CBI);
   }
+  {
+    SmallPtrSet<BasicBlock *, 4> ArgBBs;
+    for (Value *V : CBI.args())
+      if (auto *BA = dyn_cast<BlockAddress>(V))
+        ArgBBs.insert(BA->getBasicBlock());
+    for (BasicBlock *BB : CBI.getIndirectDests())
+      Assert(ArgBBs.find(BB) != ArgBBs.end(),
+             "Indirect label missing from arglist.", &CBI);
+  }
 
   visitTerminator(CBI);
 }
