@@ -53,7 +53,7 @@ public:
 
   struct DIEInfo {
     dw_offset_t die_offset = DW_INVALID_OFFSET;
-    dw_tag_t tag = 0;
+    dw_tag_t tag = llvm::dwarf::DW_TAG_null;
 
     /// Any flags for this DIEInfo.
     uint32_t type_flags = 0;

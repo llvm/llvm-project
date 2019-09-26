@@ -23,9 +23,9 @@
 #include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
-#include "ClangExpressionSourceCode.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
+#include "CppModuleConfiguration.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -328,6 +328,7 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
     if (PersistentExpressionState *persistent_state =
             target->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeC)) {
+      m_clang_state = llvm::cast<ClangPersistentVariables>(persistent_state);
       m_result_delegate.RegisterPersistentState(persistent_state);
     } else {
       diagnostic_manager.PutString(
@@ -392,18 +393,18 @@ void ClangUserExpression::CreateSourceCode(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
     std::vector<std::string> modules_to_import, bool for_completion) {
 
+  m_filename = m_clang_state->GetNextExprFileName();
   std::string prefix = m_expr_prefix;
 
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
     m_transformed_text = m_expr_text;
   } else {
-    std::unique_ptr<ClangExpressionSourceCode> source_code(
-        ClangExpressionSourceCode::CreateWrapped(prefix.c_str(),
-                                                 m_expr_text.c_str()));
+    m_source_code.reset(ClangExpressionSourceCode::CreateWrapped(
+        m_filename, prefix.c_str(), m_expr_text.c_str()));
 
-    if (!source_code->GetText(m_transformed_text, m_expr_lang,
-                              m_in_static_method, exe_ctx, !m_ctx_obj,
-                              for_completion, modules_to_import)) {
+    if (!m_source_code->GetText(m_transformed_text, m_expr_lang,
+                                m_in_static_method, exe_ctx, !m_ctx_obj,
+                                for_completion, modules_to_import)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -413,7 +414,7 @@ void ClangUserExpression::CreateSourceCode(
     // transformed code. We need this later for the code completion.
     std::size_t original_start;
     std::size_t original_end;
-    bool found_bounds = source_code->GetOriginalBodyBounds(
+    bool found_bounds = m_source_code->GetOriginalBodyBounds(
         m_transformed_text, m_expr_lang, original_start, original_end);
     if (found_bounds)
       m_user_expression_start_pos = original_start;
@@ -433,48 +434,59 @@ static bool SupportsCxxModuleImport(lldb::LanguageType language) {
   }
 }
 
-std::vector<std::string>
-ClangUserExpression::GetModulesToImport(ExecutionContext &exe_ctx) {
+/// Utility method that puts a message into the expression log and
+/// returns an invalid module configuration.
+static CppModuleConfiguration LogConfigError(const std::string &msg) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  LLDB_LOG(log, "[C++ module config] {0}", msg);
+  return CppModuleConfiguration();
+}
 
-  if (!SupportsCxxModuleImport(Language()))
-    return {};
+CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
+                                       ExecutionContext &exe_ctx) {
+  // Don't do anything if this is not a C++ module configuration.
+  if (!SupportsCxxModuleImport(language))
+    return LogConfigError("Language doesn't support C++ modules");
 
   Target *target = exe_ctx.GetTargetPtr();
-  if (!target || !target->GetEnableImportStdModule())
-    return {};
+  if (!target)
+    return LogConfigError("No target");
+
+  if (!target->GetEnableImportStdModule())
+    return LogConfigError("Importing std module not enabled in settings");
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   if (!frame)
-    return {};
+    return LogConfigError("No frame");
 
   Block *block = frame->GetFrameBlock();
   if (!block)
-    return {};
+    return LogConfigError("No block");
 
   SymbolContext sc;
   block->CalculateSymbolContext(&sc);
   if (!sc.comp_unit)
-    return {};
+    return LogConfigError("Couldn't calculate symbol context");
 
-  if (log) {
-    for (const SourceModule &m : sc.comp_unit->GetImportedModules()) {
-      LLDB_LOG(log, "Found module in compile unit: {0:$[.]} - include dir: {1}",
-                  llvm::make_range(m.path.begin(), m.path.end()), m.search_path);
+  // Build a list of files we need to analyze to build the configuration.
+  FileSpecList files;
+  for (const FileSpec &f : sc.comp_unit->GetSupportFiles())
+    files.AppendIfUnique(f);
+  // We also need to look at external modules in the case of -gmodules as they
+  // contain the support files for libc++ and the C library.
+  sc.comp_unit->ForEachExternalModule([&files](lldb::ModuleSP module) {
+    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i) {
+      const FileSpecList &support_files =
+          module->GetCompileUnitAtIndex(i)->GetSupportFiles();
+      for (const FileSpec &f : support_files) {
+        files.AppendIfUnique(f);
+      }
     }
-  }
-
-  for (const SourceModule &m : sc.comp_unit->GetImportedModules())
-    m_include_directories.emplace_back(m.search_path.GetCString());
-
-  // Check if we imported 'std' or any of its submodules.
-  // We currently don't support importing any other modules in the expression
-  // parser.
-  for (const SourceModule &m : sc.comp_unit->GetImportedModules())
-    if (!m.path.empty() && m.path.front() == "std")
-      return {"std"};
-
-  return {};
+  });
+  // Try to create a configuration from the files. If there is no valid
+  // configuration possible with the files, this just returns an invalid
+  // configuration.
+  return CppModuleConfiguration(files);
 }
 
 bool ClangUserExpression::PrepareForParsing(
@@ -502,14 +514,21 @@ bool ClangUserExpression::PrepareForParsing(
 
   SetupDeclVendor(exe_ctx, m_target);
 
-  std::vector<std::string> used_modules = GetModulesToImport(exe_ctx);
-  m_imported_cpp_modules = !used_modules.empty();
+  CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
+  llvm::ArrayRef<std::string> imported_modules =
+      module_config.GetImportedModules();
+  m_imported_cpp_modules = !imported_modules.empty();
+  m_include_directories = module_config.GetIncludeDirs();
 
   LLDB_LOG(log, "List of imported modules in expression: {0}",
-           llvm::make_range(used_modules.begin(), used_modules.end()));
+           llvm::make_range(imported_modules.begin(), imported_modules.end()));
+  LLDB_LOG(log, "List of include directories gathered for modules: {0}",
+           llvm::make_range(m_include_directories.begin(),
+                            m_include_directories.end()));
 
   UpdateLanguageForExpr();
-  CreateSourceCode(diagnostic_manager, exe_ctx, used_modules, for_completion);
+  CreateSourceCode(diagnostic_manager, exe_ctx, imported_modules,
+                   for_completion);
   return true;
 }
 
@@ -568,7 +587,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // parser_sp will never be empty.
 
   ClangExpressionParser parser(exe_scope, *this, generate_debug_info,
-                               m_include_directories);
+                               m_include_directories, m_filename);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 
@@ -581,8 +600,11 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         size_t fixed_end;
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
-        if (ClangExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, m_expr_lang, fixed_start, fixed_end))
+        // Retrieve the original expression in case we don't have a top level
+        // expression (which has no surrounding source code).
+        if (m_source_code &&
+            m_source_code->GetOriginalBodyBounds(fixed_expression, m_expr_lang,
+                                                 fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }

@@ -50,10 +50,8 @@ public:
   lldb_private::CompilerDeclContext
   GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) override;
 
-  std::vector<DWARFDIE> GetDIEForDeclContext(
-      lldb_private::CompilerDeclContext decl_context) override {
-    return {};
-  }
+  void EnsureAllDIEsInDeclContextHaveBeenParsed(
+      lldb_private::CompilerDeclContext decl_context) override {}
 
 protected:
   /// Use the -gmodules DWARF info to quickly find the correct clang type.

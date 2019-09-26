@@ -177,9 +177,9 @@ Status NativeProcessWindows::Detach() {
     else
       LLDB_LOG(log, "Detaching process error: {0}", error);
   } else {
-    error.SetErrorStringWithFormat("error: process {0} in state = {1}, but "
-                                   "cannot detach it in this state.",
-                                   GetID(), state);
+    error.SetErrorStringWithFormatv("error: process {0} in state = {1}, but "
+                                    "cannot detach it in this state.",
+                                    GetID(), state);
     LLDB_LOG(log, "error: {0}", error);
   }
   return error;
@@ -479,7 +479,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    // Fall through
+    LLVM_FALLTHROUGH;
   default:
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "

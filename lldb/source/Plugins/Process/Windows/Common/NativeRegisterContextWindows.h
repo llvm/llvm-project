@@ -19,7 +19,7 @@ class NativeThreadWindows;
 
 class NativeRegisterContextWindows : public NativeRegisterContextRegisterInfo {
 public:
-  NativeRegisterContextWindows::NativeRegisterContextWindows(
+  NativeRegisterContextWindows(
       NativeThreadProtocol &native_thread,
       RegisterInfoInterface *reg_info_interface_p);
 

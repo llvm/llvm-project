@@ -1,4 +1,4 @@
 C_SOURCES := main.c
-CFLAGS_EXTRAS += -fblocks
+CFLAGS_EXTRAS := -fblocks
 
 include Makefile.rules

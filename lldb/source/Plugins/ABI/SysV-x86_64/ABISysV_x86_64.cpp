@@ -235,7 +235,8 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
       case llvm::Triple::EnvironmentType::UnknownEnvironment:
         // UnknownEnvironment is needed for older compilers that don't
         // support the simulator environment.
-        return ABISP(new ABISysV_x86_64(process_sp));
+        return ABISP(new ABISysV_x86_64(std::move(process_sp),
+                                        MakeMCRegisterInfo(arch)));
       default:
         return ABISP();
       }
@@ -246,7 +247,8 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::NetBSD:
     case llvm::Triple::OSType::Solaris:
     case llvm::Triple::OSType::UnknownOS:
-      return ABISP(new ABISysV_x86_64(process_sp));
+      return ABISP(
+          new ABISysV_x86_64(std::move(process_sp), MakeMCRegisterInfo(arch)));
     default:
       return ABISP();
     }

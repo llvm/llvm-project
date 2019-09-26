@@ -254,8 +254,6 @@ public:
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
                                     const char *oneliner) override;
 
-  void ResetOutputFileHandle(FILE *new_fh) override;
-
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 
   PyThreadState *GetThreadState() { return m_command_thread_state; }
