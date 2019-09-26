@@ -988,7 +988,7 @@ static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
       continue;
 
     if (const Argument *A = dyn_cast<Argument>(BaseObj))
-      if (A->hasByValAttr() || A->hasNoAliasAttr())
+      if (A->hasByValAttr())
         continue;
 
     LLVM_DEBUG(dbgs() << "Non-local base object " << *BaseObj << "\n");
@@ -1112,6 +1112,9 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
 
     // If the base object is not an instruction, conservatively return true.
     if (!isa<Instruction>(BaseObj)) {
+      // From BasicAliasAnalysis.cpp: If this is an argument that corresponds to
+      // a byval or noalias argument, then it has not escaped before entering
+      // the function.
       if (const Argument *A = dyn_cast<Argument>(BaseObj)) {
         if (!A->hasByValAttr() && !A->hasNoAliasAttr())
           return true;
@@ -2170,49 +2173,47 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
   MaybeParallelTasks MPTasks;
   TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
 
-  for (Spindle *S : depth_first(TI.getRootTask()->getEntrySpindle())) {
-    for (BasicBlock *BB : S->blocks()) {
-      // Record the Tapir sync instructions found
-      if (SyncInst *SI = dyn_cast<SyncInst>(BB->getTerminator()))
-        Syncs.push_back(SI);
+  for (BasicBlock &BB : F) {
+    // Record the Tapir sync instructions found
+    if (SyncInst *SI = dyn_cast<SyncInst>(BB.getTerminator()))
+      Syncs.push_back(SI);
 
-      // Record the memory accesses in the basic block
-      for (Instruction &Inst : *BB) {
-        // TODO: Handle VAArgInst
-        if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-          LocalLoadsAndStores.push_back(&Inst);
-        else if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
-          AtomicAccesses.push_back(&Inst);
-        else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
-          // if (CallInst *CI = dyn_cast<CallInst>(&Inst))
-          //   maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
+    // Record the memory accesses in the basic block
+    for (Instruction &Inst : BB) {
+      // TODO: Handle VAArgInst
+      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
+        LocalLoadsAndStores.push_back(&Inst);
+      else if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
+        AtomicAccesses.push_back(&Inst);
+      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+        // if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+        //   maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
 
-          // Record this function call as either an allocation function, a call
-          // to free (or delete), a memory intrinsic, or an ordinary real
-          // function call.
-          if (isAllocationFn(&Inst, TLI, /*LookThroughBitCast=*/false,
-                             /*IgnoreBuiltinAttr=*/true))
-            AllocationFnCalls.insert(&Inst);
-          else if (isFreeCall(&Inst, TLI))
-            FreeCalls.insert(&Inst);
-          else if (isa<AnyMemIntrinsic>(Inst))
-            MemIntrinCalls.push_back(&Inst);
-          else if (!simpleCallCannotRace(Inst))
-            Callsites.push_back(&Inst);
+        // Record this function call as either an allocation function, a call to
+        // free (or delete), a memory intrinsic, or an ordinary real function
+        // call.
+        if (isAllocationFn(&Inst, TLI, /*LookThroughBitCast=*/false,
+                           /*IgnoreBuiltinAttr=*/true))
+          AllocationFnCalls.insert(&Inst);
+        else if (isFreeCall(&Inst, TLI))
+          FreeCalls.insert(&Inst);
+        else if (isa<AnyMemIntrinsic>(Inst))
+          MemIntrinCalls.push_back(&Inst);
+        else if (!simpleCallCannotRace(Inst))
+          Callsites.push_back(&Inst);
 
-          // Add the current set of local loads and stores to be considered for
-          // instrumentation.
-          if (!simpleCallCannotRace(Inst)) {
-            chooseInstructionsToInstrument(LocalLoadsAndStores,
-                                           AllLoadsAndStores, TI, LI);
-          }
-        } else if (isa<AllocaInst>(Inst)) {
-          Allocas.insert(&Inst);
+        // Add the current set of local loads and stores to be considered for
+        // instrumentation.
+        if (!simpleCallCannotRace(Inst)) {
+          chooseInstructionsToInstrument(LocalLoadsAndStores,
+                                         AllLoadsAndStores, TI, LI);
         }
+      } else if (isa<AllocaInst>(Inst)) {
+        Allocas.insert(&Inst);
       }
-      chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, TI,
-                                     LI);
     }
+    chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, TI,
+                                     LI);
   }
 
   // Map each detach instruction with the sync instructions that could sync it.
@@ -2815,7 +2816,6 @@ void CilkSanitizerImpl::instrumentLoop(Loop &L, TaskInfo &TI,
                                        ScalarEvolution *SE) {
   assert(L.isLoopSimplifyForm() && "CSI assumes loops are in simplified form.");
   BasicBlock *Preheader = L.getLoopPreheader();
-  BasicBlock *Header = L.getHeader();
   Task *T = getTaskIfTapirLoop(&L, &TI);
   assert(T && "CilkSanitizer should only instrument Tapir loops.");
   // We assign a local ID for this loop here, so that IDs for loops follow a
