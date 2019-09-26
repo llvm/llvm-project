@@ -114,10 +114,6 @@ struct Instruction {
   // aliasing Use and Def registers.
   bool hasAliasingRegisters() const;
 
-  // Whether this instruction's implicit registers alias with OtherInstr's
-  // implicit registers.
-  bool hasAliasingImplicitRegistersThrough(const Instruction &OtherInstr) const;
-
   // Whether this instruction's registers alias with OtherInstr's registers.
   bool hasAliasingRegistersThrough(const Instruction &OtherInstr) const;
 

@@ -15,6 +15,7 @@
 
 #include <experimental/simd>
 #include <cstdint>
+#include <cassert>
 
 #include "test_macros.h"
 

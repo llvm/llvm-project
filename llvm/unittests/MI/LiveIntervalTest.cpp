@@ -309,8 +309,8 @@ TEST(LiveIntervalTest, MoveUndefUse) {
 
 TEST(LiveIntervalTest, MoveUpValNos) {
   // handleMoveUp() had a bug where it would reuse the value number of the
-  // destination segment, even though we have no guarntee that this valno wasn't
-  // used in other segments.
+  // destination segment, even though we have no guarantee that this valno
+  // wasn't used in other segments.
   liveIntervalTest(R"MIR(
     successors: %bb.1, %bb.2
     %0 = IMPLICIT_DEF

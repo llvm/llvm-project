@@ -10,6 +10,7 @@
 #include "Matchers.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestIndex.h"
@@ -18,13 +19,19 @@
 #include "index/FileIndex.h"
 #include "index/MemIndex.h"
 #include "index/SymbolCollector.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Index/IndexingAction.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -2184,6 +2191,84 @@ TEST(GetDeducedType, KwAutoExpansion) {
       auto DeducedType = getDeducedType(AST, *Location);
       EXPECT_EQ(DeducedType->getAsString(), T.DeducedType);
     }
+  }
+}
+
+TEST(GetNonLocalDeclRefs, All) {
+  struct Case {
+    llvm::StringRef AnnotatedCode;
+    std::vector<llvm::StringRef> ExpectedDecls;
+  } Cases[] = {
+      {
+          // VarDecl and ParamVarDecl
+          R"cpp(
+            void bar();
+            void ^foo(int baz) {
+              int x = 10;
+              bar();
+            })cpp",
+          {"bar"},
+      },
+      {
+          // Method from class
+          R"cpp(
+            class Foo { public: void foo(); };
+            class Bar {
+              void foo();
+              void bar();
+            };
+            void Bar::^foo() {
+              Foo f;
+              bar();
+              f.foo();
+            })cpp",
+          {"Bar", "Bar::bar", "Foo", "Foo::foo"},
+      },
+      {
+          // Local types
+          R"cpp(
+            void ^foo() {
+              class Foo { public: void foo() {} };
+              class Bar { public: void bar() {} };
+              Foo f;
+              Bar b;
+              b.bar();
+              f.foo();
+            })cpp",
+          {},
+      },
+      {
+          // Template params
+          R"cpp(
+            template <typename T, template<typename> class Q>
+            void ^foo() {
+              T x;
+              Q<T> y;
+            })cpp",
+          {},
+      },
+  };
+  for (const Case &C : Cases) {
+    Annotations File(C.AnnotatedCode);
+    auto AST = TestTU::withCode(File.code()).build();
+    ASSERT_TRUE(AST.getDiagnostics().empty())
+        << AST.getDiagnostics().begin()->Message;
+    SourceLocation SL = llvm::cantFail(
+        sourceLocationInMainFile(AST.getSourceManager(), File.point()));
+
+    const FunctionDecl *FD =
+        llvm::dyn_cast<FunctionDecl>(&findDecl(AST, [SL](const NamedDecl &ND) {
+          return ND.getLocation() == SL && llvm::isa<FunctionDecl>(ND);
+        }));
+    ASSERT_NE(FD, nullptr);
+
+    auto NonLocalDeclRefs = getNonLocalDeclRefs(AST, FD);
+    std::vector<std::string> Names;
+    for (const Decl *D : NonLocalDeclRefs) {
+      if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
+        Names.push_back(ND->getQualifiedNameAsString());
+    }
+    EXPECT_THAT(Names, UnorderedElementsAreArray(C.ExpectedDecls));
   }
 }
 

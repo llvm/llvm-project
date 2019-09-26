@@ -261,7 +261,7 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
-    CTFactories.createChecks(CTContext.getPointer(), CTChecks);
+    CTChecks = CTFactories.createChecks(CTContext.getPointer());
     ASTDiags.setLevelAdjuster([&CTContext](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
       if (CTContext) {
