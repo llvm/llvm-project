@@ -8,7 +8,7 @@
 
 message(STATUS "kitsune: looking for cilkrts...")
 
-find_path(CILKRTS_INCLUDE_DIR cilk.h)
+find_path(CILKRTS_INCLUDE_DIR cilk/cilk.h)
 find_library(CILKRTS_LIBRARY cilkrts)
 
 include(FindPackageHandleStandardArgs)
