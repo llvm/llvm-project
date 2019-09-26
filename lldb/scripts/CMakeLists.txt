@@ -4,6 +4,12 @@ file(GLOB SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
   ${LLDB_SOURCE_DIR}/include/lldb/*.h
 )
+file(GLOB SWIG_PRIVATE_HEADERS
+  ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h
+)
+foreach(private_header ${SWIG_PRIVATE_HEADERS})
+  list(REMOVE_ITEM SWIG_HEADERS ${private_header})
+endforeach()
 
 if(LLDB_BUILD_FRAMEWORK)
   set(framework_arg --framework --target-platform Darwin)

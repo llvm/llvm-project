@@ -29,6 +29,10 @@ T foofoo();
 #pragma omp declare variant(foofoo <int>) match(xxx = {vvv})
 #pragma omp declare variant(foofoo <int>) match(xxx = {vvv} xxx) // expected-error {{expected ','}} expected-error {{expected '=' after 'xxx' context selector set name on 'omp declare variant' directive}}
 #pragma omp declare variant(foofoo <int>) match(xxx = {vvv}) xxx // expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
+#pragma omp declare variant(foofoo <int>) match(implementation={xxx}) // expected-warning {{unknown context selector in 'implementation' context selector set of 'omp declare variant' directive, ignored}}
+#pragma omp declare variant(foofoo <int>) match(implementation={vendor}) // expected-error {{expected '(' after 'vendor'}} expected-error {{expected vendor identifier in 'vendor' context selector of 'implementation' selector set of 'omp declare variant' directive}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foofoo <int>) match(implementation={vendor(}) // expected-error {{expected vendor identifier in 'vendor' context selector of 'implementation' selector set of 'omp declare variant' directive}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foofoo <int>) match(implementation={vendor()}) // expected-error {{expected vendor identifier in 'vendor' context selector of 'implementation' selector set of 'omp declare variant' directive}}
 int bar();
 
 #pragma omp declare variant                            // expected-error {{expected '(' after 'declare variant'}}

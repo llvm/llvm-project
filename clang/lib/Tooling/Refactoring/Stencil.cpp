@@ -26,6 +26,7 @@ using namespace tooling;
 using ast_matchers::MatchFinder;
 using llvm::errc;
 using llvm::Error;
+using llvm::Expected;
 using llvm::StringError;
 
 // A down_cast function to safely down cast a StencilPartInterface to a subclass
@@ -102,6 +103,12 @@ bool isEqualData(const IfBoundData &A, const IfBoundData &B) {
   return A.Id == B.Id && A.TruePart == B.TruePart && A.FalsePart == B.FalsePart;
 }
 
+// Equality is not defined over MatchConsumers, which are opaque.
+bool isEqualData(const MatchConsumer<std::string> &A,
+                 const MatchConsumer<std::string> &B) {
+  return false;
+}
+
 // The `evalData()` overloads evaluate the given stencil data to a string, given
 // the match result, and append it to `Result`. We define an overload for each
 // type of stencil data.
@@ -157,6 +164,15 @@ Error evalData(const IfBoundData &Data, const MatchFinder::MatchResult &Match,
   auto &M = Match.Nodes.getMap();
   return (M.find(Data.Id) != M.end() ? Data.TruePart : Data.FalsePart)
       .eval(Match, Result);
+}
+
+Error evalData(const MatchConsumer<std::string> &Fn,
+               const MatchFinder::MatchResult &Match, std::string *Result) {
+  Expected<std::string> Value = Fn(Match);
+  if (!Value)
+    return Value.takeError();
+  *Result += *Value;
+  return Error::success();
 }
 
 template <typename T>
@@ -232,4 +248,10 @@ StencilPart stencil::ifBound(StringRef Id, StencilPart TruePart,
                              StencilPart FalsePart) {
   return StencilPart(std::make_shared<StencilPartImpl<IfBoundData>>(
       Id, std::move(TruePart), std::move(FalsePart)));
+}
+
+StencilPart stencil::run(MatchConsumer<std::string> Fn) {
+  return StencilPart(
+      std::make_shared<StencilPartImpl<MatchConsumer<std::string>>>(
+          std::move(Fn)));
 }

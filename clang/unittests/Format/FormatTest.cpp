@@ -12463,7 +12463,7 @@ TEST_F(FormatTest, ParsesConfiguration) {
 
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
-      {"abc/.*", 2}, {".*", 1}};
+      {"abc/.*", 2, 0}, {".*", 1, 0}};
   CHECK_PARSE("IncludeCategories:\n"
               "  - Regex: abc/.*\n"
               "    Priority: 2\n"

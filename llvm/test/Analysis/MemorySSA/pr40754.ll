@@ -11,44 +11,45 @@ target triple = "systemz-unknown"
 ; Function Attrs: norecurse noreturn nounwind
 define dso_local void @func_65() local_unnamed_addr {
 ; CHECK-LABEL: @func_65()
-  br label %1
+label0:
+  br label %label1
 
-; <label>:1:                                      ; preds = %.thread, %0
-  br label %2
+label1:                                      ; preds = %.thread, %label0
+  br label %label2
 
-; <label>:2:                                      ; preds = %.critedge, %1
-  br label %3
+label2:                                      ; preds = %.critedge, %label1
+  br label %label3
 
-; <label>:3:                                      ; preds = %5, %2
-  %storemerge = phi i32 [ 0, %2 ], [ %6, %5 ]
+label3:                                      ; preds = %label5, %label2
+  %storemerge = phi i32 [ 0, %label2 ], [ %tmp6, %label5 ]
   store i32 %storemerge, i32* @g_185, align 4
-  %4 = icmp ult i32 %storemerge, 2
-  br i1 %4, label %5, label %.thread.loopexit
+  %tmp4 = icmp ult i32 %storemerge, 2
+  br i1 %tmp4, label %label5, label %.thread.loopexit
 
-; <label>:5:                                      ; preds = %3
-  %6 = add i32 %storemerge, 1
-  %7 = zext i32 %6 to i64
-  %8 = getelementptr [8 x [4 x [6 x i32]]], [8 x [4 x [6 x i32]]]* @g_120, i64 0, i64 undef, i64 %7, i64 undef
-  %9 = load i32, i32* %8, align 4
-  %10 = icmp eq i32 %9, 0
-  br i1 %10, label %3, label %11
+label5:                                      ; preds = %label3
+  %tmp6 = add i32 %storemerge, 1
+  %tmp7 = zext i32 %tmp6 to i64
+  %tmp8 = getelementptr [8 x [4 x [6 x i32]]], [8 x [4 x [6 x i32]]]* @g_120, i64 0, i64 undef, i64 %tmp7, i64 undef
+  %tmp9 = load i32, i32* %tmp8, align 4
+  %tmp10 = icmp eq i32 %tmp9, 0
+  br i1 %tmp10, label %label3, label %label11
 
-; <label>:11:                                     ; preds = %5
-  %storemerge.lcssa4 = phi i32 [ %storemerge, %5 ]
-  %12 = icmp eq i32 %storemerge.lcssa4, 0
-  br i1 %12, label %.critedge, label %.thread.loopexit3
+label11:                                     ; preds = %label5
+  %storemerge.lcssa4 = phi i32 [ %storemerge, %label5 ]
+  %tmp12 = icmp eq i32 %storemerge.lcssa4, 0
+  br i1 %tmp12, label %.critedge, label %.thread.loopexit3
 
-.critedge:                                        ; preds = %11
+.critedge:                                        ; preds = %label11
   store i16 0, i16* @g_329, align 2
-  br label %2
+  br label %label2
 
-.thread.loopexit:                                 ; preds = %3
+.thread.loopexit:                                 ; preds = %label3
   br label %.thread
 
-.thread.loopexit3:                                ; preds = %11
+.thread.loopexit3:                                ; preds = %label11
   br label %.thread
 
 .thread:                                          ; preds = %.thread.loopexit3, %.thread.loopexit
-  br label %1
+  br label %label1
 }
 

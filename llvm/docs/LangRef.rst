@@ -7070,7 +7070,7 @@ Syntax:
 ::
 
       <result> = callbr [cconv] [ret attrs] [addrspace(<num>)] <ty>|<fnty> <fnptrval>(<function args>) [fn attrs]
-                    [operand bundles] to label <normal label> or jump [other labels]
+                    [operand bundles] to label <normal label> [other labels]
 
 Overview:
 """""""""
@@ -7114,7 +7114,8 @@ This instruction requires several arguments:
 #. '``normal label``': the label reached when the called function
    executes a '``ret``' instruction.
 #. '``other labels``': the labels reached when a callee transfers control
-   to a location other than the normal '``normal label``'
+   to a location other than the normal '``normal label``'. The blockaddress
+   constant for these should also be in the list of '``function args``'.
 #. The optional :ref:`function attributes <fnattrs>` list.
 #. The optional :ref:`operand bundles <opbundles>` list.
 
@@ -7136,7 +7137,7 @@ Example:
 .. code-block:: text
 
       callbr void asm "", "r,x"(i32 %x, i8 *blockaddress(@foo, %fail))
-                  to label %normal or jump [label %fail]
+                  to label %normal [label %fail]
 
 .. _i_resume:
 

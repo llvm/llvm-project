@@ -1505,12 +1505,9 @@ unsigned TargetLoweringBase::getByValTypeAlignment(Type *Ty,
   return DL.getABITypeAlignment(Ty);
 }
 
-bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
-                                            const DataLayout &DL, EVT VT,
-                                            unsigned AddrSpace,
-                                            unsigned Alignment,
-                                            MachineMemOperand::Flags Flags,
-                                            bool *Fast) const {
+bool TargetLoweringBase::allowsMemoryAccessForAlignment(
+    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
   // Check if the specified alignment is sufficient based on the data layout.
   // TODO: While using the data layout works in practice, a better solution
   // would be to implement this check directly (make this a virtual function).
@@ -1526,6 +1523,21 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
 
   // This is a misaligned access.
   return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Flags, Fast);
+}
+
+bool TargetLoweringBase::allowsMemoryAccessForAlignment(
+    LLVMContext &Context, const DataLayout &DL, EVT VT,
+    const MachineMemOperand &MMO, bool *Fast) const {
+  return allowsMemoryAccessForAlignment(Context, DL, VT, MMO.getAddrSpace(),
+                                        MMO.getAlignment(), MMO.getFlags(),
+                                        Fast);
+}
+
+bool TargetLoweringBase::allowsMemoryAccess(
+    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+  return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace, Alignment,
+                                        Flags, Fast);
 }
 
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
