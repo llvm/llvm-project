@@ -6013,6 +6013,20 @@ define <8 x i64> @stack_fold_psadbw(<64 x i8> %a0, <64 x i8> %a1) {
 }
 declare <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8>, <64 x i8>) nounwind readnone
 
+define <8 x i64> @stack_fold_psadbw_commute(<64 x i8> %a0, <64 x i8> %a1) {
+; CHECK-LABEL: stack_fold_psadbw_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vpsadbw {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
+; CHECK-NEXT:    retq
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8> %a1, <64 x i8> %a0)
+  ret <8 x i64> %2
+}
+
 define <64 x i8> @stack_fold_pshufb_zmm(<64 x i8> %a0, <64 x i8> %a1) {
 ; CHECK-LABEL: stack_fold_pshufb_zmm:
 ; CHECK:       # %bb.0:

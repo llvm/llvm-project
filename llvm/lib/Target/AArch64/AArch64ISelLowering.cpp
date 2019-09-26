@@ -647,11 +647,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(
       llvm::Align(1ULL << STI.getPrefFunctionLogAlignment()));
 
-  // Only change the limit for entries in a jump table if specified by
+  // Only change the limit for targets in a jump table if specified by
   // the sub target, but not at the command line.
-  unsigned MaxJT = STI.getMaximumJumpTableSize();
-  if (MaxJT && getMaximumJumpTableSize() == UINT_MAX)
-    setMaximumJumpTableSize(MaxJT);
+  if (getMaximumJumpTableTargets() == UINT_MAX)
+    setMaximumJumpTableTargets(STI.getMaximumJumpTableTargets());
 
   setHasExtractBitsInsn(true);
 

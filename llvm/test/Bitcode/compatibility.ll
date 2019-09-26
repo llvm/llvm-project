@@ -861,6 +861,27 @@ define void @fastmathflags_vector_select(<2 x i1> %cond, <2 x double> %op1, <2 x
   ret void
 }
 
+define void @fastmathflags_phi(i1 %cond, float %f1, float %f2, double %d1, double %d2, half %h1, half %h2) {
+entry:
+  br i1 %cond, label %L1, label %L2
+L1:
+  br label %exit
+L2:
+  br label %exit
+exit:
+  %p.nnan = phi nnan float [ %f1, %L1 ], [ %f2, %L2 ]
+  ; CHECK: %p.nnan = phi nnan float [ %f1, %L1 ], [ %f2, %L2 ]
+  %p.ninf = phi ninf double [ %d1, %L1 ], [ %d2, %L2 ]
+  ; CHECK: %p.ninf = phi ninf double [ %d1, %L1 ], [ %d2, %L2 ]
+  %p.contract = phi contract half [ %h1, %L1 ], [ %h2, %L2 ]
+  ; CHECK: %p.contract = phi contract half [ %h1, %L1 ], [ %h2, %L2 ]
+  %p.nsz.reassoc = phi reassoc nsz float [ %f1, %L1 ], [ %f2, %L2 ]
+  ; CHECK: %p.nsz.reassoc = phi reassoc nsz float [ %f1, %L1 ], [ %f2, %L2 ]
+  %p.fast = phi fast half [ %h2, %L1 ], [ %h1, %L2 ]
+  ; CHECK: %p.fast = phi fast half [ %h2, %L1 ], [ %h1, %L2 ]
+  ret void
+}
+
 ; Check various fast math flags and floating-point types on calls.
 
 declare float @fmf1()

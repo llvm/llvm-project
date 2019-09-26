@@ -251,7 +251,7 @@ TEST(ArrayRefTest, OwningArrayRef) {
 }
 
 TEST(ArrayRefTest, makeArrayRefFromStdArray) {
-  std::array<int, 5> A1{42, -5, 0, 1000000, -1000000};
+  std::array<int, 5> A1{{42, -5, 0, 1000000, -1000000}};
   ArrayRef<int> A2 = makeArrayRef(A1);
 
   EXPECT_EQ(A1.size(), A2.size());

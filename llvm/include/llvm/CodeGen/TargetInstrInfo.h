@@ -422,7 +422,8 @@ public:
   ///     findCommutedOpIndices(MI, Op1, Op2);
   /// can be interpreted as a query asking to find an operand that would be
   /// commutable with the operand#1.
-  virtual bool findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
+  virtual bool findCommutedOpIndices(const MachineInstr &MI,
+                                     unsigned &SrcOpIdx1,
                                      unsigned &SrcOpIdx2) const;
 
   /// A pair composed of a register and a sub-register index.

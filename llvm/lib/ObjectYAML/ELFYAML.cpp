@@ -1020,6 +1020,7 @@ static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
 static void sectionMapping(IO &IO, ELFYAML::StackSizesSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Size", Section.Size);
   IO.mapOptional("Entries", Section.Entries);
 }
 
@@ -1151,6 +1152,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     if (!IO.outputting()) {
       StringRef Name;
       IO.mapOptional("Name", Name, StringRef());
+      Name = ELFYAML::dropUniqueSuffix(Name);
 
       if (ELFYAML::StackSizesSection::nameMatches(Name))
         Section = std::make_unique<ELFYAML::StackSizesSection>();
@@ -1176,10 +1178,22 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
   }
 
   if (const auto *SS = dyn_cast<ELFYAML::StackSizesSection>(Section.get())) {
-    if (SS->Content && SS->Entries)
+    if (!SS->Entries && !SS->Content && !SS->Size)
+      return ".stack_sizes: one of Content, Entries and Size must be specified";
+
+    if (SS->Size && SS->Content &&
+        (uint64_t)(*SS->Size) < SS->Content->binary_size())
+      return ".stack_sizes: Size must be greater than or equal to the content "
+             "size";
+
+    // We accept Content, Size or both together when there are no Entries.
+    if (!SS->Entries)
+      return {};
+
+    if (SS->Size)
+      return ".stack_sizes: Size and Entries cannot be used together";
+    if (SS->Content)
       return ".stack_sizes: Content and Entries cannot be used together";
-    if (!SS->Content && !SS->Entries)
-      return ".stack_sizes: either Content or Entries tag must be specified";
     return {};
   }
   return {};
