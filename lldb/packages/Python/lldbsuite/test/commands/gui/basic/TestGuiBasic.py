@@ -12,6 +12,7 @@ class BasicGuiCommandTest(PExpectTest):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfCursesSupportMissing
+    @skipIfLinux #rdar://problem/55757360
     def test_gui(self):
         self.build()
 
