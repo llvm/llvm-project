@@ -43,6 +43,8 @@ bool ThreadDpu::GetStopReason(ThreadStopInfo &stop_info,
                               std::string &description) {
   description.clear();
   stop_info.details.signal.signo = 0;
+  stop_info.details.exception.type = 0;
+  stop_info.details.exception.data_count = 0;
   m_state = GetProcess().GetThreadState(m_thread_index, description,
                                         stop_info.reason, m_stepping);
 
