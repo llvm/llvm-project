@@ -6,20 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
+// Before GCC 6, aggregate initialization kicks in.
+// See https://stackoverflow.com/q/41799015/627587.
+// UNSUPPORTED: gcc-5
+
 // <memory>
 
 // struct allocator_arg_t { explicit allocator_arg_t() = default; };
 // const allocator_arg_t allocator_arg = allocator_arg_t();
 
+// This test checks for LWG 2510.
+
 #include <memory>
 
-#include "test_macros.h"
 
-void test(std::allocator_arg_t) {}
+std::allocator_arg_t f() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
 
-int main(int, char**)
-{
-    test(std::allocator_arg);
-
+int main(int, char**) {
     return 0;
 }

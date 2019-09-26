@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <memory>
+// UNSUPPORTED: c++98, c++03
 
-// struct allocator_arg_t { explicit allocator_arg_t() = default; };
-// const allocator_arg_t allocator_arg = allocator_arg_t();
+// <utility>
 
-#include <memory>
+// struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
+// constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
-#include "test_macros.h"
+#include <utility>
 
-void test(std::allocator_arg_t) {}
 
-int main(int, char**)
-{
-    test(std::allocator_arg);
+int main(int, char**) {
+    std::piecewise_construct_t x = std::piecewise_construct;
+    (void)x;
 
     return 0;
 }
