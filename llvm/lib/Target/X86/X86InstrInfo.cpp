@@ -1970,7 +1970,8 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
   return true;
 }
 
-bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
+bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
+                                         unsigned &SrcOpIdx1,
                                          unsigned &SrcOpIdx2) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!Desc.isCommutable())

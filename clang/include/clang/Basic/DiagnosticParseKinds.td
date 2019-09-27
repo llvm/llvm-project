@@ -1206,6 +1206,11 @@ def err_omp_declare_variant_no_ctx_selector : Error<
   "expected context selector in '%0' clause on 'omp declare variant' directive">;
 def err_omp_declare_variant_equal_expected : Error<
   "expected '=' after '%0' context selector set name on 'omp declare variant' directive">;
+def warn_omp_declare_variant_cs_name_expected : Warning<
+  "unknown context selector in '%0' context selector set of 'omp declare variant' directive, ignored">,
+  InGroup<OpenMPClauses>;
+def err_omp_declare_variant_item_expected : Error<
+  "expected %0 in '%1' context selector of '%2' selector set of 'omp declare variant' directive">;
 def warn_omp_more_one_device_type_clause : Warning<
   "more than one 'device_type' clause is specified">,
   InGroup<OpenMPClauses>;

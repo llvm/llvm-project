@@ -2208,7 +2208,7 @@ private:
       SourceLocation FilenameLoc, CharSourceRange FilenameRange,
       const Token &FilenameTok, bool &IsFrameworkFound, bool IsImportDecl,
       bool &IsMapped, const DirectoryLookup *LookupFrom,
-      const FileEntry *LookupFromFile, SmallString<128> &NormalizedPath,
+      const FileEntry *LookupFromFile, StringRef LookupFilename,
       SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
 

@@ -4952,7 +4952,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
   if (LDST->getMemoryVT().getSizeInBits() < MemVT.getSizeInBits())
     return false;
 
-  // Ensure that this isn't going to produce an unsupported unaligned access.
+  // Ensure that this isn't going to produce an unsupported memory access.
   if (ShAmt &&
       !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
                               LDST->getAddressSpace(), ShAmt / 8,
@@ -18990,7 +18990,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
   // build_vector.
   if (SVN->isSplat() && SVN->getSplatIndex() < (int)NumElts) {
     int SplatIndex = SVN->getSplatIndex();
-    if (TLI.isExtractVecEltCheap(VT, SplatIndex) &&
+    if (N0.hasOneUse() && TLI.isExtractVecEltCheap(VT, SplatIndex) &&
         TLI.isBinOp(N0.getOpcode()) && N0.getNode()->getNumValues() == 1) {
       // splat (vector_bo L, R), Index -->
       // splat (scalar_bo (extelt L, Index), (extelt R, Index))

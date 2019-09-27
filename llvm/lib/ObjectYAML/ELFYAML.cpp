@@ -1152,6 +1152,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     if (!IO.outputting()) {
       StringRef Name;
       IO.mapOptional("Name", Name, StringRef());
+      Name = ELFYAML::dropUniqueSuffix(Name);
 
       if (ELFYAML::StackSizesSection::nameMatches(Name))
         Section = std::make_unique<ELFYAML::StackSizesSection>();

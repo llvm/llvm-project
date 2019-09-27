@@ -453,7 +453,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   }
 
   // Strip spaces from the line and see if we had only spaces
-  if (request.GetRawLineUntilCursor().trim().empty()) {
+  if (request.GetRawLine().trim().empty()) {
     // Only spaces on this line, so just indent
     request.AddCompletion(m_indent_str);
     return;
@@ -479,7 +479,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   }
 
   current_code.append("\n");
-  current_code += request.GetRawLineUntilCursor();
+  current_code += request.GetRawLine();
 
   StringList matches;
   int result = CompleteCode(current_code, matches);

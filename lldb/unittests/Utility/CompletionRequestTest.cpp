@@ -15,7 +15,6 @@ TEST(CompletionRequest, Constructor) {
   std::string command = "a bad c";
   const unsigned cursor_pos = 3;
   const size_t arg_index = 1;
-  const size_t arg_cursor_pos = 1;
   StringList matches;
   CompletionResult result;
 
@@ -25,10 +24,9 @@ TEST(CompletionRequest, Constructor) {
   EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
-  EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
 
   EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 2u);
-  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(1), "b");
+  EXPECT_EQ(request.GetCursorArgumentPrefix().str(), "b");
 }
 
 TEST(CompletionRequest, FakeLastArg) {
@@ -43,10 +41,9 @@ TEST(CompletionRequest, FakeLastArg) {
   EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), 3U);
-  EXPECT_EQ(request.GetCursorCharPosition(), 0U);
 
   EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 4U);
-  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(3), "");
+  EXPECT_EQ(request.GetCursorArgumentPrefix().str(), "");
 }
 
 TEST(CompletionRequest, TryCompleteCurrentArgGood) {
@@ -90,7 +87,6 @@ TEST(CompletionRequest, ShiftArguments) {
   std::string command = "a bad c";
   const unsigned cursor_pos = 3;
   const size_t arg_index = 1;
-  const size_t arg_cursor_pos = 1;
   StringList matches;
   CompletionResult result;
 
@@ -100,7 +96,6 @@ TEST(CompletionRequest, ShiftArguments) {
   EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
-  EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
 
   EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 2u);
   EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(1), "b");
@@ -112,13 +107,10 @@ TEST(CompletionRequest, ShiftArguments) {
   EXPECT_STREQ(request.GetRawLine().str().c_str(), command.c_str());
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
 
-  // Relative cursor position in arg is identical.
-  EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
-
   // Partially parsed line and cursor should be updated.
   EXPECT_EQ(request.GetCursorIndex(), arg_index - 1U);
   EXPECT_EQ(request.GetParsedLine().GetArgumentCount(), 1u);
-  EXPECT_STREQ(request.GetParsedLine().GetArgumentAtIndex(0), "b");
+  EXPECT_EQ(request.GetCursorArgumentPrefix().str(), "b");
 }
 
 TEST(CompletionRequest, DuplicateFiltering) {

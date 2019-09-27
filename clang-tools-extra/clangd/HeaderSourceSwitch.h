@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_HEADERSOURCESWITCH_H
+#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_HEADERSOURCESWITCH_H
+
 #include "ParsedAST.h"
 #include "llvm/ADT/Optional.h"
 
@@ -20,3 +23,5 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(
 
 } // namespace clangd
 } // namespace clang
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_HEADERSOURCESWITCH_H

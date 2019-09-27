@@ -1797,6 +1797,11 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     }
   }
 
+  static const CostTblEntry SLMCostTbl[] = {
+    // slm pcmpeq/pcmpgt throughput is 2
+    { ISD::SETCC,   MVT::v2i64,   2 },
+  };
+
   static const CostTblEntry AVX512BWCostTbl[] = {
     { ISD::SETCC,   MVT::v32i16,  1 },
     { ISD::SETCC,   MVT::v64i8,   1 },
@@ -1882,6 +1887,10 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
 
     { ISD::SELECT,  MVT::v4f32,   3 }, // andps + andnps + orps
   };
+
+  if (ST->isSLM())
+    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))

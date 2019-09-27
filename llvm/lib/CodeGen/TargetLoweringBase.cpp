@@ -72,9 +72,9 @@ static cl::opt<unsigned> MinimumJumpTableEntries
   ("min-jump-table-entries", cl::init(4), cl::Hidden,
    cl::desc("Set minimum number of entries to use a jump table."));
 
-static cl::opt<unsigned> MaximumJumpTableSize
-  ("max-jump-table-size", cl::init(UINT_MAX), cl::Hidden,
-   cl::desc("Set maximum size of jump tables."));
+static cl::opt<unsigned> MaximumJumpTableTargets
+  ("max-jump-table-targets", cl::init(UINT_MAX), cl::Hidden,
+   cl::desc("Set maximum number of targets to use in a jump table."));
 
 /// Minimum jump table density for normal functions.
 static cl::opt<unsigned>
@@ -1505,12 +1505,9 @@ unsigned TargetLoweringBase::getByValTypeAlignment(Type *Ty,
   return DL.getABITypeAlignment(Ty);
 }
 
-bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
-                                            const DataLayout &DL, EVT VT,
-                                            unsigned AddrSpace,
-                                            unsigned Alignment,
-                                            MachineMemOperand::Flags Flags,
-                                            bool *Fast) const {
+bool TargetLoweringBase::allowsMemoryAccessForAlignment(
+    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
   // Check if the specified alignment is sufficient based on the data layout.
   // TODO: While using the data layout works in practice, a better solution
   // would be to implement this check directly (make this a virtual function).
@@ -1526,6 +1523,21 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
 
   // This is a misaligned access.
   return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Flags, Fast);
+}
+
+bool TargetLoweringBase::allowsMemoryAccessForAlignment(
+    LLVMContext &Context, const DataLayout &DL, EVT VT,
+    const MachineMemOperand &MMO, bool *Fast) const {
+  return allowsMemoryAccessForAlignment(Context, DL, VT, MMO.getAddrSpace(),
+                                        MMO.getAlignment(), MMO.getFlags(),
+                                        Fast);
+}
+
+bool TargetLoweringBase::allowsMemoryAccess(
+    LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+    unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+  return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace, Alignment,
+                                        Flags, Fast);
 }
 
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
@@ -1778,16 +1790,16 @@ void TargetLoweringBase::setMinimumJumpTableEntries(unsigned Val) {
   MinimumJumpTableEntries = Val;
 }
 
+unsigned TargetLoweringBase::getMaximumJumpTableTargets() const {
+  return MaximumJumpTableTargets;
+}
+
+void TargetLoweringBase::setMaximumJumpTableTargets(unsigned Val) {
+  MaximumJumpTableTargets = Val;
+}
+
 unsigned TargetLoweringBase::getMinimumJumpTableDensity(bool OptForSize) const {
   return OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
-}
-
-unsigned TargetLoweringBase::getMaximumJumpTableSize() const {
-  return MaximumJumpTableSize;
-}
-
-void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
-  MaximumJumpTableSize = Val;
 }
 
 //===----------------------------------------------------------------------===//

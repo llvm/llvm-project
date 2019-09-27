@@ -1,10 +1,13 @@
-; RUN: opt -S -licm -enable-mssa-loop-dependency=true < %s | FileCheck %s
-; REQUIRES: asserts
+; RUN: opt -disable-output -licm -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
 @v_274 = external dso_local global i64, align 1
 @v_295 = external dso_local global i16, align 1
 @v_335 = external dso_local global i32, align 1
 
 ; CHECK-LABEL: @main()
+; CHECK-NOT: 5 = MemoryPhi(
+; CHECK-NOT: 6 = MemoryPhi(
+; CHECK: 4 = MemoryPhi(
+; CHECK-NOT: 7 = MemoryPhi(
 define dso_local void @main() {
 entry:
   store i32 undef, i32* @v_335, align 1

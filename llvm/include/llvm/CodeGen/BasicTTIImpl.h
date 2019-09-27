@@ -373,7 +373,7 @@ public:
           (MaxCaseVal - MinCaseVal)
               .getLimitedValue(std::numeric_limits<uint64_t>::max() - 1) + 1;
       // Check whether a range of clusters is dense enough for a jump table
-      if (TLI->isSuitableForJumpTable(&SI, N, Range)) {
+      if (TLI->isSuitableForJumpTable(&SI, N, 0, Range)) {
         JumpTableSize = Range;
         return 1;
       }

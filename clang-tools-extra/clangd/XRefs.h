@@ -17,8 +17,8 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "index/Index.h"
-#include "clang/AST/Type.h"
 #include "index/SymbolLocation.h"
+#include "clang/AST/Type.h"
 #include "clang/Format/Format.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/Optional.h"
@@ -158,6 +158,9 @@ llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
 /// SourceLocationBeg must point to the first character of the token
 bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg);
 
+/// Returns all decls that are referenced in the \p FD except local symbols.
+llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,
+                                                 const FunctionDecl *FD);
 } // namespace clangd
 } // namespace clang
 

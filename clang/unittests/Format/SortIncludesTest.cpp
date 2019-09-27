@@ -70,6 +70,77 @@ TEST_F(SortIncludesTest, BasicSorting) {
                  {tooling::Range(25, 1)}));
 }
 
+TEST_F(SortIncludesTest, SortedIncludesUsingSortPriorityAttribute) {
+  FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  FmtStyle.IncludeStyle.IncludeCategories = {
+      {"^<sys/param\\.h>", 1, 0},
+      {"^<sys/types\\.h>", 1, 1},
+      {"^<sys.*/", 1, 2},
+      {"^<uvm/", 2, 3},
+      {"^<machine/", 3, 4},
+      {"^<dev/", 4, 5},
+      {"^<net.*/", 5, 6},
+      {"^<protocols/", 5, 7},
+      {"^<(fs|miscfs|msdosfs|nfs|ntfs|ufs)/", 6, 8},
+      {"^<(x86|amd64|i386|xen)/", 7, 8},
+      {"<path", 9, 11},
+      {"^<[^/].*\\.h>", 8, 10},
+      {"^\".*\\.h\"", 10, 12}};
+  EXPECT_EQ("#include <sys/param.h>\n"
+            "#include <sys/types.h>\n"
+            "#include <sys/ioctl.h>\n"
+            "#include <sys/socket.h>\n"
+            "#include <sys/stat.h>\n"
+            "#include <sys/wait.h>\n"
+            "\n"
+            "#include <net/if.h>\n"
+            "#include <net/if_dl.h>\n"
+            "#include <net/route.h>\n"
+            "#include <netinet/in.h>\n"
+            "#include <protocols/rwhod.h>\n"
+            "\n"
+            "#include <assert.h>\n"
+            "#include <errno.h>\n"
+            "#include <inttypes.h>\n"
+            "#include <stdio.h>\n"
+            "#include <stdlib.h>\n"
+            "\n"
+            "#include <paths.h>\n"
+            "\n"
+            "#include \"pathnames.h\"\n",
+            sort("#include <sys/param.h>\n"
+                 "#include <sys/types.h>\n"
+                 "#include <sys/ioctl.h>\n"
+                 "#include <net/if_dl.h>\n"
+                 "#include <net/route.h>\n"
+                 "#include <netinet/in.h>\n"
+                 "#include <sys/socket.h>\n"
+                 "#include <sys/stat.h>\n"
+                 "#include <sys/wait.h>\n"
+                 "#include <net/if.h>\n"
+                 "#include <protocols/rwhod.h>\n"
+                 "#include <assert.h>\n"
+                 "#include <paths.h>\n"
+                 "#include \"pathnames.h\"\n"
+                 "#include <errno.h>\n"
+                 "#include <inttypes.h>\n"
+                 "#include <stdio.h>\n"
+                 "#include <stdlib.h>\n"));
+}
+TEST_F(SortIncludesTest, SortPriorityNotDefined) {
+  FmtStyle = getLLVMStyle();
+  EXPECT_EQ("#include \"FormatTestUtils.h\"\n"
+            "#include \"clang/Format/Format.h\"\n"
+            "#include \"llvm/ADT/None.h\"\n"
+            "#include \"llvm/Support/Debug.h\"\n"
+            "#include \"gtest/gtest.h\"\n",
+            sort("#include \"clang/Format/Format.h\"\n"
+                 "#include \"llvm/ADT/None.h\"\n"
+                 "#include \"FormatTestUtils.h\"\n"
+                 "#include \"gtest/gtest.h\"\n"
+                 "#include \"llvm/Support/Debug.h\"\n"));
+}
+
 TEST_F(SortIncludesTest, NoReplacementsForValidIncludes) {
   // Identical #includes have led to a failure with an unstable sort.
   std::string Code = "#include <a>\n"
@@ -448,7 +519,7 @@ TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
 }
 
 TEST_F(SortIncludesTest, NegativePriorities) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0}, {".*", 1, 0}};
   EXPECT_EQ("#include \"important_os_header.h\"\n"
             "#include \"c_main.h\"\n"
             "#include \"a_other.h\"\n",
@@ -468,7 +539,7 @@ TEST_F(SortIncludesTest, NegativePriorities) {
 }
 
 TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1}, {".*", 1}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0}, {".*", 1, 0}};
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
 
   EXPECT_EQ("#include \"important_os_header.h\"\n"

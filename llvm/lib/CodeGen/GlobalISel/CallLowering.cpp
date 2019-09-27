@@ -379,10 +379,12 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
 }
 
 bool CallLowering::analyzeArgInfo(CCState &CCState,
-                                     SmallVectorImpl<ArgInfo> &Args,
-                                     CCAssignFn &Fn) const {
+                                  SmallVectorImpl<ArgInfo> &Args,
+                                  CCAssignFn &AssignFnFixed,
+                                  CCAssignFn &AssignFnVarArg) const {
   for (unsigned i = 0, e = Args.size(); i < e; ++i) {
     MVT VT = MVT::getVT(Args[i].Ty);
+    CCAssignFn &Fn = Args[i].IsFixed ? AssignFnFixed : AssignFnVarArg;
     if (Fn(i, VT, VT, CCValAssign::Full, Args[i].Flags[0], CCState)) {
       // Bail out on anything we can't handle.
       LLVM_DEBUG(dbgs() << "Cannot analyze " << EVT(VT).getEVTString()
@@ -396,8 +398,10 @@ bool CallLowering::analyzeArgInfo(CCState &CCState,
 bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
                                      MachineFunction &MF,
                                      SmallVectorImpl<ArgInfo> &InArgs,
-                                     CCAssignFn &CalleeAssignFn,
-                                     CCAssignFn &CallerAssignFn) const {
+                                     CCAssignFn &CalleeAssignFnFixed,
+                                     CCAssignFn &CalleeAssignFnVarArg,
+                                     CCAssignFn &CallerAssignFnFixed,
+                                     CCAssignFn &CallerAssignFnVarArg) const {
   const Function &F = MF.getFunction();
   CallingConv::ID CalleeCC = Info.CallConv;
   CallingConv::ID CallerCC = F.getCallingConv();
@@ -407,12 +411,14 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
 
   SmallVector<CCValAssign, 16> ArgLocs1;
   CCState CCInfo1(CalleeCC, false, MF, ArgLocs1, F.getContext());
-  if (!analyzeArgInfo(CCInfo1, InArgs, CalleeAssignFn))
+  if (!analyzeArgInfo(CCInfo1, InArgs, CalleeAssignFnFixed,
+                      CalleeAssignFnVarArg))
     return false;
 
   SmallVector<CCValAssign, 16> ArgLocs2;
   CCState CCInfo2(CallerCC, false, MF, ArgLocs2, F.getContext());
-  if (!analyzeArgInfo(CCInfo2, InArgs, CallerAssignFn))
+  if (!analyzeArgInfo(CCInfo2, InArgs, CallerAssignFnFixed,
+                      CalleeAssignFnVarArg))
     return false;
 
   // We need the argument locations to match up exactly. If there's more in

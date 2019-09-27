@@ -25,6 +25,8 @@
 namespace llvm {
 namespace ELFYAML {
 
+StringRef dropUniqueSuffix(StringRef S);
+
 // These types are invariant across 32/64-bit ELF, so for simplicity just
 // directly give them their exact sizes. We don't need to worry about
 // endianness because these are just the types in the YAMLIO structures,

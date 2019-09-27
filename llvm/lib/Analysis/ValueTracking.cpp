@@ -2392,253 +2392,256 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
   if (Depth == MaxDepth)
     return 1;  // Limit search depth.
 
-  const Operator *U = dyn_cast<Operator>(V);
-  switch (Operator::getOpcode(V)) {
-  default: break;
-  case Instruction::SExt:
-    Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
-    return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q) + Tmp;
+  if (auto *U = dyn_cast<Operator>(V)) {
+    switch (Operator::getOpcode(V)) {
+    default: break;
+    case Instruction::SExt:
+      Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
+      return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q) + Tmp;
 
-  case Instruction::SDiv: {
-    const APInt *Denominator;
-    // sdiv X, C -> adds log(C) sign bits.
-    if (match(U->getOperand(1), m_APInt(Denominator))) {
+    case Instruction::SDiv: {
+      const APInt *Denominator;
+      // sdiv X, C -> adds log(C) sign bits.
+      if (match(U->getOperand(1), m_APInt(Denominator))) {
 
-      // Ignore non-positive denominator.
-      if (!Denominator->isStrictlyPositive())
-        break;
+        // Ignore non-positive denominator.
+        if (!Denominator->isStrictlyPositive())
+          break;
 
-      // Calculate the incoming numerator bits.
-      unsigned NumBits = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+        // Calculate the incoming numerator bits.
+        unsigned NumBits = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
 
-      // Add floor(log(C)) bits to the numerator bits.
-      return std::min(TyBits, NumBits + Denominator->logBase2());
-    }
-    break;
-  }
-
-  case Instruction::SRem: {
-    const APInt *Denominator;
-    // srem X, C -> we know that the result is within [-C+1,C) when C is a
-    // positive constant.  This let us put a lower bound on the number of sign
-    // bits.
-    if (match(U->getOperand(1), m_APInt(Denominator))) {
-
-      // Ignore non-positive denominator.
-      if (!Denominator->isStrictlyPositive())
-        break;
-
-      // Calculate the incoming numerator bits. SRem by a positive constant
-      // can't lower the number of sign bits.
-      unsigned NumrBits =
-          ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-
-      // Calculate the leading sign bit constraints by examining the
-      // denominator.  Given that the denominator is positive, there are two
-      // cases:
-      //
-      //  1. the numerator is positive.  The result range is [0,C) and [0,C) u<
-      //     (1 << ceilLogBase2(C)).
-      //
-      //  2. the numerator is negative.  Then the result range is (-C,0] and
-      //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
-      //
-      // Thus a lower bound on the number of sign bits is `TyBits -
-      // ceilLogBase2(C)`.
-
-      unsigned ResBits = TyBits - Denominator->ceilLogBase2();
-      return std::max(NumrBits, ResBits);
-    }
-    break;
-  }
-
-  case Instruction::AShr: {
-    Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    // ashr X, C   -> adds C sign bits.  Vectors too.
-    const APInt *ShAmt;
-    if (match(U->getOperand(1), m_APInt(ShAmt))) {
-      if (ShAmt->uge(TyBits))
-        break;  // Bad shift.
-      unsigned ShAmtLimited = ShAmt->getZExtValue();
-      Tmp += ShAmtLimited;
-      if (Tmp > TyBits) Tmp = TyBits;
-    }
-    return Tmp;
-  }
-  case Instruction::Shl: {
-    const APInt *ShAmt;
-    if (match(U->getOperand(1), m_APInt(ShAmt))) {
-      // shl destroys sign bits.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-      if (ShAmt->uge(TyBits) ||      // Bad shift.
-          ShAmt->uge(Tmp)) break;    // Shifted all sign bits out.
-      Tmp2 = ShAmt->getZExtValue();
-      return Tmp - Tmp2;
-    }
-    break;
-  }
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:    // NOT is handled here.
-    // Logical binary ops preserve the number of sign bits at the worst.
-    Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (Tmp != 1) {
-      Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-      FirstAnswer = std::min(Tmp, Tmp2);
-      // We computed what we know about the sign bits as our first
-      // answer. Now proceed to the generic code that uses
-      // computeKnownBits, and pick whichever answer is better.
-    }
-    break;
-
-  case Instruction::Select: {
-    // If we have a clamp pattern, we know that the number of sign bits will be
-    // the minimum of the clamp min/max range.
-    const Value *X;
-    const APInt *CLow, *CHigh;
-    if (isSignedMinMaxClamp(U, X, CLow, CHigh))
-      return std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
-
-    Tmp = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (Tmp == 1) break;
-    Tmp2 = ComputeNumSignBits(U->getOperand(2), Depth + 1, Q);
-    return std::min(Tmp, Tmp2);
-  }
-
-  case Instruction::Add:
-    // Add can have at most one carry bit.  Thus we know that the output
-    // is, at worst, one more bit than the inputs.
-    Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (Tmp == 1) break;
-
-    // Special case decrementing a value (ADD X, -1):
-    if (const auto *CRHS = dyn_cast<Constant>(U->getOperand(1)))
-      if (CRHS->isAllOnesValue()) {
-        KnownBits Known(TyBits);
-        computeKnownBits(U->getOperand(0), Known, Depth + 1, Q);
-
-        // If the input is known to be 0 or 1, the output is 0/-1, which is all
-        // sign bits set.
-        if ((Known.Zero | 1).isAllOnesValue())
-          return TyBits;
-
-        // If we are subtracting one from a positive number, there is no carry
-        // out of the result.
-        if (Known.isNonNegative())
-          return Tmp;
+        // Add floor(log(C)) bits to the numerator bits.
+        return std::min(TyBits, NumBits + Denominator->logBase2());
       }
-
-    Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (Tmp2 == 1) break;
-    return std::min(Tmp, Tmp2)-1;
-
-  case Instruction::Sub:
-    Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (Tmp2 == 1) break;
-
-    // Handle NEG.
-    if (const auto *CLHS = dyn_cast<Constant>(U->getOperand(0)))
-      if (CLHS->isNullValue()) {
-        KnownBits Known(TyBits);
-        computeKnownBits(U->getOperand(1), Known, Depth + 1, Q);
-        // If the input is known to be 0 or 1, the output is 0/-1, which is all
-        // sign bits set.
-        if ((Known.Zero | 1).isAllOnesValue())
-          return TyBits;
-
-        // If the input is known to be positive (the sign bit is known clear),
-        // the output of the NEG has the same number of sign bits as the input.
-        if (Known.isNonNegative())
-          return Tmp2;
-
-        // Otherwise, we treat this like a SUB.
-      }
-
-    // Sub can have at most one carry bit.  Thus we know that the output
-    // is, at worst, one more bit than the inputs.
-    Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (Tmp == 1) break;
-    return std::min(Tmp, Tmp2)-1;
-
-  case Instruction::Mul: {
-    // The output of the Mul can be at most twice the valid bits in the inputs.
-    unsigned SignBitsOp0 = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-    if (SignBitsOp0 == 1) break;
-    unsigned SignBitsOp1 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (SignBitsOp1 == 1) break;
-    unsigned OutValidBits =
-        (TyBits - SignBitsOp0 + 1) + (TyBits - SignBitsOp1 + 1);
-    return OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
-  }
-
-  case Instruction::PHI: {
-    const PHINode *PN = cast<PHINode>(U);
-    unsigned NumIncomingValues = PN->getNumIncomingValues();
-    // Don't analyze large in-degree PHIs.
-    if (NumIncomingValues > 4) break;
-    // Unreachable blocks may have zero-operand PHI nodes.
-    if (NumIncomingValues == 0) break;
-
-    // Take the minimum of all incoming values.  This can't infinitely loop
-    // because of our depth threshold.
-    Tmp = ComputeNumSignBits(PN->getIncomingValue(0), Depth + 1, Q);
-    for (unsigned i = 1, e = NumIncomingValues; i != e; ++i) {
-      if (Tmp == 1) return Tmp;
-      Tmp = std::min(
-          Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, Q));
-    }
-    return Tmp;
-  }
-
-  case Instruction::Trunc:
-    // FIXME: it's tricky to do anything useful for this, but it is an important
-    // case for targets like X86.
-    break;
-
-  case Instruction::ExtractElement:
-    // Look through extract element. At the moment we keep this simple and skip
-    // tracking the specific element. But at least we might find information
-    // valid for all elements of the vector (for example if vector is sign
-    // extended, shifted, etc).
-    return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
-
-  case Instruction::ShuffleVector: {
-    // TODO: This is copied almost directly from the SelectionDAG version of
-    //       ComputeNumSignBits. It would be better if we could share common
-    //       code. If not, make sure that changes are translated to the DAG.
-
-    // Collect the minimum number of sign bits that are shared by every vector
-    // element referenced by the shuffle.
-    auto *Shuf = cast<ShuffleVectorInst>(U);
-    int NumElts = Shuf->getOperand(0)->getType()->getVectorNumElements();
-    int NumMaskElts = Shuf->getMask()->getType()->getVectorNumElements();
-    APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
-    for (int i = 0; i != NumMaskElts; ++i) {
-      int M = Shuf->getMaskValue(i);
-      assert(M < NumElts * 2 && "Invalid shuffle mask constant");
-      // For undef elements, we don't know anything about the common state of
-      // the shuffle result.
-      if (M == -1)
-        return 1;
-      if (M < NumElts)
-        DemandedLHS.setBit(M % NumElts);
-      else
-        DemandedRHS.setBit(M % NumElts);
-    }
-    Tmp = std::numeric_limits<unsigned>::max();
-    if (!!DemandedLHS)
-      Tmp = ComputeNumSignBits(Shuf->getOperand(0), Depth + 1, Q);
-    if (!!DemandedRHS) {
-      Tmp2 = ComputeNumSignBits(Shuf->getOperand(1), Depth + 1, Q);
-      Tmp = std::min(Tmp, Tmp2);
-    }
-    // If we don't know anything, early out and try computeKnownBits fall-back.
-    if (Tmp == 1)
       break;
-    assert(Tmp <= V->getType()->getScalarSizeInBits() &&
-           "Failed to determine minimum sign bits");
-    return Tmp;
-  }
+    }
+
+    case Instruction::SRem: {
+      const APInt *Denominator;
+      // srem X, C -> we know that the result is within [-C+1,C) when C is a
+      // positive constant.  This let us put a lower bound on the number of sign
+      // bits.
+      if (match(U->getOperand(1), m_APInt(Denominator))) {
+
+        // Ignore non-positive denominator.
+        if (!Denominator->isStrictlyPositive())
+          break;
+
+        // Calculate the incoming numerator bits. SRem by a positive constant
+        // can't lower the number of sign bits.
+        unsigned NumrBits = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+
+        // Calculate the leading sign bit constraints by examining the
+        // denominator.  Given that the denominator is positive, there are two
+        // cases:
+        //
+        //  1. the numerator is positive. The result range is [0,C) and [0,C) u<
+        //     (1 << ceilLogBase2(C)).
+        //
+        //  2. the numerator is negative. Then the result range is (-C,0] and
+        //     integers in (-C,0] are either 0 or >u (-1 << ceilLogBase2(C)).
+        //
+        // Thus a lower bound on the number of sign bits is `TyBits -
+        // ceilLogBase2(C)`.
+
+        unsigned ResBits = TyBits - Denominator->ceilLogBase2();
+        return std::max(NumrBits, ResBits);
+      }
+      break;
+    }
+
+    case Instruction::AShr: {
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      // ashr X, C   -> adds C sign bits.  Vectors too.
+      const APInt *ShAmt;
+      if (match(U->getOperand(1), m_APInt(ShAmt))) {
+        if (ShAmt->uge(TyBits))
+          break; // Bad shift.
+        unsigned ShAmtLimited = ShAmt->getZExtValue();
+        Tmp += ShAmtLimited;
+        if (Tmp > TyBits) Tmp = TyBits;
+      }
+      return Tmp;
+    }
+    case Instruction::Shl: {
+      const APInt *ShAmt;
+      if (match(U->getOperand(1), m_APInt(ShAmt))) {
+        // shl destroys sign bits.
+        Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+        if (ShAmt->uge(TyBits) ||   // Bad shift.
+            ShAmt->uge(Tmp)) break; // Shifted all sign bits out.
+        Tmp2 = ShAmt->getZExtValue();
+        return Tmp - Tmp2;
+      }
+      break;
+    }
+    case Instruction::And:
+    case Instruction::Or:
+    case Instruction::Xor: // NOT is handled here.
+      // Logical binary ops preserve the number of sign bits at the worst.
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      if (Tmp != 1) {
+        Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+        FirstAnswer = std::min(Tmp, Tmp2);
+        // We computed what we know about the sign bits as our first
+        // answer. Now proceed to the generic code that uses
+        // computeKnownBits, and pick whichever answer is better.
+      }
+      break;
+
+    case Instruction::Select: {
+      // If we have a clamp pattern, we know that the number of sign bits will
+      // be the minimum of the clamp min/max range.
+      const Value *X;
+      const APInt *CLow, *CHigh;
+      if (isSignedMinMaxClamp(U, X, CLow, CHigh))
+        return std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
+
+      Tmp = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+      if (Tmp == 1) break;
+      Tmp2 = ComputeNumSignBits(U->getOperand(2), Depth + 1, Q);
+      return std::min(Tmp, Tmp2);
+    }
+
+    case Instruction::Add:
+      // Add can have at most one carry bit.  Thus we know that the output
+      // is, at worst, one more bit than the inputs.
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      if (Tmp == 1) break;
+
+      // Special case decrementing a value (ADD X, -1):
+      if (const auto *CRHS = dyn_cast<Constant>(U->getOperand(1)))
+        if (CRHS->isAllOnesValue()) {
+          KnownBits Known(TyBits);
+          computeKnownBits(U->getOperand(0), Known, Depth + 1, Q);
+
+          // If the input is known to be 0 or 1, the output is 0/-1, which is
+          // all sign bits set.
+          if ((Known.Zero | 1).isAllOnesValue())
+            return TyBits;
+
+          // If we are subtracting one from a positive number, there is no carry
+          // out of the result.
+          if (Known.isNonNegative())
+            return Tmp;
+        }
+
+      Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+      if (Tmp2 == 1) break;
+      return std::min(Tmp, Tmp2) - 1;
+
+    case Instruction::Sub:
+      Tmp2 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+      if (Tmp2 == 1) break;
+
+      // Handle NEG.
+      if (const auto *CLHS = dyn_cast<Constant>(U->getOperand(0)))
+        if (CLHS->isNullValue()) {
+          KnownBits Known(TyBits);
+          computeKnownBits(U->getOperand(1), Known, Depth + 1, Q);
+          // If the input is known to be 0 or 1, the output is 0/-1, which is
+          // all sign bits set.
+          if ((Known.Zero | 1).isAllOnesValue())
+            return TyBits;
+
+          // If the input is known to be positive (the sign bit is known clear),
+          // the output of the NEG has the same number of sign bits as the
+          // input.
+          if (Known.isNonNegative())
+            return Tmp2;
+
+          // Otherwise, we treat this like a SUB.
+        }
+
+      // Sub can have at most one carry bit.  Thus we know that the output
+      // is, at worst, one more bit than the inputs.
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      if (Tmp == 1) break;
+      return std::min(Tmp, Tmp2) - 1;
+
+    case Instruction::Mul: {
+      // The output of the Mul can be at most twice the valid bits in the
+      // inputs.
+      unsigned SignBitsOp0 = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      if (SignBitsOp0 == 1) break;
+      unsigned SignBitsOp1 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+      if (SignBitsOp1 == 1) break;
+      unsigned OutValidBits =
+          (TyBits - SignBitsOp0 + 1) + (TyBits - SignBitsOp1 + 1);
+      return OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
+    }
+
+    case Instruction::PHI: {
+      const PHINode *PN = cast<PHINode>(U);
+      unsigned NumIncomingValues = PN->getNumIncomingValues();
+      // Don't analyze large in-degree PHIs.
+      if (NumIncomingValues > 4) break;
+      // Unreachable blocks may have zero-operand PHI nodes.
+      if (NumIncomingValues == 0) break;
+
+      // Take the minimum of all incoming values.  This can't infinitely loop
+      // because of our depth threshold.
+      Tmp = ComputeNumSignBits(PN->getIncomingValue(0), Depth + 1, Q);
+      for (unsigned i = 1, e = NumIncomingValues; i != e; ++i) {
+        if (Tmp == 1) return Tmp;
+        Tmp = std::min(
+            Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, Q));
+      }
+      return Tmp;
+    }
+
+    case Instruction::Trunc:
+      // FIXME: it's tricky to do anything useful for this, but it is an
+      // important case for targets like X86.
+      break;
+
+    case Instruction::ExtractElement:
+      // Look through extract element. At the moment we keep this simple and
+      // skip tracking the specific element. But at least we might find
+      // information valid for all elements of the vector (for example if vector
+      // is sign extended, shifted, etc).
+      return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+
+    case Instruction::ShuffleVector: {
+      // TODO: This is copied almost directly from the SelectionDAG version of
+      //       ComputeNumSignBits. It would be better if we could share common
+      //       code. If not, make sure that changes are translated to the DAG.
+
+      // Collect the minimum number of sign bits that are shared by every vector
+      // element referenced by the shuffle.
+      auto *Shuf = cast<ShuffleVectorInst>(U);
+      int NumElts = Shuf->getOperand(0)->getType()->getVectorNumElements();
+      int NumMaskElts = Shuf->getMask()->getType()->getVectorNumElements();
+      APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
+      for (int i = 0; i != NumMaskElts; ++i) {
+        int M = Shuf->getMaskValue(i);
+        assert(M < NumElts * 2 && "Invalid shuffle mask constant");
+        // For undef elements, we don't know anything about the common state of
+        // the shuffle result.
+        if (M == -1)
+          return 1;
+        if (M < NumElts)
+          DemandedLHS.setBit(M % NumElts);
+        else
+          DemandedRHS.setBit(M % NumElts);
+      }
+      Tmp = std::numeric_limits<unsigned>::max();
+      if (!!DemandedLHS)
+        Tmp = ComputeNumSignBits(Shuf->getOperand(0), Depth + 1, Q);
+      if (!!DemandedRHS) {
+        Tmp2 = ComputeNumSignBits(Shuf->getOperand(1), Depth + 1, Q);
+        Tmp = std::min(Tmp, Tmp2);
+      }
+      // If we don't know anything, early out and try computeKnownBits
+      // fall-back.
+      if (Tmp == 1)
+        break;
+      assert(Tmp <= V->getType()->getScalarSizeInBits() &&
+             "Failed to determine minimum sign bits");
+      return Tmp;
+    }
+    }
   }
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
@@ -2663,8 +2666,6 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
 /// through SExt instructions only if LookThroughSExt is true.
 bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
                            bool LookThroughSExt, unsigned Depth) {
-  const unsigned MaxDepth = 6;
-
   assert(V && "No Value?");
   assert(Depth <= MaxDepth && "Limit Search Depth");
   assert(V->getType()->isIntegerTy() && "Not integer or pointer type!");

@@ -698,7 +698,7 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
           request.AddCompletion("--" + long_option.str(), opt.usage_text);
           return true;
         } else
-          request.AddCompletion(request.GetCursorArgument());
+          request.AddCompletion(request.GetCursorArgumentPrefix());
         return true;
       } else {
         // FIXME - not handling wrong options yet:

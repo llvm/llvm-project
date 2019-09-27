@@ -52,7 +52,7 @@ multiple file formats.
 
 .. option::  --no-strip-all
 
- Disable --strip-all.
+ Disable :option:`--strip-all`.
 
 .. option::  -o <file>
 
@@ -84,11 +84,7 @@ multiple file formats.
 
 .. option:: --strip-debug, -g
 
- Remove all debug sections.
-
-.. option:: --strip-sections
-
- Remove all section headers and all sections not in segments.
+ Remove all debug sections from the output.
 
 .. option:: --strip-symbol <symbol>, -N
 
@@ -147,12 +143,18 @@ them.
 
 .. option:: --keep-symbol <symbol>, -K
 
- Do not remove symbols named ``<symbol>``. Can be specified multiple times to
- keep multiple symbols.
+ When removing symbols from the output, do not remove symbols named
+ ``<symbol>``. Can be specified multiple times to keep multiple symbols.
 
 .. option::  --preserve-dates, -p
 
- Preserve access and modification timestamps.
+ Preserve access and modification timestamps in the output.
+
+.. option:: --strip-sections
+
+ Remove from the output all section headers and all section data not within
+ segments. Note that many tools will not be able to use an object without
+ section headers.
 
 EXIT STATUS
 -----------

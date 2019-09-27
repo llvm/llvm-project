@@ -26,6 +26,10 @@ int foo(void);
 #pragma omp declare variant(foo) match(xxx={vvv})
 #pragma omp declare variant(foo) match(xxx={vvv} xxx) // expected-error {{expected ','}} expected-error {{expected '=' after 'xxx' context selector set name on 'omp declare variant' directive}}
 #pragma omp declare variant(foo) match(xxx={vvv}) xxx // expected-warning {{extra tokens at the end of '#pragma omp declare variant' are ignored}}
+#pragma omp declare variant(foo) match(implementation={xxx}) // expected-warning {{unknown context selector in 'implementation' context selector set of 'omp declare variant' directive, ignored}}
+#pragma omp declare variant(foo) match(implementation={vendor}) // expected-error {{expected '(' after 'vendor'}} expected-error {{expected vendor identifier in 'vendor' context selector of 'implementation' selector set of 'omp declare variant' directive}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(implementation={vendor(}) // expected-error {{expected vendor identifier in 'vendor' context selector of 'implementation' selector set of 'omp declare variant' directive}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp declare variant(foo) match(implementation={vendor()}) // expected-error {{expected vendor identifier in 'vendor' context selector of 'implementation' selector set of 'omp declare variant' directive}}
 int bar(void);
 
 // expected-error@+2 {{'#pragma omp declare variant' can only be applied to functions}}
@@ -89,7 +93,7 @@ void diff_ret(void);
 void marked(void);
 void not_marked(void);
 // expected-note@+1 {{marked as 'declare variant' here}}
-#pragma omp declare variant(not_marked) match(xxx={})
+#pragma omp declare variant(not_marked) match(implementation={vendor(unknown)})
 void marked_variant(void);
 // expected-warning@+1 {{variant function in '#pragma omp declare variant' is itself marked as '#pragma omp declare variant'}}
 #pragma omp declare variant(marked_variant) match(xxx={})

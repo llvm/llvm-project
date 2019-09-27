@@ -39,10 +39,9 @@
 
      '("^[ \t]*\\(@.+\\)" 1 'td-decorators-face)
      ;; Keywords
-     (cons (concat kw "[ \n\t(]") 1)
-
+     kw
      ;; Type keywords
-     (cons (concat type-kw "[ \n\t(]") 1)
+     type-kw
      ))
   "Additional expressions to highlight in TableGen mode.")
 (put 'tablegen-mode 'font-lock-defaults '(tablegen-font-lock-keywords))

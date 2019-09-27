@@ -311,3 +311,34 @@ Sections:
     Type: SHT_PROGBITS
     Size: 0x1
     Content: "1122"
+
+## Check we can describe multiple .stack_sizes sections using unique suffixes.
+
+# RUN: yaml2obj --docnum=14 %s -o %t11
+# RUN: llvm-readobj --sections --section-data %t11 | FileCheck %s --check-prefix=UNIQUE
+
+# UNIQUE:      Name: .stack_sizes
+# UNIQUE:      SectionData (
+# UNIQUE-NEXT:   0000: 10000000 00000000 20 |
+
+# UNIQUE:      Name: .stack_sizes
+# UNIQUE:      SectionData (
+# UNIQUE-NEXT:   0000: 30000000 00000000 40 |
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    '.stack_sizes [1]'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x20
+  - Name:    '.stack_sizes [2]'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x30
+        Size:    0x40

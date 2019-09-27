@@ -19,6 +19,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "clang/Tooling/Refactoring/MatchConsumer.h"
 #include "clang/Tooling/Refactoring/RangeSelector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,11 +33,7 @@
 namespace clang {
 namespace tooling {
 
-// Note that \p TextGenerator is allowed to fail, e.g. when trying to access a
-// matched node that was not bound.  Allowing this to fail simplifies error
-// handling for interactive tools like clang-query.
-using TextGenerator = std::function<Expected<std::string>(
-    const ast_matchers::MatchFinder::MatchResult &)>;
+using TextGenerator = MatchConsumer<std::string>;
 
 /// Wraps a string as a TextGenerator.
 inline TextGenerator text(std::string M) {
