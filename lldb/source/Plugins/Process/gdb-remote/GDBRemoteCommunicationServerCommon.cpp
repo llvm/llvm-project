@@ -512,14 +512,23 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
         mode_t mode = packet.GetHexMaxU32(false, 0600);
         FileSpec path_spec(path);
         FileSystem::Instance().Resolve(path_spec);
-        File file;
         // Do not close fd.
-        Status error =
-            FileSystem::Instance().Open(file, path_spec, flags, mode, false);
-        const int save_errno = error.GetError();
+        auto file = FileSystem::Instance().Open(path_spec, flags, mode, false);
+
+        int save_errno = 0;
+        int descriptor = File::kInvalidDescriptor;
+        if (file) {
+          descriptor = file.get()->GetDescriptor();
+        } else {
+          std::error_code code = errorToErrorCode(file.takeError());
+          if (code.category() == std::system_category()) {
+            save_errno = code.value();
+          }
+        }
+
         StreamString response;
         response.PutChar('F');
-        response.Printf("%i", file.GetDescriptor());
+        response.Printf("%i", descriptor);
         if (save_errno)
           response.Printf(",%i", save_errno);
         return SendPacketNoLock(response.GetString());

@@ -513,6 +513,11 @@ void LinkerScript::processSectionCommands() {
           s->alignment = subalign;
       }
 
+      // Set the partition field the same way OutputSection::recordSection()
+      // does. Partitions cannot be used with the SECTIONS command, so this is
+      // always 1.
+      sec->partition = 1;
+
       sec->sectionIndex = i++;
     }
   }

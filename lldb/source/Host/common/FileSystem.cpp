@@ -415,13 +415,10 @@ static mode_t GetOpenMode(uint32_t permissions) {
   return mode;
 }
 
-Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
-                        uint32_t permissions, bool should_close_fd) {
+Expected<FileUP> FileSystem::Open(const FileSpec &file_spec, uint32_t options,
+                                  uint32_t permissions, bool should_close_fd) {
   if (m_collector)
     m_collector->addFile(file_spec.GetPath());
-
-  if (File.IsValid())
-    File.Close();
 
   const int open_flags = GetOpenFlags(options);
   const mode_t open_mode =
@@ -429,19 +426,18 @@ Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
 
   auto path = GetExternalPath(file_spec);
   if (!path)
-    return Status(path.getError());
+    return errorCodeToError(path.getError());
 
   int descriptor = llvm::sys::RetryAfterSignal(
       -1, OpenWithFS, *this, path->c_str(), open_flags, open_mode);
 
-  Status error;
-  if (!File::DescriptorIsValid(descriptor)) {
-    File.SetDescriptor(-1, options, false);
-    error.SetErrorToErrno();
-  } else {
-    File.SetDescriptor(descriptor, options, should_close_fd);
-  }
-  return error;
+  if (!File::DescriptorIsValid(descriptor))
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::system_category()));
+
+  auto file = std::make_unique<File>(descriptor, options, should_close_fd);
+  assert(file->IsValid());
+  return std::move(file);
 }
 
 ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {

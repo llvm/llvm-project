@@ -152,6 +152,8 @@ SystemInitializerFull::~SystemInitializerFull() {}
   ABIWindows_x86_64::op();
 
 #define LLDB_PROCESS_AMDGPU(op)
+#define LLDB_PROCESS_ARC(op)
+#define LLDB_PROCESS_AVR(op)
 #define LLDB_PROCESS_BPF(op)
 #define LLDB_PROCESS_Lanai(op)
 #define LLDB_PROCESS_MSP430(op)
