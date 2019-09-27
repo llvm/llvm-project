@@ -37,15 +37,35 @@ SnippetGenerator::SnippetGenerator(const LLVMState &State) : State(State) {}
 SnippetGenerator::~SnippetGenerator() = default;
 
 llvm::Expected<std::vector<BenchmarkCode>>
-SnippetGenerator::generateConfigurations(const Instruction &Instr) const {
-  if (auto E = generateCodeTemplates(Instr)) {
-    const auto &RATC = State.getRATC();
+SnippetGenerator::generateConfigurations(
+    const Instruction &Instr, const llvm::BitVector &ExtraForbiddenRegs) const {
+  llvm::BitVector ForbiddenRegs = State.getRATC().reservedRegisters();
+  ForbiddenRegs |= ExtraForbiddenRegs;
+  // If the instruction has memory registers, prevent the generator from
+  // using the scratch register and its aliasing registers.
+  if (Instr.hasMemoryOperands()) {
+    const auto &ET = State.getExegesisTarget();
+    unsigned ScratchSpacePointerInReg =
+        ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
+    if (ScratchSpacePointerInReg == 0)
+      return llvm::make_error<BenchmarkFailure>(
+          "Infeasible : target does not support memory instructions");
+    const auto &ScratchRegAliases =
+        State.getRATC().getRegister(ScratchSpacePointerInReg).aliasedBits();
+    // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
+    // FIXME: We could make a copy of the scratch register.
+    for (const auto &Op : Instr.Operands) {
+      if (Op.isDef() && Op.isImplicitReg() &&
+          ScratchRegAliases.test(Op.getImplicitReg()))
+        return llvm::make_error<BenchmarkFailure>(
+            "Infeasible : memory instruction uses scratch memory register");
+    }
+    ForbiddenRegs |= ScratchRegAliases;
+  }
+
+  if (auto E = generateCodeTemplates(Instr, ForbiddenRegs)) {
     std::vector<BenchmarkCode> Output;
     for (CodeTemplate &CT : E.get()) {
-      const llvm::BitVector &ForbiddenRegs =
-          CT.ScratchSpacePointerInReg
-              ? RATC.getRegister(CT.ScratchSpacePointerInReg).aliasedBits()
-              : RATC.emptyRegisters();
       // TODO: Generate as many BenchmarkCode as needed.
       {
         BenchmarkCode BC;

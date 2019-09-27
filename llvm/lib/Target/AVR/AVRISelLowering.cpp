@@ -236,7 +236,7 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setLibcallName(RTLIB::SIN_F32, "sin");
   setLibcallName(RTLIB::COS_F32, "cos");
 
-  setMinFunctionAlignment(llvm::Align(2));
+  setMinFunctionAlignment(Align(2));
   setMinimumJumpTableEntries(UINT_MAX);
 }
 

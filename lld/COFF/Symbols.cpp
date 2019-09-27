@@ -12,6 +12,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -26,26 +27,25 @@ static_assert(sizeof(SymbolUnion) <= 48,
               "symbols should be optimized for memory usage");
 
 // Returns a symbol name for an error message.
-static std::string demangle(StringRef symName) {
+static std::string maybeDemangleSymbol(StringRef symName) {
   if (config->demangle) {
-    if (Optional<std::string> s = demangleMSVC(symName))
-      return *s;
-    if (config->mingw) {
-      StringRef demangleInput = symName;
-      std::string prefix;
-      if (demangleInput.consume_front("__imp_"))
-        prefix = "__declspec(dllimport) ";
-      if (config->machine == I386)
-        demangleInput.consume_front("_");
-      if (Optional<std::string> s = demangleItanium(demangleInput))
-        return prefix + *s;
-    }
+    std::string prefix;
+    StringRef demangleInput = symName;
+    if (demangleInput.consume_front("__imp_"))
+      prefix = "__declspec(dllimport) ";
+    if (config->machine == I386)
+      demangleInput.consume_front("_");
+    std::string demangled = demangle(demangleInput);
+    if (demangled != demangleInput)
+      return prefix + demangled;
   }
   return symName;
 }
-std::string toString(coff::Symbol &b) { return demangle(b.getName()); }
+std::string toString(coff::Symbol &b) {
+  return maybeDemangleSymbol(b.getName());
+}
 std::string toCOFFString(const Archive::Symbol &b) {
-  return demangle(b.getName());
+  return maybeDemangleSymbol(b.getName());
 }
 
 namespace coff {

@@ -2618,7 +2618,8 @@ def VSCCLRMD : VFPXI<(outs), (ins pred:$p, fp_dreglist_with_vpr:$regs, variable_
   let Inst{21-16} = 0b011111;
   let Inst{15-12} = regs{11-8};
   let Inst{11-8} = 0b1011;
-  let Inst{7-0} = regs{7-0};
+  let Inst{7-1} = regs{7-1};
+  let Inst{0} = 0;
 
   let DecoderMethod = "DecodeVSCCLRM";
 

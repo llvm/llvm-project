@@ -126,7 +126,7 @@ namespace ISD {
       return A ? A->value() : 0;
     }
     void setByValAlign(unsigned A) {
-      ByValAlign = encode(llvm::Align(A));
+      ByValAlign = encode(Align(A));
       assert(getByValAlign() == A && "bitfield overflow");
     }
 
@@ -135,7 +135,7 @@ namespace ISD {
       return A ? A->value() : 0;
     }
     void setOrigAlign(unsigned A) {
-      OrigAlign = encode(llvm::Align(A));
+      OrigAlign = encode(Align(A));
       assert(getOrigAlign() == A && "bitfield overflow");
     }
 

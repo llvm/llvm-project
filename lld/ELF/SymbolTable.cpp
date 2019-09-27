@@ -123,10 +123,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
     for (Symbol *sym : symVector) {
       if (!sym->isDefined() && !sym->isCommon())
         continue;
-      if (Optional<std::string> s = demangleItanium(sym->getName()))
-        (*demangledSyms)[*s].push_back(sym);
-      else
-        (*demangledSyms)[sym->getName()].push_back(sym);
+      (*demangledSyms)[demangleItanium(sym->getName())].push_back(sym);
     }
   }
   return *demangledSyms;

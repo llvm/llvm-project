@@ -1634,7 +1634,7 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(isPPC64 ? llvm::Align(8) : llvm::Align(4));
+      EmitAlignment(isPPC64 ? Align(8) : Align(4));
 
       for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
         // L_foo$stub:

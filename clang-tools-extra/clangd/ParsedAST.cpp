@@ -49,6 +49,11 @@
 #include <algorithm>
 #include <memory>
 
+// Force the linker to link in Clang-tidy modules.
+// clangd doesn't support the static analyzer.
+#define CLANG_TIDY_DISABLE_STATIC_ANALYZER_CHECKS
+#include "../clang-tidy/ClangTidyForceLinker.h"
+
 namespace clang {
 namespace clangd {
 namespace {
@@ -521,32 +526,4 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
 }
 
 } // namespace clangd
-namespace tidy {
-// Force the linker to link in Clang-tidy modules.
-#define LINK_TIDY_MODULE(X)                                                    \
-  extern volatile int X##ModuleAnchorSource;                                   \
-  static int LLVM_ATTRIBUTE_UNUSED X##ModuleAnchorDestination =                \
-      X##ModuleAnchorSource
-LINK_TIDY_MODULE(Abseil);
-LINK_TIDY_MODULE(Android);
-LINK_TIDY_MODULE(Boost);
-LINK_TIDY_MODULE(Bugprone);
-LINK_TIDY_MODULE(CERT);
-LINK_TIDY_MODULE(CppCoreGuidelines);
-LINK_TIDY_MODULE(Fuchsia);
-LINK_TIDY_MODULE(Google);
-LINK_TIDY_MODULE(HICPP);
-LINK_TIDY_MODULE(LinuxKernel);
-LINK_TIDY_MODULE(LLVM);
-LINK_TIDY_MODULE(Misc);
-LINK_TIDY_MODULE(Modernize);
-// LINK_TIDY_MODULE(MPI); // clangd doesn't support static analyzer.
-LINK_TIDY_MODULE(ObjC);
-LINK_TIDY_MODULE(OpenMP);
-LINK_TIDY_MODULE(Performance);
-LINK_TIDY_MODULE(Portability);
-LINK_TIDY_MODULE(Readability);
-LINK_TIDY_MODULE(Zircon);
-#undef LINK_TIDY_MODULE
-} // namespace tidy
 } // namespace clang

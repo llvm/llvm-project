@@ -79,6 +79,12 @@ Improvements to clang-tidy
   Finds obvious infinite loops (loops where the condition variable is not
   changed at all).
 
+- New :doc:`darwin-dispatch-once-nonstatic
+  <clang-tidy/checks/darwin-dispatch-once-nonstatic>` check.
+
+  Finds declarations of ``dispatch_once_t`` variables without static or global
+  storage.
+
 - New :doc:`linuxkernel-must-use-errs
   <clang-tidy/checks/linuxkernel-must-use-errs>` check.
 

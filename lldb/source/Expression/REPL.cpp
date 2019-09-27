@@ -96,7 +96,7 @@ void REPL::IOHandlerActivated(IOHandler &io_handler, bool interactive) {
   lldb::ProcessSP process_sp = m_target.GetProcessSP();
   if (process_sp && process_sp->IsAlive())
     return;
-  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
   error_sp->Printf("REPL requires a running target process.\n");
   io_handler.SetIsDone(true);
 }
@@ -180,8 +180,8 @@ int REPL::IOHandlerFixIndentation(IOHandler &io_handler,
 }
 
 void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
-  lldb::StreamFileSP output_sp(io_handler.GetOutputStreamFile());
-  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+  lldb::StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+  lldb::StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
   bool extra_line = false;
   bool did_quit = false;
 
@@ -398,11 +398,11 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
           // Update our code on disk
           if (!m_repl_source_path.empty()) {
-            auto file = FileSystem::Instance().Open(FileSpec(m_repl_source_path),
-                                        File::eOpenOptionWrite |
-                                            File::eOpenOptionTruncate |
-                                            File::eOpenOptionCanCreate,
-                                        lldb::eFilePermissionsFileDefault);
+            auto file = FileSystem::Instance().Open(
+                FileSpec(m_repl_source_path),
+                File::eOpenOptionWrite | File::eOpenOptionTruncate |
+                    File::eOpenOptionCanCreate,
+                lldb::eFilePermissionsFileDefault);
             if (file) {
               std::string code(m_code.CopyList());
               code.append(1, '\n');

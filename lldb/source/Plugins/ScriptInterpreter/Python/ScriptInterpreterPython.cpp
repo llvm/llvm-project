@@ -536,7 +536,7 @@ def function (frame, bp_loc, internal_dict):
   }
 
   if (instructions) {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
     if (output_sp && interactive) {
       output_sp->PutCString(instructions);
       output_sp->Flush();
@@ -572,7 +572,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
         bp_options->SetCallback(
             ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
       } else if (!batch_mode) {
-        StreamFileSP error_sp = io_handler.GetErrorStreamFile();
+        StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
         if (error_sp) {
           error_sp->Printf("Warning: No command attached to breakpoint.\n");
           error_sp->Flush();
@@ -594,7 +594,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       wp_options->SetCallback(
           ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
     } else if (!batch_mode) {
-      StreamFileSP error_sp = io_handler.GetErrorStreamFile();
+      StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
       if (error_sp) {
         error_sp->Printf("Warning: No command attached to breakpoint.\n");
         error_sp->Flush();
@@ -723,7 +723,7 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
     File out_file(out, false);
     File err_file(err, false);
 
-    lldb::StreamFileSP in_sp;
+    lldb::FileSP in_sp;
     lldb::StreamFileSP out_sp;
     lldb::StreamFileSP err_sp;
     if (!in_file.IsValid() || !out_file.IsValid() || !err_file.IsValid())
@@ -734,7 +734,7 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
     } else {
       if (!SetStdHandle(in_file, "stdin", m_saved_stdin, "r")) {
         if (in_sp)
-          SetStdHandle(in_sp->GetFile(), "stdin", m_saved_stdin, "r");
+          SetStdHandle(*in_sp, "stdin", m_saved_stdin, "r");
       }
     }
 
@@ -853,7 +853,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
     // directly down to Python.
     Debugger &debugger = m_debugger;
 
-    StreamFileSP input_file_sp;
+    FileSP input_file_sp;
     StreamFileSP output_file_sp;
     StreamFileSP error_file_sp;
     Communication output_comm(
@@ -861,7 +861,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
     bool join_read_thread = false;
     if (options.GetEnableIO()) {
       if (result) {
-        input_file_sp = debugger.GetInputFile();
+        input_file_sp = debugger.GetInputFileSP();
         // Set output to a temporary file so we can forward the results on to
         // the result object
 
@@ -892,9 +892,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
               ::setbuf(outfile_handle, nullptr);
 
             result->SetImmediateOutputFile(
-                debugger.GetOutputFile()->GetFile().GetStream());
-            result->SetImmediateErrorFile(
-                debugger.GetErrorFile()->GetFile().GetStream());
+                debugger.GetOutputFile().GetStream());
+            result->SetImmediateErrorFile(debugger.GetErrorFile().GetStream());
           }
         }
       }
@@ -918,11 +917,11 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
                                        llvm::fmt_consume(nullout.takeError()));
         return false;
       }
-      input_file_sp = std::make_shared<StreamFile>(std::move(nullin.get()));
+      input_file_sp = std::move(nullin.get());
       error_file_sp = output_file_sp = std::make_shared<StreamFile>(std::move(nullout.get()));
     }
 
-    FILE *in_file = input_file_sp->GetFile().GetStream();
+    FILE *in_file = input_file_sp->GetStream();
     FILE *out_file = output_file_sp->GetFile().GetStream();
     FILE *err_file = error_file_sp->GetFile().GetStream();
     bool success = false;
@@ -1013,7 +1012,7 @@ void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
   // a running interpreter loop inside the already running Python interpreter
   // loop, so we won't do it.
 
-  if (!debugger.GetInputFile()->GetFile().IsValid())
+  if (!debugger.GetInputFile().IsValid())
     return;
 
   IOHandlerSP io_handler_sp(new IOHandlerPythonInterpreter(debugger, this));

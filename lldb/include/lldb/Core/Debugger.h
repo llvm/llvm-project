@@ -17,6 +17,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Terminal.h"
@@ -113,11 +114,21 @@ public:
 
   void SetAsyncExecution(bool async);
 
-  lldb::StreamFileSP GetInputFile() { return m_input_file_sp; }
+  lldb::FileSP GetInputFileSP() { return m_input_file_sp; }
 
-  lldb::StreamFileSP GetOutputFile() { return m_output_file_sp; }
+  lldb::StreamFileSP GetOutputStreamSP() { return m_output_stream_sp; }
 
-  lldb::StreamFileSP GetErrorFile() { return m_error_file_sp; }
+  lldb::StreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
+
+  File &GetInputFile() { return *m_input_file_sp; }
+
+  File &GetOutputFile() { return m_output_stream_sp->GetFile(); }
+
+  File &GetErrorFile() { return m_error_stream_sp->GetFile(); }
+
+  StreamFile &GetOutputStream() { return *m_output_stream_sp; }
+
+  StreamFile &GetErrorStream() { return *m_error_stream_sp; }
 
   repro::DataRecorder *GetInputRecorder();
 
@@ -174,7 +185,7 @@ public:
 
   // If any of the streams are not set, set them to the in/out/err stream of
   // the top most input reader to ensure they at least have something
-  void AdoptTopIOHandlerFilesIfInvalid(lldb::StreamFileSP &in,
+  void AdoptTopIOHandlerFilesIfInvalid(lldb::FileSP &in,
                                        lldb::StreamFileSP &out,
                                        lldb::StreamFileSP &err);
 
@@ -356,9 +367,10 @@ protected:
 
   void InstanceInitialize();
 
-  lldb::StreamFileSP m_input_file_sp;
-  lldb::StreamFileSP m_output_file_sp;
-  lldb::StreamFileSP m_error_file_sp;
+  // these should never be NULL
+  lldb::FileSP m_input_file_sp;
+  lldb::StreamFileSP m_output_stream_sp;
+  lldb::StreamFileSP m_error_stream_sp;
 
   /// Used for shadowing the input file when capturing a reproducer.
   repro::DataRecorder *m_input_recorder;

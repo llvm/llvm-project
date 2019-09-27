@@ -54,13 +54,6 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
-namespace llvm {
-cl::opt<uint64_t> MaxDedicateExitIterations(
-    "max-dedicate-exit-iterations", cl::Hidden, cl::init(100000),
-    cl::desc("Max number of loop iterations to check whether a loop is a "
-             "dedicated exit loop. "));
-}
-
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //

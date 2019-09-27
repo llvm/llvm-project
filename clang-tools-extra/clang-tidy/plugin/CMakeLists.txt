@@ -8,30 +8,6 @@ add_clang_library(clangTidyPlugin
   clangFrontend
   clangSema
   clangTidy
-  clangTidyAbseilModule
-  clangTidyAndroidModule
-  clangTidyBoostModule
-  clangTidyBugproneModule
-  clangTidyCERTModule
-  clangTidyCppCoreGuidelinesModule
-  clangTidyFuchsiaModule
-  clangTidyGoogleModule
-  clangTidyHICPPModule
-  clangTidyLinuxKernelModule
-  clangTidyLLVMModule
-  clangTidyMiscModule
-  clangTidyModernizeModule
-  clangTidyObjCModule
-  clangTidyOpenMPModule
-  clangTidyPerformanceModule
-  clangTidyPortabilityModule
-  clangTidyReadabilityModule
-  clangTidyZirconModule
   clangTooling
+  ${ALL_CLANG_TIDY_CHECKS}
   )
-
-if(CLANG_ENABLE_STATIC_ANALYZER)
-  target_link_libraries(clangTidyPlugin PRIVATE
-    clangTidyMPIModule
-  )
-endif()

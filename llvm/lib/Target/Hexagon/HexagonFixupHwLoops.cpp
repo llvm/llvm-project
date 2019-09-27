@@ -114,7 +114,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
 
   // First pass - compute the offset of each basic block.
   for (const MachineBasicBlock &MBB : MF) {
-    if (MBB.getAlignment() != llvm::Align::None()) {
+    if (MBB.getAlignment() != Align::None()) {
       // Although we don't know the exact layout of the final code, we need
       // to account for alignment padding somehow. This heuristic pads each
       // aligned basic block according to the alignment value.

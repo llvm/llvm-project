@@ -337,7 +337,7 @@ public:
 } // end anonymous namespace
 
 void ELFWriter::align(unsigned Alignment) {
-  uint64_t Padding = offsetToAlignment(W.OS.tell(), llvm::Align(Alignment));
+  uint64_t Padding = offsetToAlignment(W.OS.tell(), Align(Alignment));
   W.OS.write_zeros(Padding);
 }
 
@@ -638,7 +638,7 @@ void ELFWriter::computeSymbolTable(
   unsigned EntrySize = is64Bit() ? ELF::SYMENTRY_SIZE64 : ELF::SYMENTRY_SIZE32;
   MCSectionELF *SymtabSection =
       Ctx.getELFSection(".symtab", ELF::SHT_SYMTAB, 0, EntrySize, "");
-  SymtabSection->setAlignment(is64Bit() ? llvm::Align(8) : llvm::Align(4));
+  SymtabSection->setAlignment(is64Bit() ? Align(8) : Align(4));
   SymbolTableIndex = addToSectionTable(SymtabSection);
 
   align(SymtabSection->getAlignment());
@@ -736,7 +736,7 @@ void ELFWriter::computeSymbolTable(
     MCSectionELF *SymtabShndxSection =
         Ctx.getELFSection(".symtab_shndx", ELF::SHT_SYMTAB_SHNDX, 0, 4, "");
     SymtabShndxSectionIndex = addToSectionTable(SymtabShndxSection);
-    SymtabShndxSection->setAlignment(llvm::Align(4));
+    SymtabShndxSection->setAlignment(Align(4));
   }
 
   ArrayRef<std::string> FileNames = Asm.getFileNames();
@@ -824,7 +824,7 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
   MCSectionELF *RelaSection = Ctx.createELFRelSection(
       RelaSectionName, hasRelocationAddend() ? ELF::SHT_RELA : ELF::SHT_REL,
       Flags, EntrySize, Sec.getGroup(), &Sec);
-  RelaSection->setAlignment(is64Bit() ? llvm::Align(8) : llvm::Align(4));
+  RelaSection->setAlignment(is64Bit() ? Align(8) : Align(4));
   return RelaSection;
 }
 
@@ -911,7 +911,7 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     Section.setFlags(Section.getFlags() | ELF::SHF_COMPRESSED);
     // Alignment field should reflect the requirements of
     // the compressed section header.
-    Section.setAlignment(is64Bit() ? llvm::Align(8) : llvm::Align(4));
+    Section.setAlignment(is64Bit() ? Align(8) : Align(4));
   } else {
     // Add "z" prefix to section name. This is zlib-gnu style.
     MC.renameELFSection(&Section, (".z" + SectionName.drop_front(1)).str());
@@ -1135,7 +1135,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
       if (!GroupIdx) {
         MCSectionELF *Group = Ctx.createELFGroupSection(SignatureSymbol);
         GroupIdx = addToSectionTable(Group);
-        Group->setAlignment(llvm::Align(4));
+        Group->setAlignment(Align(4));
         Groups.push_back(Group);
       }
       std::vector<const MCSectionELF *> &Members =

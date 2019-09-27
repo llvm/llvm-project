@@ -187,8 +187,8 @@ public:
   bool canMacroFuseCmp();
   bool isLegalMaskedLoad(Type *DataType);
   bool isLegalMaskedStore(Type *DataType);
-  bool isLegalNTLoad(Type *DataType, llvm::Align Alignment);
-  bool isLegalNTStore(Type *DataType, llvm::Align Alignment);
+  bool isLegalNTLoad(Type *DataType, Align Alignment);
+  bool isLegalNTStore(Type *DataType, Align Alignment);
   bool isLegalMaskedGather(Type *DataType);
   bool isLegalMaskedScatter(Type *DataType);
   bool isLegalMaskedExpandLoad(Type *DataType);

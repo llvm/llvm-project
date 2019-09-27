@@ -866,7 +866,7 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
   bool DstAlignCanChange = false;
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF);
-  unsigned Align = MinAlign(DstAlign, SrcAlign);
+  unsigned Alignment = MinAlign(DstAlign, SrcAlign);
 
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
   if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
@@ -885,7 +885,8 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
   MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
 
   if (!findGISelOptimalMemOpLowering(
-          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Align), SrcAlign,
+          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Alignment),
+          SrcAlign,
           /*IsMemset=*/false,
           /*ZeroMemset=*/false, /*MemcpyStrSrc=*/false,
           /*AllowOverlap=*/!IsVolatile, DstPtrInfo.getAddrSpace(),
@@ -901,16 +902,16 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->needsStackRealignment(MF))
-      while (NewAlign > Align &&
-             DL.exceedsNaturalStackAlignment(llvm::Align(NewAlign)))
-          NewAlign /= 2;
+      while (NewAlign > Alignment &&
+             DL.exceedsNaturalStackAlignment(Align(NewAlign)))
+        NewAlign /= 2;
 
-    if (NewAlign > Align) {
+    if (NewAlign > Alignment) {
       unsigned FI = FIDef->getOperand(1).getIndex();
       // Give the stack frame object a larger alignment if needed.
       if (MFI.getObjectAlignment(FI) < NewAlign)
         MFI.setObjectAlignment(FI, NewAlign);
-      Align = NewAlign;
+      Alignment = NewAlign;
     }
   }
 
@@ -973,7 +974,7 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
   bool DstAlignCanChange = false;
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF);
-  unsigned Align = MinAlign(DstAlign, SrcAlign);
+  unsigned Alignment = MinAlign(DstAlign, SrcAlign);
 
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
   if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
@@ -991,7 +992,8 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
   // to a bug in it's findOptimalMemOpLowering implementation. For now do the
   // same thing here.
   if (!findGISelOptimalMemOpLowering(
-          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Align), SrcAlign,
+          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Alignment),
+          SrcAlign,
           /*IsMemset=*/false,
           /*ZeroMemset=*/false, /*MemcpyStrSrc=*/false,
           /*AllowOverlap=*/false, DstPtrInfo.getAddrSpace(),
@@ -1007,16 +1009,16 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->needsStackRealignment(MF))
-      while (NewAlign > Align &&
-             DL.exceedsNaturalStackAlignment(llvm::Align(NewAlign)))
-          NewAlign /= 2;
+      while (NewAlign > Alignment &&
+             DL.exceedsNaturalStackAlignment(Align(NewAlign)))
+        NewAlign /= 2;
 
-    if (NewAlign > Align) {
+    if (NewAlign > Alignment) {
       unsigned FI = FIDef->getOperand(1).getIndex();
       // Give the stack frame object a larger alignment if needed.
       if (MFI.getObjectAlignment(FI) < NewAlign)
         MFI.setObjectAlignment(FI, NewAlign);
-      Align = NewAlign;
+      Alignment = NewAlign;
     }
   }
 
