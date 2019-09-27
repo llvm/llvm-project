@@ -189,7 +189,7 @@ private:
 /// is necessary for reproducing  a failure.
 class Generator final {
 public:
-  Generator(const FileSpec &root);
+  Generator(FileSpec root);
   ~Generator();
 
   /// Method to indicate we want to keep the reproducer. If reproducer
@@ -246,7 +246,7 @@ private:
 
 class Loader final {
 public:
-  Loader(const FileSpec &root);
+  Loader(FileSpec root);
 
   template <typename T> FileSpec GetFile() {
     if (!HasFile(T::file))
