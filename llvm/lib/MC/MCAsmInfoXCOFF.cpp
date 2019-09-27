@@ -20,5 +20,16 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   UseDotAlignForAlignment = true;
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
+  NeedsFunctionDescriptors = true;
+  HasDotLGloblDirective = true;
   Data64bitsDirective = "\t.llong\t";
+  SupportsQuotedNames = false;
+}
+
+bool MCAsmInfoXCOFF::isValidUnquotedName(StringRef Name) const {
+  // FIXME: Remove this function when we stop using "TOC[TC0]" as a symbol name.
+  if (Name.equals("TOC[TC0]"))
+    return true;
+
+  return MCAsmInfo::isValidUnquotedName(Name);
 }

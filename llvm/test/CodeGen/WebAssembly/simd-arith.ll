@@ -223,6 +223,23 @@ define <16 x i8> @not_v16i8(<16 x i8> %x) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: andnot_v16i8:
+; NO-SIMD128-NOT: v128
+; SIMD128-VM-NOT: v128.andnot
+; SIMD128-NEXT: .functype andnot_v16i8 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: return
+define <16 x i8> @andnot_v16i8(<16 x i8> %x, <16 x i8> %y) {
+ %inv_y = xor <16 x i8> %y,
+   <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1,
+    i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+ %a = and <16 x i8> %x, %inv_y
+ ret <16 x i8> %a
+}
+
 ; CHECK-LABEL: bitselect_v16i8:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-NEXT: .functype bitselect_v16i8 (v128, v128, v128) -> (v128){{$}}
@@ -445,6 +462,22 @@ define <8 x i16> @not_v8i16(<8 x i16> %x) {
   ret <8 x i16> %a
 }
 
+; CHECK-LABEL: andnot_v8i16:
+; SIMD128-VM-NOT: v128.andnot
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype andnot_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: return
+define <8 x i16> @andnot_v8i16(<8 x i16> %x, <8 x i16> %y) {
+ %inv_y = xor <8 x i16> %y,
+   <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+ %a = and <8 x i16> %x, %inv_y
+ ret <8 x i16> %a
+}
+
 ; CHECK-LABEL: bitselect_v8i16:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-NEXT: .functype bitselect_v8i16 (v128, v128, v128) -> (v128){{$}}
@@ -650,6 +683,21 @@ define <4 x i32> @xor_v4i32(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @not_v4i32(<4 x i32> %x) {
   %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %a
+}
+
+; CHECK-LABEL: andnot_v4i32:
+; SIMD128-VM-NOT: v128.andnot
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype andnot_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: return
+define <4 x i32> @andnot_v4i32(<4 x i32> %x, <4 x i32> %y) {
+ %inv_y = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+ %a = and <4 x i32> %x, %inv_y
+ ret <4 x i32> %a
 }
 
 ; CHECK-LABEL: bitselect_v4i32:
@@ -960,6 +1008,21 @@ define <2 x i64> @xor_v2i64(<2 x i64> %x, <2 x i64> %y) {
 define <2 x i64> @not_v2i64(<2 x i64> %x) {
   %a = xor <2 x i64> %x, <i64 -1, i64 -1>
   ret <2 x i64> %a
+}
+
+; CHECK-LABEL: andnot_v2i64:
+; SIMD128-VM-NOT: v128.andnot
+; NO-SIMD128-NOT: v128
+; SIMD128-NEXT: .functype andnot_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: v128.andnot $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+; SIMD128-FAST-NEXT: v128.not
+; SIMD128-FAST-NEXT: v128.and
+; SIMD128-FAST-NEXT: return
+define <2 x i64> @andnot_v2i64(<2 x i64> %x, <2 x i64> %y) {
+ %inv_y = xor <2 x i64> %y, <i64 -1, i64 -1>
+ %a = and <2 x i64> %x, %inv_y
+ ret <2 x i64> %a
 }
 
 ; CHECK-LABEL: bitselect_v2i64:

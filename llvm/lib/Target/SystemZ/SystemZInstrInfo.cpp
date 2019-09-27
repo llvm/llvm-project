@@ -1750,8 +1750,7 @@ void SystemZInstrInfo::loadImmediate(MachineBasicBlock &MBB,
 
 bool SystemZInstrInfo::
 areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                const MachineInstr &MIb,
-                                AliasAnalysis *AA) const {
+                                const MachineInstr &MIb) const {
 
   if (!MIa.hasOneMemOperand() || !MIb.hasOneMemOperand())
     return false;

@@ -700,7 +700,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
               TII->getMemOperandWithOffset(MI, BaseOp2, Offset2, TRI)) {
             if (BaseOp1->isIdenticalTo(*BaseOp2) &&
                 (int)Offset1 < (int)Offset2) {
-              assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI, AA) &&
+              assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI) &&
                      "What happened to the chain edge?");
               SDep Dep(Load, SDep::Barrier);
               Dep.setLatency(1);
