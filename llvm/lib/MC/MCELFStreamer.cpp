@@ -277,6 +277,9 @@ bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   case MCSA_AltEntry:
     llvm_unreachable("ELF doesn't support the .alt_entry attribute");
+
+  case MCSA_LGlobal:
+    llvm_unreachable("ELF doesn't support the .lglobl attribute");
   }
 
   return true;

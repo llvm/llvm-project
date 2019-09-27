@@ -1786,7 +1786,8 @@ example:
     requires strict floating-point semantics.  LLVM will not attempt any
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
-    might otherwise be set or cleared by calling this function.
+    might otherwise be set or cleared by calling this function. LLVM will
+    not introduce any new floating-point instructions that may trap.
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
     function with a tail call. The prototype of a thunk should not be used for
@@ -15155,6 +15156,17 @@ example, a series of FP operations that each may raise exceptions may be
 vectorized into a single instruction that raises each unique exception a single
 time.
 
+Required Function Attributes:
+"""""""""""""""""""""""""""""
+
+Proper :ref:`function attributes <fnattrs>` usage is required for the
+constrained intrinsics to function correctly.
+
+All function *calls* done in a function that uses constrained floating
+point intrinsics must have the ``strictfp`` attribute.
+
+All function *definitions* that use constrained floating point intrinsics
+must have the ``strictfp`` attribute.
 
 '``llvm.experimental.constrained.fadd``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -303,8 +303,7 @@ public:
 
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb,
-                                  AliasAnalysis *AA = nullptr) const override;
+                                  const MachineInstr &MIb) const override;
 
   bool isFoldableCopy(const MachineInstr &MI) const;
 

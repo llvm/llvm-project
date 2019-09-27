@@ -228,7 +228,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   //  - Floating-point extending loads.
   //  - Floating-point truncating stores.
   //  - i1 extending loads.
-  //  - extending/truncating SIMD loads/stores
+  //  - truncating SIMD stores and most extending loads
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   for (auto T : MVT::integer_valuetypes())
@@ -243,6 +243,14 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
           for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
             setLoadExtAction(Ext, T, MemT, Expand);
         }
+      }
+    }
+    // But some vector extending loads are legal
+    if (Subtarget->hasUnimplementedSIMD128()) {
+      for (auto Ext : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
+        setLoadExtAction(Ext, MVT::v8i16, MVT::v8i8, Legal);
+        setLoadExtAction(Ext, MVT::v4i32, MVT::v4i16, Legal);
+        setLoadExtAction(Ext, MVT::v2i64, MVT::v2i32, Legal);
       }
     }
   }
@@ -538,6 +546,16 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
   // The current thinking is that wasm engines will perform this optimization,
   // so we can save on code size.
   return true;
+}
+
+bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
+  if (!Subtarget->hasUnimplementedSIMD128())
+    return false;
+  MVT ExtT = ExtVal.getSimpleValueType();
+  MVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getSimpleValueType(0);
+  return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
+         (ExtT == MVT::v4i32 && MemT == MVT::v4i16) ||
+         (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
 }
 
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,

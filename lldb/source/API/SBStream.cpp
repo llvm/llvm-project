@@ -82,26 +82,27 @@ void SBStream::RedirectToFile(const char *path, bool append) {
     if (!m_is_file)
       local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
   }
-  StreamFile *stream_file = new StreamFile;
   uint32_t open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
   if (append)
     open_options |= File::eOpenOptionAppend;
   else
     open_options |= File::eOpenOptionTruncate;
 
-  FileSystem::Instance().Open(stream_file->GetFile(), FileSpec(path),
-                              open_options);
-  m_opaque_up.reset(stream_file);
+  llvm::Expected<FileUP> file =
+      FileSystem::Instance().Open(FileSpec(path), open_options);
+  if (!file) {
+    LLDB_LOG_ERROR(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), file.takeError(),
+                   "Cannot open {1}: {0}", path);
+    return;
+  }
 
-  if (m_opaque_up) {
-    m_is_file = true;
+  m_opaque_up = std::make_unique<StreamFile>(std::move(file.get()));
+  m_is_file = true;
 
-    // If we had any data locally in our StreamString, then pass that along to
-    // the to new file we are redirecting to.
-    if (!local_data.empty())
-      m_opaque_up->Write(&local_data[0], local_data.size());
-  } else
-    m_is_file = false;
+  // If we had any data locally in our StreamString, then pass that along to
+  // the to new file we are redirecting to.
+  if (!local_data.empty())
+    m_opaque_up->Write(&local_data[0], local_data.size());
 }
 
 void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
@@ -118,17 +119,14 @@ void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
     if (!m_is_file)
       local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
   }
-  m_opaque_up.reset(new StreamFile(fh, transfer_fh_ownership));
 
-  if (m_opaque_up) {
-    m_is_file = true;
+  m_opaque_up = std::make_unique<StreamFile>(fh, transfer_fh_ownership);
+  m_is_file = true;
 
-    // If we had any data locally in our StreamString, then pass that along to
-    // the to new file we are redirecting to.
-    if (!local_data.empty())
-      m_opaque_up->Write(&local_data[0], local_data.size());
-  } else
-    m_is_file = false;
+  // If we had any data locally in our StreamString, then pass that along to
+  // the to new file we are redirecting to.
+  if (!local_data.empty())
+    m_opaque_up->Write(&local_data[0], local_data.size());
 }
 
 void SBStream::RedirectToFileDescriptor(int fd, bool transfer_fh_ownership) {
@@ -143,16 +141,13 @@ void SBStream::RedirectToFileDescriptor(int fd, bool transfer_fh_ownership) {
       local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
   }
 
-  m_opaque_up.reset(new StreamFile(::fdopen(fd, "w"), transfer_fh_ownership));
-  if (m_opaque_up) {
-    m_is_file = true;
+  m_opaque_up = std::make_unique<StreamFile>(fd, transfer_fh_ownership);
+  m_is_file = true;
 
-    // If we had any data locally in our StreamString, then pass that along to
-    // the to new file we are redirecting to.
-    if (!local_data.empty())
-      m_opaque_up->Write(&local_data[0], local_data.size());
-  } else
-    m_is_file = false;
+  // If we had any data locally in our StreamString, then pass that along to
+  // the to new file we are redirecting to.
+  if (!local_data.empty())
+    m_opaque_up->Write(&local_data[0], local_data.size());
 }
 
 lldb_private::Stream *SBStream::operator->() { return m_opaque_up.get(); }

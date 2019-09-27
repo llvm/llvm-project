@@ -1606,8 +1606,7 @@ public:
   /// function.
   virtual bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb,
-                                  AliasAnalysis *AA = nullptr) const {
+                                  const MachineInstr &MIb) const {
     assert((MIa.mayLoad() || MIa.mayStore()) &&
            "MIa must load from or modify a memory location");
     assert((MIb.mayLoad() || MIb.mayStore()) &&

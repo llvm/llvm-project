@@ -1205,7 +1205,7 @@ bool MachineInstr::mayAlias(AliasAnalysis *AA, const MachineInstr &Other,
     return false;
 
   // Let the target decide if memory accesses cannot possibly overlap.
-  if (TII->areMemAccessesTriviallyDisjoint(*this, Other, AA))
+  if (TII->areMemAccessesTriviallyDisjoint(*this, Other))
     return false;
 
   // FIXME: Need to handle multiple memory operands to support all targets.

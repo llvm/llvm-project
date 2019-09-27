@@ -166,7 +166,7 @@ static bool computeUnrollAndJamCount(
   bool UseUpperBound = false;
   bool ExplicitUnroll = computeUnrollCount(
       L, TTI, DT, LI, SE, EphValues, ORE, OuterTripCount, MaxTripCount,
-      OuterTripMultiple, OuterLoopSize, UP, UseUpperBound);
+      /*MaxOrZero*/ false, OuterTripMultiple, OuterLoopSize, UP, UseUpperBound);
   if (ExplicitUnroll || UseUpperBound) {
     // If the user explicitly set the loop as unrolled, dont UnJ it. Leave it
     // for the unroller instead.

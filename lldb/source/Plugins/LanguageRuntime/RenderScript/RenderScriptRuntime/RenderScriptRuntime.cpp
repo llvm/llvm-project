@@ -2651,14 +2651,14 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   // Check we can create writable file
   FileSpec file_spec(path);
   FileSystem::Instance().Resolve(file_spec);
-  File file;
-  FileSystem::Instance().Open(file, file_spec,
-                              File::eOpenOptionWrite |
-                                  File::eOpenOptionCanCreate |
-                                  File::eOpenOptionTruncate);
+  auto file = FileSystem::Instance().Open(
+      file_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate |
+                     File::eOpenOptionTruncate);
 
   if (!file) {
-    strm.Printf("Error: Failed to open '%s' for writing", path);
+    std::string error = llvm::toString(file.takeError());
+    strm.Printf("Error: Failed to open '%s' for writing: %s", path,
+                error.c_str());
     strm.EOL();
     return false;
   }
@@ -2690,7 +2690,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   LLDB_LOGF(log, "%s - writing File Header, 0x%" PRIx64 " bytes", __FUNCTION__,
             (uint64_t)num_bytes);
 
-  Status err = file.Write(&head, num_bytes);
+  Status err = file.get()->Write(&head, num_bytes);
   if (!err.Success()) {
     strm.Printf("Error: '%s' when writing to file '%s'", err.AsCString(), path);
     strm.EOL();
@@ -2715,7 +2715,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   LLDB_LOGF(log, "%s - writing element headers, 0x%" PRIx64 " bytes.",
             __FUNCTION__, (uint64_t)num_bytes);
 
-  err = file.Write(element_header_buffer.get(), num_bytes);
+  err = file.get()->Write(element_header_buffer.get(), num_bytes);
   if (!err.Success()) {
     strm.Printf("Error: '%s' when writing to file '%s'", err.AsCString(), path);
     strm.EOL();
@@ -2727,7 +2727,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   LLDB_LOGF(log, "%s - writing 0x%" PRIx64 " bytes", __FUNCTION__,
             (uint64_t)num_bytes);
 
-  err = file.Write(buffer.get(), num_bytes);
+  err = file.get()->Write(buffer.get(), num_bytes);
   if (!err.Success()) {
     strm.Printf("Error: '%s' when writing to file '%s'", err.AsCString(), path);
     strm.EOL();
@@ -4578,32 +4578,36 @@ public:
       return false;
     }
 
-    Stream *output_strm = nullptr;
-    StreamFile outfile_stream;
+    Stream *output_stream_p = nullptr;
+    std::unique_ptr<Stream> output_stream_storage;
+
     const FileSpec &outfile_spec =
         m_options.m_outfile; // Dump allocation to file instead
     if (outfile_spec) {
       // Open output file
       std::string path = outfile_spec.GetPath();
-      auto error = FileSystem::Instance().Open(
-          outfile_stream.GetFile(), outfile_spec,
-          File::eOpenOptionWrite | File::eOpenOptionCanCreate);
-      if (error.Success()) {
-        output_strm = &outfile_stream;
+      auto file = FileSystem::Instance().Open(
+          outfile_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate);
+      if (file) {
+        output_stream_storage =
+            std::make_unique<StreamFile>(std::move(file.get()));
+        output_stream_p = output_stream_storage.get();
         result.GetOutputStream().Printf("Results written to '%s'",
                                         path.c_str());
         result.GetOutputStream().EOL();
       } else {
-        result.AppendErrorWithFormat("Couldn't open file '%s'", path.c_str());
+        std::string error = llvm::toString(file.takeError());
+        result.AppendErrorWithFormat("Couldn't open file '%s': %s",
+                                     path.c_str(), error.c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else
-      output_strm = &result.GetOutputStream();
+      output_stream_p = &result.GetOutputStream();
 
-    assert(output_strm != nullptr);
+    assert(output_stream_p != nullptr);
     bool dumped =
-        runtime->DumpAllocation(*output_strm, m_exe_ctx.GetFramePtr(), id);
+        runtime->DumpAllocation(*output_stream_p, m_exe_ctx.GetFramePtr(), id);
 
     if (dumped)
       result.SetStatus(eReturnStatusSuccessFinishResult);

@@ -70,6 +70,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
@@ -2337,18 +2338,17 @@ void CommandInterpreter::HandleCommandsFromFile(
     return;
   }
 
-  StreamFileSP input_file_sp(new StreamFile());
   std::string cmd_file_path = cmd_file.GetPath();
-  Status error = FileSystem::Instance().Open(input_file_sp->GetFile(), cmd_file,
-                                             File::eOpenOptionRead);
 
-  if (error.Fail()) {
-    result.AppendErrorWithFormat(
-        "error: an error occurred read file '%s': %s\n", cmd_file_path.c_str(),
-        error.AsCString());
+  auto file = FileSystem::Instance().Open(cmd_file, File::eOpenOptionRead);
+  if (!file) {
+    result.AppendErrorWithFormatv(
+        "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
+        llvm::fmt_consume(file.takeError()));
     result.SetStatus(eReturnStatusFailed);
     return;
   }
+  auto input_file_sp = std::make_shared<StreamFile>(std::move(file.get()));
 
   Debugger &debugger = GetDebugger();
 

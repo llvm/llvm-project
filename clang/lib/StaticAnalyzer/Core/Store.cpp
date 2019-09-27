@@ -51,11 +51,8 @@ StoreRef StoreManager::enterStackFrame(Store OldStore,
   SmallVector<CallEvent::FrameBindingTy, 16> InitialBindings;
   Call.getInitialStackFrameContents(LCtx, InitialBindings);
 
-  for (const auto &I : InitialBindings) {
-    Loc L = I.first.castAs<Loc>();
-    SVal V = I.second;
-    Store = Bind(Store.getStore(), L, V);
-  }
+  for (const auto &I : InitialBindings)
+    Store = Bind(Store.getStore(), I.first.castAs<Loc>(), I.second);
 
   return Store;
 }
