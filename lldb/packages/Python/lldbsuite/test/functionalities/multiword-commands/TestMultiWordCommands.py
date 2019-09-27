@@ -20,8 +20,7 @@ class MultiwordCommandsTestCase(TestBase):
 
     @no_debug_info_test
     def test_empty_subcommand(self):
-        # FIXME: This has no error message.
-        self.expect("platform \"\"", error=True)
+        self.expect("platform \"\"", error=True, substrs=["Need to specify a non-empty subcommand."])
 
     @no_debug_info_test
     def test_help(self):
