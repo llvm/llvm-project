@@ -72,9 +72,9 @@ static cl::opt<unsigned> MinimumJumpTableEntries
   ("min-jump-table-entries", cl::init(4), cl::Hidden,
    cl::desc("Set minimum number of entries to use a jump table."));
 
-static cl::opt<unsigned> MaximumJumpTableTargets
-  ("max-jump-table-targets", cl::init(UINT_MAX), cl::Hidden,
-   cl::desc("Set maximum number of targets to use in a jump table."));
+static cl::opt<unsigned> MaximumJumpTableSize
+  ("max-jump-table-size", cl::init(UINT_MAX), cl::Hidden,
+   cl::desc("Set maximum size of jump tables."));
 
 /// Minimum jump table density for normal functions.
 static cl::opt<unsigned>
@@ -1790,16 +1790,16 @@ void TargetLoweringBase::setMinimumJumpTableEntries(unsigned Val) {
   MinimumJumpTableEntries = Val;
 }
 
-unsigned TargetLoweringBase::getMaximumJumpTableTargets() const {
-  return MaximumJumpTableTargets;
-}
-
-void TargetLoweringBase::setMaximumJumpTableTargets(unsigned Val) {
-  MaximumJumpTableTargets = Val;
-}
-
 unsigned TargetLoweringBase::getMinimumJumpTableDensity(bool OptForSize) const {
   return OptForSize ? OptsizeJumpTableDensity : JumpTableDensity;
+}
+
+unsigned TargetLoweringBase::getMaximumJumpTableSize() const {
+  return MaximumJumpTableSize;
+}
+
+void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
+  MaximumJumpTableSize = Val;
 }
 
 //===----------------------------------------------------------------------===//

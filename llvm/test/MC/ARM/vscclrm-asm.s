@@ -1,6 +1,9 @@
 // RUN: not llvm-mc -triple=thumbv8.1m.main-none-eabi -mattr=+8msecext -show-encoding < %s 2>%t \
 // RUN: | FileCheck --check-prefix=CHECK %s
 // RUN:   FileCheck --check-prefix=ERROR < %t %s
+// RUN: not llvm-mc -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+8msecext -show-encoding < %s 2>%t \
+// RUN: | FileCheck --check-prefix=CHECK %s
+// RUN:   FileCheck --check-prefix=ERROR < %t %s
 // RUN: not llvm-mc -triple=thumbv8.1m.main-arm-none-eabi -mattr=-8msecext < %s 2>%t
 // RUN: FileCheck --check-prefix=NOSEC < %t %s
 
@@ -20,6 +23,9 @@ vscclrm {s31, vpr}
 
 // CHECK: vscclrm            {d0, d1, vpr}  @ encoding: [0x9f,0xec,0x04,0x0b]
 vscclrm {d0-d1, vpr}
+
+// CHECK: vscclrm            {d0, d1, d2, d3, vpr}  @ encoding: [0x9f,0xec,0x08,0x0b]
+vscclrm {d0-d3, vpr}
 
 // CHECK: vscclrm            {d5, d6, d7, vpr}  @ encoding: [0x9f,0xec,0x06,0x5b]
 vscclrm {d5-d7, vpr}

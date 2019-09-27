@@ -91,10 +91,12 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
@@ -426,7 +428,10 @@ void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
     OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
     return;
   case GlobalValue::PrivateLinkage:
+    return;
   case GlobalValue::InternalLinkage:
+    if (MAI->hasDotLGloblDirective())
+      OutStreamer->EmitSymbolAttribute(GVSym, MCSA_LGlobal);
     return;
   case GlobalValue::AppendingLinkage:
   case GlobalValue::AvailableExternallyLinkage:
@@ -662,6 +667,10 @@ void AsmPrinter::EmitFunctionHeader() {
   OutStreamer->SwitchSection(getObjFileLowering().SectionForGlobal(&F, TM));
   EmitVisibility(CurrentFnSym, F.getVisibility());
 
+  if (MAI->needsFunctionDescriptors() &&
+      F.getLinkage() != GlobalValue::InternalLinkage)
+    EmitLinkage(&F, CurrentFnDescSym);
+
   EmitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment())
     EmitAlignment(MF->getAlignment(), &F);
@@ -697,8 +706,13 @@ void AsmPrinter::EmitFunctionHeader() {
     }
   }
 
-  // Emit the CurrentFnSym.  This is a virtual function to allow targets to
-  // do their wild and crazy things as required.
+  // Emit the function descriptor. This is a virtual function to allow targets
+  // to emit their specific function descriptor.
+  if (MAI->needsFunctionDescriptors())
+    EmitFunctionDescriptor();
+
+  // Emit the CurrentFnSym. This is a virtual function to allow targets to do
+  // their wild and crazy things as required.
   EmitFunctionEntryLabel();
 
   // If the function had address-taken blocks that got deleted, then we have
@@ -1644,8 +1658,27 @@ MCSymbol *AsmPrinter::getCurExceptionSym() {
 
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
+
   // Get the function symbol.
-  CurrentFnSym = getSymbol(&MF.getFunction());
+  if (MAI->needsFunctionDescriptors()) {
+    assert(TM.getTargetTriple().isOSAIX() && "Function descriptor is only"
+                                             " supported on AIX.");
+    assert(CurrentFnDescSym && "The function descriptor symbol needs to be"
+		                           " initalized first.");
+
+    // Get the function entry point symbol.
+    CurrentFnSym =
+        OutContext.getOrCreateSymbol("." + CurrentFnDescSym->getName());
+
+    const Function &F = MF.getFunction();
+    MCSectionXCOFF *FnEntryPointSec =
+        cast<MCSectionXCOFF>(getObjFileLowering().SectionForGlobal(&F, TM));
+    // Set the containing csect.
+    cast<MCSymbolXCOFF>(CurrentFnSym)->setContainingCsect(FnEntryPointSec);
+  } else {
+    CurrentFnSym = getSymbol(&MF.getFunction());
+  }
+
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
   CurExceptionSym = nullptr;

@@ -27,7 +27,7 @@ define float @select_fcmp_one_f32(float %a, float %b, float %c, float %d) {
 ; AVX512-LABEL: select_fcmp_one_f32:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpneq_oqss %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp one float %a, %b
@@ -55,7 +55,7 @@ define double @select_fcmp_one_f64(double %a, double %b, double %c, double %d) {
 ; AVX512-LABEL: select_fcmp_one_f64:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpneq_oqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm0, %xmm3 {%k1}
+; AVX512-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
 ; AVX512-NEXT:    vmovapd %xmm3, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fcmp one double %a, %b
@@ -87,7 +87,7 @@ define float @select_icmp_eq_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    sete %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -128,7 +128,7 @@ define float @select_icmp_ne_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setne %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -169,7 +169,7 @@ define float @select_icmp_ugt_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    seta %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -210,7 +210,7 @@ define float @select_icmp_uge_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setae %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -251,7 +251,7 @@ define float @select_icmp_ult_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setb %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -292,7 +292,7 @@ define float @select_icmp_ule_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setbe %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -333,7 +333,7 @@ define float @select_icmp_sgt_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setg %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -374,7 +374,7 @@ define float @select_icmp_sge_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setge %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -415,7 +415,7 @@ define float @select_icmp_slt_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setl %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;
@@ -456,7 +456,7 @@ define float @select_icmp_sle_f32(i64 %a, i64 %b, float %c, float %d) {
 ; AVX512-ISEL-NEXT:    cmpq %rsi, %rdi
 ; AVX512-ISEL-NEXT:    setle %al
 ; AVX512-ISEL-NEXT:    kmovd %eax, %k1
-; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-ISEL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-ISEL-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-ISEL-NEXT:    retq
 ;

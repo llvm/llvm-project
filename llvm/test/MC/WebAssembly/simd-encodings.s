@@ -511,4 +511,25 @@ main:
     # CHECK: i32x4.widen_high_i16x8_u # encoding: [0xfd,0xd1,0x01]
     i32x4.widen_high_i16x8_u
 
+    # CHECK: i16x8.load8x8_s 32 # encoding: [0xfd,0xd2,0x01,0x03,0x20]
+    i16x8.load8x8_s 32
+
+    # CHECK: i16x8.load8x8_u 32 # encoding: [0xfd,0xd3,0x01,0x03,0x20]
+    i16x8.load8x8_u 32
+
+    # CHECK: i32x4.load16x4_s 32 # encoding: [0xfd,0xd4,0x01,0x03,0x20]
+    i32x4.load16x4_s 32
+
+    # CHECK: i32x4.load16x4_u 32 # encoding: [0xfd,0xd5,0x01,0x03,0x20]
+    i32x4.load16x4_u 32
+
+    # CHECK: i64x2.load32x2_s 32 # encoding: [0xfd,0xd6,0x01,0x03,0x20]
+    i64x2.load32x2_s 32
+
+    # CHECK: i64x2.load32x2_u 32 # encoding: [0xfd,0xd7,0x01,0x03,0x20]
+    i64x2.load32x2_u 32
+
+    # CHECK: v128.andnot # encoding: [0xfd,0xd8,0x01]
+    v128.andnot
+
     end_function

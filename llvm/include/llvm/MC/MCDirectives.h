@@ -28,6 +28,7 @@ enum MCSymbolAttr {
   MCSA_ELF_TypeNoType,      ///< .type _foo, STT_NOTYPE  # aka @notype
   MCSA_ELF_TypeGnuUniqueObject, /// .type _foo, @gnu_unique_object
   MCSA_Global,              ///< .globl
+  MCSA_LGlobal,             ///< .lglobl (XCOFF)
   MCSA_Hidden,              ///< .hidden (ELF)
   MCSA_IndirectSymbol,      ///< .indirect_symbol (MachO)
   MCSA_Internal,            ///< .internal (ELF)

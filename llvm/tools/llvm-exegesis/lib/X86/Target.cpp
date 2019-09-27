@@ -182,19 +182,21 @@ public:
   using LatencySnippetGenerator::LatencySnippetGenerator;
 
   llvm::Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr) const override;
+  generateCodeTemplates(const Instruction &Instr,
+                        const BitVector &ForbiddenRegisters) const override;
 };
 } // namespace
 
 llvm::Expected<std::vector<CodeTemplate>>
 X86LatencySnippetGenerator::generateCodeTemplates(
-    const Instruction &Instr) const {
+    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   if (auto E = IsInvalidOpcode(Instr))
     return std::move(E);
 
   switch (getX86FPFlags(Instr)) {
   case llvm::X86II::NotFP:
-    return LatencySnippetGenerator::generateCodeTemplates(Instr);
+    return LatencySnippetGenerator::generateCodeTemplates(Instr,
+                                                          ForbiddenRegisters);
   case llvm::X86II::ZeroArgFP:
   case llvm::X86II::OneArgFP:
   case llvm::X86II::SpecialFP:
@@ -219,19 +221,21 @@ public:
   using UopsSnippetGenerator::UopsSnippetGenerator;
 
   llvm::Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr) const override;
+  generateCodeTemplates(const Instruction &Instr,
+                        const BitVector &ForbiddenRegisters) const override;
 };
 } // namespace
 
 llvm::Expected<std::vector<CodeTemplate>>
 X86UopsSnippetGenerator::generateCodeTemplates(
-    const Instruction &Instr) const {
+    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   if (auto E = IsInvalidOpcode(Instr))
     return std::move(E);
 
   switch (getX86FPFlags(Instr)) {
   case llvm::X86II::NotFP:
-    return UopsSnippetGenerator::generateCodeTemplates(Instr);
+    return UopsSnippetGenerator::generateCodeTemplates(Instr,
+                                                       ForbiddenRegisters);
   case llvm::X86II::ZeroArgFP:
   case llvm::X86II::OneArgFP:
   case llvm::X86II::SpecialFP:

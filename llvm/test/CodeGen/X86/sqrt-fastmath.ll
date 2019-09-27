@@ -94,7 +94,7 @@ define float @finite_f32_estimate(float %f) #1 {
 ; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vcmpeqss %xmm2, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %call = tail call float @__sqrtf_finite(float %f) #2
@@ -165,7 +165,7 @@ define float @sqrtf_check_denorms(float %x) #3 {
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %k1
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovss %xmm0, %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %call = tail call float @__sqrtf_finite(float %x) #2

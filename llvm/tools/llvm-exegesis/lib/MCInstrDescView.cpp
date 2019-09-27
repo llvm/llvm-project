@@ -183,16 +183,29 @@ bool Instruction::hasAliasingImplicitRegisters() const {
   return ImplDefRegs.anyCommon(ImplUseRegs);
 }
 
-bool Instruction::hasAliasingImplicitRegistersThrough(
-    const Instruction &OtherInstr) const {
-  return ImplDefRegs.anyCommon(OtherInstr.ImplUseRegs) &&
-         OtherInstr.ImplDefRegs.anyCommon(ImplUseRegs);
+// Returns true if there are registers that are both in `A` and `B` but not in
+// `Forbidden`.
+static bool anyCommonExcludingForbidden(const BitVector &A, const BitVector &B,
+                                        const BitVector &Forbidden) {
+  assert(A.size() == B.size() && B.size() == Forbidden.size());
+  const auto Size = A.size();
+  for (int AIndex = A.find_first(); AIndex != -1;) {
+    const int BIndex = B.find_first_in(AIndex, Size);
+    if (BIndex == -1)
+      return false;
+    if (AIndex == BIndex && !Forbidden.test(AIndex))
+      return true;
+    AIndex = A.find_first_in(BIndex + 1, Size);
+  }
+  return false;
 }
 
 bool Instruction::hasAliasingRegistersThrough(
-    const Instruction &OtherInstr) const {
-  return AllDefRegs.anyCommon(OtherInstr.AllUseRegs) &&
-         OtherInstr.AllDefRegs.anyCommon(AllUseRegs);
+    const Instruction &OtherInstr, const BitVector &ForbiddenRegisters) const {
+  return anyCommonExcludingForbidden(AllDefRegs, OtherInstr.AllUseRegs,
+                                     ForbiddenRegisters) &&
+         anyCommonExcludingForbidden(OtherInstr.AllDefRegs, AllUseRegs,
+                                     ForbiddenRegisters);
 }
 
 bool Instruction::hasTiedRegisters() const {
@@ -200,8 +213,10 @@ bool Instruction::hasTiedRegisters() const {
       Variables, [](const Variable &Var) { return Var.hasTiedOperands(); });
 }
 
-bool Instruction::hasAliasingRegisters() const {
-  return AllDefRegs.anyCommon(AllUseRegs);
+bool Instruction::hasAliasingRegisters(
+    const BitVector &ForbiddenRegisters) const {
+  return anyCommonExcludingForbidden(AllDefRegs, AllUseRegs,
+                                     ForbiddenRegisters);
 }
 
 bool Instruction::hasOneUseOrOneDef() const {
@@ -209,6 +224,7 @@ bool Instruction::hasOneUseOrOneDef() const {
 }
 
 void Instruction::dump(const llvm::MCRegisterInfo &RegInfo,
+                       const RegisterAliasingTrackerCache &RATC,
                        llvm::raw_ostream &Stream) const {
   Stream << "- " << Name << "\n";
   for (const auto &Op : Operands) {
@@ -257,7 +273,7 @@ void Instruction::dump(const llvm::MCRegisterInfo &RegInfo,
     Stream << "- hasAliasingImplicitRegisters (execution is always serial)\n";
   if (hasTiedRegisters())
     Stream << "- hasTiedRegisters (execution is always serial)\n";
-  if (hasAliasingRegisters())
+  if (hasAliasingRegisters(RATC.emptyRegisters()))
     Stream << "- hasAliasingRegisters\n";
 }
 

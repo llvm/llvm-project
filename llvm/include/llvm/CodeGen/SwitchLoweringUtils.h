@@ -221,6 +221,14 @@ struct BitTestBlock {
         Cases(std::move(C)), Prob(Pr) {}
 };
 
+/// Return the range of values within a range.
+uint64_t getJumpTableRange(const CaseClusterVector &Clusters, unsigned First,
+                           unsigned Last);
+
+/// Return the number of cases within a range.
+uint64_t getJumpTableNumCases(const SmallVectorImpl<unsigned> &TotalCases,
+                              unsigned First, unsigned Last);
+
 struct SwitchWorkListItem {
   MachineBasicBlock *MBB;
   CaseClusterIt FirstCluster;

@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 
@@ -59,8 +60,8 @@ extern cl::opt<bool> RunSLPVectorization;
 struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   using StoreList = SmallVector<StoreInst *, 8>;
   using StoreListMap = MapVector<Value *, StoreList>;
-  using GEPList = SmallVector<GetElementPtrInst *, 8>;
-  using GEPListMap = MapVector<Value *, GEPList>;
+  using WeakTrackingVHList = SmallVector<WeakTrackingVH, 8>;
+  using WeakTrackingVHListMap = MapVector<Value *, WeakTrackingVHList>;
 
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
@@ -130,7 +131,7 @@ private:
 
   /// Tries to vectorize constructs started from CmpInst, InsertValueInst or
   /// InsertElementInst instructions.
-  bool vectorizeSimpleInstructions(SmallVectorImpl<Instruction *> &Instructions,
+  bool vectorizeSimpleInstructions(SmallVectorImpl<WeakVH> &Instructions,
                                    BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
   /// Scan the basic block and look for patterns that are likely to start
@@ -146,7 +147,7 @@ private:
   StoreListMap Stores;
 
   /// The getelementptr instructions in a basic block organized by base pointer.
-  GEPListMap GEPs;
+  WeakTrackingVHListMap GEPs;
 };
 
 } // end namespace llvm

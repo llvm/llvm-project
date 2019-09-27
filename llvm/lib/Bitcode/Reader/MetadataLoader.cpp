@@ -987,7 +987,7 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
   assert(ID >= MDStringRef.size() && "Unexpected lazy-loading of MDString");
   // Lookup first if the metadata hasn't already been loaded.
   if (auto *MD = MetadataList.lookup(ID)) {
-    auto *N = dyn_cast_or_null<MDNode>(MD);
+    auto *N = cast<MDNode>(MD);
     if (!N->isTemporary())
       return;
   }
