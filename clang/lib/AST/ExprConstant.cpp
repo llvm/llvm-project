@@ -1239,11 +1239,14 @@ namespace {
 
       // Run all cleanups for a block scope, and non-lifetime-extended cleanups
       // for a full-expression scope.
+      bool Success = true;
       for (unsigned I = Info.CleanupStack.size(); I > OldStackSize; --I) {
         if (!(IsFullExpression &&
               Info.CleanupStack[I - 1].isLifetimeExtended())) {
-          if (!Info.CleanupStack[I - 1].endLifetime(Info, RunDestructors))
-            return false;
+          if (!Info.CleanupStack[I - 1].endLifetime(Info, RunDestructors)) {
+            Success = false;
+            break;
+          }
         }
       }
 
@@ -1254,7 +1257,7 @@ namespace {
             std::remove_if(NewEnd, Info.CleanupStack.end(),
                            [](Cleanup &C) { return !C.isLifetimeExtended(); });
       Info.CleanupStack.erase(NewEnd, Info.CleanupStack.end());
-      return true;
+      return Success;
     }
   };
   typedef ScopeRAII<false> BlockScopeRAII;

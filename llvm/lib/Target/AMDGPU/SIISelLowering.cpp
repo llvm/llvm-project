@@ -10684,9 +10684,9 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
-llvm::Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
-  const llvm::Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
-  const llvm::Align CacheLineAlign = llvm::Align(64);
+Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+  const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
+  const Align CacheLineAlign = Align(64);
 
   // Pre-GFX10 target did not benefit from loop alignment
   if (!ML || DisableLoopAlignment ||

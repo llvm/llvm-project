@@ -76,13 +76,13 @@ def main():
     sys.exit(1)
   opt_basename = 'opt'
 
-  test_paths = []
   for test in args.tests:
     if not glob.glob(test):
-      common.warn("Test file '%s' was not found. Ignoring it." % (test,))
+      common.warn("Test file pattern '%s' was not found. Ignoring it." % (test,))
       continue
-    test_paths.append(test)
 
+  # On Windows we must expand the patterns ourselves.
+  test_paths = [test for pattern in args.tests for test in glob.glob(pattern)]
   for test in test_paths:
     if args.verbose:
       print('Scanning for RUN lines in test file: ' + test, file=sys.stderr)

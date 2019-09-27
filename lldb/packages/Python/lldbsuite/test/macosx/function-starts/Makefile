@@ -1,6 +1,5 @@
 CXX_SOURCES := main.cpp
 EXE := StripMe
-MAKE_DSYM := NO
 
 include Makefile.rules
 

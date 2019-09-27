@@ -139,7 +139,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // On PPC32/64, arguments smaller than 4/8 bytes are extended, so all
   // arguments are at least 4/8 bytes aligned.
   bool isPPC64 = Subtarget.isPPC64();
-  setMinStackArgumentAlignment(isPPC64 ? llvm::Align(8) : llvm::Align(4));
+  setMinStackArgumentAlignment(isPPC64 ? Align(8) : Align(4));
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &PPC::GPRCRegClass);
@@ -1179,9 +1179,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setJumpIsExpensive();
   }
 
-  setMinFunctionAlignment(llvm::Align(4));
+  setMinFunctionAlignment(Align(4));
   if (Subtarget.isDarwin())
-    setPrefFunctionAlignment(llvm::Align(16));
+    setPrefFunctionAlignment(Align(16));
 
   switch (Subtarget.getDarwinDirective()) {
   default: break;
@@ -1198,8 +1198,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   case PPC::DIR_PWR7:
   case PPC::DIR_PWR8:
   case PPC::DIR_PWR9:
-    setPrefLoopAlignment(llvm::Align(16));
-    setPrefFunctionAlignment(llvm::Align(16));
+    setPrefLoopAlignment(Align(16));
+    setPrefFunctionAlignment(Align(16));
     break;
   }
 
@@ -14110,7 +14110,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
-llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   switch (Subtarget.getDarwinDirective()) {
   default: break;
   case PPC::DIR_970:
@@ -14131,7 +14131,7 @@ llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
       // Actual alignment of the loop will depend on the hotness check and other
       // logic in alignBlocks.
       if (ML->getLoopDepth() > 1 && ML->getSubLoops().empty())
-        return llvm::Align(32);
+        return Align(32);
     }
 
     const PPCInstrInfo *TII = Subtarget.getInstrInfo();
@@ -14147,7 +14147,7 @@ llvm::Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
       }
 
     if (LoopSize > 16 && LoopSize <= 32)
-      return llvm::Align(32);
+      return Align(32);
 
     break;
   }

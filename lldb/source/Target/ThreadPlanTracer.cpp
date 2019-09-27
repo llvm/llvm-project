@@ -46,7 +46,7 @@ Stream *ThreadPlanTracer::GetLogStream() {
   else {
     TargetSP target_sp(m_thread.CalculateTarget());
     if (target_sp)
-      return target_sp->GetDebugger().GetOutputFile().get();
+      return &(target_sp->GetDebugger().GetOutputStream());
   }
   return nullptr;
 }

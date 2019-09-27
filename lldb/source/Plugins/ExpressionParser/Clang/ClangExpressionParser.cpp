@@ -1223,12 +1223,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
       type_system_helper->DeclMap(); // result can be NULL
 
   if (decl_map) {
-    Stream *error_stream = nullptr;
     Target *target = exe_ctx.GetTargetPtr();
-    error_stream = target->GetDebugger().GetErrorFile().get();
-
+    auto &error_stream = target->GetDebugger().GetErrorStream();
     IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(),
-                              *execution_unit_sp, *error_stream,
+                              *execution_unit_sp, error_stream,
                               function_name.AsCString());
 
     bool ir_can_run =

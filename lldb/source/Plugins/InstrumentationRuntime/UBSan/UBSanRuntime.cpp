@@ -124,7 +124,7 @@ StructuredData::ObjectSP UndefinedBehaviorSanitizerRuntime::RetrieveReportData(
   if (!frame_sp)
     return StructuredData::ObjectSP();
 
-  StreamFileSP Stream(target.GetDebugger().GetOutputFile());
+  StreamFileSP Stream = target.GetDebugger().GetOutputStreamSP();
 
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);

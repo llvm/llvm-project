@@ -81,20 +81,20 @@ FunctionPass *llvm::createPPCBranchSelectionPass() {
 /// original Offset.
 unsigned PPCBSel::GetAlignmentAdjustment(MachineBasicBlock &MBB,
                                          unsigned Offset) {
-  const llvm::Align Align = MBB.getAlignment();
-  if (Align == 1)
+  const Align Alignment = MBB.getAlignment();
+  if (Alignment == Align::None())
     return 0;
 
-  const llvm::Align ParentAlign = MBB.getParent()->getAlignment();
+  const Align ParentAlign = MBB.getParent()->getAlignment();
 
-  if (Align <= ParentAlign)
-    return offsetToAlignment(Offset, Align);
+  if (Alignment <= ParentAlign)
+    return offsetToAlignment(Offset, Alignment);
 
   // The alignment of this MBB is larger than the function's alignment, so we
   // can't tell whether or not it will insert nops. Assume that it will.
   if (FirstImpreciseBlock < 0)
     FirstImpreciseBlock = MBB.getNumber();
-  return Align.value() + offsetToAlignment(Offset, Align);
+  return Alignment.value() + offsetToAlignment(Offset, Alignment);
 }
 
 /// We need to be careful about the offset of the first block in the function
@@ -178,7 +178,7 @@ int PPCBSel::computeBranchSize(MachineFunction &Fn,
                                const MachineBasicBlock *Dest,
                                unsigned BrOffset) {
   int BranchSize;
-  llvm::Align MaxAlign = llvm::Align(4);
+  Align MaxAlign = Align(4);
   bool NeedExtraAdjustment = false;
   if (Dest->getNumber() <= Src->getNumber()) {
     // If this is a backwards branch, the delta is the offset from the

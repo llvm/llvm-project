@@ -8,6 +8,7 @@
 
 #include "Assembler.h"
 
+#include "SnippetRepetitor.h"
 #include "Target.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -28,21 +29,22 @@ namespace exegesis {
 static constexpr const char ModuleID[] = "ExegesisInfoTest";
 static constexpr const char FunctionID[] = "foo";
 
-static std::vector<llvm::MCInst>
+// Fills the given basic block with register setup code, and returns true if
+// all registers could be setup correctly.
+static bool
 generateSnippetSetupCode(const ExegesisTarget &ET,
                          const llvm::MCSubtargetInfo *const MSI,
                          llvm::ArrayRef<RegisterValue> RegisterInitialValues,
-                         bool &IsSnippetSetupComplete) {
-  IsSnippetSetupComplete = true;
-  std::vector<llvm::MCInst> Result;
+                         BasicBlockFiller &BBF) {
+  bool IsSnippetSetupComplete = true;
   for (const RegisterValue &RV : RegisterInitialValues) {
     // Load a constant in the register.
     const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
     if (SetRegisterCode.empty())
       IsSnippetSetupComplete = false;
-    Result.insert(Result.end(), SetRegisterCode.begin(), SetRegisterCode.end());
+    BBF.addInstructions(SetRegisterCode);
   }
-  return Result;
+  return IsSnippetSetupComplete;
 }
 
 // Small utility function to add named passes.
@@ -67,8 +69,7 @@ static bool addPass(llvm::PassManagerBase &PM, llvm::StringRef PassName,
   return false;
 }
 
-// Creates a void(int8*) MachineFunction.
-static llvm::MachineFunction &
+llvm::MachineFunction &
 createVoidVoidPtrMachineFunction(llvm::StringRef FunctionID,
                                  llvm::Module *Module,
                                  llvm::MachineModuleInfo *MMI) {
@@ -85,38 +86,43 @@ createVoidVoidPtrMachineFunction(llvm::StringRef FunctionID,
   return MMI->getOrCreateMachineFunction(*F);
 }
 
-static void fillMachineFunction(llvm::MachineFunction &MF,
-                                llvm::ArrayRef<unsigned> LiveIns,
-                                llvm::ArrayRef<llvm::MCInst> Instructions) {
-  llvm::MachineBasicBlock *MBB = MF.CreateMachineBasicBlock();
-  MF.push_back(MBB);
-  for (const unsigned Reg : LiveIns)
-    MBB->addLiveIn(Reg);
-  const llvm::MCInstrInfo *MCII = MF.getTarget().getMCInstrInfo();
-  llvm::DebugLoc DL;
-  for (const llvm::MCInst &Inst : Instructions) {
-    const unsigned Opcode = Inst.getOpcode();
-    const llvm::MCInstrDesc &MCID = MCII->get(Opcode);
-    llvm::MachineInstrBuilder Builder = llvm::BuildMI(MBB, DL, MCID);
-    for (unsigned OpIndex = 0, E = Inst.getNumOperands(); OpIndex < E;
-         ++OpIndex) {
-      const llvm::MCOperand &Op = Inst.getOperand(OpIndex);
-      if (Op.isReg()) {
-        const bool IsDef = OpIndex < MCID.getNumDefs();
-        unsigned Flags = 0;
-        const llvm::MCOperandInfo &OpInfo = MCID.operands().begin()[OpIndex];
-        if (IsDef && !OpInfo.isOptionalDef())
-          Flags |= llvm::RegState::Define;
-        Builder.addReg(Op.getReg(), Flags);
-      } else if (Op.isImm()) {
-        Builder.addImm(Op.getImm());
-      } else if (!Op.isValid()) {
-        llvm_unreachable("Operand is not set");
-      } else {
-        llvm_unreachable("Not yet implemented");
-      }
+BasicBlockFiller::BasicBlockFiller(llvm::MachineFunction &MF,
+                                   llvm::MachineBasicBlock *MBB,
+                                   const llvm::MCInstrInfo *MCII)
+    : MF(MF), MBB(MBB), MCII(MCII) {}
+
+void BasicBlockFiller::addInstruction(const llvm::MCInst &Inst,
+                                      const llvm::DebugLoc &DL) {
+  const unsigned Opcode = Inst.getOpcode();
+  const llvm::MCInstrDesc &MCID = MCII->get(Opcode);
+  llvm::MachineInstrBuilder Builder = llvm::BuildMI(MBB, DL, MCID);
+  for (unsigned OpIndex = 0, E = Inst.getNumOperands(); OpIndex < E;
+       ++OpIndex) {
+    const llvm::MCOperand &Op = Inst.getOperand(OpIndex);
+    if (Op.isReg()) {
+      const bool IsDef = OpIndex < MCID.getNumDefs();
+      unsigned Flags = 0;
+      const llvm::MCOperandInfo &OpInfo = MCID.operands().begin()[OpIndex];
+      if (IsDef && !OpInfo.isOptionalDef())
+        Flags |= llvm::RegState::Define;
+      Builder.addReg(Op.getReg(), Flags);
+    } else if (Op.isImm()) {
+      Builder.addImm(Op.getImm());
+    } else if (!Op.isValid()) {
+      llvm_unreachable("Operand is not set");
+    } else {
+      llvm_unreachable("Not yet implemented");
     }
   }
+}
+
+void BasicBlockFiller::addInstructions(ArrayRef<llvm::MCInst> Insts,
+                                       const llvm::DebugLoc &DL) {
+  for (const MCInst &Inst : Insts)
+    addInstruction(Inst, DL);
+}
+
+void BasicBlockFiller::addReturn(const llvm::DebugLoc &DL) {
   // Insert the return code.
   const llvm::TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   if (TII->getReturnOpcode() < TII->getNumOpcodes()) {
@@ -126,6 +132,21 @@ static void fillMachineFunction(llvm::MachineFunction &MF,
     MIB.setMBB(*MBB);
     MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {});
   }
+}
+
+FunctionFiller::FunctionFiller(llvm::MachineFunction &MF,
+                               std::vector<unsigned> RegistersSetUp)
+    : MF(MF), MCII(MF.getTarget().getMCInstrInfo()), Entry(addBasicBlock()),
+      RegistersSetUp(std::move(RegistersSetUp)) {}
+
+BasicBlockFiller FunctionFiller::addBasicBlock() {
+  llvm::MachineBasicBlock *MBB = MF.CreateMachineBasicBlock();
+  MF.push_back(MBB);
+  return BasicBlockFiller(MF, MBB, MCII);
+}
+
+ArrayRef<unsigned> FunctionFiller::getRegistersSetUp() const {
+  return RegistersSetUp;
 }
 
 static std::unique_ptr<llvm::Module>
@@ -155,7 +176,7 @@ void assembleToStream(const ExegesisTarget &ET,
                       std::unique_ptr<llvm::LLVMTargetMachine> TM,
                       llvm::ArrayRef<unsigned> LiveIns,
                       llvm::ArrayRef<RegisterValue> RegisterInitialValues,
-                      llvm::ArrayRef<llvm::MCInst> Instructions,
+                      const FillFunction &Fill,
                       llvm::raw_pwrite_stream &AsmStream) {
   std::unique_ptr<llvm::LLVMContext> Context =
       std::make_unique<llvm::LLVMContext>();
@@ -171,28 +192,33 @@ void assembleToStream(const ExegesisTarget &ET,
   auto &Properties = MF.getProperties();
   Properties.set(llvm::MachineFunctionProperties::Property::NoVRegs);
   Properties.reset(llvm::MachineFunctionProperties::Property::IsSSA);
+  Properties.set(llvm::MachineFunctionProperties::Property::NoPHIs);
 
   for (const unsigned Reg : LiveIns)
     MF.getRegInfo().addLiveIn(Reg);
 
-  bool IsSnippetSetupComplete;
-  std::vector<llvm::MCInst> Code =
-      generateSnippetSetupCode(ET, TM->getMCSubtargetInfo(),
-                               RegisterInitialValues, IsSnippetSetupComplete);
+  std::vector<unsigned> RegistersSetUp;
+  for (const auto &InitValue : RegisterInitialValues) {
+    RegistersSetUp.push_back(InitValue.Register);
+  }
+  FunctionFiller Sink(MF, std::move(RegistersSetUp));
+  auto Entry = Sink.getEntry();
+  for (const unsigned Reg : LiveIns)
+    Entry.MBB->addLiveIn(Reg);
 
-  Code.insert(Code.end(), Instructions.begin(), Instructions.end());
+  const bool IsSnippetSetupComplete = generateSnippetSetupCode(
+      ET, TM->getMCSubtargetInfo(), RegisterInitialValues, Entry);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.
   if (!IsSnippetSetupComplete)
     Properties.reset(llvm::MachineFunctionProperties::Property::TracksLiveness);
 
+  Fill(Sink);
+
   // prologue/epilogue pass needs the reserved registers to be frozen, this
   // is usually done by the SelectionDAGISel pass.
   MF.getRegInfo().freezeReservedRegs(MF);
-
-  // Fill the MachineFunction from the instructions.
-  fillMachineFunction(MF, LiveIns, Code);
 
   // We create the pass manager, run the passes to populate AsmBuffer.
   llvm::MCContext &MCContext = MMI->getContext();

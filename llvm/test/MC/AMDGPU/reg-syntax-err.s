@@ -62,3 +62,12 @@ s_mov_b32 s1, xnack_mask_lo s1
 
 exp mrt0 v1, v2, v3, v4000 off
 // NOVI: error: failed parsing operand
+
+v_add_f64 v[0:1], v[0:1], v[0xF00000001:0x2]
+// NOVI: error: failed parsing operand
+
+v_add_f64 v[0:1], v[0:1], v[0x1:0xF00000002]
+// NOVI: error: failed parsing operand
+
+s_mov_b32 s1, s[0:-1]
+// NOVI: error: failed parsing operand

@@ -223,12 +223,6 @@ public:
     SBError
     AddLocation(SBAddress &address);
 
-    bool
-    operator == (const lldb::SBBreakpoint& rhs);
-
-    bool
-    operator != (const lldb::SBBreakpoint& rhs);
-
     static bool
     EventIsBreakpointEvent (const lldb::SBEvent &event);
 

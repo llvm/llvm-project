@@ -182,7 +182,7 @@ void MachineFunction::init() {
                          STI->getTargetLowering()->getPrefFunctionAlignment());
 
   if (AlignAllFunctions)
-    Alignment = llvm::Align(1ULL << AlignAllFunctions);
+    Alignment = Align(1ULL << AlignAllFunctions);
 
   JumpTableInfo = nullptr;
 

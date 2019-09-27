@@ -1,4 +1,4 @@
-// RUN: not %clang -cc1 -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only %s 2>&1 | FileCheck %s
 
 #define a b
 #define b c

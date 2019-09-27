@@ -28,9 +28,8 @@ bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
   if (args.GetArgumentCount() == 0) {
     Debugger &debugger = GetDebugger();
 
-    lldb::StreamFileSP input_sp = debugger.GetInputFile();
-    if (input_sp && input_sp->GetFile().GetIsRealTerminal() &&
-        input_sp->GetFile().GetIsInteractive()) {
+    File &input = debugger.GetInputFile();
+    if (input.GetIsRealTerminal() && input.GetIsInteractive()) {
       IOHandlerSP io_handler_sp(new IOHandlerCursesGUI(debugger));
       if (io_handler_sp)
         debugger.PushIOHandler(io_handler_sp);

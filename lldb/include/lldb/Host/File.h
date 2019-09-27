@@ -125,11 +125,7 @@ public:
 
   WaitableHandle GetWaitableHandle() override;
 
-  void SetDescriptor(int fd, uint32_t options, bool transfer_ownership);
-
   FILE *GetStream();
-
-  void SetStream(FILE *fh, bool transfer_ownership);
 
   /// Read bytes from a file from the current file position.
   ///

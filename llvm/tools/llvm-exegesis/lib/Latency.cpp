@@ -39,7 +39,8 @@ static constexpr size_t kMaxAliasingInstructions = 10;
 
 static std::vector<Instruction>
 computeAliasingInstructions(const LLVMState &State, const Instruction &Instr,
-                            size_t MaxAliasingInstructions) {
+                            size_t MaxAliasingInstructions,
+                            const BitVector &ForbiddenRegisters) {
   // Randomly iterate the set of instructions.
   std::vector<unsigned> Opcodes;
   Opcodes.resize(State.getInstrInfo().getNumOpcodes());
@@ -53,15 +54,16 @@ computeAliasingInstructions(const LLVMState &State, const Instruction &Instr,
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
     if (OtherInstr.hasMemoryOperands())
       continue;
-    if (Instr.hasAliasingRegistersThrough(OtherInstr))
-      AliasingInstructions.push_back(std::move(OtherInstr));
+    if (Instr.hasAliasingRegistersThrough(OtherInstr, ForbiddenRegisters))
+      AliasingInstructions.push_back(OtherInstr);
     if (AliasingInstructions.size() >= MaxAliasingInstructions)
       break;
   }
   return AliasingInstructions;
 }
 
-static ExecutionMode getExecutionModes(const Instruction &Instr) {
+static ExecutionMode getExecutionModes(const Instruction &Instr,
+                                       const BitVector &ForbiddenRegisters) {
   ExecutionMode EM = ExecutionMode::UNKNOWN;
   if (Instr.hasAliasingImplicitRegisters())
     EM |= ExecutionMode::ALWAYS_SERIAL_IMPLICIT_REGS_ALIAS;
@@ -70,7 +72,7 @@ static ExecutionMode getExecutionModes(const Instruction &Instr) {
   if (Instr.hasMemoryOperands())
     EM |= ExecutionMode::SERIAL_VIA_MEMORY_INSTR;
   else {
-    if (Instr.hasAliasingRegisters())
+    if (Instr.hasAliasingRegisters(ForbiddenRegisters))
       EM |= ExecutionMode::SERIAL_VIA_EXPLICIT_REGS;
     if (Instr.hasOneUseOrOneDef())
       EM |= ExecutionMode::SERIAL_VIA_NON_MEMORY_INSTR;
@@ -80,6 +82,7 @@ static ExecutionMode getExecutionModes(const Instruction &Instr) {
 
 static void appendCodeTemplates(const LLVMState &State,
                                 const Instruction &Instr,
+                                const BitVector &ForbiddenRegisters,
                                 ExecutionMode ExecutionModeBit,
                                 llvm::StringRef ExecutionClassDescription,
                                 std::vector<CodeTemplate> &CodeTemplates) {
@@ -122,8 +125,8 @@ static void appendCodeTemplates(const LLVMState &State,
   }
   case ExecutionMode::SERIAL_VIA_NON_MEMORY_INSTR: {
     // Select back-to-back non-memory instruction.
-    for (const auto OtherInstr :
-         computeAliasingInstructions(State, Instr, kMaxAliasingInstructions)) {
+    for (const auto OtherInstr : computeAliasingInstructions(
+             State, Instr, kMaxAliasingInstructions, ForbiddenRegisters)) {
       const AliasingConfigurations Forward(Instr, OtherInstr);
       const AliasingConfigurations Back(OtherInstr, Instr);
       InstructionTemplate ThisIT(Instr);
@@ -149,13 +152,14 @@ static void appendCodeTemplates(const LLVMState &State,
 LatencySnippetGenerator::~LatencySnippetGenerator() = default;
 
 llvm::Expected<std::vector<CodeTemplate>>
-LatencySnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
+LatencySnippetGenerator::generateCodeTemplates(
+    const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   std::vector<CodeTemplate> Results;
-  const ExecutionMode EM = getExecutionModes(Instr);
+  const ExecutionMode EM = getExecutionModes(Instr, ForbiddenRegisters);
   for (const auto EC : kExecutionClasses) {
     for (const auto ExecutionModeBit : getExecutionModeBits(EM & EC.Mask))
-      appendCodeTemplates(State, Instr, ExecutionModeBit, EC.Description,
-                          Results);
+      appendCodeTemplates(State, Instr, ForbiddenRegisters, ExecutionModeBit,
+                          EC.Description, Results);
     if (!Results.empty())
       break;
   }

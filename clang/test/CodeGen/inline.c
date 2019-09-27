@@ -52,7 +52,7 @@
 // CHECK3-LABEL: define i32 @_Z3barv()
 // CHECK3-LABEL: define linkonce_odr i32 @_Z3foov()
 // CHECK3-NOT: unreferenced
-// CHECK3-LABEL: define void @_Z10gnu_inlinev()
+// CHECK3-LABEL: define available_externally void @_Z10gnu_inlinev()
 // CHECK3-LABEL: define available_externally void @_Z13gnu_ei_inlinev()
 // CHECK3-NOT: @_Z5testCv
 // CHECK3-LABEL: define linkonce_odr i32 @_Z2eiv()
@@ -85,6 +85,7 @@ __inline void unreferenced1() {}
 extern __inline void unreferenced2() {}
 
 __inline __attribute((__gnu_inline__)) void gnu_inline() {}
+void (*P1)() = gnu_inline;
 
 // PR3988
 extern __inline __attribute__((gnu_inline)) void gnu_ei_inline() {}

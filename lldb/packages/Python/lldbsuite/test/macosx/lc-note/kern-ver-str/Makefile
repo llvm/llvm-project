@@ -1,5 +1,3 @@
-MAKE_DSYM := NO
-
 C_SOURCES := main.c
 
 all: a.out create-empty-corefile

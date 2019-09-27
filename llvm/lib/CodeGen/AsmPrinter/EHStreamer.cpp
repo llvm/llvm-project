@@ -426,7 +426,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   // EHABI). In this case LSDASection will be NULL.
   if (LSDASection)
     Asm->OutStreamer->SwitchSection(LSDASection);
-  Asm->EmitAlignment(llvm::Align(4));
+  Asm->EmitAlignment(Align(4));
 
   // Emit the LSDA.
   MCSymbol *GCCETSym =
@@ -602,11 +602,11 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   }
 
   if (HaveTTData) {
-    Asm->EmitAlignment(llvm::Align(4));
+    Asm->EmitAlignment(Align(4));
     emitTypeInfos(TTypeEncoding, TTBaseLabel);
   }
 
-  Asm->EmitAlignment(llvm::Align(4));
+  Asm->EmitAlignment(Align(4));
   return GCCETSym;
 }
 

@@ -1022,10 +1022,8 @@ public:
   }
 
   /// Return true if lowering to a jump table is suitable for a set of case
-  /// clusters which may contain \p NumCases cases, \p Range range of values,
-  /// \p NumTargets targets.
-  virtual bool isSuitableForJumpTable(const SwitchInst *SI,
-                                      uint64_t NumCases, uint64_t NumTargets,
+  /// clusters which may contain \p NumCases cases, \p Range range of values.
+  virtual bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
                                       uint64_t Range) const {
     // FIXME: This function check the maximum table size and density, but the
     // minimum size is not checked. It would be nice if the minimum size is
@@ -1034,14 +1032,14 @@ public:
     // getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
     const bool OptForSize = SI->getParent()->getParent()->hasOptSize();
     const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
-    const unsigned MaxJumpTableTargets = getMaximumJumpTableTargets();
-
-    // Check whether the number of targets is small enough and
+    const unsigned MaxJumpTableSize = getMaximumJumpTableSize();
+    
+    // Check whether the number of cases is small enough and
     // the range is dense enough for a jump table.
-    if ((OptForSize || NumTargets <= MaxJumpTableTargets) &&
-        NumCases * 100 >= Range * MinDensity)
+    if ((OptForSize || Range <= MaxJumpTableSize) &&
+        (NumCases * 100 >= Range * MinDensity)) {
       return true;
-
+    }
     return false;
   }
 
@@ -1563,8 +1561,9 @@ public:
   /// Return lower limit of the density in a jump table.
   unsigned getMinimumJumpTableDensity(bool OptForSize) const;
 
-  /// Return upper limit for number of targets in a jump table.
-  unsigned getMaximumJumpTableTargets() const;
+  /// Return upper limit for number of entries in a jump table.
+  /// Zero if no limit.
+  unsigned getMaximumJumpTableSize() const;
 
   virtual bool isJumpTableRelative() const {
     return TM.isPositionIndependent();
@@ -1597,18 +1596,18 @@ public:
   }
 
   /// Return the minimum stack alignment of an argument.
-  llvm::Align getMinStackArgumentAlignment() const {
+  Align getMinStackArgumentAlignment() const {
     return MinStackArgumentAlignment;
   }
 
   /// Return the minimum function alignment.
-  llvm::Align getMinFunctionAlignment() const { return MinFunctionAlignment; }
+  Align getMinFunctionAlignment() const { return MinFunctionAlignment; }
 
   /// Return the preferred function alignment.
-  llvm::Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
+  Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
   /// Return the preferred loop alignment.
-  virtual llvm::Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
+  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
     return PrefLoopAlignment;
   }
 
@@ -1971,8 +1970,9 @@ protected:
   /// Indicate the minimum number of blocks to generate jump tables.
   void setMinimumJumpTableEntries(unsigned Val);
 
-  /// Indicate the maximum number of targets in jump tables.
-  void setMaximumJumpTableTargets(unsigned);
+  /// Indicate the maximum number of entries in jump tables.
+  /// Set to zero to generate unlimited jump tables.
+  void setMaximumJumpTableSize(unsigned);
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -2120,24 +2120,24 @@ protected:
   }
 
   /// Set the target's minimum function alignment.
-  void setMinFunctionAlignment(llvm::Align Align) {
-    MinFunctionAlignment = Align;
+  void setMinFunctionAlignment(Align Alignment) {
+    MinFunctionAlignment = Alignment;
   }
 
   /// Set the target's preferred function alignment.  This should be set if
   /// there is a performance benefit to higher-than-minimum alignment
-  void setPrefFunctionAlignment(llvm::Align Align) {
-    PrefFunctionAlignment = Align;
+  void setPrefFunctionAlignment(Align Alignment) {
+    PrefFunctionAlignment = Alignment;
   }
 
   /// Set the target's preferred loop alignment. Default alignment is one, it
   /// means the target does not care about loop alignment. The target may also
   /// override getPrefLoopAlignment to provide per-loop values.
-  void setPrefLoopAlignment(llvm::Align Align) { PrefLoopAlignment = Align; }
+  void setPrefLoopAlignment(Align Alignment) { PrefLoopAlignment = Alignment; }
 
   /// Set the minimum stack alignment of an argument.
-  void setMinStackArgumentAlignment(llvm::Align Align) {
-    MinStackArgumentAlignment = Align;
+  void setMinStackArgumentAlignment(Align Alignment) {
+    MinStackArgumentAlignment = Alignment;
   }
 
   /// Set the maximum atomic operation size supported by the
@@ -2699,18 +2699,18 @@ private:
   Sched::Preference SchedPreferenceInfo;
 
   /// The minimum alignment that any argument on the stack needs to have.
-  llvm::Align MinStackArgumentAlignment;
+  Align MinStackArgumentAlignment;
 
   /// The minimum function alignment (used when optimizing for size, and to
   /// prevent explicitly provided alignment from leading to incorrect code).
-  llvm::Align MinFunctionAlignment;
+  Align MinFunctionAlignment;
 
   /// The preferred function alignment (used when alignment unspecified and
   /// optimizing for speed).
-  llvm::Align PrefFunctionAlignment;
+  Align PrefFunctionAlignment;
 
   /// The preferred loop alignment (in log2 bot in bytes).
-  llvm::Align PrefLoopAlignment;
+  Align PrefLoopAlignment;
 
   /// Size in bits of the maximum atomics size the backend supports.
   /// Accesses larger than this will be expanded by AtomicExpandPass.
