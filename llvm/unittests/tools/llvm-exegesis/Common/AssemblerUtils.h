@@ -43,12 +43,15 @@ protected:
   }
 
   template <class... Bs>
-  inline void Check(llvm::ArrayRef<RegisterValue> RegisterInitialValues,
-                    llvm::MCInst MCInst, Bs... Bytes) {
+  inline void Check(ArrayRef<RegisterValue> RegisterInitialValues, MCInst Inst,
+                    Bs... Bytes) {
     ExecutableFunction Function =
-        (MCInst.getOpcode() == 0)
-            ? assembleToFunction(RegisterInitialValues, {})
-            : assembleToFunction(RegisterInitialValues, {MCInst});
+        (Inst.getOpcode() == 0)
+            ? assembleToFunction(RegisterInitialValues, [](FunctionFiller &) {})
+            : assembleToFunction(RegisterInitialValues,
+                                 [Inst](FunctionFiller &Filler) {
+                                   Filler.getEntry().addInstruction(Inst);
+                                 });
     ASSERT_THAT(Function.getFunctionBytes().str(),
                 testing::ElementsAre(Bytes...));
     if (CanExecute) {
@@ -73,11 +76,11 @@ private:
 
   ExecutableFunction
   assembleToFunction(llvm::ArrayRef<RegisterValue> RegisterInitialValues,
-                     llvm::ArrayRef<llvm::MCInst> Instructions) {
+                     FillFunction Fill) {
     llvm::SmallString<256> Buffer;
     llvm::raw_svector_ostream AsmStream(Buffer);
     assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                     RegisterInitialValues, Instructions, AsmStream);
+                     RegisterInitialValues, Fill, AsmStream);
     return ExecutableFunction(createTargetMachine(),
                               getObjectFromBuffer(AsmStream.str()));
   }

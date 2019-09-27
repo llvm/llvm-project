@@ -1,11 +1,6 @@
 language: cpp
 
-sudo: false
-dist: trusty
-
-cache:
-  apt: true
-
+dist: xenial
 
 matrix:
   include:
@@ -15,12 +10,7 @@ matrix:
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-3.9
           packages:
-            - libedit-dev
-            - g++-4.8
-            # From sources above
             - llvm-3.9-dev
             - clang-3.9
     - env:
@@ -29,12 +19,7 @@ matrix:
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-4.0
           packages:
-            - libedit-dev
-            - g++-4.8
-            # From sources above
             - llvm-4.0-dev
             - clang-4.0
     - env:
@@ -43,41 +28,28 @@ matrix:
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-5.0
           packages:
-            - libedit-dev
-            - g++-4.8
-            # From sources above
             - llvm-5.0-dev
             - clang-5.0
     - env:
         - LABEL="make gcc LLVM-6.0"
         - LLVM_VERSION=6.0
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
-        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
-        - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-6.0
-            - ubuntu-toolchain-r-test
           packages:
-            - libedit-dev
-            # LLVM-6 needs libstdc++4.9
-            - g++-4.9
-            # From sources above
             - llvm-6.0-dev
             - clang-6.0
     - env:
         - LABEL="make gcc LLVM-7"
         - LLVM_VERSION=7
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       addons:
         apt:
           sources:
-            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main'
+            - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
               key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
             - ubuntu-toolchain-r-test
           packages:
@@ -90,11 +62,12 @@ matrix:
         - LABEL="make gcc LLVM-8"
         - LLVM_VERSION=8
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       addons:
         apt:
           sources:
-            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-8 main'
+            - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main'
               key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
             - ubuntu-toolchain-r-test
           packages:
@@ -104,17 +77,29 @@ matrix:
             - llvm-8-dev
             - clang-8
     - env:
+        - LABEL="make gcc LLVM-9"
+        - LLVM_VERSION=9
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+      addons:
+        apt:
+          sources:
+            - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main'
+              key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
+            - ubuntu-toolchain-r-test
+          packages:
+            - libedit-dev
+            - g++-6
+            # From sources above
+            - llvm-9-dev
+            - clang-9
+    - env:
         - LABEL="cmake gcc LLVM-3.9"
         - LLVM_VERSION=3.9
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-3.9
           packages:
-            - libedit-dev
-            - g++-4.8
-            # From sources above
             - llvm-3.9-dev
             - clang-3.9
     - env:
@@ -123,12 +108,7 @@ matrix:
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-4.0
           packages:
-            - libedit-dev
-            - g++-4.8
-            # From sources above
             - llvm-4.0-dev
             - clang-4.0
     - env:
@@ -137,41 +117,28 @@ matrix:
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-5.0
           packages:
-            - libedit-dev
-            - g++-4.8
-            # From sources above
             - llvm-5.0-dev
             - clang-5.0
     - env:
         - LABEL="cmake gcc LLVM-6.0"
         - LLVM_VERSION=6.0
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
-        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
-        - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       addons:
         apt:
-          sources:
-            - llvm-toolchain-trusty-6.0
-            - ubuntu-toolchain-r-test
           packages:
-            - libedit-dev
-            # LLVM-6 needs libstdc++4.9
-            - g++-4.9
-            # From sources above
             - llvm-6.0-dev
             - clang-6.0
     - env:
         - LABEL="cmake gcc LLVM-7"
         - LLVM_VERSION=7
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       addons:
         apt:
           sources:
-            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main'
+            - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
               key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
             - ubuntu-toolchain-r-test
           packages:
@@ -184,11 +151,12 @@ matrix:
         - LABEL="cmake gcc LLVM-8"
         - LLVM_VERSION=8
         - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
       addons:
         apt:
           sources:
-            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-8 main'
+            - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main'
               key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
             - ubuntu-toolchain-r-test
           packages:
@@ -197,6 +165,23 @@ matrix:
             # From sources above
             - llvm-8-dev
             - clang-8
+    - env:
+        - LABEL="cmake gcc LLVM-9"
+        - LLVM_VERSION=9
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+      addons:
+        apt:
+          sources:
+            - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main'
+              key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
+            - ubuntu-toolchain-r-test
+          packages:
+            - libedit-dev
+            - g++-6
+            # From sources above
+            - llvm-9-dev
+            - clang-9
 
 before_install:
     - eval "${MATRIX_EVAL}"

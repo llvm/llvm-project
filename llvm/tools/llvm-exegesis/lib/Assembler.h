@@ -40,6 +40,49 @@ class ExegesisTarget;
 // convention and target machine).
 llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM);
 
+// Helper to fill in a basic block.
+class BasicBlockFiller {
+public:
+  BasicBlockFiller(MachineFunction &MF, MachineBasicBlock *MBB,
+                   const MCInstrInfo *MCII);
+
+  void addInstruction(const MCInst &Inst, const DebugLoc &DL = DebugLoc());
+  void addInstructions(ArrayRef<llvm::MCInst> Insts,
+                       const DebugLoc &DL = DebugLoc());
+
+  void addReturn(const DebugLoc &DL = DebugLoc());
+
+  MachineFunction &MF;
+  MachineBasicBlock *const MBB;
+  const MCInstrInfo *const MCII;
+};
+
+// Helper to fill in a function.
+class FunctionFiller {
+public:
+  FunctionFiller(MachineFunction &MF, std::vector<unsigned> RegistersSetUp);
+
+  // Adds a basic block to the function.
+  BasicBlockFiller addBasicBlock();
+
+  // Returns the function entry point.
+  BasicBlockFiller getEntry() { return Entry; }
+
+  MachineFunction &MF;
+  const MCInstrInfo *const MCII;
+
+  // Returns the set of registers in the snippet setup code.
+  ArrayRef<unsigned> getRegistersSetUp() const;
+
+private:
+  BasicBlockFiller Entry;
+  // The set of registers that are set up in the basic block.
+  std::vector<unsigned> RegistersSetUp;
+};
+
+// A callback that fills a function.
+using FillFunction = std::function<void(FunctionFiller &)>;
+
 // Creates a temporary `void foo(char*)` function containing the provided
 // Instructions. Runs a set of llvm Passes to provide correct prologue and
 // epilogue. Once the MachineFunction is ready, it is assembled for TM to
@@ -48,7 +91,7 @@ void assembleToStream(const ExegesisTarget &ET,
                       std::unique_ptr<llvm::LLVMTargetMachine> TM,
                       llvm::ArrayRef<unsigned> LiveIns,
                       llvm::ArrayRef<RegisterValue> RegisterInitialValues,
-                      llvm::ArrayRef<llvm::MCInst> Instructions,
+                      const FillFunction &Fill,
                       llvm::raw_pwrite_stream &AsmStream);
 
 // Creates an ObjectFile in the format understood by the host.
@@ -80,6 +123,12 @@ struct ExecutableFunction {
   std::unique_ptr<llvm::ExecutionEngine> ExecEngine;
   llvm::StringRef FunctionBytes;
 };
+
+// Creates a void(int8*) MachineFunction.
+llvm::MachineFunction &
+createVoidVoidPtrMachineFunction(llvm::StringRef FunctionID,
+                                 llvm::Module *Module,
+                                 llvm::MachineModuleInfo *MMI);
 
 } // namespace exegesis
 } // namespace llvm

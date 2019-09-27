@@ -104,6 +104,45 @@ def : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
                                !cast<NI>("LOAD_SPLAT_"#args[1])>;
 }
 
+// Load and extend
+multiclass SIMDLoadExtend<ValueType vec_t, string name, bits<32> simdop> {
+  let mayLoad = 1, UseNamedOperandTable = 1,
+      Predicates = [HasUnimplementedSIMD128] in {
+  defm LOAD_EXTEND_S_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+           (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+           name#"_s\t$dst, ${off}(${addr})$p2align",
+           name#"_s\t$off$p2align", simdop>;
+  defm LOAD_EXTEND_U_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+           (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+           name#"_u\t$dst, ${off}(${addr})$p2align",
+           name#"_u\t$off$p2align", !add(simdop, 1)>;
+  }
+}
+
+defm "" : SIMDLoadExtend<v8i16, "i16x8.load8x8", 210>;
+defm "" : SIMDLoadExtend<v4i32, "i32x4.load16x4", 212>;
+defm "" : SIMDLoadExtend<v2i64, "i64x2.load32x2", 214>;
+
+let Predicates = [HasUnimplementedSIMD128] in
+foreach types = [[v8i16, i8], [v4i32, i16], [v2i64, i32]] in
+foreach exts = [["sextloadv", "_S"],
+                ["zextloadv", "_U"],
+                ["extloadv", "_U"]] in {
+def : LoadPatNoOffset<types[0], !cast<PatFrag>(exts[0]#types[1]),
+                      !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
+def : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), regPlusImm,
+                    !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
+def : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), or_is_add,
+                    !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
+def : LoadPatOffsetOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
+                        !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
+def : LoadPatGlobalAddrOffOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
+                               !cast<NI>("LOAD_EXTEND"#exts[1]#"_"#types[0])>;
+}
+
+
 // Store: v128.store
 let mayStore = 1, UseNamedOperandTable = 1 in
 defm STORE_V128 :
@@ -509,6 +548,11 @@ defm AND : SIMDBitwise<and, "and", 77>;
 defm OR : SIMDBitwise<or, "or", 78>;
 defm XOR : SIMDBitwise<xor, "xor", 79>;
 } // isCommutable = 1
+
+// Bitwise logic: v128.andnot
+def andnot : PatFrag<(ops node:$left, node:$right), (and $left, (vnot $right))>;
+let Predicates = [HasUnimplementedSIMD128] in
+defm ANDNOT : SIMDBitwise<andnot, "andnot", 216>;
 
 // Bitwise select: v128.bitselect
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in

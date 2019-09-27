@@ -251,6 +251,12 @@ ast_matchers::internal::DynTypedMatcher buildMatcher(const RewriteRule &Rule);
 std::vector<ast_matchers::internal::DynTypedMatcher>
 buildMatchers(const RewriteRule &Rule);
 
+/// Gets the beginning location of the source matched by a rewrite rule. If the
+/// match occurs within a macro expansion, returns the beginning of the
+/// expansion point. `Result` must come from the matching of a rewrite rule.
+SourceLocation
+getRuleMatchLoc(const ast_matchers::MatchFinder::MatchResult &Result);
+
 /// Returns the \c Case of \c Rule that was selected in the match result.
 /// Assumes a matcher built with \c buildMatcher.
 const RewriteRule::Case &

@@ -6,5 +6,5 @@ static NSString* const myConstString = @"hello";
 // CHECK-FIXES: static NSString* const kMyConstString = @"hello";
 
 class MyTest {
-    static int not_objc_style;
+  static int not_objc_style;
 };

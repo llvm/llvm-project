@@ -11,6 +11,4 @@ else
     LDFLAGS = $(CFLAGS) -Wl,--gc-sections
 endif
 
-MAKE_DSYM := NO
-
 include Makefile.rules

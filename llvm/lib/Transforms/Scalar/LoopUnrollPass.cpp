@@ -737,7 +737,7 @@ bool llvm::computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
     OptimizationRemarkEmitter *ORE, unsigned &TripCount, unsigned MaxTripCount,
-    unsigned &TripMultiple, unsigned LoopSize,
+    bool MaxOrZero, unsigned &TripMultiple, unsigned LoopSize,
     TargetTransformInfo::UnrollingPreferences &UP, bool &UseUpperBound) {
 
   // Check for explicit Count.
@@ -788,18 +788,34 @@ bool llvm::computeUnrollCount(
   // Also we need to check if we exceed FullUnrollMaxCount.
   // If using the upper bound to unroll, TripMultiple should be set to 1 because
   // we do not know when loop may exit.
-  // MaxTripCount and ExactTripCount cannot both be non zero since we only
+
+  // We can unroll by the upper bound amount if it's generally allowed or if
+  // we know that the loop is executed either the upper bound or zero times.
+  // (MaxOrZero unrolling keeps only the first loop test, so the number of
+  // loop tests remains the same compared to the non-unrolled version, whereas
+  // the generic upper bound unrolling keeps all but the last loop test so the
+  // number of loop tests goes up which may end up being worse on targets with
+  // constrained branch predictor resources so is controlled by an option.)
+  // In addition we only unroll small upper bounds.
+  unsigned FullUnrollMaxTripCount = MaxTripCount;
+  if (!(UP.UpperBound || MaxOrZero) ||
+      FullUnrollMaxTripCount > UnrollMaxUpperBound)
+    FullUnrollMaxTripCount = 0;
+
+  // UnrollByMaxCount and ExactTripCount cannot both be non zero since we only
   // compute the former when the latter is zero.
   unsigned ExactTripCount = TripCount;
-  assert((ExactTripCount == 0 || MaxTripCount == 0) &&
-         "ExtractTripCount and MaxTripCount cannot both be non zero.");
-  unsigned FullUnrollTripCount = ExactTripCount ? ExactTripCount : MaxTripCount;
+  assert((ExactTripCount == 0 || FullUnrollMaxTripCount == 0) &&
+         "ExtractTripCount and UnrollByMaxCount cannot both be non zero.");
+
+  unsigned FullUnrollTripCount =
+      ExactTripCount ? ExactTripCount : FullUnrollMaxTripCount;
   UP.Count = FullUnrollTripCount;
   if (FullUnrollTripCount && FullUnrollTripCount <= UP.FullUnrollMaxCount) {
     // When computing the unrolled size, note that BEInsns are not replicated
     // like the rest of the loop body.
     if (getUnrolledLoopSize(LoopSize, UP) < UP.Threshold) {
-      UseUpperBound = (MaxTripCount == FullUnrollTripCount);
+      UseUpperBound = (FullUnrollMaxTripCount == FullUnrollTripCount);
       TripCount = FullUnrollTripCount;
       TripMultiple = UP.UpperBound ? 1 : TripMultiple;
       return ExplicitUnroll;
@@ -813,7 +829,7 @@ bool llvm::computeUnrollCount(
         unsigned Boost =
             getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
         if (Cost->UnrolledCost < UP.Threshold * Boost / 100) {
-          UseUpperBound = (MaxTripCount == FullUnrollTripCount);
+          UseUpperBound = (FullUnrollMaxTripCount == FullUnrollTripCount);
           TripCount = FullUnrollTripCount;
           TripMultiple = UP.UpperBound ? 1 : TripMultiple;
           return ExplicitUnroll;
@@ -889,6 +905,8 @@ bool llvm::computeUnrollCount(
                   "because "
                   "unrolled size is too large.";
       });
+    LLVM_DEBUG(dbgs() << "  partially unrolling with count: " << UP.Count
+                      << "\n");
     return ExplicitUnroll;
   }
   assert(TripCount == 0 &&
@@ -906,6 +924,12 @@ bool llvm::computeUnrollCount(
   // 6th priority is runtime unrolling.
   // Don't unroll a runtime trip count loop when it is disabled.
   if (HasRuntimeUnrollDisablePragma(L)) {
+    UP.Count = 0;
+    return false;
+  }
+
+  // Don't unroll a small upper bound loop unless user or TTI asked to do so.
+  if (MaxTripCount && !UP.Force && MaxTripCount < UnrollMaxUpperBound) {
     UP.Count = 0;
     return false;
   }
@@ -973,7 +997,11 @@ bool llvm::computeUnrollCount(
 
   if (UP.Count > UP.MaxCount)
     UP.Count = UP.MaxCount;
-  LLVM_DEBUG(dbgs() << "  partially unrolling with count: " << UP.Count
+
+  if (MaxTripCount && UP.Count > MaxTripCount)
+    UP.Count = MaxTripCount;
+
+  LLVM_DEBUG(dbgs() << "  runtime unrolling with count: " << UP.Count
                     << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
@@ -1049,7 +1077,6 @@ static LoopUnrollResult tryToUnrollLoop(
 
   // Find trip count and trip multiple if count is not available
   unsigned TripCount = 0;
-  unsigned MaxTripCount = 0;
   unsigned TripMultiple = 1;
   // If there are multiple exiting blocks but one of them is the latch, use the
   // latch for the trip count estimation. Otherwise insist on a single exiting
@@ -1079,28 +1106,18 @@ static LoopUnrollResult tryToUnrollLoop(
 
   // Try to find the trip count upper bound if we cannot find the exact trip
   // count.
+  unsigned MaxTripCount = 0;
   bool MaxOrZero = false;
   if (!TripCount) {
     MaxTripCount = SE.getSmallConstantMaxTripCount(L);
     MaxOrZero = SE.isBackedgeTakenCountMaxOrZero(L);
-    // We can unroll by the upper bound amount if it's generally allowed or if
-    // we know that the loop is executed either the upper bound or zero times.
-    // (MaxOrZero unrolling keeps only the first loop test, so the number of
-    // loop tests remains the same compared to the non-unrolled version, whereas
-    // the generic upper bound unrolling keeps all but the last loop test so the
-    // number of loop tests goes up which may end up being worse on targets with
-    // constrained branch predictor resources so is controlled by an option.)
-    // In addition we only unroll small upper bounds.
-    if (!(UP.UpperBound || MaxOrZero) || MaxTripCount > UnrollMaxUpperBound) {
-      MaxTripCount = 0;
-    }
   }
 
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
   bool UseUpperBound = false;
   bool IsCountSetExplicitly = computeUnrollCount(
-      L, TTI, DT, LI, SE, EphValues, &ORE, TripCount, MaxTripCount,
+      L, TTI, DT, LI, SE, EphValues, &ORE, TripCount, MaxTripCount, MaxOrZero,
       TripMultiple, LoopSize, UP, UseUpperBound);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;

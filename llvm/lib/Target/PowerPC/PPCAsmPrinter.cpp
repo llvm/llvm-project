@@ -167,7 +167,13 @@ public:
 
   StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
 
+  void SetupMachineFunction(MachineFunction &MF) override;
+
   void EmitGlobalVariable(const GlobalVariable *GV) override;
+
+  void EmitFunctionDescriptor() override;
+
+  void EmitEndOfAsmFile(Module &) override;
 };
 
 } // end anonymous namespace
@@ -1628,7 +1634,7 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(isPPC64 ? llvm::Align(8) : llvm::Align(4));
+      EmitAlignment(isPPC64 ? Align(8) : Align(4));
 
       for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
         // L_foo$stub:
@@ -1667,6 +1673,18 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
   OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
 
   return AsmPrinter::doFinalization(M);
+}
+
+void PPCAIXAsmPrinter::SetupMachineFunction(MachineFunction &MF) {
+  // Get the function descriptor symbol.
+  CurrentFnDescSym = getSymbol(&MF.getFunction());
+  // Set the containing csect.
+  MCSectionXCOFF *FnDescSec = OutStreamer->getContext().getXCOFFSection(
+      CurrentFnDescSym->getName(), XCOFF::XMC_DS, XCOFF::XTY_SD,
+      XCOFF::C_HIDEXT, SectionKind::getData());
+  cast<MCSymbolXCOFF>(CurrentFnDescSym)->setContainingCsect(FnDescSec);
+
+  return AsmPrinter::SetupMachineFunction(MF);
 }
 
 void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
@@ -1717,6 +1735,45 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   OutStreamer->EmitLabel(EmittedInitSym);
   EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
+
+void PPCAIXAsmPrinter::EmitFunctionDescriptor() {
+  const DataLayout &DL = getDataLayout();
+  const unsigned PointerSize = DL.getPointerSizeInBits() == 64 ? 8 : 4;
+
+  MCSectionSubPair Current = OutStreamer->getCurrentSection();
+  // Emit function descriptor.
+  OutStreamer->SwitchSection(
+      cast<MCSymbolXCOFF>(CurrentFnDescSym)->getContainingCsect());
+  OutStreamer->EmitLabel(CurrentFnDescSym);
+  // Emit function entry point address.
+  OutStreamer->EmitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
+                         PointerSize);
+  // Emit TOC base address.
+  MCSymbol *TOCBaseSym = OutContext.getOrCreateSymbol(StringRef("TOC[TC0]"));
+  OutStreamer->EmitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
+                         PointerSize);
+  // Emit a null environment pointer.
+  OutStreamer->EmitIntValue(0, PointerSize);
+
+  OutStreamer->SwitchSection(Current.first, Current.second);
+}
+
+void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  // If there are no functions in this module, we will never need to reference
+  // the TOC base.
+  if (M.empty())
+    return;
+
+  // Emit TOC base.
+  MCSymbol *TOCBaseSym = OutContext.getOrCreateSymbol(StringRef("TOC[TC0]"));
+  MCSectionXCOFF *TOCBaseSection = OutStreamer->getContext().getXCOFFSection(
+      StringRef("TOC"), XCOFF::XMC_TC0, XCOFF::XTY_SD, XCOFF::C_HIDEXT,
+      SectionKind::getData());
+  cast<MCSymbolXCOFF>(TOCBaseSym)->setContainingCsect(TOCBaseSection);
+  // Switch to section to emit TOC base.
+  OutStreamer->SwitchSection(TOCBaseSection);
+}
+
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code
 /// for a MachineFunction to the given output stream, in a format that the

@@ -4931,11 +4931,15 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   }
 
   // Allow #pragma omp declare variant only if the function is not used.
-  if (FD->isUsed(false)) {
-    Diag(SR.getBegin(), diag::err_omp_declare_variant_after_used)
+  if (FD->isUsed(false))
+    Diag(SR.getBegin(), diag::warn_omp_declare_variant_after_used)
         << FD->getLocation();
-    return None;
-  }
+
+  // Check if the function was emitted already.
+  if ((LangOpts.EmitAllDecls && FD->isDefined()) ||
+      Context.DeclMustBeEmitted(FD))
+    Diag(SR.getBegin(), diag::warn_omp_declare_variant_after_emitted)
+        << FD->getLocation();
 
   // The VariantRef must point to function.
   if (!VariantRef) {
@@ -14750,6 +14754,11 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
                                             Expr *UnresolvedMapper) {
   if (MapperIdScopeSpec.isInvalid())
     return ExprError();
+  // Get the actual type for the array type.
+  if (Type->isArrayType()) {
+    assert(Type->getAsArrayTypeUnsafe() && "Expect to get a valid array type");
+    Type = Type->getAsArrayTypeUnsafe()->getElementType().getCanonicalType();
+  }
   // Find all user-defined mappers with the given MapperId.
   SmallVector<UnresolvedSet<8>, 4> Lookups;
   LookupResult Lookup(SemaRef, MapperId, Sema::LookupOMPMapperName);
@@ -14796,11 +14805,14 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
         MapperIdScopeSpec.getWithLocInContext(SemaRef.Context), MapperId,
         /*ADL=*/false, /*Overloaded=*/true, URS.begin(), URS.end());
   }
+  SourceLocation Loc = MapperId.getLoc();
   // [OpenMP 5.0], 2.19.7.3 declare mapper Directive, Restrictions
   //  The type must be of struct, union or class type in C and C++
-  if (!Type->isStructureOrClassType() && !Type->isUnionType())
-    return ExprEmpty();
-  SourceLocation Loc = MapperId.getLoc();
+  if (!Type->isStructureOrClassType() && !Type->isUnionType() &&
+      (MapperIdScopeSpec.isSet() || MapperId.getAsString() != "default")) {
+    SemaRef.Diag(Loc, diag::err_omp_mapper_wrong_type);
+    return ExprError();
+  }
   // Perform argument dependent lookup.
   if (SemaRef.getLangOpts().CPlusPlus && !MapperIdScopeSpec.isSet())
     argumentDependentLookup(SemaRef, MapperId, Loc, Type, Lookups);

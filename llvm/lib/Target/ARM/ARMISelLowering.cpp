@@ -1428,16 +1428,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   // On ARM arguments smaller than 4 bytes are extended, so all arguments
   // are at least 4 bytes aligned.
-  setMinStackArgumentAlignment(llvm::Align(4));
+  setMinStackArgumentAlignment(Align(4));
 
   // Prefer likely predicted branches to selects on out-of-order cores.
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
-  setPrefLoopAlignment(
-      llvm::Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
+  setPrefLoopAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
 
-  setMinFunctionAlignment(Subtarget->isThumb() ? llvm::Align(2)
-                                               : llvm::Align(4));
+  setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
 
   if (Subtarget->isThumb() || Subtarget->isThumb2())
     setTargetDAGCombine(ISD::ABS);

@@ -15,26 +15,46 @@ using namespace llvm;
 
 MCSectionXCOFF::~MCSectionXCOFF() = default;
 
+static StringRef getMappingClassString(XCOFF::StorageMappingClass SMC) {
+  switch (SMC) {
+  case XCOFF::XMC_DS:
+    return "DS";
+  case XCOFF::XMC_RW:
+    return "RW";
+  case XCOFF::XMC_PR:
+    return "PR";
+  default:
+    report_fatal_error("Unhandled storage-mapping class.");
+  }
+}
+
 void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
                                           const MCExpr *Subsection) const {
   if (getKind().isText()) {
     if (getMappingClass() != XCOFF::XMC_PR)
-      llvm_unreachable("Unsupported storage-mapping class for .text csect");
+      report_fatal_error("Unhandled storage-mapping class for .text csect");
 
     OS << "\t.csect " << getSectionName() << "["
-       << "PR"
+       << getMappingClassString(getMappingClass())
        << "]" << '\n';
     return;
   }
 
   if (getKind().isData()) {
-    assert(getMappingClass() == XCOFF::XMC_RW &&
-           "Unhandled storage-mapping class for data section.");
-
-    OS << "\t.csect " << getSectionName() << "["
-       << "RW"
-       << "]" << '\n';
+    switch (getMappingClass()) {
+    case XCOFF::XMC_RW:
+    case XCOFF::XMC_DS:
+      OS << "\t.csect " << getSectionName() << "["
+         << getMappingClassString(getMappingClass()) << "]" << '\n';
+      break;
+    case XCOFF::XMC_TC0:
+      OS << "\t.toc\n";
+      break;
+    default:
+      report_fatal_error(
+          "Unhandled storage-mapping class for .data csect.");
+    }
     return;
   }
 

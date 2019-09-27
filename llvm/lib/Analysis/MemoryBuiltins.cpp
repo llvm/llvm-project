@@ -560,9 +560,9 @@ STATISTIC(ObjectVisitorArgument,
 STATISTIC(ObjectVisitorLoad,
           "Number of load instructions with unsolved size and offset");
 
-APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Align) {
-  if (Options.RoundToAlign && Align)
-    return APInt(IntTyBits, alignTo(Size.getZExtValue(), llvm::Align(Align)));
+APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Alignment) {
+  if (Options.RoundToAlign && Alignment)
+    return APInt(IntTyBits, alignTo(Size.getZExtValue(), Align(Alignment)));
   return Size;
 }
 

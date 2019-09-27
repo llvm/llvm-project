@@ -93,14 +93,6 @@ int File::GetDescriptor() const {
 
 IOObject::WaitableHandle File::GetWaitableHandle() { return GetDescriptor(); }
 
-void File::SetDescriptor(int fd, uint32_t options, bool transfer_ownership) {
-  if (IsValid())
-    Close();
-  m_descriptor = fd;
-  m_should_close_fd = transfer_ownership;
-  m_options = options;
-}
-
 FILE *File::GetStream() {
   if (!StreamIsValid()) {
     if (DescriptorIsValid()) {
@@ -131,13 +123,6 @@ FILE *File::GetStream() {
     }
   }
   return m_stream;
-}
-
-void File::SetStream(FILE *fh, bool transfer_ownership) {
-  if (IsValid())
-    Close();
-  m_stream = fh;
-  m_own_stream = transfer_ownership;
 }
 
 uint32_t File::GetPermissions(Status &error) const {

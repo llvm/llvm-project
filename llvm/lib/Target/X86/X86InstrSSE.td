@@ -7735,7 +7735,7 @@ defm VPMASKMOVQ : avx2_pmovmask<"vpmaskmovq",
                                 int_x86_avx2_maskstore_q_256>, VEX_W;
 
 multiclass maskmov_lowering<string InstrStr, RegisterClass RC, ValueType VT,
-                          ValueType MaskVT, string BlendStr, ValueType ZeroVT> {
+                          ValueType MaskVT> {
     // masked store
     def: Pat<(masked_store (VT RC:$src), addr:$ptr, (MaskVT RC:$mask)),
              (!cast<Instruction>(InstrStr#"mr") addr:$ptr, RC:$mask, RC:$src)>;
@@ -7747,23 +7747,23 @@ multiclass maskmov_lowering<string InstrStr, RegisterClass RC, ValueType VT,
              (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)>;
 }
 let Predicates = [HasAVX] in {
-  defm : maskmov_lowering<"VMASKMOVPS", VR128, v4f32, v4i32, "VBLENDVPS", v4i32>;
-  defm : maskmov_lowering<"VMASKMOVPD", VR128, v2f64, v2i64, "VBLENDVPD", v4i32>;
-  defm : maskmov_lowering<"VMASKMOVPSY", VR256, v8f32, v8i32, "VBLENDVPSY", v8i32>;
-  defm : maskmov_lowering<"VMASKMOVPDY", VR256, v4f64, v4i64, "VBLENDVPDY", v8i32>;
+  defm : maskmov_lowering<"VMASKMOVPS", VR128, v4f32, v4i32>;
+  defm : maskmov_lowering<"VMASKMOVPD", VR128, v2f64, v2i64>;
+  defm : maskmov_lowering<"VMASKMOVPSY", VR256, v8f32, v8i32>;
+  defm : maskmov_lowering<"VMASKMOVPDY", VR256, v4f64, v4i64>;
 }
 let Predicates = [HasAVX1Only] in {
   // load/store i32/i64 not supported use ps/pd version
-  defm : maskmov_lowering<"VMASKMOVPSY", VR256, v8i32, v8i32, "VBLENDVPSY", v8i32>;
-  defm : maskmov_lowering<"VMASKMOVPDY", VR256, v4i64, v4i64, "VBLENDVPDY", v8i32>;
-  defm : maskmov_lowering<"VMASKMOVPS", VR128, v4i32, v4i32, "VBLENDVPS", v4i32>;
-  defm : maskmov_lowering<"VMASKMOVPD", VR128, v2i64, v2i64, "VBLENDVPD", v4i32>;
+  defm : maskmov_lowering<"VMASKMOVPSY", VR256, v8i32, v8i32>;
+  defm : maskmov_lowering<"VMASKMOVPDY", VR256, v4i64, v4i64>;
+  defm : maskmov_lowering<"VMASKMOVPS", VR128, v4i32, v4i32>;
+  defm : maskmov_lowering<"VMASKMOVPD", VR128, v2i64, v2i64>;
 }
 let Predicates = [HasAVX2] in {
-  defm : maskmov_lowering<"VPMASKMOVDY", VR256, v8i32, v8i32, "VBLENDVPSY", v8i32>;
-  defm : maskmov_lowering<"VPMASKMOVQY", VR256, v4i64, v4i64, "VBLENDVPDY", v8i32>;
-  defm : maskmov_lowering<"VPMASKMOVD", VR128, v4i32, v4i32, "VBLENDVPS", v4i32>;
-  defm : maskmov_lowering<"VPMASKMOVQ", VR128, v2i64, v2i64, "VBLENDVPD", v4i32>;
+  defm : maskmov_lowering<"VPMASKMOVDY", VR256, v8i32, v8i32>;
+  defm : maskmov_lowering<"VPMASKMOVQY", VR256, v4i64, v4i64>;
+  defm : maskmov_lowering<"VPMASKMOVD", VR128, v4i32, v4i32>;
+  defm : maskmov_lowering<"VPMASKMOVQ", VR128, v2i64, v2i64>;
 }
 
 //===----------------------------------------------------------------------===//

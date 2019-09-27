@@ -235,6 +235,9 @@ void XCOFFObjectWriter::executePostLayoutBinding(
         break;
       }
       report_fatal_error("Unhandled mapping of read-write csect to section.");
+    case XCOFF::XMC_TC0:
+      // TODO FIXME Handle emiting the TOC base.
+      break;
     case XCOFF::XMC_BS:
       assert(XCOFF::XTY_CM == MCSec->getCSectType() &&
              "Mapping invalid csect. CSECT with bss storage class must be "

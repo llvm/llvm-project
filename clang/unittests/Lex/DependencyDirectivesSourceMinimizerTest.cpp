@@ -157,19 +157,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, DefineHorizontalWhitespace) {
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO(\t)\tcon \t tent\t", Out));
-  EXPECT_STREQ("#define MACRO() con \t tent\t\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con \t tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO(\f)\fcon \f tent\f", Out));
-  EXPECT_STREQ("#define MACRO() con \f tent\f\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con \f tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO(\v)\vcon \v tent\v", Out));
-  EXPECT_STREQ("#define MACRO() con \v tent\v\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con \v tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO \t\v\f\v\t con\f\t\vtent\v\f \v", Out));
-  EXPECT_STREQ("#define MACRO con\f\t\vtent\v\n", Out.data());
+  EXPECT_STREQ("#define MACRO con\f\t\vtent\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineMultilineArgs) {
@@ -474,6 +474,17 @@ TEST(MinimizeSourceToDependencyDirectivesTest, SplitIdentifier) {
                                                     "           RD\n",
                                                     Out));
   EXPECT_STREQ("#define GUA RD\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     WhitespaceAfterLineContinuationSlash) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define A 1 + \\  \n"
+                                                    "2 + \\\t\n"
+                                                    "3\n",
+                                                    Out));
+  EXPECT_STREQ("#define A 1 + 2 + 3\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {

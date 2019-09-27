@@ -2509,8 +2509,8 @@ void DwarfDebug::emitDebugARanges() {
     unsigned TupleSize = PtrSize * 2;
 
     // 7.20 in the Dwarf specs requires the table to be aligned to a tuple.
-    unsigned Padding = offsetToAlignment(sizeof(int32_t) + ContentSize,
-                                         llvm::Align(TupleSize));
+    unsigned Padding =
+        offsetToAlignment(sizeof(int32_t) + ContentSize, Align(TupleSize));
 
     ContentSize += Padding;
     ContentSize += (List.size() + 1) * TupleSize;

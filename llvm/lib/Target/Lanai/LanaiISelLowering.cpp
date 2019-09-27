@@ -145,8 +145,8 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::XOR);
 
   // Function alignments
-  setMinFunctionAlignment(llvm::Align(4));
-  setPrefFunctionAlignment(llvm::Align(4));
+  setMinFunctionAlignment(Align(4));
+  setPrefFunctionAlignment(Align(4));
 
   setJumpIsExpensive(true);
 

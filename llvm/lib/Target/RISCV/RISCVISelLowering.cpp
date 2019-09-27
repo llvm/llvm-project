@@ -198,7 +198,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   // Function alignments.
-  const llvm::Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
+  const Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
   setPrefFunctionAlignment(FunctionAlignment);
 

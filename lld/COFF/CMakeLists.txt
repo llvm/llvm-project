@@ -30,6 +30,7 @@ add_lld_library(lldCOFF
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB
+  Demangle
   LibDriver
   LTO
   MC
