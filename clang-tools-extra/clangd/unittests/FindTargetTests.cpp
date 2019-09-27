@@ -10,8 +10,10 @@
 #include "Selection.h"
 #include "TestTU.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
@@ -482,7 +484,11 @@ protected:
     TU.Code = Code;
 
     auto AST = TU.build();
-    auto &Func = llvm::cast<FunctionDecl>(findDecl(AST, "foo"));
+
+    auto *TestDecl = &findDecl(AST, "foo");
+    if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
+      TestDecl = T->getTemplatedDecl();
+    auto &Func = llvm::cast<FunctionDecl>(*TestDecl);
 
     std::vector<ReferenceLoc> Refs;
     findExplicitReferences(Func.getBody(), [&Refs](ReferenceLoc R) {
@@ -671,6 +677,35 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
            "0: targets = {vector}\n"
            "1: targets = {x}\n"},
+          // Handle UnresolvedLookupExpr.
+          {R"cpp(
+            namespace ns1 { void func(char*); }
+            namespace ns2 { void func(int*); }
+            using namespace ns1;
+            using namespace ns2;
+
+            template <class T>
+            void foo(T t) {
+              $0^func($1^t);
+            }
+        )cpp",
+           "0: targets = {ns1::func, ns2::func}\n"
+           "1: targets = {t}\n"},
+          // Handle UnresolvedMemberExpr.
+          {R"cpp(
+            struct X {
+              void func(char*);
+              void func(int*);
+            };
+
+            template <class T>
+            void foo(X x, T t) {
+              $0^x.$1^func($2^t);
+            }
+        )cpp",
+           "0: targets = {x}\n"
+           "1: targets = {X::func, X::func}\n"
+           "2: targets = {t}\n"},
       };
 
   for (const auto &C : Cases) {

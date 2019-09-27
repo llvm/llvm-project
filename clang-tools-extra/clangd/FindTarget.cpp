@@ -16,6 +16,7 @@
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -448,6 +449,12 @@ Optional<ReferenceLoc> refInExpr(const Expr *E) {
       Ref = ReferenceLoc{E->getQualifierLoc(),
                          E->getMemberNameInfo().getLoc(),
                          {E->getFoundDecl()}};
+    }
+
+    void VisitOverloadExpr(const OverloadExpr *E) {
+      Ref = ReferenceLoc{E->getQualifierLoc(), E->getNameInfo().getLoc(),
+                         llvm::SmallVector<const NamedDecl *, 1>(
+                             E->decls().begin(), E->decls().end())};
     }
   };
 
