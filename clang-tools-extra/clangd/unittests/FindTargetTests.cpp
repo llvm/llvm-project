@@ -615,20 +615,18 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
            "0: targets = {vector<int>}\n"
            "1: targets = {vector<bool>}\n"},
-          // FIXME: Fix 'allTargetDecls' to return alias template and re-enable.
           // Template type aliases.
-          //   {R"cpp(
-          //   template <class T> struct vector { using value_type = T; };
-          //   template <> struct vector<bool> { using value_type = bool; };
-          //   template <class T> using valias = vector<T>;
-          //   void foo() {
-          //     $0^valias<int> vi;
-          //     $1^valias<bool> vb;
-          //   }
-          // )cpp",
-          //    "0: targets = {valias}\n"
-          //    "1: targets = {valias}\n"},
-
+          {R"cpp(
+            template <class T> struct vector { using value_type = T; };
+            template <> struct vector<bool> { using value_type = bool; };
+            template <class T> using valias = vector<T>;
+            void foo() {
+              $0^valias<int> vi;
+              $1^valias<bool> vb;
+            }
+          )cpp",
+           "0: targets = {valias}\n"
+           "1: targets = {valias}\n"},
           // MemberExpr should know their using declaration.
           {R"cpp(
             struct X { void func(int); }
@@ -706,6 +704,26 @@ TEST_F(FindExplicitReferencesTest, All) {
            "0: targets = {x}\n"
            "1: targets = {X::func, X::func}\n"
            "2: targets = {t}\n"},
+          // Type template parameters.
+          {R"cpp(
+            template <class T>
+            void foo() {
+              static_cast<$0^T>(0);
+              $1^T();
+              $2^T t;
+            }
+        )cpp",
+           "0: targets = {T}\n"
+           "1: targets = {T}\n"
+           "2: targets = {T}\n"},
+          // Non-type template parameters.
+          {R"cpp(
+            template <int I>
+            void foo() {
+              int x = $0^I;
+            }
+        )cpp",
+           "0: targets = {I}\n"},
       };
 
   for (const auto &C : Cases) {
