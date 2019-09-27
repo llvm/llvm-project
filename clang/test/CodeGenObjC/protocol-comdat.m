@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -triple thumbv7--windows-itanium -fobjc-runtime=ios -emit-llvm -o - %s -Wno-objc-root-class | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv7--windows-itanium -fobjc-runtime=ios -emit-llvm -o - %s -Wno-objc-root-class | FileCheck %s
 
 @protocol P
 - (void) method;

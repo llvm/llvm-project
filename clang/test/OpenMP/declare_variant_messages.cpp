@@ -102,9 +102,7 @@ void h(C *hp, C *hp2, C *hq, C *lin) {
 // expected-error@+1 {{variant in '#pragma omp declare variant' with type '<overloaded function type>' is incompatible with type 'void (*)(int *, int *, int *, int *)'}}
 #pragma omp declare variant(barbar <int>) match(xxx = {})
 template <>
-void h(int *hp, int *hp2, int *hq, int *lin) {
-  h((float *)hp, (float *)hp2, (float *)hq, (float *)lin);
-}
+void h(int *hp, int *hp2, int *hq, int *lin);
 
 int after_use_variant(void);
 int after_use();
@@ -112,7 +110,7 @@ int bar() {
   return after_use();
 }
 
-// expected-error@+1 {{'#pragma omp declare variant' cannot be applied for function after first usage}}
+// expected-warning@+1 {{'#pragma omp declare variant' cannot be applied for function after first usage; the original function might be used}}
 #pragma omp declare variant(after_use_variant) match(xxx = {})
 int after_use(void);
 
@@ -174,6 +172,7 @@ auto fn_deduced_variant() { return 0; }
 int fn_deduced();
 
 int fn_deduced_variant1();
+// expected-warning@+1 {{'#pragma omp declare variant' cannot be applied to the function that was defined already; the original function might be used}}
 #pragma omp declare variant(fn_deduced_variant1) match(xxx = {})
 auto fn_deduced1() { return 0; }
 
