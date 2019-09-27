@@ -94,8 +94,10 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   }
 
   auto sub_command = args[0].ref();
-  if (sub_command.empty())
+  if (sub_command.empty()) {
+    result.AppendError("Need to specify a non-empty subcommand.");
     return result.Succeeded();
+  }
 
   if (sub_command.equals_lower("help")) {
     this->CommandObject::GenerateHelpText(result);

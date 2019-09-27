@@ -27,7 +27,8 @@ public:
   ~LatencySnippetGenerator() override;
 
   llvm::Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr) const override;
+  generateCodeTemplates(const Instruction &Instr,
+                        const BitVector &ForbiddenRegisters) const override;
 };
 
 class LatencyBenchmarkRunner : public BenchmarkRunner {

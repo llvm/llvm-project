@@ -269,9 +269,6 @@ public:
 
   /// Return true if no exit block for the loop has a predecessor that is
   /// outside the loop.
-  /// Return false if a non-dedicated successor is found or it cannot finish
-  /// the check within MaxDedicateExitIterations iterations so return false
-  /// conservatively.
   bool hasDedicatedExits() const;
 
   /// Return all unique successor blocks of this loop.

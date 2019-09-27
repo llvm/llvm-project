@@ -15,6 +15,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "PythonTestSuite.h"
 
@@ -581,10 +582,10 @@ TEST_F(PythonDataObjectsTest, TestPythonCallableInvoke) {
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonFile) {
-  File file;
-  FileSystem::Instance().Open(file, FileSpec(FileSystem::DEV_NULL),
-                              File::eOpenOptionRead);
-  PythonFile py_file(file, "r");
+  auto file = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
+                                          File::eOpenOptionRead);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  PythonFile py_file(*file.get(), "r");
   EXPECT_TRUE(PythonFile::Check(py_file.get()));
 }
 

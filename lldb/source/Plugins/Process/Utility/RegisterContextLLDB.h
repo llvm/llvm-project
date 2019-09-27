@@ -201,6 +201,8 @@ private:
   bool IsUnwindPlanValidForCurrentPC(lldb::UnwindPlanSP unwind_plan_sp,
                                      int &valid_pc_offset);
 
+  lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
+
   lldb_private::Thread &m_thread;
 
   ///

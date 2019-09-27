@@ -123,6 +123,7 @@ add_clang_library(clangDaemon
   clangTidyBugproneModule
   clangTidyCERTModule
   clangTidyCppCoreGuidelinesModule
+  clangTidyDarwinModule
   clangTidyFuchsiaModule
   clangTidyGoogleModule
   clangTidyHICPPModule

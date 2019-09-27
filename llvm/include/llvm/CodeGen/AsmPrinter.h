@@ -111,6 +111,10 @@ public:
   /// of each call to runOnMachineFunction().
   MCSymbol *CurrentFnSym = nullptr;
 
+  /// The symbol for the current function descriptor on AIX. This is created
+  /// at the beginning of each call to SetupMachineFunction().
+  MCSymbol *CurrentFnDescSym = nullptr;
+
   /// The symbol used to represent the start of the current function for the
   /// purpose of calculating its size (e.g. using the .size directive). By
   /// default, this is equal to CurrentFnSym.
@@ -304,7 +308,7 @@ public:
 
   /// This should be called when a new MachineFunction is being processed from
   /// runOnMachineFunction.
-  void SetupMachineFunction(MachineFunction &MF);
+  virtual void SetupMachineFunction(MachineFunction &MF);
 
   /// This method emits the body and trailer for a function.
   void EmitFunctionBody();
@@ -413,6 +417,10 @@ public:
   virtual MCSymbol *GetCPISymbol(unsigned CPID) const;
 
   virtual void EmitFunctionEntryLabel();
+
+  virtual void EmitFunctionDescriptor() {
+    llvm_unreachable("Function descriptor is target-specific.");
+  }
 
   virtual void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV);
 

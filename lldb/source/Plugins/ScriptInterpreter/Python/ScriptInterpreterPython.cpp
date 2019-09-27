@@ -45,6 +45,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatAdapters.h"
 
 #include <memory>
 #include <mutex>
@@ -901,17 +902,24 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
         debugger.AdoptTopIOHandlerFilesIfInvalid(input_file_sp, output_file_sp,
                                                  error_file_sp);
     } else {
-      input_file_sp = std::make_shared<StreamFile>();
-      FileSystem::Instance().Open(input_file_sp->GetFile(),
+      auto nullin = FileSystem::Instance().Open(
                                   FileSpec(FileSystem::DEV_NULL),
                                   File::eOpenOptionRead);
-
-      output_file_sp = std::make_shared<StreamFile>();
-      FileSystem::Instance().Open(output_file_sp->GetFile(),
+      auto nullout = FileSystem::Instance().Open(
                                   FileSpec(FileSystem::DEV_NULL),
                                   File::eOpenOptionWrite);
-
-      error_file_sp = output_file_sp;
+      if (!nullin) {
+        result->AppendErrorWithFormatv("failed to open /dev/null: {0}\n",
+                                       llvm::fmt_consume(nullin.takeError()));
+        return false;
+      }
+      if (!nullout) {
+        result->AppendErrorWithFormatv("failed to open /dev/null: {0}\n",
+                                       llvm::fmt_consume(nullout.takeError()));
+        return false;
+      }
+      input_file_sp = std::make_shared<StreamFile>(std::move(nullin.get()));
+      error_file_sp = output_file_sp = std::make_shared<StreamFile>(std::move(nullout.get()));
     }
 
     FILE *in_file = input_file_sp->GetFile().GetStream();

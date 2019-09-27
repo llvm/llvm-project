@@ -19,8 +19,8 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
-
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Errc.h"
 
 #include <mutex>
 
@@ -243,6 +243,13 @@ public:
   virtual lldb::UnwindPlanSP
   GetUnwindPlan(const Address &address, const RegisterInfoResolver &resolver) {
     return nullptr;
+  }
+
+  /// Return the number of stack bytes taken up by the parameters to this
+  /// function.
+  virtual llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) {
+    return llvm::createStringError(make_error_code(llvm::errc::not_supported),
+                                   "Operation not supported.");
   }
 
   virtual void Dump(Stream &s);

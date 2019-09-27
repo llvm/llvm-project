@@ -69,7 +69,8 @@ protected:
 private:
   // API to be implemented by subclasses.
   virtual llvm::Expected<std::vector<CodeTemplate>>
-  generateCodeTemplates(const Instruction &Instr) const = 0;
+  generateCodeTemplates(const Instruction &Instr,
+                        const BitVector &ForbiddenRegisters) const = 0;
 };
 
 // A global Random Number Generator to randomize configurations.

@@ -800,6 +800,10 @@ def HWASAN_CHECK_MEMACCESS : Pseudo<
   (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
   [(int_hwasan_check_memaccess X9, GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
   Sched<[]>;
+def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
+  [(int_hwasan_check_memaccess_shortgranules X9, GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  Sched<[]>;
 }
 
 // The cycle counter PMC register is PMCCNTR_EL0.

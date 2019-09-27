@@ -51,14 +51,60 @@
 // +---------------------------------+ <-- [x30 / SP]
 
 // This function takes two arguments:
-//   * x0: The address of read/write instruction that caused HWASan check fail.
-//   * x1: The tag size.
+//   * x0: The data address.
+//   * x1: The encoded access info for the failing access.
 
+// This function has two entry points. The first, __hwasan_tag_mismatch, is used
+// by clients that were compiled without short tag checks (i.e. binaries built
+// by older compilers and binaries targeting older runtimes). In this case the
+// outlined tag check will be missing the code handling short tags (which won't
+// be used in the binary's own stack variables but may be used on the heap
+// or stack variables in other binaries), so the check needs to be done here.
+//
+// The second, __hwasan_tag_mismatch_v2, is used by binaries targeting newer
+// runtimes. This entry point bypasses the short tag check since it will have
+// already been done as part of the outlined tag check. Since tag mismatches are
+// uncommon, there isn't a significant performance benefit to being able to
+// bypass the check; the main benefits are that we can sometimes avoid
+// clobbering the x17 register in error reports, and that the program will have
+// a runtime dependency on the __hwasan_tag_mismatch_v2 symbol therefore it will
+// fail to start up given an older (i.e. incompatible) runtime.
 .section .text
 .file "hwasan_tag_mismatch_aarch64.S"
 .global __hwasan_tag_mismatch
 .type __hwasan_tag_mismatch, %function
 __hwasan_tag_mismatch:
+  // Compute the granule position one past the end of the access.
+  mov x16, #1
+  and x17, x1, #0xf
+  lsl x16, x16, x17
+  and x17, x0, #0xf
+  add x17, x16, x17
+
+  // Load the shadow byte again and check whether it is a short tag within the
+  // range of the granule position computed above.
+  ubfx x16, x0, #4, #52
+  ldrb w16, [x9, x16]
+  cmp w16, #0xf
+  b.hi __hwasan_tag_mismatch_v2
+  cmp w16, w17
+  b.lo __hwasan_tag_mismatch_v2
+
+  // Load the real tag from the last byte of the granule and compare against
+  // the pointer tag.
+  orr x16, x0, #0xf
+  ldrb w16, [x16]
+  cmp x16, x0, lsr #56
+  b.ne __hwasan_tag_mismatch_v2
+
+  // Restore x0, x1 and sp to their values from before the __hwasan_tag_mismatch
+  // call and resume execution.
+  ldp x0, x1, [sp], #256
+  ret
+
+.global __hwasan_tag_mismatch_v2
+.type __hwasan_tag_mismatch_v2, %function
+__hwasan_tag_mismatch_v2:
   CFI_STARTPROC
 
   // Set the CFA to be the return address for caller of __hwasan_check_*. Note

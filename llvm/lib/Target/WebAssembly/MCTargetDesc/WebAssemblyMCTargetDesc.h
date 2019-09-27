@@ -332,6 +332,18 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   case WebAssembly::ATOMIC_WAIT_I64_S:
   case WebAssembly::LOAD_SPLAT_v64x2:
   case WebAssembly::LOAD_SPLAT_v64x2_S:
+  case WebAssembly::LOAD_EXTEND_S_v8i16:
+  case WebAssembly::LOAD_EXTEND_S_v8i16_S:
+  case WebAssembly::LOAD_EXTEND_U_v8i16:
+  case WebAssembly::LOAD_EXTEND_U_v8i16_S:
+  case WebAssembly::LOAD_EXTEND_S_v4i32:
+  case WebAssembly::LOAD_EXTEND_S_v4i32_S:
+  case WebAssembly::LOAD_EXTEND_U_v4i32:
+  case WebAssembly::LOAD_EXTEND_U_v4i32_S:
+  case WebAssembly::LOAD_EXTEND_S_v2i64:
+  case WebAssembly::LOAD_EXTEND_S_v2i64_S:
+  case WebAssembly::LOAD_EXTEND_U_v2i64:
+  case WebAssembly::LOAD_EXTEND_U_v2i64_S:
     return 3;
   case WebAssembly::LOAD_V128:
   case WebAssembly::LOAD_V128_S:
