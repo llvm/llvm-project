@@ -170,7 +170,8 @@ operator==(const UnwindPlan::Row::FAValue &rhs) const {
   if (m_type == rhs.m_type) {
     switch (m_type) {
     case unspecified:
-      return true;
+    case isRaSearch:
+      return m_value.ra_search_offset == rhs.m_value.ra_search_offset;
 
     case isRegisterPlusOffset:
       return m_value.reg.offset == rhs.m_value.reg.offset;
@@ -205,8 +206,11 @@ void UnwindPlan::Row::FAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
                   llvm::makeArrayRef(m_value.expr.opcodes, m_value.expr.length),
                   thread);
     break;
-  default:
+  case unspecified:
     s.PutCString("unspecified");
+    break;
+  case isRaSearch:
+    s.Printf("RaSearch@SP%+d", m_value.ra_search_offset);
     break;
   }
 }

@@ -135,6 +135,8 @@ public:
 
   void AddSymbols(Symtab &symtab) override;
 
+  llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) override;
+
   lldb::UnwindPlanSP
   GetUnwindPlan(const Address &address,
                 const RegisterInfoResolver &resolver) override;

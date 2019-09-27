@@ -18,9 +18,8 @@
 
 namespace lld {
 // Returns a demangled C++ symbol name. If Name is not a mangled
-// name, it returns Optional::None.
-llvm::Optional<std::string> demangleItanium(llvm::StringRef name);
-llvm::Optional<std::string> demangleMSVC(llvm::StringRef s);
+// name, it returns name.
+std::string demangleItanium(llvm::StringRef name);
 
 std::vector<uint8_t> parseHex(llvm::StringRef s);
 bool isValidCIdentifier(llvm::StringRef s);

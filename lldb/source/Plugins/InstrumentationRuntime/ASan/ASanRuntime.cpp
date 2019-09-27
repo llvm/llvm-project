@@ -264,7 +264,7 @@ bool AddressSanitizerRuntime::NotifyBreakpointHit(
                                      *thread_sp, description, report));
 
     StreamFileSP stream_sp(
-        process_sp->GetTarget().GetDebugger().GetOutputFile());
+        process_sp->GetTarget().GetDebugger().GetOutputStreamSP());
     if (stream_sp) {
       stream_sp->Printf("AddressSanitizer report breakpoint hit. Use 'thread "
                         "info -s' to get extended information about the "

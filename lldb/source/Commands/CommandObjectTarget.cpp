@@ -4555,7 +4555,7 @@ public:
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
     if (output_sp && interactive) {
       output_sp->PutCString(
           "Enter your stop hook command(s).  Type 'DONE' to end.\n");
@@ -4567,7 +4567,7 @@ protected:
                               std::string &line) override {
     if (m_stop_hook_sp) {
       if (line.empty()) {
-        StreamFileSP error_sp(io_handler.GetErrorStreamFile());
+        StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
         if (error_sp) {
           error_sp->Printf("error: stop hook #%" PRIu64
                            " aborted, no commands.\n",
@@ -4579,7 +4579,7 @@ protected:
           target->RemoveStopHookByID(m_stop_hook_sp->GetID());
       } else {
         m_stop_hook_sp->GetCommandPointer()->SplitIntoLines(line);
-        StreamFileSP output_sp(io_handler.GetOutputStreamFile());
+        StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
         if (output_sp) {
           output_sp->Printf("Stop hook #%" PRIu64 " added.\n",
                             m_stop_hook_sp->GetID());

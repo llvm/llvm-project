@@ -2339,16 +2339,17 @@ void CommandInterpreter::HandleCommandsFromFile(
   }
 
   std::string cmd_file_path = cmd_file.GetPath();
-
-  auto file = FileSystem::Instance().Open(cmd_file, File::eOpenOptionRead);
-  if (!file) {
+  auto input_file_up =
+      FileSystem::Instance().Open(cmd_file, File::eOpenOptionRead);
+  if (!input_file_up) {
+    std::string error = llvm::toString(input_file_up.takeError());
     result.AppendErrorWithFormatv(
         "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
-        llvm::fmt_consume(file.takeError()));
+        llvm::fmt_consume(input_file_up.takeError()));
     result.SetStatus(eReturnStatusFailed);
     return;
   }
-  auto input_file_sp = std::make_shared<StreamFile>(std::move(file.get()));
+  FileSP input_file_sp = FileSP(std::move(input_file_up.get()));
 
   Debugger &debugger = GetDebugger();
 
@@ -2434,8 +2435,8 @@ void CommandInterpreter::HandleCommandsFromFile(
   }
 
   if (flags & eHandleCommandFlagPrintResult) {
-    debugger.GetOutputFile()->Printf("Executing commands in '%s'.\n",
-                                     cmd_file_path.c_str());
+    debugger.GetOutputFile().Printf("Executing commands in '%s'.\n",
+                                    cmd_file_path.c_str());
   }
 
   // Used for inheriting the right settings when "command source" might
@@ -2735,8 +2736,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
     if (EchoCommandNonInteractive(line, io_handler.GetFlags()))
-      io_handler.GetOutputStreamFile()->Printf("%s%s\n", io_handler.GetPrompt(),
-                                               line.c_str());
+      io_handler.GetOutputStreamFileSP()->Printf(
+          "%s%s\n", io_handler.GetPrompt(), line.c_str());
   }
 
   StartHandlingCommand();
@@ -2753,13 +2754,13 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     if (!result.GetImmediateOutputStream()) {
       llvm::StringRef output = result.GetOutputData();
-      PrintCommandOutput(*io_handler.GetOutputStreamFile(), output);
+      PrintCommandOutput(*io_handler.GetOutputStreamFileSP(), output);
     }
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
       llvm::StringRef error = result.GetErrorData();
-      PrintCommandOutput(*io_handler.GetErrorStreamFile(), error);
+      PrintCommandOutput(*io_handler.GetErrorStreamFileSP(), error);
     }
   }
 
@@ -2909,8 +2910,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
 
     m_command_io_handler_sp = std::make_shared<IOHandlerEditline>(
         m_debugger, IOHandler::Type::CommandInterpreter,
-        m_debugger.GetInputFile(), m_debugger.GetOutputFile(),
-        m_debugger.GetErrorFile(), flags, "lldb", m_debugger.GetPrompt(),
+        m_debugger.GetInputFileSP(), m_debugger.GetOutputStreamSP(),
+        m_debugger.GetErrorStreamSP(), flags, "lldb", m_debugger.GetPrompt(),
         llvm::StringRef(), // Continuation prompt
         false, // Don't enable multiple line input, just single line commands
         m_debugger.GetUseColor(),

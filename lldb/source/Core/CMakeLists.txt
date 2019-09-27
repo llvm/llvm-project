@@ -67,6 +67,7 @@ add_lldb_library(lldbCore
 
   LINK_LIBS
     clangAST
+    clangDriver
     lldbBreakpoint
     lldbDataFormatters
     lldbExpression
