@@ -1783,20 +1783,23 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
       return Filename;
     };
     StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
-    SmallString<128> NormalizedTypoCorrectionPath;
-    if (LangOpts.MSVCCompat) {
-      NormalizedTypoCorrectionPath = TypoCorrectionName.str();
+
 #ifndef _WIN32
+    // Normalize slashes when compiling with -fms-extensions on non-Windows.
+    // This is unnecessary on Windows since the filesystem there handles
+    // backslashes.
+    SmallString<128> NormalizedTypoCorrectionPath;
+    if (LangOpts.MicrosoftExt) {
+      NormalizedTypoCorrectionPath = TypoCorrectionName;
       llvm::sys::path::native(NormalizedTypoCorrectionPath);
-#endif
+      TypoCorrectionName = NormalizedTypoCorrectionPath;
     }
+#endif
+
     Optional<FileEntryRef> File = LookupFile(
-        FilenameLoc,
-        LangOpts.MSVCCompat ? NormalizedTypoCorrectionPath.c_str()
-                            : TypoCorrectionName,
-        isAngled, LookupFrom, LookupFromFile, CurDir,
-        Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
-        &SuggestedModule, &IsMapped,
+        FilenameLoc, TypoCorrectionName, isAngled, LookupFrom, LookupFromFile,
+        CurDir, Callbacks ? &SearchPath : nullptr,
+        Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
     if (File) {
       auto Hint =
@@ -1904,15 +1907,18 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // the path.
   ModuleMap::KnownHeader SuggestedModule;
   SourceLocation FilenameLoc = FilenameTok.getLocation();
-  SmallString<128> NormalizedPath;
-  if (LangOpts.MSVCCompat) {
-    NormalizedPath = Filename.str();
+  StringRef LookupFilename = Filename;
+
 #ifndef _WIN32
+  // Normalize slashes when compiling with -fms-extensions on non-Windows. This
+  // is unnecessary on Windows since the filesystem there handles backslashes.
+  SmallString<128> NormalizedPath;
+  if (LangOpts.MicrosoftExt) {
+    NormalizedPath = Filename.str();
     llvm::sys::path::native(NormalizedPath);
-#endif
+    LookupFilename = NormalizedPath;
   }
-  StringRef LookupFilename =
-      LangOpts.MSVCCompat ? StringRef(NormalizedPath) : Filename;
+#endif
 
   Optional<FileEntryRef> File = LookupHeaderIncludeOrImport(
       CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,

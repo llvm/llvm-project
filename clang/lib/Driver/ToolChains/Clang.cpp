@@ -832,12 +832,14 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     }
   }
 
-  if (Args.hasArg(options::OPT_ftest_coverage) ||
-      Args.hasArg(options::OPT_coverage))
+  bool EmitCovNotes = Args.hasArg(options::OPT_ftest_coverage) ||
+                      Args.hasArg(options::OPT_coverage);
+  bool EmitCovData = Args.hasFlag(options::OPT_fprofile_arcs,
+                                  options::OPT_fno_profile_arcs, false) ||
+                     Args.hasArg(options::OPT_coverage);
+  if (EmitCovNotes)
     CmdArgs.push_back("-femit-coverage-notes");
-  if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
-                   false) ||
-      Args.hasArg(options::OPT_coverage))
+  if (EmitCovData)
     CmdArgs.push_back("-femit-coverage-data");
 
   if (Args.hasFlag(options::OPT_fcoverage_mapping,
@@ -873,40 +875,48 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back(Args.MakeArgString(Twine("-fprofile-filter-files=" + v)));
   }
 
-  if (C.getArgs().hasArg(options::OPT_c) ||
-      C.getArgs().hasArg(options::OPT_S)) {
-    if (Output.isFilename()) {
-      CmdArgs.push_back("-coverage-notes-file");
-      SmallString<128> OutputFilename;
-      if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
-        OutputFilename = FinalOutput->getValue();
-      else
-        OutputFilename = llvm::sys::path::filename(Output.getBaseInput());
-      SmallString<128> CoverageFilename = OutputFilename;
-      if (llvm::sys::path::is_relative(CoverageFilename)) {
-        SmallString<128> Pwd;
-        if (!llvm::sys::fs::current_path(Pwd)) {
-          llvm::sys::path::append(Pwd, CoverageFilename);
-          CoverageFilename.swap(Pwd);
-        }
-      }
-      llvm::sys::path::replace_extension(CoverageFilename, "gcno");
-      CmdArgs.push_back(Args.MakeArgString(CoverageFilename));
+  // Leave -fprofile-dir= an unused argument unless .gcda emission is
+  // enabled. To be polite, with '-fprofile-arcs -fno-profile-arcs' consider
+  // the flag used. There is no -fno-profile-dir, so the user has no
+  // targeted way to suppress the warning.
+  Arg *FProfileDir = nullptr;
+  if (Args.hasArg(options::OPT_fprofile_arcs) ||
+      Args.hasArg(options::OPT_coverage))
+    FProfileDir = Args.getLastArg(options::OPT_fprofile_dir);
 
-      // Leave -fprofile-dir= an unused argument unless .gcda emission is
-      // enabled. To be polite, with '-fprofile-arcs -fno-profile-arcs' consider
-      // the flag used. There is no -fno-profile-dir, so the user has no
-      // targeted way to suppress the warning.
-      if (Args.hasArg(options::OPT_fprofile_arcs) ||
-          Args.hasArg(options::OPT_coverage)) {
-        CmdArgs.push_back("-coverage-data-file");
-        if (Arg *FProfileDir = Args.getLastArg(options::OPT_fprofile_dir)) {
-          CoverageFilename = FProfileDir->getValue();
-          llvm::sys::path::append(CoverageFilename, OutputFilename);
-        }
-        llvm::sys::path::replace_extension(CoverageFilename, "gcda");
-        CmdArgs.push_back(Args.MakeArgString(CoverageFilename));
+  // Put the .gcno and .gcda files (if needed) next to the object file or
+  // bitcode file in the case of LTO.
+  // FIXME: There should be a simpler way to find the object file for this
+  // input, and this code probably does the wrong thing for commands that
+  // compile and link all at once.
+  if ((Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) &&
+      (EmitCovNotes || EmitCovData) && Output.isFilename()) {
+    SmallString<128> OutputFilename;
+    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
+      OutputFilename = FinalOutput->getValue();
+    else
+      OutputFilename = llvm::sys::path::filename(Output.getBaseInput());
+    SmallString<128> CoverageFilename = OutputFilename;
+    if (llvm::sys::path::is_relative(CoverageFilename)) {
+      SmallString<128> Pwd;
+      if (!llvm::sys::fs::current_path(Pwd)) {
+        llvm::sys::path::append(Pwd, CoverageFilename);
+        CoverageFilename.swap(Pwd);
       }
+    }
+    llvm::sys::path::replace_extension(CoverageFilename, "gcno");
+
+    CmdArgs.push_back("-coverage-notes-file");
+    CmdArgs.push_back(Args.MakeArgString(CoverageFilename));
+
+    if (EmitCovData) {
+      if (FProfileDir) {
+        CoverageFilename = FProfileDir->getValue();
+        llvm::sys::path::append(CoverageFilename, OutputFilename);
+      }
+      llvm::sys::path::replace_extension(CoverageFilename, "gcda");
+      CmdArgs.push_back("-coverage-data-file");
+      CmdArgs.push_back(Args.MakeArgString(CoverageFilename));
     }
   }
 }
@@ -2018,7 +2028,7 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
   }
   auto &CDB = *CompilationDatabase;
   SmallString<128> Buf;
-  if (!llvm::sys::fs::current_path(Buf))
+  if (llvm::sys::fs::current_path(Buf))
     Buf = ".";
   CDB << "{ \"directory\": \"" << escape(Buf) << "\"";
   CDB << ", \"file\": \"" << escape(Input.getFilename()) << "\"";
