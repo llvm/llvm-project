@@ -111,7 +111,8 @@ public:
   // Other methods
   // ---------------------------------------------------------------------
   void GetThreadContext(int thread_index, uint32_t *&regs, uint16_t *&pc,
-                        bool *&zf, bool *&cf);
+                        bool *&zf, bool *&cf,
+                        bool *&registers_has_been_modified);
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
                                  lldb::StopReason &stop_reason, bool stepping);

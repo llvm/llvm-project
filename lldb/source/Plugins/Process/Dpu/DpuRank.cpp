@@ -258,6 +258,10 @@ bool Dpu::ResumeThreads(bool allowed_polling) {
     return false;
 
   int ret = DPU_API_SUCCESS;
+  if (registers_has_been_modified) {
+    ret |= dpu_restore_context_for_dpu(m_dpu, &m_context);
+    registers_has_been_modified = false;
+  }
   ret |= dpu_finalize_fault_process_for_dpu(m_dpu, &m_context);
 
   if (allowed_polling)
@@ -280,6 +284,10 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
     return StateType::eStateStopped;
 
   int ret = DPU_API_SUCCESS;
+  if (registers_has_been_modified) {
+    ret |= dpu_restore_context_for_dpu(m_dpu, &m_context);
+    registers_has_been_modified = false;
+  }
   ret |=
       dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
   ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
@@ -361,6 +369,10 @@ bool *Dpu::ThreadContextZF(int thread_index) {
 
 bool *Dpu::ThreadContextCF(int thread_index) {
   return m_context.carry_flags + thread_index;
+}
+
+bool *Dpu::ThreadRegistersHasBeenModified() {
+  return &registers_has_been_modified;
 }
 
 lldb::StateType Dpu::GetThreadState(int thread_index, std::string &description,

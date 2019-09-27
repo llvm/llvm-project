@@ -45,6 +45,7 @@ private:
   uint16_t *m_context_pc;
   bool *m_context_zf;
   bool *m_context_cf;
+  bool *m_registers_has_been_modified;
 };
 
 } // namespace process_dpu

@@ -76,7 +76,8 @@ constexpr size_t k_dpu_reg_context_size =
 RegisterContextDpu::RegisterContextDpu(ThreadDpu &thread, ProcessDpu &process)
     : NativeRegisterContextRegisterInfo(thread, new RegisterInfo_dpu()) {
   process.GetThreadContext(thread.GetIndex(), m_context_reg, m_context_pc,
-                           m_context_zf, m_context_cf);
+                           m_context_zf, m_context_cf,
+                           m_registers_has_been_modified);
 }
 
 uint32_t RegisterContextDpu::GetRegisterSetCount() const { return 1; }
@@ -129,6 +130,8 @@ Status RegisterContextDpu::WriteRegister(const RegisterInfo *info,
     *m_context_cf = (value.GetAsUInt32() == 1);
   else
     m_context_reg[reg] = value.GetAsUInt32();
+
+  *m_registers_has_been_modified = true;
 
   return Status();
 }
@@ -185,6 +188,8 @@ RegisterContextDpu::WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) {
   *m_context_pc = (pc - k_dpu_iram_base) / 8 /*sizeof(iram_instruction_t)*/;
   *m_context_zf = zf == 1;
   *m_context_cf = cf == 1;
+
+  *m_registers_has_been_modified = true;
 
   return error;
 }

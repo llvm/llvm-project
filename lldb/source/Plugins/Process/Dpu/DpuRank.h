@@ -90,6 +90,7 @@ public:
   uint16_t *ThreadContextPC(int thread_index);
   bool *ThreadContextZF(int thread_index);
   bool *ThreadContextCF(int thread_index);
+  bool *ThreadRegistersHasBeenModified();
 
   lldb::StateType GetThreadState(int thread_index, std::string &description,
                                  lldb::StopReason &stop_reason, bool stepping);
@@ -111,6 +112,7 @@ private:
   struct _dpu_context_t m_context;
   bool dpu_is_running = false;
   bool attach_session = false;
+  bool registers_has_been_modified = false;
 };
 
 } // namespace dpu
