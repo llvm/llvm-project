@@ -2016,7 +2016,7 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
   }
   auto &CDB = *CompilationDatabase;
   SmallString<128> Buf;
-  if (!llvm::sys::fs::current_path(Buf))
+  if (llvm::sys::fs::current_path(Buf))
     Buf = ".";
   CDB << "{ \"directory\": \"" << escape(Buf) << "\"";
   CDB << ", \"file\": \"" << escape(Input.getFilename()) << "\"";
