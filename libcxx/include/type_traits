@@ -2807,6 +2807,30 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_default_constructible_v
     = is_default_constructible<_Tp>::value;
 #endif
 
+#ifndef _LIBCPP_CXX03_LANG
+// First of all, we can't implement this check in C++03 mode because the {}
+// default initialization syntax isn't valid.
+// Second, we implement the trait in a funny manner with two defaulted template
+// arguments to workaround Clang's PR43454.
+template <class _Tp>
+void __test_implicit_default_constructible(_Tp);
+
+template <class _Tp, class = void, bool = is_default_constructible<_Tp>::value>
+struct __is_implicitly_default_constructible
+    : false_type
+{ };
+
+template <class _Tp>
+struct __is_implicitly_default_constructible<_Tp, decltype(__test_implicit_default_constructible<_Tp const&>({})), true>
+    : true_type
+{ };
+
+template <class _Tp>
+struct __is_implicitly_default_constructible<_Tp, decltype(__test_implicit_default_constructible<_Tp const&>({})), false>
+    : false_type
+{ };
+#endif // !C++03
+
 // is_copy_constructible
 
 template <class _Tp>

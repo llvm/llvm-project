@@ -1,10 +1,27 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2a -verify %s -fcxx-exceptions -triple=x86_64-linux-gnu -Wno-mismatched-new-delete
 
 #include "Inputs/std-compare.h"
 
 namespace std {
   struct type_info;
+  struct destroying_delete_t {
+    explicit destroying_delete_t() = default;
+  } inline constexpr destroying_delete{};
+  struct nothrow_t {
+    explicit nothrow_t() = default;
+  } inline constexpr nothrow{};
+  using size_t = decltype(sizeof(0));
+  enum class align_val_t : size_t {};
 };
+
+[[nodiscard]] void *operator new(std::size_t, const std::nothrow_t&) noexcept;
+[[nodiscard]] void *operator new(std::size_t, std::align_val_t, const std::nothrow_t&) noexcept;
+[[nodiscard]] void *operator new[](std::size_t, const std::nothrow_t&) noexcept;
+[[nodiscard]] void *operator new[](std::size_t, std::align_val_t, const std::nothrow_t&) noexcept;
+void operator delete(void*, const std::nothrow_t&) noexcept;
+void operator delete(void*, std::align_val_t, const std::nothrow_t&) noexcept;
+void operator delete[](void*, const std::nothrow_t&) noexcept;
+void operator delete[](void*, std::align_val_t, const std::nothrow_t&) noexcept;
 
 // Helper to print out values for debugging.
 constexpr void not_defined();
@@ -752,4 +769,307 @@ namespace dtor {
       "ca";
   }
   static_assert(check_abnormal_termination());
+
+  constexpr bool run_dtors_on_array_filler() {
+    struct S {
+      int times_destroyed = 0;
+      constexpr ~S() { if (++times_destroyed != 1) throw "oops"; }
+    };
+    S s[3];
+    return true;
+  }
+  static_assert(run_dtors_on_array_filler());
+}
+
+namespace dynamic_alloc {
+  constexpr int *p = // expected-error {{constant}} expected-note {{pointer to heap-allocated object is not a constant expression}}
+    new int; // expected-note {{heap allocation performed here}}
+
+  constexpr int f(int n) {
+    int *p = new int[n];
+    for (int i = 0; i != n; ++i) {
+      p[i] = i;
+    }
+    int k = 0;
+    for (int i = 0; i != n; ++i) {
+      k += p[i];
+    }
+    delete[] p;
+    return k;
+  }
+  static_assert(f(123) == 123 * 122 / 2);
+
+  constexpr bool nvdtor() { // expected-error {{never produces a constant expression}}
+    struct S {
+      constexpr ~S() {}
+    };
+    struct T : S {};
+    delete (S*)new T; // expected-note {{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+    return true;
+  }
+
+  constexpr int vdtor_1() {
+    int a;
+    struct S {
+      constexpr S(int *p) : p(p) {}
+      constexpr virtual ~S() { *p = 1; }
+      int *p;
+    };
+    struct T : S {
+      // implicit destructor defined eagerly because it is constexpr and virtual
+      using S::S;
+    };
+    delete (S*)new T(&a);
+    return a;
+  }
+  static_assert(vdtor_1() == 1);
+
+  constexpr int vdtor_2() {
+    int a = 0;
+    struct S { constexpr virtual ~S() {} };
+    struct T : S {
+      constexpr T(int *p) : p(p) {}
+      constexpr ~T() { ++*p; }
+      int *p;
+    };
+    S *p = new T{&a};
+    delete p;
+    return a;
+  }
+  static_assert(vdtor_2() == 1);
+
+  constexpr int vdtor_3(int mode) {
+    int a = 0;
+    struct S { constexpr virtual ~S() {} };
+    struct T : S {
+      constexpr T(int *p) : p(p) {}
+      constexpr ~T() { ++*p; }
+      int *p;
+    };
+    S *p = new T[3]{&a, &a, &a}; // expected-note 2{{heap allocation}}
+    switch (mode) {
+    case 0:
+      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
+      break;
+    case 1:
+      // FIXME: This diagnosic isn't great; we should mention the cast to S*
+      // somewhere in here.
+      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T [3]#0}[0]'}}
+      break;
+    case 2:
+      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
+      break;
+    case 3:
+      delete[] (T*)p;
+      break;
+    }
+    return a;
+  }
+  static_assert(vdtor_3(0) == 3); // expected-error {{}} expected-note {{in call}}
+  static_assert(vdtor_3(1) == 3); // expected-error {{}} expected-note {{in call}}
+  static_assert(vdtor_3(2) == 3); // expected-error {{}} expected-note {{in call}}
+  static_assert(vdtor_3(3) == 3);
+
+  constexpr void delete_mismatch() { // expected-error {{never produces a constant expression}}
+    delete[] // expected-note {{array delete used to delete pointer to non-array object of type 'int'}}
+      new int; // expected-note {{allocation}}
+  }
+
+  template<typename T>
+  constexpr T dynarray(int elems, int i) {
+    T *p;
+    if constexpr (sizeof(T) == 1)
+      p = new T[elems]{"fox"}; // expected-note {{evaluated array bound 3 is too small to hold 4 explicitly initialized elements}}
+    else
+      p = new T[elems]{1, 2, 3}; // expected-note {{evaluated array bound 2 is too small to hold 3 explicitly initialized elements}}
+    T n = p[i]; // expected-note 4{{past-the-end}}
+    delete [] p;
+    return n;
+  }
+  static_assert(dynarray<int>(4, 0) == 1);
+  static_assert(dynarray<int>(4, 1) == 2);
+  static_assert(dynarray<int>(4, 2) == 3);
+  static_assert(dynarray<int>(4, 3) == 0);
+  static_assert(dynarray<int>(4, 4) == 0); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(dynarray<int>(3, 2) == 3);
+  static_assert(dynarray<int>(3, 3) == 0); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(dynarray<int>(2, 1) == 0); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(dynarray<char>(5, 0) == 'f');
+  static_assert(dynarray<char>(5, 1) == 'o');
+  static_assert(dynarray<char>(5, 2) == 'x');
+  static_assert(dynarray<char>(5, 3) == 0); // (from string)
+  static_assert(dynarray<char>(5, 4) == 0); // (from filler)
+  static_assert(dynarray<char>(5, 5) == 0); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(dynarray<char>(4, 0) == 'f');
+  static_assert(dynarray<char>(4, 1) == 'o');
+  static_assert(dynarray<char>(4, 2) == 'x');
+  static_assert(dynarray<char>(4, 3) == 0);
+  static_assert(dynarray<char>(4, 4) == 0); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(dynarray<char>(3, 2) == 'x'); // expected-error {{constant expression}} expected-note {{in call}}
+
+  constexpr bool run_dtors_on_array_filler() {
+    struct S {
+      int times_destroyed = 0;
+      constexpr ~S() { if (++times_destroyed != 1) throw "oops"; }
+    };
+    delete[] new S[3];
+    return true;
+  }
+  static_assert(run_dtors_on_array_filler());
+
+  constexpr bool erroneous_array_bound(long long n) {
+    delete[] new int[n]; // expected-note {{array bound -1 is negative}} expected-note {{array bound 4611686018427387904 is too large}}
+    return true;
+  }
+  static_assert(erroneous_array_bound(3));
+  static_assert(erroneous_array_bound(0));
+  static_assert(erroneous_array_bound(-1)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(erroneous_array_bound(1LL << 62)); // expected-error {{constant expression}} expected-note {{in call}}
+
+  constexpr bool erroneous_array_bound_nothrow(long long n) {
+    int *p = new (std::nothrow) int[n];
+    bool result = p != 0;
+    delete[] p;
+    return result;
+  }
+  static_assert(erroneous_array_bound_nothrow(3));
+  static_assert(erroneous_array_bound_nothrow(0));
+  static_assert(!erroneous_array_bound_nothrow(-1));
+  static_assert(!erroneous_array_bound_nothrow(1LL << 62));
+
+  constexpr bool evaluate_nothrow_arg() {
+    bool ok = false;
+    delete new ((ok = true, std::nothrow)) int;
+    return ok;
+  }
+  static_assert(evaluate_nothrow_arg());
+
+  constexpr void double_delete() { // expected-error {{never produces a constant expression}}
+    int *p = new int;
+    delete p;
+    delete p; // expected-note {{delete of pointer that has already been deleted}}
+  }
+  constexpr bool super_secret_double_delete() {
+    struct A {
+      constexpr ~A() { delete this; } // expected-note {{destruction of object that is already being destroyed}} expected-note {{in call}}
+    };
+    delete new A; // expected-note {{in call}}
+    return true;
+  }
+  static_assert(super_secret_double_delete()); // expected-error {{constant expression}} expected-note {{in call}}
+
+  constexpr void use_after_free() { // expected-error {{never produces a constant expression}}
+    int *p = new int;
+    delete p;
+    *p = 1; // expected-note {{assignment to heap allocated object that has been deleted}}
+  }
+  constexpr void use_after_free_2() { // expected-error {{never produces a constant expression}}
+    struct X { constexpr void f() {} };
+    X *p = new X;
+    delete p;
+    p->f(); // expected-note {{member call on heap allocated object that has been deleted}}
+  }
+
+  template<typename T> struct X {
+    std::size_t n;
+    char *p;
+    void dependent();
+  };
+  template<typename T> void X<T>::dependent() {
+    char *p;
+    // Ensure that we don't try to evaluate these for overflow and crash. These
+    // are all value-dependent expressions.
+    p = new char[n];
+    p = new (n) char[n];
+    p = new char(n);
+  }
+}
+
+struct placement_new_arg {};
+void *operator new(std::size_t, placement_new_arg);
+void operator delete(void*, placement_new_arg);
+
+namespace placement_new_delete {
+  struct ClassSpecificNew {
+    void *operator new(std::size_t);
+  };
+  struct ClassSpecificDelete {
+    void operator delete(void*);
+  };
+  struct DestroyingDelete {
+    void operator delete(DestroyingDelete*, std::destroying_delete_t);
+  };
+  struct alignas(64) Overaligned {};
+
+  constexpr bool ok() {
+    delete new Overaligned;
+    delete ::new ClassSpecificNew;
+    ::delete new ClassSpecificDelete;
+    ::delete new DestroyingDelete;
+    return true;
+  }
+  static_assert(ok());
+
+  constexpr bool bad(int which) {
+    switch (which) {
+    case 0:
+      delete new (placement_new_arg{}) int; // expected-note {{call to placement 'operator new'}}
+      break;
+
+    case 1:
+      delete new ClassSpecificNew; // expected-note {{call to class-specific 'operator new'}}
+      break;
+
+    case 2:
+      delete new ClassSpecificDelete; // expected-note {{call to class-specific 'operator delete'}}
+      break;
+
+    case 3:
+      delete new DestroyingDelete; // expected-note {{call to class-specific 'operator delete'}}
+      break;
+
+    case 4:
+      // FIXME: This technically follows the standard's rules, but it seems
+      // unreasonable to expect implementations to support this.
+      delete new (std::align_val_t{64}) Overaligned; // expected-note {{placement new expression is not yet supported}}
+      break;
+    }
+
+    return true;
+  }
+  static_assert(bad(0)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(bad(1)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(bad(2)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(bad(3)); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(bad(4)); // expected-error {{constant expression}} expected-note {{in call}}
+}
+
+namespace delete_random_things {
+  static_assert((delete new int, true));
+  static_assert((delete (int*)0, true));
+  int n; // expected-note {{declared here}}
+  static_assert((delete &n, true)); // expected-error {{}} expected-note {{delete of pointer '&n' that does not point to a heap-allocated object}}
+  struct A { int n; };
+  static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new delete_random_things::A#0}.n'}}
+  static_assert((delete (new int + 1), true)); // expected-error {{}} expected-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
+  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int [3]#0}[1]'}}
+  static_assert((delete &(int&)(int&&)0, true)); // expected-error {{}} expected-note {{delete of pointer '&0' that does not point to a heap-allocated object}} expected-note {{temporary created here}}
+}
+
+namespace memory_leaks {
+  static_assert(*new bool(true)); // expected-error {{}} expected-note {{allocation performed here was not deallocated}}
+
+  constexpr bool *f() { return new bool(true); } // expected-note {{allocation performed here was not deallocated}}
+  static_assert(*f()); // expected-error {{}}
+
+  struct UP {
+    bool *p;
+    constexpr ~UP() { delete p; }
+    constexpr bool &operator*() { return *p; }
+  };
+  constexpr UP g() { return {new bool(true)}; }
+  static_assert(*g()); // ok
+
+  constexpr bool h(UP p) { return *p; }
+  static_assert(h({new bool(true)})); // ok
 }

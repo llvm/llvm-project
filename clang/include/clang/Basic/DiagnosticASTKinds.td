@@ -53,6 +53,9 @@ def note_constexpr_nonliteral : Note<
 def note_constexpr_non_global : Note<
   "%select{pointer|reference}0 to %select{|subobject of }1"
   "%select{temporary|%3}2 is not a constant expression">;
+def note_constexpr_dynamic_alloc : Note<
+  "%select{pointer|reference}0 to %select{|subobject of }1"
+  "heap-allocated object is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_subobject_declared_here : Note<
@@ -100,6 +103,7 @@ def note_constexpr_typeid_polymorphic : Note<
 def note_constexpr_void_comparison : Note<
   "comparison between unequal pointers to void has unspecified result">;
 def note_constexpr_temporary_here : Note<"temporary created here">;
+def note_constexpr_dynamic_alloc_here : Note<"heap allocation performed here">;
 def note_constexpr_conditional_never_const : Note<
   "both arms of conditional operator are unable to produce a "
   "constant expression">;
@@ -109,6 +113,8 @@ def note_constexpr_call_limit_exceeded : Note<
   "constexpr evaluation hit maximum call limit">;
 def note_constexpr_step_limit_exceeded : Note<
   "constexpr evaluation hit maximum step limit; possible infinite loop?">;
+def note_constexpr_heap_alloc_limit_exceeded : Note<
+  "constexpr evaluation hit maximum heap allocation limit">;
 def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
@@ -174,6 +180,10 @@ def note_constexpr_access_unreadable_object : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to}0 object '%1' "
   "whose value is not known">;
+def note_constexpr_access_deleted_object : Note<
+  "%select{read of|read of|assignment to|increment of|decrement of|"
+  "member call on|dynamic_cast of|typeid applied to}0 heap allocated "
+  "object that has been deleted">;
 def note_constexpr_modify_global : Note<
   "a constant expression cannot modify an object that is visible outside "
   "that expression">;
@@ -193,6 +203,8 @@ def note_constexpr_baa_insufficient_alignment : Note<
 def note_constexpr_baa_value_insufficient_alignment : Note<
   "value of the aligned pointer (%0) is not a multiple of the asserted %1 "
   "%plural{1:byte|:bytes}1">;
+def note_constexpr_destroy_out_of_lifetime : Note<
+  "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
   "non-trivial destruction of type %0 in a constant expression is not supported">;
 def note_constexpr_unsupported_unsized_array : Note<
@@ -234,6 +246,38 @@ def note_constexpr_bit_cast_invalid_subtype : Note<
 def note_constexpr_bit_cast_indet_dest : Note<
   "indeterminate value can only initialize an object of type 'unsigned char'"
   "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;
+def note_constexpr_new : Note<
+  "dynamic memory allocation is not permitted in constant expressions "
+  "until C++20">;
+def note_constexpr_new_non_replaceable : Note<
+  "call to %select{placement|class-specific}0 %1">;
+def note_constexpr_new_placement : Note<
+  "this placement new expression is not yet supported in constant expressions">;
+def note_constexpr_new_negative : Note<
+  "cannot allocate array; evaluated array bound %0 is negative">;
+def note_constexpr_new_too_large : Note<
+  "cannot allocate array; evaluated array bound %0 is too large">;
+def note_constexpr_new_too_small : Note<
+  "cannot allocate array; evaluated array bound %0 is too small to hold "
+  "%1 explicitly initialized elements">;
+def note_constexpr_delete_not_heap_alloc : Note<
+  "delete of pointer '%0' that does not point to a heap-allocated object">;
+def note_constexpr_double_delete : Note<
+  "delete of pointer that has already been deleted">;
+def note_constexpr_double_destroy : Note<
+  "destruction of object that is already being destroyed">;
+def note_constexpr_new_delete_mismatch : Note<
+  "%select{non-|}0array delete used to delete pointer to "
+  "%select{|non-}0array object of type %1">;
+def note_constexpr_delete_subobject : Note<
+  "delete of pointer%select{ to subobject|}1 '%0' "
+  "%select{|that does not point to complete object}1">;
+def note_constexpr_delete_base_nonvirt_dtor : Note<
+  "delete of object with dynamic type %1 through pointer to "
+  "base class type %0 with non-virtual destructor">;
+def note_constexpr_memory_leak : Note<
+  "allocation performed here was not deallocated"
+  "%plural{0:|: (along with %0 other memory leak%s0)}0">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

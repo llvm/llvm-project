@@ -6364,6 +6364,12 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
         DelayedDllExportMemberFunctions.push_back(M);
       }
     }
+
+    // Define defaulted constexpr virtual functions that override a base class
+    // function right away.
+    // FIXME: We can defer doing this until the vtable is marked as used.
+    if (M->isDefaulted() && M->isConstexpr() && M->size_overridden_methods())
+      DefineImplicitSpecialMember(*this, M, M->getLocation());
   };
 
   bool HasMethodWithOverrideControl = false,

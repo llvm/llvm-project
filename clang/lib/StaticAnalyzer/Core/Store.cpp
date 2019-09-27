@@ -52,7 +52,7 @@ StoreRef StoreManager::enterStackFrame(Store OldStore,
   Call.getInitialStackFrameContents(LCtx, InitialBindings);
 
   for (const auto &I : InitialBindings)
-    Store = Bind(Store.getStore(), I.first, I.second);
+    Store = Bind(Store.getStore(), I.first.castAs<Loc>(), I.second);
 
   return Store;
 }

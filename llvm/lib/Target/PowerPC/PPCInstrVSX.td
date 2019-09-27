@@ -1512,6 +1512,12 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                           AltVSXFMARel;
   }
 
+  // Additional xsnmsubasp patterns: -a*b + c == -(a*b - c)
+  def : Pat<(fma (fneg f32:$A), f32:$B, f32:$C),
+            (XSNMSUBASP $C, $A, $B)>;
+  def : Pat<(fma f32:$A, (fneg f32:$B), f32:$C),
+            (XSNMSUBASP $C, $A, $B)>;
+
   // Single Precision Conversions (FP <-> INT)
   def XSCVSXDSP : XX2Form<60, 312,
                       (outs vssrc:$XT), (ins vsfrc:$XB),

@@ -54,6 +54,13 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
+namespace llvm {
+cl::opt<uint64_t> MaxDedicateExitIterations(
+    "max-dedicate-exit-iterations", cl::Hidden, cl::init(100000),
+    cl::desc("Max number of loop iterations to check whether a loop is a "
+             "dedicated exit loop. "));
+}
+
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
@@ -362,18 +369,16 @@ bool Loop::isAuxiliaryInductionVariable(PHINode &AuxIndVar,
 BranchInst *Loop::getLoopGuardBranch() const {
   assert(isLoopSimplifyForm() && "Only valid for loop in simplify form");
   BasicBlock *Preheader = getLoopPreheader();
-  BasicBlock *Latch = getLoopLatch();
-  assert(Preheader && Latch &&
+  assert(Preheader && getLoopLatch() &&
          "Expecting a loop with valid preheader and latch");
-  assert(isLoopExiting(Latch) && "Only valid for rotated loop");
+  assert(isLoopExiting(getLoopLatch()) && "Only valid for rotated loop");
 
-  Instruction *LatchTI = Latch->getTerminator();
-  if (!LatchTI || LatchTI->getNumSuccessors() != 2)
+  // Disallow loops with more than one unique exit block, as we do not verify
+  // that GuardOtherSucc post dominates all exit blocks.
+  BasicBlock *ExitFromLatch = getUniqueExitBlock();
+  if (!ExitFromLatch)
     return nullptr;
 
-  BasicBlock *ExitFromLatch = (LatchTI->getSuccessor(0) == getHeader())
-                                  ? LatchTI->getSuccessor(1)
-                                  : LatchTI->getSuccessor(0);
   BasicBlock *ExitFromLatchSucc = ExitFromLatch->getUniqueSuccessor();
   if (!ExitFromLatchSucc)
     return nullptr;

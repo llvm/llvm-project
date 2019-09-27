@@ -47,8 +47,6 @@
 (put 'tablegen-mode 'font-lock-defaults '(tablegen-font-lock-keywords))
 
 ;; ---------------------- Syntax table ---------------------------
-;; Shamelessly ripped from jasmin.el
-;; URL: http://www.neilvandyke.org/jasmin-emacs/jasmin.el
 
 (defvar tablegen-mode-syntax-table nil
   "Syntax table used in `tablegen-mode' buffers.")

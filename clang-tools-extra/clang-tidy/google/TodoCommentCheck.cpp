@@ -55,6 +55,8 @@ TodoCommentCheck::TodoCommentCheck(StringRef Name, ClangTidyContext *Context)
       Handler(std::make_unique<TodoCommentHandler>(
           *this, Context->getOptions().User)) {}
 
+TodoCommentCheck::~TodoCommentCheck() = default;
+
 void TodoCommentCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {

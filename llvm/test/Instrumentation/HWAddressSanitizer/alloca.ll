@@ -5,7 +5,7 @@
 ; RUN: opt < %s -hwasan -hwasan-with-ifunc=1 -hwasan-uar-retag-to-zero=0 -S | FileCheck %s --check-prefixes=CHECK,DYNAMIC-SHADOW,UAR-TAGS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64--linux-android"
+target triple = "aarch64--linux-android10000"
 
 declare void @use32(i32*)
 

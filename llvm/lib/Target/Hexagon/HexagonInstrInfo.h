@@ -288,8 +288,7 @@ public:
   // memory addresses and false otherwise.
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb,
-                                  AliasAnalysis *AA = nullptr) const override;
+                                  const MachineInstr &MIb) const override;
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.

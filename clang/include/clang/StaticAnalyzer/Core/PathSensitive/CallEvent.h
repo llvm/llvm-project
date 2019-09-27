@@ -347,7 +347,7 @@ public:
   ProgramStateRef invalidateRegions(unsigned BlockCount,
                                     ProgramStateRef Orig = nullptr) const;
 
-  using FrameBindingTy = std::pair<Loc, SVal>;
+  using FrameBindingTy = std::pair<SVal, SVal>;
   using BindingsTy = SmallVectorImpl<FrameBindingTy>;
 
   /// Populates the given SmallVector with the bindings in the callee's stack

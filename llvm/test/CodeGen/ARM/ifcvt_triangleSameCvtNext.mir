@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter -verify-machineinstrs %s -o - | FileCheck %s
+...
+---
+name:            foo
+body:             |
+  bb.0:
+    Bcc %bb.2, 1, $cpsr
+
+  bb.1:
+    $sp = tADDspi $sp, 2, 14, _
+    B %bb.1
+
+  bb.2:
+    Bcc %bb.3, 0, $cpsr
+    B %bb.2
+
+  bb.3:
+    Bcc %bb.1, 1, $cpsr
+    B %bb.1
+...
+
+# Both branches in bb.3 jump to bb.1. IfConversion shouldn't treat this as a
+# tringle and insert the tADDspi in bb3, but leave it as it is.
+
+# CHECK:     bb.3:
+# CHECK:       successors: %bb.1
+# CHECK-NOT:   tADDspi
+# CHECK:       Bcc %bb.1, 1, $cpsr
+# CHECK:       B %bb.1

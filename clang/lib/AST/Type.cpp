@@ -2490,6 +2490,15 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   return false;
 }
 
+bool Type::isNothrowT() const {
+  if (const auto *RD = getAsCXXRecordDecl()) {
+    IdentifierInfo *II = RD->getIdentifier();
+    if (II && II->isStr("nothrow_t") && RD->isInStdNamespace())
+      return true;
+  }
+  return false;
+}
+
 bool Type::isAlignValT() const {
   if (const auto *ET = getAs<EnumType>()) {
     IdentifierInfo *II = ET->getDecl()->getIdentifier();
