@@ -46,10 +46,10 @@ const ArchSpec k_dpu_arch("dpu-upmem-dpurte");
 
 DpuRank::DpuRank() : nr_threads(0), nr_dpus(0), m_lock() { m_rank = NULL; }
 
-bool DpuRank::Open(llvm::StringRef profile) {
+bool DpuRank::Open(char *profile) {
   std::lock_guard<std::mutex> guard(m_lock);
 
-  int ret = dpu_get_rank_of_type(profile.str().c_str(), &m_rank);
+  int ret = dpu_get_rank_of_type(profile, &m_rank);
   if (ret != DPU_API_SUCCESS)
     return false;
   m_desc = dpu_get_description(m_rank);

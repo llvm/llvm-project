@@ -80,7 +80,7 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
   DpuRank *rank = new DpuRank();
-  bool success = rank->Open("");
+  bool success = rank->Open(NULL);
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 

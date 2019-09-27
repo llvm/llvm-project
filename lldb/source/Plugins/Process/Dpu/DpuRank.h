@@ -37,7 +37,7 @@ class Dpu;
 class DpuRank {
 public:
   DpuRank();
-  bool Open(llvm::StringRef profile);
+  bool Open(char *profile);
   bool IsValid();
   bool Reset();
   Dpu *GetDpu(size_t index);
