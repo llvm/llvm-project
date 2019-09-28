@@ -1596,18 +1596,18 @@ public:
   }
 
   /// Return the minimum stack alignment of an argument.
-  llvm::Align getMinStackArgumentAlignment() const {
+  Align getMinStackArgumentAlignment() const {
     return MinStackArgumentAlignment;
   }
 
   /// Return the minimum function alignment.
-  llvm::Align getMinFunctionAlignment() const { return MinFunctionAlignment; }
+  Align getMinFunctionAlignment() const { return MinFunctionAlignment; }
 
   /// Return the preferred function alignment.
-  llvm::Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
+  Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
   /// Return the preferred loop alignment.
-  virtual llvm::Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
+  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const {
     return PrefLoopAlignment;
   }
 
@@ -2120,24 +2120,24 @@ protected:
   }
 
   /// Set the target's minimum function alignment.
-  void setMinFunctionAlignment(llvm::Align Align) {
-    MinFunctionAlignment = Align;
+  void setMinFunctionAlignment(Align Alignment) {
+    MinFunctionAlignment = Alignment;
   }
 
   /// Set the target's preferred function alignment.  This should be set if
   /// there is a performance benefit to higher-than-minimum alignment
-  void setPrefFunctionAlignment(llvm::Align Align) {
-    PrefFunctionAlignment = Align;
+  void setPrefFunctionAlignment(Align Alignment) {
+    PrefFunctionAlignment = Alignment;
   }
 
   /// Set the target's preferred loop alignment. Default alignment is one, it
   /// means the target does not care about loop alignment. The target may also
   /// override getPrefLoopAlignment to provide per-loop values.
-  void setPrefLoopAlignment(llvm::Align Align) { PrefLoopAlignment = Align; }
+  void setPrefLoopAlignment(Align Alignment) { PrefLoopAlignment = Alignment; }
 
   /// Set the minimum stack alignment of an argument.
-  void setMinStackArgumentAlignment(llvm::Align Align) {
-    MinStackArgumentAlignment = Align;
+  void setMinStackArgumentAlignment(Align Alignment) {
+    MinStackArgumentAlignment = Alignment;
   }
 
   /// Set the maximum atomic operation size supported by the
@@ -2699,18 +2699,18 @@ private:
   Sched::Preference SchedPreferenceInfo;
 
   /// The minimum alignment that any argument on the stack needs to have.
-  llvm::Align MinStackArgumentAlignment;
+  Align MinStackArgumentAlignment;
 
   /// The minimum function alignment (used when optimizing for size, and to
   /// prevent explicitly provided alignment from leading to incorrect code).
-  llvm::Align MinFunctionAlignment;
+  Align MinFunctionAlignment;
 
   /// The preferred function alignment (used when alignment unspecified and
   /// optimizing for speed).
-  llvm::Align PrefFunctionAlignment;
+  Align PrefFunctionAlignment;
 
   /// The preferred loop alignment (in log2 bot in bytes).
-  llvm::Align PrefLoopAlignment;
+  Align PrefLoopAlignment;
 
   /// Size in bits of the maximum atomics size the backend supports.
   /// Accesses larger than this will be expanded by AtomicExpandPass.

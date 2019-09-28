@@ -641,11 +641,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   EnableExtLdPromotion = true;
 
   // Set required alignment.
-  setMinFunctionAlignment(llvm::Align(4));
+  setMinFunctionAlignment(Align(4));
   // Set preferred alignments.
-  setPrefLoopAlignment(llvm::Align(1ULL << STI.getPrefLoopLogAlignment()));
-  setPrefFunctionAlignment(
-      llvm::Align(1ULL << STI.getPrefFunctionLogAlignment()));
+  setPrefLoopAlignment(Align(1ULL << STI.getPrefLoopLogAlignment()));
+  setPrefFunctionAlignment(Align(1ULL << STI.getPrefFunctionLogAlignment()));
 
   // Only change the limit for entries in a jump table if specified by
   // the sub target, but not at the command line.

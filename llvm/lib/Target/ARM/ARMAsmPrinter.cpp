@@ -168,7 +168,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // relatively easy to exceed the thumb branch range within a TU.
   if (! ThumbIndirectPads.empty()) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
-    EmitAlignment(llvm::Align(2));
+    EmitAlignment(Align(2));
     for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
       OutStreamer->EmitLabel(TIP.second);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tBX)
@@ -526,7 +526,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(llvm::Align(4));
+      EmitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
@@ -539,7 +539,7 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
       OutStreamer->SwitchSection(TLOFMacho.getThreadLocalPointerSection());
-      EmitAlignment(llvm::Align(4));
+      EmitAlignment(Align(4));
 
       for (auto &Stub : Stubs)
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
@@ -940,7 +940,7 @@ void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
 
   // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
   // ARM mode tables.
-  EmitAlignment(llvm::Align(4));
+  EmitAlignment(Align(4));
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
@@ -986,7 +986,7 @@ void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
 
   // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
   // ARM mode tables.
-  EmitAlignment(llvm::Align(4));
+  EmitAlignment(Align(4));
 
   // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
@@ -1015,7 +1015,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
   unsigned JTI = MO1.getIndex();
 
   if (Subtarget->isThumb1Only())
-    EmitAlignment(llvm::Align(4));
+    EmitAlignment(Align(4));
 
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
   OutStreamer->EmitLabel(JTISymbol);
@@ -1058,7 +1058,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
   OutStreamer->EmitDataRegion(MCDR_DataRegionEnd);
 
   // Make sure the next instruction is 2-byte aligned.
-  EmitAlignment(llvm::Align(2));
+  EmitAlignment(Align(2));
 }
 
 void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {

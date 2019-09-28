@@ -130,6 +130,12 @@ static cl::opt<bool> ProfileSampleAccurate(
              "callsite and function as having 0 samples. Otherwise, treat "
              "un-sampled callsites and functions conservatively as unknown. "));
 
+static cl::opt<bool> ProfileAccurateForSymsInList(
+    "profile-accurate-for-symsinlist", cl::Hidden, cl::ZeroOrMore,
+    cl::init(true),
+    cl::desc("For symbols in profile symbol list, regard their profiles to "
+             "be accurate. It may be overriden by profile-sample-accurate. "));
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -418,8 +424,12 @@ protected:
   // names, inline instance names and call target names.
   StringSet<> NamesInProfile;
 
-  // Showing whether ProfileSampleAccurate is enabled for current function.
-  bool ProfSampleAccEnabled = false;
+  // For symbol in profile symbol list, whether to regard their profiles
+  // to be accurate. It is mainly decided by existance of profile symbol
+  // list and -profile-accurate-for-symsinlist flag, but it can be
+  // overriden by -profile-sample-accurate or profile-sample-accurate
+  // attribute.
+  bool ProfAccForSymsInList;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -476,7 +486,8 @@ private:
 /// sample count with the hot cutoff computed by ProfileSummaryInfo, it is
 /// regarded as hot if the count is above the cutoff value.
 ///
-/// When profile-sample-accurate is enabled, functions without profile will
+/// When ProfileAccurateForSymsInList is enabled and profile symbol list
+/// is present, functions in the profile symbol list but without profile will
 /// be regarded as cold and much less inlining will happen in CGSCC inlining
 /// pass, so we tend to lower the hot criteria here to allow more early
 /// inlining to happen for warm callsites and it is helpful for performance.
@@ -487,7 +498,7 @@ bool SampleProfileLoader::callsiteIsHot(const FunctionSamples *CallsiteFS,
 
   assert(PSI && "PSI is expected to be non null");
   uint64_t CallsiteTotalSamples = CallsiteFS->getTotalSamples();
-  if (ProfSampleAccEnabled)
+  if (ProfAccForSymsInList)
     return !PSI->isColdCount(CallsiteTotalSamples);
   else
     return PSI->isHotCount(CallsiteTotalSamples);
@@ -889,6 +900,14 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
+
+  // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
+  // Profile symbol list is ignored when profile-sample-accurate is on.
+  assert((!ProfAccForSymsInList ||
+          (!ProfileSampleAccurate &&
+           !F.hasFnAttribute("profile-sample-accurate"))) &&
+         "ProfAccForSymsInList should be false when profile-sample-accurate "
+         "is enabled");
 
   DenseMap<Instruction *, const FunctionSamples *> localNotInlinedCallSites;
   bool Changed = false;
@@ -1667,7 +1686,10 @@ bool SampleProfileLoader::doInitialization(Module &M) {
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
   PSL = Reader->getProfileSymbolList();
 
-  if (ProfileSampleAccurate) {
+  // While profile-sample-accurate is on, ignore symbol list.
+  ProfAccForSymsInList =
+      ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
+  if (ProfAccForSymsInList) {
     NamesInProfile.clear();
     if (auto NameTable = Reader->getNameTable())
       NamesInProfile.insert(NameTable->begin(), NameTable->end());
@@ -1765,37 +1787,38 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   // this will be overwritten in emitAnnotations.
   uint64_t initialEntryCount = -1;
 
-  ProfSampleAccEnabled =
-      ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate");
-  if (ProfSampleAccEnabled) {
-    // PSL -- profile symbol list include all the symbols in sampled binary.
-    // It is used to prevent new functions to be treated as cold.
-    if (PSL) {
-      // Profile symbol list is available, initialize the entry count to 0
-      // only for functions in the list.
-      if (PSL->contains(F.getName()))
-        initialEntryCount = 0;
+  ProfAccForSymsInList = ProfileAccurateForSymsInList && PSL;
+  if (ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate")) {
+    // initialize all the function entry counts to 0. It means all the
+    // functions without profile will be regarded as cold.
+    initialEntryCount = 0;
+    // profile-sample-accurate is a user assertion which has a higher precedence
+    // than symbol list. When profile-sample-accurate is on, ignore symbol list.
+    ProfAccForSymsInList = false;
+  }
 
-      // When ProfileSampleAccurate is true, function without sample will be
-      // regarded as cold. To minimize the potential negative performance
-      // impact it could have, we want to be a little conservative here
-      // saying if a function shows up in the profile, no matter as outline
-      // function, inline instance or call targets, treat the function as not
-      // being cold. This will handle the cases such as most callsites of a
-      // function are inlined in sampled binary but not inlined in current
-      // build (because of source code drift, imprecise debug information, or
-      // the callsites are all cold individually but not cold
-      // accumulatively...), so the outline function showing up as cold in
-      // sampled binary will actually not be cold after current build.
-      StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-      if (NamesInProfile.count(CanonName))
-        initialEntryCount = -1;
-    } else {
-      // If there is no profile symbol list available, initialize all the
-      // function entry counts to 0. It means all the functions without
-      // profile will be regarded as cold.
+  // PSL -- profile symbol list include all the symbols in sampled binary.
+  // If ProfileAccurateForSymsInList is enabled, PSL is used to treat
+  // old functions without samples being cold, without having to worry
+  // about new and hot functions being mistakenly treated as cold.
+  if (ProfAccForSymsInList) {
+    // Initialize the entry count to 0 for functions in the list.
+    if (PSL->contains(F.getName()))
       initialEntryCount = 0;
-    }
+
+    // Function in the symbol list but without sample will be regarded as
+    // cold. To minimize the potential negative performance impact it could
+    // have, we want to be a little conservative here saying if a function
+    // shows up in the profile, no matter as outline function, inline instance
+    // or call targets, treat the function as not being cold. This will handle
+    // the cases such as most callsites of a function are inlined in sampled
+    // binary but not inlined in current build (because of source code drift,
+    // imprecise debug information, or the callsites are all cold individually
+    // but not cold accumulatively...), so the outline function showing up as
+    // cold in sampled binary will actually not be cold after current build.
+    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    if (NamesInProfile.count(CanonName))
+      initialEntryCount = -1;
   }
 
   F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));

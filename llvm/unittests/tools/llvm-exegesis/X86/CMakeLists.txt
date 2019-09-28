@@ -19,6 +19,7 @@ add_llvm_unittest(LLVMExegesisX86Tests
   RegisterAliasingTest.cpp
   SchedClassResolutionTest.cpp
   SnippetGeneratorTest.cpp
+  SnippetRepetitorTest.cpp
   TargetTest.cpp
   )
 target_link_libraries(LLVMExegesisX86Tests PRIVATE

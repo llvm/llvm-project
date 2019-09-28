@@ -2807,7 +2807,7 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    const llvm::Align Align = TLI->getPrefLoopAlignment(L);
+    const Align Align = TLI->getPrefLoopAlignment(L);
     if (Align == 1)
       continue; // Don't care about loop alignment.
 
@@ -3109,14 +3109,14 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (AlignAllBlock)
     // Align all of the blocks in the function to a specific alignment.
     for (MachineBasicBlock &MBB : MF)
-      MBB.setAlignment(llvm::Align(1ULL << AlignAllBlock));
+      MBB.setAlignment(Align(1ULL << AlignAllBlock));
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
     // specific alignment.
     for (auto MBI = std::next(MF.begin()), MBE = MF.end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
       if (!LayoutPred->isSuccessor(&*MBI))
-        MBI->setAlignment(llvm::Align(1ULL << AlignAllNonFallThruBlocks));
+        MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
     }
   }
   if (ViewBlockLayoutWithBFI != GVDT_None &&

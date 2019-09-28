@@ -387,7 +387,9 @@ TEST_F(FakeSnippetGeneratorTest, MemoryUse_Movsb) {
   // - hasAliasingRegisters
   const unsigned Opcode = llvm::X86::MOVSB;
   const Instruction &Instr = State.getIC().getInstr(Opcode);
-  auto Error = Generator.generateConfigurations(Instr).takeError();
+  auto Error =
+      Generator.generateConfigurations(Instr, State.getRATC().emptyRegisters())
+          .takeError();
   EXPECT_TRUE((bool)Error);
   llvm::consumeError(std::move(Error));
 }

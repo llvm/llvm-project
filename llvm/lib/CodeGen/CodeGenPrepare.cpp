@@ -3332,7 +3332,7 @@ private:
         // So the values are different and does not match. So we need them to
         // match. (But we register no more than one match per PHI node, so that
         // we won't later try to replace them twice.)
-        if (!MatchedPHIs.insert(FirstPhi).second)
+        if (MatchedPHIs.insert(FirstPhi).second)
           Matcher.insert({ FirstPhi, SecondPhi });
         // But me must check it.
         WorkList.push_back({ FirstPhi, SecondPhi });

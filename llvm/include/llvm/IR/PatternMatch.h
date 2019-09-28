@@ -1320,10 +1320,25 @@ m_ZExtOrSelf(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline match_combine_or<CastClass_match<OpTy, Instruction::SExt>, OpTy>
+m_SExtOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_SExt(Op), Op);
+}
+
+template <typename OpTy>
 inline match_combine_or<CastClass_match<OpTy, Instruction::ZExt>,
                         CastClass_match<OpTy, Instruction::SExt>>
 m_ZExtOrSExt(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), m_SExt(Op));
+}
+
+template <typename OpTy>
+inline match_combine_or<
+    match_combine_or<CastClass_match<OpTy, Instruction::ZExt>,
+                     CastClass_match<OpTy, Instruction::SExt>>,
+    OpTy>
+m_ZExtOrSExtOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
 /// Matches UIToFP.

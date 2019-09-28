@@ -59,7 +59,7 @@ private:
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
-  llvm::Align Alignment;
+  Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
   /// The index of this section in the layout order.
@@ -119,7 +119,7 @@ public:
   bool hasEnded() const;
 
   unsigned getAlignment() const { return Alignment.value(); }
-  void setAlignment(llvm::Align Value) { Alignment = Value; }
+  void setAlignment(Align Value) { Alignment = Value; }
 
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }

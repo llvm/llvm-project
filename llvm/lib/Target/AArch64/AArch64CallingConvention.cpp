@@ -40,10 +40,10 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
                              MVT LocVT, ISD::ArgFlagsTy &ArgFlags,
                              CCState &State, unsigned SlotAlign) {
   unsigned Size = LocVT.getSizeInBits() / 8;
-  const llvm::Align StackAlign =
+  const Align StackAlign =
       State.getMachineFunction().getDataLayout().getStackAlignment();
-  const llvm::Align OrigAlign(ArgFlags.getOrigAlign());
-  const llvm::Align Align = std::min(OrigAlign, StackAlign);
+  const Align OrigAlign(ArgFlags.getOrigAlign());
+  const Align Align = std::min(OrigAlign, StackAlign);
 
   for (auto &It : PendingMembers) {
     It.convertToMem(State.AllocateStack(

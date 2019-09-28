@@ -711,7 +711,7 @@ void AArch64AsmPrinter::EmitJumpTableInfo() {
     if (JTBBs.empty()) continue;
 
     unsigned Size = AFI->getJumpTableEntrySize(JTI);
-    EmitAlignment(llvm::Align(Size));
+    EmitAlignment(Align(Size));
     OutStreamer->EmitLabel(GetJTISymbol(JTI));
 
     for (auto *JTBB : JTBBs)

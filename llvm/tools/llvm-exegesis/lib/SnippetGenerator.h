@@ -57,7 +57,8 @@ public:
 
   // Calls generateCodeTemplate and expands it into one or more BenchmarkCode.
   llvm::Expected<std::vector<BenchmarkCode>>
-  generateConfigurations(const Instruction &Instr) const;
+  generateConfigurations(const Instruction &Instr,
+                         const llvm::BitVector &ExtraForbiddenRegs) const;
 
   // Given a snippet, computes which registers the setup code needs to define.
   std::vector<RegisterValue> computeRegisterInitialValues(

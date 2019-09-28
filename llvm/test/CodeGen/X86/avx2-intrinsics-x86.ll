@@ -2192,3 +2192,35 @@ define <8 x float>  @test_gather_mask(<8 x float> %a0, float* %a, <8 x i32> %idx
 
   ret <8 x float> %res
 }
+
+define <2 x i64> @test_mask_demanded_bits(<2 x i64> %a0, i8* %a1, <2 x i64> %idx, <2 x i1> %mask) {
+; X86-AVX-LABEL: test_mask_demanded_bits:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX-NEXT:    vpsllq $63, %xmm2, %xmm2 # encoding: [0xc5,0xe9,0x73,0xf2,0x3f]
+; X86-AVX-NEXT:    vpgatherqq %xmm2, (%eax,%xmm1,2), %xmm0 # encoding: [0xc4,0xe2,0xe9,0x91,0x04,0x48]
+; X86-AVX-NEXT:    retl # encoding: [0xc3]
+;
+; X86-AVX512VL-LABEL: test_mask_demanded_bits:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512VL-NEXT:    vpsllq $63, %xmm2, %xmm2 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0x73,0xf2,0x3f]
+; X86-AVX512VL-NEXT:    vpgatherqq %xmm2, (%eax,%xmm1,2), %xmm0 # encoding: [0xc4,0xe2,0xe9,0x91,0x04,0x48]
+; X86-AVX512VL-NEXT:    retl # encoding: [0xc3]
+;
+; X64-AVX-LABEL: test_mask_demanded_bits:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpsllq $63, %xmm2, %xmm2 # encoding: [0xc5,0xe9,0x73,0xf2,0x3f]
+; X64-AVX-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # encoding: [0xc4,0xe2,0xe9,0x91,0x04,0x4f]
+; X64-AVX-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX512VL-LABEL: test_mask_demanded_bits:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vpsllq $63, %xmm2, %xmm2 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0x73,0xf2,0x3f]
+; X64-AVX512VL-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # encoding: [0xc4,0xe2,0xe9,0x91,0x04,0x4f]
+; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
+  %mask1 = sext <2 x i1> %mask to <2 x i64>
+  %res = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> %a0,
+                            i8* %a1, <2 x i64> %idx, <2 x i64> %mask1, i8 2) ;
+  ret <2 x i64> %res
+}

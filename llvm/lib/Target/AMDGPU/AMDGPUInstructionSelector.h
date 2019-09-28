@@ -43,6 +43,9 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
 class AMDGPUInstructionSelector : public InstructionSelector {
+private:
+  MachineRegisterInfo *MRI;
+
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
                             const AMDGPURegisterBankInfo &RBI,
@@ -50,6 +53,9 @@ public:
 
   bool select(MachineInstr &I) override;
   static const char *getName();
+
+  void setupMF(MachineFunction &MF, GISelKnownBits &KB,
+               CodeGenCoverage &CoverageInfo) override;
 
 private:
   struct GEPInfo {
@@ -106,7 +112,7 @@ private:
   bool selectG_PTR_MASK(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
-  selectVOP3ModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
+  selectVOP3ModsImpl(Register Src) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
