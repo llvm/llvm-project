@@ -73,7 +73,7 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
       // heuristics decide.
       unsigned MaxLen = EnableOpt ? 0 : 32;
       // Try to inline memcpy type calls if optimizations are enabled.
-      return (!EnableOptSize) ? Helper.tryCombineMemCpyFamily(MI, MaxLen)
+      return (!EnableMinSize) ? Helper.tryCombineMemCpyFamily(MI, MaxLen)
                               : false;
     }
     default:

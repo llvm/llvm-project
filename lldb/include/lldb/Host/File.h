@@ -51,22 +51,23 @@ public:
   static mode_t ConvertOpenOptionsForPOSIXOpen(uint32_t open_options);
 
   File()
-      : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-        m_stream(kInvalidStream), m_options(0), m_own_stream(false),
-        m_is_interactive(eLazyBoolCalculate),
+      : IOObject(eFDTypeFile), m_descriptor(kInvalidDescriptor),
+        m_own_descriptor(false), m_stream(kInvalidStream), m_options(0),
+        m_own_stream(false), m_is_interactive(eLazyBoolCalculate),
         m_is_real_terminal(eLazyBoolCalculate),
         m_supports_colors(eLazyBoolCalculate) {}
 
   File(FILE *fh, bool transfer_ownership)
-      : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-        m_stream(fh), m_options(0), m_own_stream(transfer_ownership),
-        m_is_interactive(eLazyBoolCalculate),
+      : IOObject(eFDTypeFile), m_descriptor(kInvalidDescriptor),
+        m_own_descriptor(false), m_stream(fh), m_options(0),
+        m_own_stream(transfer_ownership), m_is_interactive(eLazyBoolCalculate),
         m_is_real_terminal(eLazyBoolCalculate),
         m_supports_colors(eLazyBoolCalculate) {}
 
   File(int fd, uint32_t options, bool transfer_ownership)
-      : IOObject(eFDTypeFile, transfer_ownership), m_descriptor(fd),
-        m_stream(kInvalidStream), m_options(options), m_own_stream(false),
+      : IOObject(eFDTypeFile), m_descriptor(fd),
+        m_own_descriptor(transfer_ownership), m_stream(kInvalidStream),
+        m_options(options), m_own_stream(false),
         m_is_interactive(eLazyBoolCalculate),
         m_is_real_terminal(eLazyBoolCalculate) {}
 
@@ -339,6 +340,7 @@ protected:
 
   // Member variables
   int m_descriptor;
+  bool m_own_descriptor;
   FILE *m_stream;
   uint32_t m_options;
   bool m_own_stream;

@@ -1404,3 +1404,33 @@ define <2 x i64> @PR41066(<2 x i64> %t0, <2 x double> %x, <2 x double> %y) {
   %t2 = select <2 x i1> %t1, <2 x i64> <i64 undef, i64 0>, <2 x i64> zeroinitializer
   ret <2 x i64> %t2
 }
+
+define <4 x i32> @zext_bool_logic(<4 x i64> %cond1, <4 x i64> %cond2, <4 x i32> %x) {
+; AVX512-LABEL: zext_bool_logic:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vptestnmq %zmm0, %zmm0, %k0 ## encoding: [0x62,0xf2,0xfe,0x48,0x27,0xc0]
+; AVX512-NEXT:    vptestnmq %zmm1, %zmm1, %k1 ## encoding: [0x62,0xf2,0xf6,0x48,0x27,0xc9]
+; AVX512-NEXT:    korw %k1, %k0, %k1 ## encoding: [0xc5,0xfc,0x45,0xc9]
+; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; AVX512-NEXT:    vpsubd %xmm0, %xmm2, %xmm0 ## encoding: [0xc5,0xe9,0xfa,0xc0]
+; AVX512-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; AVX512-NEXT:    retq ## encoding: [0xc3]
+;
+; SKX-LABEL: zext_bool_logic:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vptestnmq %ymm0, %ymm0, %k0 ## encoding: [0x62,0xf2,0xfe,0x28,0x27,0xc0]
+; SKX-NEXT:    vptestnmq %ymm1, %ymm1, %k1 ## encoding: [0x62,0xf2,0xf6,0x28,0x27,0xc9]
+; SKX-NEXT:    korw %k1, %k0, %k0 ## encoding: [0xc5,0xfc,0x45,0xc1]
+; SKX-NEXT:    vpmovm2d %k0, %xmm0 ## encoding: [0x62,0xf2,0x7e,0x08,0x38,0xc0]
+; SKX-NEXT:    vpsubd %xmm0, %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfa,0xc0]
+; SKX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; SKX-NEXT:    retq ## encoding: [0xc3]
+  %a = icmp eq <4 x i64> %cond1, zeroinitializer
+  %b = icmp eq <4 x i64> %cond2, zeroinitializer
+  %c = or <4 x i1> %a, %b
+  %d = zext <4 x i1> %c to <4 x i32>
+  %e = add <4 x i32> %d, %x
+  ret <4 x i32> %e
+}

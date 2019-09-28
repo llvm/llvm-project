@@ -69,7 +69,6 @@ add_lldb_library(lldbCore
     clang-tablegen-targets
 
   LINK_LIBS
-    clangAST
     clangDriver
     lldbBreakpoint
     lldbDataFormatters
