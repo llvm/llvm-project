@@ -477,13 +477,6 @@ Optional<ReferenceLoc> refInTypeLoc(TypeLoc L) {
       Ref->Qualifier = L.getQualifierLoc();
     }
 
-    void VisitDeducedTemplateSpecializationTypeLoc(
-        DeducedTemplateSpecializationTypeLoc L) {
-      Ref = ReferenceLoc{
-          NestedNameSpecifierLoc(), L.getNameLoc(),
-          explicitReferenceTargets(DynTypedNode::create(L.getType()))};
-    }
-
     void VisitTagTypeLoc(TagTypeLoc L) {
       Ref =
           ReferenceLoc{NestedNameSpecifierLoc(), L.getNameLoc(), {L.getDecl()}};
@@ -495,9 +488,25 @@ Optional<ReferenceLoc> refInTypeLoc(TypeLoc L) {
     }
 
     void VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
+      // We must ensure template type aliases are included in results if they
+      // were written in the source code, e.g. in
+      //    template <class T> using valias = vector<T>;
+      //    ^valias<int> x;
+      // 'explicitReferenceTargets' will return:
+      //    1. valias with mask 'Alias'.
+      //    2. 'vector<int>' with mask 'Underlying'.
+      //  we want to return only #1 in this case.
       Ref = ReferenceLoc{
           NestedNameSpecifierLoc(), L.getTemplateNameLoc(),
-          explicitReferenceTargets(DynTypedNode::create(L.getType()))};
+          explicitReferenceTargets(DynTypedNode::create(L.getType()),
+                                   DeclRelation::Alias)};
+    }
+    void VisitDeducedTemplateSpecializationTypeLoc(
+        DeducedTemplateSpecializationTypeLoc L) {
+      Ref = ReferenceLoc{
+          NestedNameSpecifierLoc(), L.getNameLoc(),
+          explicitReferenceTargets(DynTypedNode::create(L.getType()),
+                                   DeclRelation::Alias)};
     }
 
     void VisitDependentTemplateSpecializationTypeLoc(
