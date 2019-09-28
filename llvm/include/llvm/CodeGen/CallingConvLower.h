@@ -424,18 +424,18 @@ public:
   /// AllocateStack - Allocate a chunk of stack space with the specified size
   /// and alignment.
   unsigned AllocateStack(unsigned Size, unsigned Alignment) {
-    const llvm::Align Align(Alignment);
-    StackOffset = alignTo(StackOffset, Align);
+    const Align CheckedAlignment(Alignment);
+    StackOffset = alignTo(StackOffset, CheckedAlignment);
     unsigned Result = StackOffset;
     StackOffset += Size;
-    MaxStackArgAlign = std::max(Align, MaxStackArgAlign);
-    ensureMaxAlignment(Align);
+    MaxStackArgAlign = std::max(CheckedAlignment, MaxStackArgAlign);
+    ensureMaxAlignment(CheckedAlignment);
     return Result;
   }
 
-  void ensureMaxAlignment(llvm::Align Align) {
+  void ensureMaxAlignment(Align Alignment) {
     if (!AnalyzingMustTailForwardedRegs)
-      MF.getFrameInfo().ensureMaxAlignment(Align.value());
+      MF.getFrameInfo().ensureMaxAlignment(Alignment.value());
   }
 
   /// Version of AllocateStack with extra register to be shadowed.

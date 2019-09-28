@@ -741,46 +741,9 @@ public:
 #define GET_MATCHER_IMPLEMENTATION
 #include "RISCVGenAsmMatcher.inc"
 
-// Return the matching FPR64 register for the given FPR32.
-// FIXME: Ideally this function could be removed in favour of using
-// information from TableGen.
-static Register convertFPR32ToFPR64(Register Reg) {
-  switch (Reg) {
-  default:
-    llvm_unreachable("Not a recognised FPR32 register");
-  case RISCV::F0_32: return RISCV::F0_64;
-  case RISCV::F1_32: return RISCV::F1_64;
-  case RISCV::F2_32: return RISCV::F2_64;
-  case RISCV::F3_32: return RISCV::F3_64;
-  case RISCV::F4_32: return RISCV::F4_64;
-  case RISCV::F5_32: return RISCV::F5_64;
-  case RISCV::F6_32: return RISCV::F6_64;
-  case RISCV::F7_32: return RISCV::F7_64;
-  case RISCV::F8_32: return RISCV::F8_64;
-  case RISCV::F9_32: return RISCV::F9_64;
-  case RISCV::F10_32: return RISCV::F10_64;
-  case RISCV::F11_32: return RISCV::F11_64;
-  case RISCV::F12_32: return RISCV::F12_64;
-  case RISCV::F13_32: return RISCV::F13_64;
-  case RISCV::F14_32: return RISCV::F14_64;
-  case RISCV::F15_32: return RISCV::F15_64;
-  case RISCV::F16_32: return RISCV::F16_64;
-  case RISCV::F17_32: return RISCV::F17_64;
-  case RISCV::F18_32: return RISCV::F18_64;
-  case RISCV::F19_32: return RISCV::F19_64;
-  case RISCV::F20_32: return RISCV::F20_64;
-  case RISCV::F21_32: return RISCV::F21_64;
-  case RISCV::F22_32: return RISCV::F22_64;
-  case RISCV::F23_32: return RISCV::F23_64;
-  case RISCV::F24_32: return RISCV::F24_64;
-  case RISCV::F25_32: return RISCV::F25_64;
-  case RISCV::F26_32: return RISCV::F26_64;
-  case RISCV::F27_32: return RISCV::F27_64;
-  case RISCV::F28_32: return RISCV::F28_64;
-  case RISCV::F29_32: return RISCV::F29_64;
-  case RISCV::F30_32: return RISCV::F30_64;
-  case RISCV::F31_32: return RISCV::F31_64;
-  }
+static Register convertFPR64ToFPR32(Register Reg) {
+  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
+  return Reg - RISCV::F0_D + RISCV::F0_F;
 }
 
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
@@ -790,16 +753,16 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_InvalidOperand;
 
   Register Reg = Op.getReg();
-  bool IsRegFPR32 =
-      RISCVMCRegisterClasses[RISCV::FPR32RegClassID].contains(Reg);
-  bool IsRegFPR32C =
-      RISCVMCRegisterClasses[RISCV::FPR32CRegClassID].contains(Reg);
+  bool IsRegFPR64 =
+      RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg);
+  bool IsRegFPR64C =
+      RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
 
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
-  // register from FPR32 to FPR64 or FPR32C to FPR64C if necessary.
-  if ((IsRegFPR32 && Kind == MCK_FPR64) ||
-      (IsRegFPR32C && Kind == MCK_FPR64C)) {
-    Op.Reg.RegNum = convertFPR32ToFPR64(Reg);
+  // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
+  if ((IsRegFPR64 && Kind == MCK_FPR32) ||
+      (IsRegFPR64C && Kind == MCK_FPR32C)) {
+    Op.Reg.RegNum = convertFPR64ToFPR32(Reg);
     return Match_Success;
   }
   return Match_InvalidOperand;
@@ -986,6 +949,11 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 static bool matchRegisterNameHelper(bool IsRV32E, Register &RegNo,
                                     StringRef Name) {
   RegNo = MatchRegisterName(Name);
+  // The 32- and 64-bit FPRs have the same asm name. Check that the initial
+  // match always matches the 64-bit variant, and not the 32-bit one.
+  assert(!(RegNo >= RISCV::F0_F && RegNo <= RISCV::F31_F));
+  // The default FPR register class is based on the tablegen enum ordering.
+  static_assert(RISCV::F0_D < RISCV::F0_F, "FPR matching must be updated");
   if (RegNo == RISCV::NoRegister)
     RegNo = MatchRegisterAltName(Name);
   if (IsRV32E && RegNo >= RISCV::X16 && RegNo <= RISCV::X31)

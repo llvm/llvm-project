@@ -210,7 +210,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
       if (Function *F = dyn_cast<Function>(&GV)) {
         if (!F->isDeclaration()) {
           for (auto &S : VI.getSummaryList()) {
-            FunctionSummary *FS = dyn_cast<FunctionSummary>(S->getBaseObject());
+            auto *FS = cast<FunctionSummary>(S->getBaseObject());
             if (FS->modulePath() == M.getModuleIdentifier()) {
               F->setEntryCount(Function::ProfileCount(FS->entryCount(),
                                                       Function::PCT_Synthetic));

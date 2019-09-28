@@ -424,7 +424,7 @@ namespace PseudoDtor {
   int k;
   typedef int I;
   struct T {
-    int n : (k.~I(), 0); // expected-error {{constant expression}}
+    int n : (k.~I(), 1); // cxx11-warning {{constant expression}} cxx11-note {{pseudo-destructor}}
   };
 }
 

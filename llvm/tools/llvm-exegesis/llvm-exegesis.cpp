@@ -17,6 +17,7 @@
 #include "lib/Clustering.h"
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
+#include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
 #include "lib/TargetSelect.h"
 #include "llvm/ADT/StringExtras.h"
@@ -79,6 +80,14 @@ static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
                // we'll analyse the results.
                clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
                           "Analysis")));
+
+static cl::opt<exegesis::InstructionBenchmark::RepetitionModeE> RepetitionMode(
+    "repetition-mode", cl::desc("how to repeat the instruction snippet"),
+    cl::cat(BenchmarkOptions),
+    cl::values(clEnumValN(exegesis::InstructionBenchmark::Duplicate,
+                          "duplicate", "Duplicate the snippet"),
+               clEnumValN(exegesis::InstructionBenchmark::Loop, "loop",
+                          "Loop over the snippet")));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
@@ -192,7 +201,8 @@ getOpcodesOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
 
 // Generates code snippets for opcode `Opcode`.
 static llvm::Expected<std::vector<BenchmarkCode>>
-generateSnippets(const LLVMState &State, unsigned Opcode) {
+generateSnippets(const LLVMState &State, unsigned Opcode,
+                 const llvm::BitVector &ForbiddenRegs) {
   const Instruction &Instr = State.getIC().getInstr(Opcode);
   const llvm::MCInstrDesc &InstrDesc = *Instr.Description;
   // Ignore instructions that we cannot run.
@@ -209,7 +219,7 @@ generateSnippets(const LLVMState &State, unsigned Opcode) {
       State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State);
   if (!Generator)
     llvm::report_fatal_error("cannot create snippet generator");
-  return Generator->generateConfigurations(Instr);
+  return Generator->generateConfigurations(Instr, ForbiddenRegs);
 }
 
 namespace {
@@ -372,6 +382,8 @@ void benchmarkMain() {
   const LLVMState State(CpuName);
   const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
 
+  const auto Repetitor = SnippetRepetitor::Create(RepetitionMode, State);
+
   std::vector<BenchmarkCode> Configurations;
   if (!Opcodes.empty()) {
     for (const unsigned Opcode : Opcodes) {
@@ -383,7 +395,8 @@ void benchmarkMain() {
                      << ": ignoring instruction without sched class\n";
         continue;
       }
-      auto ConfigsForInstr = generateSnippets(State, Opcode);
+      auto ConfigsForInstr =
+          generateSnippets(State, Opcode, Repetitor->getReservedRegs());
       if (!ConfigsForInstr) {
         llvm::logAllUnhandledErrors(
             ConfigsForInstr.takeError(), llvm::errs(),
@@ -411,8 +424,8 @@ void benchmarkMain() {
     BenchmarkFile = "-";
 
   for (const BenchmarkCode &Conf : Configurations) {
-    InstructionBenchmark Result =
-        Runner->runConfiguration(Conf, NumRepetitions, DumpObjectToDisk);
+    InstructionBenchmark Result = Runner->runConfiguration(
+        Conf, NumRepetitions, *Repetitor, DumpObjectToDisk);
     ExitOnErr(Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();

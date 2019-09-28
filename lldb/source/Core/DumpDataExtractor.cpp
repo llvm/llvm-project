@@ -22,9 +22,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/CanonicalType.h"
-
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"

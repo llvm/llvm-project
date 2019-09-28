@@ -37,9 +37,10 @@ SnippetGenerator::SnippetGenerator(const LLVMState &State) : State(State) {}
 SnippetGenerator::~SnippetGenerator() = default;
 
 llvm::Expected<std::vector<BenchmarkCode>>
-SnippetGenerator::generateConfigurations(const Instruction &Instr) const {
+SnippetGenerator::generateConfigurations(
+    const Instruction &Instr, const llvm::BitVector &ExtraForbiddenRegs) const {
   llvm::BitVector ForbiddenRegs = State.getRATC().reservedRegisters();
-
+  ForbiddenRegs |= ExtraForbiddenRegs;
   // If the instruction has memory registers, prevent the generator from
   // using the scratch register and its aliasing registers.
   if (Instr.hasMemoryOperands()) {

@@ -112,7 +112,6 @@ public:
     // visitor.
     for (const auto &M : AST.getMacros().Ranges)
       Tokens.push_back({HighlightingKind::Macro, M});
-    // addToken(Loc, HighlightingKind::Macro);
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);

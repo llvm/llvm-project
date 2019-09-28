@@ -371,7 +371,7 @@ namespace {
 
     void doInitialPlacement(std::vector<MachineInstr*> &CPEMIs);
     CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
-    llvm::Align getCPEAlign(const MachineInstr &CPEMI);
+    Align getCPEAlign(const MachineInstr &CPEMI);
     void initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs);
     unsigned getOffsetOf(MachineInstr *MI) const;
     unsigned getUserOffset(CPUser&) const;
@@ -529,11 +529,11 @@ MipsConstantIslands::doInitialPlacement(std::vector<MachineInstr*> &CPEMIs) {
   MF->push_back(BB);
 
   // MachineConstantPool measures alignment in bytes. We measure in log2(bytes).
-  const llvm::Align MaxAlign(MCP->getConstantPoolAlignment());
+  const Align MaxAlign(MCP->getConstantPoolAlignment());
 
   // Mark the basic block as required by the const-pool.
   // If AlignConstantIslands isn't set, use 4-byte alignment for everything.
-  BB->setAlignment(AlignConstantIslands ? MaxAlign : llvm::Align(4));
+  BB->setAlignment(AlignConstantIslands ? MaxAlign : Align(4));
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
@@ -619,16 +619,16 @@ MipsConstantIslands::CPEntry
 
 /// getCPEAlign - Returns the required alignment of the constant pool entry
 /// represented by CPEMI.  Alignment is measured in log2(bytes) units.
-llvm::Align MipsConstantIslands::getCPEAlign(const MachineInstr &CPEMI) {
+Align MipsConstantIslands::getCPEAlign(const MachineInstr &CPEMI) {
   assert(CPEMI.getOpcode() == Mips::CONSTPOOL_ENTRY);
 
   // Everything is 4-byte aligned unless AlignConstantIslands is set.
   if (!AlignConstantIslands)
-    return llvm::Align(4);
+    return Align(4);
 
   unsigned CPI = CPEMI.getOperand(1).getIndex();
   assert(CPI < MCP->getConstants().size() && "Invalid constant pool index.");
-  return llvm::Align(MCP->getConstants()[CPI].getAlignment());
+  return Align(MCP->getConstants()[CPI].getAlignment());
 }
 
 /// initializeFunctionInfo - Do the initial scan of the function, building up
@@ -936,11 +936,11 @@ bool MipsConstantIslands::isWaterInRange(unsigned UserOffset,
                                         unsigned &Growth) {
   unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset();
   unsigned NextBlockOffset;
-  llvm::Align NextBlockAlignment;
+  Align NextBlockAlignment;
   MachineFunction::const_iterator NextBlock = ++Water->getIterator();
   if (NextBlock == MF->end()) {
     NextBlockOffset = BBInfo[Water->getNumber()].postOffset();
-    NextBlockAlignment = llvm::Align::None();
+    NextBlockAlignment = Align::None();
   } else {
     NextBlockOffset = BBInfo[NextBlock->getNumber()].Offset;
     NextBlockAlignment = NextBlock->getAlignment();
@@ -1251,7 +1251,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   // Try to split the block so it's fully aligned.  Compute the latest split
   // point where we can add a 4-byte branch instruction, and then align to
   // Align which is the largest possible alignment in the function.
-  const llvm::Align Align = MF->getAlignment();
+  const Align Align = MF->getAlignment();
   unsigned BaseInsertOffset = UserOffset + U.getMaxDisp();
   LLVM_DEBUG(dbgs() << format("Split in middle of big block before %#x",
                               BaseInsertOffset));
@@ -1423,7 +1423,7 @@ void MipsConstantIslands::removeDeadCPEMI(MachineInstr *CPEMI) {
     BBInfo[CPEBB->getNumber()].Size = 0;
 
     // This block no longer needs to be aligned.
-    CPEBB->setAlignment(llvm::Align(1));
+    CPEBB->setAlignment(Align(1));
   } else {
     // Entries are sorted by descending alignment, so realign from the front.
     CPEBB->setAlignment(getCPEAlign(*CPEBB->begin()));
@@ -1522,7 +1522,7 @@ MipsConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
     // We should have a way to back out this alignment restriction if we "can" later.
     // but it is not harmful.
     //
-    DestBB->setAlignment(llvm::Align(4));
+    DestBB->setAlignment(Align(4));
     Br.MaxDisp = ((1<<24)-1) * 2;
     MI->setDesc(TII->get(Mips::JalB16));
   }

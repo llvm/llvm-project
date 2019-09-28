@@ -641,7 +641,7 @@ bool MIParser::parseBasicBlockDefinition(
     return error(Loc, Twine("redefinition of machine basic block with id #") +
                           Twine(ID));
   if (Alignment)
-    MBB->setAlignment(llvm::Align(Alignment));
+    MBB->setAlignment(Align(Alignment));
   if (HasAddressTaken)
     MBB->setHasAddressTaken();
   MBB->setIsEHPad(IsLandingPad);

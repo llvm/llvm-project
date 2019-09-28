@@ -12,6 +12,10 @@ def segalign
                "architecture when creating a universal binary file. The "
                "alignment is a hexadecimal number that is a power of 2.">;
 
+def arch
+    : MultiArg<["-", "--"], "arch", 2>,
+      HelpText<"Specifies the architecture and the corresponding input file">;
+
 def action_group : OptionGroup<"action group">;
 
 def verify_arch

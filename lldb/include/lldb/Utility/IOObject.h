@@ -29,8 +29,7 @@ public:
   typedef int WaitableHandle;
   static const WaitableHandle kInvalidHandleValue;
 
-  IOObject(FDType type, bool should_close)
-      : m_fd_type(type), m_should_close_fd(should_close) {}
+  IOObject(FDType type) : m_fd_type(type) {}
   virtual ~IOObject();
 
   virtual Status Read(void *buf, size_t &num_bytes) = 0;
@@ -44,8 +43,6 @@ public:
 
 protected:
   FDType m_fd_type;
-  bool m_should_close_fd; // True if this class should close the file descriptor
-                          // when it goes away.
 
 private:
   DISALLOW_COPY_AND_ASSIGN(IOObject);

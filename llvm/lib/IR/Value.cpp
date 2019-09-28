@@ -667,7 +667,7 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
   if (auto *GO = dyn_cast<GlobalObject>(this)) {
     if (isa<Function>(GO)) {
-      const llvm::MaybeAlign FunctionPtrAlign = DL.getFunctionPtrAlign();
+      const MaybeAlign FunctionPtrAlign = DL.getFunctionPtrAlign();
       const unsigned Align = FunctionPtrAlign ? FunctionPtrAlign->value() : 0;
       switch (DL.getFunctionPtrAlignType()) {
       case DataLayout::FunctionPtrAlignType::Independent:
