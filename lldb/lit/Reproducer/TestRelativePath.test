@@ -1,0 +1,8 @@
+# This tests relative capture paths.
+
+# RUN: mkdir -p %t
+# RUN: cd %t
+# RUN: rm -rf ./foo
+# RUN: %clang %S/Inputs/simple.c -g -o %t/reproducer.out
+# RUN: %lldb -x -b -s %S/Inputs/FileCapture.in -o 'reproducer dump -p files' --capture --capture-path ./foo %t/reproducer.out
+# RUN: %lldb --replay ./foo

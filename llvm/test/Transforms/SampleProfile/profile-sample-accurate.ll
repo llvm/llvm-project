@@ -1,8 +1,18 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
+
 ; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list.text %S/Inputs/profsampleacc.extbinary.afdo -o %t.symlist.afdo
-; RUN: opt < %s -sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=PROFSYMLIST
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=PROFSYMLIST
+; RUN: opt < %s -sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=PROFSYMLIST
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=PROFSYMLIST
+;
+; If -profile-accurate-for-symsinlist and -profile-sample-accurate both present,
+; -profile-sample-accurate will override -profile-accurate-for-symsinlist.
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
 ;
 ; Original C++ test case
 ;
@@ -22,13 +32,21 @@
 ;
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
-; Check _Z3sumii's function entry count will be intialized to 0 if no profile
-; symbol list is available.
-; If symbol list is available, _Z3sumii's function entry count will be
-; initialized to -1 if it shows up in the profile.
+; Check _Z3sumii's function entry count will be 0 when
+; profile-sample-accurate is enabled.
+; CALL_SUM_IS_HOT: define i32 @_Z3sumii{{.*}}!prof ![[ZERO_ID:[0-9]+]]
 ;
-; CHECK: define i32 @_Z3sumii{{.*}}!prof ![[ZERO_ID:[0-9]+]]
+; Check _Z3sumii's function entry count will be nonzero when
+; profile-sample-accurate is enabled because the callsite is warm and not
+; inlined so its function entry count is adjusted to nonzero.
+; CALL_SUM_IS_WARM: define i32 @_Z3sumii{{.*}}!prof ![[NONZERO_ID:[0-9]+]]
+;
+; Check _Z3sumii's function entry count will be initialized to -1 when
+; profile-accurate-for-profsymlist is enabled and _Z3sumii exists in the
+; profile symbol list because it also shows up in the profile as inline
+; instance.
 ; PROFSYMLIST: define i32 @_Z3sumii{{.*}}!prof ![[UNKNOWN_ID:[0-9]+]]
+;
 ; Function Attrs: nounwind uwtable
 define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !4 {
 entry:
@@ -65,11 +83,21 @@ while.body:                                       ; preds = %while.cond
   br i1 %cmp1, label %if.then, label %if.else, !dbg !16
 
 ; With the hot cutoff being set to 600000, the inline instance of _Z3sumii
-; in main is neither hot nor cold. Check it will still be inlined when
+; in main is neither hot nor cold. Check it won't be inlined when
 ; profile-sample-accurate is enabled.
-; CHECK: if.then:
-; CHECK-NOT: call i32 @_Z3sumii
-; CHECK: if.else:
+; CALL_SUM_IS_WARM: if.then:
+; CALL_SUM_IS_WARM: call i32 @_Z3sumii
+; CALL_SUM_IS_WARM: if.else:
+;
+; With the hot cutoff being set to 900000, the inline instance of _Z3sumii
+; in main is hot. Check the callsite of _Z3sumii will be inlined when
+; profile-sample-accurate is enabled.
+; CALL_SUM_IS_HOT: if.then:
+; CALL_SUM_IS_HOT-NOT: call i32 @_Z3sumii
+; CALL_SUM_IS_HOT: if.else:
+;
+; Check _Z3sumii will be inlined when profile-accurate-for-profsymlist is
+; enabled
 ; PROFSYMLIST: if.then:
 ; PROFSYMLIST-NOT: call i32 @_Z3sumii
 ; PROFSYMLIST: if.else:
@@ -99,7 +127,8 @@ declare i32 @printf(i8*, ...) #2
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-; CHECK: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
+; CALL_SUM_IS_HOT: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
+; CALL_SUM_IS_WARM: ![[NONZERO_ID]] = !{!"function_entry_count", i64 5179}
 ; PROFSYMLIST: ![[UNKNOWN_ID]] = !{!"function_entry_count", i64 -1}
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")

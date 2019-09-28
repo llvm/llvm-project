@@ -3972,16 +3972,16 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   // host entries section. These will be defined by the linker.
   llvm::Type *OffloadEntryTy =
       CGM.getTypes().ConvertTypeForMem(getTgtOffloadEntryQTy());
-  std::string EntriesBeginName = getName({"omp_offloading", "entries_begin"});
   auto *HostEntriesBegin = new llvm::GlobalVariable(
       M, OffloadEntryTy, /*isConstant=*/true,
       llvm::GlobalValue::ExternalLinkage, /*Initializer=*/nullptr,
-      EntriesBeginName);
-  std::string EntriesEndName = getName({"omp_offloading", "entries_end"});
-  auto *HostEntriesEnd =
-      new llvm::GlobalVariable(M, OffloadEntryTy, /*isConstant=*/true,
-                               llvm::GlobalValue::ExternalLinkage,
-                               /*Initializer=*/nullptr, EntriesEndName);
+      "__start_omp_offloading_entries");
+  HostEntriesBegin->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  auto *HostEntriesEnd = new llvm::GlobalVariable(
+      M, OffloadEntryTy, /*isConstant=*/true,
+      llvm::GlobalValue::ExternalLinkage,
+      /*Initializer=*/nullptr, "__stop_omp_offloading_entries");
+  HostEntriesEnd->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
   // Create all device images
   auto *DeviceImageTy = cast<llvm::StructType>(
@@ -4129,8 +4129,7 @@ void CGOpenMPRuntime::createOffloadEntry(
       Twine(EntryName).concat(Name), llvm::GlobalValue::WeakAnyLinkage);
 
   // The entry has to be created in the section the linker expects it to be.
-  std::string Section = getName({"omp_offloading", "entries"});
-  Entry->setSection(Section);
+  Entry->setSection("omp_offloading_entries");
 }
 
 void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {

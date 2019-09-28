@@ -26,7 +26,7 @@
 // HOST: [[SIZES:@.+]] = private unnamed_addr constant [3 x i64] [i64 4, i64 4, i64 4]
 // HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [3 x i64] [i64 35, i64 531, i64 531]
 // HOST: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_decl_tgt_ref_ptr\00"
-// HOST: @.omp_offloading.entry.c_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i8* bitcast (i32** @c_decl_tgt_ref_ptr to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name, i32 0, i32 0), i64 8, i32 1, i32 0 }, section ".omp_offloading.entries", align 1
+// HOST: @.omp_offloading.entry.c_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i8* bitcast (i32** @c_decl_tgt_ref_ptr to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name, i32 0, i32 0), i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
 // DEVICE-NOT: internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_{{.*}}_decl_tgt_ref_ptr\00"
 // HOST: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"_{{.*}}d_{{.*}}_decl_tgt_ref_ptr\00"
 // HOST: @.omp_offloading.entry.[[D_PTR]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (i32** @[[D_PTR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0
