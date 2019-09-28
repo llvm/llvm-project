@@ -280,14 +280,6 @@
 // CHK-LKS:     [[T2BIN]]
 // CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.img_end.x86_64-pc-linux-gnu = .);
 // CHK-LKS:   }
-// CHK-LKS:   .omp_offloading.entries :
-// CHK-LKS:   ALIGN(0x10)
-// CHK-LKS:   SUBALIGN(0x01)
-// CHK-LKS:   {
-// CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.entries_begin = .);
-// CHK-LKS:     *(.omp_offloading.entries)
-// CHK-LKS:     PROVIDE_HIDDEN(.omp_offloading.entries_end = .);
-// CHK-LKS:   }
 // CHK-LKS: }
 // CHK-LKS: INSERT BEFORE .data
 

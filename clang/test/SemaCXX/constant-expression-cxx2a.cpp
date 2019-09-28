@@ -1073,3 +1073,180 @@ namespace memory_leaks {
   constexpr bool h(UP p) { return *p; }
   static_assert(h({new bool(true)})); // ok
 }
+
+namespace dtor_call {
+  struct A { int n; };
+  constexpr void f() { // expected-error {{never produces a constant expression}}
+    A a; // expected-note {{destroying object 'a' whose lifetime has already ended}}
+    a.~A();
+  }
+  union U { A a; };
+  constexpr void g() {
+    U u;
+    u.a.n = 3;
+    u.a.~A();
+    // There's now effectively no active union member, but we model it as if
+    // 'a' is still the active union member (but its lifetime has ended).
+    u.a.n = 4; // Start lifetime of 'a' again.
+    u.a.~A();
+  }
+  static_assert((g(), true));
+
+  constexpr bool pseudo() {
+    using T = bool;
+    bool b = false;
+    // This does evaluate the store to 'b'...
+    (b = true).~T();
+    // ... but does not end the lifetime of the object.
+    return b;
+  }
+  static_assert(pseudo());
+
+  constexpr void use_after_destroy() {
+    A a;
+    a.~A();
+    A b = a; // expected-note {{in call}} expected-note {{read of object outside its lifetime}}
+  }
+  static_assert((use_after_destroy(), true)); // expected-error {{}} expected-note {{in call}}
+
+  constexpr void double_destroy() {
+    A a;
+    a.~A();
+    a.~A(); // expected-note {{destruction of object outside its lifetime}}
+  }
+  static_assert((double_destroy(), true)); // expected-error {{}} expected-note {{in call}}
+
+  struct X { char *p; constexpr ~X() { *p++ = 'X'; } };
+  struct Y : X { int y; virtual constexpr ~Y() { *p++ = 'Y'; } };
+  struct Z : Y { int z; constexpr ~Z() override { *p++ = 'Z'; } };
+  union VU {
+    constexpr VU() : z() {}
+    constexpr ~VU() {}
+    Z z;
+  };
+
+  constexpr bool virt_dtor(int mode, const char *expected) {
+    char buff[4] = {};
+    VU vu;
+    vu.z.p = buff;
+    switch (mode) {
+    case 0:
+      vu.z.~Z();
+      break;
+    case 1:
+      ((Y&)vu.z).~Y();
+      break;
+    case 2:
+      ((X&)vu.z).~X();
+      break;
+    case 3:
+      ((Y&)vu.z).Y::~Y();
+      vu.z.z = 1; // ok, still have a Z (with no Y base class!)
+      break;
+    case 4:
+      ((X&)vu.z).X::~X();
+      vu.z.y = 1; // ok, still have a Z and a Y (with no X base class!)
+      break;
+    }
+    return __builtin_strcmp(expected, buff) == 0;
+  }
+  static_assert(virt_dtor(0, "ZYX"));
+  static_assert(virt_dtor(1, "ZYX"));
+  static_assert(virt_dtor(2, "X"));
+  static_assert(virt_dtor(3, "YX"));
+  static_assert(virt_dtor(4, "X"));
+
+  constexpr void use_after_virt_destroy() {
+    char buff[4] = {};
+    VU vu;
+    vu.z.p = buff;
+    ((Y&)vu.z).~Y();
+    ((Z&)vu.z).z = 1; // expected-note {{assignment to object outside its lifetime}}
+  }
+  static_assert((use_after_virt_destroy(), true)); // expected-error {{}} expected-note {{in call}}
+
+  constexpr void destroy_after_lifetime() {
+    A *p;
+    {
+      A a;
+      p = &a;
+    }
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
+  }
+  static_assert((destroy_after_lifetime(), true)); // expected-error {{}} expected-note {{in call}}
+
+  constexpr void destroy_after_lifetime2() {
+    A *p = []{ A a; return &a; }(); // expected-warning {{}} expected-note {{declared here}}
+    p->~A(); // expected-note {{destruction of variable whose lifetime has ended}}
+  }
+  static_assert((destroy_after_lifetime2(), true)); // expected-error {{}} expected-note {{in call}}
+
+  constexpr void destroy_after_lifetime3() {
+    A *p = []{ return &(A&)(A&&)A(); }(); // expected-warning {{}} expected-note {{temporary created here}}
+    p->~A(); // expected-note {{destruction of temporary whose lifetime has ended}}
+  }
+  static_assert((destroy_after_lifetime3(), true)); // expected-error {{}} expected-note {{in call}}
+
+  constexpr void destroy_after_lifetime4() { // expected-error {{never produces a constant expression}}
+    A *p = new A;
+    delete p;
+    p->~A(); // expected-note {{destruction of heap allocated object that has been deleted}}
+  }
+
+  struct Extern { constexpr ~Extern() {} } extern e;
+  constexpr void destroy_extern() { // expected-error {{never produces a constant expression}}
+    e.~Extern(); // expected-note {{cannot modify an object that is visible outside}}
+  }
+
+  constexpr A &&a_ref = A(); // expected-note {{temporary created here}}
+  constexpr void destroy_extern_2() { // expected-error {{never produces a constant expression}}
+    a_ref.~A(); // expected-note {{destruction of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+  }
+
+  struct S {
+    constexpr S() { n = 1; }
+    constexpr ~S() { n = 0; }
+    int n;
+  };
+  constexpr void destroy_volatile() {
+    volatile S s;
+  }
+  static_assert((destroy_volatile(), true)); // ok, not volatile during construction and destruction
+
+  constexpr void destroy_null() { // expected-error {{never produces a constant expression}}
+    ((A*)nullptr)->~A(); // expected-note {{destruction of dereferenced null pointer}}
+  }
+
+  constexpr void destroy_past_end() { // expected-error {{never produces a constant expression}}
+    A a;
+    (&a+1)->~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}}
+  }
+
+  constexpr void destroy_past_end_array() { // expected-error {{never produces a constant expression}}
+    A a[2];
+    a[2].~A(); // expected-note {{destruction of dereferenced one-past-the-end pointer}}
+  }
+
+  union As {
+    A a, b;
+  };
+
+  constexpr void destroy_no_active() { // expected-error {{never produces a constant expression}}
+    As as;
+    as.b.~A(); // expected-note {{destruction of member 'b' of union with no active member}}
+  }
+
+  constexpr void destroy_inactive() { // expected-error {{never produces a constant expression}}
+    As as;
+    as.a.n = 1;
+    as.b.~A(); // expected-note {{destruction of member 'b' of union with active member 'a'}}
+  }
+
+  constexpr void destroy_no_active_2() { // expected-error {{never produces a constant expression}}
+    As as;
+    as.a.n = 1;
+    as.a.~A();
+    // FIXME: This diagnostic is wrong; the union has no active member now.
+    as.b.~A(); // expected-note {{destruction of member 'b' of union with active member 'a'}}
+  }
+}

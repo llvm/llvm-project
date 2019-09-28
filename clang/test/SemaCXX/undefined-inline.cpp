@@ -40,20 +40,20 @@ namespace test7 {
 }
 
 namespace test8 {
-  inline void foo() __attribute__((gnu_inline));
+  inline void foo() __attribute__((gnu_inline)); // expected-warning {{'gnu_inline' attribute without 'extern' in C++ treated as externally available, this changed in Clang 10}}
   void test() { foo(); }
 }
 
 namespace test9 {
   void foo();
   void test() { foo(); }
-  inline void foo() __attribute__((gnu_inline));
+  inline void foo() __attribute__((gnu_inline)); // expected-warning {{'gnu_inline' attribute without 'extern' in C++ treated as externally available, this changed in Clang 10}}
 }
 
 namespace test10 {
   inline void foo();
   void test() { foo(); }
-  inline void foo() __attribute__((gnu_inline));
+  inline void foo() __attribute__((gnu_inline)); // expected-warning {{'gnu_inline' attribute without 'extern' in C++ treated as externally available, this changed in Clang 10}}
 }
 
 namespace test11 {

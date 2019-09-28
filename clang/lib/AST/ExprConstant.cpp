@@ -613,9 +613,11 @@ namespace {
   };
 }
 
-static bool HandleDestructorCall(EvalInfo &Info, SourceLocation Loc,
-                                 APValue::LValueBase LVBase, APValue &Value,
-                                 QualType T);
+static bool HandleDestruction(EvalInfo &Info, const Expr *E,
+                              const LValue &This, QualType ThisType);
+static bool HandleDestruction(EvalInfo &Info, SourceLocation Loc,
+                              APValue::LValueBase LVBase, APValue &Value,
+                              QualType T);
 
 namespace {
   /// A cleanup, and a flag indicating whether it is lifetime-extended.
@@ -637,7 +639,7 @@ namespace {
           Loc = VD->getLocation();
         else if (const Expr *E = Base.dyn_cast<const Expr*>())
           Loc = E->getExprLoc();
-        return HandleDestructorCall(Info, Loc, Base, *Value.getPointer(), T);
+        return HandleDestruction(Info, Loc, Base, *Value.getPointer(), T);
       }
       *Value.getPointer() = APValue();
       return true;
@@ -1332,14 +1334,19 @@ static bool isModification(AccessKinds AK) {
   case AK_Assign:
   case AK_Increment:
   case AK_Decrement:
+  case AK_Destroy:
     return true;
   }
   llvm_unreachable("unknown access kind");
 }
 
+static bool isAnyAccess(AccessKinds AK) {
+  return isRead(AK) || isModification(AK);
+}
+
 /// Is this an access per the C++ definition?
 static bool isFormalAccess(AccessKinds AK) {
-  return isRead(AK) || isModification(AK);
+  return isAnyAccess(AK) && AK != AK_Destroy;
 }
 
 namespace {
@@ -3174,6 +3181,10 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         const FieldDecl *UnionField = O->getUnionField();
         if (!UnionField ||
             UnionField->getCanonicalDecl() != Field->getCanonicalDecl()) {
+          // FIXME: If O->getUnionValue() is absent, report that there's no
+          // active union member rather than reporting the prior active union
+          // member. We'll need to fix nullptr_t to not use APValue() as its
+          // representation first.
           Info.FFDiag(E, diag::note_constexpr_access_inactive_union_member)
             << handler.AccessKind << Field << !UnionField << UnionField;
           return handler.failed();
@@ -3375,13 +3386,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
   }
 
-  bool IsAccess = isFormalAccess(AK);
+  bool IsAccess = isAnyAccess(AK);
 
   // C++11 DR1311: An lvalue-to-rvalue conversion on a volatile-qualified type
   // is not a constant expression (even if the object is non-volatile). We also
   // apply this rule to C++98, in order to conform to the expected 'volatile'
   // semantics.
-  if (IsAccess && LValType.isVolatileQualified()) {
+  if (isFormalAccess(AK) && LValType.isVolatileQualified()) {
     if (Info.getLangOpts().CPlusPlus)
       Info.FFDiag(E, diag::note_constexpr_access_volatile_type)
         << AK << LValType;
@@ -4840,9 +4851,13 @@ static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
 
 /// Check that the pointee of the 'this' pointer in a member function call is
 /// either within its lifetime or in its period of construction or destruction.
-static bool checkNonVirtualMemberCallThisPointer(EvalInfo &Info, const Expr *E,
-                                                 const LValue &This) {
-  return checkDynamicType(Info, E, This, AK_MemberCall, false);
+static bool
+checkNonVirtualMemberCallThisPointer(EvalInfo &Info, const Expr *E,
+                                     const LValue &This,
+                                     const CXXMethodDecl *NamedMember) {
+  return checkDynamicType(
+      Info, E, This,
+      isa<CXXDestructorDecl>(NamedMember) ? AK_Destroy : AK_MemberCall, false);
 }
 
 struct DynamicType {
@@ -4919,8 +4934,9 @@ static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, const Expr *E,
 static const CXXMethodDecl *HandleVirtualDispatch(
     EvalInfo &Info, const Expr *E, LValue &This, const CXXMethodDecl *Found,
     llvm::SmallVectorImpl<QualType> &CovariantAdjustmentPath) {
-  Optional<DynamicType> DynType =
-      ComputeDynamicType(Info, E, This, AK_MemberCall);
+  Optional<DynamicType> DynType = ComputeDynamicType(
+      Info, E, This,
+      isa<CXXDestructorDecl>(Found) ? AK_Destroy : AK_MemberCall);
   if (!DynType)
     return nullptr;
 
@@ -5134,7 +5150,8 @@ struct StartLifetimeOfUnionMemberHandler {
     //  * No variant members' lifetimes begin
     //  * All scalar subobjects whose lifetimes begin have indeterminate values
     assert(SubobjType->isUnionType());
-    if (!declaresSameEntity(Subobj.getUnionField(), Field))
+    if (!declaresSameEntity(Subobj.getUnionField(), Field) ||
+        !Subobj.getUnionValue().hasValue())
       Subobj.setUnion(Field, getDefaultInitValue(Field->getType()));
     return true;
   }
@@ -5571,9 +5588,9 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
                                Info, Result);
 }
 
-static bool HandleDestructorCallImpl(EvalInfo &Info, SourceLocation CallLoc,
-                                     const LValue &This, APValue &Value,
-                                     QualType T) {
+static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
+                                  const LValue &This, APValue &Value,
+                                  QualType T) {
   // Objects can only be destroyed while they're within their lifetimes.
   // FIXME: We have no representation for whether an object of type nullptr_t
   // is in its lifetime; it usually doesn't matter. Perhaps we should model it
@@ -5609,7 +5626,7 @@ static bool HandleDestructorCallImpl(EvalInfo &Info, SourceLocation CallLoc,
     for (; Size != 0; --Size) {
       APValue &Elem = Value.getArrayInitializedElt(Size - 1);
       if (!HandleLValueArrayAdjustment(Info, &LocE, ElemLV, ElemT, -1) ||
-          !HandleDestructorCallImpl(Info, CallLoc, ElemLV, Elem, ElemT))
+          !HandleDestructionImpl(Info, CallLoc, ElemLV, Elem, ElemT))
         return false;
     }
 
@@ -5707,8 +5724,8 @@ static bool HandleDestructorCallImpl(EvalInfo &Info, SourceLocation CallLoc,
       return false;
 
     APValue *SubobjectValue = &Value.getStructField(FD->getFieldIndex());
-    if (!HandleDestructorCallImpl(Info, CallLoc, Subobject, *SubobjectValue,
-                                  FD->getType()))
+    if (!HandleDestructionImpl(Info, CallLoc, Subobject, *SubobjectValue,
+                               FD->getType()))
       return false;
   }
 
@@ -5726,8 +5743,8 @@ static bool HandleDestructorCallImpl(EvalInfo &Info, SourceLocation CallLoc,
       return false;
 
     APValue *SubobjectValue = &Value.getStructBase(BasesLeft);
-    if (!HandleDestructorCallImpl(Info, CallLoc, Subobject, *SubobjectValue,
-                                  BaseType))
+    if (!HandleDestructionImpl(Info, CallLoc, Subobject, *SubobjectValue,
+                               BaseType))
       return false;
   }
   assert(BasesLeft == 0 && "NumBases was wrong?");
@@ -5737,9 +5754,43 @@ static bool HandleDestructorCallImpl(EvalInfo &Info, SourceLocation CallLoc,
   return true;
 }
 
-static bool HandleDestructorCall(EvalInfo &Info, SourceLocation Loc,
-                                 APValue::LValueBase LVBase, APValue &Value,
-                                 QualType T) {
+namespace {
+struct DestroyObjectHandler {
+  EvalInfo &Info;
+  const Expr *E;
+  const LValue &This;
+  const AccessKinds AccessKind;
+
+  typedef bool result_type;
+  bool failed() { return false; }
+  bool found(APValue &Subobj, QualType SubobjType) {
+    return HandleDestructionImpl(Info, E->getExprLoc(), This, Subobj,
+                                 SubobjType);
+  }
+  bool found(APSInt &Value, QualType SubobjType) {
+    Info.FFDiag(E, diag::note_constexpr_destroy_complex_elem);
+    return false;
+  }
+  bool found(APFloat &Value, QualType SubobjType) {
+    Info.FFDiag(E, diag::note_constexpr_destroy_complex_elem);
+    return false;
+  }
+};
+}
+
+/// Perform a destructor or pseudo-destructor call on the given object, which
+/// might in general not be a complete object.
+static bool HandleDestruction(EvalInfo &Info, const Expr *E,
+                              const LValue &This, QualType ThisType) {
+  CompleteObject Obj = findCompleteObject(Info, E, AK_Destroy, This, ThisType);
+  DestroyObjectHandler Handler = {Info, E, This, AK_Destroy};
+  return Obj && findSubobject(Info, E, Obj, This.Designator, Handler);
+}
+
+/// Destroy and end the lifetime of the given complete object.
+static bool HandleDestruction(EvalInfo &Info, SourceLocation Loc,
+                              APValue::LValueBase LVBase, APValue &Value,
+                              QualType T) {
   // If we've had an unmodeled side-effect, we can't rely on mutable state
   // (such as the object we're about to destroy) being correct.
   if (Info.EvalStatus.HasSideEffects)
@@ -5747,7 +5798,7 @@ static bool HandleDestructorCall(EvalInfo &Info, SourceLocation Loc,
 
   LValue LV;
   LV.set({LVBase});
-  return HandleDestructorCallImpl(Info, Loc, LV, Value, T);
+  return HandleDestructionImpl(Info, Loc, LV, Value, T);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6405,8 +6456,9 @@ public:
     // even though it's not quite the same thing.
     LValue CommonLV;
     if (!Evaluate(Info.CurrentCall->createTemporary(
-                      E->getOpaqueValue(), getStorageType(Info.Ctx, E->getOpaqueValue()),
-                      false, CommonLV),
+                      E->getOpaqueValue(),
+                      getStorageType(Info.Ctx, E->getOpaqueValue()), false,
+                      CommonLV),
                   Info, E->getCommon()))
       return false;
 
@@ -6490,6 +6542,13 @@ public:
         if (!Member)
           return Error(Callee);
         This = &ThisVal;
+      } else if (const auto *PDE = dyn_cast<CXXPseudoDestructorExpr>(Callee)) {
+        if (!Info.getLangOpts().CPlusPlus2a)
+          Info.CCEDiag(PDE, diag::note_constexpr_pseudo_destructor);
+        // FIXME: If pseudo-destructor calls ever start ending the lifetime of
+        // their callee, we should start calling HandleDestruction here.
+        // For now, we just evaluate the object argument and discard it.
+        return EvaluateObjectArgument(Info, PDE->getBase(), ThisVal);
       } else
         return Error(Callee);
       FD = Member;
@@ -6573,9 +6632,18 @@ public:
           return false;
       } else {
         // Check that the 'this' pointer points to an object of the right type.
-        if (!checkNonVirtualMemberCallThisPointer(Info, E, *This))
+        // FIXME: If this is an assignment operator call, we may need to change
+        // the active union member before we check this.
+        if (!checkNonVirtualMemberCallThisPointer(Info, E, *This, NamedMember))
           return false;
       }
+    }
+
+    // Destructor calls are different enough that they have their own codepath.
+    if (auto *DD = dyn_cast<CXXDestructorDecl>(FD)) {
+      assert(This && "no 'this' pointer for destructor call");
+      return HandleDestruction(Info, E, *This,
+                               Info.Ctx.getRecordType(DD->getParent()));
     }
 
     const FunctionDecl *Definition = nullptr;
@@ -12798,8 +12866,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return false;
   }
 
-  if (!HandleDestructorCall(Info, E->getExprLoc(), Pointer.getLValueBase(),
-                            (*Alloc)->Value, AllocType))
+  if (!HandleDestruction(Info, E->getExprLoc(), Pointer.getLValueBase(),
+                         (*Alloc)->Value, AllocType))
     return false;
 
   if (!Info.HeapAllocs.erase(DA)) {

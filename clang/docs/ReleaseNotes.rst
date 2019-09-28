@@ -128,7 +128,10 @@ C11 Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
-- ...
+- The behaviour of the `gnu_inline` attribute now matches GCC, for cases
+  where used without the `extern` keyword. As this is a change compared to
+  how it behaved in previous Clang versions, a warning is emitted for this
+  combination.
 
 C++1z Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
