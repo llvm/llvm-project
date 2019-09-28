@@ -16,8 +16,8 @@ void foo() {
 // CHECK-DAG: $[[REGFN:\.omp_offloading\..+\.powerpc64le-ibm-linux-gnu\.x86_64-pc-linux-gnu+]] = comdat any
 
 // Check if offloading descriptor is created.
-// CHECK: [[ENTBEGIN:@.+]] = external constant [[ENTTY]]
-// CHECK: [[ENTEND:@.+]] = external constant [[ENTTY]]
+// CHECK: [[ENTBEGIN:@.+]] = external hidden constant [[ENTTY]]
+// CHECK: [[ENTEND:@.+]] = external hidden constant [[ENTTY]]
 // CHECK: [[DEV1BEGIN:@.+]] = extern_weak constant i8
 // CHECK: [[DEV1END:@.+]] = extern_weak constant i8
 // CHECK: [[DEV2BEGIN:@.+]] = extern_weak constant i8

@@ -97,6 +97,7 @@ LLDBSwigPythonCreateCommandObject(const char *python_class_name,
 
 extern "C" void *LLDBSwigPythonCreateScriptedThreadPlan(
     const char *python_class_name, const char *session_dictionary_name,
+    std::string &error_string,
     const lldb::ThreadPlanSP &thread_plan_sp);
 
 extern "C" bool LLDBSWIGPythonCallThreadPlan(void *implementor,
@@ -1844,12 +1845,13 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
 }
 
 StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
-    const char *class_name, lldb::ThreadPlanSP thread_plan_sp) {
+    const char *class_name, std::string &error_str, 
+    lldb::ThreadPlanSP thread_plan_sp) {
   if (class_name == nullptr || class_name[0] == '\0')
     return StructuredData::ObjectSP();
 
   if (!thread_plan_sp.get())
-    return StructuredData::ObjectSP();
+    return {};
 
   Debugger &debugger = thread_plan_sp->GetTarget().GetDebugger();
   ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
@@ -1857,17 +1859,18 @@ StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
       static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
 
   if (!script_interpreter)
-    return StructuredData::ObjectSP();
+    return {};
 
   void *ret_val;
 
   {
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-
     ret_val = LLDBSwigPythonCreateScriptedThreadPlan(
         class_name, python_interpreter->m_dictionary_name.c_str(),
-        thread_plan_sp);
+        error_str, thread_plan_sp);
+    if (!ret_val)
+      return {};
   }
 
   return StructuredData::ObjectSP(new StructuredPythonObject(ret_val));
