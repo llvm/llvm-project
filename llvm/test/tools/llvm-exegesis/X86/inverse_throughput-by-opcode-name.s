@@ -1,4 +1,5 @@
-# RUN: llvm-exegesis -mode=inverse_throughput -opcode-name=ADD32rr | FileCheck %s
+# RUN: llvm-exegesis -mode=inverse_throughput -opcode-name=ADD32rr -repetition-mode=duplicate | FileCheck %s
+# RUN: llvm-exegesis -mode=inverse_throughput -opcode-name=ADD32rr -repetition-mode=loop | FileCheck %s
 
 CHECK:      ---
 CHECK-NEXT: mode: inverse_throughput

@@ -1,4 +1,5 @@
-# RUN: llvm-exegesis -mode=uops -opcode-name=VFMADDSS4rm | FileCheck %s
+# RUN: llvm-exegesis -mode=uops -opcode-name=VFMADDSS4rm -repetition-mode=duplicate | FileCheck %s
+# RUN: llvm-exegesis -mode=uops -opcode-name=VFMADDSS4rm -repetition-mode=loop | FileCheck %s
 
 CHECK:      mode:            uops
 CHECK-NEXT: key:

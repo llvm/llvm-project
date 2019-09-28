@@ -745,6 +745,60 @@ define i9 @fshr_shift_undef(i9 %x, i9 %y) {
 declare double @llvm.fma.f64(double,double,double)
 declare double @llvm.fmuladd.f64(double,double,double)
 
+define double @fma_undef_op0(double %x, double %y) {
+; CHECK-LABEL: @fma_undef_op0(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double undef, double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double undef, double %x, double %y)
+  ret double %r
+}
+
+define double @fma_undef_op1(double %x, double %y) {
+; CHECK-LABEL: @fma_undef_op1(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double [[X:%.*]], double undef, double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double %x, double undef, double %y)
+  ret double %r
+}
+
+define double @fma_undef_op2(double %x, double %y) {
+; CHECK-LABEL: @fma_undef_op2(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double undef)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fma.f64(double %x, double %y, double undef)
+  ret double %r
+}
+
+define double @fmuladd_undef_op0(double %x, double %y) {
+; CHECK-LABEL: @fmuladd_undef_op0(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double undef, double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double undef, double %x, double %y)
+  ret double %r
+}
+
+define double @fmuladd_undef_op1(double %x, double %y) {
+; CHECK-LABEL: @fmuladd_undef_op1(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double [[X:%.*]], double undef, double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double %x, double undef, double %y)
+  ret double %r
+}
+
+define double @fmuladd_undef_op2(double %x, double %y) {
+; CHECK-LABEL: @fmuladd_undef_op2(
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double [[X:%.*]], double [[Y:%.*]], double undef)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @llvm.fmuladd.f64(double %x, double %y, double undef)
+  ret double %r
+}
+
 define double @fma_nan_op0(double %x, double %y) {
 ; CHECK-LABEL: @fma_nan_op0(
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 0x7FF8000000000000, double [[X:%.*]], double [[Y:%.*]])

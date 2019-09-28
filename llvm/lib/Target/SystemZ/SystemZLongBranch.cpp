@@ -87,7 +87,7 @@ struct MBBInfo {
 
   // The minimum alignment of the block.
   // This value never changes.
-  llvm::Align Alignment;
+  Align Alignment;
 
   // The number of terminators in this block.  This value never changes.
   unsigned NumTerminators = 0;

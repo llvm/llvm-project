@@ -114,9 +114,9 @@ public:
       return MA->value();
     return 0;
   }
-  // FIXME: Remove once migration to llvm::Align is over.
+  // FIXME: Remove once migration to Align is over.
   void setAlignment(unsigned Align);
-  void setAlignment(llvm::MaybeAlign Align);
+  void setAlignment(MaybeAlign Align);
 
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
@@ -248,9 +248,9 @@ public:
     return 0;
   }
 
-  // FIXME: Remove once migration to llvm::Align is over.
+  // FIXME: Remove once migration to Align is over.
   void setAlignment(unsigned Align);
-  void setAlignment(llvm::MaybeAlign Align);
+  void setAlignment(MaybeAlign Align);
 
   /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
@@ -378,9 +378,9 @@ public:
     return 0;
   }
 
-  // FIXME: Remove once migration to llvm::Align is over.
+  // FIXME: Remove once migration to Align is over.
   void setAlignment(unsigned Align);
-  void setAlignment(llvm::MaybeAlign Align);
+  void setAlignment(MaybeAlign Align);
 
   /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {

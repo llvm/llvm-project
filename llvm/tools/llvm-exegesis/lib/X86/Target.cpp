@@ -436,6 +436,8 @@ private:
 
   unsigned getScratchMemoryRegister(const llvm::Triple &TT) const override;
 
+  unsigned getLoopCounterRegister(const llvm::Triple &) const override;
+
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
   void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
@@ -444,6 +446,9 @@ private:
 
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
+
+  void decrementLoopCounterAndLoop(MachineBasicBlock &MBB,
+                                   const llvm::MCInstrInfo &MII) const override;
 
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
                                      unsigned Reg,
@@ -476,6 +481,12 @@ private:
 // prefix.
 const unsigned ExegesisX86Target::kUnavailableRegisters[4] = {X86::AH, X86::BH,
                                                               X86::CH, X86::DH};
+
+// We're using one of R8-R15 because these registers are never hardcoded in
+// instructions (e.g. MOVS writes to EDI, ESI, EDX), so they have less
+// conflicts.
+constexpr const unsigned kLoopCounterReg = X86::R8;
+
 } // namespace
 
 void ExegesisX86Target::addTargetSpecificPasses(
@@ -492,6 +503,14 @@ ExegesisX86Target::getScratchMemoryRegister(const llvm::Triple &TT) const {
     return 0;
   }
   return TT.isOSWindows() ? llvm::X86::RCX : llvm::X86::RDI;
+}
+
+unsigned
+ExegesisX86Target::getLoopCounterRegister(const llvm::Triple &TT) const {
+  if (!TT.isArch64Bit()) {
+    return 0;
+  }
+  return kLoopCounterReg;
 }
 
 void ExegesisX86Target::randomizeMCOperand(
@@ -536,6 +555,17 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
   SetOp(MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg
   SetOp(MemOpIdx + 3, MCOperand::createImm(Offset)); // Disp
   SetOp(MemOpIdx + 4, MCOperand::createReg(0));      // Segment
+}
+
+void ExegesisX86Target::decrementLoopCounterAndLoop(
+    MachineBasicBlock &MBB, const llvm::MCInstrInfo &MII) const {
+  BuildMI(&MBB, DebugLoc(), MII.get(X86::ADD64ri8))
+      .addDef(kLoopCounterReg)
+      .addUse(kLoopCounterReg)
+      .addImm(-1);
+  BuildMI(&MBB, DebugLoc(), MII.get(X86::JCC_1))
+      .addMBB(&MBB)
+      .addImm(X86::COND_NE);
 }
 
 std::vector<llvm::MCInst>

@@ -629,7 +629,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "landing-pad";
     HasAttributes = true;
   }
-  if (MBB.getAlignment() != llvm::Align::None()) {
+  if (MBB.getAlignment() != Align::None()) {
     OS << (HasAttributes ? ", " : " (");
     OS << "align " << MBB.getAlignment().value();
     HasAttributes = true;

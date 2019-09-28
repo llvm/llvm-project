@@ -241,6 +241,13 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   assert(Op0->getType() == Op1->getType());
 
+  // If the shift amount is a one-use `sext`, we can demote it to `zext`.
+  Value *Y;
+  if (match(Op1, m_OneUse(m_SExt(m_Value(Y))))) {
+    Value *NewExt = Builder.CreateZExt(Y, I.getType(), Op1->getName());
+    return BinaryOperator::Create(I.getOpcode(), Op0, NewExt);
+  }
+
   // See if we can fold away this shift.
   if (SimplifyDemandedInstructionBits(I))
     return &I;

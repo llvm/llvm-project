@@ -1757,7 +1757,7 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
                      [](const LatticeVal &LV) { return LV.isOverdefined(); }))
       return false;
     std::vector<Constant *> ConstVals;
-    auto *ST = dyn_cast<StructType>(V->getType());
+    auto *ST = cast<StructType>(V->getType());
     for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
       LatticeVal V = IVs[i];
       ConstVals.push_back(V.isConstant()

@@ -1,4 +1,5 @@
-# RUN: llvm-exegesis -mode=uops -opcode-name=XCHG64rr | FileCheck %s
+# RUN: llvm-exegesis -mode=uops -opcode-name=XCHG64rr -repetition-mode=duplicate | FileCheck %s
+# RUN: llvm-exegesis -mode=uops -opcode-name=XCHG64rr -repetition-mode=loop | FileCheck %s
 
 CHECK:      mode:            uops
 CHECK-NEXT: key:

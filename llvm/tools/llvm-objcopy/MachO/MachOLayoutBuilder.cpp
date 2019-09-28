@@ -146,7 +146,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           Sec.Offset = 0;
         } else {
           uint64_t PaddingSize =
-              offsetToAlignment(SegFileSize, llvm::Align(1ull << Sec.Align));
+              offsetToAlignment(SegFileSize, Align(1ull << Sec.Align));
           Sec.Offset = SegOffset + SegFileSize + PaddingSize;
           Sec.Size = Sec.Content.size();
           SegFileSize += PaddingSize + Sec.Size;
