@@ -110,6 +110,7 @@ SnippetRepetitor::Create(InstructionBenchmark::RepetitionModeE Mode,
   case InstructionBenchmark::Loop:
     return std::make_unique<LoopSnippetRepetitor>(State);
   }
+  llvm_unreachable("Unknown RepetitionModeE enum");
 }
 
 } // namespace exegesis

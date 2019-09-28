@@ -38,7 +38,8 @@ def note_constexpr_pure_virtual_call : Note<
   "pure virtual function %q0 called">;
 def note_constexpr_polymorphic_unknown_dynamic_type : Note<
   "%select{|||||virtual function called on|dynamic_cast applied to|"
-  "typeid applied to}0 object '%1' whose dynamic type is not constant">;
+  "typeid applied to|destruction of}0 object '%1' whose dynamic type "
+  "is not constant">;
 def note_constexpr_dynamic_cast_to_reference_failed : Note<
   "reference dynamic_cast failed: %select{"
   "static type %1 of operand is a non-public base class of dynamic type %2|"
@@ -120,11 +121,11 @@ def note_constexpr_this : Note<
   "evaluation of a call to a 'constexpr' member function">;
 def note_constexpr_lifetime_ended : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
   "%select{temporary|variable}1 whose lifetime has ended">;
 def note_constexpr_access_uninit : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
   "%select{object outside its lifetime|uninitialized object}1 "
   "is not allowed in a constant expression">;
 def note_constexpr_use_uninit_reference : Note<
@@ -135,11 +136,11 @@ def note_constexpr_modify_const_type : Note<
   "in a constant expression">;
 def note_constexpr_access_volatile_type : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "<ERROR>|<ERROR>}0 "
+  "<ERROR>|<ERROR>|<ERROR>}0 "
   "volatile-qualified type %1 is not allowed in a constant expression">;
 def note_constexpr_access_volatile_obj : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "<ERROR>|<ERROR>}0 "
+  "<ERROR>|<ERROR>|<ERROR>}0 "
   "volatile %select{temporary|object %2|member %2}1 is not allowed in "
   "a constant expression">;
 def note_constexpr_volatile_here : Note<
@@ -154,36 +155,36 @@ def note_constexpr_ltor_incomplete_type : Note<
   "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
 def note_constexpr_access_past_end : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
   "dereferenced one-past-the-end pointer is not allowed "
   "in a constant expression">;
 def note_constexpr_access_unsized_array : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
   "element of array without known bound "
   "is not allowed in a constant expression">;
 def note_constexpr_access_inactive_union_member : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
   "member %1 of union with %select{active member %3|no active member}2 "
   "is not allowed in a constant expression">;
 def note_constexpr_access_static_temporary : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 temporary "
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 temporary "
   "is not allowed in a constant expression outside the expression that "
   "created the temporary">;
 def note_constexpr_access_unreadable_object : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 object '%1' "
-  "whose value is not known">;
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
+  "object '%1' whose value is not known">;
 def note_constexpr_access_deleted_object : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to}0 heap allocated "
-  "object that has been deleted">;
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
+  "heap allocated object that has been deleted">;
 def note_constexpr_modify_global : Note<
   "a constant expression cannot modify an object that is visible outside "
   "that expression">;
@@ -246,6 +247,12 @@ def note_constexpr_bit_cast_invalid_subtype : Note<
 def note_constexpr_bit_cast_indet_dest : Note<
   "indeterminate value can only initialize an object of type 'unsigned char'"
   "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;
+def note_constexpr_pseudo_destructor : Note<
+  "pseudo-destructor call is not permitted in constant expressions "
+  "until C++20">;
+def note_constexpr_destroy_complex_elem : Note<
+  "destruction of individual component of complex number is not yet supported "
+  "in constant expressions">;
 def note_constexpr_new : Note<
   "dynamic memory allocation is not permitted in constant expressions "
   "until C++20">;

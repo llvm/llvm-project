@@ -1054,11 +1054,23 @@ private:
                            std::string &CollectString);
 
   bool AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth,
-                             RegisterKind RegKind, unsigned Reg1,
-                             unsigned RegNum);
+                             RegisterKind RegKind, unsigned Reg1);
   bool ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg,
-                           unsigned& RegNum, unsigned& RegWidth,
-                           unsigned *DwordRegIndex);
+                           unsigned& RegNum, unsigned& RegWidth);
+  unsigned ParseRegularReg(RegisterKind &RegKind,
+                           unsigned &RegNum,
+                           unsigned &RegWidth);
+  unsigned ParseSpecialReg(RegisterKind &RegKind,
+                           unsigned &RegNum,
+                           unsigned &RegWidth);
+  unsigned ParseRegList(RegisterKind &RegKind,
+                        unsigned &RegNum,
+                        unsigned &RegWidth);
+  bool ParseRegRange(unsigned& Num, unsigned& Width);
+  unsigned getRegularReg(RegisterKind RegKind,
+                         unsigned RegNum,
+                         unsigned RegWidth);
+
   bool isRegister();
   bool isRegister(const AsmToken &Token, const AsmToken &NextToken) const;
   Optional<StringRef> getGprCountSymbolName(RegisterKind RegKind);
@@ -1953,7 +1965,7 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("tba_lo", AMDGPU::TBA_LO)
     .Case("tba_hi", AMDGPU::TBA_HI)
     .Case("null", AMDGPU::SGPR_NULL)
-    .Default(0);
+    .Default(AMDGPU::NoRegister);
 }
 
 bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
@@ -1968,8 +1980,7 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
 }
 
 bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
-                                            RegisterKind RegKind, unsigned Reg1,
-                                            unsigned RegNum) {
+                                            RegisterKind RegKind, unsigned Reg1) {
   switch (RegKind) {
   case IS_SPECIAL:
     if (Reg == AMDGPU::EXEC_LO && Reg1 == AMDGPU::EXEC_HI) {
@@ -2017,7 +2028,36 @@ bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
   }
 }
 
-static constexpr StringLiteral Registers[] = {"v", "s", "ttmp", "acc", "a"};
+struct RegInfo {
+  StringLiteral Name;
+  RegisterKind Kind;
+};
+
+static constexpr RegInfo RegularRegisters[] = {
+  {{"v"},    IS_VGPR},
+  {{"s"},    IS_SGPR},
+  {{"ttmp"}, IS_TTMP},
+  {{"acc"},  IS_AGPR},
+  {{"a"},    IS_AGPR},
+};
+
+static bool isRegularReg(RegisterKind Kind) {
+  return Kind == IS_VGPR ||
+         Kind == IS_SGPR ||
+         Kind == IS_TTMP ||
+         Kind == IS_AGPR;
+}
+
+static const RegInfo* getRegularRegInfo(StringRef Str) {
+  for (const RegInfo &Reg : RegularRegisters)
+    if (Str.startswith(Reg.Name))
+      return &Reg;
+  return nullptr;
+}
+
+static bool getRegNum(StringRef Str, unsigned& Num) {
+  return !Str.getAsInteger(10, Num);
+}
 
 bool
 AMDGPUAsmParser::isRegister(const AsmToken &Token,
@@ -2032,24 +2072,24 @@ AMDGPUAsmParser::isRegister(const AsmToken &Token,
 
   // A single register like s0 or a range of registers like s[0:1]
 
-  StringRef RegName = Token.getString();
-
-  for (StringRef Reg : Registers) {
-    if (RegName.startswith(Reg)) {
-      if (Reg.size() < RegName.size()) {
-        unsigned RegNum;
-        // A single register with an index: rXX
-        if (!RegName.substr(Reg.size()).getAsInteger(10, RegNum))
-          return true;
-      } else {
-        // A range of registers: r[XX:YY].
-        if (NextToken.is(AsmToken::LBrac))
-          return true;
-      }
+  StringRef Str = Token.getString();
+  const RegInfo *Reg = getRegularRegInfo(Str);
+  if (Reg) {
+    StringRef RegName = Reg->Name;
+    StringRef RegSuffix = Str.substr(RegName.size());
+    if (!RegSuffix.empty()) {
+      unsigned Num;
+      // A single register with an index: rXX
+      if (getRegNum(RegSuffix, Num))
+        return true;
+    } else {
+      // A range of registers: r[XX:YY].
+      if (NextToken.is(AsmToken::LBrac))
+        return true;
     }
   }
 
-  return getSpecialRegForName(RegName);
+  return getSpecialRegForName(Str) != AMDGPU::NoRegister;
 }
 
 bool
@@ -2058,137 +2098,161 @@ AMDGPUAsmParser::isRegister()
   return isRegister(getToken(), peekToken());
 }
 
-bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
-                                          unsigned &RegNum, unsigned &RegWidth,
-                                          unsigned *DwordRegIndex) {
-  if (DwordRegIndex) { *DwordRegIndex = 0; }
-  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  if (getLexer().is(AsmToken::Identifier)) {
-    StringRef RegName = Parser.getTok().getString();
-    if ((Reg = getSpecialRegForName(RegName))) {
-      Parser.Lex();
-      RegKind = IS_SPECIAL;
-    } else {
-      unsigned RegNumIndex = 0;
-      if (RegName[0] == 'v') {
-        RegNumIndex = 1;
-        RegKind = IS_VGPR;
-      } else if (RegName[0] == 's') {
-        RegNumIndex = 1;
-        RegKind = IS_SGPR;
-      } else if (RegName[0] == 'a') {
-        RegNumIndex = RegName.startswith("acc") ? 3 : 1;
-        RegKind = IS_AGPR;
-      } else if (RegName.startswith("ttmp")) {
-        RegNumIndex = strlen("ttmp");
-        RegKind = IS_TTMP;
-      } else {
-        return false;
-      }
-      if (RegName.size() > RegNumIndex) {
-        // Single 32-bit register: vXX.
-        if (RegName.substr(RegNumIndex).getAsInteger(10, RegNum))
-          return false;
-        Parser.Lex();
-        RegWidth = 1;
-      } else {
-        // Range of registers: v[XX:YY]. ":YY" is optional.
-        Parser.Lex();
-        int64_t RegLo, RegHi;
-        if (getLexer().isNot(AsmToken::LBrac))
-          return false;
-        Parser.Lex();
+unsigned
+AMDGPUAsmParser::getRegularReg(RegisterKind RegKind,
+                               unsigned RegNum,
+                               unsigned RegWidth) {
 
-        if (getParser().parseAbsoluteExpression(RegLo))
-          return false;
+  assert(isRegularReg(RegKind));
 
-        const bool isRBrace = getLexer().is(AsmToken::RBrac);
-        if (!isRBrace && getLexer().isNot(AsmToken::Colon))
-          return false;
-        Parser.Lex();
-
-        if (isRBrace) {
-          RegHi = RegLo;
-        } else {
-          if (getParser().parseAbsoluteExpression(RegHi))
-            return false;
-
-          if (getLexer().isNot(AsmToken::RBrac))
-            return false;
-          Parser.Lex();
-        }
-        RegNum = (unsigned) RegLo;
-        RegWidth = (RegHi - RegLo) + 1;
-      }
-    }
-  } else if (getLexer().is(AsmToken::LBrac)) {
-    // List of consecutive registers: [s0,s1,s2,s3]
-    Parser.Lex();
-    if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth, nullptr))
-      return false;
-    if (RegWidth != 1)
-      return false;
-    RegisterKind RegKind1;
-    unsigned Reg1, RegNum1, RegWidth1;
-    do {
-      if (getLexer().is(AsmToken::Comma)) {
-        Parser.Lex();
-      } else if (getLexer().is(AsmToken::RBrac)) {
-        Parser.Lex();
-        break;
-      } else if (ParseAMDGPURegister(RegKind1, Reg1, RegNum1, RegWidth1, nullptr)) {
-        if (RegWidth1 != 1) {
-          return false;
-        }
-        if (RegKind1 != RegKind) {
-          return false;
-        }
-        if (!AddNextRegisterToList(Reg, RegWidth, RegKind1, Reg1, RegNum1)) {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    } while (true);
-  } else {
-    return false;
+  unsigned AlignSize = 1;
+  if (RegKind == IS_SGPR || RegKind == IS_TTMP) {
+    // SGPR and TTMP registers must be aligned.
+    // Max required alignment is 4 dwords.
+    AlignSize = std::min(RegWidth, 4u);
   }
-  switch (RegKind) {
-  case IS_SPECIAL:
+
+  if (RegNum % AlignSize != 0)
+    return AMDGPU::NoRegister;
+
+  unsigned RegIdx = RegNum / AlignSize;
+  int RCID = getRegClass(RegKind, RegWidth);
+  if (RCID == -1)
+    return AMDGPU::NoRegister;
+
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  const MCRegisterClass RC = TRI->getRegClass(RCID);
+  if (RegIdx >= RC.getNumRegs())
+    return AMDGPU::NoRegister;
+
+  return RC.getRegister(RegIdx);
+}
+
+bool
+AMDGPUAsmParser::ParseRegRange(unsigned& Num, unsigned& Width) {
+  int64_t RegLo, RegHi;
+  if (!trySkipToken(AsmToken::LBrac))
+    return false;
+
+  if (!parseExpr(RegLo))
+    return false;
+
+  if (trySkipToken(AsmToken::Colon)) {
+    if (!parseExpr(RegHi))
+      return false;
+  } else {
+    RegHi = RegLo;
+  }
+
+  if (!trySkipToken(AsmToken::RBrac))
+    return false;
+
+  if (!isUInt<32>(RegLo) || !isUInt<32>(RegHi) || RegLo > RegHi)
+    return false;
+
+  Num = static_cast<unsigned>(RegLo);
+  Width = (RegHi - RegLo) + 1;
+  return true;
+}
+
+unsigned
+AMDGPUAsmParser::ParseSpecialReg(RegisterKind &RegKind,
+                                 unsigned &RegNum,
+                                 unsigned &RegWidth) {
+  assert(isToken(AsmToken::Identifier));
+  unsigned Reg = getSpecialRegForName(getTokenStr());
+  if (Reg) {
     RegNum = 0;
     RegWidth = 1;
-    break;
-  case IS_VGPR:
-  case IS_SGPR:
-  case IS_AGPR:
-  case IS_TTMP:
-  {
-    unsigned Size = 1;
-    if (RegKind == IS_SGPR || RegKind == IS_TTMP) {
-      // SGPR and TTMP registers must be aligned. Max required alignment is 4 dwords.
-      Size = std::min(RegWidth, 4u);
-    }
-    if (RegNum % Size != 0)
-      return false;
-    if (DwordRegIndex) { *DwordRegIndex = RegNum; }
-    RegNum = RegNum / Size;
-    int RCID = getRegClass(RegKind, RegWidth);
-    if (RCID == -1)
-      return false;
-    const MCRegisterClass RC = TRI->getRegClass(RCID);
-    if (RegNum >= RC.getNumRegs())
-      return false;
-    Reg = RC.getRegister(RegNum);
-    break;
+    RegKind = IS_SPECIAL;
+    lex(); // skip register name
+  }
+  return Reg;
+}
+
+unsigned
+AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
+                                 unsigned &RegNum,
+                                 unsigned &RegWidth) {
+  assert(isToken(AsmToken::Identifier));
+  StringRef RegName = getTokenStr();
+
+  const RegInfo *RI = getRegularRegInfo(RegName);
+  if (!RI)
+    return AMDGPU::NoRegister;
+  lex(); // skip register name
+
+  RegKind = RI->Kind;
+  StringRef RegSuffix = RegName.substr(RI->Name.size());
+  if (!RegSuffix.empty()) {
+    // Single 32-bit register: vXX.
+    if (!getRegNum(RegSuffix, RegNum))
+      return AMDGPU::NoRegister;
+    RegWidth = 1;
+  } else {
+    // Range of registers: v[XX:YY]. ":YY" is optional.
+    if (!ParseRegRange(RegNum, RegWidth))
+      return AMDGPU::NoRegister;
   }
 
-  default:
-    llvm_unreachable("unexpected register kind");
+  return getRegularReg(RegKind, RegNum, RegWidth);
+}
+
+unsigned
+AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
+                              unsigned &RegNum,
+                              unsigned &RegWidth) {
+  unsigned Reg = AMDGPU::NoRegister;
+
+  if (!trySkipToken(AsmToken::LBrac))
+    return AMDGPU::NoRegister;
+
+  // List of consecutive registers, e.g.: [s0,s1,s2,s3]
+
+  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
+    return AMDGPU::NoRegister;
+  if (RegWidth != 1)
+    return AMDGPU::NoRegister;
+
+  for (; trySkipToken(AsmToken::Comma); ) {
+    RegisterKind NextRegKind;
+    unsigned NextReg, NextRegNum, NextRegWidth;
+
+    if (!ParseAMDGPURegister(NextRegKind, NextReg, NextRegNum, NextRegWidth))
+      return AMDGPU::NoRegister;
+    if (NextRegWidth != 1)
+      return AMDGPU::NoRegister;
+    if (NextRegKind != RegKind)
+      return AMDGPU::NoRegister;
+    if (!AddNextRegisterToList(Reg, RegWidth, RegKind, NextReg))
+      return AMDGPU::NoRegister;
   }
 
-  if (!subtargetHasRegister(*TRI, Reg))
-    return false;
-  return true;
+  if (!trySkipToken(AsmToken::RBrac))
+    return AMDGPU::NoRegister;
+
+  if (isRegularReg(RegKind))
+    Reg = getRegularReg(RegKind, RegNum, RegWidth);
+
+  return Reg;
+}
+
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind,
+                                          unsigned &Reg,
+                                          unsigned &RegNum,
+                                          unsigned &RegWidth) {
+  Reg = AMDGPU::NoRegister;
+
+  if (isToken(AsmToken::Identifier)) {
+    Reg = ParseSpecialReg(RegKind, RegNum, RegWidth);
+    if (Reg == AMDGPU::NoRegister)
+      Reg = ParseRegularReg(RegKind, RegNum, RegWidth);
+  } else {
+    Reg = ParseRegList(RegKind, RegNum, RegWidth);
+  }
+
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  return Reg != AMDGPU::NoRegister && subtargetHasRegister(*TRI, Reg);
 }
 
 Optional<StringRef>
@@ -2244,18 +2308,18 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
   SMLoc StartLoc = Tok.getLoc();
   SMLoc EndLoc = Tok.getEndLoc();
   RegisterKind RegKind;
-  unsigned Reg, RegNum, RegWidth, DwordRegIndex;
+  unsigned Reg, RegNum, RegWidth;
 
-  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth, &DwordRegIndex)) {
+  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth)) {
     //FIXME: improve error messages (bug 41303).
     Error(StartLoc, "not a valid operand.");
     return nullptr;
   }
   if (AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())) {
-    if (!updateGprCountSymbols(RegKind, DwordRegIndex, RegWidth))
+    if (!updateGprCountSymbols(RegKind, RegNum, RegWidth))
       return nullptr;
   } else
-    KernelScope.usesRegister(RegKind, DwordRegIndex, RegWidth);
+    KernelScope.usesRegister(RegKind, RegNum, RegWidth);
   return AMDGPUOperand::CreateReg(this, Reg, StartLoc, EndLoc);
 }
 

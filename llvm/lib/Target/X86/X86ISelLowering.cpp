@@ -43425,10 +43425,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // With AVX2 we only demand the upper bit of the mask.
-  if (!Subtarget.hasAVX512()) {
+  // With vector masks we only demand the upper bit of the mask.
+  SDValue Mask = N->getOperand(2);
+  if (Mask.getScalarValueSizeInBits() != 1) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    SDValue Mask = N->getOperand(2);
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
       return SDValue(N, 0);

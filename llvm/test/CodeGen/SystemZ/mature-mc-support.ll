@@ -1,12 +1,10 @@
 ; Test that inline assembly is parsed by the MC layer when MC support is mature
 ; (even when the output is assembly).
-; FIXME: SystemZ doesn't use the integrated assembler by default so we only test
-; that -filetype=obj tries to parse the assembly.
 
-; SKIP: not llc -march=systemz < %s > /dev/null 2> %t1
-; SKIP: FileCheck %s < %t1
+; RUN: not llc -mtriple=s390x-linux-gnu < %s > /dev/null 2> %t1
+; RUN: FileCheck %s < %t1
 
-; RUN: not llc -march=systemz -filetype=obj < %s > /dev/null 2> %t2
+; RUN: not llc -mtriple=s390x-linux-gnu -filetype=obj < %s > /dev/null 2> %t2
 ; RUN: FileCheck %s < %t2
 
 

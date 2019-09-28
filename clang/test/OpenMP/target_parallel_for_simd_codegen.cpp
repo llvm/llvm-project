@@ -83,8 +83,8 @@
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
 // Check if offloading descriptor is created.
-// CHECK: [[ENTBEGIN:@.+]] = external constant [[ENTTY]]
-// CHECK: [[ENTEND:@.+]] = external constant [[ENTTY]]
+// CHECK: [[ENTBEGIN:@.+]] = external hidden constant [[ENTTY]]
+// CHECK: [[ENTEND:@.+]] = external hidden constant [[ENTTY]]
 // CHECK: [[DEVBEGIN:@.+]] = extern_weak constant i8
 // CHECK: [[DEVEND:@.+]] = extern_weak constant i8
 // CHECK: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[DEVTY]]] [{{.+}} { i8* [[DEVBEGIN]], i8* [[DEVEND]], [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }], comdat($[[REGFN]])
