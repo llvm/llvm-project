@@ -23,6 +23,8 @@
 # CHECK: error: undefined symbol: vtable for Foo
 # CHECK: the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
 
+# Check that this symbol isn't demangled
+
 # CHECK: error: undefined symbol: __Z3fooi
 # CHECK: >>> referenced by undef.s
 # CHECK: >>>               {{.*}}:(.text+0x1A)

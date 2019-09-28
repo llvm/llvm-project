@@ -1143,6 +1143,11 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     DstAlign = std::max<unsigned>(MSI->getDestAlignment(), 1);
   }
 
+  // We need to propagate the tail call flag from the IR inst as an argument.
+  // Otherwise, we have to pessimize and assume later that we cannot tail call
+  // any memory intrinsics.
+  ICall.addImm(CI.isTailCall() ? 1 : 0);
+
   // Create mem operands to store the alignment and volatile info.
   auto VolFlag = IsVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
   ICall.addMemOperand(MF->getMachineMemOperand(
