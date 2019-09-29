@@ -3,12 +3,12 @@ target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define void @acosh_float8(<4 x i32> %v1, <4 x i32> %v2) #0 {
+define void @acosh_float8(<4 x i32> %v1, <4 x i32> %v2, <4 x float> %x) #0 {
 entry:
   br i1 undef, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %0 = tail call <4 x float> @llvm.fmuladd.v4f32(<4 x float> undef, <4 x float> <float 0x3FE62E4200000000, float 0x3FE62E4200000000, float 0x3FE62E4200000000, float 0x3FE62E4200000000>, <4 x float> undef) #0
+  %0 = tail call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %x, <4 x float> <float 0x3FE62E4200000000, float 0x3FE62E4200000000, float 0x3FE62E4200000000, float 0x3FE62E4200000000>, <4 x float> %x) #0
   %astype.i.i.74.i = bitcast <4 x float> %0 to <4 x i32>
   %and.i.i.76.i = and <4 x i32> %astype.i.i.74.i, %v1
   %or.i.i.79.i = or <4 x i32> %and.i.i.76.i, %v2

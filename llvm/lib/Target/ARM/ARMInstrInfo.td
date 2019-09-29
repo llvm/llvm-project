@@ -1967,7 +1967,7 @@ multiclass AI_str1nopc<bit isByte, string opc, InstrItinClass iii,
 /// the function.  The first operand is the ID# for this instruction, the second
 /// is the index into the MachineConstantPool that this is, the third is the
 /// size in bytes of this constant pool entry.
-let hasSideEffects = 0, isNotDuplicable = 1 in
+let hasSideEffects = 0, isNotDuplicable = 1, hasNoSchedulingInfo = 1 in
 def CONSTPOOL_ENTRY :
 PseudoInst<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx,
                     i32imm:$size), NoItinerary, []>;
@@ -4895,14 +4895,13 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
   let hasSideEffects = 1;
 }
 
-let usesCustomInserter = 1, Defs = [CPSR] in {
-
-// Pseudo instruction that combines movs + predicated rsbmi
-// to implement integer ABS
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
+  // Pseudo instruction that combines movs + predicated rsbmi
+  // to implement integer ABS
   def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
 }
 
-let usesCustomInserter = 1, Defs = [CPSR] in {
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -5604,12 +5603,12 @@ def MSRbanked : ABI<0b0001, (outs), (ins banked_reg:$banked, GPRnopc:$Rn),
 
 def win__chkstk : SDNode<"ARMISD::WIN__CHKSTK", SDTNone,
                       [SDNPHasChain, SDNPSideEffect]>;
-let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP] in
+let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP], hasNoSchedulingInfo = 1 in
   def WIN__CHKSTK : PseudoInst<(outs), (ins), NoItinerary, [(win__chkstk)]>;
 
 def win__dbzchk : SDNode<"ARMISD::WIN__DBZCHK", SDT_WIN__DBZCHK,
                          [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
-let usesCustomInserter = 1, Defs = [CPSR] in
+let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in
   def WIN__DBZCHK : PseudoInst<(outs), (ins tGPR:$divisor), NoItinerary,
                                [(win__dbzchk tGPR:$divisor)]>;
 
@@ -6156,7 +6155,7 @@ def : InstAlias<"umull${s}${p} $RdLo, $RdHi, $Rn, $Rm",
 def ITasm : ARMAsmPseudo<"it$mask $cc", (ins it_pred:$cc, it_mask:$mask)>,
          ComplexDeprecationPredicate<"IT">;
 
-let mayLoad = 1, mayStore =1, hasSideEffects = 1 in
+let mayLoad = 1, mayStore =1, hasSideEffects = 1, hasNoSchedulingInfo = 1 in
 def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
                        NoItinerary,
                        [(set GPR:$Rd, (int_arm_space timm:$size, GPR:$Rn))]>;
@@ -6199,4 +6198,5 @@ def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
   let hasSideEffects = 1;
   let Size = 0;
   let AsmString = "@ COMPILER BARRIER";
+  let hasNoSchedulingInfo = 1;
 }
