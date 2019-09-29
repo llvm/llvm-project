@@ -510,6 +510,7 @@ namespace {
     bool combineIncDecVector(SDNode *Node);
     bool tryShrinkShlLogicImm(SDNode *N);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
+    bool tryMatchBitSelect(SDNode *N);
 
     MachineSDNode *emitPCMPISTR(unsigned ROpc, unsigned MOpc, bool MayFoldLoad,
                                 const SDLoc &dl, MVT VT, SDNode *Node);
@@ -4275,6 +4276,55 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   return true;
 }
 
+// Try to match the bitselect pattern (or (and A, B), (andn A, C)). Turn it
+// into vpternlog.
+bool X86DAGToDAGISel::tryMatchBitSelect(SDNode *N) {
+  assert(N->getOpcode() == ISD::OR && "Unexpected opcode!");
+
+  MVT NVT = N->getSimpleValueType(0);
+
+  // Make sure we support VPTERNLOG.
+  if (!NVT.isVector() || !Subtarget->hasAVX512())
+    return false;
+
+  // We need VLX for 128/256-bit.
+  if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
+    return false;
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Canonicalize AND to LHS.
+  if (N1.getOpcode() == ISD::AND)
+    std::swap(N0, N1);
+
+  if (N0.getOpcode() != ISD::AND ||
+      N1.getOpcode() != X86ISD::ANDNP ||
+      !N0.hasOneUse() || !N1.hasOneUse())
+    return false;
+
+  // ANDN is not commutable, use it to pick down A and C.
+  SDValue A = N1.getOperand(0);
+  SDValue C = N1.getOperand(1);
+
+  // AND is commutable, if one operand matches A, the other operand is B.
+  // Otherwise this isn't a match.
+  SDValue B;
+  if (N0.getOperand(0) == A)
+    B = N0.getOperand(1);
+  else if (N0.getOperand(1) == A)
+    B = N0.getOperand(0);
+  else
+    return false;
+
+  SDLoc dl(N);
+  SDValue Imm = CurDAG->getTargetConstant(0xCA, dl, MVT::i8);
+  SDValue Ternlog = CurDAG->getNode(X86ISD::VPTERNLOG, dl, NVT, A, B, C, Imm);
+  ReplaceNode(N, Ternlog.getNode());
+  SelectCode(Ternlog.getNode());
+  return true;
+}
+
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opcode = Node->getOpcode();
@@ -4431,6 +4481,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::OR:
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
+      return;
+
+    if (Opcode == ISD::OR && tryMatchBitSelect(Node))
       return;
 
     LLVM_FALLTHROUGH;

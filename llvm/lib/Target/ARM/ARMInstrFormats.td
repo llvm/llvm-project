@@ -465,6 +465,7 @@ class AsmPseudoInst<string asm, dag iops, dag oops = (outs)>
   let isCodeGenOnly = 0; // So we get asm matcher for it.
   let AsmString = asm;
   let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 class ARMAsmPseudo<string asm, dag iops, dag oops = (outs)>

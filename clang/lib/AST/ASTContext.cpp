@@ -10064,7 +10064,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables that have destruction with side-effects are required.
-  if (VD->getType().isDestructedType())
+  if (VD->needsDestruction(*this))
     return true;
 
   // Variables that have initialization with side-effects are required.

@@ -50,6 +50,9 @@
 #include <mach/mach.h>
 #include <sys/sysctl.h>
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
 #include <pthread_np.h>
 #elif KMP_OS_NETBSD
 #include <sys/types.h>
@@ -1979,7 +1982,7 @@ int __kmp_is_address_mapped(void *addr) {
   int found = 0;
   int rc;
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_HURD
+#if KMP_OS_LINUX || KMP_OS_HURD
 
   /* On GNUish OSes, read the /proc/<pid>/maps pseudo-file to get all the address
      ranges mapped into the address space. */
@@ -2017,6 +2020,44 @@ int __kmp_is_address_mapped(void *addr) {
   // Free resources.
   fclose(file);
   KMP_INTERNAL_FREE(name);
+#elif KMP_OS_FREEBSD
+  char *buf;
+  size_t lstsz;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_VMMAP, getpid()};
+  rc = sysctl(mib, 4, NULL, &lstsz, NULL, 0);
+  if (rc < 0)
+     return 0;
+  // We pass from number of vm entry's semantic
+  // to size of whole entry map list.
+  lstsz = lstsz * 4 / 3;
+  buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
+  rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
+  if (rc < 0) {
+     kmpc_free(buf);
+     return 0;
+  }
+
+  char *lw = buf;
+  char *up = buf + lstsz;
+
+  while (lw < up) {
+      struct kinfo_vmentry *cur = reinterpret_cast<struct kinfo_vmentry *>(lw);
+      size_t cursz = cur->kve_structsize;
+      if (cursz == 0)
+          break;
+      void *start = reinterpret_cast<void *>(cur->kve_start);
+      void *end = reinterpret_cast<void *>(cur->kve_end);
+      // Readable/Writable addresses within current map entry
+      if ((addr >= start) && (addr < end)) {
+          if ((cur->kve_protection & KVME_PROT_READ) != 0 &&
+              (cur->kve_protection & KVME_PROT_WRITE) != 0) {
+              found = 1;
+              break;
+          }
+      }
+      lw += cursz;
+  }
+  kmpc_free(buf);
 
 #elif KMP_OS_DARWIN
 

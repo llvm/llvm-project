@@ -19,8 +19,8 @@ define i32 @add_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-LE-NEXT:    ldr lr, [r3, #2]!
 ; CHECK-LE-NEXT:    ldr r4, [r2, #2]!
-; CHECK-LE-NEXT:    subs r0, #1
 ; CHECK-LE-NEXT:    sxtah r1, r1, lr
+; CHECK-LE-NEXT:    subs r0, #1
 ; CHECK-LE-NEXT:    smlad r12, r4, lr, r12
 ; CHECK-LE-NEXT:    bne .LBB0_2
 ; CHECK-LE-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -47,13 +47,13 @@ define i32 @add_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-BE-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    ldrsh lr, [r3, #2]!
-; CHECK-BE-NEXT:    ldrsh r4, [r2, #2]!
-; CHECK-BE-NEXT:    ldrsh.w r5, [r3, #2]
+; CHECK-BE-NEXT:    ldrsh r5, [r2, #2]!
+; CHECK-BE-NEXT:    ldrsh.w r4, [r3, #2]
 ; CHECK-BE-NEXT:    ldrsh.w r6, [r2, #2]
-; CHECK-BE-NEXT:    smlabb r4, r4, lr, r12
-; CHECK-BE-NEXT:    subs r0, #1
-; CHECK-BE-NEXT:    smlabb r12, r6, r5, r4
+; CHECK-BE-NEXT:    smlabb r5, r5, lr, r12
 ; CHECK-BE-NEXT:    add r1, lr
+; CHECK-BE-NEXT:    subs r0, #1
+; CHECK-BE-NEXT:    smlabb r12, r6, r4, r5
 ; CHECK-BE-NEXT:    bne .LBB0_2
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
@@ -154,8 +154,8 @@ define i32 @mul_bottom_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapt
 ; CHECK-BE-NEXT:    ldrsh.w r5, [r3, #2]
 ; CHECK-BE-NEXT:    ldrsh.w r6, [r2, #2]
 ; CHECK-BE-NEXT:    smlabb r4, r4, lr, r12
-; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    smlabb r12, r6, r5, r4
+; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    mul r1, lr, r1
 ; CHECK-BE-NEXT:    bne .LBB1_2
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -215,17 +215,17 @@ define i32 @mul_top_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture
 ; CHECK-LE-NEXT:    cmp r0, #1
 ; CHECK-LE-NEXT:    blt .LBB2_4
 ; CHECK-LE-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-LE-NEXT:    subs r2, #2
+; CHECK-LE-NEXT:    sub.w lr, r2, #2
 ; CHECK-LE-NEXT:    subs r3, #2
 ; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    .p2align 2
 ; CHECK-LE-NEXT:  .LBB2_2: @ %for.body
 ; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-LE-NEXT:    ldr r4, [r2, #2]!
-; CHECK-LE-NEXT:    ldr lr, [r3, #2]!
-; CHECK-LE-NEXT:    asrs r5, r4, #16
-; CHECK-LE-NEXT:    smlad r12, r4, lr, r12
+; CHECK-LE-NEXT:    ldr r2, [lr, #2]!
+; CHECK-LE-NEXT:    ldr r4, [r3, #2]!
+; CHECK-LE-NEXT:    asrs r5, r2, #16
+; CHECK-LE-NEXT:    smlad r12, r2, r4, r12
 ; CHECK-LE-NEXT:    subs r0, #1
 ; CHECK-LE-NEXT:    mul r1, r5, r1
 ; CHECK-LE-NEXT:    bne .LBB2_2
@@ -257,8 +257,8 @@ define i32 @mul_top_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture
 ; CHECK-BE-NEXT:    ldrsh.w r5, [r3, #2]
 ; CHECK-BE-NEXT:    ldrsh.w r6, [r2, #2]
 ; CHECK-BE-NEXT:    smlabb r4, r4, lr, r12
-; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    smlabb r12, r6, r5, r4
+; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    mul r1, r6, r1
 ; CHECK-BE-NEXT:    bne .LBB2_2
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -343,8 +343,8 @@ define i32 @and_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ;
 ; CHECK-BE-LABEL: and_user:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-BE-NEXT:    push {r4, r5, r6, lr}
+; CHECK-BE-NEXT:    .save {r4, r5, r6, r7, lr}
+; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-BE-NEXT:    cmp r0, #1
 ; CHECK-BE-NEXT:    blt .LBB3_4
 ; CHECK-BE-NEXT:  @ %bb.1: @ %for.body.preheader
@@ -356,23 +356,23 @@ define i32 @and_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-BE-NEXT:  .LBB3_2: @ %for.body
 ; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    ldrsh lr, [r3, #2]!
-; CHECK-BE-NEXT:    ldrsh r4, [r2, #2]!
-; CHECK-BE-NEXT:    ldrsh.w r5, [r3, #2]
-; CHECK-BE-NEXT:    ldrsh.w r6, [r2, #2]
-; CHECK-BE-NEXT:    smlabb r4, r4, lr, r12
-; CHECK-BE-NEXT:    uxth.w lr, lr
-; CHECK-BE-NEXT:    smlabb r12, r6, r5, r4
+; CHECK-BE-NEXT:    ldrsh r5, [r2, #2]!
+; CHECK-BE-NEXT:    ldrsh.w r4, [r3, #2]
+; CHECK-BE-NEXT:    ldrsh.w r7, [r2, #2]
+; CHECK-BE-NEXT:    uxth.w r6, lr
+; CHECK-BE-NEXT:    smlabb r5, r5, lr, r12
+; CHECK-BE-NEXT:    smlabb r12, r7, r4, r5
 ; CHECK-BE-NEXT:    subs r0, #1
-; CHECK-BE-NEXT:    mul r1, lr, r1
+; CHECK-BE-NEXT:    mul r1, r6, r1
 ; CHECK-BE-NEXT:    bne .LBB3_2
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
 ; CHECK-BE-NEXT:  .LBB3_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
-; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %cmp24 = icmp sgt i32 %arg, 0
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
@@ -466,10 +466,10 @@ define i32 @multi_uses(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture r
 ; CHECK-BE-NEXT:    ldrsh.w r5, [r3, #2]
 ; CHECK-BE-NEXT:    ldrsh.w r6, [r2, #2]
 ; CHECK-BE-NEXT:    smlabb r4, r4, r1, r12
-; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    smlabb r12, r6, r5, r4
 ; CHECK-BE-NEXT:    eor.w r6, r1, lr
-; CHECK-BE-NEXT:    mul r1, r6, r1
+; CHECK-BE-NEXT:    muls r1, r6, r1
+; CHECK-BE-NEXT:    subs r0, #1
 ; CHECK-BE-NEXT:    lsl.w lr, r1, #16
 ; CHECK-BE-NEXT:    bne .LBB4_2
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup

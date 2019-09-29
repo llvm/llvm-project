@@ -1250,3 +1250,22 @@ namespace dtor_call {
     as.b.~A(); // expected-note {{destruction of member 'b' of union with active member 'a'}}
   }
 }
+
+namespace temp_dtor {
+  void f();
+  struct A {
+    bool b;
+    constexpr ~A() { if (b) f(); }
+  };
+
+  // We can't accept either of these unless we start actually registering the
+  // destructors of the A temporaries to run on shutdown. It's unclear what the
+  // intended standard behavior is so we reject this for now.
+  constexpr A &&a = A{false}; // expected-error {{constant}} expected-note {{non-trivial destruction of lifetime-extended temporary}}
+  void f() { a.b = true; }
+
+  constexpr A &&b = A{true}; // expected-error {{constant}} expected-note {{non-trivial destruction of lifetime-extended temporary}}
+
+  // FIXME: We could in prinicple accept this.
+  constexpr const A &c = A{false}; // expected-error {{constant}} expected-note {{non-trivial destruction of lifetime-extended temporary}}
+}

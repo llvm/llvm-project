@@ -664,7 +664,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LWZ);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert(MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Unexpected operand type for LWZtoc pseudo.");
 
     // Map the operand to its corresponding MCSymbol.

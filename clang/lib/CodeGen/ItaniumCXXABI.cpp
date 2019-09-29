@@ -350,7 +350,7 @@ public:
     // If we have the only definition, we don't need a thread wrapper if we
     // will emit the value as a constant.
     if (isUniqueGVALinkage(getContext().GetGVALinkageForVariable(VD)))
-      return !VD->getType().isDestructedType() && InitDecl->evaluateValue();
+      return !VD->needsDestruction(getContext()) && InitDecl->evaluateValue();
 
     // Otherwise, we need a thread wrapper unless we know that every
     // translation unit will emit the value as a constant. We rely on
