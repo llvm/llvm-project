@@ -8,13 +8,13 @@
 ; CHECK: smultt
 ; CHECK: smlalbb
 ; CHECK: smultt
-; CHECK: smlaldx
 ; CHECK: smlalbb
-; CHECK: smlaldx
 ; CHECK: smultt
 ; CHECK: smlalbb
-; CHECK: smlaldx
 ; CHECK: smultt
+; CHECK: smlaldx
+; CHECK: smlaldx
+; CHECK: smlaldx
 ; CHECK: pop.w	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 define dso_local arm_aapcscc void @complex_dot_prod(i16* nocapture readonly %pSrcA, i16* nocapture readonly %pSrcB, i32* nocapture %realResult, i32* nocapture %imagResult) {
 entry:
