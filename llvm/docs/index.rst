@@ -45,9 +45,6 @@ Several introductory papers and presentations.
 
   .. __: http://llvm.org/pubs/2002-12-LattnerMSThesis.html
 
-`Publications mentioning LLVM <http://llvm.org/pubs>`_
-   ..
-
 Documentation
 =============
 

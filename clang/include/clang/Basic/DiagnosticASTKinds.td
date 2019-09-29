@@ -145,8 +145,10 @@ def note_constexpr_access_volatile_obj : Note<
   "a constant expression">;
 def note_constexpr_volatile_here : Note<
   "volatile %select{temporary created|object declared|member declared}0 here">;
-def note_constexpr_ltor_mutable : Note<
-  "read of mutable member %0 is not allowed in a constant expression">;
+def note_constexpr_access_mutable : Note<
+  "%select{read of|read of|assignment to|increment of|decrement of|"
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
+  "mutable member %1 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_const_int : Note<
   "read of non-const variable %0 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
@@ -208,6 +210,9 @@ def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
   "non-trivial destruction of type %0 in a constant expression is not supported">;
+def note_constexpr_unsupported_tempoarary_nontrivial_dtor : Note<
+  "non-trivial destruction of lifetime-extended temporary with type %0 "
+  "used in the result of a constant expression is not yet supported">;
 def note_constexpr_unsupported_unsized_array : Note<
   "array-to-pointer decay of array member without known bound is not supported">;
 def note_constexpr_unsized_array_indexed : Note<

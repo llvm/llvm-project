@@ -26,6 +26,11 @@ CAMLprim value llvm_add_aggressive_dce(LLVMPassManagerRef PM) {
   return Val_unit;
 }
 
+CAMLprim value llvm_add_dce(LLVMPassManagerRef PM) {
+  LLVMAddDCEPass(PM);
+  return Val_unit;
+}
+
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 CAMLprim value llvm_add_alignment_from_assumptions(LLVMPassManagerRef PM) {
   LLVMAddAlignmentFromAssumptionsPass(PM);

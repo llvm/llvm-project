@@ -615,9 +615,6 @@ bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
     return false;
   }
 
-  if (Symbol.isUndefined() && !Symbol.isBindingSet())
-    return false;
-
   if (Symbol.isTemporary())
     return false;
 

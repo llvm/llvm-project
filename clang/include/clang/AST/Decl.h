@@ -808,12 +808,19 @@ struct EvaluatedStmt {
   /// valid if CheckedICE is true.
   bool IsICE : 1;
 
+  /// Whether this variable is known to have constant destruction. That is,
+  /// whether running the destructor on the initial value is a side-effect
+  /// (and doesn't inspect any state that might have changed during program
+  /// execution). This is currently only computed if the destructor is
+  /// non-trivial.
+  bool HasConstantDestruction : 1;
+
   Stmt *Value;
   APValue Evaluated;
 
-  EvaluatedStmt() : WasEvaluated(false), IsEvaluating(false), CheckedICE(false),
-                    CheckingICE(false), IsICE(false) {}
-
+  EvaluatedStmt()
+      : WasEvaluated(false), IsEvaluating(false), CheckedICE(false),
+        CheckingICE(false), IsICE(false), HasConstantDestruction(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1267,6 +1274,14 @@ public:
   /// to untyped APValue if the value could not be evaluated.
   APValue *getEvaluatedValue() const;
 
+  /// Evaluate the destruction of this variable to determine if it constitutes
+  /// constant destruction.
+  ///
+  /// \pre isInitICE()
+  /// \return \c true if this variable has constant destruction, \c false if
+  ///         not.
+  bool evaluateDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+
   /// Determines whether it is already known whether the
   /// initializer is an integral constant expression or not.
   bool isInitKnownICE() const;
@@ -1505,8 +1520,13 @@ public:
   // has no definition within this source file.
   bool isKnownToBeDefined() const;
 
-  /// Do we need to emit an exit-time destructor for this variable?
+  /// Is destruction of this variable entirely suppressed? If so, the variable
+  /// need not have a usable destructor at all.
   bool isNoDestroy(const ASTContext &) const;
+
+  /// Do we need to emit an exit-time destructor for this variable, and if so,
+  /// what kind?
+  QualType::DestructionKind needsDestruction(const ASTContext &Ctx) const;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

@@ -8,6 +8,7 @@ For developers of applications which use LLVM as a library.
 
    Atomics
    CommandLine
+   CommandGuide/index
    ExtendingLLVM
    HowToSetUpLLVMStyleRTTI
    ProgrammersManual
@@ -50,6 +51,10 @@ Command Line
 
 :doc:`OptBisect`
   A command line option for debugging optimization-induced failures.
+
+:doc:`LLVM Command Guide <CommandGuide/index>`
+   A reference manual for the LLVM command line utilities ("man" pages for LLVM
+   tools).
 
 =========
 LibFuzzer
