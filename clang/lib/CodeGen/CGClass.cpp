@@ -2083,7 +2083,7 @@ static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
   if (CGF.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
     // If the parameters are callee-cleanup, it's not safe to forward.
     for (auto *P : Ctor->parameters())
-      if (P->getType().isDestructedType())
+      if (P->needsDestruction(CGF.getContext()))
         return false;
 
     // Likewise if they're inalloca.
