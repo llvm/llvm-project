@@ -39582,7 +39582,7 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
   assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
-  EVT VT = N->getValueType(0);
+  MVT VT = N->getSimpleValueType(0);
   if (!VT.isVector() || (VT.getScalarSizeInBits() % 8) != 0)
     return SDValue();
 
@@ -39591,10 +39591,12 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   if (N0.getOpcode() != ISD::AND || N1.getOpcode() != ISD::AND)
     return SDValue();
 
-  // On XOP we'll lower to PCMOV so accept one use, otherwise only
-  // do this if either mask has multiple uses already.
-  if (!(Subtarget.hasXOP() || !N0.getOperand(1).hasOneUse() ||
-        !N1.getOperand(1).hasOneUse()))
+  // On XOP we'll lower to PCMOV so accept one use. With AVX512, we can use
+  // VPTERNLOG. Otherwise only do this if either mask has multiple uses already.
+  bool UseVPTERNLOG = (Subtarget.hasAVX512() && VT.is512BitVector()) ||
+                      Subtarget.hasVLX();
+  if (!(Subtarget.hasXOP() || UseVPTERNLOG ||
+        !N0.getOperand(1).hasOneUse() || !N1.getOperand(1).hasOneUse()))
     return SDValue();
 
   // Attempt to extract constant byte masks.
