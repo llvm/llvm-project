@@ -145,8 +145,10 @@ def note_constexpr_access_volatile_obj : Note<
   "a constant expression">;
 def note_constexpr_volatile_here : Note<
   "volatile %select{temporary created|object declared|member declared}0 here">;
-def note_constexpr_ltor_mutable : Note<
-  "read of mutable member %0 is not allowed in a constant expression">;
+def note_constexpr_access_mutable : Note<
+  "%select{read of|read of|assignment to|increment of|decrement of|"
+  "member call on|dynamic_cast of|typeid applied to|destruction of}0 "
+  "mutable member %1 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_const_int : Note<
   "read of non-const variable %0 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
