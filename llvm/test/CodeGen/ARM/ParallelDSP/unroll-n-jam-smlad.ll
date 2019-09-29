@@ -46,7 +46,6 @@ entry:
 ; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
 ; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
 ; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
-; CHECK-REG-PRESSURE: ldr{{.*}}, [sp
 ; CHECK-REG-PRESSURE: bne .LBB0_1
 
 for.body:

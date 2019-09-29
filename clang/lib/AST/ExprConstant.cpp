@@ -1912,12 +1912,30 @@ static void NoteLValueLocation(EvalInfo &Info, APValue::LValueBase Base) {
   // We have no information to show for a typeid(T) object.
 }
 
+enum class CheckEvaluationResultKind {
+  ConstantExpression,
+  FullyInitialized,
+};
+
+/// Materialized temporaries that we've already checked to determine if they're
+/// initializsed by a constant expression.
+using CheckedTemporaries =
+    llvm::SmallPtrSet<const MaterializeTemporaryExpr *, 8>;
+
+static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
+                                  EvalInfo &Info, SourceLocation DiagLoc,
+                                  QualType Type, const APValue &Value,
+                                  Expr::ConstExprUsage Usage,
+                                  SourceLocation SubobjectLoc,
+                                  CheckedTemporaries &CheckedTemps);
+
 /// Check that this reference or pointer core constant expression is a valid
 /// value for an address or reference constant expression. Return true if we
 /// can fold this expression, whether or not it's a constant expression.
 static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
                                           QualType Type, const LValue &LVal,
-                                          Expr::ConstExprUsage Usage) {
+                                          Expr::ConstExprUsage Usage,
+                                          CheckedTemporaries &CheckedTemps) {
   bool IsReferenceType = Type->isReferenceType();
 
   APValue::LValueBase Base = LVal.getLValueBase();
@@ -1976,6 +1994,24 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       if (Info.getLangOpts().CPlusPlus && Usage == Expr::EvaluateForCodeGen &&
           FD->hasAttr<DLLImportAttr>())
         // FIXME: Diagnostic!
+        return false;
+    }
+  } else if (const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(
+                 Base.dyn_cast<const Expr *>())) {
+    if (CheckedTemps.insert(MTE).second) {
+      QualType TempType = getType(Base);
+      if (TempType.isDestructedType()) {
+        Info.FFDiag(MTE->getExprLoc(),
+                    diag::note_constexpr_unsupported_tempoarary_nontrivial_dtor)
+            << TempType;
+        return false;
+      }
+
+      APValue *V = Info.Ctx.getMaterializedTemporaryValue(MTE, false);
+      assert(V && "evasluation result refers to uninitialised temporary");
+      if (!CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
+                                 Info, MTE->getExprLoc(), TempType, *V,
+                                 Usage, SourceLocation(), CheckedTemps))
         return false;
     }
   }
@@ -2050,16 +2086,12 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
   return false;
 }
 
-enum class CheckEvaluationResultKind {
-  ConstantExpression,
-  FullyInitialized,
-};
-
-static bool
-CheckEvaluationResult(CheckEvaluationResultKind CERK, EvalInfo &Info,
-                      SourceLocation DiagLoc, QualType Type,
-                      const APValue &Value, Expr::ConstExprUsage Usage,
-                      SourceLocation SubobjectLoc = SourceLocation()) {
+static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
+                                  EvalInfo &Info, SourceLocation DiagLoc,
+                                  QualType Type, const APValue &Value,
+                                  Expr::ConstExprUsage Usage,
+                                  SourceLocation SubobjectLoc,
+                                  CheckedTemporaries &CheckedTemps) {
   if (!Value.hasValue()) {
     Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
       << true << Type;
@@ -2081,18 +2113,20 @@ CheckEvaluationResult(CheckEvaluationResultKind CERK, EvalInfo &Info,
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
                                  Value.getArrayInitializedElt(I), Usage,
-                                 SubobjectLoc))
+                                 SubobjectLoc, CheckedTemps))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
     return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
-                                 Value.getArrayFiller(), Usage, SubobjectLoc);
+                                 Value.getArrayFiller(), Usage, SubobjectLoc,
+                                 CheckedTemps);
   }
   if (Value.isUnion() && Value.getUnionField()) {
     return CheckEvaluationResult(
         CERK, Info, DiagLoc, Value.getUnionField()->getType(),
-        Value.getUnionValue(), Usage, Value.getUnionField()->getLocation());
+        Value.getUnionValue(), Usage, Value.getUnionField()->getLocation(),
+        CheckedTemps);
   }
   if (Value.isStruct()) {
     RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
@@ -2101,7 +2135,7 @@ CheckEvaluationResult(CheckEvaluationResultKind CERK, EvalInfo &Info,
       for (const CXXBaseSpecifier &BS : CD->bases()) {
         if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
                                    Value.getStructBase(BaseIndex), Usage,
-                                   BS.getBeginLoc()))
+                                   BS.getBeginLoc(), CheckedTemps))
           return false;
         ++BaseIndex;
       }
@@ -2112,7 +2146,7 @@ CheckEvaluationResult(CheckEvaluationResultKind CERK, EvalInfo &Info,
 
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
                                  Value.getStructField(I->getFieldIndex()),
-                                 Usage, I->getLocation()))
+                                 Usage, I->getLocation(), CheckedTemps))
         return false;
     }
   }
@@ -2121,7 +2155,8 @@ CheckEvaluationResult(CheckEvaluationResultKind CERK, EvalInfo &Info,
       CERK == CheckEvaluationResultKind::ConstantExpression) {
     LValue LVal;
     LVal.setFrom(Info.Ctx, Value);
-    return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Usage);
+    return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Usage,
+                                         CheckedTemps);
   }
 
   if (Value.isMemberPointer() &&
@@ -2139,17 +2174,20 @@ static bool
 CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
                         const APValue &Value,
                         Expr::ConstExprUsage Usage = Expr::EvaluateForCodeGen) {
+  CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
-                               Info, DiagLoc, Type, Value, Usage);
+                               Info, DiagLoc, Type, Value, Usage,
+                               SourceLocation(), CheckedTemps);
 }
 
 /// Check that this evaluated value is fully-initialized and can be loaded by
 /// an lvalue-to-rvalue conversion.
 static bool CheckFullyInitialized(EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value) {
-  return CheckEvaluationResult(CheckEvaluationResultKind::FullyInitialized,
-                               Info, DiagLoc, Type, Value,
-                               Expr::EvaluateForCodeGen);
+  CheckedTemporaries CheckedTemps;
+  return CheckEvaluationResult(
+      CheckEvaluationResultKind::FullyInitialized, Info, DiagLoc, Type, Value,
+      Expr::EvaluateForCodeGen, SourceLocation(), CheckedTemps);
 }
 
 /// Enforce C++2a [expr.const]/4.17, which disallows new-expressions unless
@@ -7189,9 +7227,7 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
   QualType Type = Inner->getType();
 
   // Materialize the temporary itself.
-  if (!EvaluateInPlace(*Value, Info, Result, Inner) ||
-      (E->getStorageDuration() == SD_Static &&
-       !CheckConstantExpression(Info, E->getExprLoc(), Type, *Value))) {
+  if (!EvaluateInPlace(*Value, Info, Result, Inner)) {
     *Value = APValue();
     return false;
   }
@@ -13218,11 +13254,12 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
   EvalInfo Info(Ctx, Result, EvalInfo::EM_ConstantFold);
   Info.InConstantContext = InConstantContext;
   LValue LV;
+  CheckedTemporaries CheckedTemps;
   if (!EvaluateLValue(this, LV, Info) || !Info.discardCleanups() ||
       Result.HasSideEffects ||
       !CheckLValueConstantExpression(Info, getExprLoc(),
                                      Ctx.getLValueReferenceType(getType()), LV,
-                                     Expr::EvaluateForCodeGen))
+                                     Expr::EvaluateForCodeGen, CheckedTemps))
     return false;
 
   LV.moveInto(Result.Val);
