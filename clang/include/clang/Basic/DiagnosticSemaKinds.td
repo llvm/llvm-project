@@ -2384,6 +2384,8 @@ def err_constexpr_var_non_literal : Error<
   "constexpr variable cannot have non-literal type %0">;
 def err_constexpr_var_requires_const_init : Error<
   "constexpr variable %0 must be initialized by a constant expression">;
+def err_constexpr_var_requires_const_destruction : Error<
+  "constexpr variable %0 must have constant destruction">;
 def err_constexpr_redecl_mismatch : Error<
   "%select{non-constexpr|constexpr|consteval}1 declaration of %0"
   " follows %select{non-constexpr|constexpr|consteval}2 declaration">;
