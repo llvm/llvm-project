@@ -18,11 +18,13 @@ static void aborting_fatal_error_handler(void *, const std::string &reason,
   ::abort();
 }
 
-void clang_install_aborting_llvm_fatal_error_handler() {
+extern "C" {
+void clang_install_aborting_llvm_fatal_error_handler(void) {
   llvm::remove_fatal_error_handler();
   llvm::install_fatal_error_handler(aborting_fatal_error_handler, nullptr);
 }
 
-void clang_uninstall_llvm_fatal_error_handler() {
+void clang_uninstall_llvm_fatal_error_handler(void) {
   llvm::remove_fatal_error_handler();
+}
 }

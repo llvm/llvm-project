@@ -310,7 +310,7 @@ static void createStoreInstBefore(llvm::Value *value, Address addr,
 static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
                                             llvm::Instruction *beforeInst) {
   auto load = new llvm::LoadInst(addr.getPointer(), name, beforeInst);
-  load->setAlignment(addr.getAlignment().getQuantity());
+  load->setAlignment(llvm::MaybeAlign(addr.getAlignment().getQuantity()));
   return load;
 }
 

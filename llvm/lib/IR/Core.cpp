@@ -2010,9 +2010,9 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   if (GlobalObject *GV = dyn_cast<GlobalObject>(P))
     GV->setAlignment(Bytes);
   else if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
-    AI->setAlignment(Bytes);
+    AI->setAlignment(MaybeAlign(Bytes));
   else if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    LI->setAlignment(Bytes);
+    LI->setAlignment(MaybeAlign(Bytes));
   else if (StoreInst *SI = dyn_cast<StoreInst>(P))
     SI->setAlignment(Bytes);
   else

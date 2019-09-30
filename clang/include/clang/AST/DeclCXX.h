@@ -2236,7 +2236,7 @@ public:
                                     const CXXRecordDecl *Decl);
 
   Qualifiers getMethodQualifiers() const {
-    return getType()->getAs<FunctionProtoType>()->getMethodQuals();
+    return getType()->castAs<FunctionProtoType>()->getMethodQuals();
   }
 
   /// Retrieve the ref-qualifier associated with this method.
@@ -2251,7 +2251,7 @@ public:
   /// };
   /// @endcode
   RefQualifierKind getRefQualifier() const {
-    return getType()->getAs<FunctionProtoType>()->getRefQualifier();
+    return getType()->castAs<FunctionProtoType>()->getRefQualifier();
   }
 
   bool hasInlineBody() const;
@@ -2905,7 +2905,7 @@ public:
 
   /// Returns the type that this conversion function is converting to.
   QualType getConversionType() const {
-    return getType()->getAs<FunctionType>()->getReturnType();
+    return getType()->castAs<FunctionType>()->getReturnType();
   }
 
   /// Determine whether this conversion function is a conversion from

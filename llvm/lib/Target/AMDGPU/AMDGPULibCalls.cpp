@@ -1430,8 +1430,8 @@ AllocaInst* AMDGPULibCalls::insertAlloca(CallInst *UI, IRBuilder<> &B,
   B.SetInsertPoint(&*ItNew);
   AllocaInst *Alloc = B.CreateAlloca(RetType, 0,
     std::string(prefix) + UI->getName());
-  Alloc->setAlignment(UCallee->getParent()->getDataLayout()
-                       .getTypeAllocSize(RetType));
+  Alloc->setAlignment(MaybeAlign(
+      UCallee->getParent()->getDataLayout().getTypeAllocSize(RetType)));
   return Alloc;
 }
 

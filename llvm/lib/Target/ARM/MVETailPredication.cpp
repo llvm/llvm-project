@@ -491,13 +491,13 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
     case 16: VCTPID = Intrinsic::arm_vctp8; break;
     }
     Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
-    // TODO: This add likely already exists in the loop.
-    Value *Remaining = Builder.CreateSub(Processed, Factor);
-    Value *TailPredicate = Builder.CreateCall(VCTP, Remaining);
+    Value *TailPredicate = Builder.CreateCall(VCTP, Processed);
     Predicate->replaceAllUsesWith(TailPredicate);
     NewPredicates[Predicate] = cast<Instruction>(TailPredicate);
 
     // Add the incoming value to the new phi.
+    // TODO: This add likely already exists in the loop.
+    Value *Remaining = Builder.CreateSub(Processed, Factor);
     Processed->addIncoming(Remaining, L->getLoopLatch());
     LLVM_DEBUG(dbgs() << "TP: Insert processed elements phi: "
                << *Processed << "\n"

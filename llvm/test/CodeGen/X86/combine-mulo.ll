@@ -34,30 +34,21 @@ define <4 x i32> @combine_vec_smul_two(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_vec_smul_two:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    paddd %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE-NEXT:    pxor %xmm4, %xmm3
-; SSE-NEXT:    paddd %xmm2, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE-NEXT:    pxor %xmm4, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE-NEXT:    blendvps %xmm0, %xmm2, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm0, %xmm3
+; SSE-NEXT:    movdqa %xmm3, %xmm0
+; SSE-NEXT:    blendvps %xmm0, %xmm1, %xmm2
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_smul_two:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; AVX-NEXT:    vpxor %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm2
-; AVX-NEXT:    vpxor %xmm4, %xmm2, %xmm2
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm3
+; AVX-NEXT:    vpxor %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
   %1 = call {<4 x i32>, <4 x i1>} @llvm.smul.with.overflow.v4i32(<4 x i32> %a0, <4 x i32> <i32 2, i32 2, i32 2, i32 2>)
   %2 = extractvalue {<4 x i32>, <4 x i1>} %1, 0
