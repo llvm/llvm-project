@@ -50,8 +50,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86tti"
 
-extern cl::opt<bool> ExperimentalVectorWideningLegalization;
-
 //===----------------------------------------------------------------------===//
 //
 // X86 cost model.
@@ -920,8 +918,7 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
       // FIXME: We can use permq for 64-bit or larger extracts from 256-bit
       // vectors.
       int OrigSubElts = SubTp->getVectorNumElements();
-      if (ExperimentalVectorWideningLegalization &&
-          NumSubElts > OrigSubElts &&
+      if (NumSubElts > OrigSubElts &&
           (Index % OrigSubElts) == 0 && (NumSubElts % OrigSubElts) == 0 &&
           LT.second.getVectorElementType() ==
             SubLT.second.getVectorElementType() &&
@@ -1333,12 +1330,6 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   // TODO: For AVX512DQ + AVX512VL, we also have cheap casts for 128-bit and
   // 256-bit wide vectors.
 
-  // Used with widening legalization
-  static const TypeConversionCostTblEntry AVX512FConversionTblWide[] = {
-    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,   1 },
-  };
-
   static const TypeConversionCostTblEntry AVX512FConversionTbl[] = {
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,  1 },
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32, 3 },
@@ -1356,6 +1347,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8,  1 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 1 },
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 1 },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,   1 },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,   1 },
     { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i16,  1 },
     { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i16,  1 },
     { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i32,  1 },
@@ -1410,28 +1403,19 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v16f32, 2 },
   };
 
-  static const TypeConversionCostTblEntry AVX2ConversionTblWide[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i8,   1 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,   1 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,   1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16,  1 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16,  1 },
-  };
-
   static const TypeConversionCostTblEntry AVX2ConversionTbl[] = {
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   3 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   3 },
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   3 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   3 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,   3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i8,   3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,   3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,   3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,   1 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i8,   1 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,   1 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,   1 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8,  1 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8,  1 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16,  3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16,  3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16,  1 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16,  1 },
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16,  1 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  1 },
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32,  1 },
@@ -1450,24 +1434,18 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i32,  8 },
   };
 
-  static const TypeConversionCostTblEntry AVXConversionTblWide[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,  4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  4 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 4 },
-  };
-
   static const TypeConversionCostTblEntry AVXConversionTbl[] = {
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,  6 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,  4 },
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,  7 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,  4 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,  6 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,  4 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i8,  4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  7 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  4 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,  4 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 4 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 4 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 6 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 4 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16, 4 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 4 },
@@ -1574,11 +1552,6 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    4 },
   };
 
-  static const TypeConversionCostTblEntry SSE2ConversionTblWide[] = {
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v4i32, 2*10 },
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i32, 2*10 },
-  };
-
   static const TypeConversionCostTblEntry SSE2ConversionTbl[] = {
     // These are somewhat magic numbers justified by looking at the output of
     // Intel's IACA, running some kernels and making sure when we take
@@ -1588,7 +1561,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v8i16, 15 },
     { ISD::SINT_TO_FP, MVT::v2f64, MVT::v8i16, 8*10 },
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 5 },
-    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v4i32, 4*10 },
+    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v4i32, 2*10 },
+    { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i32, 2*10 },
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v2i64, 15 },
     { ISD::SINT_TO_FP, MVT::v2f64, MVT::v2i64, 2*10 },
 
@@ -1652,13 +1626,6 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   std::pair<int, MVT> LTSrc = TLI->getTypeLegalizationCost(DL, Src);
   std::pair<int, MVT> LTDest = TLI->getTypeLegalizationCost(DL, Dst);
 
-  if (ST->hasSSE2() && !ST->hasAVX() &&
-      ExperimentalVectorWideningLegalization) {
-    if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTblWide, ISD,
-                                                   LTDest.second, LTSrc.second))
-      return LTSrc.first * Entry->Cost;
-  }
-
   if (ST->hasSSE2() && !ST->hasAVX()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
@@ -1690,31 +1657,14 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                                      SimpleDstTy, SimpleSrcTy))
         return Entry->Cost;
 
-    if (ST->hasAVX512() && ExperimentalVectorWideningLegalization)
-      if (const auto *Entry = ConvertCostTableLookup(AVX512FConversionTblWide, ISD,
-                                                     SimpleDstTy, SimpleSrcTy))
-        return Entry->Cost;
-
     if (ST->hasAVX512())
       if (const auto *Entry = ConvertCostTableLookup(AVX512FConversionTbl, ISD,
                                                      SimpleDstTy, SimpleSrcTy))
         return Entry->Cost;
   }
 
-  if (ST->hasAVX2() && ExperimentalVectorWideningLegalization) {
-    if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTblWide, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
-  }
-
   if (ST->hasAVX2()) {
     if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
-  }
-
-  if (ST->hasAVX() && ExperimentalVectorWideningLegalization) {
-    if (const auto *Entry = ConvertCostTableLookup(AVXConversionTblWide, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
       return Entry->Cost;
   }
@@ -1727,12 +1677,6 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
   if (ST->hasSSE41()) {
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return Entry->Cost;
-  }
-
-  if (ST->hasSSE2() && ExperimentalVectorWideningLegalization) {
-    if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTblWide, ISD,
                                                    SimpleDstTy, SimpleSrcTy))
       return Entry->Cost;
   }
@@ -2600,7 +2544,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   // in the table.
   // FIXME: Is there a better way to do this?
   EVT VT = TLI->getValueType(DL, ValTy);
-  if (VT.isSimple() && ExperimentalVectorWideningLegalization) {
+  if (VT.isSimple()) {
     MVT MTy = VT.getSimpleVT();
     if (IsPairwise) {
       if (ST->hasAVX())
