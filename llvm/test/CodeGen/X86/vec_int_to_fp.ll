@@ -552,8 +552,8 @@ define <2 x double> @uitofp_2i64_to_2f64(<2 x i64> %a) {
 ;
 ; AVX512VL-LABEL: uitofp_2i64_to_2f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm1
-; AVX512VL-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [4841369599423283200,4841369599423283200]
+; AVX512VL-NEXT:    vpternlogq $248, {{.*}}(%rip), %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512VL-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
@@ -905,8 +905,8 @@ define <4 x double> @uitofp_4i64_to_4f64(<4 x i64> %a) {
 ;
 ; AVX512VL-LABEL: uitofp_4i64_to_4f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpandq {{.*}}(%rip){1to4}, %ymm0, %ymm1
-; AVX512VL-NEXT:    vporq {{.*}}(%rip){1to4}, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX512VL-NEXT:    vpternlogq $248, {{.*}}(%rip){1to4}, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vporq {{.*}}(%rip){1to4}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vsubpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
@@ -3464,8 +3464,8 @@ define <2 x double> @uitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ; AVX512VL-LABEL: uitofp_load_2i64_to_2f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm1
-; AVX512VL-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [4841369599423283200,4841369599423283200]
+; AVX512VL-NEXT:    vpternlogq $248, {{.*}}(%rip), %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512VL-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
@@ -3847,8 +3847,8 @@ define <4 x double> @uitofp_load_4i64_to_4f64(<4 x i64> *%a) {
 ; AVX512VL-LABEL: uitofp_load_4i64_to_4f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vpandq {{.*}}(%rip){1to4}, %ymm0, %ymm1
-; AVX512VL-NEXT:    vporq {{.*}}(%rip){1to4}, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX512VL-NEXT:    vpternlogq $248, {{.*}}(%rip){1to4}, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vporq {{.*}}(%rip){1to4}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vsubpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
