@@ -1939,7 +1939,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           ss << ": "
              << module_swift_ast->GetFatalErrors().AsCString("unknown error");
 
-        target.GetDebugger().GetErrorFile()->Printf(
+        target.GetDebugger().GetErrorStreamSP()->Printf(
             "Error while loading Swift module:\n%s\n"
             "Debug info from this module will be unavailable in the "
             "debugger.\n\n",
