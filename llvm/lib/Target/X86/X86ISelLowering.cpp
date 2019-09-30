@@ -27887,6 +27887,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::ANY_EXTEND:
+    // Right now, only MVT::v8i8 has Custom action for an illegal type.
+    // It's intended to custom handle the input type.
+    assert(N->getValueType(0) == MVT::v8i8 &&
+           "Do not know how to legalize this Node");
+    return;
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
     EVT VT = N->getValueType(0);

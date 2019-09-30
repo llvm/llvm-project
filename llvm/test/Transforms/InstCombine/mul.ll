@@ -517,3 +517,81 @@ define i64 @test_mul_canonicalize_neg_is_not_undone(i64 %L1) {
   %B4 = mul i64 %B8, %L1
   ret i64 %B4
 }
+
+define i32 @negate_if_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sel = select i1 %cond, i32 -1, i32 1
+  %r = mul i32 %sel, %x
+  ret i32 %r
+}
+
+define i32 @negate_if_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[X]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sel = select i1 %cond, i32 1, i32 -1
+  %r = mul i32 %sel, %x
+  ret i32 %r
+}
+
+define <2 x i8> @negate_if_true_commute(<2 x i8> %px, i1 %cond) {
+; CHECK-LABEL: @negate_if_true_commute(
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 42>, [[PX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <2 x i8> zeroinitializer, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], <2 x i8> [[TMP1]], <2 x i8> [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %x = sdiv <2 x i8> <i8 42, i8 42>, %px  ; thwart complexity-based canonicalization
+  %sel = select i1 %cond, <2 x i8> <i8 -1, i8 -1>, <2 x i8> <i8 1, i8 1>
+  %r = mul <2 x i8> %x, %sel
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @negate_if_false_commute(<2 x i8> %px, <2 x i1> %cond) {
+; CHECK-LABEL: @negate_if_false_commute(
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 5>, [[PX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i8> [[X]], <2 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %x = sdiv <2 x i8> <i8 42, i8 5>, %px  ; thwart complexity-based canonicalization
+  %sel = select <2 x i1> %cond, <2 x i8> <i8 1, i8 undef>, <2 x i8> <i8 -1, i8 -1>
+  %r = mul <2 x i8> %x, %sel
+  ret <2 x i8> %r
+}
+
+; Negative test
+
+define i32 @negate_if_true_extra_use(i32 %x, i1 %cond) {
+; CHECK-LABEL: @negate_if_true_extra_use(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 -1, i32 1
+; CHECK-NEXT:    call void @use32(i32 [[SEL]])
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[SEL]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sel = select i1 %cond, i32 -1, i32 1
+  call void @use32(i32 %sel)
+  %r = mul i32 %sel, %x
+  ret i32 %r
+}
+
+; Negative test
+
+define <2 x i8> @negate_if_true_wrong_constant(<2 x i8> %px, i1 %cond) {
+; CHECK-LABEL: @negate_if_true_wrong_constant(
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 42>, [[PX:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x i8> <i8 -1, i8 0>, <2 x i8> <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i8> [[X]], [[SEL]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %x = sdiv <2 x i8> <i8 42, i8 42>, %px  ; thwart complexity-based canonicalization
+  %sel = select i1 %cond, <2 x i8> <i8 -1, i8 0>, <2 x i8> <i8 1, i8 1>
+  %r = mul <2 x i8> %x, %sel
+  ret <2 x i8> %r
+}

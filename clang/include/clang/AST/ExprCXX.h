@@ -2096,8 +2096,7 @@ public:
                                  bool IsParenTypeId);
 
   QualType getAllocatedType() const {
-    assert(getType()->isPointerType());
-    return getType()->getAs<PointerType>()->getPointeeType();
+    return getType()->castAs<PointerType>()->getPointeeType();
   }
 
   TypeSourceInfo *getAllocatedTypeSourceInfo() const {

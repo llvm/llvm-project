@@ -246,7 +246,7 @@ public:
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
-        case 'r': {
+      case 'r': {
         int32_t offset = 0;
         if (option_arg.getAsInteger(0, offset) || offset == INT32_MIN) {
           error.SetErrorStringWithFormat("invalid frame offset argument '%s'",
@@ -263,8 +263,10 @@ public:
       return error;
     }
 
-    void OptionParsingStarting(ExecutionContext *execution_context) override {}
-    
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      relative_frame_offset.reset();
+    }
+
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_frame_select_options);
     }
@@ -314,7 +316,8 @@ protected:
         frame_idx = 0;
 
       if (*m_options.relative_frame_offset < 0) {
-        if (static_cast<int32_t>(frame_idx) >= -*m_options.relative_frame_offset)
+        if (static_cast<int32_t>(frame_idx) >=
+            -*m_options.relative_frame_offset)
           frame_idx += *m_options.relative_frame_offset;
         else {
           if (frame_idx == 0) {

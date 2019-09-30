@@ -15,8 +15,10 @@
 #include "lib/BenchmarkResult.h"
 #include "lib/BenchmarkRunner.h"
 #include "lib/Clustering.h"
+#include "lib/Error.h"
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
+#include "lib/SnippetFile.h"
 #include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
 #include "lib/TargetSelect.h"
@@ -27,7 +29,6 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
@@ -207,162 +208,17 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   const llvm::MCInstrDesc &InstrDesc = *Instr.Description;
   // Ignore instructions that we cannot run.
   if (InstrDesc.isPseudo())
-    return llvm::make_error<BenchmarkFailure>("Unsupported opcode: isPseudo");
+    return make_error<Failure>("Unsupported opcode: isPseudo");
   if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return llvm::make_error<BenchmarkFailure>(
-        "Unsupported opcode: isBranch/isIndirectBranch");
+    return make_error<Failure>("Unsupported opcode: isBranch/isIndirectBranch");
   if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return llvm::make_error<BenchmarkFailure>(
-        "Unsupported opcode: isCall/isReturn");
+    return make_error<Failure>("Unsupported opcode: isCall/isReturn");
 
   const std::unique_ptr<SnippetGenerator> Generator =
       State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State);
   if (!Generator)
     llvm::report_fatal_error("cannot create snippet generator");
   return Generator->generateConfigurations(Instr, ForbiddenRegs);
-}
-
-namespace {
-
-// An MCStreamer that reads a BenchmarkCode definition from a file.
-// The BenchmarkCode definition is just an asm file, with additional comments to
-// specify which registers should be defined or are live on entry.
-class BenchmarkCodeStreamer : public llvm::MCStreamer,
-                              public llvm::AsmCommentConsumer {
-public:
-  explicit BenchmarkCodeStreamer(llvm::MCContext *Context,
-                                 const llvm::MCRegisterInfo *TheRegInfo,
-                                 BenchmarkCode *Result)
-      : llvm::MCStreamer(*Context), RegInfo(TheRegInfo), Result(Result) {}
-
-  // Implementation of the llvm::MCStreamer interface. We only care about
-  // instructions.
-  void EmitInstruction(const llvm::MCInst &Instruction,
-                       const llvm::MCSubtargetInfo &STI) override {
-    Result->Instructions.push_back(Instruction);
-  }
-
-  // Implementation of the llvm::AsmCommentConsumer.
-  void HandleComment(llvm::SMLoc Loc, llvm::StringRef CommentText) override {
-    CommentText = CommentText.trim();
-    if (!CommentText.consume_front("LLVM-EXEGESIS-"))
-      return;
-    if (CommentText.consume_front("DEFREG")) {
-      // LLVM-EXEGESIS-DEFREF <reg> <hex_value>
-      RegisterValue RegVal;
-      llvm::SmallVector<llvm::StringRef, 2> Parts;
-      CommentText.split(Parts, ' ', /*unlimited splits*/ -1,
-                        /*do not keep empty strings*/ false);
-      if (Parts.size() != 2) {
-        llvm::errs() << "invalid comment 'LLVM-EXEGESIS-DEFREG " << CommentText
-                     << "\n";
-        ++InvalidComments;
-      }
-      if (!(RegVal.Register = findRegisterByName(Parts[0].trim()))) {
-        llvm::errs() << "unknown register in 'LLVM-EXEGESIS-DEFREG "
-                     << CommentText << "\n";
-        ++InvalidComments;
-        return;
-      }
-      const llvm::StringRef HexValue = Parts[1].trim();
-      RegVal.Value = llvm::APInt(
-          /* each hex digit is 4 bits */ HexValue.size() * 4, HexValue, 16);
-      Result->RegisterInitialValues.push_back(std::move(RegVal));
-      return;
-    }
-    if (CommentText.consume_front("LIVEIN")) {
-      // LLVM-EXEGESIS-LIVEIN <reg>
-      if (unsigned Reg = findRegisterByName(CommentText.ltrim()))
-        Result->LiveIns.push_back(Reg);
-      else {
-        llvm::errs() << "unknown register in 'LLVM-EXEGESIS-LIVEIN "
-                     << CommentText << "\n";
-        ++InvalidComments;
-      }
-      return;
-    }
-  }
-
-  unsigned numInvalidComments() const { return InvalidComments; }
-
-private:
-  // We only care about instructions, we don't implement this part of the API.
-  void EmitCommonSymbol(llvm::MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override {}
-  bool EmitSymbolAttribute(llvm::MCSymbol *Symbol,
-                           llvm::MCSymbolAttr Attribute) override {
-    return false;
-  }
-  void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
-                            unsigned ValueSize,
-                            unsigned MaxBytesToEmit) override {}
-  void EmitZerofill(llvm::MCSection *Section, llvm::MCSymbol *Symbol,
-                    uint64_t Size, unsigned ByteAlignment,
-                    llvm::SMLoc Loc) override {}
-
-  unsigned findRegisterByName(const llvm::StringRef RegName) const {
-    // FIXME: Can we do better than this ?
-    for (unsigned I = 0, E = RegInfo->getNumRegs(); I < E; ++I) {
-      if (RegName == RegInfo->getName(I))
-        return I;
-    }
-    llvm::errs() << "'" << RegName
-                 << "' is not a valid register name for the target\n";
-    return 0;
-  }
-
-  const llvm::MCRegisterInfo *const RegInfo;
-  BenchmarkCode *const Result;
-  unsigned InvalidComments = 0;
-};
-
-} // namespace
-
-// Reads code snippets from file `Filename`.
-static llvm::Expected<std::vector<BenchmarkCode>>
-readSnippets(const LLVMState &State, llvm::StringRef Filename) {
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferPtr =
-      llvm::MemoryBuffer::getFileOrSTDIN(Filename);
-  if (std::error_code EC = BufferPtr.getError()) {
-    return llvm::make_error<BenchmarkFailure>(
-        "cannot read snippet: " + Filename + ": " + EC.message());
-  }
-  llvm::SourceMgr SM;
-  SM.AddNewSourceBuffer(std::move(BufferPtr.get()), llvm::SMLoc());
-
-  BenchmarkCode Result;
-
-  llvm::MCObjectFileInfo ObjectFileInfo;
-  const llvm::TargetMachine &TM = State.getTargetMachine();
-  llvm::MCContext Context(TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
-                          &ObjectFileInfo);
-  ObjectFileInfo.InitMCObjectFileInfo(TM.getTargetTriple(), /*PIC*/ false,
-                                      Context);
-  BenchmarkCodeStreamer Streamer(&Context, TM.getMCRegisterInfo(), &Result);
-  const std::unique_ptr<llvm::MCAsmParser> AsmParser(
-      llvm::createMCAsmParser(SM, Context, Streamer, *TM.getMCAsmInfo()));
-  if (!AsmParser)
-    return llvm::make_error<BenchmarkFailure>("cannot create asm parser");
-  AsmParser->getLexer().setCommentConsumer(&Streamer);
-
-  const std::unique_ptr<llvm::MCTargetAsmParser> TargetAsmParser(
-      TM.getTarget().createMCAsmParser(*TM.getMCSubtargetInfo(), *AsmParser,
-                                       *TM.getMCInstrInfo(),
-                                       llvm::MCTargetOptions()));
-
-  if (!TargetAsmParser)
-    return llvm::make_error<BenchmarkFailure>(
-        "cannot create target asm parser");
-  AsmParser->setTargetParser(*TargetAsmParser);
-
-  if (AsmParser->Run(false))
-    return llvm::make_error<BenchmarkFailure>("cannot parse asm file");
-  if (Streamer.numInvalidComments())
-    return llvm::make_error<BenchmarkFailure>(
-        llvm::Twine("found ")
-            .concat(llvm::Twine(Streamer.numInvalidComments()))
-            .concat(" invalid LLVM-EXEGESIS comments"));
-  return std::vector<BenchmarkCode>{std::move(Result)};
 }
 
 void benchmarkMain() {

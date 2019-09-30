@@ -10,6 +10,7 @@
 #include <string>
 
 #include "Assembler.h"
+#include "Error.h"
 #include "MCInstrDescView.h"
 #include "SnippetGenerator.h"
 #include "Target.h"
@@ -48,7 +49,7 @@ SnippetGenerator::generateConfigurations(
     unsigned ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
     if (ScratchSpacePointerInReg == 0)
-      return llvm::make_error<BenchmarkFailure>(
+      return make_error<Failure>(
           "Infeasible : target does not support memory instructions");
     const auto &ScratchRegAliases =
         State.getRATC().getRegister(ScratchSpacePointerInReg).aliasedBits();
@@ -57,7 +58,7 @@ SnippetGenerator::generateConfigurations(
     for (const auto &Op : Instr.Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
           ScratchRegAliases.test(Op.getImplicitReg()))
-        return llvm::make_error<BenchmarkFailure>(
+        return make_error<Failure>(
             "Infeasible : memory instruction uses scratch memory register");
     }
     ForbiddenRegs |= ScratchRegAliases;

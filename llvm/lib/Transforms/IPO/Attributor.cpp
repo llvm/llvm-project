@@ -2473,7 +2473,7 @@ struct AAAlignImpl : AAAlign {
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
         if (LI->getPointerOperand() == &AnchorVal)
           if (LI->getAlignment() < getAssumedAlign()) {
-            LI->setAlignment(getAssumedAlign());
+            LI->setAlignment(Align(getAssumedAlign()));
             STATS_DECLTRACK(AAAlign, Load,
                             "Number of times alignemnt added to a load");
             Changed = ChangeStatus::CHANGED;
