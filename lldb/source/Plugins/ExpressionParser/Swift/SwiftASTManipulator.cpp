@@ -1045,6 +1045,15 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
   swift::NamedPattern *named_pattern =
       new (ast_context) swift::NamedPattern(var_decl, is_implicit);
 
+  // Since lldb does not call bindExtensions, must ensure that any enclosing
+  // extension is bound
+  for (auto *context = containing_context; context;
+       context = context->getParent()) {
+    if (auto *d = context->getAsDecl()) {
+      if (auto *ext = swift::dyn_cast<swift::ExtensionDecl>(d))
+        ext->computeExtendedNominal();
+    }
+  }
   swift::Type type = containing_context->mapTypeIntoContext(
       var_decl->getInterfaceType());
   swift::TypedPattern *typed_pattern =
