@@ -266,6 +266,18 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (getenv("RC_DEBUG_OPTIONS"))
     Options.PaperTrailWarnings = true;
 
+  if (opt::Arg *RemarksPrependPath = Args.getLastArg(OPT_remarks_prepend_path))
+    Options.LinkOpts.RemarksPrependPath = RemarksPrependPath->getValue();
+
+  if (opt::Arg *RemarksOutputFormat =
+          Args.getLastArg(OPT_remarks_output_format)) {
+    if (Expected<remarks::Format> FormatOrErr =
+            remarks::parseFormat(RemarksOutputFormat->getValue()))
+      Options.LinkOpts.RemarksFormat = *FormatOrErr;
+    else
+      return FormatOrErr.takeError();
+  }
+
   if (Error E = verifyOptions(Options))
     return std::move(E);
   return Options;
@@ -506,6 +518,10 @@ int main(int argc, char **argv) {
                          << "': " << EC.message() << '\n';
       return 1;
     }
+
+    // Remember the number of debug maps that are being processed to decide how
+    // to name the remark files.
+    Options.LinkOpts.NumDebugMaps = DebugMapPtrsOrErr->size();
 
     if (Options.LinkOpts.Update) {
       // The debug map should be empty. Add one object file corresponding to
