@@ -836,7 +836,7 @@ public:
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
 
     int          offset = 0;       // offset off of ptrVal
-    unsigned     size = 0;         // the size of the memory location
+    uint64_t     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)
     MaybeAlign align = Align::None(); // alignment
 

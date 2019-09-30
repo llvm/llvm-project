@@ -170,7 +170,7 @@ private:
   OpenMPClauseKind ClauseKindMode = OMPC_unknown;
   Sema &SemaRef;
   bool ForceCapturing = false;
-  /// true if all the vaiables in the target executable directives must be
+  /// true if all the variables in the target executable directives must be
   /// captured by reference.
   bool ForceCaptureByReferenceInTargetExecutable = false;
   CriticalsWithHintsTy Criticals;

@@ -3982,11 +3982,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (getTreeEntry(PO))
         ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
 
-      unsigned Alignment = LI->getAlignment();
+      MaybeAlign Alignment = MaybeAlign(LI->getAlignment());
       LI = Builder.CreateLoad(VecTy, VecPtr);
-      if (!Alignment) {
-        Alignment = DL->getABITypeAlignment(ScalarLoadTy);
-      }
+      if (!Alignment)
+        Alignment = MaybeAlign(DL->getABITypeAlignment(ScalarLoadTy));
       LI->setAlignment(Alignment);
       Value *V = propagateMetadata(LI, E->Scalars);
       if (IsReorder) {

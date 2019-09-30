@@ -15156,9 +15156,6 @@ example, a series of FP operations that each may raise exceptions may be
 vectorized into a single instruction that raises each unique exception a single
 time.
 
-Required Function Attributes:
-"""""""""""""""""""""""""""""
-
 Proper :ref:`function attributes <fnattrs>` usage is required for the
 constrained intrinsics to function correctly.
 

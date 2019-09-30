@@ -129,8 +129,6 @@ void ClangASTSource::InstallASTContext(clang::ASTContext &ast_context,
                          *scratch_ast_context->getFileManager(),
                          scratch_ast_context->GetOriginMap()});
     }
-    while (false)
-      ;
 
     m_merger_up =
         std::make_unique<clang::ExternalASTMerger>(target, sources);

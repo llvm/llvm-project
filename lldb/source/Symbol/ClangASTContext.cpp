@@ -103,8 +103,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace llvm;
 using namespace clang;
+using llvm::StringSwitch;
 
 namespace {
 #ifdef LLDB_CONFIGURATION_DEBUG
