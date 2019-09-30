@@ -287,12 +287,12 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
     if (!name_module.second)
       continue;
     if (name_module.second->GetSymbolFile()->FindTypes(
-            decl_context, clang_languages, true, clang_types))
+            decl_context, clang_languages, clang_types))
       return;
   }
 
   // Next search the .dSYM the DIE came from, if applicable.
-  if (sym_file.FindTypes(decl_context, clang_languages, true, clang_types))
+  if (sym_file.FindTypes(decl_context, clang_languages, clang_types))
     return;
 }
 

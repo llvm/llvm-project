@@ -116,7 +116,7 @@ public:
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
   size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
-                   lldb_private::LanguageSet langauges, bool append,
+                   lldb_private::LanguageSet langauges,
                    lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,

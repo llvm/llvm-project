@@ -2524,7 +2524,7 @@ void SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
 
   for (const auto &pair : m_external_type_modules)
     if (ModuleSP external_module_sp = pair.second)
-      external_module_sp->FindTypes(pattern, languages, true, types);
+      external_module_sp->FindTypes(pattern, languages, types);
 }
 
 CompilerDeclContext
