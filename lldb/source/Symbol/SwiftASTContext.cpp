@@ -1765,58 +1765,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         swift_ast_sp->SetPlatformSDKPath(serialized_sdk_path);
       }
     }
-
-    if (!got_serialized_options || swift_ast_sp->GetPlatformSDKPath().empty()) {
-      std::string platform_sdk_path;
-      if (sym_vendor->GetCompileOption("-sdk", platform_sdk_path)) {
-        FileSpec sdk_spec(platform_sdk_path.c_str());
-        if (FileSystem::Instance().Exists(sdk_spec)) {
-          swift_ast_sp->SetPlatformSDKPath(platform_sdk_path);
-        }
-
-        if (sym_vendor->GetCompileOption("-target", target_triple)) {
-          swift_ast_sp->SetTriple(llvm::Triple(target_triple), &module);
-          set_triple = true;
-        }
-      }
-    }
-
-    if (!got_serialized_options) {
-
-      std::vector<std::string> fw_paths;
-      if (sym_vendor->GetCompileOptions("-F", fw_paths))
-        for (std::string &fw_path : fw_paths)
-          framework_search_paths.push_back({fw_path, /*is_system*/ false});
-
-      std::vector<std::string> include_paths;
-      if (sym_vendor->GetCompileOptions("-I", include_paths)) {
-        for (std::string &search_path : include_paths) {
-          const FileSpec path_spec(search_path.c_str());
-
-          if (FileSystem::Instance().Exists(path_spec)) {
-            static const ConstString s_hmap_extension("hmap");
-
-            if (IsDirectory(path_spec)) {
-              module_search_paths.push_back(search_path);
-            } else if (IsRegularFile(path_spec) &&
-                       path_spec.GetFileNameExtension() == s_hmap_extension) {
-              std::string argument("-I");
-              argument.append(search_path);
-              swift_ast_sp->AddClangArgument(argument.c_str());
-            }
-          }
-        }
-      }
-
-      std::vector<std::string> cc_options;
-      if (sym_vendor->GetCompileOptions("-Xcc", cc_options)) {
-        for (size_t i = 0; i < cc_options.size(); ++i) {
-          if (!cc_options[i].compare("-iquote") && i + 1 < cc_options.size()) {
-            swift_ast_sp->AddClangArgumentPair("-iquote", cc_options[i + 1]);
-          }
-        }
-      }
-    }
   }
 
   if (!set_triple) {
