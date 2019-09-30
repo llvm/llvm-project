@@ -264,10 +264,9 @@ define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
 }
 
 ; CHECK-LABEL: underflow_if_sub_signext
-; CHECK: uxtb [[UXT1:r[0-9]+]], r1
-; CHECK: sub{{.*}} [[SUB:r[0-9]+]], #11
-; CHECK: uxtb [[UXT_SUB:r[0-9]+]], [[SUB]]
-; CHECK: cmp{{.*}}[[UXT_SUB]]
+; CHECK:      cmp r0, #0
+; CHECK-NEXT: uxtb  r1, r1
+; CHECK-NOT:  xtb
 define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
   %cmp = icmp sgt i32 %arg, 0
   %conv = zext i1 %cmp to i32

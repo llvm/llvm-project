@@ -10,17 +10,11 @@ declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
 define i1 @sadd(i32 %a, i32 %b, i32* %c) nounwind {
 ; RV32I-LABEL: sadd:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi a3, zero, -1
-; RV32I-NEXT:    slt a4, a3, a1
-; RV32I-NEXT:    slt a5, a3, a0
-; RV32I-NEXT:    xor a4, a5, a4
-; RV32I-NEXT:    seqz a4, a4
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    slt a0, a3, a1
-; RV32I-NEXT:    xor a0, a5, a0
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    and a0, a4, a0
-; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    add a3, a0, a1
+; RV32I-NEXT:    slt a0, a3, a0
+; RV32I-NEXT:    slti a1, a1, 0
+; RV32I-NEXT:    xor a0, a1, a0
+; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    ret
 entry:
   %x = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
@@ -33,16 +27,10 @@ entry:
 define i1 @ssub(i32 %a, i32 %b, i32* %c) nounwind {
 ; RV32I-LABEL: ssub:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi a3, zero, -1
-; RV32I-NEXT:    slt a4, a3, a1
-; RV32I-NEXT:    slt a5, a3, a0
-; RV32I-NEXT:    xor a4, a5, a4
-; RV32I-NEXT:    snez a4, a4
+; RV32I-NEXT:    sgtz a3, a1
 ; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    slt a0, a3, a1
-; RV32I-NEXT:    xor a0, a5, a0
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    and a0, a4, a0
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    xor a0, a3, a0
 ; RV32I-NEXT:    sw a1, 0(a2)
 ; RV32I-NEXT:    ret
 entry:

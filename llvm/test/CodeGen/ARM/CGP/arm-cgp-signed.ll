@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv7m -arm-disable-cgp=false %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv8m.main -arm-disable-cgp=false %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv7em -arm-disable-cgp=false %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8m.main -mattr=+dsp -arm-disable-cgp=false %s -o - | FileCheck %s
 ; RUN: llc -mtriple=thumbv7 %s -arm-disable-cgp=false -o - | FileCheck %s
 ; RUN: llc -mtriple=armv8 %s -arm-disable-cgp=false -o - | FileCheck %s
 
@@ -45,8 +45,8 @@ define i16 @test_srem(i16 zeroext %arg) {
 
 ; CHECK-LABEL: test_signext_b
 ; CHECK: ldrb [[LDR:r[0-9]+]], [r0]
-; CHECK: sxtb [[SXT:r[0-9]+]], [[LDR]]
-; CHECK: cm{{.*}} [[SXT]]
+; CHECK: uxtab [[UXT:r[0-9]+]], [[LDR]], r1
+; CHECK: cm{{.*}} [[UXT]], #128
 define i32 @test_signext_b(i8* %ptr, i8 signext %arg) {
 entry:
   %0 = load i8, i8* %ptr, align 1
@@ -56,10 +56,28 @@ entry:
   ret i32 %res
 }
 
+; CHECK-LABEL: test_signext_b_ult_slt
+; CHECK: ldrb [[LDR:r[0-9]+]], [r0]
+; CHECK: uxtab [[ADD:r[0-9]+]], [[LDR]], r1
+; CHECK: uxtb [[UXT:r[0-9]+]], r1
+; CHECK: cmp [[ADD]], [[UXT]]
+; CHECK: uxtb [[TRUNC:r[0-9]+]], [[ADD]]
+; CHECK: cmp [[TRUNC]], #127
+define i32 @test_signext_b_ult_slt(i8* %ptr, i8 signext %arg) {
+entry:
+  %0 = load i8, i8* %ptr, align 1
+  %1 = add nuw nsw i8 %0, %arg
+  %cmp = icmp sle i8 %1, 126
+  %cmp.1 = icmp ule i8 %1, %arg
+  %or = and i1 %cmp, %cmp.1
+  %res = select i1 %or, i32 42, i32 57
+  ret i32 %res
+}
+
 ; CHECK-LABEL: test_signext_h
 ; CHECK: ldrh [[LDR:r[0-9]+]], [r0]
-; CHECK: sxth [[SXT:r[0-9]+]], [[LDR]]
-; CHECK: cm{{.*}} [[SXT]]
+; CHECK: uxtah [[ADD:r[0-9]+]], [[LDR]], r1
+; CHECK: cm{{.*}} [[ADD]],
 define i32 @test_signext_h(i16* %ptr, i16 signext %arg) {
 entry:
   %0 = load i16, i16* %ptr, align 1
@@ -68,3 +86,4 @@ entry:
   %res = select i1 %cmp, i32 42, i32 20894
   ret i32 %res
 }
+

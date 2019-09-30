@@ -184,3 +184,35 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
   store i8 %conv, i8* %res
   ret i16 %arg1
 }
+
+; CHECK-COMMON-LABEL: signext_bitcast_phi_select
+; CHECK: uxth [[UXT:r[0-9]+]], r0
+; CHECK: sxth [[SXT:r[0-9]+]], [[UXT]]
+; CHECK: cmp [[SXT]],
+; CHECK-NOT: xth
+define i16 @signext_bitcast_phi_select(i16 signext %start, i16* %in) {
+entry:
+  %const = bitcast i16 -1 to i16
+  br label %for.body
+
+for.body:
+  %idx = phi i16 [ %select, %if.else ], [ %start, %entry ]
+  %cmp.i = icmp sgt i16 %idx, %const
+  br i1 %cmp.i, label %exit, label %if.then
+
+if.then:
+  %idx.next = getelementptr i16, i16* %in, i16 %idx
+  %ld = load i16, i16* %idx.next, align 2
+  %cmp1.i = icmp eq i16 %ld, %idx
+  br i1 %cmp1.i, label %exit, label %if.else
+
+if.else:
+  %lobit = lshr i16 %idx, 15
+  %lobit.not = xor i16 %lobit, 1
+  %select = add nuw i16 %lobit.not, %idx
+  br label %for.body
+
+exit:
+  %res = phi i16 [ %ld, %if.then ], [ 0, %for.body ]
+  ret i16 %res
+}

@@ -3,8 +3,8 @@
 ; CHECK-LABEL: vpsel_mul_reduce_add
 ; CHECK:      dls lr, lr
 ; CHECK:  [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      sub{{.*}} [[ELEMS:r[0-9]+]], #4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
 ; CHECK:      vstr p0, [sp
 ; CHECK:      vpstt	
 ; CHECK-NEXT: vldrwt.u32
@@ -14,8 +14,9 @@
 ; CHECK:      vldr p0, [sp
 ; CHECK:      vpst	
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r0]
+; CHECK:      sub{{.*}} [[ELEMS]], [[ELEMS_OUT]], #4
 ; CHECK:      le lr, [[LOOP]]
-; CHECK:      vctp.32	[[ELEMS]]
+; CHECK:      vctp.32	[[ELEMS_OUT]]
 ; CHECK-NEXT: vpsel
 ; CHECK-NEXT: vaddv.u32
 define dso_local i32 @vpsel_mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c, i32 %N) {
@@ -71,8 +72,8 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK-LABEL: vpsel_mul_reduce_add_2
 ; CHECK:      dls lr, lr
 ; CHECK:  [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      sub{{.*}} [[ELEMS:r[0-9]+]], #4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
 ; CHECK:      vstr p0, [sp
 ; CHECK:      vpstt
 ; CHECK-NEXT: vldrwt.u32
@@ -85,8 +86,9 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK:      vldr p0, [sp
 ; CHECK:      vpst	
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r0]
+; CHECK:      sub{{.*}} [[ELEMS]], [[ELEMS_OUT]], #4
 ; CHECK:      le lr, [[LOOP]]
-; CHECK:      vctp.32	[[ELEMS]]
+; CHECK:      vctp.32	[[ELEMS_OUT]]
 ; CHECK-NEXT: vpsel
 ; CHECK-NEXT: vaddv.u32
 define dso_local i32 @vpsel_mul_reduce_add_2(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b,
@@ -147,17 +149,18 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK-LABEL: and_mul_reduce_add
 ; CHECK:      dls lr, lr
 ; CHECK:  [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      sub{{.*}} [[ELEMS:r[0-9]+]],{{.*}}#4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
 ; CHECK:      vpstt	
 ; CHECK-NEXT: vldrwt.u32
 ; CHECK-NEXT: vldrwt.u32
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
 ; CHECK:      vpsttt
 ; CHECK-NEXT: vcmpt.i32	eq, {{.*}}, zr
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r3]
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r2]
+; CHECK:      sub{{.*}} [[ELEMS]],{{.*}}#4
 ; CHECK:      le lr, [[LOOP]]
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS_OUT]]
 ; CHECK:      vpsel
 define dso_local i32 @and_mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b,
                                          i32* noalias nocapture readonly %c, i32* noalias nocapture readonly %d, i32 %N) {
@@ -215,9 +218,9 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK-LABEL: or_mul_reduce_add
 ; CHECK:      dls lr, lr
 ; CHECK:  [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      sub{{.*}} [[ELEMS:r[0-9]+]],{{.*}}#4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
 ; CHECK:      vstr p0, [sp
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
 ; CHECK:      vpstt	
 ; CHECK-NEXT: vldrwt.u32
 ; CHECK-NEXT: vldrwt.u32
@@ -226,12 +229,13 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK:      vldr p0, [sp
 ; CHECK:      vmrs [[VCTP:r[0-9]+]], p0
 ; CHECK:      orr{{.*}} [[VCMP]], [[VCTP]]
+; CHECK:      sub{{.*}} [[ELEMS:r[0-9]+]], [[ELEMS_OUT]], #4
 ; CHECK-NEXT: vmsr p0
 ; CHECK-NEXT: vpstt
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r3]
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r2]
 ; CHECK:      le lr, [[LOOP]]
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS_OUT]]
 ; CHECK:      vpsel
 define dso_local i32 @or_mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b,
                                         i32* noalias nocapture readonly %c, i32* noalias nocapture readonly %d, i32 %N) {
