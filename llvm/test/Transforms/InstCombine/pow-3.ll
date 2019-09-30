@@ -8,8 +8,7 @@ declare double @pow(double, double)
 
 define double @test_simplify_unavailable1(double %x) {
 ; CHECK-LABEL: @test_simplify_unavailable1(
-; CHECK-NEXT:    [[RETVAL:%.*]] = call double @llvm.pow.f64(double [[X:%.*]], double 5.000000e-01)
-; CHECK-NEXT:    ret double [[RETVAL]]
+; CHECK-NEXT:    = call double @llvm.sqrt.f64
 ;
   %retval = call double @llvm.pow.f64(double %x, double 0.5)
   ret double %retval
