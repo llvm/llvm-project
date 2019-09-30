@@ -129,13 +129,13 @@ public:
                          bool append, SymbolContextList &sc_list) override;
 
   uint32_t FindTypes(ConstString name,
-                     const CompilerDeclContext *parent_decl_ctx, bool append,
+                     const CompilerDeclContext *parent_decl_ctx,
                      uint32_t max_matches,
                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                      TypeMap &types) override;
 
   size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                   LanguageSet languages, bool append, TypeMap &types) override;
+                   LanguageSet languages, TypeMap &types) override;
 
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;

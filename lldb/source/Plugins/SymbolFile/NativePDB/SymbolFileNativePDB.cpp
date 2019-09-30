@@ -1252,11 +1252,9 @@ uint32_t SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
 
 uint32_t SymbolFileNativePDB::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches,
+    uint32_t max_matches,
     llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!append)
-    types.Clear();
   if (!name)
     return 0;
 
@@ -1270,10 +1268,7 @@ uint32_t SymbolFileNativePDB::FindTypes(
 }
 
 size_t SymbolFileNativePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                      LanguageSet languages, bool append,
-                                      TypeMap &types) {
-  if (!append)
-    types.Clear();
+                                      LanguageSet languages, TypeMap &types) {
   return 0;
 }
 

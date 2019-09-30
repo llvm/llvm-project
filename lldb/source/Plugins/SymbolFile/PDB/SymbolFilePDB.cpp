@@ -1443,13 +1443,11 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
 
 uint32_t SymbolFilePDB::FindTypes(
     lldb_private::ConstString name,
-    const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append,
+    const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     lldb_private::TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!append)
-    types.Clear();
   if (!name)
     return 0;
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
@@ -1585,10 +1583,8 @@ void SymbolFilePDB::FindTypesByName(
 }
 
 size_t SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                LanguageSet languages, bool append,
+                                LanguageSet languages,
                                 lldb_private::TypeMap &types) {
-  if (!append)
-    types.Clear();
   return 0;
 }
 
