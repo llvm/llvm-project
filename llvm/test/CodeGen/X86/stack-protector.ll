@@ -4087,8 +4087,8 @@ define i32 @IgnoreIntrinsicTest() #1 {
   %1 = alloca i32, align 4
   %2 = bitcast i32* %1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2)
-  store i32 1, i32* %1, align 4
-  %3 = load i32, i32* %1, align 4
+  store volatile i32 1, i32* %1, align 4
+  %3 = load volatile i32, i32* %1, align 4
   %4 = mul nsw i32 %3, 42
   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
   ret i32 %4

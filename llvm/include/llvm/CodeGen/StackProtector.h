@@ -89,7 +89,8 @@ private:
                                 bool InStruct = false) const;
 
   /// Check whether a stack allocation has its address taken.
-  bool HasAddressTaken(const Instruction *AI);
+  bool HasAddressTaken(const Instruction *AI,
+                       SmallPtrSetImpl<const PHINode *> &VisitedPHIs);
 
   /// RequiresStackProtector - Check whether or not this function needs a
   /// stack protector based upon the stack protector level.
