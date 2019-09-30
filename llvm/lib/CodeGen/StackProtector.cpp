@@ -165,12 +165,19 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
       if (AI == cast<StoreInst>(I)->getValueOperand())
         return true;
       break;
+    case Instruction::AtomicCmpXchg:
+      // cmpxchg conceptually includes both a load and store from the same
+      // location. So, like store, the value being stored is what matters.
+      if (AI == cast<AtomicCmpXchgInst>(I)->getNewValOperand())
+        return true;
+      break;
     case Instruction::PtrToInt:
       if (AI == cast<PtrToIntInst>(I)->getOperand(0))
         return true;
       break;
     case Instruction::Call: {
-      // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
+      // Ignore intrinsics that do not become real instructions.
+      // TODO: Narrow this to intrinsics that have store-like effects.
       const auto *CI = cast<CallInst>(I);
       if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
@@ -181,6 +188,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
     case Instruction::BitCast:
     case Instruction::GetElementPtr:
     case Instruction::Select:
+    case Instruction::AddrSpaceCast:
       if (HasAddressTaken(I, VisitedPHIs))
         return true;
       break;
@@ -193,8 +201,19 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
           return true;
       break;
     }
-    default:
+    case Instruction::Load:
+    case Instruction::AtomicRMW:
+    case Instruction::Ret:
+      // These instructions take an address operand, but have load-like or
+      // other innocuous behavior that should not trigger a stack protector.
+      // atomicrmw conceptually has both load and store semantics, but the
+      // value being stored must be integer; so if a pointer is being stored,
+      // we'll catch it in the PtrToInt case above.
       break;
+    default:
+      // Conservatively return true for any instruction that takes an address
+      // operand, but is not handled above.
+      return true;
     }
   }
   return false;
