@@ -159,33 +159,42 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
 bool StackProtector::HasAddressTaken(const Instruction *AI,
                                 SmallPtrSetImpl<const PHINode *> &VisitedPHIs) {
   for (const User *U : AI->users()) {
-    if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
-      if (AI == SI->getValueOperand())
+    const auto *I = cast<Instruction>(U);
+    switch (I->getOpcode()) {
+    case Instruction::Store:
+      if (AI == cast<StoreInst>(I)->getValueOperand())
         return true;
-    } else if (const PtrToIntInst *SI = dyn_cast<PtrToIntInst>(U)) {
-      if (AI == SI->getOperand(0))
+      break;
+    case Instruction::PtrToInt:
+      if (AI == cast<PtrToIntInst>(I)->getOperand(0))
         return true;
-    } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
+      break;
+    case Instruction::Call: {
       // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
+      const auto *CI = cast<CallInst>(I);
       if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
-    } else if (isa<InvokeInst>(U)) {
+      break;
+    }
+    case Instruction::Invoke:
       return true;
-    } else if (const SelectInst *SI = dyn_cast<SelectInst>(U)) {
-      if (HasAddressTaken(SI, VisitedPHIs))
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+    case Instruction::Select:
+      if (HasAddressTaken(I, VisitedPHIs))
         return true;
-    } else if (const PHINode *PN = dyn_cast<PHINode>(U)) {
+      break;
+    case Instruction::PHI: {
       // Keep track of what PHI nodes we have already visited to ensure
       // they are only visited once.
+      const auto *PN = cast<PHINode>(I);
       if (VisitedPHIs.insert(PN).second)
         if (HasAddressTaken(PN, VisitedPHIs))
           return true;
-    } else if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(U)) {
-      if (HasAddressTaken(GEP, VisitedPHIs))
-        return true;
-    } else if (const BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
-      if (HasAddressTaken(BI, VisitedPHIs))
-        return true;
+      break;
+    }
+    default:
+      break;
     }
   }
   return false;
