@@ -1201,17 +1201,14 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
 
 uint32_t SymbolFileDWARFDebugMap::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches,
+    uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!append)
-    types.Clear();
-
   const uint32_t initial_types_size = types.GetSize();
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    oso_dwarf->FindTypes(name, parent_decl_ctx, append, max_matches,
+    oso_dwarf->FindTypes(name, parent_decl_ctx, max_matches,
                          searched_symbol_files, types);
     return types.GetSize() >= max_matches;
   });
