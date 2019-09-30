@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_EXTERNALASTMERGER_H
 
 #include "clang/AST/ASTImporter.h"
+#include "clang/AST/ASTImporterSharedState.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -88,6 +89,11 @@ public:
 private:
   /// The target for this ExtenralASTMerger.
   ImporterTarget Target;
+  /// ExternalASTMerger has multiple ASTImporters that import into the same
+  /// TU. This is the shared state for all ASTImporters of this
+  /// ExternalASTMerger.
+  /// See also the CrossTranslationUnitContext that has a similar setup.
+  std::shared_ptr<ASTImporterSharedState> SharedState;
 
 public:
   ExternalASTMerger(const ImporterTarget &Target,

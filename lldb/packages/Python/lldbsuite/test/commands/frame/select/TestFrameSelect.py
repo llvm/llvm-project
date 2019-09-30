@@ -23,16 +23,12 @@ class TestFrameSelect(TestBase):
 
         self.expect("frame select -r -1", error=True, substrs=["Already at the bottom of the stack."])
         self.expect("frame select -r -2147483647", error=True, substrs=["Already at the bottom of the stack."])
-        self.expect("frame select -r -2147483648", error=True, substrs=["error: invalid frame offset argument '-2147483648'"])
-        self.expect("frame select -r -2147483649", error=True, substrs=["error: invalid frame offset argument '-2147483649'"])
 
         self.expect("frame select -r 1", substrs=["nested2() at"])
         self.expect("frame select -r -2", substrs=["nested3() at"])
         self.expect("frame select -r 1", substrs=["nested2() at"])
         self.expect("frame select -r -2147483647", substrs=["nested3() at"])
         self.expect("frame select -r 1", substrs=["nested2() at"])
-        self.expect("frame select -r -2147483648", error=True, substrs=["error: invalid frame offset argument '-2147483648'"])
-        self.expect("frame select -r -2147483649", error=True, substrs=["error: invalid frame offset argument '-2147483649'"])
 
         self.expect("frame select -r 100")
         self.expect("frame select -r 1", error=True, substrs=["Already at the top of the stack."])

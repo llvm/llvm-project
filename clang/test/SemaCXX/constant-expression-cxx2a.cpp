@@ -1269,3 +1269,12 @@ namespace temp_dtor {
   // FIXME: We could in prinicple accept this.
   constexpr const A &c = A{false}; // expected-error {{constant}} expected-note {{non-trivial destruction of lifetime-extended temporary}}
 }
+
+namespace value_dependent_init {
+  struct A {
+    constexpr ~A() {}
+  };
+  template<typename T> void f() {
+    A a = T();
+  }
+}

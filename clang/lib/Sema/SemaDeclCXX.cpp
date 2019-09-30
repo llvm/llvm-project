@@ -13404,7 +13404,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 
   // If the destructor is constexpr, check whether the variable has constant
   // destruction now.
-  if (Destructor->isConstexpr() && VD->evaluateValue()) {
+  if (Destructor->isConstexpr() && VD->getInit() &&
+      !VD->getInit()->isValueDependent() && VD->evaluateValue()) {
     SmallVector<PartialDiagnosticAt, 8> Notes;
     if (!VD->evaluateDestruction(Notes) && VD->isConstexpr()) {
       Diag(VD->getLocation(),
