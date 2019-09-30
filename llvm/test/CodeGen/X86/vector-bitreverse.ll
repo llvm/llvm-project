@@ -1911,15 +1911,13 @@ define <16 x i32> @test_bitreverse_v16i32(<16 x i32> %a) nounwind {
 ;
 ; AVX512F-LABEL: test_bitreverse_v16i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsrld $24, %zmm0, %zmm1
-; AVX512F-NEXT:    vpsrld $8, %zmm0, %zmm2
-; AVX512F-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm2, %zmm2
-; AVX512F-NEXT:    vpord %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    vpslld $8, %zmm0, %zmm1
 ; AVX512F-NEXT:    vpslld $24, %zmm0, %zmm2
-; AVX512F-NEXT:    vpslld $8, %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogd $248, {{.*}}(%rip){1to16}, %zmm1, %zmm2
+; AVX512F-NEXT:    vpsrld $24, %zmm0, %zmm1
+; AVX512F-NEXT:    vpsrld $8, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; AVX512F-NEXT:    vpord %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpord %zmm0, %zmm2, %zmm0
+; AVX512F-NEXT:    vpternlogd $254, %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512F-NEXT:    vpslld $4, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
@@ -2219,27 +2217,22 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ;
 ; AVX512F-LABEL: test_bitreverse_v8i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsrlq $56, %zmm0, %zmm1
-; AVX512F-NEXT:    vpsrlq $40, %zmm0, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
-; AVX512F-NEXT:    vpsrlq $24, %zmm0, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
-; AVX512F-NEXT:    vpsrlq $8, %zmm0, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
-; AVX512F-NEXT:    vporq %zmm1, %zmm2, %zmm1
-; AVX512F-NEXT:    vpsllq $8, %zmm0, %zmm2
-; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsllq $40, %zmm0, %zmm1
+; AVX512F-NEXT:    vpsllq $56, %zmm0, %zmm2
+; AVX512F-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm1, %zmm2
+; AVX512F-NEXT:    vpsllq $8, %zmm0, %zmm1
+; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpsllq $24, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm3, %zmm3
-; AVX512F-NEXT:    vporq %zmm2, %zmm3, %zmm2
-; AVX512F-NEXT:    vpsllq $56, %zmm0, %zmm3
-; AVX512F-NEXT:    vpsllq $40, %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogq $254, %zmm1, %zmm2, %zmm3
+; AVX512F-NEXT:    vpsrlq $40, %zmm0, %zmm1
+; AVX512F-NEXT:    vpsrlq $56, %zmm0, %zmm2
+; AVX512F-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm1, %zmm2
+; AVX512F-NEXT:    vpsrlq $24, %zmm0, %zmm1
+; AVX512F-NEXT:    vpsrlq $8, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; AVX512F-NEXT:    vporq %zmm2, %zmm0, %zmm0
-; AVX512F-NEXT:    vporq %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vporq %zmm0, %zmm3, %zmm0
+; AVX512F-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm1, %zmm0
+; AVX512F-NEXT:    vpternlogq $254, %zmm2, %zmm3, %zmm0
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm1
 ; AVX512F-NEXT:    vpsllq $4, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm0

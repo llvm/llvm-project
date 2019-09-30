@@ -2910,3 +2910,74 @@ define <8 x i16> @shuffle_extract_insert_double(<8 x i16> %a, <8 x i16> %b) {
   %7 = insertelement <8 x i16> %6, i16 %b15, i32 7
   ret <8 x i16> %7
 }
+
+define <8 x i16> @shuffle_extract_concat_insert(<4 x i16> %lhsa, <4 x i16> %rhsa, <8 x i16> %b) {
+; SSE2-LABEL: shuffle_extract_concat_insert:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pextrw $2, %xmm1, %ecx
+; SSE2-NEXT:    pextrw $5, %xmm2, %edx
+; SSE2-NEXT:    pextrw $7, %xmm2, %esi
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,1,0,3,4,5,6,7]
+; SSE2-NEXT:    pinsrw $4, %ecx, %xmm0
+; SSE2-NEXT:    pinsrw $5, %edx, %xmm0
+; SSE2-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $7, %esi, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: shuffle_extract_concat_insert:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pextrw $2, %xmm1, %eax
+; SSSE3-NEXT:    pextrw $5, %xmm2, %ecx
+; SSSE3-NEXT:    pextrw $7, %xmm2, %edx
+; SSSE3-NEXT:    movd %xmm1, %esi
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,9,2,3,0,1,14,15,8,9,14,15,12,13,14,15]
+; SSSE3-NEXT:    pinsrw $4, %eax, %xmm0
+; SSSE3-NEXT:    pinsrw $5, %ecx, %xmm0
+; SSSE3-NEXT:    pinsrw $6, %esi, %xmm0
+; SSSE3-NEXT:    pinsrw $7, %edx, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: shuffle_extract_concat_insert:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movd %xmm1, %eax
+; SSE41-NEXT:    pextrw $2, %xmm1, %ecx
+; SSE41-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,9,2,3,0,1,14,15,8,9,14,15,12,13,14,15]
+; SSE41-NEXT:    pinsrw $4, %ecx, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm2[5],xmm0[6,7]
+; SSE41-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm2[7]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: shuffle_extract_concat_insert:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    vpextrw $2, %xmm1, %ecx
+; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,2,3,0,1,14,15,8,9,14,15,12,13,14,15]
+; AVX-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm2[5],xmm0[6,7]
+; AVX-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm2[7]
+; AVX-NEXT:    retq
+  %a = shufflevector <4 x i16> %lhsa, <4 x i16> %rhsa, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %a0 = extractelement <8 x i16> %a, i32 0
+  %a4 = extractelement <8 x i16> %a, i32 4
+  %a6 = extractelement <8 x i16> %a, i32 6
+  %b11 = extractelement <8 x i16> %b, i32 3
+  %b13 = extractelement <8 x i16> %b, i32 5
+  %b15 = extractelement <8 x i16> %b, i32 7
+  %1 = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 2, i32 8, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %2 = insertelement <8 x i16> %1, i16 %a0, i32 2
+  %3 = insertelement <8 x i16> %2, i16 %b11, i32 3
+  %4 = insertelement <8 x i16> %3, i16 %a6, i32 4
+  %5 = insertelement <8 x i16> %4, i16 %b13, i32 5
+  %6 = insertelement <8 x i16> %5, i16 %a4, i32 6
+  %7 = insertelement <8 x i16> %6, i16 %b15, i32 7
+  ret <8 x i16> %7
+}
