@@ -509,6 +509,7 @@ namespace {
     bool tryShiftAmountMod(SDNode *N);
     bool combineIncDecVector(SDNode *Node);
     bool tryShrinkShlLogicImm(SDNode *N);
+    bool tryVPTERNLOG(SDNode *N);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
     bool tryMatchBitSelect(SDNode *N);
 
@@ -3813,6 +3814,82 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   return true;
 }
 
+// Try to match two logic ops to a VPTERNLOG.
+// FIXME: Handle inverted inputs?
+// FIXME: Handle more complex patterns that use an operand more than once?
+// FIXME: Support X86ISD::ANDNP
+bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
+  MVT NVT = N->getSimpleValueType(0);
+
+  // Make sure we support VPTERNLOG.
+  if (!NVT.isVector() || !Subtarget->hasAVX512() ||
+      NVT.getVectorElementType() == MVT::i1)
+    return false;
+
+  // We need VLX for 128/256-bit.
+  if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
+    return false;
+
+  unsigned Opc1 = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  auto isLogicOp = [](unsigned Opc) {
+    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR;
+  };
+
+  SDValue A, B, C;
+  unsigned Opc2;
+  if (isLogicOp(N1.getOpcode()) && N1.hasOneUse()) {
+    Opc2 = N1.getOpcode();
+    A = N0;
+    B = N1.getOperand(0);
+    C = N1.getOperand(1);
+  } else if (isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
+    Opc2 = N0.getOpcode();
+    A = N1;
+    B = N0.getOperand(0);
+    C = N0.getOperand(1);
+  } else
+    return false;
+
+  uint64_t Imm;
+  switch (Opc1) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case ISD::AND:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND: Imm = 0x80; break;
+    case ISD::OR:  Imm = 0xe0; break;
+    case ISD::XOR: Imm = 0x60; break;
+    }
+    break;
+  case ISD::OR:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND: Imm = 0xf8; break;
+    case ISD::OR:  Imm = 0xfe; break;
+    case ISD::XOR: Imm = 0xf6; break;
+    }
+    break;
+  case ISD::XOR:
+    switch (Opc2) {
+    default: llvm_unreachable("Unexpected opcode!");
+    case ISD::AND: Imm = 0x78; break;
+    case ISD::OR:  Imm = 0x1e; break;
+    case ISD::XOR: Imm = 0x96; break;
+    }
+    break;
+  }
+
+  SDLoc DL(N);
+  SDValue New = CurDAG->getNode(X86ISD::VPTERNLOG, DL, NVT, A, B, C,
+                                CurDAG->getTargetConstant(Imm, DL, MVT::i8));
+  ReplaceNode(N, New.getNode());
+  SelectCode(New.getNode());
+  return true;
+}
+
 /// Convert vector increment or decrement to sub/add with an all-ones constant:
 /// add X, <1, 1...> --> sub X, <-1, -1...>
 /// sub X, <1, 1...> --> add X, <-1, -1...>
@@ -4482,8 +4559,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
       return;
-
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))
+      return;
+    if (tryVPTERNLOG(Node))
       return;
 
     LLVM_FALLTHROUGH;
