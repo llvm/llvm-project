@@ -2619,13 +2619,13 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
                                              MachineBasicBlock *SwitchBB) {
   SDLoc dl = getCurSDLoc();
 
-  // Subtract the minimum value
+  // Subtract the minimum value.
   SDValue SwitchOp = getValue(B.SValue);
   EVT VT = SwitchOp.getValueType();
   SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, SwitchOp,
                             DAG.getConstant(B.First, dl, VT));
 
-  // Check range
+  // Check range.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue RangeCmp = DAG.getSetCC(
       dl, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
@@ -2634,9 +2634,9 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
 
   // Determine the type of the test operands.
   bool UsePtrType = false;
-  if (!TLI.isTypeLegal(VT))
+  if (!TLI.isTypeLegal(VT)) {
     UsePtrType = true;
-  else {
+  } else {
     for (unsigned i = 0, e = B.Cases.size(); i != e; ++i)
       if (!isUIntN(VT.getSizeInBits(), B.Cases[i].Mask)) {
         // Switch table case range are encoded into series of masks.

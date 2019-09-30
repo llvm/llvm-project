@@ -12,10 +12,10 @@ define i32 @test(double* nocapture %A, i8* nocapture %B) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[B:%.*]] to <2 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 3, i8 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> undef, i8 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i8> [[TMP4]], i8 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i8> undef, i8 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i8> [[TMP5]], i8 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sitofp <2 x i8> [[TMP6]] to <2 x double>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], <double 1.000000e+00, double 1.000000e+00>

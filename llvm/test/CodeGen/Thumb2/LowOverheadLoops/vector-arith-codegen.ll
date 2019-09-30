@@ -3,13 +3,14 @@
 ; CHECK-LABEL: mul_reduce_add
 ; CHECK:      dls lr,
 ; CHECK: [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      sub{{.*}} [[ELEMS:r[0-9]+]], #4
-; CHECK:      vctp.32	[[ELEMS]]
+; CHECK:      vctp.32	[[ELEMS:r[0-9]+]]
 ; CHECK:      vpstt	
 ; CHECK-NEXT: vldrwt.u32
 ; CHECK-NEXT: vldrwt.u32
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
+; CHECK:      sub{{.*}} [[ELEMS]], #4
 ; CHECK:      le	lr, [[LOOP]]
-; CHECK:      vctp.32	[[ELEMS]]
+; CHECK:      vctp.32	[[ELEMS_OUT]]
 ; CHECK:      vpsel
 ; CHECK:      vaddv.u32	r0
 define dso_local i32 @mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i32 %N) {
@@ -54,7 +55,17 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
   ret i32 %res.0.lcssa
 }
 
-; Function Attrs: norecurse nounwind readonly
+; CHECK-LABEL: mul_reduce_add_const
+; CHECK:    dls lr
+; CHECK: [[LOOP:.LBB[0-9_]+]]:
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
+; CHECK:      vpst	
+; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r0]
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
+; CHECK:      sub{{.*}} [[ELEMS]], #4
+; CHECK:      le lr, [[LOOP]]
+; CHECK:      vctp.32 [[ELEMS_OUT]]
+; CHECK:      vpsel
 define dso_local i32 @mul_reduce_add_const(i32* noalias nocapture readonly %a, i32 %b, i32 %N) {
 entry:
   %cmp6 = icmp eq i32 %N, 0
@@ -96,13 +107,14 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK-LABEL: add_reduce_add_const
 ; CHECK:      dls lr, lr
 ; CHECK: [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      subs [[ELEMS:r[0-9]+]], #4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
 ; CHECK:      vpst	
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r0]
+; CHECK:      mov [[ELEMS_OUT:r[0-9]+]], [[ELEMS]]
+; CHECK:      sub{{.*}} [[ELEMS]], #4
 ; CHECK:      vadd.i32
 ; CHECK:      le lr, [[LOOP]]
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS_OUT]]
 ; CHECK:      vpsel
 define dso_local i32 @add_reduce_add_const(i32* noalias nocapture readonly %a, i32 %b, i32 %N) {
 entry:
@@ -145,8 +157,8 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 ; CHECK-LABEL: vector_mul_const
 ; CHECK:      dls lr, lr
 ; CHECK: [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      subs [[ELEMS:r[0-9]+]], #4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
+; CHECK:      sub{{.*}} [[ELEMS]], #4
 ; CHECK:      vpst	
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r1]
 ; CHECK:      vmul.i32
@@ -192,8 +204,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 ; CHECK-LABEL: vector_add_const
 ; CHECK:      dls lr, lr
 ; CHECK: [[LOOP:.LBB[0-9_]+]]:
-; CHECK:      subs [[ELEMS:r[0-9]+]], #4
-; CHECK:      vctp.32 [[ELEMS]]
+; CHECK:      vctp.32 [[ELEMS:r[0-9]+]]
+; CHECK:      sub{{.*}} [[ELEMS]], #4
 ; CHECK:      vpst	
 ; CHECK-NEXT: vldrwt.u32 q{{.*}}, [r1]
 ; CHECK:      vadd.i32

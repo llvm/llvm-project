@@ -333,6 +333,14 @@ inline MaybeAlign operator/(MaybeAlign Lhs, uint64_t Divisor) {
   return Lhs ? Lhs.getValue() / Divisor : MaybeAlign();
 }
 
+inline Align max(MaybeAlign Lhs, Align Rhs) {
+  return Lhs && *Lhs > Rhs ? *Lhs : Rhs;
+}
+
+inline Align max(Align Lhs, MaybeAlign Rhs) {
+  return Rhs && *Rhs > Lhs ? *Rhs : Lhs;
+}
+
 #undef ALIGN_CHECK_ISPOSITIVE
 #undef ALIGN_CHECK_ISSET
 

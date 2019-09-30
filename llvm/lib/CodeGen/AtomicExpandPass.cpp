@@ -382,7 +382,7 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
   auto *NewLI = Builder.CreateLoad(NewTy, NewAddr);
-  NewLI->setAlignment(LI->getAlignment());
+  NewLI->setAlignment(MaybeAlign(LI->getAlignment()));
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
@@ -1376,7 +1376,7 @@ Value *AtomicExpand::insertRMWCmpXchgLoop(
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateLoad(ResultTy, Addr);
   // Atomics require at least natural alignment.
-  InitLoaded->setAlignment(ResultTy->getPrimitiveSizeInBits() / 8);
+  InitLoaded->setAlignment(MaybeAlign(ResultTy->getPrimitiveSizeInBits() / 8));
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.

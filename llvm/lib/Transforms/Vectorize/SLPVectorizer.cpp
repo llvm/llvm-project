@@ -1121,6 +1121,14 @@ public:
 #endif
   };
 
+  /// Checks if the instruction is marked for deletion.
+  bool isDeleted(Instruction *I) const { return DeletedInstructions.count(I); }
+
+  /// Marks values operands for later deletion by replacing them with Undefs.
+  void eraseInstructions(ArrayRef<Value *> AV);
+
+  ~BoUpSLP();
+
 private:
   /// Checks if all users of \p I are the part of the vectorization tree.
   bool areAllUsersVectorized(Instruction *I) const;
@@ -1490,15 +1498,14 @@ private:
   /// This is required to ensure that there are no incorrect collisions in the
   /// AliasCache, which can happen if a new instruction is allocated at the
   /// same address as a previously deleted instruction.
-  void eraseInstruction(Instruction *I) {
-    I->removeFromParent();
-    I->dropAllReferences();
-    DeletedInstructions.emplace_back(I);
+  void eraseInstruction(Instruction *I, bool ReplaceOpsWithUndef = false) {
+    auto It = DeletedInstructions.try_emplace(I, ReplaceOpsWithUndef).first;
+    It->getSecond() = It->getSecond() && ReplaceOpsWithUndef;
   }
 
   /// Temporary store for deleted instructions. Instructions will be deleted
   /// eventually when the BoUpSLP is destructed.
-  SmallVector<unique_value, 8> DeletedInstructions;
+  DenseMap<Instruction *, bool> DeletedInstructions;
 
   /// A list of values that need to extracted out of the tree.
   /// This list holds pairs of (Internal Scalar : External User). External User
@@ -2054,6 +2061,30 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
 };
 
 } // end namespace llvm
+
+BoUpSLP::~BoUpSLP() {
+  for (const auto &Pair : DeletedInstructions) {
+    // Replace operands of ignored instructions with Undefs in case if they were
+    // marked for deletion.
+    if (Pair.getSecond()) {
+      Value *Undef = UndefValue::get(Pair.getFirst()->getType());
+      Pair.getFirst()->replaceAllUsesWith(Undef);
+    }
+    Pair.getFirst()->dropAllReferences();
+  }
+  for (const auto &Pair : DeletedInstructions) {
+    assert(Pair.getFirst()->use_empty() &&
+           "trying to erase instruction with users.");
+    Pair.getFirst()->eraseFromParent();
+  }
+}
+
+void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
+  for (auto *V : AV) {
+    if (auto *I = dyn_cast<Instruction>(V))
+      eraseInstruction(I, /*ReplaceWithUndef=*/true);
+  };
+}
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ArrayRef<Value *> UserIgnoreLst) {
@@ -3541,7 +3572,7 @@ Value *BoUpSLP::Gather(ArrayRef<Value *> VL, VectorType *Ty) {
   // Generate the 'InsertElement' instruction.
   for (unsigned i = 0; i < Ty->getNumElements(); ++i) {
     Vec = Builder.CreateInsertElement(Vec, VL[i], Builder.getInt32(i));
-    if (Instruction *Insrt = dyn_cast<Instruction>(Vec)) {
+    if (auto *Insrt = dyn_cast<InsertElementInst>(Vec)) {
       GatherSeq.insert(Insrt);
       CSEBlocks.insert(Insrt->getParent());
 
@@ -3951,11 +3982,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (getTreeEntry(PO))
         ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
 
-      unsigned Alignment = LI->getAlignment();
+      MaybeAlign Alignment = MaybeAlign(LI->getAlignment());
       LI = Builder.CreateLoad(VecTy, VecPtr);
-      if (!Alignment) {
-        Alignment = DL->getABITypeAlignment(ScalarLoadTy);
-      }
+      if (!Alignment)
+        Alignment = MaybeAlign(DL->getABITypeAlignment(ScalarLoadTy));
       LI->setAlignment(Alignment);
       Value *V = propagateMetadata(LI, E->Scalars);
       if (IsReorder) {
@@ -4290,20 +4320,18 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
       Value *Scalar = Entry->Scalars[Lane];
 
+#ifndef NDEBUG
       Type *Ty = Scalar->getType();
       if (!Ty->isVoidTy()) {
-#ifndef NDEBUG
         for (User *U : Scalar->users()) {
           LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
-          // It is legal to replace users in the ignorelist by undef.
+          // It is legal to delete users in the ignorelist.
           assert((getTreeEntry(U) || is_contained(UserIgnoreList, U)) &&
-                 "Replacing out-of-tree value with undef");
+                 "Deleting out-of-tree value");
         }
-#endif
-        Value *Undef = UndefValue::get(Ty);
-        Scalar->replaceAllUsesWith(Undef);
       }
+#endif
       LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *Scalar << ".\n");
       eraseInstruction(cast<Instruction>(Scalar));
     }
@@ -4319,7 +4347,7 @@ void BoUpSLP::optimizeGatherSequence() {
                     << " gather sequences instructions.\n");
   // LICM InsertElementInst sequences.
   for (Instruction *I : GatherSeq) {
-    if (!isa<InsertElementInst>(I) && !isa<ShuffleVectorInst>(I))
+    if (isDeleted(I))
       continue;
 
     // Check if this block is inside a loop.
@@ -4373,6 +4401,8 @@ void BoUpSLP::optimizeGatherSequence() {
     // For all instructions in blocks containing gather sequences:
     for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e;) {
       Instruction *In = &*it++;
+      if (isDeleted(In))
+        continue;
       if (!isa<InsertElementInst>(In) && !isa<ExtractElementInst>(In))
         continue;
 
@@ -5255,19 +5285,6 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   return Changed;
 }
 
-/// Check that the Values in the slice in VL array are still existent in
-/// the WeakTrackingVH array.
-/// Vectorization of part of the VL array may cause later values in the VL array
-/// to become invalid. We track when this has happened in the WeakTrackingVH
-/// array.
-static bool hasValueBeenRAUWed(ArrayRef<Value *> VL,
-                               ArrayRef<WeakTrackingVH> VH, unsigned SliceBegin,
-                               unsigned SliceSize) {
-  VL = VL.slice(SliceBegin, SliceSize);
-  VH = VH.slice(SliceBegin, SliceSize);
-  return !std::equal(VL.begin(), VL.end(), VH.begin());
-}
-
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                             unsigned VecRegSize) {
   const unsigned ChainLen = Chain.size();
@@ -5279,20 +5296,20 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (!isPowerOf2_32(Sz) || VF < 2)
     return false;
 
-  // Keep track of values that were deleted by vectorizing in the loop below.
-  const SmallVector<WeakTrackingVH, 8> TrackValues(Chain.begin(), Chain.end());
-
   bool Changed = false;
   // Look for profitable vectorizable trees at all offsets, starting at zero.
   for (unsigned i = 0, e = ChainLen; i + VF <= e; ++i) {
 
+    ArrayRef<Value *> Operands = Chain.slice(i, VF);
     // Check that a previous iteration of this loop did not delete the Value.
-    if (hasValueBeenRAUWed(Chain, TrackValues, i, VF))
+    if (llvm::any_of(Operands, [&R](Value *V) {
+          auto *I = dyn_cast<Instruction>(V);
+          return I && R.isDeleted(I);
+        }))
       continue;
 
     LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << i
                       << "\n");
-    ArrayRef<Value *> Operands = Chain.slice(i, VF);
 
     R.buildTree(Operands);
     if (R.isTreeTinyAndNotFullyVectorizable())
@@ -5484,9 +5501,6 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool CandidateFound = false;
   int MinCost = SLPCostThreshold;
 
-  // Keep track of values that were deleted by vectorizing in the loop below.
-  SmallVector<WeakTrackingVH, 8> TrackValues(VL.begin(), VL.end());
-
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF; VF /= 2) {
     // No actual vectorization should happen, if number of parts is the same as
@@ -5506,13 +5520,16 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       if (!isPowerOf2_32(OpsWidth) || OpsWidth < 2)
         break;
 
+      ArrayRef<Value *> Ops = VL.slice(I, OpsWidth);
       // Check that a previous iteration of this loop did not delete the Value.
-      if (hasValueBeenRAUWed(VL, TrackValues, I, OpsWidth))
+      if (llvm::any_of(Ops, [&R](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return I && R.isDeleted(I);
+          }))
         continue;
 
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << OpsWidth << " operations "
                         << "\n");
-      ArrayRef<Value *> Ops = VL.slice(I, OpsWidth);
 
       R.buildTree(Ops);
       Optional<ArrayRef<unsigned>> Order = R.bestOrder();
@@ -5733,23 +5750,23 @@ class HorizontalReduction {
       case RK_Min:
         Cmp = Opcode == Instruction::ICmp ? Builder.CreateICmpSLT(LHS, RHS)
                                           : Builder.CreateFCmpOLT(LHS, RHS);
-        break;
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       case RK_Max:
         Cmp = Opcode == Instruction::ICmp ? Builder.CreateICmpSGT(LHS, RHS)
                                           : Builder.CreateFCmpOGT(LHS, RHS);
-        break;
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       case RK_UMin:
         assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Cmp = Builder.CreateICmpULT(LHS, RHS);
-        break;
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       case RK_UMax:
         assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Cmp = Builder.CreateICmpUGT(LHS, RHS);
-        break;
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       case RK_None:
-        llvm_unreachable("Unknown reduction operation.");
+        break;
       }
-      return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      llvm_unreachable("Unknown reduction operation.");
     }
 
   public:
@@ -6429,6 +6446,9 @@ public:
       }
       // Update users.
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
+      // Mark all scalar reduction ops for deletion, they are replaced by the
+      // vector reductions.
+      V.eraseInstructions(IgnoreList);
     }
     return VectorizedTree != nullptr;
   }
@@ -6683,18 +6703,13 @@ static bool tryToVectorizeHorReductionOrInstOperands(
   // horizontal reduction.
   // Interrupt the process if the Root instruction itself was vectorized or all
   // sub-trees not higher that RecursionMaxDepth were analyzed/vectorized.
-  SmallVector<std::pair<WeakTrackingVH, unsigned>, 8> Stack(1, {Root, 0});
+  SmallVector<std::pair<Instruction *, unsigned>, 8> Stack(1, {Root, 0});
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
   while (!Stack.empty()) {
-    Value *V;
+    Instruction *Inst;
     unsigned Level;
-    std::tie(V, Level) = Stack.pop_back_val();
-    if (!V)
-      continue;
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
-      continue;
+    std::tie(Inst, Level) = Stack.pop_back_val();
     auto *BI = dyn_cast<BinaryOperator>(Inst);
     auto *SI = dyn_cast<SelectInst>(Inst);
     if (BI || SI) {
@@ -6735,8 +6750,8 @@ static bool tryToVectorizeHorReductionOrInstOperands(
       for (auto *Op : Inst->operand_values())
         if (VisitedInstrs.insert(Op).second)
           if (auto *I = dyn_cast<Instruction>(Op))
-            if (!isa<PHINode>(I) && I->getParent() == BB)
-              Stack.emplace_back(Op, Level);
+            if (!isa<PHINode>(I) && !R.isDeleted(I) && I->getParent() == BB)
+              Stack.emplace_back(I, Level);
   }
   return Res;
 }
@@ -6805,11 +6820,10 @@ bool SLPVectorizerPass::vectorizeCmpInst(CmpInst *CI, BasicBlock *BB,
 }
 
 bool SLPVectorizerPass::vectorizeSimpleInstructions(
-    SmallVectorImpl<WeakVH> &Instructions, BasicBlock *BB, BoUpSLP &R) {
+    SmallVectorImpl<Instruction *> &Instructions, BasicBlock *BB, BoUpSLP &R) {
   bool OpsChanged = false;
-  for (auto &VH : reverse(Instructions)) {
-    auto *I = dyn_cast_or_null<Instruction>(VH);
-    if (!I)
+  for (auto *I : reverse(Instructions)) {
+    if (R.isDeleted(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I))
       OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
@@ -6838,7 +6852,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (!P)
         break;
 
-      if (!VisitedInstrs.count(P))
+      if (!VisitedInstrs.count(P) && !R.isDeleted(P))
         Incoming.push_back(P);
     }
 
@@ -6882,9 +6896,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   VisitedInstrs.clear();
 
-  SmallVector<WeakVH, 8> PostProcessInstructions;
+  SmallVector<Instruction *, 8> PostProcessInstructions;
   SmallDenseSet<Instruction *, 4> KeyNodes;
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
+    // Skip instructions marked for the deletion.
+    if (R.isDeleted(&*it))
+      continue;
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
       if (it->use_empty() && KeyNodes.count(&*it) > 0 &&
@@ -6977,10 +6994,10 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
 
       // Some of the candidates may have already been vectorized after we
-      // initially collected them. If so, the WeakTrackingVHs will have
-      // nullified the
-      // values, so remove them from the set of candidates.
-      Candidates.remove(nullptr);
+      // initially collected them. If so, they are marked as deleted, so remove
+      // them from the set of candidates.
+      Candidates.remove_if(
+          [&R](Value *I) { return R.isDeleted(cast<Instruction>(I)); });
 
       // Remove from the set of candidates all pairs of getelementptrs with
       // constant differences. Such getelementptrs are likely not good
@@ -6988,18 +7005,18 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       // computed from the other. We also ensure all candidate getelementptr
       // indices are unique.
       for (int I = 0, E = GEPList.size(); I < E && Candidates.size() > 1; ++I) {
-        auto *GEPI = cast<GetElementPtrInst>(GEPList[I]);
+        auto *GEPI = GEPList[I];
         if (!Candidates.count(GEPI))
           continue;
         auto *SCEVI = SE->getSCEV(GEPList[I]);
         for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
-          auto *GEPJ = cast<GetElementPtrInst>(GEPList[J]);
+          auto *GEPJ = GEPList[J];
           auto *SCEVJ = SE->getSCEV(GEPList[J]);
           if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
-            Candidates.remove(GEPList[I]);
-            Candidates.remove(GEPList[J]);
+            Candidates.remove(GEPI);
+            Candidates.remove(GEPJ);
           } else if (GEPI->idx_begin()->get() == GEPJ->idx_begin()->get()) {
-            Candidates.remove(GEPList[J]);
+            Candidates.remove(GEPJ);
           }
         }
       }

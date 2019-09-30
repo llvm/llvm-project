@@ -35,13 +35,6 @@ define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 undef, [[SUM]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 undef, [[ADD]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 undef, [[ADD_1]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add i32 undef, [[ADD_2]]
-; CHECK-NEXT:    [[ADD_4:%.*]] = add i32 undef, [[ADD_3]]
-; CHECK-NEXT:    [[ADD_5:%.*]] = add i32 undef, [[ADD_4]]
-; CHECK-NEXT:    [[ADD_6:%.*]] = add i32 undef, [[ADD_5]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP2]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -50,7 +43,6 @@ define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
 ; CHECK-NEXT:    [[OP_EXTRA]] = add i32 [[TMP3]], [[SUM]]
-; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 undef, [[ADD_6]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 [[OP_EXTRA]]
@@ -138,13 +130,6 @@ define i32 @test2(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 undef, [[SUM]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 undef, [[ADD]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 undef, [[ADD_1]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add i32 undef, [[ADD_2]]
-; CHECK-NEXT:    [[ADD_4:%.*]] = add i32 undef, [[ADD_3]]
-; CHECK-NEXT:    [[ADD_5:%.*]] = add i32 undef, [[ADD_4]]
-; CHECK-NEXT:    [[ADD_6:%.*]] = add i32 undef, [[ADD_5]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP4]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -153,7 +138,6 @@ define i32 @test2(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
 ; CHECK-NEXT:    [[OP_EXTRA]] = add i32 [[TMP5]], [[SUM]]
-; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 undef, [[ADD_6]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 [[OP_EXTRA]]
@@ -258,13 +242,6 @@ define i32 @test3(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[REORDER_SHUFFLE]], [[TMP3]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 undef, [[SUM]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 undef, [[ADD]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 undef, [[ADD_1]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add i32 undef, [[ADD_2]]
-; CHECK-NEXT:    [[ADD_4:%.*]] = add i32 undef, [[ADD_3]]
-; CHECK-NEXT:    [[ADD_5:%.*]] = add i32 undef, [[ADD_4]]
-; CHECK-NEXT:    [[ADD_6:%.*]] = add i32 undef, [[ADD_5]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP4]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -273,7 +250,6 @@ define i32 @test3(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
 ; CHECK-NEXT:    [[OP_EXTRA]] = add i32 [[TMP5]], [[SUM]]
-; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 undef, [[ADD_6]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 [[OP_EXTRA]]

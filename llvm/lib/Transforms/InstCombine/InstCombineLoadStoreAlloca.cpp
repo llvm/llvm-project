@@ -960,9 +960,9 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
       LoadAlign != 0 ? LoadAlign : DL.getABITypeAlignment(LI.getType());
 
   if (KnownAlign > EffectiveLoadAlign)
-    LI.setAlignment(KnownAlign);
+    LI.setAlignment(MaybeAlign(KnownAlign));
   else if (LoadAlign == 0)
-    LI.setAlignment(EffectiveLoadAlign);
+    LI.setAlignment(MaybeAlign(EffectiveLoadAlign));
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI)) {
@@ -1031,9 +1031,9 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
             Builder.CreateLoad(LI.getType(), SI->getOperand(2),
                                SI->getOperand(2)->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        V1->setAlignment(Align);
+        V1->setAlignment(MaybeAlign(Align));
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-        V2->setAlignment(Align);
+        V2->setAlignment(MaybeAlign(Align));
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }

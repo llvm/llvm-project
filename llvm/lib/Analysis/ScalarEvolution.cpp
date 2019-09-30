@@ -4992,7 +4992,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   // overflow.
   if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
     if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
-      (void)getAddRecExpr(getAddExpr(StartVal, Accum, Flags), Accum, L, Flags);
+      (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
 
   return PHISCEV;
 }
