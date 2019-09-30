@@ -7665,7 +7665,7 @@ CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
     if (auto *unbound_generic_type =
             swift_can_type->getAs<swift::UnboundGenericType>()) {
       auto *nominal_type_decl = unbound_generic_type->getDecl();
-      swift::GenericSignature *generic_sig =
+      swift::GenericSignature generic_sig =
           nominal_type_decl->getGenericSignature();
       auto depTy = generic_sig->getGenericParams()[idx];
       return {nominal_type_decl->mapTypeIntoContext(depTy)
