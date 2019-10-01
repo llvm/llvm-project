@@ -5,8 +5,6 @@ Test SBThread APIs.
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -42,6 +40,7 @@ class ThreadAPITestCase(TestBase):
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureNetBSD
     def test_step_out_of_malloc_into_function_b(self):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
         # We build a different executable than the default build() does.
@@ -51,7 +50,6 @@ class ThreadAPITestCase(TestBase):
         self.step_out_of_malloc_into_function_b(self.exe_name)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr32343')
     def test_step_over_3_times(self):
         """Test Python SBThread.StepOver() API."""
         # We build a different executable than the default build() does.

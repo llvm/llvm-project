@@ -12,9 +12,7 @@
 namespace lldb_private {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 
-//---------------------------------------------------------------------------
 // Internal codes for all s390x registers.
-//---------------------------------------------------------------------------
 enum {
   k_first_gpr_s390x,
   lldb_r0_s390x = k_first_gpr_s390x,

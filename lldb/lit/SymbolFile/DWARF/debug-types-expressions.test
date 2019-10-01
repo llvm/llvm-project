@@ -1,0 +1,53 @@
+# UNSUPPORTED: system-darwin, system-windows
+
+# Make sure DWARF v4 type units work.
+# RUN: %clangxx %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-4 -fdebug-types-section -o %t4
+# RUN: %lldb %t4 -s %s -o exit | FileCheck %s
+
+# Now do the same for DWARF v5.
+# RUN: %clangxx %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -o %t5
+# RUN: %lldb %t5 -s %s -o exit | FileCheck %s
+
+# Test type units in dwo files.
+# RUN: %clangxx %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-4 -fdebug-types-section -o %t4dwo
+# RUN: %lldb %t4dwo -s %s -o exit | FileCheck %s
+
+# And type units+dwo+dwarf5.
+# RUN: %clangxx %S/Inputs/debug-types-expressions.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -o %t5dwo
+# RUN: %lldb %t5dwo -s %s -o exit | FileCheck %s
+
+breakpoint set -n foo
+process launch
+
+# CHECK: Process {{.*}} stopped
+
+frame variable a
+# CHECK-LABEL: frame variable a
+# CHECK: (B *) a =
+
+frame variable *a
+# CHECK-LABEL: frame variable *a
+# CHECK:      (B) *a = {
+# CHECK-NEXT:   A = (i = 47)
+# CHECK-NEXT:   j = 42
+# CHECK-NEXT: }
+
+print a->f()
+# CHECK-LABEL: print a->f()
+# CHECK: (int) $0 = 47
+
+print ns::A()
+# CHECK-LABEL: print ns::A()
+# CHECK: (ns::A) $1 = (i = 147)
+
+print ns::A().i + a->i
+# CHECK-LABEL: print ns::A().i + a->i
+# CHECK: (int) $2 = 194
+
+print ns::A().getA()
+# CHECK-LABEL: ns::A().getA()
+# CHECK: (A) $3 = (i = 146)

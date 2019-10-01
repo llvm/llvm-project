@@ -5,9 +5,6 @@ Test the iteration protocol for some lldb container objects.
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -94,6 +91,7 @@ class LLDBIteratorTestCase(TestBase):
             self.assertTrue(yours[i] == mine[i],
                             "ID of yours[{0}] and mine[{0}] matches".format(i))
 
+    @expectedFailureNetBSD
     @add_test_categories(['pyapi'])
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""

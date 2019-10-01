@@ -618,7 +618,6 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
                const __class_type_info *dst_type,
                std::ptrdiff_t src2dst_offset) {
     // Possible future optimization:  Take advantage of src2dst_offset
-    // Currently clang always sets src2dst_offset to -1 (no hint).
 
     // Get (dynamic_ptr, dynamic_type) from static_ptr
     void **vtable = *static_cast<void ** const *>(static_ptr);

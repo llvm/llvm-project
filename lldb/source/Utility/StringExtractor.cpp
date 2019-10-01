@@ -24,9 +24,7 @@ static inline int xdigit_to_sint(char ch) {
   return -1;
 }
 
-//----------------------------------------------------------------------
 // StringExtractor constructor
-//----------------------------------------------------------------------
 StringExtractor::StringExtractor() : m_packet(), m_index(0) {}
 
 StringExtractor::StringExtractor(llvm::StringRef packet_str)
@@ -40,26 +38,7 @@ StringExtractor::StringExtractor(const char *packet_cstr)
     m_packet.assign(packet_cstr);
 }
 
-//----------------------------------------------------------------------
-// StringExtractor copy constructor
-//----------------------------------------------------------------------
-StringExtractor::StringExtractor(const StringExtractor &rhs)
-    : m_packet(rhs.m_packet), m_index(rhs.m_index) {}
-
-//----------------------------------------------------------------------
-// StringExtractor assignment operator
-//----------------------------------------------------------------------
-const StringExtractor &StringExtractor::operator=(const StringExtractor &rhs) {
-  if (this != &rhs) {
-    m_packet = rhs.m_packet;
-    m_index = rhs.m_index;
-  }
-  return *this;
-}
-
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 StringExtractor::~StringExtractor() {}
 
 char StringExtractor::GetChar(char fail_value) {
@@ -72,13 +51,11 @@ char StringExtractor::GetChar(char fail_value) {
   return fail_value;
 }
 
-//----------------------------------------------------------------------
 // If a pair of valid hex digits exist at the head of the StringExtractor they
 // are decoded into an unsigned byte and returned by this function
 //
 // If there is not a pair of valid hex digits at the head of the
 // StringExtractor, it is left unchanged and -1 is returned
-//----------------------------------------------------------------------
 int StringExtractor::DecodeHexU8() {
   SkipSpaces();
   if (GetBytesLeft() < 2) {
@@ -90,13 +67,11 @@ int StringExtractor::DecodeHexU8() {
     return -1;
   }
   m_index += 2;
-  return (uint8_t)((hi_nibble << 4) + lo_nibble);
+  return static_cast<uint8_t>((hi_nibble << 4) + lo_nibble);
 }
 
-//----------------------------------------------------------------------
 // Extract an unsigned character from two hex ASCII chars in the packet string,
 // or return fail_value on failure
-//----------------------------------------------------------------------
 uint8_t StringExtractor::GetHexU8(uint8_t fail_value, bool set_eof_on_fail) {
   // On success, fail_value will be overwritten with the next character in the
   // stream
@@ -112,7 +87,7 @@ bool StringExtractor::GetHexU8Ex(uint8_t &ch, bool set_eof_on_fail) {
     // ch should not be changed in case of failure
     return false;
   }
-  ch = (uint8_t)byte;
+  ch = static_cast<uint8_t>(byte);
   return true;
 }
 
@@ -197,12 +172,12 @@ uint32_t StringExtractor::GetHexMaxU32(bool little_endian,
       if (m_index < m_packet.size() && ::isxdigit(m_packet[m_index])) {
         nibble_lo = xdigit_to_sint(m_packet[m_index]);
         ++m_index;
-        result |= ((uint32_t)nibble_hi << (shift_amount + 4));
-        result |= ((uint32_t)nibble_lo << shift_amount);
+        result |= (static_cast<uint32_t>(nibble_hi) << (shift_amount + 4));
+        result |= (static_cast<uint32_t>(nibble_lo) << shift_amount);
         nibble_count += 2;
         shift_amount += 8;
       } else {
-        result |= ((uint32_t)nibble_hi << shift_amount);
+        result |= (static_cast<uint32_t>(nibble_hi) << shift_amount);
         nibble_count += 1;
         shift_amount += 4;
       }
@@ -248,12 +223,12 @@ uint64_t StringExtractor::GetHexMaxU64(bool little_endian,
       if (m_index < m_packet.size() && ::isxdigit(m_packet[m_index])) {
         nibble_lo = xdigit_to_sint(m_packet[m_index]);
         ++m_index;
-        result |= ((uint64_t)nibble_hi << (shift_amount + 4));
-        result |= ((uint64_t)nibble_lo << shift_amount);
+        result |= (static_cast<uint64_t>(nibble_hi) << (shift_amount + 4));
+        result |= (static_cast<uint64_t>(nibble_lo) << shift_amount);
         nibble_count += 2;
         shift_amount += 8;
       } else {
-        result |= ((uint64_t)nibble_hi << shift_amount);
+        result |= (static_cast<uint64_t>(nibble_hi) << shift_amount);
         nibble_count += 1;
         shift_amount += 4;
       }
@@ -304,51 +279,21 @@ size_t StringExtractor::GetHexBytes(llvm::MutableArrayRef<uint8_t> dest,
   return bytes_extracted;
 }
 
-//----------------------------------------------------------------------
 // Decodes all valid hex encoded bytes at the head of the StringExtractor,
 // limited by dst_len.
 //
 // Returns the number of bytes successfully decoded
-//----------------------------------------------------------------------
 size_t StringExtractor::GetHexBytesAvail(llvm::MutableArrayRef<uint8_t> dest) {
   size_t bytes_extracted = 0;
   while (!dest.empty()) {
     int decode = DecodeHexU8();
     if (decode == -1)
       break;
-    dest[0] = (uint8_t)decode;
+    dest[0] = static_cast<uint8_t>(decode);
     dest = dest.drop_front();
     ++bytes_extracted;
   }
   return bytes_extracted;
-}
-
-// Consume ASCII hex nibble character pairs until we have decoded byte_size
-// bytes of data.
-
-uint64_t StringExtractor::GetHexWithFixedSize(uint32_t byte_size,
-                                              bool little_endian,
-                                              uint64_t fail_value) {
-  if (byte_size <= 8 && GetBytesLeft() >= byte_size * 2) {
-    uint64_t result = 0;
-    uint32_t i;
-    if (little_endian) {
-      // Little Endian
-      uint32_t shift_amount;
-      for (i = 0, shift_amount = 0; i < byte_size && IsGood();
-           ++i, shift_amount += 8) {
-        result |= ((uint64_t)GetHexU8() << shift_amount);
-      }
-    } else {
-      // Big Endian
-      for (i = 0; i < byte_size && IsGood(); ++i) {
-        result <<= 8;
-        result |= GetHexU8();
-      }
-    }
-  }
-  m_index = UINT64_MAX;
-  return fail_value;
 }
 
 size_t StringExtractor::GetHexByteString(std::string &str) {

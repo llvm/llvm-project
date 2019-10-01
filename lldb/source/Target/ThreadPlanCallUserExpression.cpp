@@ -29,9 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanCallUserExpression: Plan to call a single function
-//----------------------------------------------------------------------
 
 ThreadPlanCallUserExpression::ThreadPlanCallUserExpression(
     Thread &thread, Address &function, llvm::ArrayRef<lldb::addr_t> args,
@@ -71,9 +69,8 @@ bool ThreadPlanCallUserExpression::MischiefManaged() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   if (IsPlanComplete()) {
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): Completed call function plan.",
-                  static_cast<void *>(this));
+    LLDB_LOGF(log, "ThreadPlanCallFunction(%p): Completed call function plan.",
+              static_cast<void *>(this));
 
     if (m_manage_materialization && PlanSucceeded() && m_user_expression_sp) {
       lldb::addr_t function_stack_top;

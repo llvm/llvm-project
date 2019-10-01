@@ -16,7 +16,7 @@
 
 class ObjectFilePECOFF : public lldb_private::ObjectFile {
 public:
-  typedef enum MachineType {
+  enum MachineType {
     MachineUnknown = 0x0,
     MachineAm33 = 0x1d3,
     MachineAmd64 = 0x8664,
@@ -39,7 +39,7 @@ public:
     MachineSh5 = 0x1a8,
     MachineThumb = 0x1c2,
     MachineWcemIpsv2 = 0x169
-  } MachineType;
+  };
 
   ObjectFilePECOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
                    lldb::offset_t data_offset,
@@ -52,9 +52,7 @@ public:
 
   ~ObjectFilePECOFF() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -87,6 +85,13 @@ public:
 
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);
 
+  // LLVM RTTI support
+  static char ID;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ObjectFile::isA(ClassID);
+  }
+  static bool classof(const ObjectFile *obj) { return obj->isA(&ID); }
+
   bool ParseHeader() override;
 
   bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,
@@ -111,19 +116,19 @@ public:
 
   lldb_private::ArchSpec GetArchitecture() override;
 
-  bool GetUUID(lldb_private::UUID *uuid) override;
+  lldb_private::UUID GetUUID() override;
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
-  virtual lldb_private::Address GetEntryPointAddress() override;
+  lldb_private::Address GetEntryPointAddress() override;
+
+  lldb_private::Address GetBaseAddress() override;
 
   ObjectFile::Type CalculateType() override;
 
   ObjectFile::Strata CalculateStrata() override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -173,45 +178,45 @@ protected:
   } data_directory_t;
 
   typedef struct coff_opt_header {
-    uint16_t magic;
-    uint8_t major_linker_version;
-    uint8_t minor_linker_version;
-    uint32_t code_size;
-    uint32_t data_size;
-    uint32_t bss_size;
-    uint32_t entry;
-    uint32_t code_offset;
-    uint32_t data_offset;
+    uint16_t magic = 0;
+    uint8_t major_linker_version = 0;
+    uint8_t minor_linker_version = 0;
+    uint32_t code_size = 0;
+    uint32_t data_size = 0;
+    uint32_t bss_size = 0;
+    uint32_t entry = 0;
+    uint32_t code_offset = 0;
+    uint32_t data_offset = 0;
 
-    uint64_t image_base;
-    uint32_t sect_alignment;
-    uint32_t file_alignment;
-    uint16_t major_os_system_version;
-    uint16_t minor_os_system_version;
-    uint16_t major_image_version;
-    uint16_t minor_image_version;
-    uint16_t major_subsystem_version;
-    uint16_t minor_subsystem_version;
-    uint32_t reserved1;
-    uint32_t image_size;
-    uint32_t header_size;
-    uint32_t checksum;
-    uint16_t subsystem;
-    uint16_t dll_flags;
-    uint64_t stack_reserve_size;
-    uint64_t stack_commit_size;
-    uint64_t heap_reserve_size;
-    uint64_t heap_commit_size;
-    uint32_t loader_flags;
+    uint64_t image_base = 0;
+    uint32_t sect_alignment = 0;
+    uint32_t file_alignment = 0;
+    uint16_t major_os_system_version = 0;
+    uint16_t minor_os_system_version = 0;
+    uint16_t major_image_version = 0;
+    uint16_t minor_image_version = 0;
+    uint16_t major_subsystem_version = 0;
+    uint16_t minor_subsystem_version = 0;
+    uint32_t reserved1 = 0;
+    uint32_t image_size = 0;
+    uint32_t header_size = 0;
+    uint32_t checksum = 0;
+    uint16_t subsystem = 0;
+    uint16_t dll_flags = 0;
+    uint64_t stack_reserve_size = 0;
+    uint64_t stack_commit_size = 0;
+    uint64_t heap_reserve_size = 0;
+    uint64_t heap_commit_size = 0;
+    uint32_t loader_flags = 0;
     //    uint32_t	num_data_dir_entries;
     std::vector<data_directory>
         data_dirs; // will contain num_data_dir_entries entries
   } coff_opt_header_t;
 
-  typedef enum coff_data_dir_type {
+  enum coff_data_dir_type {
     coff_data_dir_export_table = 0,
     coff_data_dir_import_table = 1,
-  } coff_data_dir_type;
+  };
 
   typedef struct section_header {
     char name[8];
@@ -288,6 +293,7 @@ private:
   llvm::Optional<lldb_private::FileSpecList> m_deps_filespec;
   typedef llvm::object::OwningBinary<llvm::object::Binary> OWNBINType;
   llvm::Optional<OWNBINType> m_owningbin;
+  lldb_private::UUID m_uuid;
 };
 
 #endif // liblldb_ObjectFilePECOFF_h_

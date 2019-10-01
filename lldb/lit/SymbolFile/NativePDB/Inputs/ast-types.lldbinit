@@ -10,10 +10,15 @@ target variable ABCVoid
 target variable AC0
 target variable ACNeg1
 
+target variable AC1D
 target variable AC0D
 target variable ACNeg1D
 target variable AD
 target variable ADE
+
+target variable AnonInt
+target variable AnonABCVoid
+target variable AnonABCVoidD
 
 target modules dump ast
 

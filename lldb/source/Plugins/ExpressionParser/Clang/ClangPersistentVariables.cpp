@@ -29,8 +29,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 ClangPersistentVariables::ClangPersistentVariables()
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
-      m_next_persistent_variable_id(0), m_next_persistent_error_id(0) {}
+    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {
@@ -73,7 +72,7 @@ void ClangPersistentVariables::RemovePersistentVariable(
     name++;
   }
 
-  uint32_t value = strtoul(name, NULL, 0);
+  uint32_t value = strtoul(name, nullptr, 0);
   if (is_error) {
     if (value == m_next_persistent_error_id - 1)
       m_next_persistent_error_id--;
@@ -118,7 +117,7 @@ ClangPersistentVariables::GetPersistentDecl(ConstString name) {
       m_persistent_decls.find(name.GetCString());
 
   if (i == m_persistent_decls.end())
-    return NULL;
+    return nullptr;
   else
     return i->second;
 }

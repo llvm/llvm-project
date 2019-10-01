@@ -41,7 +41,8 @@ public:
     eTypeBytes
   };
 
-  RegisterValue() : m_type(eTypeInvalid), m_scalar((unsigned long)0) {}
+  RegisterValue()
+      : m_type(eTypeInvalid), m_scalar(static_cast<unsigned long>(0)) {}
 
   explicit RegisterValue(uint8_t inst) : m_type(eTypeUInt8) { m_scalar = inst; }
 

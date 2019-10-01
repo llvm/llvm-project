@@ -26,6 +26,24 @@ class TestVLA(TestBase):
         for value in all_locals:
             self.assertFalse("vla_expr" in value.name)
 
+    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    def test_vla(self):
+        self.build()
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec('main.c'))
+
+        # Make sure no helper expressions show up in frame variable.
+        var_opts = lldb.SBVariablesOptions()
+        var_opts.SetIncludeArguments(False)
+        var_opts.SetIncludeLocals(True)
+        var_opts.SetInScopeOnly(True)
+        var_opts.SetIncludeStatics(False)
+        var_opts.SetIncludeRuntimeSupportValues(False)
+        var_opts.SetUseDynamic(lldb.eDynamicCanRunTarget)
+        all_locals = self.frame().GetVariables(var_opts)
+        for value in all_locals:
+            self.assertFalse("vla_expr" in value.name)
+
         def test(a, array):
             for i in range(a):
                 self.expect("fr v vla[%d]"%i, substrs=["int", "%d"%(a-i)])

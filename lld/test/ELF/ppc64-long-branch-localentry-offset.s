@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64le %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld %t.o -z separate-code -o %t
 # RUN: llvm-nm %t | FileCheck %s
 
 # CHECK-DAG: 0000000010010000 t __long_branch_callee

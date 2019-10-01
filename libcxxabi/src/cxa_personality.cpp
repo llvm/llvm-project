@@ -17,8 +17,8 @@
 #include <typeinfo>
 
 #include "__cxxabi_config.h"
-#include "cxa_exception.hpp"
-#include "cxa_handlers.hpp"
+#include "cxa_exception.h"
+#include "cxa_handlers.h"
 #include "private_typeinfo.h"
 #include "unwind.h"
 

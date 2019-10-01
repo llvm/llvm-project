@@ -11,12 +11,12 @@
 #include "IDebugDelegate.h"
 
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Predicate.h"
@@ -28,6 +28,10 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifndef STATUS_WX86_BREAKPOINT
+#define STATUS_WX86_BREAKPOINT 0x4000001FL // For WOW64 
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -63,16 +67,18 @@ Status DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   LLDB_LOG(log, "launching '{0}'", launch_info.GetExecutableFile().GetPath());
 
-  Status error;
+  Status result;
   DebugLaunchContext *context = new DebugLaunchContext(this, launch_info);
-  HostThread slave_thread(ThreadLauncher::LaunchThread(
+
+  llvm::Expected<HostThread> slave_thread = ThreadLauncher::LaunchThread(
       "lldb.plugin.process-windows.slave[?]", DebuggerThreadLaunchRoutine,
-      context, &error));
+      context);
+  if (!slave_thread) {
+    result = Status(slave_thread.takeError());
+    LLDB_LOG(log, "couldn't launch debugger thread. {0}", result);
+  }
 
-  if (!error.Success())
-    LLDB_LOG(log, "couldn't launch debugger thread. {0}", error);
-
-  return error;
+  return result;
 }
 
 Status DebuggerThread::DebugAttach(lldb::pid_t pid,
@@ -80,16 +86,18 @@ Status DebuggerThread::DebugAttach(lldb::pid_t pid,
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   LLDB_LOG(log, "attaching to '{0}'", pid);
 
-  Status error;
+  Status result;
   DebugAttachContext *context = new DebugAttachContext(this, pid, attach_info);
-  HostThread slave_thread(ThreadLauncher::LaunchThread(
+
+  llvm::Expected<HostThread> slave_thread = ThreadLauncher::LaunchThread(
       "lldb.plugin.process-windows.slave[?]", DebuggerThreadAttachRoutine,
-      context, &error));
+      context);
+  if (!slave_thread) {
+    result = Status(slave_thread.takeError());
+    LLDB_LOG(log, "couldn't attach to process '{0}'. {1}", pid, result);
+  }
 
-  if (!error.Success())
-    LLDB_LOG(log, "couldn't attach to process '{0}'. {1}", pid, error);
-
-  return error;
+  return result;
 }
 
 lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(void *data) {
@@ -132,7 +140,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadLaunchRoutine(
   else
     m_debug_delegate->OnDebuggerError(error, 0);
 
-  return 0;
+  return {};
 }
 
 lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
@@ -148,7 +156,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   if (!DebugActiveProcess((DWORD)pid)) {
     Status error(::GetLastError(), eErrorTypeWin32);
     m_debug_delegate->OnDebuggerError(error, 0);
-    return 0;
+    return {};
   }
 
   // The attach was successful, enter the debug loop.  From here on out, this
@@ -156,7 +164,7 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
   // in DebugLaunch should apply from this point out.
   DebugLoop();
 
-  return 0;
+  return {};
 }
 
 Status DebuggerThread::StopDebugging(bool terminate) {
@@ -346,7 +354,8 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
     // we use simply to wake up the DebuggerThread so that we can close out the
     // debug loop.
     if (m_pid_to_detach != 0 &&
-        info.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
+        (info.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT ||
+         info.ExceptionRecord.ExceptionCode == STATUS_WX86_BREAKPOINT)) {
       LLDB_LOG(log, "Breakpoint exception is cue to detach from process {0:x}",
                m_pid_to_detach.load());
       ::DebugActiveProcessStop(m_pid_to_detach);

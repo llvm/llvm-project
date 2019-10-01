@@ -11,13 +11,13 @@
 #include "Cocoa.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
+
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -461,12 +461,13 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::NSArrayMSyntheticFrontE
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
       m_id_type() {
   if (valobj_sp) {
-    clang::ASTContext *ast = valobj_sp->GetExecutionContextRef()
-                                 .GetTargetSP()
-                                 ->GetScratchClangASTContext()
-                                 ->getASTContext();
-    if (ast)
-      m_id_type = CompilerType(ast, ast->ObjCBuiltinIdTy);
+    auto *clang_ast_context = valobj_sp->GetExecutionContextRef()
+                                  .GetTargetSP()
+                                  ->GetScratchClangASTContext();
+    if (clang_ast_context)
+      m_id_type = CompilerType(
+          clang_ast_context,
+          clang_ast_context->getASTContext()->ObjCBuiltinIdTy.getAsOpaquePtr());
     if (valobj_sp->GetProcessSP())
       m_ptr_size = valobj_sp->GetProcessSP()->GetAddressByteSize();
   }
@@ -609,12 +610,13 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      ClangASTContext *ast = valobj_sp->GetExecutionContextRef()
-                                 .GetTargetSP()
-                                 ->GetScratchClangASTContext();
-      if (ast)
-        m_id_type = CompilerType(ast->getASTContext(),
-                                 ast->getASTContext()->ObjCBuiltinIdTy);
+      auto *clang_ast_context = valobj_sp->GetExecutionContextRef()
+                                    .GetTargetSP()
+                                    ->GetScratchClangASTContext();
+      if (clang_ast_context)
+        m_id_type = CompilerType(clang_ast_context,
+                                 clang_ast_context->getASTContext()
+                                     ->ObjCBuiltinIdTy.getAsOpaquePtr());
     }
   }
 }

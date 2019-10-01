@@ -26,7 +26,7 @@ public:
   const static uint32_t kMaxPacketSize = 1200;
   const static uint32_t kMaxDataSize = 1024;
   typedef lldb_private::StreamBuffer<1024> PacketStreamType;
-  typedef enum {
+  enum CommandType {
     KDP_CONNECT = 0u,
     KDP_DISCONNECT,
     KDP_HOSTINFO,
@@ -59,26 +59,24 @@ public:
     KDP_READMSR64,
     KDP_WRITEMSR64,
     KDP_DUMPINFO
-  } CommandType;
+  };
 
   enum { KDP_FEATURE_BP = (1u << 0) };
 
-  typedef enum {
+  enum KDPError {
     KDP_PROTERR_SUCCESS = 0,
     KDP_PROTERR_ALREADY_CONNECTED,
     KDP_PROTERR_BAD_NBYTES,
     KDP_PROTERR_BADFLAVOR
-  } KDPError;
+  };
 
-  typedef enum {
+  enum PacketType {
     ePacketTypeRequest = 0x00u,
     ePacketTypeReply = 0x80u,
     ePacketTypeMask = 0x80u,
     eCommandTypeMask = 0x7fu
-  } PacketType;
-  //------------------------------------------------------------------
+  };
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommunicationKDP(const char *comm_name);
 
   virtual ~CommunicationKDP();
@@ -96,14 +94,12 @@ public:
                       lldb_private::DataExtractor &packet);
   bool IsRunning() const { return m_is_running.GetValue(); }
 
-  //------------------------------------------------------------------
   // Set the global packet timeout.
   //
   // For clients, this is the timeout that gets used when sending
   // packets and waiting for responses. For servers, this might not
   // get used, and if it doesn't this should be moved to the
   // CommunicationKDPClient.
-  //------------------------------------------------------------------
   std::chrono::seconds SetPacketTimeout(std::chrono::seconds packet_timeout) {
     const auto old_packet_timeout = m_packet_timeout;
     m_packet_timeout = packet_timeout;
@@ -112,9 +108,7 @@ public:
 
   std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
-  //------------------------------------------------------------------
   // Public Request Packets
-  //------------------------------------------------------------------
   bool SendRequestConnect(uint16_t reply_port, uint16_t exc_port,
                           const char *greeting);
 
@@ -188,10 +182,8 @@ protected:
                                PacketStreamType &request_packet,
                                uint16_t request_length);
 
-  //------------------------------------------------------------------
   // Protected Request Packets (use public accessors which will cache
   // results.
-  //------------------------------------------------------------------
   bool SendRequestVersion();
 
   bool SendRequestHostInfo();
@@ -228,9 +220,7 @@ protected:
   bool SendRequestAndGetReply(const CommandType command,
                               const PacketStreamType &request_packet,
                               lldb_private::DataExtractor &reply_packet);
-  //------------------------------------------------------------------
   // Classes that inherit from CommunicationKDP can see and modify these
-  //------------------------------------------------------------------
   uint32_t m_addr_byte_size;
   lldb::ByteOrder m_byte_order;
   std::chrono::seconds m_packet_timeout;
@@ -250,9 +240,7 @@ protected:
   // hang the KDP connection...
   lldb::addr_t m_last_read_memory_addr; // Last memory read address for logging
 private:
-  //------------------------------------------------------------------
   // For CommunicationKDP only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommunicationKDP);
 };
 

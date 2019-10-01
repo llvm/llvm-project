@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-windows-msvc %s -o %t.obj
 
-# RUN: lld-link -entry:dllmain -dll %t.obj -out:%t.dll -implib:%t.lib
+# RUN: lld-link -safeseh:no -entry:dllmain -dll %t.obj -out:%t.dll -implib:%t.lib
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix DECORATED-IMPLIB %s
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix DECORATED-EXPORTS %s
 

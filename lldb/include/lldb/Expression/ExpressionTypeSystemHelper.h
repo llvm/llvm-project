@@ -14,8 +14,7 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class ExpressionTypeSystemHelper ExpressionTypeSystemHelper.h
+/// \class ExpressionTypeSystemHelper ExpressionTypeSystemHelper.h
 /// "lldb/Expression/ExpressionTypeSystemHelper.h"
 /// A helper object that the Expression can pass to its ExpressionParser
 /// to provide generic information that
@@ -23,7 +22,6 @@ namespace lldb_private {
 /// dyn_cast so that the expression parser can cast it back to the requisite
 /// specific type.
 ///
-//----------------------------------------------------------------------
 
 class ExpressionTypeSystemHelper {
 public:

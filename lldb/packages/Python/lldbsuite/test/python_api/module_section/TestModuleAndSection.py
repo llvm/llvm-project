@@ -5,9 +5,6 @@ Test some SBModule and SBSection APIs.
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -45,6 +42,7 @@ class ModuleAndSectionAPIsTestCase(TestBase):
 
         print("Exe module: %s" % str(exe_module))
         print("Number of sections: %d" % exe_module.GetNumSections())
+        print("Number of symbols: %d" % len(exe_module))
         INDENT = ' ' * 4
         INDENT2 = INDENT * 2
         for sec in exe_module.section_iter():

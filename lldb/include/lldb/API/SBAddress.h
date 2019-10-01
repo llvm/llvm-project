@@ -31,6 +31,8 @@ public:
 
   explicit operator bool() const;
 
+  bool operator!=(const SBAddress &rhs) const;
+
   bool IsValid() const;
 
   void Clear();

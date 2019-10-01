@@ -1,4 +1,4 @@
-///===-- Activity.cpp ---------------------------------------*- C++ -*-===//
+//===-- Genealogy.cpp -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,7 @@
 #include "GenealogySPI.h"
 #include "MachThreadList.h"
 
-//---------------------------
 /// Constructor
-//---------------------------
 
 Genealogy::Genealogy()
     : m_os_activity_diagnostic_for_pid(nullptr),

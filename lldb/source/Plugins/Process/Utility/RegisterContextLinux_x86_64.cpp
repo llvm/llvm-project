@@ -75,10 +75,8 @@ struct UserArea {
   (LLVM_EXTENSION offsetof(UserArea, dbg) +                                    \
    LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64
 // structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_X86_64_STRUCT
 #include "RegisterInfos_x86_64.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT
@@ -102,10 +100,8 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
     g_register_infos.insert(g_register_infos.end(), &base_info[0],
                             &base_info[k_num_registers_i386]);
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_x86_64 to update the g_register_infos structure
 //  with x86_64 offsets.
-//---------------------------------------------------------------------------
 #define UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
 #include "RegisterInfos_x86_64.h"
 #undef UPDATE_REGISTER_INFOS_I386_STRUCT_WITH_X86_64_OFFSETS
@@ -161,8 +157,8 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
       m_register_info_count(GetRegisterInfoCount(target_arch)),
       m_user_register_count(GetUserRegisterInfoCount(target_arch)) {
   RegisterInfo orig_ax = {"orig_rax",
-                          NULL,
-                          sizeof(((GPR *)NULL)->orig_rax),
+                          nullptr,
+                          sizeof(((GPR *)nullptr)->orig_rax),
                           (LLVM_EXTENSION offsetof(GPR, orig_rax)),
                           eEncodingUint,
                           eFormatHex,

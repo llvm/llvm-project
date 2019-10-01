@@ -58,21 +58,8 @@ static mode_t ParsePermissionString(llvm::StringRef permissions) {
   return user | group | world;
 }
 
-static constexpr OptionDefinition g_permissions_options[] = {
-    // clang-format off
-  {LLDB_OPT_SET_ALL, false, "permissions-value",   'v', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePermissionsNumber, "Give out the numeric value for permissions (e.g. 757)"},
-  {LLDB_OPT_SET_ALL, false, "permissions-string",  's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePermissionsString, "Give out the string value for permissions (e.g. rwxr-xr--)."},
-  {LLDB_OPT_SET_ALL, false, "user-read",           'r', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow user to read."},
-  {LLDB_OPT_SET_ALL, false, "user-write",          'w', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow user to write."},
-  {LLDB_OPT_SET_ALL, false, "user-exec",           'x', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow user to execute."},
-  {LLDB_OPT_SET_ALL, false, "group-read",          'R', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow group to read."},
-  {LLDB_OPT_SET_ALL, false, "group-write",         'W', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow group to write."},
-  {LLDB_OPT_SET_ALL, false, "group-exec",          'X', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow group to execute."},
-  {LLDB_OPT_SET_ALL, false, "world-read",          'd', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow world to read."},
-  {LLDB_OPT_SET_ALL, false, "world-write",         't', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow world to write."},
-  {LLDB_OPT_SET_ALL, false, "world-exec",          'e', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow world to execute."},
-    // clang-format on
-};
+#define LLDB_OPTIONS_permissions
+#include "CommandOptions.inc"
 
 class OptionPermissions : public OptionGroup {
 public:
@@ -130,8 +117,7 @@ public:
       m_permissions |= lldb::eFilePermissionsWorldExecute;
       break;
     default:
-      error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
 
     return error;
@@ -153,9 +139,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(OptionPermissions);
 };
 
-//----------------------------------------------------------------------
 // "platform select <platform-name>"
-//----------------------------------------------------------------------
 class CommandObjectPlatformSelect : public CommandObjectParsed {
 public:
   CommandObjectPlatformSelect(CommandInterpreter &interpreter)
@@ -173,10 +157,9 @@ public:
 
   ~CommandObjectPlatformSelect() override = default;
 
-  int HandleCompletion(CompletionRequest &request) override {
+  void HandleCompletion(CompletionRequest &request) override {
     CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
                                             nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -193,8 +176,7 @@ protected:
         PlatformSP platform_sp(m_platform_options.CreatePlatformWithOptions(
             m_interpreter, ArchSpec(), select, error, platform_arch));
         if (platform_sp) {
-          m_interpreter.GetDebugger().GetPlatformList().SetSelectedPlatform(
-              platform_sp);
+          GetDebugger().GetPlatformList().SetSelectedPlatform(platform_sp);
 
           platform_sp->GetStatus(result.GetOutputStream());
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -218,9 +200,7 @@ protected:
   OptionGroupPlatform m_platform_options;
 };
 
-//----------------------------------------------------------------------
 // "platform list"
-//----------------------------------------------------------------------
 class CommandObjectPlatformList : public CommandObjectParsed {
 public:
   CommandObjectPlatformList(CommandInterpreter &interpreter)
@@ -240,7 +220,7 @@ protected:
                  host_platform_sp->GetDescription());
 
     uint32_t idx;
-    for (idx = 0; 1; ++idx) {
+    for (idx = 0; true; ++idx) {
       const char *plugin_name =
           PluginManager::GetPlatformPluginNameAtIndex(idx);
       if (plugin_name == nullptr)
@@ -261,9 +241,7 @@ protected:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform status"
-//----------------------------------------------------------------------
 class CommandObjectPlatformStatus : public CommandObjectParsed {
 public:
   CommandObjectPlatformStatus(CommandInterpreter &interpreter)
@@ -277,14 +255,13 @@ protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
     if (platform_sp) {
       platform_sp->GetStatus(ostrm);
@@ -297,9 +274,7 @@ protected:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform connect <connect-url>"
-//----------------------------------------------------------------------
 class CommandObjectPlatformConnect : public CommandObjectParsed {
 public:
   CommandObjectPlatformConnect(CommandInterpreter &interpreter)
@@ -315,15 +290,14 @@ protected:
     Stream &ostrm = result.GetOutputStream();
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status error(platform_sp->ConnectRemote(args));
       if (error.Success()) {
         platform_sp->GetStatus(ostrm);
         result.SetStatus(eReturnStatusSuccessFinishResult);
 
-        platform_sp->ConnectToWaitingProcesses(m_interpreter.GetDebugger(),
-                                               error);
+        platform_sp->ConnectToWaitingProcesses(GetDebugger(), error);
         if (error.Fail()) {
           result.AppendError(error.AsCString());
           result.SetStatus(eReturnStatusFailed);
@@ -341,7 +315,7 @@ protected:
 
   Options *GetOptions() override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     OptionGroupOptions *m_platform_options = nullptr;
     if (platform_sp) {
       m_platform_options = platform_sp->GetConnectionOptions(m_interpreter);
@@ -352,9 +326,7 @@ protected:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform disconnect"
-//----------------------------------------------------------------------
 class CommandObjectPlatformDisconnect : public CommandObjectParsed {
 public:
   CommandObjectPlatformDisconnect(CommandInterpreter &interpreter)
@@ -367,7 +339,7 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       if (args.GetArgumentCount() == 0) {
         Status error;
@@ -414,9 +386,7 @@ protected:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform settings"
-//----------------------------------------------------------------------
 class CommandObjectPlatformSettings : public CommandObjectParsed {
 public:
   CommandObjectPlatformSettings(CommandInterpreter &interpreter)
@@ -436,7 +406,7 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       if (m_option_working_dir.GetOptionValue().OptionWasSet())
         platform_sp->SetWorkingDirectory(
@@ -459,9 +429,7 @@ protected:
   OptionGroupFile m_option_working_dir;
 };
 
-//----------------------------------------------------------------------
 // "platform mkdir"
-//----------------------------------------------------------------------
 class CommandObjectPlatformMkDir : public CommandObjectParsed {
 public:
   CommandObjectPlatformMkDir(CommandInterpreter &interpreter)
@@ -474,7 +442,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -511,9 +479,7 @@ public:
   OptionGroupOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // "platform fopen"
-//----------------------------------------------------------------------
 class CommandObjectPlatformFOpen : public CommandObjectParsed {
 public:
   CommandObjectPlatformFOpen(CommandInterpreter &interpreter)
@@ -525,7 +491,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status error;
       std::string cmd_line;
@@ -568,9 +534,7 @@ public:
   OptionGroupOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // "platform fclose"
-//----------------------------------------------------------------------
 class CommandObjectPlatformFClose : public CommandObjectParsed {
 public:
   CommandObjectPlatformFClose(CommandInterpreter &interpreter)
@@ -581,7 +545,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -604,16 +568,10 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform fread"
-//----------------------------------------------------------------------
 
-static constexpr OptionDefinition g_platform_fread_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeIndex, "Offset into the file at which to start reading." },
-  { LLDB_OPT_SET_1, false, "count",  'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount, "Number of bytes to read from the file." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_platform_fread
+#include "CommandOptions.inc"
 
 class CommandObjectPlatformFRead : public CommandObjectParsed {
 public:
@@ -627,7 +585,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -673,9 +631,7 @@ protected:
                                          option_arg.str().c_str());
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -699,16 +655,10 @@ protected:
   CommandOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // "platform fwrite"
-//----------------------------------------------------------------------
 
-static constexpr OptionDefinition g_platform_fwrite_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeIndex, "Offset into the file at which to start reading." },
-  { LLDB_OPT_SET_1, false, "data",   'd', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeValue, "Text to write to the file." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_platform_fwrite
+#include "CommandOptions.inc"
 
 class CommandObjectPlatformFWrite : public CommandObjectParsed {
 public:
@@ -722,7 +672,7 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string cmd_line;
       args.GetCommandString(cmd_line);
@@ -765,9 +715,7 @@ protected:
         m_data.assign(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -793,9 +741,7 @@ protected:
 
 class CommandObjectPlatformFile : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectPlatformFile(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
             interpreter, "platform file",
@@ -814,15 +760,11 @@ public:
   ~CommandObjectPlatformFile() override = default;
 
 private:
-  //------------------------------------------------------------------
   // For CommandObjectPlatform only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformFile);
 };
 
-//----------------------------------------------------------------------
 // "platform get-file remote-file-path host-file-path"
-//----------------------------------------------------------------------
 class CommandObjectPlatformGetFile : public CommandObjectParsed {
 public:
   CommandObjectPlatformGetFile(CommandInterpreter &interpreter)
@@ -873,7 +815,7 @@ public:
     }
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       const char *remote_file_path = args.GetArgumentAtIndex(0);
       const char *local_file_path = args.GetArgumentAtIndex(1);
@@ -897,9 +839,7 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform get-size remote-file-path"
-//----------------------------------------------------------------------
 class CommandObjectPlatformGetSize : public CommandObjectParsed {
 public:
   CommandObjectPlatformGetSize(CommandInterpreter &interpreter)
@@ -940,7 +880,7 @@ public:
     }
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       user_id_t size = platform_sp->GetFileSize(FileSpec(remote_file_path));
@@ -963,9 +903,7 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform put-file"
-//----------------------------------------------------------------------
 class CommandObjectPlatformPutFile : public CommandObjectParsed {
 public:
   CommandObjectPlatformPutFile(CommandInterpreter &interpreter)
@@ -985,7 +923,7 @@ public:
     FileSpec dst_fs(dst ? dst : src_fs.GetFilename().GetCString());
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status error(platform_sp->PutFile(src_fs, dst_fs));
       if (error.Success()) {
@@ -1002,9 +940,7 @@ public:
   }
 };
 
-//----------------------------------------------------------------------
 // "platform process launch"
-//----------------------------------------------------------------------
 class CommandObjectPlatformProcessLaunch : public CommandObjectParsed {
 public:
   CommandObjectPlatformProcessLaunch(CommandInterpreter &interpreter)
@@ -1020,14 +956,13 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
 
     if (platform_sp) {
@@ -1058,7 +993,7 @@ protected:
       }
 
       if (m_options.launch_info.GetExecutableFile()) {
-        Debugger &debugger = m_interpreter.GetDebugger();
+        Debugger &debugger = GetDebugger();
 
         if (argc == 0)
           target->GetRunArguments(m_options.launch_info.GetArguments());
@@ -1092,28 +1027,11 @@ protected:
   ProcessLaunchCommandOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // "platform process list"
-//----------------------------------------------------------------------
 
-static OptionDefinition g_platform_process_list_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1,             false, "pid",         'p', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePid,               "List the process info for a specific process ID." },
-  { LLDB_OPT_SET_2,             true,  "name",        'n', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that match a string." },
-  { LLDB_OPT_SET_3,             true,  "ends-with",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that end with a string." },
-  { LLDB_OPT_SET_4,             true,  "starts-with", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that start with a string." },
-  { LLDB_OPT_SET_5,             true,  "contains",    'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that contain a string." },
-  { LLDB_OPT_SET_6,             true,  "regex",       'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeRegularExpression, "Find processes with executable basenames that match a regular expression." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "parent",      'P', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePid,               "Find processes that have a matching parent process ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "uid",         'u', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching user ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "euid",        'U', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching effective user ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "gid",         'g', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching group ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "egid",        'G', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching effective group ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "arch",        'a', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeArchitecture,      "Find processes that have a matching architecture." },
-  { LLDB_OPT_SET_FROM_TO(1, 6), false, "show-args",   'A', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Show process arguments instead of the process executable basename." },
-  { LLDB_OPT_SET_FROM_TO(1, 6), false, "verbose",     'v', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Enable verbose output." },
-    // clang-format on
-};
+static PosixPlatformCommandOptionValidator posix_validator;
+#define LLDB_OPTIONS_platform_process_list
+#include "CommandOptions.inc"
 
 class CommandObjectPlatformProcessList : public CommandObjectParsed {
 public:
@@ -1130,14 +1048,13 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
 
     if (platform_sp) {
@@ -1151,10 +1068,9 @@ protected:
           if (pid != LLDB_INVALID_PROCESS_ID) {
             ProcessInstanceInfo proc_info;
             if (platform_sp->GetProcessInfo(pid, proc_info)) {
-              ProcessInstanceInfo::DumpTableHeader(ostrm, platform_sp.get(),
-                                                   m_options.show_args,
+              ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                    m_options.verbose);
-              proc_info.DumpAsTableRow(ostrm, platform_sp.get(),
+              proc_info.DumpAsTableRow(ostrm, platform_sp->GetUserIDResolver(),
                                        m_options.show_args, m_options.verbose);
               result.SetStatus(eReturnStatusSuccessFinishResult);
             } else {
@@ -1212,13 +1128,12 @@ protected:
                 result.AppendMessageWithFormat(" whose name %s \"%s\"",
                                                match_desc, match_name);
               result.AppendMessageWithFormat("\n");
-              ProcessInstanceInfo::DumpTableHeader(ostrm, platform_sp.get(),
-                                                   m_options.show_args,
+              ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                    m_options.verbose);
               for (uint32_t i = 0; i < matches; ++i) {
                 proc_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
-                    ostrm, platform_sp.get(), m_options.show_args,
-                    m_options.verbose);
+                    ostrm, platform_sp->GetUserIDResolver(),
+                    m_options.show_args, m_options.verbose);
               }
             }
           }
@@ -1238,23 +1153,6 @@ protected:
   public:
     CommandOptions()
         : Options(), match_info(), show_args(false), verbose(false) {
-      static std::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, []() {
-        PosixPlatformCommandOptionValidator *posix_validator =
-            new PosixPlatformCommandOptionValidator();
-        for (auto &Option : g_platform_process_list_options) {
-          switch (Option.short_option) {
-          case 'u':
-          case 'U':
-          case 'g':
-          case 'G':
-            Option.validator = posix_validator;
-            break;
-          default:
-            break;
-          }
-        }
-      });
     }
 
     ~CommandOptions() override = default;
@@ -1367,9 +1265,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1395,9 +1291,7 @@ protected:
   CommandOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // "platform process info"
-//----------------------------------------------------------------------
 class CommandObjectPlatformProcessInfo : public CommandObjectParsed {
 public:
   CommandObjectPlatformProcessInfo(CommandInterpreter &interpreter)
@@ -1424,14 +1318,13 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    Target *target = GetDebugger().GetSelectedTarget().get();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
     }
     if (!platform_sp) {
-      platform_sp =
-          m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+      platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
 
     if (platform_sp) {
@@ -1453,7 +1346,7 @@ protected:
               if (platform_sp->GetProcessInfo(pid, proc_info)) {
                 ostrm.Printf("Process information for process %" PRIu64 ":\n",
                              pid);
-                proc_info.Dump(ostrm, platform_sp.get());
+                proc_info.Dump(ostrm, platform_sp->GetUserIDResolver());
               } else {
                 ostrm.Printf("error: no process information is available for "
                              "process %" PRIu64 "\n",
@@ -1482,14 +1375,8 @@ protected:
   }
 };
 
-static constexpr OptionDefinition g_platform_process_attach_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "plugin",  'P', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePlugin,      "Name of the process plugin you want to use." },
-  { LLDB_OPT_SET_1,   false, "pid",     'p', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePid,         "The process ID of an existing process to attach to." },
-  { LLDB_OPT_SET_2,   false, "name",    'n', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName, "The name of the process to attach to." },
-  { LLDB_OPT_SET_2,   false, "waitfor", 'w', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,        "Wait for the process with <process-name> to launch." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_platform_process_attach
+#include "CommandOptions.inc"
 
 class CommandObjectPlatformProcessAttach : public CommandObjectParsed {
 public:
@@ -1532,9 +1419,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1547,7 +1432,7 @@ public:
       return llvm::makeArrayRef(g_platform_process_attach_options);
     }
 
-    bool HandleOptionArgumentCompletion(
+    void HandleOptionArgumentCompletion(
         CompletionRequest &request, OptionElementVector &opt_element_vector,
         int opt_element_index, CommandInterpreter &interpreter) override {
       int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
@@ -1555,37 +1440,36 @@ public:
 
       // We are only completing the name option for now...
 
-      if (GetDefinitions()[opt_defs_index].short_option == 'n') {
-        // Are we in the name?
+      // Are we in the name?
+      if (GetDefinitions()[opt_defs_index].short_option != 'n')
+        return;
 
-        // Look to see if there is a -P argument provided, and if so use that
-        // plugin, otherwise use the default plugin.
+      // Look to see if there is a -P argument provided, and if so use that
+      // plugin, otherwise use the default plugin.
 
-        const char *partial_name = nullptr;
-        partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
+      const char *partial_name = nullptr;
+      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
 
-        PlatformSP platform_sp(interpreter.GetPlatform(true));
-        if (platform_sp) {
-          ProcessInstanceInfoList process_infos;
-          ProcessInstanceInfoMatch match_info;
-          if (partial_name) {
-            match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, FileSpec::Style::native);
-            match_info.SetNameMatchType(NameMatch::StartsWith);
-          }
-          platform_sp->FindProcesses(match_info, process_infos);
-          const uint32_t num_matches = process_infos.GetSize();
-          if (num_matches > 0) {
-            for (uint32_t i = 0; i < num_matches; ++i) {
-              request.AddCompletion(llvm::StringRef(
-                  process_infos.GetProcessNameAtIndex(i),
-                  process_infos.GetProcessNameLengthAtIndex(i)));
-            }
-          }
-        }
+      PlatformSP platform_sp(interpreter.GetPlatform(true));
+      if (!platform_sp)
+        return;
+
+      ProcessInstanceInfoList process_infos;
+      ProcessInstanceInfoMatch match_info;
+      if (partial_name) {
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            partial_name, FileSpec::Style::native);
+        match_info.SetNameMatchType(NameMatch::StartsWith);
       }
+      platform_sp->FindProcesses(match_info, process_infos);
+      const uint32_t num_matches = process_infos.GetSize();
+      if (num_matches == 0)
+        return;
 
-      return false;
+      for (uint32_t i = 0; i < num_matches; ++i) {
+        request.AddCompletion(process_infos.GetProcessNameAtIndex(i));
+      }
+      return;
     }
 
     // Options table: Required for subclasses of Options.
@@ -1607,11 +1491,11 @@ public:
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
       Status err;
       ProcessSP remote_process_sp = platform_sp->Attach(
-          m_options.attach_info, m_interpreter.GetDebugger(), nullptr, err);
+          m_options.attach_info, GetDebugger(), nullptr, err);
       if (err.Fail()) {
         result.AppendError(err.AsCString());
         result.SetStatus(eReturnStatusFailed);
@@ -1635,9 +1519,7 @@ protected:
 
 class CommandObjectPlatformProcess : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectPlatformProcess(CommandInterpreter &interpreter)
       : CommandObjectMultiword(interpreter, "platform process",
                                "Commands to query, launch and attach to "
@@ -1658,20 +1540,13 @@ public:
   ~CommandObjectPlatformProcess() override = default;
 
 private:
-  //------------------------------------------------------------------
   // For CommandObjectPlatform only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatformProcess);
 };
 
-//----------------------------------------------------------------------
 // "platform shell"
-//----------------------------------------------------------------------
-static constexpr OptionDefinition g_platform_shell_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "timeout", 't', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeValue, "Seconds to wait for the remote host to finish running the command." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_platform_shell
+#include "CommandOptions.inc"
 
 class CommandObjectPlatformShell : public CommandObjectRaw {
 public:
@@ -1702,9 +1577,7 @@ public:
           timeout = std::chrono::seconds(timeout_sec);
         break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1745,7 +1618,7 @@ public:
         return false;
 
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     Status error;
     if (platform_sp) {
       FileSpec working_dir{};
@@ -1790,9 +1663,7 @@ public:
   CommandOptions m_options;
 };
 
-//----------------------------------------------------------------------
 // "platform install" - install a target to a remote end
-//----------------------------------------------------------------------
 class CommandObjectPlatformInstall : public CommandObjectParsed {
 public:
   CommandObjectPlatformInstall(CommandInterpreter &interpreter)
@@ -1819,7 +1690,7 @@ public:
       return false;
     }
     PlatformSP platform_sp(
-        m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());
+        GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (!platform_sp) {
       result.AppendError("no platform currently selected");
       result.SetStatus(eReturnStatusFailed);

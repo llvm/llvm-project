@@ -11,6 +11,7 @@
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Module.h"
@@ -20,6 +21,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -35,9 +37,11 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
+    SymbolFileSymtab::Initialize();
   }
 
   void TearDown() override {
+    SymbolFileSymtab::Terminate();
     ObjectFileELF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
@@ -46,17 +50,6 @@ public:
 protected:
   void TestBasic(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);
 };
-
-#define ASSERT_NO_ERROR(x)                                                     \
-  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
-    llvm::SmallString<128> MessageStorage;                                     \
-    llvm::raw_svector_ostream Message(MessageStorage);                         \
-    Message << #x ": did not return errc::success.\n"                          \
-            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
-            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
-    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
-  } else {                                                                     \
-  }
 
 namespace lldb_private {
 static std::ostream &operator<<(std::ostream &OS, const UnwindPlan::Row &row) {
@@ -94,25 +87,152 @@ static UnwindPlan::Row GetExpectedRow2() {
 
 void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
                                        llvm::StringRef symbol) {
-  std::string yaml = GetInputFilePath("basic-call-frame-info.yaml");
-  llvm::SmallString<128> obj;
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x0000000000000260
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000260
+    AddressAlign:    0x0000000000000010
+    Content:         554889E5897DFC8B45FC5DC30F1F4000554889E5897DFC8B45FC5DC30F1F4000554889E5897DFC8B45FC5DC3
+#0000000000000260 <eh_frame>:
+# 260:	55                   	push   %rbp
+# 261:	48 89 e5             	mov    %rsp,%rbp
+# 264:	89 7d fc             	mov    %edi,-0x4(%rbp)
+# 267:	8b 45 fc             	mov    -0x4(%rbp),%eax
+# 26a:	5d                   	pop    %rbp
+# 26b:	c3                   	retq
+# 26c:	0f 1f 40 00          	nopl   0x0(%rax)
+#
+#0000000000000270 <debug_frame3>:
+# 270:	55                   	push   %rbp
+# 271:	48 89 e5             	mov    %rsp,%rbp
+# 274:	89 7d fc             	mov    %edi,-0x4(%rbp)
+# 277:	8b 45 fc             	mov    -0x4(%rbp),%eax
+# 27a:	5d                   	pop    %rbp
+# 27b:	c3                   	retq
+# 27c:	0f 1f 40 00          	nopl   0x0(%rax)
+#
+#0000000000000280 <debug_frame4>:
+# 280:	55                   	push   %rbp
+# 281:	48 89 e5             	mov    %rsp,%rbp
+# 284:	89 7d fc             	mov    %edi,-0x4(%rbp)
+# 287:	8b 45 fc             	mov    -0x4(%rbp),%eax
+# 28a:	5d                   	pop    %rbp
+# 28b:	c3                   	retq
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000290
+    AddressAlign:    0x0000000000000008
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000B0FFFFFF0C00000000410E108602430D0600000000000000
+#00000000 0000000000000014 00000000 CIE
+#  Version:               1
+#  Augmentation:          "zR"
+#  Code alignment factor: 1
+#  Data alignment factor: -8
+#  Return address column: 16
+#  Augmentation data:     1b
+#
+#  DW_CFA_def_cfa: r7 (rsp) ofs 8
+#  DW_CFA_offset: r16 (rip) at cfa-8
+#  DW_CFA_nop
+#  DW_CFA_nop
+#
+#00000018 000000000000001c 0000001c FDE cie=00000000 pc=ffffffffffffffd0..ffffffffffffffdc
+#  DW_CFA_advance_loc: 1 to ffffffffffffffd1
+#  DW_CFA_def_cfa_offset: 16
+#  DW_CFA_offset: r6 (rbp) at cfa-16
+#  DW_CFA_advance_loc: 3 to ffffffffffffffd4
+#  DW_CFA_def_cfa_register: r6 (rbp)
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000008
+    Content:         14000000FFFFFFFF03000178100C070890010000000000001C0000000000000070020000000000000C00000000000000410E108602430D0614000000FFFFFFFF040008000178100C07089001000000001C0000003800000080020000000000000C00000000000000410E108602430D06
+#00000000 0000000000000014 ffffffff CIE
+#  Version:               3
+#  Augmentation:          ""
+#  Code alignment factor: 1
+#  Data alignment factor: -8
+#  Return address column: 16
+#
+#  DW_CFA_def_cfa: r7 (rsp) ofs 8
+#  DW_CFA_offset: r16 (rip) at cfa-8
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#
+#00000018 000000000000001c 00000000 FDE cie=00000000 pc=0000000000000270..000000000000027c
+#  DW_CFA_advance_loc: 1 to 0000000000000271
+#  DW_CFA_def_cfa_offset: 16
+#  DW_CFA_offset: r6 (rbp) at cfa-16
+#  DW_CFA_advance_loc: 3 to 0000000000000274
+#  DW_CFA_def_cfa_register: r6 (rbp)
+#
+#00000038 0000000000000014 ffffffff CIE
+#  Version:               4
+#  Augmentation:          ""
+#  Pointer Size:          8
+#  Segment Size:          0
+#  Code alignment factor: 1
+#  Data alignment factor: -8
+#  Return address column: 16
+#
+#  DW_CFA_def_cfa: r7 (rsp) ofs 8
+#  DW_CFA_offset: r16 (rip) at cfa-8
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#  DW_CFA_nop
+#
+#00000050 000000000000001c 00000038 FDE cie=00000038 pc=0000000000000280..000000000000028c
+#  DW_CFA_advance_loc: 1 to 0000000000000281
+#  DW_CFA_def_cfa_offset: 16
+#  DW_CFA_offset: r6 (rbp) at cfa-16
+#  DW_CFA_advance_loc: 3 to 0000000000000284
+#  DW_CFA_def_cfa_register: r6 (rbp)
+Symbols:
+  - Name:            eh_frame
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000260
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+  - Name:            debug_frame3
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000270
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+  - Name:            debug_frame4
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000000280
+    Size:            0x000000000000000C
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
-      "basic-call-frame-info-%%%%%%", "obj", obj));
-  llvm::FileRemover obj_remover(obj);
-
-  llvm::StringRef args[] = {YAML2OBJ, yaml};
-  llvm::StringRef obj_ref = obj;
-  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
-                                                       llvm::None};
-  ASSERT_EQ(0,
-            llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects));
-
-  uint64_t size;
-  ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
-  ASSERT_GT(size, 0u);
-
-  auto module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(obj)));
+  auto module_sp =
+      std::make_shared<Module>(ModuleSpec(FileSpec(ExpectedFile->name())));
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 

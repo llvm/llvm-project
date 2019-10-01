@@ -24,7 +24,6 @@ class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(compiler="swiftc", compiler_version=['<', '5.0'])
-    @add_test_categories(["swiftpr", "swift-history"])
     def test_simple(self):
         if 'SWIFTC' in os.environ:
             compiler = os.environ['SWIFTC']
@@ -34,7 +33,6 @@ class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
         if version < '5.0':
             self.skipTest('Swift compiler predates stable ABI')
         self.build()
-        self.expect("log enable lldb types break")
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
         # FIXME: Removing the next line breaks subsequent expressions

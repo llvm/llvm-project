@@ -302,9 +302,7 @@ public:
 
   ~RenderScriptRuntime() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -333,8 +331,6 @@ public:
 
   static void ModulesDidLoad(const lldb::ProcessSP &process_sp,
                              const ModuleList &module_list);
-
-  bool IsVTableName(const char *name) override;
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
@@ -406,9 +402,7 @@ public:
     return false;
   }
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

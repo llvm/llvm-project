@@ -1,6 +1,5 @@
 import os
 import os.path
-import subprocess
 import threading
 import socket
 import lldb
@@ -103,6 +102,8 @@ class MockGDBServerResponder:
             return self.interrupt()
         if packet == "c":
             return self.cont()
+        if packet.startswith("vCont;c"):
+            return self.vCont(packet)
         if packet[0] == "g":
             return self.readRegisters()
         if packet[0] == "G":
@@ -168,6 +169,9 @@ class MockGDBServerResponder:
     def cont(self):
         raise self.UnexpectedPacketException()
 
+    def vCont(self, packet):
+        raise self.UnexpectedPacketException()
+    
     def readRegisters(self):
         return "00000000" * self.registerCount
 

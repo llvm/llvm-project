@@ -20,3 +20,6 @@ out_of_tree_debugserver = False
 
 # path to the lldb command line executable tool
 lldbExec = None
+
+# Environment variables for the inferior
+inferior_env = None

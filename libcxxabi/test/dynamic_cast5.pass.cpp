@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
-#include "support/timer.hpp"
+#include "support/timer.h"
 
 // This test explicitly tests dynamic cast with types that have inaccessible
 // bases.

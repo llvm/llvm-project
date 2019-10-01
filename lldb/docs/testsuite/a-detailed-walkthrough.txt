@@ -123,7 +123,7 @@ And the test/plugins/darwin.py provides the implementation for all three build
 methods using the makefile mechanism.  We envision that linux plugin can use a
 similar approach to accomplish the task of building the binaries.
 
-Mac OS X provides an additional way to manipulate archived DWARF debug symbol
+macOS provides an additional way to manipulate archived DWARF debug symbol
 files and produces dSYM files.  The buildDsym() instance method is used by the
 test method to build the binary with dsym info.  For an example of this,
 see test/array_types/TestArrayTypes.py:

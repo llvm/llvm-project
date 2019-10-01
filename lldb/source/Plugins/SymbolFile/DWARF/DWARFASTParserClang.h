@@ -21,11 +21,12 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 
+#include <vector>
+
 namespace lldb_private {
 class CompileUnit;
 }
 class DWARFDebugInfoEntry;
-class DWARFDIECollection;
 class SymbolFileDWARF;
 
 class DWARFASTParserClang : public DWARFASTParser {
@@ -80,19 +81,17 @@ protected:
           &template_param_infos);
 
   bool ParseChildMembers(
-      const lldb_private::SymbolContext &sc, const DWARFDIE &die,
-      lldb_private::CompilerType &class_compiler_type,
+      const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       const lldb::LanguageType class_language,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<int> &member_accessibilities,
-      DWARFDIECollection &member_function_dies,
+      std::vector<DWARFDIE> &member_function_dies,
       DelayedPropertyList &delayed_properties,
       lldb::AccessType &default_accessibility, bool &is_a_class,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
-  ParseChildParameters(lldb_private::CompileUnit &comp_unit,
-                       clang::DeclContext *containing_decl_ctx,
+  ParseChildParameters(clang::DeclContext *containing_decl_ctx,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
                        bool &has_template_params,
@@ -100,8 +99,7 @@ protected:
                        std::vector<clang::ParmVarDecl *> &function_param_decls,
                        unsigned &type_quals);
 
-  size_t ParseChildEnumerators(const lldb_private::SymbolContext &sc,
-                               lldb_private::CompilerType &compiler_type,
+  size_t ParseChildEnumerators(lldb_private::CompilerType &compiler_type,
                                bool is_signed, uint32_t enumerator_byte_size,
                                const DWARFDIE &parent_die);
 
@@ -117,7 +115,7 @@ protected:
   bool CopyUniqueClassMethodTypes(const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,
                                   lldb_private::Type *class_type,
-                                  DWARFDIECollection &failures);
+                                  std::vector<DWARFDIE> &failures);
 
   clang::DeclContext *GetCachedClangDeclContextForDIE(const DWARFDIE &die);
 
@@ -127,10 +125,8 @@ protected:
 
   lldb::TypeSP ParseTypeFromDWO(const DWARFDIE &die, lldb_private::Log *log);
 
-  //----------------------------------------------------------------------
   // Return true if this type is a declaration to a type in an external
   // module.
-  //----------------------------------------------------------------------
   lldb::ModuleSP GetModuleForType(const DWARFDIE &die);
 
   typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;

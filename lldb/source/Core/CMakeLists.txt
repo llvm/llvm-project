@@ -1,3 +1,11 @@
+lldb_tablegen(CoreProperties.inc -gen-lldb-property-defs
+  SOURCE CoreProperties.td
+  TARGET LLDBCorePropertiesGen)
+
+lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE CoreProperties.td
+  TARGET LLDBCorePropertiesEnumGen)
+
 set(LLDB_CURSES_LIBS)
 set(LLDB_LIBEDIT_LIBS)
 
@@ -67,16 +75,18 @@ add_lldb_library(lldbCore
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginProcessUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
 
   LINK_COMPONENTS
-    BinaryFormat
     Support
     Demangle
   )
+
+add_dependencies(lldbCore
+  LLDBCorePropertiesGen
+  LLDBCorePropertiesEnumGen)
 
 # Needed to properly resolve references in a debug build.
 # TODO: Remove once we have better layering

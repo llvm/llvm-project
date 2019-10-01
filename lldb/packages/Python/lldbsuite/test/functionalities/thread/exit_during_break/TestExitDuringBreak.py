@@ -5,8 +5,6 @@ Test number of threads.
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -23,6 +21,7 @@ class ExitDuringBreakpointTestCase(TestBase):
         # Find the line number for our breakpoint.
         self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
 
+    @expectedFailureNetBSD
     def test(self):
         """Test thread exit during breakpoint handling."""
         self.build(dictionary=self.getBuildFlags())

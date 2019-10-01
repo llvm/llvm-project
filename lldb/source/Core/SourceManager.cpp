@@ -49,9 +49,7 @@ using namespace lldb_private;
 
 static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
-//----------------------------------------------------------------------
 // SourceManager constructor
-//----------------------------------------------------------------------
 SourceManager::SourceManager(const TargetSP &target_sp)
     : m_last_file_sp(), m_last_line(0), m_last_count(0), m_default_set(false),
       m_target_wp(target_sp),
@@ -61,9 +59,7 @@ SourceManager::SourceManager(const DebuggerSP &debugger_sp)
     : m_last_file_sp(), m_last_line(0), m_last_count(0), m_default_set(false),
       m_target_wp(), m_debugger_wp(debugger_sp) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SourceManager::~SourceManager() {}
 
 SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
@@ -438,7 +434,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         if (num_matches != 0) {
           if (num_matches > 1) {
             SymbolContext sc;
-            FileSpec *test_cu_spec = NULL;
+            FileSpec *test_cu_spec = nullptr;
 
             for (unsigned i = 0; i < num_matches; i++) {
               sc_list.GetContextAtIndex(i, sc);
@@ -500,12 +496,12 @@ uint32_t SourceManager::File::GetNumLines() {
 
 const char *SourceManager::File::PeekLineData(uint32_t line) {
   if (!LineIsValid(line))
-    return NULL;
+    return nullptr;
 
   size_t line_offset = GetLineOffset(line);
   if (line_offset < m_data_sp->GetByteSize())
     return (const char *)m_data_sp->GetBytes() + line_offset;
-  return NULL;
+  return nullptr;
 }
 
 uint32_t SourceManager::File::GetLineLength(uint32_t line,
@@ -660,7 +656,7 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
       return true;
 
     if (m_offsets.empty()) {
-      if (m_data_sp.get() == NULL)
+      if (m_data_sp.get() == nullptr)
         return false;
 
       const char *start = (char *)m_data_sp->GetBytes();

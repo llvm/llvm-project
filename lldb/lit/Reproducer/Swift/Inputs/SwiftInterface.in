@@ -1,0 +1,10 @@
+settings set symbols.swift-module-loading-mode prefer-parseable
+b Main.swift:8
+run
+expr let x: OtherType = testValue
+expr y.magnitudeSquared
+expr MyPoint(x: 1, y: 2).magnitudeSquared
+expr import AA
+cont
+reproducer status
+reproducer generate

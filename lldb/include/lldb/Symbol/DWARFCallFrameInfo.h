@@ -13,12 +13,11 @@
 #include <mutex>
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Utility/Flags.h"
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/Flags.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/VMRange.h"
 #include "lldb/lldb-private.h"
 
@@ -44,13 +43,18 @@ public:
   // address.
   bool GetAddressRange(Address addr, AddressRange &range);
 
-  // Return an UnwindPlan based on the call frame information encoded in the
-  // FDE of this DWARFCallFrameInfo section.
-  bool GetUnwindPlan(Address addr, UnwindPlan &unwind_plan);
+  /// Return an UnwindPlan based on the call frame information encoded in the
+  /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid
+  /// (at least) for the given address.
+  bool GetUnwindPlan(const Address &addr, UnwindPlan &unwind_plan);
+
+  /// Return an UnwindPlan based on the call frame information encoded in the
+  /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid
+  /// (at least) for some address in the given range.
+  bool GetUnwindPlan(const AddressRange &range, UnwindPlan &unwind_plan);
 
   typedef RangeVector<lldb::addr_t, uint32_t> FunctionAddressAndSizeVector;
 
-  //------------------------------------------------------------------
   // Build a vector of file address and size for all functions in this Module
   // based on the eh_frame FDE entries.
   //
@@ -60,7 +64,7 @@ public:
   // functions in the Module.  But the eh_frame can help to give the addresses
   // of these stripped symbols, at least.
   //
-  // @param[out] function_info
+  // \param[out] function_info
   //      A vector provided by the caller is filled out.  May be empty if no
   //      FDEs/no eh_frame
   //      is present in this Module.
@@ -117,8 +121,8 @@ private:
 
   bool IsEHFrame() const;
 
-  bool GetFDEEntryByFileAddress(lldb::addr_t file_offset,
-                                FDEEntryMap::Entry &fde_entry);
+  llvm::Optional<FDEEntryMap::Entry>
+  GetFirstFDEEntryInRange(const AddressRange &range);
 
   void GetFDEIndex();
 

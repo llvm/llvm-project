@@ -35,7 +35,7 @@ public:
 
   lldb::process_t GetSystemHandle() const { return m_process; }
 
-  virtual HostThread
+  virtual llvm::Expected<HostThread>
   StartMonitoring(const Host::MonitorChildProcessCallback &callback,
                   bool monitor_signals) = 0;
 

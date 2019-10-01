@@ -14,7 +14,7 @@ namespace wasm {
 
 class InputChunk;
 
-void scanRelocations(InputChunk *Chunk);
+void scanRelocations(InputChunk *chunk);
 
 } // namespace wasm
 } // namespace lld

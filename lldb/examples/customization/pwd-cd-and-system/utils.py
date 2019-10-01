@@ -1,4 +1,5 @@
 """Utility for changing directories and execution of commands in a subshell."""
+from __future__ import print_function
 
 import os
 import shlex
@@ -29,14 +30,14 @@ def chdir(debugger, args, result, dict):
     elif new_dir == '-':
         if not Holder.prev_dir():
             # Bad directory, not changing.
-            print "bad directory, not changing"
+            print("bad directory, not changing")
             return
         else:
             new_dir = Holder.prev_dir()
 
     Holder.swap(os.getcwd())
     os.chdir(new_dir)
-    print "Current working directory: %s" % os.getcwd()
+    print("Current working directory: %s" % os.getcwd())
 
 
 def system(debugger, command_line, result, dict):
@@ -49,10 +50,10 @@ def system(debugger, command_line, result, dict):
     output, error = process.communicate()
     retcode = process.poll()
     if output and error:
-        print "stdout=>\n", output
-        print "stderr=>\n", error
+        print("stdout=>\n", output)
+        print("stderr=>\n", error)
     elif output:
-        print output
+        print(output)
     elif error:
-        print error
-    print "retcode:", retcode
+        print(error)
+    print("retcode:", retcode)

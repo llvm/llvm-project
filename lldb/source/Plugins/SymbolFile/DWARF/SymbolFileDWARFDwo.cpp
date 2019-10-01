@@ -12,35 +12,32 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "llvm/Support/Casting.h"
 
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
+#include "DWARFUnit.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
-                                       DWARFUnit *dwarf_cu)
-    : SymbolFileDWARF(objfile.get()), m_obj_file_sp(objfile),
+                                       DWARFCompileUnit &dwarf_cu)
+    : SymbolFileDWARF(objfile, objfile->GetSectionList(
+                                   /*update_module_section_list*/ false)),
       m_base_dwarf_cu(dwarf_cu) {
-  SetID(((lldb::user_id_t)dwarf_cu->GetOffset()) << 32);
+  SetID(((lldb::user_id_t)dwarf_cu.GetID()) << 32);
 }
 
 void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
                                          DWARFDataExtractor &data) {
   const SectionList *section_list =
-      m_obj_file->GetSectionList(false /* update_module_section_list */);
+      m_objfile_sp->GetSectionList(false /* update_module_section_list */);
   if (section_list) {
     SectionSP section_sp(section_list->FindSectionByType(sect_type, true));
     if (section_sp) {
-      // See if we memory mapped the DWARF segment?
-      if (m_dwarf_data.GetByteSize()) {
-        data.SetData(m_dwarf_data, section_sp->GetOffset(),
-                     section_sp->GetFileSize());
-        return;
-      }
 
-      if (m_obj_file->ReadSectionData(section_sp.get(), data) != 0)
+      if (m_objfile_sp->ReadSectionData(section_sp.get(), data) != 0)
         return;
 
       data.Clear();
@@ -51,20 +48,41 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
 }
 
 lldb::CompUnitSP
-SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
-                                     uint32_t cu_idx) {
-  assert(GetCompileUnit() == dwarf_cu && "SymbolFileDWARFDwo::ParseCompileUnit "
-                                         "called with incompatible compile "
-                                         "unit");
-  return GetBaseSymbolFile()->ParseCompileUnit(m_base_dwarf_cu, UINT32_MAX);
+SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
+  assert(GetCompileUnit() == &dwarf_cu &&
+         "SymbolFileDWARFDwo::ParseCompileUnit called with incompatible "
+         "compile unit");
+  return GetBaseSymbolFile().ParseCompileUnit(m_base_dwarf_cu);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
-  // Only dwo files with 1 compile unit is supported
-  if (GetNumCompileUnits() == 1)
-    return DebugInfo()->GetCompileUnitAtIndex(0);
-  else
+DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
+  if (!m_cu)
+    m_cu = ComputeCompileUnit();
+  return m_cu;
+}
+
+DWARFCompileUnit *SymbolFileDWARFDwo::ComputeCompileUnit() {
+  DWARFDebugInfo *debug_info = DebugInfo();
+  if (!debug_info)
     return nullptr;
+
+  // Right now we only support dwo files with one compile unit. If we don't have
+  // type units, we can just check for the unit count.
+  if (!debug_info->ContainsTypeUnits() && debug_info->GetNumUnits() == 1)
+    return llvm::cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(0));
+
+  // Otherwise, we have to run through all units, and find the compile unit that
+  // way.
+  DWARFCompileUnit *cu = nullptr;
+  for (size_t i = 0; i < debug_info->GetNumUnits(); ++i) {
+    if (auto *candidate =
+            llvm::dyn_cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(i))) {
+      if (cu)
+        return nullptr; // More that one CU found.
+      cu = candidate;
+    }
+  }
+  return cu;
 }
 
 DWARFUnit *
@@ -73,83 +91,48 @@ SymbolFileDWARFDwo::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 }
 
 SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
-  return GetBaseSymbolFile()->GetDIEToType();
+  return GetBaseSymbolFile().GetDIEToType();
 }
 
 SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
-  return GetBaseSymbolFile()->GetDIEToVariable();
+  return GetBaseSymbolFile().GetDIEToVariable();
 }
 
 SymbolFileDWARF::DIEToClangType &
 SymbolFileDWARFDwo::GetForwardDeclDieToClangType() {
-  return GetBaseSymbolFile()->GetForwardDeclDieToClangType();
+  return GetBaseSymbolFile().GetForwardDeclDieToClangType();
 }
 
 SymbolFileDWARF::ClangTypeToDIE &
 SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
-  return GetBaseSymbolFile()->GetForwardDeclClangTypeToDie();
+  return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
 }
 
 size_t SymbolFileDWARFDwo::GetObjCMethodDIEOffsets(
     lldb_private::ConstString class_name, DIEArray &method_die_offsets) {
-  return GetBaseSymbolFile()->GetObjCMethodDIEOffsets(
-      class_name, method_die_offsets);
+  return GetBaseSymbolFile().GetObjCMethodDIEOffsets(class_name,
+                                                     method_die_offsets);
 }
 
 UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
-  return GetBaseSymbolFile()->GetUniqueDWARFASTTypeMap();
+  return GetBaseSymbolFile().GetUniqueDWARFASTTypeMap();
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(
     const DWARFDeclContext &die_decl_ctx) {
-  return GetBaseSymbolFile()->FindDefinitionTypeForDWARFDeclContext(
+  return GetBaseSymbolFile().FindDefinitionTypeForDWARFDeclContext(
       die_decl_ctx);
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
     const DWARFDIE &die, lldb_private::ConstString type_name,
     bool must_be_implementation) {
-  return GetBaseSymbolFile()->FindCompleteObjCDefinitionTypeForDIE(
+  return GetBaseSymbolFile().FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
-  return m_base_dwarf_cu;
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_abbrev_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugAbbrevDwo,
-                              m_data_debug_abbrev);
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_addr_data() {
-  // For single file split dwarf case (when we have .dwo sections in a .o),
-  // we do not want to use the .debug_addr section from .o file,
-  // but want to get one from the final executable.
-  // For regular split debug case, .dwo file does not contain the
-  // .debug_addr, so we would always fall back to such lookup anyways.
-  llvm::call_once(m_data_debug_addr.m_flag, [this] {
-    SymbolFileDWARF::LoadSectionData(eSectionTypeDWARFDebugAddr,
-                                     std::ref(m_data_debug_addr.m_data));
-  });
-  return m_data_debug_addr.m_data;
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_info_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugInfoDwo, m_data_debug_info);
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugStrDwo, m_data_debug_str);
-}
-
-const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_offsets_data() {
-  return GetCachedSectionData(eSectionTypeDWARFDebugStrOffsetsDwo,
-                              m_data_debug_str_offsets);
-}
-
-SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {
-  return m_base_dwarf_cu->GetSymbolFileDWARF();
+SymbolFileDWARF &SymbolFileDWARFDwo::GetBaseSymbolFile() {
+  return m_base_dwarf_cu.GetSymbolFileDWARF();
 }
 
 DWARFExpression::LocationListFormat
@@ -157,13 +140,14 @@ SymbolFileDWARFDwo::GetLocationListFormat() const {
   return DWARFExpression::SplitDwarfLocationList;
 }
 
-TypeSystem *
+llvm::Expected<TypeSystem &>
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
-  return GetBaseSymbolFile()->GetTypeSystemForLanguage(language);
+  return GetBaseSymbolFile().GetTypeSystemForLanguage(language);
 }
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(m_base_dwarf_cu->GetOffset() == die_ref.cu_offset);
-  return DebugInfo()->GetDIEForDIEOffset(die_ref.die_offset);
+  if (*die_ref.dwo_num() == GetDwoNum())
+    return DebugInfo()->GetDIE(die_ref);
+  return GetBaseSymbolFile().GetDIE(die_ref);
 }

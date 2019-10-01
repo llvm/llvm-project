@@ -16,16 +16,12 @@ namespace lldb_private {
 
 class Stoppoint {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   Stoppoint();
 
   virtual ~Stoppoint();
 
-  //------------------------------------------------------------------
   // Methods
-  //------------------------------------------------------------------
   virtual void Dump(Stream *) = 0;
 
   virtual bool IsEnabled() = 0;
@@ -40,9 +36,7 @@ protected:
   lldb::break_id_t m_bid;
 
 private:
-  //------------------------------------------------------------------
   // For Stoppoint only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(Stoppoint);
 };
 

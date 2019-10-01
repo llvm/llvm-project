@@ -17,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/raw_ostream.h"
 
 #ifndef LLDB_DISABLE_POSIX
@@ -117,6 +118,14 @@ std::string TCPSocket::GetRemoteIPAddress() const {
   return "";
 }
 
+std::string TCPSocket::GetRemoteConnectionURI() const {
+  if (m_socket != kInvalidSocketValue) {
+    return llvm::formatv("connect://[{0}]:{1}", GetRemoteIPAddress(),
+                         GetRemotePortNumber());
+  }
+  return "";
+}
+
 Status TCPSocket::CreateSocket(int domain) {
   Status error;
   if (IsValid())
@@ -131,8 +140,7 @@ Status TCPSocket::CreateSocket(int domain) {
 Status TCPSocket::Connect(llvm::StringRef name) {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
-  if (log)
-    log->Printf("TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
+  LLDB_LOGF(log, "TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
   Status error;
   std::string host_str;
@@ -142,7 +150,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
     return error;
 
   auto addresses = lldb_private::SocketAddress::GetAddressInfo(
-      host_str.c_str(), NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+      host_str.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (auto address : addresses) {
     error = CreateSocket(address.GetFamily());
     if (error.Fail())
@@ -150,8 +158,8 @@ Status TCPSocket::Connect(llvm::StringRef name) {
 
     address.SetPort(port);
 
-    if (-1 == ::connect(GetNativeSocket(), &address.sockaddr(),
-                        address.GetLength())) {
+    if (-1 == llvm::sys::RetryAfterSignal(-1, ::connect,
+          GetNativeSocket(), &address.sockaddr(), address.GetLength())) {
       CLOSE_SOCKET(GetNativeSocket());
       continue;
     }
@@ -168,8 +176,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
 
 Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("TCPSocket::%s (%s)", __FUNCTION__, name.data());
+  LLDB_LOGF(log, "TCPSocket::%s (%s)", __FUNCTION__, name.data());
 
   Status error;
   std::string host_str;
@@ -181,7 +188,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   if (host_str == "*")
     host_str = "0.0.0.0";
   auto addresses = lldb_private::SocketAddress::GetAddressInfo(
-      host_str.c_str(), NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+      host_str.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (auto address : addresses) {
     int fd = Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP,
                                   m_child_processes_inherit, error);

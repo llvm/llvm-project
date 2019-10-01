@@ -8,12 +8,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 # System modules
-import collections
 import errno
 import os
 import re
 import sys
-import time
 
 # Third-party modules
 from six import StringIO as SixStringIO
@@ -738,7 +736,7 @@ def is_thread_crashed(test, thread):
         return thread.GetStopReason() == lldb.eStopReasonSignal and thread.GetStopReasonDataAtIndex(
             0) == thread.GetProcess().GetUnixSignals().GetSignalNumberFromName("SIGSEGV")
     elif test.getPlatform() == "windows":
-        return "Exception 0xc0000005" in thread.GetStopDescription(100)
+        return "Exception 0xc0000005" in thread.GetStopDescription(200)
     else:
         return "invalid address" in thread.GetStopDescription(100)
 

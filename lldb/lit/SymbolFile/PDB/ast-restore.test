@@ -1,6 +1,7 @@
 REQUIRES: system-windows, msvc
 RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/AstRestoreTest.cpp
-RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s

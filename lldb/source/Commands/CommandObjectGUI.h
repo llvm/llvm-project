@@ -13,9 +13,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectGUI
-//-------------------------------------------------------------------------
 
 class CommandObjectGUI : public CommandObjectParsed {
 public:

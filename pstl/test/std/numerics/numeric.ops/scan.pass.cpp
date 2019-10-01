@@ -156,8 +156,7 @@ struct test_scan_with_binary_op
     template <typename Policy, typename Iterator1, typename Iterator2, typename Iterator3, typename Size, typename T,
               typename BinaryOp>
     typename std::enable_if<TestUtils::isReverse<Iterator1>::value, void>::type
-    operator()(Policy&&, Iterator1, Iterator1, Iterator2, Iterator2,
-               Iterator3, Iterator3, Size, T, BinaryOp, T)
+    operator()(Policy&&, Iterator1, Iterator1, Iterator2, Iterator2, Iterator3, Iterator3, Size, T, BinaryOp, T)
     {
     }
 };
@@ -180,7 +179,7 @@ test_matrix(Out init, BinaryOp binary_op, Out trash)
     }
 }
 
-int32_t
+int
 main()
 {
     for (int32_t mode = 0; mode < 2; ++mode)

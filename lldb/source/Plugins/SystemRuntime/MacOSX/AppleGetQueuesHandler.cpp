@@ -158,23 +158,23 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
     // First stage is to make the ClangUtility to hold our injected function:
 
     if (!m_get_queues_impl_code_up) {
-      if (g_get_current_queues_function_code != NULL) {
+      if (g_get_current_queues_function_code != nullptr) {
         Status error;
         m_get_queues_impl_code_up.reset(
             exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
                 g_get_current_queues_function_code, eLanguageTypeC,
                 g_get_current_queues_function_name, error));
         if (error.Fail()) {
-          if (log)
-            log->Printf(
-                "Failed to get UtilityFunction for queues introspection: %s.",
-                error.AsCString());
+          LLDB_LOGF(
+              log,
+              "Failed to get UtilityFunction for queues introspection: %s.",
+              error.AsCString());
           return args_addr;
         }
 
         if (!m_get_queues_impl_code_up->Install(diagnostics, exe_ctx)) {
           if (log) {
-            log->Printf("Failed to install queues introspection");
+            LLDB_LOGF(log, "Failed to install queues introspection");
             diagnostics.Dump(log);
           }
           m_get_queues_impl_code_up.reset();
@@ -182,7 +182,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
         }
       } else {
         if (log) {
-          log->Printf("No queues introspection code found.");
+          LLDB_LOGF(log, "No queues introspection code found.");
           diagnostics.Dump(log);
         }
         return LLDB_INVALID_ADDRESS;
@@ -198,10 +198,9 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
     get_queues_caller = m_get_queues_impl_code_up->MakeFunctionCaller(
         get_queues_return_type, get_queues_arglist, thread_sp, error);
     if (error.Fail() || get_queues_caller == nullptr) {
-      if (log)
-        log->Printf(
-            "Could not get function caller for get-queues function: %s.",
-            error.AsCString());
+      LLDB_LOGF(log,
+                "Could not get function caller for get-queues function: %s.",
+                error.AsCString());
       return args_addr;
     }
   }
@@ -216,7 +215,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
   if (!get_queues_caller->WriteFunctionArguments(
           exe_ctx, args_addr, get_queues_arglist, diagnostics)) {
     if (log) {
-      log->Printf("Error writing get-queues function arguments.");
+      LLDB_LOGF(log, "Error writing get-queues function arguments.");
       diagnostics.Dump(log);
     }
     return args_addr;
@@ -243,9 +242,8 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   error.Clear();
 
   if (!thread.SafeToCallFunctions()) {
-    if (log)
-      log->Printf("Not safe to call functions on thread 0x%" PRIx64,
-                  thread.GetID());
+    LLDB_LOGF(log, "Not safe to call functions on thread 0x%" PRIx64,
+              thread.GetID());
     error.SetErrorString("Not safe to call functions on this thread.");
     return return_value;
   }
@@ -299,9 +297,8 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
     addr_t bufaddr = process_sp->AllocateMemory(
         32, ePermissionsReadable | ePermissionsWritable, error);
     if (!error.Success() || bufaddr == LLDB_INVALID_ADDRESS) {
-      if (log)
-        log->Printf("Failed to allocate memory for return buffer for get "
-                    "current queues func call");
+      LLDB_LOGF(log, "Failed to allocate memory for return buffer for get "
+                     "current queues func call");
       return return_value;
     }
     m_get_queues_return_buffer_addr = bufaddr;
@@ -335,7 +332,7 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   FunctionCaller *get_queues_caller =
       m_get_queues_impl_code_up->GetFunctionCaller();
 
-  if (get_queues_caller == NULL) {
+  if (get_queues_caller == nullptr) {
     error.SetErrorString(
         "Unable to get caller for call __introspection_dispatch_get_queues");
     return return_value;
@@ -347,7 +344,11 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetStopOthers(true);
+#if __has_feature(address_sanitizer)
   options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
+#else
+  options.SetTimeout(std::chrono::milliseconds(500));
+#endif
   options.SetTryAllThreads(false);
   options.SetIsForUtilityExpr(true);
   thread.CalculateExecutionContext(exe_ctx);
@@ -357,10 +358,10 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   func_call_ret = get_queues_caller->ExecuteFunction(
       exe_ctx, &args_addr, options, diagnostics, results);
   if (func_call_ret != eExpressionCompleted || !error.Success()) {
-    if (log)
-      log->Printf("Unable to call introspection_get_dispatch_queues(), got "
-                  "ExpressionResults %d, error contains %s",
-                  func_call_ret, error.AsCString(""));
+    LLDB_LOGF(log,
+              "Unable to call introspection_get_dispatch_queues(), got "
+              "ExpressionResults %d, error contains %s",
+              func_call_ret, error.AsCString(""));
     error.SetErrorString("Unable to call introspection_get_dispatch_queues() "
                          "for list of queues");
     return return_value;
@@ -389,14 +390,13 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
     return return_value;
   }
 
-  if (log)
-    log->Printf("AppleGetQueuesHandler called "
-                "__introspection_dispatch_get_queues (page_to_free == "
-                "0x%" PRIx64 ", size = %" PRId64
-                "), returned page is at 0x%" PRIx64 ", size %" PRId64
-                ", count = %" PRId64,
-                page_to_free, page_to_free_size, return_value.queues_buffer_ptr,
-                return_value.queues_buffer_size, return_value.count);
+  LLDB_LOGF(log,
+            "AppleGetQueuesHandler called "
+            "__introspection_dispatch_get_queues (page_to_free == "
+            "0x%" PRIx64 ", size = %" PRId64 "), returned page is at 0x%" PRIx64
+            ", size %" PRId64 ", count = %" PRId64,
+            page_to_free, page_to_free_size, return_value.queues_buffer_ptr,
+            return_value.queues_buffer_size, return_value.count);
 
   return return_value;
 }

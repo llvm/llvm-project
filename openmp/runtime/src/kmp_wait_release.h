@@ -140,8 +140,11 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
 #endif
     if (!KMP_MASTER_TID(ds_tid)) {
       if (ompt_enabled.ompt_callback_implicit_task) {
+        int flags = this_thr->th.ompt_thread_info.parallel_flags;
+        flags = (flags & ompt_parallel_league) ? ompt_task_initial
+                                               : ompt_task_implicit;
         ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-            ompt_scope_end, NULL, tId, 0, ds_tid, ompt_task_implicit);
+            ompt_scope_end, NULL, tId, 0, ds_tid, flags);
       }
       // return to idle state
       this_thr->th.ompt_thread_info.state = ompt_state_idle;
@@ -274,19 +277,13 @@ final_spin=FALSE)
 
   KMP_INIT_YIELD(spins); // Setup for waiting
 
-  if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME
-#if OMP_50_ENABLED
-      || __kmp_pause_status == kmp_soft_paused
-#endif
-      ) {
+  if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME ||
+      __kmp_pause_status == kmp_soft_paused) {
 #if KMP_USE_MONITOR
 // The worker threads cannot rely on the team struct existing at this point.
 // Use the bt values cached in the thread struct instead.
 #ifdef KMP_ADJUST_BLOCKTIME
-    if (
-#if OMP_50_ENABLED
-        __kmp_pause_status == kmp_soft_paused ||
-#endif
+    if (__kmp_pause_status == kmp_soft_paused ||
         (__kmp_zero_bt && !this_thr->th.th_team_bt_set))
       // Force immediate suspend if not set by user and more threads than
       // available procs
@@ -310,12 +307,10 @@ final_spin=FALSE)
                   th_gtid, __kmp_global.g.g_time.dt.t_value, hibernate,
                   hibernate - __kmp_global.g.g_time.dt.t_value));
 #else
-#if OMP_50_ENABLED
     if (__kmp_pause_status == kmp_soft_paused) {
       // Force immediate suspend
       hibernate_goal = KMP_NOW();
     } else
-#endif
       hibernate_goal = KMP_NOW() + this_thr->th.th_team_bt_intervals;
     poll_count = 0;
 #endif // KMP_USE_MONITOR
@@ -387,11 +382,8 @@ final_spin=FALSE)
     }
 
     // Don't suspend if KMP_BLOCKTIME is set to "infinite"
-    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME
-#if OMP_50_ENABLED
-        && __kmp_pause_status != kmp_soft_paused
-#endif
-        )
+    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
+        __kmp_pause_status != kmp_soft_paused)
       continue;
 
     // Don't suspend if there is a likelihood of new tasks being spawned.
@@ -411,11 +403,9 @@ final_spin=FALSE)
     if (!sleepable)
       continue;
 
-#if OMP_50_ENABLED
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
         __kmp_pause_status != kmp_soft_paused)
       continue;
-#endif
 
     KF_TRACE(50, ("__kmp_wait_sleep: T#%d suspend time reached\n", th_gtid));
 

@@ -14,8 +14,9 @@
 #include "AppleObjCTrampolineHandler.h"
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 namespace lldb_private {
 
@@ -23,9 +24,7 @@ class AppleObjCRuntime : public lldb_private::ObjCLanguageRuntime {
 public:
   ~AppleObjCRuntime() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   // Note there is no CreateInstance, Initialize & Terminate functions here,
   // because
   // you can't make an instance of this generic runtime.

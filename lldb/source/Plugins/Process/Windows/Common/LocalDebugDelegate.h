@@ -20,7 +20,6 @@ namespace lldb_private {
 class ProcessWindows;
 typedef std::shared_ptr<ProcessWindows> ProcessWindowsSP;
 
-//----------------------------------------------------------------------
 // LocalDebugDelegate
 //
 // LocalDebugDelegate creates a connection between a ProcessWindows and the
@@ -39,7 +38,6 @@ typedef std::shared_ptr<ProcessWindows> ProcessWindowsSP;
 //    a ProcessSP (which is exactly what we are trying to decouple from the
 //    driver), so this adapter serves as a way to transparently hold the
 //    ProcessSP while still keeping it decoupled from the driver.
-//----------------------------------------------------------------------
 class LocalDebugDelegate : public IDebugDelegate {
 public:
   explicit LocalDebugDelegate(lldb::ProcessWP process);

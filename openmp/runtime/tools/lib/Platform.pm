@@ -61,6 +61,8 @@ sub canon_arch($) {
             $arch = "mips64";
         } elsif ( $arch =~ m{\Amips} ) {
             $arch = "mips";
+        } elsif ( $arch =~ m{\Ariscv64} ) {
+            $arch = "riscv64";
         } else {
             $arch = undef;
         }; # if
@@ -94,6 +96,7 @@ sub canon_mic_arch($) {
         "mic" => "Intel(R) Many Integrated Core Architecture",
         "mips" => "MIPS",
         "mips64" => "MIPS64",
+        "riscv64" => "RISC-V (64-bit)",
     );
 
     sub legal_arch($) {
@@ -220,6 +223,8 @@ sub target_options() {
         $_host_arch = "mips64";
     } elsif ( $hardware_platform eq "mips" ) {
         $_host_arch = "mips";
+    } elsif ( $hardware_platform eq "riscv64" ) {
+        $_host_arch = "riscv64";
     } else {
         die "Unsupported host hardware platform: \"$hardware_platform\"; stopped";
     }; # if
@@ -409,7 +414,7 @@ the script assumes host architecture is target one.
 
 Input string is an architecture name to canonize. The function recognizes many variants, for example:
 C<32e>, C<Intel64>, C<Intel(R) 64>, etc. Returned string is a canononized architecture name,
-one of: C<32>, C<32e>, C<64>, C<arm>, C<ppc64le>, C<ppc64>, C<mic>, C<mips>, C<mips64>, or C<undef> is input string is not recognized.
+one of: C<32>, C<32e>, C<64>, C<arm>, C<ppc64le>, C<ppc64>, C<mic>, C<mips>, C<mips64>, C<riscv64> or C<undef> is input string is not recognized.
 
 =item B<legal_arch( $arch )>
 

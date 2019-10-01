@@ -38,43 +38,43 @@ using namespace lld;
 //
 // This function spawns a background thread to remove the file.
 // The calling thread returns almost immediately.
-void lld::unlinkAsync(StringRef Path) {
+void lld::unlinkAsync(StringRef path) {
 // Removing a file is async on windows.
 #if defined(_WIN32)
-  sys::fs::remove(Path);
+  sys::fs::remove(path);
 #else
-  if (!ThreadsEnabled || !sys::fs::exists(Path) ||
-      !sys::fs::is_regular_file(Path))
+  if (!threadsEnabled || !sys::fs::exists(path) ||
+      !sys::fs::is_regular_file(path))
     return;
 
   // We cannot just remove path from a different thread because we are now going
   // to create path as a new file.
   // Instead we open the file and unlink it on this thread. The unlink is fast
   // since the open fd guarantees that it is not removing the last reference.
-  int FD;
-  std::error_code EC = sys::fs::openFileForRead(Path, FD);
-  sys::fs::remove(Path);
+  int fd;
+  std::error_code ec = sys::fs::openFileForRead(path, fd);
+  sys::fs::remove(path);
 
-  if (EC)
+  if (ec)
     return;
 
   // close and therefore remove TempPath in background.
-  std::mutex M;
-  std::condition_variable CV;
-  bool Started = false;
-  std::thread([&, FD] {
+  std::mutex m;
+  std::condition_variable cv;
+  bool started = false;
+  std::thread([&, fd] {
     {
-      std::lock_guard<std::mutex> L(M);
-      Started = true;
-      CV.notify_all();
+      std::lock_guard<std::mutex> l(m);
+      started = true;
+      cv.notify_all();
     }
-    ::close(FD);
+    ::close(fd);
   }).detach();
 
   // GLIBC 2.26 and earlier have race condition that crashes an entire process
   // if the main thread calls exit(2) while other thread is starting up.
-  std::unique_lock<std::mutex> L(M);
-  CV.wait(L, [&] { return Started; });
+  std::unique_lock<std::mutex> l(m);
+  cv.wait(l, [&] { return started; });
 #endif
 }
 
@@ -90,10 +90,10 @@ void lld::unlinkAsync(StringRef Path) {
 // FileOutputBuffer doesn't touch a desitnation file until commit()
 // is called. We use that class without calling commit() to predict
 // if the given file is writable.
-std::error_code lld::tryCreateFile(StringRef Path) {
-  if (Path.empty())
+std::error_code lld::tryCreateFile(StringRef path) {
+  if (path.empty())
     return std::error_code();
-  if (Path == "-")
+  if (path == "-")
     return std::error_code();
-  return errorToErrorCode(FileOutputBuffer::create(Path, 1).takeError());
+  return errorToErrorCode(FileOutputBuffer::create(path, 1).takeError());
 }

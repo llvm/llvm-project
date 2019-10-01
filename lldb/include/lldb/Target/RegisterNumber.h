@@ -12,11 +12,9 @@
 #include "lldb/lldb-private.h"
 #include <map>
 
-//--------------------------------------------------------------------
 /// A class to represent register numbers, and able to convert between
 /// different register numbering schemes that may be used in a single
 /// debug session.
-//--------------------------------------------------------------------
 
 class RegisterNumber {
 public:

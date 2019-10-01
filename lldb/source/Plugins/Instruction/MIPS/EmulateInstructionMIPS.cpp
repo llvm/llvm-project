@@ -42,11 +42,9 @@ using namespace lldb_private;
 #define UInt(x) ((uint64_t)x)
 #define integer int64_t
 
-//----------------------------------------------------------------------
 //
 // EmulateInstructionMIPS implementation
 //
-//----------------------------------------------------------------------
 
 #ifdef __mips__
 extern "C" {
@@ -215,7 +213,7 @@ EmulateInstructionMIPS::CreateInstance(const ArchSpec &arch,
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 bool EmulateInstructionMIPS::SetTargetTriple(const ArchSpec &arch) {
@@ -677,9 +675,7 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
 EmulateInstructionMIPS::MipsOpcode *
 EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
   static EmulateInstructionMIPS::MipsOpcode g_opcodes[] = {
-      //----------------------------------------------------------------------
       // Prologue/Epilogue instructions
-      //----------------------------------------------------------------------
       {"ADDiu", &EmulateInstructionMIPS::Emulate_ADDiu,
        "ADDIU rt, rs, immediate"},
       {"SW", &EmulateInstructionMIPS::Emulate_SW, "SW rt, offset(rs)"},
@@ -688,9 +684,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       {"ADDU", &EmulateInstructionMIPS::Emulate_SUBU_ADDU, "ADDU rd, rs, rt"},
       {"LUI", &EmulateInstructionMIPS::Emulate_LUI, "LUI rt, immediate"},
 
-      //----------------------------------------------------------------------
       // MicroMIPS Prologue/Epilogue instructions
-      //----------------------------------------------------------------------
       {"ADDIUSP_MM", &EmulateInstructionMIPS::Emulate_ADDIUSP,
        "ADDIU immediate"},
       {"ADDIUS5_MM", &EmulateInstructionMIPS::Emulate_ADDIUS5,
@@ -711,10 +705,8 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
        "LWP rd,offset(base)"},
       {"JRADDIUSP", &EmulateInstructionMIPS::Emulate_JRADDIUSP,
        "JRADDIUSP immediate"},
-      //----------------------------------------------------------------------
 
       // Load/Store  instructions
-      //----------------------------------------------------------------------
       /* Following list of emulated instructions are required by implementation
          of hardware watchpoint
          for MIPS in lldb. As we just need the address accessed by instructions,
@@ -834,9 +826,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       {"SCDX", &EmulateInstructionMIPS::Emulate_LDST_Imm,
        "SCDX  rt, offset(base)"},
 
-      //----------------------------------------------------------------------
       // MicroMIPS Load/Store instructions
-      //----------------------------------------------------------------------
       {"LBU16_MM", &EmulateInstructionMIPS::Emulate_LDST_Imm,
        "LBU16 rt, decoded_offset(base)"},
       {"LHU16_MM", &EmulateInstructionMIPS::Emulate_LDST_Imm,
@@ -854,9 +844,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       {"SB16_MM", &EmulateInstructionMIPS::Emulate_LDST_Imm,
        "SB16  rt, offset(base)"},
 
-      //----------------------------------------------------------------------
       // Branch instructions
-      //----------------------------------------------------------------------
       {"BEQ", &EmulateInstructionMIPS::Emulate_BXX_3ops, "BEQ rs,rt,offset"},
       {"BNE", &EmulateInstructionMIPS::Emulate_BXX_3ops, "BNE rs,rt,offset"},
       {"BEQL", &EmulateInstructionMIPS::Emulate_BXX_3ops, "BEQL rs,rt,offset"},
@@ -948,9 +936,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       {"BNZ_V", &EmulateInstructionMIPS::Emulate_BNZV, "BNZ.V wt,s16"},
       {"BZ_V", &EmulateInstructionMIPS::Emulate_BZV, "BZ.V wt,s16"},
 
-      //----------------------------------------------------------------------
       // MicroMIPS Branch instructions
-      //----------------------------------------------------------------------
       {"B16_MM", &EmulateInstructionMIPS::Emulate_B16_MM, "B16 offset"},
       {"BEQZ16_MM", &EmulateInstructionMIPS::Emulate_Branch_MM,
        "BEQZ16 rs, offset"},
@@ -980,7 +966,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       return &g_opcodes[i];
   }
 
-  return NULL;
+  return nullptr;
 }
 
 uint32_t
@@ -1109,7 +1095,7 @@ bool EmulateInstructionMIPS::EvaluateInstruction(uint32_t evaluate_options) {
   */
   MipsOpcode *opcode_data = GetOpcodeForInstruction(op_name);
 
-  if (opcode_data == NULL)
+  if (opcode_data == nullptr)
     return false;
 
   uint64_t old_pc = 0, new_pc = 0;
@@ -1167,6 +1153,7 @@ bool EmulateInstructionMIPS::CreateFunctionEntryUnwind(
   unwind_plan.SetSourceName("EmulateInstructionMIPS");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   unwind_plan.SetReturnAddressRegister(dwarf_ra_mips);
 
   return true;
@@ -2919,7 +2906,7 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_DF(llvm::MCInst &insn,
   bool success = false, branch_hit = true;
   int32_t target = 0;
   RegisterValue reg_value;
-  const uint8_t *ptr = NULL;
+  const uint8_t *ptr = nullptr;
 
   uint32_t wt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   int32_t offset = insn.getOperand(1).getImm();

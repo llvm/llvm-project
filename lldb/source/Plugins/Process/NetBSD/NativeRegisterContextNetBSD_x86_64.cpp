@@ -20,8 +20,12 @@
 
 // clang-format off
 #include <sys/types.h>
+#include <sys/ptrace.h>
 #include <sys/sysctl.h>
+#include <sys/uio.h>
 #include <x86/cpu.h>
+#include <x86/cpu_extended_state.h>
+#include <x86/specialreg.h>
 #include <elf.h>
 #include <err.h>
 #include <stdint.h>
@@ -31,9 +35,7 @@
 using namespace lldb_private;
 using namespace lldb_private::process_netbsd;
 
-// ----------------------------------------------------------------------------
 // Private namespace.
-// ----------------------------------------------------------------------------
 
 namespace {
 // x86 64-bit general purpose registers.
@@ -92,58 +94,6 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 };
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())
-
-const int fpu_present = []() -> int {
-  int mib[2];
-  int error;
-  size_t len;
-  int val;
-
-  len = sizeof(val);
-  mib[0] = CTL_MACHDEP;
-  mib[1] = CPU_FPU_PRESENT;
-
-  error = sysctl(mib, __arraycount(mib), &val, &len, NULL, 0);
-  if (error)
-    errx(EXIT_FAILURE, "sysctl");
-
-  return val;
-}();
-
-const int osfxsr = []() -> int {
-  int mib[2];
-  int error;
-  size_t len;
-  int val;
-
-  len = sizeof(val);
-  mib[0] = CTL_MACHDEP;
-  mib[1] = CPU_OSFXSR;
-
-  error = sysctl(mib, __arraycount(mib), &val, &len, NULL, 0);
-  if (error)
-    errx(EXIT_FAILURE, "sysctl");
-
-  return val;
-}();
-
-const int fpu_save = []() -> int {
-  int mib[2];
-  int error;
-  size_t len;
-  int val;
-
-  len = sizeof(val);
-  mib[0] = CTL_MACHDEP;
-  mib[1] = CPU_FPU_SAVE;
-
-  error = sysctl(mib, __arraycount(mib), &val, &len, NULL, 0);
-  if (error)
-    errx(EXIT_FAILURE, "sysctl");
-
-  return val;
-}();
-
 } // namespace
 
 NativeRegisterContextNetBSD *
@@ -152,9 +102,7 @@ NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
   return new NativeRegisterContextNetBSD_x86_64(target_arch, native_thread);
 }
 
-// ----------------------------------------------------------------------------
 // NativeRegisterContextNetBSD_x86_64 members.
-// ----------------------------------------------------------------------------
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
@@ -201,9 +149,9 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
   if (reg_num <= k_last_gpr_x86_64)
     return GPRegSet;
   else if (reg_num <= k_last_fpr_x86_64)
-    return (fpu_present == 1 && osfxsr == 1 && fpu_save >= 1) ? FPRegSet : -1;
+    return FPRegSet;
   else if (reg_num <= k_last_avx_x86_64)
-    return -1; // AVX
+    return XStateRegSet; // AVX
   else if (reg_num <= k_last_mpxr_x86_64)
     return -1; // MPXR
   else if (reg_num <= k_last_mpxc_x86_64)
@@ -214,37 +162,46 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
     return -1;
 }
 
-int NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
+Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    ReadGPR();
-    return 0;
+    return DoRegisterSet(PT_GETREGS, &m_gpr_x86_64);
   case FPRegSet:
-    ReadFPR();
-    return 0;
+    return DoRegisterSet(PT_GETFPREGS, &m_fpr_x86_64);
   case DBRegSet:
-    ReadDBR();
-    return 0;
-  default:
-    break;
+    return DoRegisterSet(PT_GETDBREGS, &m_dbr_x86_64);
+  case XStateRegSet:
+#ifdef HAVE_XSTATE
+    {
+      struct iovec iov = {&m_xstate_x86_64, sizeof(m_xstate_x86_64)};
+      return DoRegisterSet(PT_GETXSTATE, &iov);
+    }
+#else
+    return Status("XState is not supported by the kernel");
+#endif
   }
-  return -1;
+  llvm_unreachable("NativeRegisterContextNetBSD_x86_64::ReadRegisterSet");
 }
-int NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
+
+Status NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    WriteGPR();
-    return 0;
+    return DoRegisterSet(PT_SETREGS, &m_gpr_x86_64);
   case FPRegSet:
-    WriteFPR();
-    return 0;
+    return DoRegisterSet(PT_SETFPREGS, &m_fpr_x86_64);
   case DBRegSet:
-    WriteDBR();
-    return 0;
-  default:
-    break;
+    return DoRegisterSet(PT_SETDBREGS, &m_dbr_x86_64);
+  case XStateRegSet:
+#ifdef HAVE_XSTATE
+    {
+      struct iovec iov = {&m_xstate_x86_64, sizeof(m_xstate_x86_64)};
+      return DoRegisterSet(PT_SETXSTATE, &iov);
+    }
+#else
+    return Status("XState is not supported by the kernel");
+#endif
   }
-  return -1;
+  llvm_unreachable("NativeRegisterContextNetBSD_x86_64::WriteRegisterSet");
 }
 
 Status
@@ -276,13 +233,9 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  if (ReadRegisterSet(set) != 0) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error.SetErrorStringWithFormat(
-        "reading register set for register \"%s\" failed", reg_info->name);
+  error = ReadRegisterSet(set);
+  if (error.Fail())
     return error;
-  }
 
   switch (reg) {
   case lldb_rax_x86_64:
@@ -406,7 +359,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case lldb_mm5_x86_64:
   case lldb_mm6_x86_64:
   case lldb_mm7_x86_64:
-    reg_value.SetBytes(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_mm0_x86_64],
+    reg_value.SetBytes(&m_fpr_x86_64.fxstate.fx_87_ac[reg - lldb_mm0_x86_64],
                        reg_info->byte_size, endian::InlHostByteOrder());
     break;
   case lldb_xmm0_x86_64:
@@ -427,6 +380,39 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case lldb_xmm15_x86_64:
     reg_value.SetBytes(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_xmm0_x86_64],
                        reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_ymm0_x86_64:
+  case lldb_ymm1_x86_64:
+  case lldb_ymm2_x86_64:
+  case lldb_ymm3_x86_64:
+  case lldb_ymm4_x86_64:
+  case lldb_ymm5_x86_64:
+  case lldb_ymm6_x86_64:
+  case lldb_ymm7_x86_64:
+  case lldb_ymm8_x86_64:
+  case lldb_ymm9_x86_64:
+  case lldb_ymm10_x86_64:
+  case lldb_ymm11_x86_64:
+  case lldb_ymm12_x86_64:
+  case lldb_ymm13_x86_64:
+  case lldb_ymm14_x86_64:
+  case lldb_ymm15_x86_64:
+#ifdef HAVE_XSTATE
+    if (!(m_xstate_x86_64.xs_rfbm & XCR0_SSE) ||
+        !(m_xstate_x86_64.xs_rfbm & XCR0_YMM_Hi128)) {
+      error.SetErrorStringWithFormat("register \"%s\" not supported by CPU/kernel",
+                                     reg_info->name);
+    } else {
+      uint32_t reg_index = reg - lldb_ymm0_x86_64;
+      YMMReg ymm = XStateToYMM(
+          m_xstate_x86_64.xs_fxsave.fx_xmm[reg_index].xmm_bytes,
+          m_xstate_x86_64.xs_ymm_hi128.xs_ymm[reg_index].ymm_bytes);
+      reg_value.SetBytes(ymm.bytes, reg_info->byte_size,
+                         endian::InlHostByteOrder());
+    }
+#else
+    error.SetErrorString("XState queries not supported by the kernel");
+#endif
     break;
   case lldb_dr0_x86_64:
   case lldb_dr1_x86_64:
@@ -472,13 +458,9 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     return error;
   }
 
-  if (ReadRegisterSet(set) != 0) {
-    // This is likely an internal register for lldb use only and should not be
-    // directly queried.
-    error.SetErrorStringWithFormat(
-        "reading register set for register \"%s\" failed", reg_info->name);
+  error = ReadRegisterSet(set);
+  if (error.Fail())
     return error;
-  }
 
   switch (reg) {
   case lldb_rax_x86_64:
@@ -602,7 +584,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   case lldb_mm5_x86_64:
   case lldb_mm6_x86_64:
   case lldb_mm7_x86_64:
-    ::memcpy(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_mm0_x86_64],
+    ::memcpy(&m_fpr_x86_64.fxstate.fx_87_ac[reg - lldb_mm0_x86_64],
              reg_value.GetBytes(), reg_value.GetByteSize());
     break;
   case lldb_xmm0_x86_64:
@@ -624,6 +606,39 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     ::memcpy(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_xmm0_x86_64],
              reg_value.GetBytes(), reg_value.GetByteSize());
     break;
+  case lldb_ymm0_x86_64:
+  case lldb_ymm1_x86_64:
+  case lldb_ymm2_x86_64:
+  case lldb_ymm3_x86_64:
+  case lldb_ymm4_x86_64:
+  case lldb_ymm5_x86_64:
+  case lldb_ymm6_x86_64:
+  case lldb_ymm7_x86_64:
+  case lldb_ymm8_x86_64:
+  case lldb_ymm9_x86_64:
+  case lldb_ymm10_x86_64:
+  case lldb_ymm11_x86_64:
+  case lldb_ymm12_x86_64:
+  case lldb_ymm13_x86_64:
+  case lldb_ymm14_x86_64:
+  case lldb_ymm15_x86_64:
+#ifdef HAVE_XSTATE
+    if (!(m_xstate_x86_64.xs_rfbm & XCR0_SSE) ||
+        !(m_xstate_x86_64.xs_rfbm & XCR0_YMM_Hi128)) {
+      error.SetErrorStringWithFormat("register \"%s\" not supported by CPU/kernel",
+                                     reg_info->name);
+    } else {
+      uint32_t reg_index = reg - lldb_ymm0_x86_64;
+      YMMReg ymm;
+      ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
+      YMMToXState(ymm,
+          m_xstate_x86_64.xs_fxsave.fx_xmm[reg_index].xmm_bytes,
+          m_xstate_x86_64.xs_ymm_hi128.xs_ymm[reg_index].ymm_bytes);
+    }
+#else
+    error.SetErrorString("XState not supported by the kernel");
+#endif
+    break;
   case lldb_dr0_x86_64:
   case lldb_dr1_x86_64:
   case lldb_dr2_x86_64:
@@ -636,10 +651,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     break;
   }
 
-  if (WriteRegisterSet(set) != 0)
-    error.SetErrorStringWithFormat("failed to write register set");
-
-  return error;
+  return WriteRegisterSet(set);
 }
 
 Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
@@ -647,25 +659,11 @@ Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (!data_sp) {
-    error.SetErrorStringWithFormat(
-        "failed to allocate DataBufferHeap instance of size %" PRIu64,
-        REG_CONTEXT_SIZE);
-    return error;
-  }
-
-  error = ReadGPR();
+  error = ReadRegisterSet(GPRegSet);
   if (error.Fail())
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  if (dst == nullptr) {
-    error.SetErrorStringWithFormat("DataBufferHeap instance of size %" PRIu64
-                                   " returned a null pointer",
-                                   REG_CONTEXT_SIZE);
-    return error;
-  }
-
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
 
@@ -706,7 +704,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
   }
   ::memcpy(&m_gpr_x86_64, src, GetRegisterInfoInterface().GetGPRSize());
 
-  error = WriteGPR();
+  error = WriteRegisterSet(GPRegSet);
   if (error.Fail())
     return error;
   src += GetRegisterInfoInterface().GetGPRSize();
@@ -766,7 +764,7 @@ Status NativeRegisterContextNetBSD_x86_64::IsWatchpointVacant(uint32_t wp_index,
 
   uint64_t control_bits = reg_value.GetAsUInt64();
 
-  is_vacant = !(control_bits & (1 << (2 * wp_index)));
+  is_vacant = !(control_bits & (1 << (2 * wp_index + 1)));
 
   return error;
 }
@@ -805,7 +803,7 @@ Status NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
     return error;
 
   // for watchpoints 0, 1, 2, or 3, respectively, set bits 1, 3, 5, or 7
-  uint64_t enable_bit = 1 << (2 * wp_index);
+  uint64_t enable_bit = 1 << (2 * wp_index + 1);
 
   // set bits 16-17, 20-21, 24-25, or 28-29
   // with 0b01 for write, and 0b11 for read/write
@@ -908,8 +906,8 @@ uint32_t NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpoint(
         return wp_index;
     }
     if (error.Fail() && log) {
-      log->Printf("NativeRegisterContextNetBSD_x86_64::%s Error: %s",
-                  __FUNCTION__, error.AsCString());
+      LLDB_LOGF(log, "NativeRegisterContextNetBSD_x86_64::%s Error: %s",
+                __FUNCTION__, error.AsCString());
     }
   }
   return LLDB_INVALID_INDEX32;

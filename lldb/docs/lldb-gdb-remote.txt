@@ -787,9 +787,9 @@ os_version: a version string that represents the current OS version (10.8.2)
 watchpoint_exceptions_received: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
 default_packet_timeout: an unsigned number that specifies the default timeout in seconds
 distribution_id: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
-osmajor: optional, specifies the major version number of the OS (e.g. for Mac OS X 10.11.2, it would be 10)
-osminor: optional, specifies the minor version number of the OS (e.g. for Mac OS X 10.11.2, it would be 11)
-ospatch: optional, specifies the patch level number of the OS (e.g. for Mac OS X 10.11.2, it would be 2)
+osmajor: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
+osminor: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
+ospatch: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
 
 //----------------------------------------------------------------------
 // "qGDBServerVersion"
@@ -1086,7 +1086,7 @@ tuples to return are:
 If the address requested is not in a mapped region (e.g. we've jumped through
 a NULL pointer and are at 0x0) currently lldb expects to get back the size 
 of the unmapped region -- that is, the distance to the next valid region.
-For instance, with a Mac OS X process which has nothing mapped in the first
+For instance, with a macOS process which has nothing mapped in the first
 4GB of its address space, if we're asking about address 0x2,
 
   qMemoryRegionInfo:2
@@ -1160,7 +1160,7 @@ for this region.
 //  second form of this packet is used, otherwise the first form is 
 //  used. This packet is called prior to executing an expression, so
 //  the remote GDB server should do anything it needs to in order to 
-//  ensure the registers that are saved are correct. On MacOSX this
+//  ensure the registers that are saved are correct. On macOS this
 //  involves calling "thread_abort_safely(mach_port_t thread)" to 
 //  ensure we get the correct registers for a thread in case it is
 //  currently having code run on its behalf in the kernel.
@@ -1611,7 +1611,7 @@ for this region.
 //
 // Because this is a JSON string, the thread number is provided in base10.
 // Additional key-value pairs may be provided by lldb to the gdb remote
-// stub.  For instance, on some versions of Mac OS X, lldb can read offset
+// stub.  For instance, on some versions of macOS, lldb can read offset
 // information out of the system libraries.  Using those offsets, debugserver
 // is able to find the Thread Specific Address (TSD) for a thread and include
 // that in the return information.  So lldb will send these additional fields
@@ -1620,7 +1620,7 @@ for this region.
 //   jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":612910}
 //
 // There are no requirements for what is included in the response.  A simple 
-// reply on a Mac OS X Yosemite / iOS 8 may include the pthread_t value, the
+// reply on a OS X Yosemite / iOS 8 may include the pthread_t value, the
 // Thread Specific Data (TSD) address, the dispatch_queue_t value if the thread
 // is associated with a GCD queue, and the requested Quality of Service (QoS)
 // information about that thread.  For instance, a reply may look like:
@@ -1723,7 +1723,7 @@ for this region.
 //  There are three ways this packet can be used.  All three return a dictionary of
 //  binary images formatted the same way.
 //
-//  On MacOS X 10.11, iOS 9, tvOS 9, watchOS 2 and earlier, the packet is used like
+//  On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and earlier, the packet is used like
 //       jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
 //  where the image_list_address is an array of {void* load_addr, void* mod_date, void* pathname}
 //  in the inferior process memory (and image_count is the number of elements in this array).
@@ -1740,7 +1740,7 @@ for this region.
 //  out of memory with generic read packets) but also adds additional information in the form of the 
 //  filename of the shared libraries (which is not available in the mach-o header/load commands.)
 //  
-//  An example using the Mac OS X 10.11 style call:
+//  An example using the OS X 10.11 style call:
 //
 //  LLDB SENDS: jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
 //  STUB REPLIES: ${"images":[{"load_address":4294967296,"mod_date":0,"pathname":"/tmp/a.out","uuid":"02CF262C-ED6F-3965-9E14-63538B465CFF","mach_header":{"magic":4277009103,"cputype":16777223,"cpusubtype":18446744071562067971,"filetype":2},"segments":{"name":"__PAGEZERO","vmaddr":0,"vmsize":4294967296,"fileoff":0,"filesize":0,"maxprot":0},{"name":"__TEXT","vmaddr":4294967296,"vmsize":4096,"fileoff":0,"filesize":4096,"maxprot":7},{"name":"__LINKEDIT","vmaddr":4294971392,"vmsize":4096,"fileoff":4096,"filesize":152,"maxprot":7}}]}#00
@@ -1797,7 +1797,7 @@ for this region.
 // would need to work correctly on this platform.
 //
 // PRIORITY TO IMPLEMENT
-//  On Mac OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent, 
+//  On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent, 
 //  lldb will read the Mach-O headers/load commands out of memory.
 //  On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer: High.  If this packet is absent,
 //  lldb will not know anything about shared libraries in the inferior, or where the main
@@ -1863,9 +1863,9 @@ server to expedite memory that the client is likely to use (e.g., areas around t
 stack pointer, which are needed for computing backtraces) and it reduces the packet
 count.
 
-On MacOSX with debugserver, we expedite the frame pointer backchain for a thread
+On macOS with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
-the previous FP and PC), and follow the backchain. Most backtraces on MacOSX and
+the previous FP and PC), and follow the backchain. Most backtraces on macOS and
 iOS now don't require us to read any memory!
 
 //----------------------------------------------------------------------

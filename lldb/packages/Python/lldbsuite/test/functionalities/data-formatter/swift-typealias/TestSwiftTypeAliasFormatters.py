@@ -27,7 +27,6 @@ class TestSwiftTypeAliasFormatters(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_type_alias_formatters(self):
         """Test that Swift typealiases get formatted properly"""
         self.build()

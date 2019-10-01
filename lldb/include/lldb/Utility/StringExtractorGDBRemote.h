@@ -34,7 +34,7 @@ public:
   StringExtractorGDBRemote(const StringExtractorGDBRemote &rhs)
       : StringExtractor(rhs), m_validator(rhs.m_validator) {}
 
-  virtual ~StringExtractorGDBRemote() {}
+  ~StringExtractorGDBRemote() override {}
 
   bool ValidateResponse() const;
 
@@ -128,7 +128,7 @@ public:
     eServerPacketType_qVAttachOrWaitSupported,
     eServerPacketType_qWatchpointSupportInfo,
     eServerPacketType_qWatchpointSupportInfoSupported,
-    eServerPacketType_qXfer_auxv_read,
+    eServerPacketType_qXfer,
 
     eServerPacketType_jSignalsInfo,
     eServerPacketType_jModulesInfo,

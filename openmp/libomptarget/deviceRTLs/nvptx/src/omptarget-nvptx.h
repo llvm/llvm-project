@@ -45,29 +45,6 @@
 #define BARRIER_COUNTER 0
 #define ORDERED_COUNTER 1
 
-// Macros for Cuda intrinsics
-// In Cuda 9.0, the *_sync() version takes an extra argument 'mask'.
-// Also, __ballot(1) in Cuda 8.0 is replaced with __activemask().
-#if defined(CUDART_VERSION) && CUDART_VERSION >= 9000
-#define __SHFL_SYNC(mask, var, srcLane) __shfl_sync((mask), (var), (srcLane))
-#define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
-  __shfl_down_sync((mask), (var), (delta), (width))
-#define __ACTIVEMASK() __activemask()
-#else
-#define __SHFL_SYNC(mask, var, srcLane) __shfl((var), (srcLane))
-#define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
-  __shfl_down((var), (delta), (width))
-#define __ACTIVEMASK() __ballot(1)
-#endif
-
-#define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
-// Use original __syncthreads if compiled by nvcc or clang >= 9.0.
-#if !defined(__clang__) || __clang_major__ >= 9
-#define __SYNCTHREADS() __syncthreads()
-#else
-#define __SYNCTHREADS() __SYNCTHREADS_N(0)
-#endif
-
 // arguments needed for L0 parallelism only.
 class omptarget_nvptx_SharedArgs {
 public:

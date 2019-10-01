@@ -5,8 +5,6 @@ Test number of threads.
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -33,6 +31,7 @@ class MultipleBreakpointTestCase(TestBase):
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
     @skipIfWindows # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
+    @expectedFailureNetBSD
     def test(self):
         """Test simultaneous breakpoints in multiple threads."""
         self.build(dictionary=self.getBuildFlags())

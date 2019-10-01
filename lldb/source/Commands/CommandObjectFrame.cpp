@@ -23,7 +23,6 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionGroupVariable.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -50,21 +49,12 @@ using namespace lldb_private;
 
 #pragma mark CommandObjectFrameDiagnose
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameInfo
-//-------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameDiagnose
-//-------------------------------------------------------------------------
 
-static constexpr OptionDefinition g_frame_diag_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeRegisterName,    "A register to diagnose." },
-  { LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeAddress,         "An address to diagnose." },
-  { LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOffset,          "An optional offset.  Requires --register." }
-    // clang-format on
-};
+#define LLDB_OPTIONS_frame_diag
+#include "CommandOptions.inc"
 
 class CommandObjectFrameDiagnose : public CommandObjectParsed {
 public:
@@ -102,9 +92,7 @@ public:
       } break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -216,9 +204,7 @@ protected:
 
 #pragma mark CommandObjectFrameInfo
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameInfo
-//-------------------------------------------------------------------------
 
 class CommandObjectFrameInfo : public CommandObjectParsed {
 public:
@@ -242,15 +228,10 @@ protected:
 
 #pragma mark CommandObjectFrameSelect
 
-//-------------------------------------------------------------------------
 // CommandObjectFrameSelect
-//-------------------------------------------------------------------------
 
-static OptionDefinition g_frame_select_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOffset, "A relative frame index offset from the current frame index." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_frame_select
+#include "CommandOptions.inc"
 
 class CommandObjectFrameSelect : public CommandObjectParsed {
 public:
@@ -265,32 +246,30 @@ public:
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
-      case 'r':
-        if (option_arg.getAsInteger(0, relative_frame_offset)) {
-          relative_frame_offset = INT32_MIN;
+        case 'r': {
+        int32_t offset = 0;
+        if (option_arg.getAsInteger(0, offset) || offset == INT32_MIN) {
           error.SetErrorStringWithFormat("invalid frame offset argument '%s'",
                                          option_arg.str().c_str());
-        }
+        } else
+          relative_frame_offset = offset;
         break;
+      }
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
     }
 
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      relative_frame_offset = INT32_MIN;
-    }
-
+    void OptionParsingStarting(ExecutionContext *execution_context) override {}
+    
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_frame_select_options);
     }
 
-    int32_t relative_frame_offset;
+    llvm::Optional<int32_t> relative_frame_offset;
   };
 
   CommandObjectFrameSelect(CommandInterpreter &interpreter)
@@ -328,15 +307,15 @@ protected:
     Thread *thread = m_exe_ctx.GetThreadPtr();
 
     uint32_t frame_idx = UINT32_MAX;
-    if (m_options.relative_frame_offset != INT32_MIN) {
+    if (m_options.relative_frame_offset.hasValue()) {
       // The one and only argument is a signed relative frame index
       frame_idx = thread->GetSelectedFrameIndex();
       if (frame_idx == UINT32_MAX)
         frame_idx = 0;
 
-      if (m_options.relative_frame_offset < 0) {
-        if (static_cast<int32_t>(frame_idx) >= -m_options.relative_frame_offset)
-          frame_idx += m_options.relative_frame_offset;
+      if (*m_options.relative_frame_offset < 0) {
+        if (static_cast<int32_t>(frame_idx) >= -*m_options.relative_frame_offset)
+          frame_idx += *m_options.relative_frame_offset;
         else {
           if (frame_idx == 0) {
             // If you are already at the bottom of the stack, then just warn
@@ -347,15 +326,15 @@ protected:
           } else
             frame_idx = 0;
         }
-      } else if (m_options.relative_frame_offset > 0) {
+      } else if (*m_options.relative_frame_offset > 0) {
         // I don't want "up 20" where "20" takes you past the top of the stack
         // to produce
         // an error, but rather to just go to the top.  So I have to count the
         // stack here...
         const uint32_t num_frames = thread->GetStackFrameCount();
         if (static_cast<int32_t>(num_frames - frame_idx) >
-            m_options.relative_frame_offset)
-          frame_idx += m_options.relative_frame_offset;
+            *m_options.relative_frame_offset)
+          frame_idx += *m_options.relative_frame_offset;
         else {
           if (frame_idx == num_frames - 1) {
             // If we are already at the top of the stack, just warn and don't
@@ -412,9 +391,7 @@ protected:
 };
 
 #pragma mark CommandObjectFrameVariable
-//----------------------------------------------------------------------
 // List images with associated information
-//----------------------------------------------------------------------
 class CommandObjectFrameVariable : public CommandObjectParsed {
 public:
   CommandObjectFrameVariable(CommandInterpreter &interpreter)
@@ -470,14 +447,13 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     // Arguments are the standard source file completer.
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -553,7 +529,7 @@ protected:
             const size_t regex_start_index = regex_var_list.GetSize();
             llvm::StringRef name_str = entry.ref;
             RegularExpression regex(name_str);
-            if (regex.Compile(name_str)) {
+            if (regex.IsValid()) {
               size_t num_matches = 0;
               const size_t num_new_regex_vars =
                   variable_list->AppendVariablesIfUnique(regex, regex_var_list,
@@ -592,9 +568,9 @@ protected:
                                                entry.c_str());
               }
             } else {
-              char regex_error[1024];
-              if (regex.GetErrorAsCString(regex_error, sizeof(regex_error)))
-                result.GetErrorStream().Printf("error: %s\n", regex_error);
+              if (llvm::Error err = regex.GetError())
+                result.GetErrorStream().Printf(
+                    "error: %s\n", llvm::toString(std::move(err)).c_str());
               else
                 result.GetErrorStream().Printf(
                     "error: unknown regex error when compiling '%s'\n",
@@ -737,11 +713,11 @@ protected:
 
     // Increment statistics.
     bool res = result.Succeeded();
-    Target *target = GetSelectedOrDummyTarget();
+    Target &target = GetSelectedOrDummyTarget();
     if (res)
-      target->IncrementStats(StatisticKind::FrameVarSuccess);
+      target.IncrementStats(StatisticKind::FrameVarSuccess);
     else
-      target->IncrementStats(StatisticKind::FrameVarFailure);
+      target.IncrementStats(StatisticKind::FrameVarFailure);
     return res;
   }
 
@@ -754,14 +730,8 @@ protected:
 
 #pragma mark CommandObjectFrameRecognizer
 
-static OptionDefinition g_frame_recognizer_add_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "shlib",         's', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eModuleCompletion, eArgTypeShlibName,   "Name of the module or shared library that this recognizer applies to." },
-  { LLDB_OPT_SET_ALL, false, "function",      'n', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eSymbolCompletion, eArgTypeName,        "Name of the function that this recognizer applies to." },
-  { LLDB_OPT_SET_2,   false, "python-class",  'l', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypePythonClass, "Give the name of a Python class to use for this frame recognizer." },
-  { LLDB_OPT_SET_ALL, false, "regex",         'x', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,        "Function name and module name are actually regular expressions." }
-    // clang-format on
-};
+#define LLDB_OPTIONS_frame_recognizer_add
+#include "CommandOptions.inc"
 
 class CommandObjectFrameRecognizerAdd : public CommandObjectParsed {
 private:
@@ -789,9 +759,7 @@ private:
         m_regex = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1118,9 +1086,7 @@ class CommandObjectFrameRecognizer : public CommandObjectMultiword {
 
 #pragma mark CommandObjectMultiwordFrame
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordFrame
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
     CommandInterpreter &interpreter)

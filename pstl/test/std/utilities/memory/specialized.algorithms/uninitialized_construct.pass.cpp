@@ -104,7 +104,7 @@ test_uninit_construct_by_type()
     }
 }
 
-int32_t
+int
 main()
 {
 

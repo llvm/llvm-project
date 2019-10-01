@@ -32,7 +32,7 @@ SBDeclaration::SBDeclaration(const SBDeclaration &rhs) : m_opaque_up() {
 SBDeclaration::SBDeclaration(const lldb_private::Declaration *lldb_object_ptr)
     : m_opaque_up() {
   if (lldb_object_ptr)
-    m_opaque_up = llvm::make_unique<Declaration>(*lldb_object_ptr);
+    m_opaque_up = std::make_unique<Declaration>(*lldb_object_ptr);
 }
 
 const SBDeclaration &SBDeclaration::operator=(const SBDeclaration &rhs) {
@@ -147,7 +147,7 @@ const lldb_private::Declaration *SBDeclaration::operator->() const {
 }
 
 lldb_private::Declaration &SBDeclaration::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new lldb_private::Declaration());
   return *m_opaque_up;
 }

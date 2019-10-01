@@ -176,7 +176,7 @@ private:
 
 void addGOTPass(PassManager &pm, const MachOLinkingContext &ctx) {
   assert(ctx.needsGOTPass());
-  pm.add(llvm::make_unique<GOTPass>(ctx));
+  pm.add(std::make_unique<GOTPass>(ctx));
 }
 
 } // end namesapce mach_o

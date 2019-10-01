@@ -79,9 +79,7 @@
 // C++ includes
 #include <vector>
 
-//----------------------------------------------------------------------
 // Redefine private types from "/usr/local/include/stack_logging.h"
-//----------------------------------------------------------------------
 typedef struct {
   uint32_t type_flags;
   uint64_t stack_identifier;
@@ -89,9 +87,7 @@ typedef struct {
   mach_vm_address_t address;
 } mach_stack_logging_record_t;
 
-//----------------------------------------------------------------------
 // Redefine private defines from "/usr/local/include/stack_logging.h"
-//----------------------------------------------------------------------
 #define stack_logging_type_free 0
 #define stack_logging_type_generic 1
 #define stack_logging_type_alloc 2
@@ -99,10 +95,8 @@ typedef struct {
 // This bit is made up by this code
 #define stack_logging_type_vm_region 8
 
-//----------------------------------------------------------------------
 // Redefine private function prototypes from
 // "/usr/local/include/stack_logging.h"
-//----------------------------------------------------------------------
 extern "C" kern_return_t __mach_stack_logging_set_file_path(task_t task,
                                                             char *file_path);
 
@@ -125,21 +119,15 @@ extern "C" void *gdb_class_getClass(void *objc_class);
 static void range_info_callback(task_t task, void *baton, unsigned type,
                                 uint64_t ptr_addr, uint64_t ptr_size);
 
-//----------------------------------------------------------------------
 // Redefine private global variables prototypes from
 // "/usr/local/include/stack_logging.h"
-//----------------------------------------------------------------------
 
 extern "C" int stack_logging_enable_logging;
 
-//----------------------------------------------------------------------
 // Local defines
-//----------------------------------------------------------------------
 #define MAX_FRAMES 1024
 
-//----------------------------------------------------------------------
 // Local Typedefs and Types
-//----------------------------------------------------------------------
 typedef void range_callback_t(task_t task, void *baton, unsigned type,
                               uint64_t ptr_addr, uint64_t ptr_size);
 typedef void zone_callback_t(void *info, const malloc_zone_t *zone);
@@ -294,10 +282,8 @@ protected:
   uint32_t m_size;
 };
 
-//----------------------------------------------------------------------
 // A safe way to allocate memory and keep it from interfering with the
 // malloc enumerators.
-//----------------------------------------------------------------------
 void *safe_malloc(size_t n_bytes) {
   if (n_bytes > 0) {
     const int k_page_size = getpagesize();
@@ -311,9 +297,7 @@ void *safe_malloc(size_t n_bytes) {
   return NULL;
 }
 
-//----------------------------------------------------------------------
 // ObjCClasses
-//----------------------------------------------------------------------
 class ObjCClasses {
 public:
   ObjCClasses() : m_objc_class_ptrs(NULL), m_size(0) {}
@@ -356,16 +340,12 @@ private:
   uint32_t m_size;
 };
 
-//----------------------------------------------------------------------
 // Local global variables
-//----------------------------------------------------------------------
 MatchResults g_matches;
 MallocStackLoggingEntries g_malloc_stack_history;
 ObjCClasses g_objc_classes;
 
-//----------------------------------------------------------------------
 // ObjCClassInfo
-//----------------------------------------------------------------------
 
 enum HeapInfoSortType { eSortTypeNone, eSortTypeBytes, eSortTypeCount };
 
@@ -469,13 +449,11 @@ private:
 
 ObjCClassInfo g_objc_class_snapshot;
 
-//----------------------------------------------------------------------
 // task_peek
 //
 // Reads memory from this tasks address space. This callback is needed
 // by the code that iterates through all of the malloc blocks to read
 // the memory in this process.
-//----------------------------------------------------------------------
 static kern_return_t task_peek(task_t task, vm_address_t remote_address,
                                vm_size_t size, void **local_memory) {
   *local_memory = (void *)remote_address;
@@ -534,12 +512,10 @@ static const void foreach_zone_in_this_process(range_callback_info_t *info) {
   }
 }
 
-//----------------------------------------------------------------------
 // dump_malloc_block_callback
 //
 // A simple callback that will dump each malloc block and all available
 // info from the enumeration callback perspective.
-//----------------------------------------------------------------------
 static void dump_malloc_block_callback(task_t task, void *baton, unsigned type,
                                        uint64_t ptr_addr, uint64_t ptr_size) {
   printf("task = 0x%4.4x: baton = %p, type = %u, ptr_addr = 0x%llx + 0x%llu\n",
@@ -739,12 +715,10 @@ malloc_stack_entry *get_stack_history_for_address(const void *addr,
   return g_malloc_stack_history.data();
 }
 
-//----------------------------------------------------------------------
 // find_pointer_in_heap
 //
 // Finds a pointer value inside one or more currently valid malloc
 // blocks.
-//----------------------------------------------------------------------
 malloc_match *find_pointer_in_heap(const void *addr, int check_vm_regions) {
   g_matches.clear();
   // Setup "info" to look for a malloc block that contains data
@@ -767,12 +741,10 @@ malloc_match *find_pointer_in_heap(const void *addr, int check_vm_regions) {
   return g_matches.data();
 }
 
-//----------------------------------------------------------------------
 // find_pointer_in_memory
 //
 // Finds a pointer value inside one or more currently valid malloc
 // blocks.
-//----------------------------------------------------------------------
 malloc_match *find_pointer_in_memory(uint64_t memory_addr, uint64_t memory_size,
                                      const void *addr) {
   g_matches.clear();
@@ -793,13 +765,11 @@ malloc_match *find_pointer_in_memory(uint64_t memory_addr, uint64_t memory_size,
   return g_matches.data();
 }
 
-//----------------------------------------------------------------------
 // find_objc_objects_in_memory
 //
 // Find all instances of ObjC classes 'c', or all ObjC classes if 'c' is
 // NULL. If 'c' is non NULL, then also check objects to see if they
 // inherit from 'c'
-//----------------------------------------------------------------------
 malloc_match *find_objc_objects_in_memory(void *isa, int check_vm_regions) {
   g_matches.clear();
   if (g_objc_classes.Update()) {
@@ -819,12 +789,10 @@ malloc_match *find_objc_objects_in_memory(void *isa, int check_vm_regions) {
   return g_matches.data();
 }
 
-//----------------------------------------------------------------------
 // get_heap_info
 //
 // Gather information for all allocations on the heap and report
 // statistics.
-//----------------------------------------------------------------------
 
 void get_heap_info(int sort_type) {
   if (g_objc_classes.Update()) {
@@ -859,11 +827,9 @@ void get_heap_info(int sort_type) {
   }
 }
 
-//----------------------------------------------------------------------
 // find_cstring_in_heap
 //
 // Finds a C string inside one or more currently valid malloc blocks.
-//----------------------------------------------------------------------
 malloc_match *find_cstring_in_heap(const char *s, int check_vm_regions) {
   g_matches.clear();
   if (s == NULL || s[0] == '\0') {
@@ -887,11 +853,9 @@ malloc_match *find_cstring_in_heap(const char *s, int check_vm_regions) {
   return g_matches.data();
 }
 
-//----------------------------------------------------------------------
 // find_block_for_address
 //
 // Find the malloc block that whose address range contains "addr".
-//----------------------------------------------------------------------
 malloc_match *find_block_for_address(const void *addr, int check_vm_regions) {
   g_matches.clear();
   // Setup "info" to look for a malloc block that contains data

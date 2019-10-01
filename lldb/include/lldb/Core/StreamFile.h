@@ -21,9 +21,7 @@ namespace lldb_private {
 
 class StreamFile : public Stream {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StreamFile();
 
   StreamFile(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
@@ -47,9 +45,7 @@ public:
 
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from StreamFile can see and modify these
-  //------------------------------------------------------------------
   File m_file;
   size_t WriteImpl(const void *s, size_t length) override;
 

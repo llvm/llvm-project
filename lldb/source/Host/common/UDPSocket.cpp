@@ -58,8 +58,7 @@ Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
   std::unique_ptr<UDPSocket> final_socket;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("UDPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
+  LLDB_LOGF(log, "UDPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
   Status error;
   std::string host_str;
@@ -133,4 +132,12 @@ Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
   socket = final_socket.release();
   error.Clear();
   return error;
+}
+
+std::string UDPSocket::GetRemoteConnectionURI() const {
+  if (m_socket != kInvalidSocketValue) {
+    return llvm::formatv("udp://[{0}]:{1}", m_sockaddr.GetIPAddress(),
+                         m_sockaddr.GetPort());
+  }
+  return "";
 }

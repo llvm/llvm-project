@@ -5,8 +5,6 @@ Test watchpoint condition API.
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -36,6 +34,7 @@ class WatchpointConditionAPITestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27710")
     @skipIfWindows  # Watchpoints not supported on Windows, and this test hangs
     def test_watchpoint_cond_api(self):

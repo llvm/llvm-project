@@ -151,7 +151,7 @@ public:
 
   /// Get the name and description of one of the available platforms.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     Zero-based index of the platform for which info should be retrieved,
   ///     must be less than the value returned by GetNumAvailablePlatforms().
   lldb::SBStructuredData GetAvailablePlatformInfoAtIndex(uint32_t idx);

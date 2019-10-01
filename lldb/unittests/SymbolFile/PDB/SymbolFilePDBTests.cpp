@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
@@ -26,7 +27,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/TypeMap.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 
@@ -150,9 +151,7 @@ TEST_F(SymbolFilePDBTests, TestAbilitiesForPDB) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
   EXPECT_NE(nullptr, symfile);
   EXPECT_EQ(symfile->GetPluginName(), SymbolFilePDB::GetPluginNameStatic());
 
@@ -168,9 +167,7 @@ TEST_F(SymbolFilePDBTests, TestResolveSymbolContextBasename) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
 
   FileSpec header_spec("test-pdb.cpp");
   SymbolContextList sc_list;
@@ -188,9 +185,7 @@ TEST_F(SymbolFilePDBTests, TestResolveSymbolContextFullPath) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
 
   FileSpec header_spec(
       R"spec(D:\src\llvm\tools\lldb\unittests\SymbolFile\PDB\Inputs\test-pdb.cpp)spec");
@@ -211,9 +206,7 @@ TEST_F(SymbolFilePDBTests, TestLookupOfHeaderFileWithInlines) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
 
   FileSpec header_specs[] = {FileSpec("test-pdb.h"),
                              FileSpec("test-pdb-nested.h")};
@@ -239,9 +232,7 @@ TEST_F(SymbolFilePDBTests, TestLookupOfHeaderFileWithNoInlines) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
 
   FileSpec header_specs[] = {FileSpec("test-pdb.h"),
                              FileSpec("test-pdb-nested.h")};
@@ -261,8 +252,7 @@ TEST_F(SymbolFilePDBTests, TestLineTablesMatchAll) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
 
   FileSpec source_file("test-pdb.cpp");
   FileSpec header1("test-pdb.h");
@@ -311,8 +301,7 @@ TEST_F(SymbolFilePDBTests, TestLineTablesMatchSpecific) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  SymbolFile *symfile = plugin->GetSymbolFile();
+  SymbolFile *symfile = module->GetSymbolFile();
 
   FileSpec source_file("test-pdb.cpp");
   FileSpec header1("test-pdb.h");
@@ -361,9 +350,8 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
@@ -383,15 +371,18 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
-  auto clang_ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
+  auto clang_ast_ctx_or_err =
+      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
+
+  auto clang_ast_ctx =
+      llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   EXPECT_EQ(1u, symfile->FindTypes(ConstString("Class"), nullptr, false, 0,
@@ -433,15 +424,18 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
-  auto clang_ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(
-      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
+  auto clang_ast_ctx_or_err =
+      symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
+
+  auto clang_ast_ctx =
+      llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   auto ast_ctx = clang_ast_ctx->getASTContext();
@@ -475,9 +469,8 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   llvm::DenseSet<SymbolFile *> searched_files;
   const char *EnumsToCheck[] = {"Enum", "ShortEnum"};
@@ -521,9 +514,8 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
@@ -556,9 +548,8 @@ TEST_F(SymbolFilePDBTests, TestRegexNameMatch) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   TypeMap results;
 
   symfile->FindTypesByRegex(RegularExpression(".*"), 0, results);
@@ -575,9 +566,8 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
   const ConstString name("ClassTypedef");
@@ -602,9 +592,8 @@ TEST_F(SymbolFilePDBTests, TestNullName) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
-      static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
+      static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
   uint32_t num_results = symfile->FindTypes(ConstString(), nullptr, false, 0,

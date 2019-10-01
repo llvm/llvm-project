@@ -301,10 +301,10 @@ uint32_t NativeThreadListDarwin::UpdateThreadList(NativeProcessDarwin &process,
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
 
   std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-  if (log)
-    log->Printf("NativeThreadListDarwin::%s() (pid = %" PRIu64 ", update = "
-                "%u) process stop count = %u",
-                __FUNCTION__, process.GetID(), update, process.GetStopID());
+  LLDB_LOGF(log,
+            "NativeThreadListDarwin::%s() (pid = %" PRIu64 ", update = "
+            "%u) process stop count = %u",
+            __FUNCTION__, process.GetID(), update, process.GetStopID());
 
   if (process.GetStopID() == 0) {
     // On our first stop, we'll record details like 32/64 bitness and select
@@ -346,11 +346,11 @@ uint32_t NativeThreadListDarwin::UpdateThreadList(NativeProcessDarwin &process,
     auto mach_err = ::task_threads(task, &thread_list, &thread_list_count);
     error.SetError(mach_err, eErrorTypeMachKernel);
     if (error.Fail()) {
-      if (log)
-        log->Printf("::task_threads(task = 0x%4.4x, thread_list => %p, "
-                    "thread_list_count => %u) failed: %u (%s)",
-                    task, thread_list, thread_list_count, error.GetError(),
-                    error.AsCString());
+      LLDB_LOGF(log,
+                "::task_threads(task = 0x%4.4x, thread_list => %p, "
+                "thread_list_count => %u) failed: %u (%s)",
+                task, thread_list, thread_list_count, error.GetError(),
+                error.AsCString());
       return 0;
     }
 
@@ -548,7 +548,6 @@ uint32_t NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process) {
   return (uint32_t)m_threads.size();
 }
 
-//----------------------------------------------------------------------
 // Check each thread in our thread list to see if we should notify our client
 // of the current halt in execution.
 //
@@ -558,7 +557,6 @@ uint32_t NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process) {
 // RETURNS
 //    true if we should stop and notify our clients
 //    false if we should resume our child process and skip notification
-//----------------------------------------------------------------------
 bool NativeThreadListDarwin::ShouldStop(bool &step_more) {
   std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
   for (auto thread_sp : m_threads) {

@@ -5,6 +5,8 @@ Run lldb to disassemble all the available functions for an executable image.
 
 """
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -18,7 +20,7 @@ def setupSysPath():
     # Get the directory containing the current script.
     scriptPath = sys.path[0]
     if not scriptPath.endswith(os.path.join('utils', 'test')):
-        print "This script expects to reside in lldb's utils/test directory."
+        print("This script expects to reside in lldb's utils/test directory.")
         sys.exit(-1)
 
     # This is our base name component.
@@ -63,8 +65,8 @@ def setupSysPath():
         lldbPath = baiPath2
 
     if not lldbPath:
-        print 'This script requires lldb.py to be in either ' + dbgPath + ',',
-        print relPath + ', or ' + baiPath
+        print('This script requires lldb.py to be in either ' + dbgPath + ',', end=' ')
+        print(relPath + ', or ' + baiPath)
         sys.exit(-1)
 
     # This is to locate the lldb.py module.  Insert it right after sys.path[0].
@@ -74,15 +76,15 @@ def setupSysPath():
 
 def run_command(ci, cmd, res, echo=True):
     if echo:
-        print "run command:", cmd
+        print("run command:", cmd)
     ci.HandleCommand(cmd, res)
     if res.Succeeded():
         if echo:
-            print "run_command output:", res.GetOutput()
+            print("run_command output:", res.GetOutput())
     else:
         if echo:
-            print "run command failed!"
-            print "run_command error:", res.GetError()
+            print("run command failed!")
+            print("run_command error:", res.GetError())
 
 
 def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
@@ -135,7 +137,7 @@ def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
         if symbols:
             for i in range(len(symbols)):
                 if verbose:
-                    print "symbol:", symbols[i]
+                    print("symbol:", symbols[i])
                 yield symbols[i]
         else:
             limited = True if num != -1 else False
@@ -146,7 +148,7 @@ def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
             stream = lldb.SBStream()
             for m in target.module_iter():
                 if verbose:
-                    print "module:", m
+                    print("module:", m)
                 for s in m:
                     if limited and count >= num:
                         return
@@ -159,18 +161,18 @@ def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
 
                     # If we come here, we're ready to disassemble the symbol.
                     if verbose:
-                        print "symbol:", s.GetName()
+                        print("symbol:", s.GetName())
                     if IsCodeType(s):
                         if limited:
                             count = count + 1
                             if verbose:
-                                print "returning symbol:", s.GetName()
+                                print("returning symbol:", s.GetName())
                         yield s.GetName()
                     if verbose:
-                        print "start address:", s.GetStartAddress()
-                        print "end address:", s.GetEndAddress()
+                        print("start address:", s.GetStartAddress())
+                        print("end address:", s.GetEndAddress())
                         s.GetDescription(stream)
-                        print "symbol description:", stream.GetData()
+                        print("symbol description:", stream.GetData())
                         stream.Clear()
 
     # Disassembly time.
@@ -273,13 +275,13 @@ Usage: %prog [options]
 
     # We have parsed the options.
     if not quiet_disassembly:
-        print "lldb commands:", lldb_commands
-        print "executable:", executable
-        print "disassemble options:", disassemble_options
-        print "quiet disassembly output:", quiet_disassembly
-        print "num of symbols to disassemble:", num_symbols
-        print "symbols to disassemble:", symbols_to_disassemble
-        print "regular expression of symbols to disassemble:", re_symbol_pattern
+        print("lldb commands:", lldb_commands)
+        print("executable:", executable)
+        print("disassemble options:", disassemble_options)
+        print("quiet disassembly output:", quiet_disassembly)
+        print("num of symbols to disassemble:", num_symbols)
+        print("symbols to disassemble:", symbols_to_disassemble)
+        print("regular expression of symbols to disassemble:", re_symbol_pattern)
 
     setupSysPath()
     do_lldb_disassembly(lldb_commands, executable, disassemble_options,

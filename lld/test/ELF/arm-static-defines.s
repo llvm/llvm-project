@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld --no-merge-exidx-entries %t --static -o %t2 2>&1
+// RUN: ld.lld --no-merge-exidx-entries %t --static -o %t2
 // RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 // Check that on ARM we don't get a multiply defined symbol for __tls_get_addr

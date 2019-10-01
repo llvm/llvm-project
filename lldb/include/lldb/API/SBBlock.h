@@ -60,16 +60,14 @@ public:
 
   lldb::SBValueList GetVariables(lldb::SBTarget &target, bool arguments,
                                  bool locals, bool statics);
-  //------------------------------------------------------------------
   /// Get the inlined block that contains this block.
   ///
-  /// @return
+  /// \return
   ///     If this block is inlined, it will return this block, else
   ///     parent blocks will be searched to see if any contain this
   ///     block and are themselves inlined. An invalid SBBlock will
   ///     be returned if this block nor any parent blocks are inlined
   ///     function blocks.
-  //------------------------------------------------------------------
   lldb::SBBlock GetContainingInlinedBlock();
 
   bool GetDescription(lldb::SBStream &description);

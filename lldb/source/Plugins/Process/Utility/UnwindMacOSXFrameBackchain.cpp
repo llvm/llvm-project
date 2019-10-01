@@ -43,9 +43,8 @@ uint32_t UnwindMacOSXFrameBackchain::DoGetFrameCount() {
   return m_cursors.size();
 }
 
-bool UnwindMacOSXFrameBackchain::DoGetFrameInfoAtIndex(uint32_t idx,
-                                                       addr_t &cfa,
-                                                       addr_t &pc) {
+bool UnwindMacOSXFrameBackchain::DoGetFrameInfoAtIndex(
+    uint32_t idx, addr_t &cfa, addr_t &pc, bool &behaves_like_zeroth_frame) {
   const uint32_t frame_count = GetFrameCount();
   if (idx < frame_count) {
     if (m_cursors[idx].pc == LLDB_INVALID_ADDRESS)
@@ -55,6 +54,7 @@ bool UnwindMacOSXFrameBackchain::DoGetFrameInfoAtIndex(uint32_t idx,
 
     pc = m_cursors[idx].pc;
     cfa = m_cursors[idx].fp;
+    behaves_like_zeroth_frame = (idx == 0);
 
     return true;
   }
@@ -79,7 +79,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
   StackFrame *first_frame = exe_ctx.GetFramePtr();
 
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == NULL)
+  if (process == nullptr)
     return 0;
 
   struct Frame_i386 {
@@ -121,7 +121,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
 
       SymbolContext first_frame_sc(
           first_frame->GetSymbolContext(resolve_scope));
-      const AddressRange *addr_range_ptr = NULL;
+      const AddressRange *addr_range_ptr = nullptr;
       AddressRange range;
       if (first_frame_sc.function)
         addr_range_ptr = &first_frame_sc.function->GetAddressRange();
@@ -169,7 +169,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
   m_cursors.clear();
 
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == NULL)
+  if (process == nullptr)
     return 0;
 
   StackFrame *first_frame = exe_ctx.GetFramePtr();
@@ -212,7 +212,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
 
       SymbolContext first_frame_sc(
           first_frame->GetSymbolContext(resolve_scope));
-      const AddressRange *addr_range_ptr = NULL;
+      const AddressRange *addr_range_ptr = nullptr;
       AddressRange range;
       if (first_frame_sc.function)
         addr_range_ptr = &first_frame_sc.function->GetAddressRange();

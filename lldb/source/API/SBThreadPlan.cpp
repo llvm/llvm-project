@@ -47,9 +47,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Constructors
-//----------------------------------------------------------------------
 SBThreadPlan::SBThreadPlan() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadPlan); }
 
 SBThreadPlan::SBThreadPlan(const ThreadPlanSP &lldb_object_sp)
@@ -72,9 +70,7 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name) {
     m_opaque_sp = std::make_shared<ThreadPlanPython>(*thread, class_name);
 }
 
-//----------------------------------------------------------------------
 // Assignment operator
-//----------------------------------------------------------------------
 
 const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBThreadPlan &,
@@ -84,9 +80,7 @@ const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   return LLDB_RECORD_RESULT(*this);
 }
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBThreadPlan::~SBThreadPlan() {}
 
 lldb_private::ThreadPlan *SBThreadPlan::get() { return m_opaque_sp.get(); }
@@ -98,7 +92,7 @@ bool SBThreadPlan::IsValid() const {
 SBThreadPlan::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadPlan, operator bool);
 
-  return m_opaque_sp.get() != NULL;
+  return m_opaque_sp.get() != nullptr;
 }
 
 void SBThreadPlan::Clear() {
@@ -268,7 +262,7 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
     Status plan_status;
     SBThreadPlan plan =
         SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepInRange(
-            false, range, sc, NULL, eAllThreads, plan_status));
+            false, range, sc, nullptr, eAllThreads, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
@@ -398,7 +392,6 @@ void RegisterMethods<SBThreadPlan>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, (lldb::SBThread &, const char *));
   LLDB_REGISTER_METHOD(const lldb::SBThreadPlan &,
                        SBThreadPlan, operator=,(const lldb::SBThreadPlan &));
-  LLDB_REGISTER_METHOD(lldb_private::ThreadPlan *, SBThreadPlan, get, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBThreadPlan, Clear, ());

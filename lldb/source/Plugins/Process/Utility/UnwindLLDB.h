@@ -73,7 +73,8 @@ protected:
   uint32_t DoGetFrameCount() override;
 
   bool DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
-                             lldb::addr_t &start_pc) override;
+                             lldb::addr_t &start_pc,
+                             bool &behaves_like_zeroth_frame) override;
 
   lldb::RegisterContextSP
   DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
@@ -93,7 +94,6 @@ protected:
       uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc,
       uint32_t starting_frame_num, bool pc_register);
 
-  //------------------------------------------------------------------
   /// Provide the list of user-specified trap handler functions
   ///
   /// The Platform is one source of trap handler function names; that
@@ -101,10 +101,9 @@ protected:
   /// into an array of ConstStrings before it can be used - we only want
   /// to do that once per thread so it's here in the UnwindLLDB object.
   ///
-  /// @return
+  /// \return
   ///     Vector of ConstStrings of trap handler function names.  May be
   ///     empty.
-  //------------------------------------------------------------------
   const std::vector<ConstString> &GetUserSpecifiedTrapHandlerFunctionNames() {
     return m_user_supplied_trap_handler_functions;
   }
@@ -138,12 +137,10 @@ private:
 
   std::vector<ConstString> m_user_supplied_trap_handler_functions;
 
-  //-----------------------------------------------------------------
   // Check if Full UnwindPlan of First frame is valid or not.
   // If not then try Fallback UnwindPlan of the frame. If Fallback
   // UnwindPlan succeeds then update the Full UnwindPlan with the
   // Fallback UnwindPlan.
-  //-----------------------------------------------------------------
   void UpdateUnwindPlanForFirstFrameIfInvalid(ABI *abi);
 
   CursorSP GetOneMoreFrame(ABI *abi);
@@ -152,9 +149,7 @@ private:
 
   bool AddFirstFrame();
 
-  //------------------------------------------------------------------
   // For UnwindLLDB only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(UnwindLLDB);
 };
 

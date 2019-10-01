@@ -92,19 +92,21 @@ pygments_style = 'friendly'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'haiku'
+html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    'font_size': '11pt'
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-#html_title = None
+html_title = 'The LLDB Debugger'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -129,10 +131,11 @@ html_context = {
         ],
     }
 
+html_extra_path = ['.htaccess']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = '%b %d, %Y'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -174,6 +177,9 @@ html_context = {
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'LLDBdoc'
 
+# If true, the reST sources are included in the HTML build as
+# _sources/name. The default is True.
+html_copy_source = False
 
 # -- Options for LaTeX output --------------------------------------------------
 

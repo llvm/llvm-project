@@ -105,15 +105,14 @@ from test/python_api/event/TestEventspy:
         process.Kill()
 
         # Wait until the 'MyListeningThread' terminates.
-        my_thread.join()
-") SBEvent;
+        my_thread.join()") SBEvent;
 class SBEvent
 {
 public:
     SBEvent();
 
     SBEvent (const lldb::SBEvent &rhs);
-    
+
     %feature("autodoc",
     "__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)"
     ) SBEvent;

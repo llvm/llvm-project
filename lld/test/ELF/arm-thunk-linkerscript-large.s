@@ -5,7 +5,7 @@
 // RUN:       .textl : { *(.text_l0*) *(.text_l1*) *(.text_l2*) *(.text_l3*) } \
 // RUN:       .texth : { *(.text_h0*) *(.text_h1*) *(.text_h2*) *(.text_h3*) } \
 // RUN:       }" > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2 2>&1
+// RUN: ld.lld --script %t.script %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump -d %t2 -start-address=1048576 -stop-address=1048594 -triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s

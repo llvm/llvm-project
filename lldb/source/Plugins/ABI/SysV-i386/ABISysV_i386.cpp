@@ -192,9 +192,7 @@ ABISysV_i386::GetRegisterInfoArray(uint32_t &count) {
   return g_register_infos;
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -787,6 +785,7 @@ bool ABISysV_i386::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.SetSourceName("i386 default unwind plan");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   return true;
 }
 
@@ -839,9 +838,7 @@ void ABISysV_i386::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_i386::GetPluginNameStatic() {
   static ConstString g_name("sysv-i386");

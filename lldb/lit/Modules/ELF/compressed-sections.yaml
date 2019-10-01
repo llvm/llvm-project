@@ -16,14 +16,18 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_COMPRESSED ]
     Content:         deadbeefbaadf00d
+  - Name:            .zdebug_info
+    Type:            SHT_PROGBITS
+    Content:         5A4C49420000000000000008789c5330700848286898000009c802c1
 
 # CHECK: Name: .hello_elf
 # CHECK-NEXT: Type: regular
 # CHECK: VM address: 0
 # CHECK-NEXT: VM size: 0
 # CHECK-NEXT: File size: 28
-# CHECK-NEXT: Data:
+# CHECK-NEXT: Data: (
 # CHECK-NEXT: 20304050 60708090
+# CHECK-NEXT: )
 
 # CHECK: Name: .bogus
 # CHECK-NEXT: Type: regular
@@ -31,3 +35,10 @@ Sections:
 # CHECK-NEXT: VM size: 0
 # CHECK-NEXT: File size: 8
 # CHECK-NEXT: Data: ()
+
+# CHECK: Name: .zdebug_info
+# CHECK: dwarf-info
+# CHECK: File size: 28
+# CHECK: Data: (
+# CHECK-NEXT: 20304050 60708090
+# CHECK-NEXT: )

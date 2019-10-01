@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupValueObjectDisplay
-//-------------------------------------------------------------------------
 
 class OptionGroupValueObjectDisplay : public OptionGroup {
 public:

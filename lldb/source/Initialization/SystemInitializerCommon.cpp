@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/Socket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Timer.h"
@@ -24,6 +25,7 @@
 #if defined(_WIN32)
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 #include "lldb/Host/windows/windows.h"
+#include <crtdbg.h>
 #endif
 
 #include "llvm/Support/TargetSelect.h"
@@ -87,11 +89,17 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   Log::Initialize();
   HostInfo::Initialize();
+
+  llvm::Error error = Socket::Initialize();
+  if (error)
+    return error;
+
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
+  // Initialize plug-ins
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ProcessPOSIXLog::Initialize();
 #endif
@@ -110,6 +118,7 @@ void SystemInitializerCommon::Terminate() {
   ProcessWindowsLog::Terminate();
 #endif
 
+  Socket::Terminate();
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
   FileSystem::Terminate();

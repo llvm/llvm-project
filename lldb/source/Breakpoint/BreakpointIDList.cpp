@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // class BreakpointIDList
-//----------------------------------------------------------------------
 
 BreakpointIDList::BreakpointIDList()
     : m_invalid_id(LLDB_INVALID_BREAK_ID, LLDB_INVALID_BREAK_ID) {}

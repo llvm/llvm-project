@@ -26,19 +26,15 @@
 #include "RNBSocket.h"
 #include "SysSignal.h"
 
-//----------------------------------------------------------------------
 // Run loop modes which determine which run loop function will be called
-//----------------------------------------------------------------------
-typedef enum {
+enum RNBRunLoopMode {
   eRNBRunLoopModeInvalid = 0,
   eRNBRunLoopModeGetStartModeFromRemoteProtocol,
   eRNBRunLoopModeInferiorExecuting,
   eRNBRunLoopModeExit
-} RNBRunLoopMode;
+};
 
-//----------------------------------------------------------------------
 // Global Variables
-//----------------------------------------------------------------------
 RNBRemoteSP g_remoteSP;
 int g_disable_aslr = 0;
 int g_isatty = 0;
@@ -60,12 +56,10 @@ int g_isatty = 0;
     }                                                                          \
   } while (0)
 
-//----------------------------------------------------------------------
 // Get our program path and arguments from the remote connection.
 // We will need to start up the remote connection without a PID, get the
 // arguments, wait for the new process to finish launching and hit its
 // entry point,  and then return the run loop mode that should come next.
-//----------------------------------------------------------------------
 RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemoteSP &remoteSP) {
   std::string packet;
 
@@ -75,7 +69,7 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemoteSP &remoteSP) {
     uint32_t event_mask = RNBContext::event_read_packet_available;
 
     // Spin waiting to get the A packet.
-    while (1) {
+    while (true) {
       DNBLogThreadedIf(LOG_RNB_MAX,
                        "%s ctx.Events().WaitForSetEvents( 0x%08x ) ...",
                        __FUNCTION__, event_mask);
@@ -125,11 +119,9 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemoteSP &remoteSP) {
   return eRNBRunLoopModeExit;
 }
 
-//----------------------------------------------------------------------
 // Watch for signals:
 // SIGINT: so we can halt our inferior. (disabled for now)
 // SIGPIPE: in case our child process dies
-//----------------------------------------------------------------------
 nub_process_t g_pid;
 int g_sigpipe_received = 0;
 void signal_handler(int signo) {

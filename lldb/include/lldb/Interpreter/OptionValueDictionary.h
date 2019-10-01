@@ -24,9 +24,7 @@ public:
 
   ~OptionValueDictionary() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeDictionary; }
 
@@ -51,9 +49,7 @@ public:
     return ConvertTypeMaskToType(m_type_mask) != eTypeInvalid;
   }
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   size_t GetNumValues() const { return m_values.size(); }
 

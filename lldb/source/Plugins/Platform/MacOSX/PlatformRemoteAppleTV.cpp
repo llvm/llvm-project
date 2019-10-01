@@ -28,20 +28,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteAppleTV::PlatformRemoteAppleTV()
     : PlatformRemoteDarwinDevice () {}
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformRemoteAppleTV::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -75,8 +69,8 @@ PlatformSP PlatformRemoteAppleTV::CreateInstance(bool force,
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformRemoteAppleTV::%s(force=%s, arch={%s,%s})",
-                __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformRemoteAppleTV::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -122,16 +116,14 @@ PlatformSP PlatformRemoteAppleTV::CreateInstance(bool force,
   }
 
   if (create) {
-    if (log)
-      log->Printf("PlatformRemoteAppleTV::%s() creating platform",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "PlatformRemoteAppleTV::%s() creating platform",
+              __FUNCTION__);
 
     return lldb::PlatformSP(new PlatformRemoteAppleTV());
   }
 
-  if (log)
-    log->Printf("PlatformRemoteAppleTV::%s() aborting creation of platform",
-                __FUNCTION__);
+  LLDB_LOGF(log, "PlatformRemoteAppleTV::%s() aborting creation of platform",
+            __FUNCTION__);
 
   return lldb::PlatformSP();
 }

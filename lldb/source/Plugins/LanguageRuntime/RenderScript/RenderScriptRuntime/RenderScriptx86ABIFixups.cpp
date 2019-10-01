@@ -93,9 +93,8 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   assert(orig && "CallInst has no called function");
   llvm::FunctionType *orig_type = orig->getFunctionType();
   auto name = orig->getName();
-  if (log)
-    log->Printf("%s - cloning to StructRet function for '%s'", __FUNCTION__,
-                name.str().c_str());
+  LLDB_LOGF(log, "%s - cloning to StructRet function for '%s'", __FUNCTION__,
+            name.str().c_str());
 
   unsigned num_params = orig_type->getNumParams();
   std::vector<llvm::Type *> new_params{num_params + 1, nullptr};
@@ -113,9 +112,9 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   if (!return_type_ptr_type)
     return nullptr;
 
-  if (log)
-    log->Printf("%s - return type pointer type for StructRet clone @ '0x%p':\n",
-                __FUNCTION__, (void *)return_type_ptr_type);
+  LLDB_LOGF(log,
+            "%s - return type pointer type for StructRet clone @ '0x%p':\n",
+            __FUNCTION__, (void *)return_type_ptr_type);
   // put the sret pointer argument in place at the beginning of the
   // argument list.
   params.emplace(params.begin(), return_type_ptr_type);
@@ -192,8 +191,9 @@ bool fixupX86StructRetCalls(llvm::Module &module) {
     llvm::LoadInst *new_func_addr_load =
         new llvm::LoadInst(new_func_ptr, "load_func_pointer", call_inst);
     // and create a callinstruction from it
-    llvm::CallInst *new_call_inst = llvm::CallInst::Create(
-        new_func_addr_load, new_call_args, "new_func_call", call_inst);
+    llvm::CallInst *new_call_inst =
+        llvm::CallInst::Create(new_func_type, new_func_addr_load, new_call_args,
+                               "new_func_call", call_inst);
     new_call_inst->setCallingConv(call_inst->getCallingConv());
     new_call_inst->setTailCall(call_inst->isTailCall());
     llvm::LoadInst *lldb_save_result_address =

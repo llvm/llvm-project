@@ -195,42 +195,42 @@ static RegisterInfo g_register_infos[] = {
     //  =============================== ======================
     //  ===================      ========================== ====================
     //  ===================
-    {DEFINE_GPR(rax, NULL),
+    {DEFINE_GPR(rax, nullptr),
      {ehframe_dwarf_gpr_rax, ehframe_dwarf_gpr_rax, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rax},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(rbx, NULL),
+    {DEFINE_GPR(rbx, nullptr),
      {ehframe_dwarf_gpr_rbx, ehframe_dwarf_gpr_rbx, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rbx},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(rcx, NULL),
+    {DEFINE_GPR(rcx, nullptr),
      {ehframe_dwarf_gpr_rcx, ehframe_dwarf_gpr_rcx, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rcx},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(rdx, NULL),
+    {DEFINE_GPR(rdx, nullptr),
      {ehframe_dwarf_gpr_rdx, ehframe_dwarf_gpr_rdx, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rdx},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(rdi, NULL),
+    {DEFINE_GPR(rdi, nullptr),
      {ehframe_dwarf_gpr_rdi, ehframe_dwarf_gpr_rdi, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rdi},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(rsi, NULL),
+    {DEFINE_GPR(rsi, nullptr),
      {ehframe_dwarf_gpr_rsi, ehframe_dwarf_gpr_rsi, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_rsi},
      nullptr,
@@ -251,56 +251,56 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r8, NULL),
+    {DEFINE_GPR(r8, nullptr),
      {ehframe_dwarf_gpr_r8, ehframe_dwarf_gpr_r8, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r8},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r9, NULL),
+    {DEFINE_GPR(r9, nullptr),
      {ehframe_dwarf_gpr_r9, ehframe_dwarf_gpr_r9, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r9},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r10, NULL),
+    {DEFINE_GPR(r10, nullptr),
      {ehframe_dwarf_gpr_r10, ehframe_dwarf_gpr_r10, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r10},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r11, NULL),
+    {DEFINE_GPR(r11, nullptr),
      {ehframe_dwarf_gpr_r11, ehframe_dwarf_gpr_r11, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r11},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r12, NULL),
+    {DEFINE_GPR(r12, nullptr),
      {ehframe_dwarf_gpr_r12, ehframe_dwarf_gpr_r12, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r12},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r13, NULL),
+    {DEFINE_GPR(r13, nullptr),
      {ehframe_dwarf_gpr_r13, ehframe_dwarf_gpr_r13, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r13},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r14, NULL),
+    {DEFINE_GPR(r14, nullptr),
      {ehframe_dwarf_gpr_r14, ehframe_dwarf_gpr_r14, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r14},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(r15, NULL),
+    {DEFINE_GPR(r15, nullptr),
      {ehframe_dwarf_gpr_r15, ehframe_dwarf_gpr_r15, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_r15},
      nullptr,
@@ -321,21 +321,21 @@ static RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(cs, NULL),
+    {DEFINE_GPR(cs, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_cs},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(fs, NULL),
+    {DEFINE_GPR(fs, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_fs},
      nullptr,
      nullptr,
      nullptr,
      0},
-    {DEFINE_GPR(gs, NULL),
+    {DEFINE_GPR(gs, nullptr),
      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, gpr_gs},
      nullptr,
@@ -489,7 +489,7 @@ RegisterContextDarwin_x86_64::GetRegisterInfoAtIndex(size_t reg) {
   assert(k_num_register_infos == k_num_registers);
   if (reg < k_num_registers)
     return &g_register_infos[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextDarwin_x86_64::GetRegisterInfosCount() {
@@ -521,11 +521,9 @@ const size_t k_num_gpr_registers = llvm::array_lengthof(g_gpr_regnums);
 const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
 const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
 
-//----------------------------------------------------------------------
 // Register set definitions. The first definitions at register set index of
 // zero is for all registers, followed by other registers sets. The register
 // information for the all register set need not be filled in.
-//----------------------------------------------------------------------
 static const RegisterSet g_reg_sets[] = {
     {
         "General Purpose Registers", "gpr", k_num_gpr_registers, g_gpr_regnums,
@@ -543,7 +541,7 @@ const RegisterSet *
 RegisterContextDarwin_x86_64::GetRegisterSet(size_t reg_set) {
   if (reg_set < k_num_regsets)
     return &g_reg_sets[reg_set];
-  return NULL;
+  return nullptr;
 }
 
 int RegisterContextDarwin_x86_64::GetSetForNativeRegNum(int reg_num) {
@@ -554,22 +552,6 @@ int RegisterContextDarwin_x86_64::GetSetForNativeRegNum(int reg_num) {
   else if (reg_num < k_num_registers)
     return EXCRegSet;
   return -1;
-}
-
-void RegisterContextDarwin_x86_64::LogGPR(Log *log, const char *format, ...) {
-  if (log) {
-    if (format) {
-      va_list args;
-      va_start(args, format);
-      log->VAPrintf(format, args);
-      va_end(args);
-    }
-    for (uint32_t i = 0; i < k_num_gpr_registers; i++) {
-      uint32_t reg = gpr_rax + i;
-      log->Printf("%12s = 0x%16.16" PRIx64, g_register_infos[reg].name,
-                  (&gpr.rax)[reg]);
-    }
-  }
 }
 
 int RegisterContextDarwin_x86_64::ReadGPR(bool force) {
@@ -912,8 +894,7 @@ bool RegisterContextDarwin_x86_64::WriteRegister(const RegisterInfo *reg_info,
 bool RegisterContextDarwin_x86_64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
   data_sp = std::make_shared<DataBufferHeap>(REG_CONTEXT_SIZE, 0);
-  if (data_sp && ReadGPR(false) == 0 && ReadFPU(false) == 0 &&
-      ReadEXC(false) == 0) {
+  if (ReadGPR(false) == 0 && ReadFPU(false) == 0 && ReadEXC(false) == 0) {
     uint8_t *dst = data_sp->GetBytes();
     ::memcpy(dst, &gpr, sizeof(gpr));
     dst += sizeof(gpr);

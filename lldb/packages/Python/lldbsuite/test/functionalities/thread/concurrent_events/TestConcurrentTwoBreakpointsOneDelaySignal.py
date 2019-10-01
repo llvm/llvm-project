@@ -15,6 +15,7 @@ class ConcurrentTwoBreakpointsOneDelaySignal(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
+    @expectedFailureNetBSD
     def test(self):
         """Test two threads that trigger a breakpoint and one (1 second delay) signal thread. """
         self.build(dictionary=self.getBuildFlags())

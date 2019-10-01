@@ -19,6 +19,8 @@ public:
   static Status Connect(llvm::StringRef name, bool child_processes_inherit,
                         Socket *&socket);
 
+  std::string GetRemoteConnectionURI() const override;
+
 private:
   UDPSocket(NativeSocket socket);
 

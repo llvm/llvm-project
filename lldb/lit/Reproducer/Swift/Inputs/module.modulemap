@@ -1,0 +1,4 @@
+module Bar {
+    header "Foo.h"
+    export *
+}

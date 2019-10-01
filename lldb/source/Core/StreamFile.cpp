@@ -14,9 +14,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // StreamFile constructor
-//----------------------------------------------------------------------
 StreamFile::StreamFile() : Stream(), m_file() {}
 
 StreamFile::StreamFile(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)

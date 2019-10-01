@@ -17,9 +17,7 @@ namespace lldb_private {
 
 class VariableList {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   //  VariableList(const SymbolContext &symbol_context);
   VariableList();
   virtual ~VariableList();
@@ -75,9 +73,7 @@ protected:
   collection m_variables;
 
 private:
-  //------------------------------------------------------------------
   // For VariableList only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(VariableList);
 };
 

@@ -1,0 +1,45 @@
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/line-table.out
+# RUN: %lldb %T/line-table.out -o "target symbols add -s line-table.out %S/Inputs/line-table.syms" \
+# RUN:   -s %s -o exit | FileCheck %s
+
+# We create a compile unit for each function. The compile unit name is the first
+# line table entry in that function.
+# This symbol file contains a single function in the "compile unit" a.c. This
+# function has two line table sequences.
+image dump line-table a.c
+# CHECK-LABEL: Line table for /tmp/a.c
+# CHECK-NEXT: 0x00000000004000b0: /tmp/a.c:1
+# CHECK-NEXT: 0x00000000004000b1: /tmp/a.c:2
+# CHECK-NEXT: 0x00000000004000b2: /tmp/c.c:2
+# CHECK-NEXT: 0x00000000004000b3: 
+# CHECK-EMPTY: 
+# CHECK-NEXT: 0x00000000004000b4: /tmp/c.c:3
+# CHECK-NEXT: 0x00000000004000b5: 
+# CHECK-EMPTY: 
+
+# Single compile unit for c.c with a single line sequence.
+image dump line-table c.c
+# CHECK-LABEL: Line table for /tmp/c.c
+# CHECK-NEXT: 0x00000000004000c0: /tmp/c.c:1
+# CHECK-NEXT: 0x00000000004000c2: /tmp/a.c:2
+# CHECK-NEXT: 0x00000000004000c4: 
+# CHECK-EMPTY: 
+
+# There are two compile units called "d.c". Hence, two line tables.
+image dump line-table d.c
+# CHECK-LABEL: Line table for /tmp/d.c
+# CHECK-NEXT: 0x00000000004000d0: /tmp/d.c:1
+# CHECK-NEXT: 0x00000000004000d2: 
+# CHECK-EMPTY: 
+# CHECK-LABEL: Line table for /tmp/d.c
+# CHECK-NEXT: 0x00000000004000e0: /tmp/d.c:2
+# CHECK-NEXT: 0x00000000004000e2: 
+# CHECK-EMPTY: 
+
+image lookup -a 0x4000b2 -v
+# CHECK-LABEL: image lookup -a 0x4000b2 -v
+# CHECK: Summary: line-table.out`func + 2
+
+breakpoint set -f c.c -l 2
+# CHECK-LABEL: breakpoint set -f c.c -l 2
+# CHECK: Breakpoint 1: where = line-table.out`func + 2, address = 0x00000000004000b2

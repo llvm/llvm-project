@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -22,6 +22,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -33,11 +34,11 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
-    SymbolVendorELF::Initialize();
+    SymbolFileSymtab::Initialize();
   }
 
   void TearDown() override {
-    SymbolVendorELF::Terminate();
+    SymbolFileSymtab::Terminate();
     ObjectFileELF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
@@ -46,36 +47,66 @@ public:
 protected:
 };
 
-#define ASSERT_NO_ERROR(x)                                                     \
-  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
-    llvm::SmallString<128> MessageStorage;                                     \
-    llvm::raw_svector_ostream Message(MessageStorage);                         \
-    Message << #x ": did not return errc::success.\n"                          \
-            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
-            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
-    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
-  } else {                                                                     \
-  }
-
 TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
-  std::string yaml = GetInputFilePath("sections-resolve-consistently.yaml");
-  llvm::SmallString<128> obj;
-  ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
-      "sections-resolve-consistently-%%%%%%", "obj", obj));
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400180
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400158
+    AddressAlign:    0x0000000000000004
+    Content:         040000001400000003000000474E55003F3EC29E3FD83E49D18C4D49CD8A730CC13117B6
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000601000
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000601004
+    AddressAlign:    0x0000000000000004
+    Size:            0x0000000000000004
+Symbols:
+  - Name:            Y
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x0000000000601000
+    Size:            0x0000000000000004
+    Binding:         STB_GLOBAL
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+  - Name:            X
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x0000000000601004
+    Size:            0x0000000000000004
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  llvm::FileRemover remover(obj);
-  llvm::StringRef args[] = {YAML2OBJ, yaml};
-  llvm::StringRef obj_ref = obj;
-  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
-                                                       llvm::None};
-  ASSERT_EQ(0,
-            llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects));
-  uint64_t size;
-  ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
-  ASSERT_GT(size, 0u);
-
-  ModuleSpec spec{FileSpec(obj)};
-  spec.GetSymbolFileSpec().SetFile(obj, FileSpec::Style::native);
+  ModuleSpec spec{FileSpec(ExpectedFile->name())};
+  spec.GetSymbolFileSpec().SetFile(ExpectedFile->name(),
+                                   FileSpec::Style::native);
   auto module_sp = std::make_shared<Module>(spec);
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
@@ -140,72 +171,4 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
   UUID Uuid;
   Uuid.SetFromStringRef("1b8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9", 20);
   EXPECT_EQ(Spec.GetUUID(), Uuid);
-}
-
-static void CHECK_ABS32(uint8_t *bytes, uint32_t offset, uint32_t addend) {
-  uint32_t res;
-  memcpy(&res, reinterpret_cast<uint32_t *>(bytes + offset), sizeof(uint32_t));
-  ASSERT_EQ(addend, res);
-}
-
-static void CHECK_ABS64(uint8_t *bytes, uint64_t offset, uint64_t addend) {
-  uint64_t res;
-  memcpy(&res, reinterpret_cast<uint64_t *>(bytes + offset), sizeof(uint64_t));
-  ASSERT_EQ(addend, res);
-}
-
-TEST_F(ObjectFileELFTest, TestAARCH64Relocations) {
-  std::string yaml = GetInputFilePath("debug-info-relocations.pcm.yaml");
-  llvm::SmallString<128> obj;
-  ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
-      "debug-info-relocations-%%%%%%", "obj", obj));
-
-  llvm::FileRemover remover(obj);
-  llvm::StringRef args[] = {YAML2OBJ, yaml};
-  llvm::StringRef obj_ref = obj;
-  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
-                                                       llvm::None};
-  ASSERT_EQ(0,
-            llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects));
-  uint64_t size;
-  ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
-  ASSERT_GT(size, 0u);
-
-  ModuleSpec spec{FileSpec(obj)};
-  spec.GetSymbolFileSpec().SetFile(obj, FileSpec::Style::native);
-  auto module_sp = std::make_shared<Module>(spec);
-
-  auto objfile = static_cast<ObjectFileELF *>(module_sp->GetObjectFile());
-  SectionList *section_list = objfile->GetSectionList();
-  ASSERT_NE(nullptr, section_list);
-
-  auto debug_info_sp =
-      section_list->FindSectionByName(ConstString(".debug_info"));
-  ASSERT_NE(nullptr, debug_info_sp);
-  objfile->RelocateSection(debug_info_sp.get());
-
-  DataExtractor data;
-  // length of 0x10 is not needed but length 0x0 crashes
-  objfile->GetData(0x00, 0x10, data);
-  DataBufferSP &data_buffer_sp = data.GetSharedDataBuffer();
-  uint8_t *bytes = data_buffer_sp->GetBytes();
-
-  addr_t debug_info_offset = debug_info_sp->GetFileOffset();
-  bytes += debug_info_offset;
-
-  // Sanity check - The first byte from the yaml file is 0x47
-  ASSERT_EQ(0x47, *bytes);
-
-  // .rela.debug_info contains 9 relocations:
-  // 7 R_AARCH64_ABS32 - 2 R_AARCH64_ABS64
-  // None have a value. Four have addends.
-  CHECK_ABS32(bytes, 0x6, 0);
-  CHECK_ABS32(bytes, 0xC, 0);
-  CHECK_ABS32(bytes, 0x12, 45);
-  CHECK_ABS32(bytes, 0x16, 0);
-  CHECK_ABS32(bytes, 0x1A, 55);
-  CHECK_ABS64(bytes, 0x1E, 0);
-  CHECK_ABS64(bytes, 0x2B, 0);
-  CHECK_ABS32(bytes, 0x39, 73);
-  CHECK_ABS32(bytes, 0x44, 75);
 }

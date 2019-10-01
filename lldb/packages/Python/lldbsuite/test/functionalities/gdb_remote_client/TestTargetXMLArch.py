@@ -114,7 +114,10 @@ class TestTargetXMLArch(GDBRemoteTestBase):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         if self.TraceOn():
-            interp.HandleCommand("log enable gdb-remote packets", result)
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(
+                    lambda: self.runCmd("log disable gdb-remote packets"))
+
         target = self.dbg.CreateTarget('')
         self.assertEqual('', target.GetTriple())
         process = self.connect(target)

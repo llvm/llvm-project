@@ -81,9 +81,7 @@ struct UserArea {
 #define DR_OFFSET(reg_index) (DR_0_OFFSET + (reg_index * 4))
 #define FPR_SIZE(reg) sizeof(((FPR_i386 *)NULL)->reg)
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_i386 to declare our g_register_infos_i386 structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_I386_STRUCT
 #include "RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT
@@ -92,8 +90,8 @@ RegisterContextLinux_i386::RegisterContextLinux_i386(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {
   RegisterInfo orig_ax = {"orig_eax",
-                          NULL,
-                          sizeof(((GPR *)NULL)->orig_eax),
+                          nullptr,
+                          sizeof(((GPR *)nullptr)->orig_eax),
                           (LLVM_EXTENSION offsetof(GPR, orig_eax)),
                           eEncodingUint,
                           eFormatHex,
@@ -116,7 +114,7 @@ const RegisterInfo *RegisterContextLinux_i386::GetRegisterInfo() const {
     return g_register_infos_i386;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

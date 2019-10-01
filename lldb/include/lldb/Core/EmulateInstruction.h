@@ -23,29 +23,16 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 namespace lldb_private {
 class OptionValueDictionary;
-}
-namespace lldb_private {
 class RegisterContext;
-}
-namespace lldb_private {
 class RegisterValue;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class Target;
-}
-namespace lldb_private {
 class UnwindPlan;
-}
 
-namespace lldb_private {
-
-//----------------------------------------------------------------------
-/// @class EmulateInstruction EmulateInstruction.h
+/// \class EmulateInstruction EmulateInstruction.h
 /// "lldb/Core/EmulateInstruction.h"
 /// A class that allows emulation of CPU opcodes.
 ///
@@ -102,7 +89,6 @@ namespace lldb_private {
 /// paths in a debugger (single step prediction, finding save restore
 /// locations of registers for unwinding stack frame variables) and emulating
 /// the instruction is just a bonus.
-//----------------------------------------------------------------------
 
 class EmulateInstruction : public PluginInterface {
 public:
@@ -367,9 +353,7 @@ public:
 
   ~EmulateInstruction() override = default;
 
-  //----------------------------------------------------------------------
   // Mandatory overrides
-  //----------------------------------------------------------------------
   virtual bool
   SupportsEmulatingInstructionsOfType(InstructionType inst_type) = 0;
 
@@ -389,9 +373,7 @@ public:
   virtual bool GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num,
                                RegisterInfo &reg_info) = 0;
 
-  //----------------------------------------------------------------------
   // Optional overrides
-  //----------------------------------------------------------------------
   virtual bool SetInstruction(const Opcode &insn_opcode,
                               const Address &inst_addr, Target *target);
 
@@ -400,9 +382,7 @@ public:
   static const char *TranslateRegister(lldb::RegisterKind reg_kind,
                                        uint32_t reg_num, std::string &reg_name);
 
-  //----------------------------------------------------------------------
   // RegisterInfo variants
-  //----------------------------------------------------------------------
   bool ReadRegister(const RegisterInfo *reg_info, RegisterValue &reg_value);
 
   uint64_t ReadRegisterUnsigned(const RegisterInfo *reg_info,
@@ -414,9 +394,7 @@ public:
   bool WriteRegisterUnsigned(const Context &context,
                              const RegisterInfo *reg_info, uint64_t reg_value);
 
-  //----------------------------------------------------------------------
   // Register kind and number variants
-  //----------------------------------------------------------------------
   bool ReadRegister(lldb::RegisterKind reg_kind, uint32_t reg_num,
                     RegisterValue &reg_value);
 
@@ -511,18 +489,16 @@ public:
 
 protected:
   ArchSpec m_arch;
-  void *m_baton;
-  ReadMemoryCallback m_read_mem_callback;
-  WriteMemoryCallback m_write_mem_callback;
-  ReadRegisterCallback m_read_reg_callback;
-  WriteRegisterCallback m_write_reg_callback;
-  lldb::addr_t m_addr;
+  void *m_baton = nullptr;
+  ReadMemoryCallback m_read_mem_callback = &ReadMemoryDefault;
+  WriteMemoryCallback m_write_mem_callback = &WriteMemoryDefault;
+  ReadRegisterCallback m_read_reg_callback = &ReadRegisterDefault;
+  WriteRegisterCallback m_write_reg_callback = &WriteRegisterDefault;
+  lldb::addr_t m_addr = LLDB_INVALID_ADDRESS;
   Opcode m_opcode;
 
 private:
-  //------------------------------------------------------------------
   // For EmulateInstruction only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(EmulateInstruction);
 };
 

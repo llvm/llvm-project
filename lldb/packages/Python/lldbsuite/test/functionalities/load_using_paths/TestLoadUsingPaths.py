@@ -6,8 +6,6 @@ from __future__ import print_function
 
 
 import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -42,6 +40,7 @@ class LoadUsingPathsTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @not_remote_testsuite_ready
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @expectedFlakeyNetBSD
     def test_load_using_paths(self):
         """Test that we can load a module by providing a set of search paths."""
         if self.platformIsDarwin():

@@ -161,6 +161,10 @@
 #  define ITT_ARCH_MIPS64  6
 #endif /* ITT_ARCH_MIPS64 */
 
+#ifndef ITT_ARCH_RISCV64
+#  define ITT_ARCH_RISCV64  7
+#endif /* ITT_ARCH_RISCV64 */
+
 #ifndef ITT_ARCH
 #  if defined _M_IX86 || defined __i386__
 #    define ITT_ARCH ITT_ARCH_IA32
@@ -178,6 +182,8 @@
 #    define ITT_ARCH ITT_ARCH_MIPS
 #  elif defined __mips__ && defined __mips64
 #    define ITT_ARCH ITT_ARCH_MIPS64
+#  elif defined __riscv && __riscv_xlen == 64
+#    define ITT_ARCH ITT_ARCH_RISCV64
 #  endif
 #endif
 
@@ -330,7 +336,9 @@ ITT_INLINE long __TBB_machine_fetchadd4(volatile void* ptr, long addend)
                           : "memory");
     return result;
 }
-#elif ITT_ARCH==ITT_ARCH_ARM || ITT_ARCH==ITT_ARCH_PPC64 || ITT_ARCH==ITT_ARCH_AARCH64 || ITT_ARCH==ITT_ARCH_MIPS ||  ITT_ARCH==ITT_ARCH_MIPS64
+#elif ITT_ARCH == ITT_ARCH_ARM || ITT_ARCH == ITT_ARCH_PPC64 ||                \
+    ITT_ARCH == ITT_ARCH_AARCH64 || ITT_ARCH == ITT_ARCH_MIPS ||               \
+    ITT_ARCH == ITT_ARCH_MIPS64 || ITT_ARCH == ITT_ARCH_RISCV64
 #define __TBB_machine_fetchadd4(addr, val) __sync_fetch_and_add(addr, val)
 #endif /* ITT_ARCH==ITT_ARCH_IA64 */
 #ifndef ITT_SIMPLE_INIT

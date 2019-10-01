@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
@@ -23,6 +24,7 @@
 #include <future>
 
 using namespace lldb_private;
+using namespace lldb;
 
 void SymbolFile::PreloadSymbols() {
   // No-op for most implementations.
@@ -31,21 +33,24 @@ void SymbolFile::PreloadSymbols() {
 std::recursive_mutex &SymbolFile::GetModuleMutex() const {
   return GetObjectFile()->GetModule()->GetMutex();
 }
+ObjectFile *SymbolFile::GetMainObjectFile() {
+  return m_objfile_sp->GetModule()->GetObjectFile();
+}
 
-SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
+SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
   std::unique_ptr<SymbolFile> best_symfile_up;
-  if (obj_file != nullptr) {
+  if (objfile_sp != nullptr) {
 
     // We need to test the abilities of this section list. So create what it
-    // would be with this new obj_file.
-    lldb::ModuleSP module_sp(obj_file->GetModule());
+    // would be with this new objfile_sp.
+    lldb::ModuleSP module_sp(objfile_sp->GetModule());
     if (module_sp) {
       // Default to the main module section list.
       ObjectFile *module_obj_file = module_sp->GetObjectFile();
-      if (module_obj_file != obj_file) {
+      if (module_obj_file != objfile_sp.get()) {
         // Make sure the main object file's sections are created
         module_obj_file->GetSectionList();
-        obj_file->CreateSections(*module_sp->GetUnifiedSectionList());
+        objfile_sp->CreateSections(*module_sp->GetUnifiedSectionList());
       }
     }
 
@@ -59,7 +64,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
          (create_callback = PluginManager::GetSymbolFileCreateCallbackAtIndex(
               idx)) != nullptr;
          ++idx) {
-      std::unique_ptr<SymbolFile> curr_symfile_up(create_callback(obj_file));
+      std::unique_ptr<SymbolFile> curr_symfile_up(create_callback(objfile_sp));
 
       if (curr_symfile_up) {
         const uint32_t sym_file_abilities = curr_symfile_up->GetAbilities();
@@ -82,18 +87,14 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   return best_symfile_up.release();
 }
 
-TypeList *SymbolFile::GetTypeList() {
-  if (m_obj_file)
-    return m_obj_file->GetModule()->GetTypeList();
-  return nullptr;
-}
-
-TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
-  TypeSystem *type_system =
-      m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system)
-    type_system->SetSymbolFile(this);
-  return type_system;
+llvm::Expected<TypeSystem &>
+SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
+  auto type_system_or_err =
+      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
+  if (type_system_or_err) {
+    type_system_or_err->SetSymbolFile(this);
+  }
+  return type_system_or_err;
 }
 
 bool SymbolFile::ForceInlineSourceFileCheck() {
@@ -105,7 +106,7 @@ bool SymbolFile::ForceInlineSourceFileCheck() {
   // file. Returning true for JIT files means all breakpoints set by file and
   // line
   // will be found correctly.
-  return m_obj_file->GetType() == ObjectFile::eTypeJIT;
+  return m_objfile_sp->GetType() == ObjectFile::eTypeJIT;
 }
 
 bool SymbolFile::SetLimitSourceFileRange(const FileSpec &file,
@@ -198,7 +199,8 @@ uint32_t SymbolFile::FindTypes(
 }
 
 size_t SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                             bool append, TypeMap &types) {
+                             LanguageSet languages, bool append,
+                             TypeMap &types) {
   if (!append)
     types.Clear();
   return 0;
@@ -217,3 +219,86 @@ void SymbolFile::AssertModuleLock() {
          "Module is not locked");
 #endif
 }
+
+uint32_t SymbolFile::GetNumCompileUnits() {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  if (!m_compile_units) {
+    // Create an array of compile unit shared pointers -- which will each
+    // remain NULL until someone asks for the actual compile unit information.
+    m_compile_units.emplace(CalculateNumCompileUnits());
+  }
+  return m_compile_units->size();
+}
+
+CompUnitSP SymbolFile::GetCompileUnitAtIndex(uint32_t idx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  uint32_t num = GetNumCompileUnits();
+  if (idx >= num)
+    return nullptr;
+  lldb::CompUnitSP &cu_sp = (*m_compile_units)[idx];
+  if (!cu_sp)
+    cu_sp = ParseCompileUnitAtIndex(idx);
+  return cu_sp;
+}
+
+void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  const size_t num_compile_units = GetNumCompileUnits();
+  assert(idx < num_compile_units);
+  (void)num_compile_units;
+
+  // Fire off an assertion if this compile unit already exists for now. The
+  // partial parsing should take care of only setting the compile unit
+  // once, so if this assertion fails, we need to make sure that we don't
+  // have a race condition, or have a second parse of the same compile
+  // unit.
+  assert((*m_compile_units)[idx] == nullptr);
+  (*m_compile_units)[idx] = cu_sp;
+}
+
+Symtab *SymbolFile::GetSymtab() {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  if (m_symtab)
+    return m_symtab;
+
+  // Fetch the symtab from the main object file.
+  m_symtab = GetMainObjectFile()->GetSymtab();
+
+  // Then add our symbols to it.
+  if (m_symtab)
+    AddSymbols(*m_symtab);
+
+  return m_symtab;
+}
+
+void SymbolFile::SectionFileAddressesChanged() {
+  ObjectFile *module_objfile = GetMainObjectFile();
+  ObjectFile *symfile_objfile = GetObjectFile();
+  if (symfile_objfile != module_objfile)
+    symfile_objfile->SectionFileAddressesChanged();
+  if (m_symtab)
+    m_symtab->SectionFileAddressesChanged();
+}
+
+void SymbolFile::Dump(Stream &s) {
+  s.Format("SymbolFile {0} ({1})\n", GetPluginName(),
+           GetMainObjectFile()->GetFileSpec());
+  s.PutCString("Types:\n");
+  m_type_list.Dump(&s, /*show_context*/ false);
+  s.PutChar('\n');
+
+  s.PutCString("Compile units:\n");
+  if (m_compile_units) {
+    for (const CompUnitSP &cu_sp : *m_compile_units) {
+      // We currently only dump the compile units that have been parsed
+      if (cu_sp)
+        cu_sp->Dump(&s, /*show_context*/ false);
+    }
+  }
+  s.PutChar('\n');
+
+  if (Symtab *symtab = GetSymtab())
+    symtab->Dump(&s, nullptr, eSortOrderNone);
+}
+
+SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;

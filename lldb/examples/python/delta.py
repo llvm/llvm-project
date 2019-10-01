@@ -16,7 +16,8 @@
 # available.
 #----------------------------------------------------------------------
 
-import commands
+from __future__ import print_function
+
 import optparse
 import os
 import shlex
@@ -94,9 +95,9 @@ def parse_log_file(file, options):
     handy when trying to figure out why some operation in the debugger is taking
     a long time during a preset set of debugger commands.'''
 
-    print '#----------------------------------------------------------------------'
-    print "# Log file: '%s'" % file
-    print '#----------------------------------------------------------------------'
+    print('#----------------------------------------------------------------------')
+    print("# Log file: '%s'" % file)
+    print('#----------------------------------------------------------------------')
 
     timestamp_regex = re.compile('(\s*)([1-9][0-9]+\.[0-9]+)([^0-9].*)$')
 
@@ -114,10 +115,10 @@ def parse_log_file(file, options):
             else:
                 base_time = curr_time
 
-            print '%s%.6f %+.6f%s' % (match.group(1), curr_time - base_time, delta, match.group(3))
+            print('%s%.6f %+.6f%s' % (match.group(1), curr_time - base_time, delta, match.group(3)))
             last_time = curr_time
         else:
-            print line
+            print(line)
 
 
 if __name__ == '__main__':
@@ -131,4 +132,4 @@ else:
         # Add any commands contained in this module to LLDB
         lldb.debugger.HandleCommand(
             'command script add -f delta.parse_time_log parse_time_log')
-        print 'The "parse_time_log" command is now installed and ready for use, type "parse_time_log --help" for more information'
+        print('The "parse_time_log" command is now installed and ready for use, type "parse_time_log --help" for more information')

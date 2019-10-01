@@ -89,7 +89,7 @@ bool DataVisualization::Categories::GetCategory(ConstString category,
                                                 lldb::TypeCategoryImplSP &entry,
                                                 bool allow_create) {
   entry = GetFormatManager().GetCategory(category, allow_create);
-  return (entry.get() != NULL);
+  return (entry.get() != nullptr);
 }
 
 bool DataVisualization::Categories::GetCategory(

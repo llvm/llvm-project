@@ -31,9 +31,7 @@
 namespace llvm {
 class raw_ostream;
 }
-//----------------------------------------------------------------------
 // Logging Options
-//----------------------------------------------------------------------
 #define LLDB_LOG_OPTION_THREADSAFE (1u << 0)
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
 #define LLDB_LOG_OPTION_PREPEND_SEQUENCE (1u << 3)
@@ -44,9 +42,7 @@ class raw_ostream;
 #define LLDB_LOG_OPTION_APPEND (1U << 8)
 #define LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION (1U << 9)
 
-//----------------------------------------------------------------------
 // Logging Functions
-//----------------------------------------------------------------------
 namespace lldb_private {
 
 class Log final {
@@ -73,7 +69,7 @@ public:
         : log_ptr(nullptr), categories(categories),
           default_flags(default_flags) {}
 
-    // This function is safe to call at any time If the channel is disabled
+    // This function is safe to call at any time. If the channel is disabled
     // after (or concurrently with) this function returning a non-null Log
     // pointer, it is still safe to attempt to write to the Log object -- the
     // output will be discarded.
@@ -84,7 +80,7 @@ public:
       return nullptr;
     }
 
-    // This function is safe to call at any time If the channel is disabled
+    // This function is safe to call at any time. If the channel is disabled
     // after (or concurrently with) this function returning a non-null Log
     // pointer, it is still safe to attempt to write to the Log object -- the
     // output will be discarded.
@@ -99,9 +95,7 @@ public:
 
   static void Initialize();
 
-  //------------------------------------------------------------------
   // Static accessors for logging channels
-  //------------------------------------------------------------------
   static void Register(llvm::StringRef name, Channel &channel);
   static void Unregister(llvm::StringRef name);
 
@@ -122,13 +116,11 @@ public:
 
   static void ListAllLogChannels(llvm::raw_ostream &stream);
 
-  //------------------------------------------------------------------
   // Member functions
   //
   // These functions are safe to call at any time you have a Log* obtained from
   // the Channel class. If logging is disabled between you obtaining the Log
   // object and writing to it, the output will be silently discarded.
-  //------------------------------------------------------------------
   Log(Channel &channel) : m_channel(channel) {}
   ~Log() = default;
 
@@ -150,13 +142,10 @@ public:
                          std::forward<Args>(args)...));
   }
 
+  /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  void VAPrintf(const char *format, va_list args);
-
   void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void VAError(const char *format, va_list args);
 
   void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
@@ -169,6 +158,9 @@ public:
   bool GetVerbose() const;
 
 private:
+  void VAPrintf(const char *format, va_list args);
+  void VAError(const char *format, va_list args);
+
   Channel &m_channel;
 
   // The mutex makes sure enable/disable operations are thread-safe. The
@@ -214,11 +206,38 @@ private:
 
 } // namespace lldb_private
 
+/// The LLDB_LOG* macros defined below are the way to emit log messages.
+///
+/// Note that the macros surround the arguments in a check for the log
+/// being on, so you can freely call methods in arguments without affecting
+/// the non-log execution flow.
+///
+/// If you need to do more complex computations to prepare the log message
+/// be sure to add your own if (log) check, since we don't want logging to
+/// have any effect when not on.
+///
+/// However, the LLDB_LOG macro uses the llvm::formatv system (see the
+/// ProgrammersManual page in the llvm docs for more details).  This allows
+/// the use of "format_providers" to auto-format datatypes, and there are
+/// already formatters for some of the llvm and lldb datatypes.
+///
+/// So if you need to do non-trivial formatting of one of these types, be
+/// sure to grep the lldb and llvm sources for "format_provider" to see if
+/// there is already a formatter before doing in situ formatting, and if
+/// possible add a provider if one does not already exist.
+
 #define LLDB_LOG(log, ...)                                                     \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private)                                                           \
       log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
+#define LLDB_LOGF(log, ...)                                                    \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    if (log_private)                                                           \
+      log_private->Printf(__VA_ARGS__);                                        \
   } while (0)
 
 #define LLDB_LOGV(log, ...)                                                    \

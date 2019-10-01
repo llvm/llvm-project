@@ -35,9 +35,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObject
-//-------------------------------------------------------------------------
 
 CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
   llvm::StringRef help, llvm::StringRef syntax, uint32_t flags)
@@ -138,17 +136,15 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
 }
 
 bool CommandObject::CheckRequirements(CommandReturnObject &result) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   // Nothing should be stored in m_exe_ctx between running commands as
   // m_exe_ctx has shared pointers to the target, process, thread and frame and
   // we don't want any CommandObject instances to keep any of these objects
   // around longer than for a single command. Every command should call
-  // CommandObject::Cleanup() after it has completed
-  assert(m_exe_ctx.GetTargetPtr() == NULL);
-  assert(m_exe_ctx.GetProcessPtr() == NULL);
-  assert(m_exe_ctx.GetThreadPtr() == NULL);
-  assert(m_exe_ctx.GetFramePtr() == NULL);
-#endif
+  // CommandObject::Cleanup() after it has completed.
+  assert(!m_exe_ctx.GetTargetPtr());
+  assert(!m_exe_ctx.GetProcessPtr());
+  assert(!m_exe_ctx.GetThreadPtr());
+  assert(!m_exe_ctx.GetFramePtr());
 
   // Lock down the interpreter's execution context prior to running the command
   // so we guarantee the selected target, process, thread and frame can't go
@@ -261,14 +257,14 @@ void CommandObject::Cleanup() {
     m_api_locker.unlock();
 }
 
-int CommandObject::HandleCompletion(CompletionRequest &request) {
+void CommandObject::HandleCompletion(CompletionRequest &request) {
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
   // completion should override WantsCompletion() to return true, instead.
   if (WantsRawCommandString() && !WantsCompletion()) {
     // FIXME: Abstract telling the completion to insert the completion
     // character.
-    return -1;
+    return;
   } else {
     // Can we do anything generic with the options?
     Options *cur_options = GetOptions();
@@ -282,11 +278,11 @@ int CommandObject::HandleCompletion(CompletionRequest &request) {
       bool handled_by_options = cur_options->HandleOptionCompletion(
           request, opt_element_vector, GetCommandInterpreter());
       if (handled_by_options)
-        return request.GetNumberOfMatches();
+        return;
     }
 
     // If we got here, the last word is not an option or an option argument.
-    return HandleArgumentCompletion(request, opt_element_vector);
+    HandleArgumentCompletion(request, opt_element_vector);
   }
 }
 
@@ -921,12 +917,21 @@ const char *CommandObject::GetArgumentDescriptionAsCString(
   return g_arguments_data[arg_type].help_text;
 }
 
-Target *CommandObject::GetDummyTarget() {
-  return m_interpreter.GetDebugger().GetDummyTarget();
+Target &CommandObject::GetDummyTarget() {
+  return *m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target *CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
+  return *m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+}
+
+Target &CommandObject::GetSelectedTarget() {
+  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
+                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
+                        eCommandRequiresThread | eCommandRequiresProcess |
+                        eCommandRequiresRegContext) &&
+         "GetSelectedTarget called from object that may have no target");
+  return *m_interpreter.GetDebugger().GetSelectedTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {
@@ -1068,7 +1073,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypePythonScript, "python-script", CommandCompletions::eNoCompletion, { nullptr, false }, "Source code written in Python." },
     { eArgTypeQueueName, "queue-name", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of the thread queue." },
     { eArgTypeRegisterName, "register-name", CommandCompletions::eNoCompletion, { RegisterNameHelpTextCallback, true }, nullptr },
-    { eArgTypeRegularExpression, "regular-expression", CommandCompletions::eNoCompletion, { nullptr, false }, "A regular expression." },
+    { eArgTypeRegularExpression, "regular-expression", CommandCompletions::eNoCompletion, { nullptr, false }, "A POSIX-compliant extended regular expression." },
     { eArgTypeRunArgs, "run-args", CommandCompletions::eNoCompletion, { nullptr, false }, "Arguments to be passed to the target program when it starts executing." },
     { eArgTypeRunMode, "run-mode", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeScriptedCommandSynchronicity, "script-cmd-synchronicity", CommandCompletions::eNoCompletion, { nullptr, false }, "The synchronicity to use to run scripted commands with regard to LLDB event system." },
@@ -1107,7 +1112,8 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
 const CommandObject::ArgumentTableEntry *CommandObject::GetArgumentTable() {
   // If this assertion fires, then the table above is out of date with the
   // CommandArgumentType enumeration
-  assert((sizeof(CommandObject::g_arguments_data) /
-          sizeof(CommandObject::ArgumentTableEntry)) == eArgTypeLastArg);
+  static_assert((sizeof(CommandObject::g_arguments_data) /
+                 sizeof(CommandObject::ArgumentTableEntry)) == eArgTypeLastArg,
+                "");
   return CommandObject::g_arguments_data;
 }

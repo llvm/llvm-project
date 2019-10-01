@@ -1,8 +1,5 @@
 """ Testing separate debug info loading for base binary with a symlink. """
-import os
-import time
 import lldb
-import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

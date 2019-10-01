@@ -1,3 +1,9 @@
+set(LLVM_OPTIONAL_SOURCES LocateSymbolFileMacOSX.cpp)
+
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
+endif()
+
 add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
@@ -6,19 +12,22 @@ add_lldb_library(lldbSymbol
   ClangExternalASTSourceCallbacks.cpp
   ClangExternalASTSourceCommon.cpp
   ClangUtil.cpp
+  CompactUnwindInfo.cpp
+  CompileUnit.cpp
   CompilerDecl.cpp
   CompilerDeclContext.cpp
   CompilerType.cpp
-  CompileUnit.cpp
-  CompactUnwindInfo.cpp
+  CxxModuleHandler.cpp
+  DWARFCallFrameInfo.cpp
   DebugMacros.cpp
   Declaration.cpp
-  DWARFCallFrameInfo.cpp
-  Function.cpp
   FuncUnwinders.cpp
+  Function.cpp
   LineEntry.cpp
   LineTable.cpp
+  LocateSymbolFile.cpp
   ObjectFile.cpp
+  PostfixExpression.cpp
   SwiftASTContext.cpp
   Symbol.cpp
   SymbolContext.cpp
@@ -33,7 +42,8 @@ add_lldb_library(lldbSymbol
   UnwindTable.cpp
   Variable.cpp
   VariableList.cpp
-  VerifyDecl.cpp
+
+  ${PLATFORM_SOURCES}
 
   LINK_LIBS
     swiftAST
@@ -55,9 +65,9 @@ add_lldb_library(lldbSymbol
     lldbPluginExpressionParserSwift
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
-    lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginPlatformMacOSX
+    lldbPluginObjCRuntime
 
   LINK_COMPONENTS
     Support

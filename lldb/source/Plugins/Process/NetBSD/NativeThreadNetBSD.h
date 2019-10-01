@@ -26,9 +26,7 @@ class NativeThreadNetBSD : public NativeThreadProtocol {
 public:
   NativeThreadNetBSD(NativeProcessNetBSD &process, lldb::tid_t tid);
 
-  // ---------------------------------------------------------------------
   // NativeThreadProtocol Interface
-  // ---------------------------------------------------------------------
   std::string GetName() override;
 
   lldb::StateType GetState() override;
@@ -48,9 +46,7 @@ public:
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
 private:
-  // ---------------------------------------------------------------------
   // Interface for friend classes
-  // ---------------------------------------------------------------------
 
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
   void SetStoppedByBreakpoint();
@@ -61,9 +57,7 @@ private:
   void SetRunning();
   void SetStepping();
 
-  // ---------------------------------------------------------------------
   // Member Variables
-  // ---------------------------------------------------------------------
   lldb::StateType m_state;
   ThreadStopInfo m_stop_info;
   std::unique_ptr<NativeRegisterContext> m_reg_context_up;

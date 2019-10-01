@@ -12,6 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -22,10 +23,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Promote to max type currently follows the ANSI C rule for type promotion in
 // expressions.
-//----------------------------------------------------------------------
 static Scalar::Type PromoteToMaxType(
     const Scalar &lhs,  // The const left hand side object
     const Scalar &rhs,  // The const right hand side object
@@ -70,10 +69,7 @@ static Scalar::Type PromoteToMaxType(
   return Scalar::e_void;
 }
 
-Scalar::Scalar() : m_type(e_void), m_float((float)0) {}
-
-Scalar::Scalar(const Scalar &rhs)
-    : m_type(rhs.m_type), m_integer(rhs.m_integer), m_float(rhs.m_float) {}
+Scalar::Scalar() : m_type(e_void), m_float(static_cast<float>(0)) {}
 
 bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   size_t byte_size = GetByteSize();
@@ -369,13 +365,13 @@ Scalar &Scalar::operator=(double v) {
 Scalar &Scalar::operator=(long double v) {
   m_type = e_long_double;
   if (m_ieee_quad)
-    m_float = llvm::APFloat(
-        llvm::APFloat::IEEEquad(),
-        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((type128 *)&v)->x));
+    m_float = llvm::APFloat(llvm::APFloat::IEEEquad(),
+                            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                                        (reinterpret_cast<type128 *>(&v))->x));
   else
-    m_float = llvm::APFloat(
-        llvm::APFloat::x87DoubleExtended(),
-        llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((type128 *)&v)->x));
+    m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                                        (reinterpret_cast<type128 *>(&v))->x));
   return *this;
 }
 
@@ -1036,7 +1032,7 @@ bool Scalar::Promote(Scalar::Type type) {
       success = true;
       break;
     case e_double:
-      m_float = llvm::APFloat((double_t)m_float.convertToFloat());
+      m_float = llvm::APFloat(static_cast<double_t>(m_float.convertToFloat()));
       success = true;
       break;
 
@@ -1322,14 +1318,16 @@ signed char Scalar::SChar(char fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (schar_t)(m_integer.sextOrTrunc(sizeof(schar_t) * 8)).getSExtValue();
+    return static_cast<schar_t>(
+        (m_integer.sextOrTrunc(sizeof(schar_t) * 8)).getSExtValue());
   case e_float:
-    return (schar_t)m_float.convertToFloat();
+    return static_cast<schar_t>(m_float.convertToFloat());
   case e_double:
-    return (schar_t)m_float.convertToDouble();
+    return static_cast<schar_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (schar_t)(ldbl_val.sextOrTrunc(sizeof(schar_t) * 8)).getSExtValue();
+    return static_cast<schar_t>(
+        (ldbl_val.sextOrTrunc(sizeof(schar_t) * 8)).getSExtValue());
   }
   return fail_value;
 }
@@ -1350,14 +1348,16 @@ unsigned char Scalar::UChar(unsigned char fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (uchar_t)(m_integer.zextOrTrunc(sizeof(uchar_t) * 8)).getZExtValue();
+    return static_cast<uchar_t>(
+        (m_integer.zextOrTrunc(sizeof(uchar_t) * 8)).getZExtValue());
   case e_float:
-    return (uchar_t)m_float.convertToFloat();
+    return static_cast<uchar_t>(m_float.convertToFloat());
   case e_double:
-    return (uchar_t)m_float.convertToDouble();
+    return static_cast<uchar_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (uchar_t)(ldbl_val.zextOrTrunc(sizeof(uchar_t) * 8)).getZExtValue();
+    return static_cast<uchar_t>(
+        (ldbl_val.zextOrTrunc(sizeof(uchar_t) * 8)).getZExtValue());
   }
   return fail_value;
 }
@@ -1378,16 +1378,16 @@ short Scalar::SShort(short fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (sshort_t)(m_integer.sextOrTrunc(sizeof(sshort_t) * 8))
-        .getSExtValue();
+    return static_cast<sshort_t>(
+        (m_integer.sextOrTrunc(sizeof(sshort_t) * 8)).getSExtValue());
   case e_float:
-    return (sshort_t)m_float.convertToFloat();
+    return static_cast<sshort_t>(m_float.convertToFloat());
   case e_double:
-    return (sshort_t)m_float.convertToDouble();
+    return static_cast<sshort_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (sshort_t)(ldbl_val.sextOrTrunc(sizeof(sshort_t) * 8))
-        .getSExtValue();
+    return static_cast<sshort_t>(
+        (ldbl_val.sextOrTrunc(sizeof(sshort_t) * 8)).getSExtValue());
   }
   return fail_value;
 }
@@ -1408,16 +1408,16 @@ unsigned short Scalar::UShort(unsigned short fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (ushort_t)(m_integer.zextOrTrunc(sizeof(ushort_t) * 8))
-        .getZExtValue();
+    return static_cast<ushort_t>(
+        (m_integer.zextOrTrunc(sizeof(ushort_t) * 8)).getZExtValue());
   case e_float:
-    return (ushort_t)m_float.convertToFloat();
+    return static_cast<ushort_t>(m_float.convertToFloat());
   case e_double:
-    return (ushort_t)m_float.convertToDouble();
+    return static_cast<ushort_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (ushort_t)(ldbl_val.zextOrTrunc(sizeof(ushort_t) * 8))
-        .getZExtValue();
+    return static_cast<ushort_t>(
+        (ldbl_val.zextOrTrunc(sizeof(ushort_t) * 8)).getZExtValue());
   }
   return fail_value;
 }
@@ -1438,14 +1438,16 @@ int Scalar::SInt(int fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (sint_t)(m_integer.sextOrTrunc(sizeof(sint_t) * 8)).getSExtValue();
+    return static_cast<sint_t>(
+        (m_integer.sextOrTrunc(sizeof(sint_t) * 8)).getSExtValue());
   case e_float:
-    return (sint_t)m_float.convertToFloat();
+    return static_cast<sint_t>(m_float.convertToFloat());
   case e_double:
-    return (sint_t)m_float.convertToDouble();
+    return static_cast<sint_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (sint_t)(ldbl_val.sextOrTrunc(sizeof(sint_t) * 8)).getSExtValue();
+    return static_cast<sint_t>(
+        (ldbl_val.sextOrTrunc(sizeof(sint_t) * 8)).getSExtValue());
   }
   return fail_value;
 }
@@ -1466,14 +1468,16 @@ unsigned int Scalar::UInt(unsigned int fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (uint_t)(m_integer.zextOrTrunc(sizeof(uint_t) * 8)).getZExtValue();
+    return static_cast<uint_t>(
+        (m_integer.zextOrTrunc(sizeof(uint_t) * 8)).getZExtValue());
   case e_float:
-    return (uint_t)m_float.convertToFloat();
+    return static_cast<uint_t>(m_float.convertToFloat());
   case e_double:
-    return (uint_t)m_float.convertToDouble();
+    return static_cast<uint_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (uint_t)(ldbl_val.zextOrTrunc(sizeof(uint_t) * 8)).getZExtValue();
+    return static_cast<uint_t>(
+        (ldbl_val.zextOrTrunc(sizeof(uint_t) * 8)).getZExtValue());
   }
   return fail_value;
 }
@@ -1494,14 +1498,16 @@ long Scalar::SLong(long fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (slong_t)(m_integer.sextOrTrunc(sizeof(slong_t) * 8)).getSExtValue();
+    return static_cast<slong_t>(
+        (m_integer.sextOrTrunc(sizeof(slong_t) * 8)).getSExtValue());
   case e_float:
-    return (slong_t)m_float.convertToFloat();
+    return static_cast<slong_t>(m_float.convertToFloat());
   case e_double:
-    return (slong_t)m_float.convertToDouble();
+    return static_cast<slong_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (slong_t)(ldbl_val.sextOrTrunc(sizeof(slong_t) * 8)).getSExtValue();
+    return static_cast<slong_t>(
+        (ldbl_val.sextOrTrunc(sizeof(slong_t) * 8)).getSExtValue());
   }
   return fail_value;
 }
@@ -1522,14 +1528,16 @@ unsigned long Scalar::ULong(unsigned long fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (ulong_t)(m_integer.zextOrTrunc(sizeof(ulong_t) * 8)).getZExtValue();
+    return static_cast<ulong_t>(
+        (m_integer.zextOrTrunc(sizeof(ulong_t) * 8)).getZExtValue());
   case e_float:
-    return (ulong_t)m_float.convertToFloat();
+    return static_cast<ulong_t>(m_float.convertToFloat());
   case e_double:
-    return (ulong_t)m_float.convertToDouble();
+    return static_cast<ulong_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (ulong_t)(ldbl_val.zextOrTrunc(sizeof(ulong_t) * 8)).getZExtValue();
+    return static_cast<ulong_t>(
+        (ldbl_val.zextOrTrunc(sizeof(ulong_t) * 8)).getZExtValue());
   }
   return fail_value;
 }
@@ -1550,16 +1558,16 @@ long long Scalar::SLongLong(long long fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (slonglong_t)(m_integer.sextOrTrunc(sizeof(slonglong_t) * 8))
-        .getSExtValue();
+    return static_cast<slonglong_t>(
+        (m_integer.sextOrTrunc(sizeof(slonglong_t) * 8)).getSExtValue());
   case e_float:
-    return (slonglong_t)m_float.convertToFloat();
+    return static_cast<slonglong_t>(m_float.convertToFloat());
   case e_double:
-    return (slonglong_t)m_float.convertToDouble();
+    return static_cast<slonglong_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (slonglong_t)(ldbl_val.sextOrTrunc(sizeof(slonglong_t) * 8))
-        .getSExtValue();
+    return static_cast<slonglong_t>(
+        (ldbl_val.sextOrTrunc(sizeof(slonglong_t) * 8)).getSExtValue());
   }
   return fail_value;
 }
@@ -1580,21 +1588,21 @@ unsigned long long Scalar::ULongLong(unsigned long long fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (ulonglong_t)(m_integer.zextOrTrunc(sizeof(ulonglong_t) * 8))
-        .getZExtValue();
+    return static_cast<ulonglong_t>(
+        (m_integer.zextOrTrunc(sizeof(ulonglong_t) * 8)).getZExtValue());
   case e_float:
-    return (ulonglong_t)m_float.convertToFloat();
+    return static_cast<ulonglong_t>(m_float.convertToFloat());
   case e_double: {
     double d_val = m_float.convertToDouble();
     llvm::APInt rounded_double =
         llvm::APIntOps::RoundDoubleToAPInt(d_val, sizeof(ulonglong_t) * 8);
-    return (ulonglong_t)(rounded_double.zextOrTrunc(sizeof(ulonglong_t) * 8))
-        .getZExtValue();
+    return static_cast<ulonglong_t>(
+        (rounded_double.zextOrTrunc(sizeof(ulonglong_t) * 8)).getZExtValue());
   }
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (ulonglong_t)(ldbl_val.zextOrTrunc(sizeof(ulonglong_t) * 8))
-        .getZExtValue();
+    return static_cast<ulonglong_t>(
+        (ldbl_val.zextOrTrunc(sizeof(ulonglong_t) * 8)).getZExtValue());
   }
   return fail_value;
 }
@@ -1669,7 +1677,7 @@ float Scalar::Float(float fail_value) const {
   case e_float:
     return m_float.convertToFloat();
   case e_double:
-    return (float_t)m_float.convertToDouble();
+    return static_cast<float_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
     return ldbl_val.bitsToFloat();
@@ -1695,7 +1703,7 @@ double Scalar::Double(double fail_value) const {
   case e_uint512:
     return llvm::APIntOps::RoundAPIntToDouble(m_integer);
   case e_float:
-    return (double_t)m_float.convertToFloat();
+    return static_cast<double_t>(m_float.convertToFloat());
   case e_double:
     return m_float.convertToDouble();
   case e_long_double:
@@ -1721,14 +1729,15 @@ long double Scalar::LongDouble(long double fail_value) const {
   case e_uint256:
   case e_sint512:
   case e_uint512:
-    return (long_double_t)llvm::APIntOps::RoundAPIntToDouble(m_integer);
+    return static_cast<long_double_t>(
+        llvm::APIntOps::RoundAPIntToDouble(m_integer));
   case e_float:
-    return (long_double_t)m_float.convertToFloat();
+    return static_cast<long_double_t>(m_float.convertToFloat());
   case e_double:
-    return (long_double_t)m_float.convertToDouble();
+    return static_cast<long_double_t>(m_float.convertToDouble());
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-    return (long_double_t)ldbl_val.bitsToDouble();
+    return static_cast<long_double_t>(ldbl_val.bitsToDouble());
   }
   return fail_value;
 }
@@ -2368,10 +2377,10 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
         error.SetErrorStringWithFormat(
             "'%s' is not a valid unsigned integer string value", value_str);
       else if (!UIntValueIsValidForSize(uval64, byte_size))
-        error.SetErrorStringWithFormat("value 0x%" PRIx64
-                                       " is too large to fit in a %" PRIu64
-                                       " byte unsigned integer value",
-                                       uval64, (uint64_t)byte_size);
+        error.SetErrorStringWithFormat(
+            "value 0x%" PRIx64 " is too large to fit in a %" PRIu64
+            " byte unsigned integer value",
+            uval64, static_cast<uint64_t>(byte_size));
       else {
         m_type = Scalar::GetValueTypeForUnsignedIntegerWithByteSize(byte_size);
         switch (m_type) {
@@ -2387,14 +2396,14 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
         default:
           error.SetErrorStringWithFormat(
               "unsupported unsigned integer byte size: %" PRIu64 "",
-              (uint64_t)byte_size);
+              static_cast<uint64_t>(byte_size));
           break;
         }
       }
     } else {
       error.SetErrorStringWithFormat(
           "unsupported unsigned integer byte size: %" PRIu64 "",
-          (uint64_t)byte_size);
+          static_cast<uint64_t>(byte_size));
       return error;
     }
     break;
@@ -2406,10 +2415,10 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
         error.SetErrorStringWithFormat(
             "'%s' is not a valid signed integer string value", value_str);
       else if (!SIntValueIsValidForSize(sval64, byte_size))
-        error.SetErrorStringWithFormat("value 0x%" PRIx64
-                                       " is too large to fit in a %" PRIu64
-                                       " byte signed integer value",
-                                       sval64, (uint64_t)byte_size);
+        error.SetErrorStringWithFormat(
+            "value 0x%" PRIx64 " is too large to fit in a %" PRIu64
+            " byte signed integer value",
+            sval64, static_cast<uint64_t>(byte_size));
       else {
         m_type = Scalar::GetValueTypeForSignedIntegerWithByteSize(byte_size);
         switch (m_type) {
@@ -2425,14 +2434,14 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
         default:
           error.SetErrorStringWithFormat(
               "unsupported signed integer byte size: %" PRIu64 "",
-              (uint64_t)byte_size);
+              static_cast<uint64_t>(byte_size));
           break;
         }
       }
     } else {
       error.SetErrorStringWithFormat(
           "unsupported signed integer byte size: %" PRIu64 "",
-          (uint64_t)byte_size);
+          static_cast<uint64_t>(byte_size));
       return error;
     }
     break;
@@ -2457,17 +2466,17 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
                                        value_str);
     } else if (byte_size == sizeof(long double)) {
       if (::sscanf(value_str, "%Lf", &l_val) == 1) {
-        m_float =
-            llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
-                          llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-                                      ((type128 *)&l_val)->x));
+        m_float = llvm::APFloat(
+            llvm::APFloat::x87DoubleExtended(),
+            llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
+                        (reinterpret_cast<type128 *>(&l_val))->x));
         m_type = e_long_double;
       } else
         error.SetErrorStringWithFormat("'%s' is not a valid float string value",
                                        value_str);
     } else {
       error.SetErrorStringWithFormat("unsupported float byte size: %" PRIu64 "",
-                                     (uint64_t)byte_size);
+                                     static_cast<uint64_t>(byte_size));
       return error;
     }
     break;
@@ -2500,45 +2509,45 @@ Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
 
     switch (byte_size) {
     case 1:
-      operator=((uint8_t)data.GetU8(&offset));
+      operator=(data.GetU8(&offset));
       break;
     case 2:
-      operator=((uint16_t)data.GetU16(&offset));
+      operator=(data.GetU16(&offset));
       break;
     case 4:
-      operator=((uint32_t)data.GetU32(&offset));
+      operator=(data.GetU32(&offset));
       break;
     case 8:
-      operator=((uint64_t)data.GetU64(&offset));
+      operator=(data.GetU64(&offset));
       break;
     case 16:
       if (data.GetByteOrder() == eByteOrderBig) {
-        int128.x[1] = (uint64_t)data.GetU64(&offset);
-        int128.x[0] = (uint64_t)data.GetU64(&offset);
+        int128.x[1] = data.GetU64(&offset);
+        int128.x[0] = data.GetU64(&offset);
       } else {
-        int128.x[0] = (uint64_t)data.GetU64(&offset);
-        int128.x[1] = (uint64_t)data.GetU64(&offset);
+        int128.x[0] = data.GetU64(&offset);
+        int128.x[1] = data.GetU64(&offset);
       }
       operator=(llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, int128.x));
       break;
     case 32:
       if (data.GetByteOrder() == eByteOrderBig) {
-        int256.x[3] = (uint64_t)data.GetU64(&offset);
-        int256.x[2] = (uint64_t)data.GetU64(&offset);
-        int256.x[1] = (uint64_t)data.GetU64(&offset);
-        int256.x[0] = (uint64_t)data.GetU64(&offset);
+        int256.x[3] = data.GetU64(&offset);
+        int256.x[2] = data.GetU64(&offset);
+        int256.x[1] = data.GetU64(&offset);
+        int256.x[0] = data.GetU64(&offset);
       } else {
-        int256.x[0] = (uint64_t)data.GetU64(&offset);
-        int256.x[1] = (uint64_t)data.GetU64(&offset);
-        int256.x[2] = (uint64_t)data.GetU64(&offset);
-        int256.x[3] = (uint64_t)data.GetU64(&offset);
+        int256.x[0] = data.GetU64(&offset);
+        int256.x[1] = data.GetU64(&offset);
+        int256.x[2] = data.GetU64(&offset);
+        int256.x[3] = data.GetU64(&offset);
       }
       operator=(llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, int256.x));
       break;
     default:
       error.SetErrorStringWithFormat(
           "unsupported unsigned integer byte size: %" PRIu64 "",
-          (uint64_t)byte_size);
+          static_cast<uint64_t>(byte_size));
       break;
     }
   } break;
@@ -2547,45 +2556,45 @@ Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
 
     switch (byte_size) {
     case 1:
-      operator=((int8_t)data.GetU8(&offset));
+      operator=(static_cast<int8_t>(data.GetU8(&offset)));
       break;
     case 2:
-      operator=((int16_t)data.GetU16(&offset));
+      operator=(static_cast<int16_t>(data.GetU16(&offset)));
       break;
     case 4:
-      operator=((int32_t)data.GetU32(&offset));
+      operator=(static_cast<int32_t>(data.GetU32(&offset)));
       break;
     case 8:
-      operator=((int64_t)data.GetU64(&offset));
+      operator=(static_cast<int64_t>(data.GetU64(&offset)));
       break;
     case 16:
       if (data.GetByteOrder() == eByteOrderBig) {
-        int128.x[1] = (uint64_t)data.GetU64(&offset);
-        int128.x[0] = (uint64_t)data.GetU64(&offset);
+        int128.x[1] = data.GetU64(&offset);
+        int128.x[0] = data.GetU64(&offset);
       } else {
-        int128.x[0] = (uint64_t)data.GetU64(&offset);
-        int128.x[1] = (uint64_t)data.GetU64(&offset);
+        int128.x[0] = data.GetU64(&offset);
+        int128.x[1] = data.GetU64(&offset);
       }
       operator=(llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, int128.x));
       break;
     case 32:
       if (data.GetByteOrder() == eByteOrderBig) {
-        int256.x[3] = (uint64_t)data.GetU64(&offset);
-        int256.x[2] = (uint64_t)data.GetU64(&offset);
-        int256.x[1] = (uint64_t)data.GetU64(&offset);
-        int256.x[0] = (uint64_t)data.GetU64(&offset);
+        int256.x[3] = data.GetU64(&offset);
+        int256.x[2] = data.GetU64(&offset);
+        int256.x[1] = data.GetU64(&offset);
+        int256.x[0] = data.GetU64(&offset);
       } else {
-        int256.x[0] = (uint64_t)data.GetU64(&offset);
-        int256.x[1] = (uint64_t)data.GetU64(&offset);
-        int256.x[2] = (uint64_t)data.GetU64(&offset);
-        int256.x[3] = (uint64_t)data.GetU64(&offset);
+        int256.x[0] = data.GetU64(&offset);
+        int256.x[1] = data.GetU64(&offset);
+        int256.x[2] = data.GetU64(&offset);
+        int256.x[3] = data.GetU64(&offset);
       }
       operator=(llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, int256.x));
       break;
     default:
       error.SetErrorStringWithFormat(
           "unsupported signed integer byte size: %" PRIu64 "",
-          (uint64_t)byte_size);
+          static_cast<uint64_t>(byte_size));
       break;
     }
   } break;
@@ -2593,14 +2602,14 @@ Status Scalar::SetValueFromData(DataExtractor &data, lldb::Encoding encoding,
     lldb::offset_t offset = 0;
 
     if (byte_size == sizeof(float))
-      operator=((float)data.GetFloat(&offset));
+      operator=(data.GetFloat(&offset));
     else if (byte_size == sizeof(double))
-      operator=((double)data.GetDouble(&offset));
+      operator=(data.GetDouble(&offset));
     else if (byte_size == sizeof(long double))
-      operator=((long double)data.GetLongDouble(&offset));
+      operator=(data.GetLongDouble(&offset));
     else
       error.SetErrorStringWithFormat("unsupported float byte size: %" PRIu64 "",
-                                     (uint64_t)byte_size);
+                                     static_cast<uint64_t>(byte_size));
   } break;
   }
 
@@ -2845,4 +2854,10 @@ bool Scalar::SetBit(uint32_t bit) {
     break;
   }
   return false;
+}
+
+llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os, const Scalar &scalar) {
+  StreamString s;
+  scalar.GetValue(&s, /*show_type*/ true);
+  return os << s.GetString();
 }

@@ -3,8 +3,6 @@
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
@@ -17,6 +15,7 @@ class CrashingInferiorTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureNetBSD
     def test_inferior_crashing(self):
         """Test that lldb reliably catches the inferior crashing (command)."""
         self.build()
@@ -38,28 +37,6 @@ class CrashingInferiorTestCase(TestBase):
         """Test that the lldb expression interpreter can read from the inferior after crashing (command)."""
         self.build()
         self.inferior_crashing_expr()
-
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    def test_inferior_crashing_step(self):
-        """Test that stepping after a crash behaves correctly."""
-        self.build()
-        self.inferior_crashing_step()
-
-    @skipIfTargetAndroid()  # debuggerd interferes with this test on Android
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    def test_inferior_crashing_step_after_break(self):
-        """Test that lldb functions correctly after stepping through a crash."""
-        self.build()
-        self.inferior_crashing_step_after_break()
-
-    # Inferior exits after stepping after a segfault. This is working as
-    # intended IMHO.
-    @skipIfLinux
-    @skipIfFreeBSD
-    def test_inferior_crashing_expr_step_and_expr(self):
-        """Test that lldb expressions work before and after stepping after a crash."""
-        self.build()
-        self.inferior_crashing_expr_step_expr()
 
     def set_breakpoint(self, line):
         lldbutil.run_break_set_by_file_and_line(
@@ -156,79 +133,3 @@ class CrashingInferiorTestCase(TestBase):
 
         self.expect("p hello_world",
                     substrs=['Hello'])
-
-    def inferior_crashing_step(self):
-        """Test that lldb functions correctly after stepping through a crash."""
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        self.set_breakpoint(self.line)
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['main.c:%d' % self.line,
-                             'stop reason = breakpoint'])
-
-        self.runCmd("next")
-        self.check_stop_reason()
-
-        # The lldb expression interpreter should be able to read from addresses
-        # of the inferior after a crash.
-        self.expect("p argv[0]",
-                    substrs=['a.out'])
-        self.expect("p null_ptr",
-                    substrs=['= 0x0'])
-
-        # lldb should be able to read from registers from the inferior after
-        # crashing.
-        lldbplatformutil.check_first_register_readable(self)
-
-        # And it should report the correct line number.
-        self.expect("thread backtrace all",
-                    substrs=['main.c:%d' % self.line])
-
-    def inferior_crashing_step_after_break(self):
-        """Test that lldb behaves correctly when stepping after a crash."""
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        self.runCmd("run", RUN_SUCCEEDED)
-        self.check_stop_reason()
-
-        expected_state = 'exited'  # Provide the exit code.
-        if self.platformIsDarwin():
-            # TODO: Determine why 'next' and 'continue' have no effect after a
-            # crash.
-            expected_state = 'stopped'
-
-        self.expect("next",
-                    substrs=['Process', expected_state])
-
-        if expected_state == 'exited':
-            self.expect(
-                "thread list",
-                error=True,
-                substrs=['Process must be launched'])
-        else:
-            self.check_stop_reason()
-
-    def inferior_crashing_expr_step_expr(self):
-        """Test that lldb expressions work before and after stepping after a crash."""
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        self.runCmd("run", RUN_SUCCEEDED)
-        self.check_stop_reason()
-
-        # The lldb expression interpreter should be able to read from addresses
-        # of the inferior after a crash.
-        self.expect("p argv[0]",
-                    substrs=['a.out'])
-
-        self.runCmd("next")
-        self.check_stop_reason()
-
-        # The lldb expression interpreter should be able to read from addresses
-        # of the inferior after a crash.
-        self.expect("p argv[0]",
-                    substrs=['a.out'])

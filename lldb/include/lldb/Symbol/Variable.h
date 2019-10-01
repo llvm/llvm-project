@@ -9,17 +9,16 @@
 #ifndef liblldb_Variable_h_
 #define liblldb_Variable_h_
 
-#include <memory>
-#include <vector>
-
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
+#include <memory>
+#include <vector>
 
 namespace lldb_private {
 
@@ -27,17 +26,14 @@ class Variable : public UserID, public std::enable_shared_from_this<Variable> {
 public:
   typedef RangeVector<lldb::addr_t, lldb::addr_t> RangeList;
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   Variable(lldb::user_id_t uid, const char *name,
            const char
                *mangled, // The mangled or fully qualified name of the variable.
-           const lldb::SymbolFileTypeSP &symfile_type_sp,
-           lldb::ValueType scope, SymbolContextScope *owner_scope,
-           const RangeList &scope_range, Declaration *decl,
-           const DWARFExpression &location, bool external, bool artificial,
-           bool static_member = false);
+           const lldb::SymbolFileTypeSP &symfile_type_sp, lldb::ValueType scope,
+           SymbolContextScope *owner_scope, const RangeList &scope_range,
+           Declaration *decl, const DWARFExpression &location, bool external,
+           bool artificial, bool static_member, bool constant);
 
   virtual ~Variable();
 
@@ -74,6 +70,8 @@ public:
 
   bool IsStaticMember() const { return m_static_member; }
 
+  bool IsConstant() const { return m_constant; }
+
   DWARFExpression &LocationExpression() { return m_location; }
 
   const DWARFExpression &LocationExpression() const { return m_location; }
@@ -102,8 +100,8 @@ public:
       GetVariableCallback callback, void *baton, VariableList &variable_list,
       ValueObjectList &valobj_list);
 
-  static size_t AutoComplete(const ExecutionContext &exe_ctx,
-                             CompletionRequest &request);
+  static void AutoComplete(const ExecutionContext &exe_ctx,
+                           CompletionRequest &request);
 
   CompilerDeclContext GetDeclContext();
 
@@ -130,9 +128,13 @@ protected:
                                // location
       m_static_member : 1; // Non-zero if variable is static member of a class
                            // or struct.
+  /// Indicates whether the variable is a constant, for example, Swift \c let
+  /// binding.
+  uint8_t m_constant : 1;
+
 private:
-  Variable(const Variable &rhs);
-  Variable &operator=(const Variable &rhs);
+  Variable(const Variable &rhs) = delete;
+  Variable &operator=(const Variable &rhs) = delete;
 };
 
 } // namespace lldb_private

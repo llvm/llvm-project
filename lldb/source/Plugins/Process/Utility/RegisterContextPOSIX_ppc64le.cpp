@@ -151,7 +151,7 @@ RegisterContextPOSIX_ppc64le::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_registers_ppc64le)
     return &GetRegisterInfo()[reg];
   else
-    return NULL;
+    return nullptr;
 }
 
 size_t RegisterContextPOSIX_ppc64le::GetRegisterSetCount() {
@@ -168,7 +168,7 @@ const RegisterSet *RegisterContextPOSIX_ppc64le::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set))
     return &g_reg_sets_ppc64le[set];
   else
-    return NULL;
+    return nullptr;
 }
 
 const char *RegisterContextPOSIX_ppc64le::GetRegisterName(unsigned reg) {

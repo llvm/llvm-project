@@ -20,8 +20,7 @@ class Stream;
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class Baton Baton.h "lldb/Core/Baton.h"
+/// \class Baton Baton.h "lldb/Core/Baton.h"
 /// A class designed to wrap callback batons so they can cleanup
 ///        any acquired resources
 ///
@@ -31,7 +30,6 @@ namespace lldb_private {
 ///
 /// The default behavior is to not free anything. Subclasses can free any
 /// needed resources in their destructors.
-//----------------------------------------------------------------------
 class Baton {
 public:
   Baton() {}
@@ -46,7 +44,7 @@ public:
 class UntypedBaton : public Baton {
 public:
   UntypedBaton(void *Data) : m_data(Data) {}
-  virtual ~UntypedBaton() {
+  ~UntypedBaton() override {
     // The default destructor for an untyped baton does NOT attempt to clean up
     // anything in m_data.
   }
@@ -65,8 +63,7 @@ public:
   const T *getItem() const { return Item.get(); }
 
   void *data() override { return Item.get(); }
-  virtual void GetDescription(Stream *s,
-                              lldb::DescriptionLevel level) const override {}
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) const override {}
 
 protected:
   std::unique_ptr<T> Item;

@@ -137,7 +137,12 @@ const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 Status AdbClient::Connect() {
   Status error;
   m_conn.reset(new ConnectionFileDescriptor);
-  m_conn->Connect("connect://localhost:5037", &error);
+  std::string port = "5037";
+  if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) {
+    port = env_port;
+  }
+  std::string uri = "connect://localhost:" + port;
+  m_conn->Connect(uri.c_str(), &error);
 
   return error;
 }
@@ -405,7 +410,7 @@ Status AdbClient::ShellToFile(const char *command, milliseconds timeout,
 
   const auto output_filename = output_file_spec.GetPath();
   std::error_code EC;
-  llvm::raw_fd_ostream dst(output_filename, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream dst(output_filename, EC, llvm::sys::fs::OF_None);
   if (EC)
     return Status("Unable to open local file %s", output_filename.c_str());
 
@@ -432,7 +437,7 @@ Status AdbClient::SyncService::internalPullFile(const FileSpec &remote_file,
   llvm::FileRemover local_file_remover(local_file_path);
 
   std::error_code EC;
-  llvm::raw_fd_ostream dst(local_file_path, EC, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream dst(local_file_path, EC, llvm::sys::fs::OF_None);
   if (EC)
     return Status("Unable to open local file %s", local_file_path.c_str());
 

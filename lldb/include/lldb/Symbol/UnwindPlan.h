@@ -370,6 +370,7 @@ public:
         m_return_addr_register(LLDB_INVALID_REGNUM), m_source_name(),
         m_plan_is_sourced_from_compiler(eLazyBoolCalculate),
         m_plan_is_valid_at_all_instruction_locations(eLazyBoolCalculate),
+        m_plan_is_for_signal_trap(eLazyBoolCalculate),
         m_lsda_address(), m_personality_func_addr() {}
 
   // Performs a deep copy of the plan, including all the rows (expensive).
@@ -463,6 +464,17 @@ public:
     m_plan_is_valid_at_all_instruction_locations = valid_at_all_insn;
   }
 
+  // Is this UnwindPlan for a signal trap frame?  If so, then its saved pc
+  // may have been set manually by the signal dispatch code and therefore
+  // not follow a call to the child frame.
+  lldb_private::LazyBool GetUnwindPlanForSignalTrap() const {
+    return m_plan_is_for_signal_trap;
+  }
+
+  void SetUnwindPlanForSignalTrap(lldb_private::LazyBool is_for_signal_trap) {
+    m_plan_is_for_signal_trap = is_for_signal_trap;
+  }
+
   int GetRowCount() const;
 
   void Clear() {
@@ -472,6 +484,7 @@ public:
     m_source_name.Clear();
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
     m_plan_is_valid_at_all_instruction_locations = eLazyBoolCalculate;
+    m_plan_is_for_signal_trap = eLazyBoolCalculate;
     m_lsda_address.Clear();
     m_personality_func_addr.Clear();
   }
@@ -502,6 +515,7 @@ private:
       m_source_name; // for logging, where this UnwindPlan originated from
   lldb_private::LazyBool m_plan_is_sourced_from_compiler;
   lldb_private::LazyBool m_plan_is_valid_at_all_instruction_locations;
+  lldb_private::LazyBool m_plan_is_for_signal_trap;
 
   Address m_lsda_address; // Where the language specific data area exists in the
                           // module - used

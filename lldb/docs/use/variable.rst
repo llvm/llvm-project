@@ -197,7 +197,7 @@ pick:
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
 | ``c-string``                                  | s                | show this as a 0-terminated C string                                     |
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
-| ``decimal``                                   | i                | show this as a signed integer number (this does not perform a cast, it   |
+| ``decimal``                                   | d                | show this as a signed integer number (this does not perform a cast, it   |
 |                                               |                  | simply shows the bytes as  an integer with sign)                         |
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
 | ``enumeration``                               | E                | show this as an enumeration, printing the                                |
@@ -238,6 +238,15 @@ pick:
 |                                               |                  | number                                                                   |
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
 | ``character array``                           | a                | show this as a character array                                           |
++-----------------------------------------------+------------------+--------------------------------------------------------------------------+
+| ``address``                                   | A                | show this as an address target (symbol/file/line + offset), possibly     |
+|                                               |                  | also the string this address is pointing to                              |
++-----------------------------------------------+------------------+--------------------------------------------------------------------------+
+| ``hex float``                                 |                  | show this as hexadecimal floating point                                  |
++-----------------------------------------------+------------------+--------------------------------------------------------------------------+
+| ``instruction``                               | i                | show this as an disassembled opcode                                      |
++-----------------------------------------------+------------------+--------------------------------------------------------------------------+
+| ``void``                                      | v                | don't show anything                                                      |
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
 
 Type Summary
@@ -746,7 +755,7 @@ container classes, regardless of the template arguments provided. The details
 for this are found at FormatManager.cpp
 
 The regular expression language used by LLDB is the POSIX extended language, as
-defined by the Single UNIX Specification, of which Mac OS X is a compliant
+defined by the Single UNIX Specification, of which macOS is a compliant
 implementation.
 
 Names Summaries
@@ -764,6 +773,7 @@ command, supports a --summary option that tells LLDB to use the named summary
 given instead of the default one.
 
 ::
+
    (lldb) type summary add --summary-string "x=${var.integer}" --name NamedSummary
    (lldb) frame variable one
    (i_am_cool) one = int = 3, float = 3.14159, char = 69
@@ -1031,7 +1041,7 @@ formatters for a same library or OS release.
 By default, several categories are created in LLDB:
 
 - default: this is the category where every formatter ends up, unless another category is specified
-- objc: formatters for basic and common Objective-C types that do not specifically depend on Mac OS X
+- objc: formatters for basic and common Objective-C types that do not specifically depend on macOS
 - gnu-libstdc++: formatters for std::string, std::vector, std::list and std::map as implemented by libstdcpp
 - libcxx: formatters for std::string, std::vector, std::list and std::map as implemented by libcxx
 - system: truly basic types for which a formatter is required

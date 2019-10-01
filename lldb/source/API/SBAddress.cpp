@@ -28,7 +28,7 @@ SBAddress::SBAddress() : m_opaque_up(new Address()) {
 SBAddress::SBAddress(const Address *lldb_object_ptr)
     : m_opaque_up(new Address()) {
   if (lldb_object_ptr)
-    m_opaque_up = llvm::make_unique<Address>(*lldb_object_ptr);
+    m_opaque_up = std::make_unique<Address>(*lldb_object_ptr);
 }
 
 SBAddress::SBAddress(const SBAddress &rhs) : m_opaque_up(new Address()) {
@@ -69,6 +69,13 @@ bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
   return false;
 }
 
+bool SBAddress::operator!=(const SBAddress &rhs) const {
+  LLDB_RECORD_METHOD_CONST(bool, SBAddress, operator!=,(const SBAddress &),
+                           &rhs);
+
+  return !(*this == rhs);
+}
+
 bool SBAddress::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, IsValid);
   return this->operator bool();
@@ -76,7 +83,7 @@ bool SBAddress::IsValid() const {
 SBAddress::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBAddress, operator bool);
 
-  return m_opaque_up != NULL && m_opaque_up->IsValid();
+  return m_opaque_up != nullptr && m_opaque_up->IsValid();
 }
 
 void SBAddress::Clear() {
@@ -179,7 +186,7 @@ Address *SBAddress::operator->() { return m_opaque_up.get(); }
 const Address *SBAddress::operator->() const { return m_opaque_up.get(); }
 
 Address &SBAddress::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new Address());
   return *m_opaque_up;
 }
@@ -201,7 +208,7 @@ bool SBAddress::GetDescription(SBStream &description) {
   // case there isn't one already...
   Stream &strm = description.ref();
   if (m_opaque_up->IsValid()) {
-    m_opaque_up->Dump(&strm, NULL, Address::DumpStyleResolvedDescription,
+    m_opaque_up->Dump(&strm, nullptr, Address::DumpStyleResolvedDescription,
                       Address::DumpStyleModuleWithFileAddress, 4);
     StreamString sstrm;
     //        m_opaque_up->Dump (&sstrm, NULL,
@@ -294,6 +301,8 @@ void RegisterMethods<SBAddress>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBAddress, (lldb::addr_t, lldb::SBTarget &));
   LLDB_REGISTER_METHOD(const lldb::SBAddress &,
                        SBAddress, operator=,(const lldb::SBAddress &));
+  LLDB_REGISTER_METHOD_CONST(bool,
+                             SBAddress, operator!=,(const lldb::SBAddress &));
   LLDB_REGISTER_METHOD_CONST(bool, SBAddress, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBAddress, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBAddress, Clear, ());

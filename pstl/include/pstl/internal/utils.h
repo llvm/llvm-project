@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- utils.h -----------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,8 @@
 
 #include <new>
 #include <iterator>
+
+_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl
 {
@@ -44,8 +46,7 @@ __invoke_if(std::true_type, _Fp __f)
 }
 
 template <typename _Fp>
-void
-__invoke_if(std::false_type, _Fp)
+void __invoke_if(std::false_type, _Fp)
 {
 }
 
@@ -57,8 +58,7 @@ __invoke_if_not(std::false_type, _Fp __f)
 }
 
 template <typename _Fp>
-void
-__invoke_if_not(std::true_type, _Fp)
+void __invoke_if_not(std::true_type, _Fp)
 {
 }
 
@@ -87,23 +87,6 @@ struct __no_op
     }
 };
 
-//! Logical negation of a predicate
-template <typename _Pred>
-class __not_pred
-{
-    _Pred _M_pred;
-
-  public:
-    explicit __not_pred(_Pred __pred) : _M_pred(__pred) {}
-
-    template <typename... _Args>
-    bool
-    operator()(_Args&&... __args)
-    {
-        return !_M_pred(std::forward<_Args>(__args)...);
-    }
-};
-
 template <typename _Pred>
 class __reorder_pred
 {
@@ -117,36 +100,6 @@ class __reorder_pred
     operator()(_FTp&& __a, _STp&& __b)
     {
         return _M_pred(std::forward<_STp>(__b), std::forward<_FTp>(__a));
-    }
-};
-
-//! "==" comparison.
-/** Not called "equal" to avoid (possibly unfounded) concerns about accidental invocation via
-    argument-dependent name lookup by code expecting to find the usual std::equal. */
-class __pstl_equal
-{
-  public:
-    explicit __pstl_equal() {}
-
-    template <typename _Xp, typename _Yp>
-    bool
-    operator()(_Xp&& __x, _Yp&& __y) const
-    {
-        return std::forward<_Xp>(__x) == std::forward<_Yp>(__y);
-    }
-};
-
-//! "<" comparison.
-class __pstl_less
-{
-  public:
-    explicit __pstl_less() {}
-
-    template <typename _Xp, typename _Yp>
-    bool
-    operator()(_Xp&& __x, _Yp&& __y) const
-    {
-        return std::forward<_Xp>(__x) < std::forward<_Yp>(__y);
     }
 };
 
@@ -218,5 +171,7 @@ __cmp_iterators_by_values(_ForwardIterator __a, _ForwardIterator __b, _Compare _
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_UTILS_H */

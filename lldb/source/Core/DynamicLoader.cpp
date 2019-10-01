@@ -62,10 +62,8 @@ DynamicLoader::DynamicLoader(Process *process) : m_process(process) {}
 
 DynamicLoader::~DynamicLoader() = default;
 
-//----------------------------------------------------------------------
 // Accessosors to the global setting as to whether to stop at image (shared
 // library) loading/unloading.
-//----------------------------------------------------------------------
 
 bool DynamicLoader::GetStopWhenImagesChange() const {
   return m_process->GetStopOnSharedLibraryEvents();

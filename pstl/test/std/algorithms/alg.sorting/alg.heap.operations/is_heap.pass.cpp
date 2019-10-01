@@ -35,7 +35,7 @@ struct WithCmpOp
 
 struct test_is_heap
 {
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename Iterator, typename Predicate>
     typename std::enable_if<is_same_iterator_category<Iterator, std::random_access_iterator_tag>::value, void>::type
@@ -132,7 +132,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test_is_heap_by_type<float32_t>(std::greater<float32_t>());

@@ -4,8 +4,6 @@ from __future__ import print_function
 
 
 import os
-import sys
-import time
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -77,6 +75,7 @@ class HelloWorldTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
+    @expectedFailureNetBSD
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
         exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
@@ -107,7 +106,8 @@ class HelloWorldTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
-    @skipIfSanitized # FIXME: Hangs indefinitely.
+    @skipIfAsan # FIXME: Hangs indefinitely.
+    @expectedFailureNetBSD
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
         exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())

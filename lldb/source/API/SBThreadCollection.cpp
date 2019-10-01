@@ -67,7 +67,7 @@ bool SBThreadCollection::IsValid() const {
 SBThreadCollection::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBThreadCollection, operator bool);
 
-  return m_opaque_sp.get() != NULL;
+  return m_opaque_sp.get() != nullptr;
 }
 
 size_t SBThreadCollection::GetSize() {

@@ -93,7 +93,7 @@ bool SBSymbolContextList::IsValid() const {
 SBSymbolContextList::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSymbolContextList, operator bool);
 
-  return m_opaque_up != NULL;
+  return m_opaque_up != nullptr;
 }
 
 lldb_private::SymbolContextList *SBSymbolContextList::operator->() const {
@@ -111,7 +111,7 @@ bool SBSymbolContextList::GetDescription(lldb::SBStream &description) {
 
   Stream &strm = description.ref();
   if (m_opaque_up)
-    m_opaque_up->GetDescription(&strm, lldb::eDescriptionLevelFull, NULL);
+    m_opaque_up->GetDescription(&strm, lldb::eDescriptionLevelFull, nullptr);
   return true;
 }
 

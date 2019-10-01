@@ -6,6 +6,7 @@
 # RUN: llvm-objdump -d -j .plt %t4.so | FileCheck --check-prefix=PLT %s
 # RUN: llvm-objdump -d -j .text %t4.so | FileCheck --check-prefix=TEXT %s
 # RUN: llvm-objdump -D -j .got %t4.so | FileCheck --check-prefix=GOT %s
+# RUN: llvm-readelf -r  %t4.so | FileCheck --check-prefix=RELO %s
 
 .global foo
 foo:
@@ -25,8 +26,22 @@ jumpr r0
 # R_HEX_GOT_16_X
 r0 = add(r1,##bar@GOT)
 
+# R_HEX_32
+.data
+.global var
+.type var,@object
+.p2align 2
+var:
+   .word 10
+   .size var, 4
+.global pvar
+.type pvar,@object
+pvar:
+   .word var
+   .size pvar, 4
+
 # PLT: { immext(#131008
-# PLT: r28 = add(pc,##131024) }
+# PLT: r28 = add(pc,##131032) }
 # PLT: { r14 -= add(r28,#16)
 # PLT: r15 = memw(r28+#8)
 # PLT: r28 = memw(r28+#4) }
@@ -34,13 +49,17 @@ r0 = add(r1,##bar@GOT)
 # PLT: jumpr r28 }
 # PLT: { trap0(#219) }
 # PLT: immext(#131008)
-# PLT: r14 = add(pc,##131008) }
+# PLT: r14 = add(pc,##131016) }
 # PLT: r28 = memw(r14+#0) }
 # PLT: jumpr r28 }
 
 # TEXT:  10000: 00 00 01 00 00010000
 # TEXT: { 	call 0x10050 }
-# TEXT: r0 = add(r1,##-65408) }
+# TEXT: r0 = add(r1,##-65416) }
 
 # GOT: .got:
 # GOT: 20080:	00 00 00 00 00000000 <unknown>
+
+# RELO: 00020080  00000121 R_HEX_GLOB_DAT
+# RELO: 00030004  00000406 R_HEX_32
+# RELO: 00030018  00000122 R_HEX_JMP_SLOT

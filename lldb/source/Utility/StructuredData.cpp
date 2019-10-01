@@ -22,9 +22,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // Functions that use a JSONParser to parse JSON into StructuredData
-//----------------------------------------------------------------------
 static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser);
@@ -49,11 +47,11 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
   // The "JSONParser::Token::ObjectStart" token should have already been
   // consumed by the time this function is called
-  auto dict_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
 
   std::string value;
   std::string key;
-  while (1) {
+  while (true) {
     JSONParser::Token token = json_parser.GetToken(value);
 
     if (token == JSONParser::Token::String) {
@@ -80,11 +78,11 @@ static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
 static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser) {
   // The "JSONParser::Token::ObjectStart" token should have already been
   // consumed by the time this function is called
-  auto array_up = llvm::make_unique<StructuredData::Array>();
+  auto array_up = std::make_unique<StructuredData::Array>();
 
   std::string value;
   std::string key;
-  while (1) {
+  while (true) {
     StructuredData::ObjectSP value_sp = ParseJSONValue(json_parser);
     if (value_sp)
       array_up->AddItem(value_sp);

@@ -77,10 +77,6 @@ using namespace lldb_private;
 
 static const char *k_white_space = " \t\v";
 
-static constexpr bool NoGlobalSetting = true;
-static constexpr uintptr_t DefaultValueTrue = true;
-static constexpr uintptr_t DefaultValueFalse = false;
-static constexpr const char *NoCStrDefault = nullptr;
 static constexpr const char *InitFileWarning =
     "There is a .lldbinit file in the current directory which is not being "
     "read.\n"
@@ -93,38 +89,12 @@ static constexpr const char *InitFileWarning =
     "and\n"
     "accept the security risk.";
 
-static constexpr PropertyDefinition g_properties[] = {
-    {"expand-regex-aliases", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueFalse, NoCStrDefault, {},
-     "If true, regular expression alias commands will show the "
-     "expanded command that will be executed. This can be used to "
-     "debug new regular expression alias commands."},
-    {"prompt-on-quit", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, LLDB will prompt you before quitting if there are any live "
-     "processes being debugged. If false, LLDB will quit without asking in any "
-     "case."},
-    {"stop-command-source-on-error", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, LLDB will stop running a 'command source' "
-     "script upon encountering an error."},
-    {"space-repl-prompts", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueFalse, NoCStrDefault, {},
-     "If true, blank lines will be printed between between REPL submissions."},
-    {"echo-commands", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, commands will be echoed before they are evaluated."},
-    {"echo-comment-commands", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, commands will be echoed even if they are pure comment lines."}};
+#define LLDB_PROPERTIES_interpreter
+#include "InterpreterProperties.inc"
 
 enum {
-  ePropertyExpandRegexAliases = 0,
-  ePropertyPromptOnQuit = 1,
-  ePropertyStopCmdSourceOnError = 2,
-  eSpaceReplPrompts = 3,
-  eEchoCommands = 4,
-  eEchoCommentCommands = 5
+#define LLDB_PROPERTIES_interpreter
+#include "InterpreterPropertiesEnum.inc"
 };
 
 ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
@@ -133,37 +103,36 @@ ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
 }
 
 CommandInterpreter::CommandInterpreter(Debugger &debugger,
-                                       ScriptLanguage script_language,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
       Properties(OptionValuePropertiesSP(
           new OptionValueProperties(ConstString("interpreter")))),
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
-      m_debugger(debugger), m_synchronous_execution(synchronous_execution),
+      m_debugger(debugger), m_synchronous_execution(true),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
       m_command_io_handler_sp(), m_comment_char('#'),
       m_batch_command_mode(false), m_truncation_warning(eNoTruncation),
       m_command_source_depth(0), m_num_errors(0), m_quit_requested(false),
       m_stopped_for_crash(false) {
-  debugger.SetScriptLanguage(script_language);
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
+  SetSynchronous(synchronous_execution);
   CheckInWithManager();
-  m_collection_sp->Initialize(g_properties);
+  m_collection_sp->Initialize(g_interpreter_properties);
 }
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
   const uint32_t idx = ePropertyExpandRegexAliases;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetPromptOnQuit() const {
   const uint32_t idx = ePropertyPromptOnQuit;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetPromptOnQuit(bool enable) {
@@ -172,24 +141,24 @@ void CommandInterpreter::SetPromptOnQuit(bool enable) {
 }
 
 bool CommandInterpreter::GetEchoCommands() const {
-  const uint32_t idx = eEchoCommands;
+  const uint32_t idx = ePropertyEchoCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommands(bool b) {
-  const uint32_t idx = eEchoCommands;
+  const uint32_t idx = ePropertyEchoCommands;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
 bool CommandInterpreter::GetEchoCommentCommands() const {
-  const uint32_t idx = eEchoCommentCommands;
+  const uint32_t idx = ePropertyEchoCommentCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommentCommands(bool b) {
-  const uint32_t idx = eEchoCommentCommands;
+  const uint32_t idx = ePropertyEchoCommentCommands;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
@@ -225,13 +194,13 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
 bool CommandInterpreter::GetStopCmdSourceOnError() const {
   const uint32_t idx = ePropertyStopCmdSourceOnError;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetSpaceReplPrompts() const {
-  const uint32_t idx = eSpaceReplPrompts;
+  const uint32_t idx = ePropertySpaceReplPrompts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::Initialize() {
@@ -766,7 +735,9 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-bt",
           "Show the current thread's call stack.  Any numeric argument "
           "displays at most that many "
-          "frames.  The argument 'all' displays all threads.",
+          "frames.  The argument 'all' displays all threads.  Use 'settings"
+          " set frame-format' to customize the printing of individual frames "
+          "and 'settings set thread-format' to customize the thread header.",
           "bt [<digit> | all]", 2, 0, false));
   if (bt_regex_cmd_up) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
@@ -827,7 +798,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-env",
           "Shorthand for viewing and setting environment variables.",
           "\n"
-          "_regexp-env                  // Show enrivonment\n"
+          "_regexp-env                  // Show environment\n"
           "_regexp-env <name>=<value>   // Set an environment variable",
           2, 0, false));
   if (env_regex_cmd_up) {
@@ -1634,8 +1605,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
                                    command_line);
 
-  if (log)
-    log->Printf("Processing command: %s", command_line);
+  LLDB_LOGF(log, "Processing command: %s", command_line);
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "Handling command: %s.", command_line);
@@ -1741,13 +1711,13 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // "br s -n main", command_string is now "breakpoint set -n main".
   if (log) {
     llvm::StringRef command_name = cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
-    log->Printf("HandleCommand, cmd_obj : '%s'", command_name.str().c_str());
-    log->Printf("HandleCommand, (revised) command_string: '%s'",
-                command_string.c_str());
+    LLDB_LOGF(log, "HandleCommand, cmd_obj : '%s'", command_name.str().c_str());
+    LLDB_LOGF(log, "HandleCommand, (revised) command_string: '%s'",
+              command_string.c_str());
     const bool wants_raw_input =
-        (cmd_obj != NULL) ? cmd_obj->WantsRawCommandString() : false;
-    log->Printf("HandleCommand, wants_raw_input:'%s'",
-                wants_raw_input ? "True" : "False");
+        (cmd_obj != nullptr) ? cmd_obj->WantsRawCommandString() : false;
+    LLDB_LOGF(log, "HandleCommand, wants_raw_input:'%s'",
+              wants_raw_input ? "True" : "False");
   }
 
   // Phase 2.
@@ -1777,34 +1747,30 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     if (pos != 0 && pos != std::string::npos)
       remainder.erase(0, pos);
 
-    if (log)
-      log->Printf(
-          "HandleCommand, command line after removing command name(s): '%s'",
-          remainder.c_str());
+    LLDB_LOGF(
+        log, "HandleCommand, command line after removing command name(s): '%s'",
+        remainder.c_str());
 
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
-  if (log)
-    log->Printf("HandleCommand, command %s",
-                (result.Succeeded() ? "succeeded" : "did not succeed"));
+  LLDB_LOGF(log, "HandleCommand, command %s",
+            (result.Succeeded() ? "succeeded" : "did not succeed"));
 
   return result.Succeeded();
 }
 
-int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
-  int num_command_matches = 0;
+void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   bool look_for_subcommand = false;
 
   // For any of the command completions a unique match will be a complete word.
-  request.SetWordComplete(true);
 
   if (request.GetCursorIndex() == -1) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
     StringList new_matches, descriptions;
-    num_command_matches = GetCommandNamesMatchingPartialString(
-        "", include_aliases, new_matches, descriptions);
+    GetCommandNamesMatchingPartialString("", include_aliases, new_matches,
+                                         descriptions);
     request.AddCompletions(new_matches, descriptions);
   } else if (request.GetCursorIndex() == 0) {
     // The cursor is in the first argument, so just do a lookup in the
@@ -1814,15 +1780,12 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
         GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0),
                          &new_matches, &new_descriptions);
 
-    if (num_command_matches == 1 && cmd_obj && cmd_obj->IsMultiwordObject() &&
+    if (new_matches.GetSize() && cmd_obj && cmd_obj->IsMultiwordObject() &&
         new_matches.GetStringAtIndex(0) != nullptr &&
         strcmp(request.GetParsedLine().GetArgumentAtIndex(0),
                new_matches.GetStringAtIndex(0)) == 0) {
-      if (request.GetParsedLine().GetArgumentCount() == 1) {
-        request.SetWordComplete(true);
-      } else {
+      if (request.GetParsedLine().GetArgumentCount() != 1) {
         look_for_subcommand = true;
-        num_command_matches = 0;
         new_matches.DeleteStringAtIndex(0);
         new_descriptions.DeleteStringAtIndex(0);
         request.GetParsedLine().AppendArgument(llvm::StringRef());
@@ -1831,7 +1794,6 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
       }
     }
     request.AddCompletions(new_matches, new_descriptions);
-    num_command_matches = request.GetNumberOfMatches();
   }
 
   if (request.GetCursorIndex() > 0 || look_for_subcommand) {
@@ -1840,81 +1802,32 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
     // matching initial command:
     CommandObject *command_object =
         GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0));
-    if (command_object == nullptr) {
-      return 0;
-    } else {
+    if (command_object) {
       request.GetParsedLine().Shift();
       request.SetCursorIndex(request.GetCursorIndex() - 1);
-      num_command_matches = command_object->HandleCompletion(request);
+      command_object->HandleCompletion(request);
     }
   }
-
-  return num_command_matches;
 }
 
-int CommandInterpreter::HandleCompletion(
-    const char *current_line, const char *cursor, const char *last_char,
-    int match_start_point, int max_return_elements, StringList &matches,
-    StringList &descriptions) {
+void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
 
-  llvm::StringRef command_line(current_line, last_char - current_line);
-  CompletionResult result;
-  CompletionRequest request(command_line, cursor - current_line,
-                            match_start_point, max_return_elements, result);
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
-  const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
-  if (first_arg) {
-    if (first_arg[0] == m_comment_char)
-      return 0;
-    else if (first_arg[0] == CommandHistory::g_repeat_char) {
-      if (auto hist_str = m_command_history.FindString(first_arg)) {
-        matches.InsertStringAtIndex(0, *hist_str);
-        descriptions.InsertStringAtIndex(0, "Previous command history event");
-        return -2;
-      } else
-        return 0;
+  llvm::StringRef first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
+
+  if (!first_arg.empty()) {
+    if (first_arg.front() == m_comment_char)
+      return;
+    if (first_arg.front() == CommandHistory::g_repeat_char) {
+      if (auto hist_str = m_command_history.FindString(first_arg))
+        request.AddCompletion(*hist_str, "Previous command history event",
+                              CompletionMode::RewriteLine);
+      return;
     }
   }
 
-  // Only max_return_elements == -1 is supported at present:
-  lldbassert(max_return_elements == -1);
-
-  int num_command_matches = HandleCompletionMatches(request);
-  result.GetMatches(matches);
-  result.GetDescriptions(descriptions);
-
-  if (num_command_matches <= 0)
-    return num_command_matches;
-
-  if (request.GetParsedLine().GetArgumentCount() == 0) {
-    // If we got an empty string, insert nothing.
-    matches.InsertStringAtIndex(0, "");
-    descriptions.InsertStringAtIndex(0, "");
-  } else {
-    // Now figure out if there is a common substring, and if so put that in
-    // element 0, otherwise put an empty string in element 0.
-    std::string command_partial_str = request.GetCursorArgumentPrefix().str();
-
-    std::string common_prefix;
-    matches.LongestCommonPrefix(common_prefix);
-    const size_t partial_name_len = command_partial_str.size();
-    common_prefix.erase(0, partial_name_len);
-
-    // If we matched a unique single command, add a space... Only do this if
-    // the completer told us this was a complete word, however...
-    if (num_command_matches == 1 && request.GetWordComplete()) {
-      char quote_char = request.GetParsedLine()[request.GetCursorIndex()].quote;
-      common_prefix =
-          Args::EscapeLLDBCommandArgument(common_prefix, quote_char);
-      if (quote_char != '\0')
-        common_prefix.push_back(quote_char);
-      common_prefix.push_back(' ');
-    }
-    matches.InsertStringAtIndex(0, common_prefix.c_str());
-    descriptions.InsertStringAtIndex(0, "");
-  }
-  return num_command_matches;
+  HandleCompletionMatches(request);
 }
 
 CommandInterpreter::~CommandInterpreter() {}
@@ -2220,7 +2133,7 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result) {
 
 const char *CommandInterpreter::GetCommandPrefix() {
   const char *prefix = GetDebugger().GetIOHandlerCommandPrefix();
-  return prefix == NULL ? "" : prefix;
+  return prefix == nullptr ? "" : prefix;
 }
 
 PlatformSP CommandInterpreter::GetPlatform(bool prefer_target_platform) {
@@ -2547,6 +2460,9 @@ void CommandInterpreter::HandleCommandsFromFile(
 bool CommandInterpreter::GetSynchronous() { return m_synchronous_execution; }
 
 void CommandInterpreter::SetSynchronous(bool value) {
+  // Asynchronous mode is not supported during reproducer replay.
+  if (repro::Reproducer::Instance().GetLoader())
+    return;
   m_synchronous_execution = value;
 }
 
@@ -2707,32 +2623,14 @@ void CommandInterpreter::UpdateExecutionContext(
   }
 }
 
-size_t CommandInterpreter::GetProcessOutput() {
-  //  The process has stuff waiting for stderr; get it and write it out to the
-  //  appropriate place.
-  char stdio_buffer[1024];
-  size_t len;
-  size_t total_bytes = 0;
-  Status error;
+void CommandInterpreter::GetProcessOutput() {
   TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
-  if (target_sp) {
-    ProcessSP process_sp(target_sp->GetProcessSP());
-    if (process_sp) {
-      while ((len = process_sp->GetSTDOUT(stdio_buffer, sizeof(stdio_buffer),
-                                          error)) > 0) {
-        size_t bytes_written = len;
-        m_debugger.GetOutputFile()->Write(stdio_buffer, bytes_written);
-        total_bytes += len;
-      }
-      while ((len = process_sp->GetSTDERR(stdio_buffer, sizeof(stdio_buffer),
-                                          error)) > 0) {
-        size_t bytes_written = len;
-        m_debugger.GetErrorFile()->Write(stdio_buffer, bytes_written);
-        total_bytes += len;
-      }
-    }
-  }
-  return total_bytes;
+  if (!target_sp)
+    return;
+
+  if (ProcessSP process_sp = target_sp->GetProcessSP())
+    m_debugger.FlushProcessOutput(*process_sp, /*flush_stdout*/ true,
+                                  /*flush_stderr*/ true);
 }
 
 void CommandInterpreter::StartHandlingCommand() {
@@ -3212,7 +3110,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
   if (!scratch_command.empty())
     revised_command_line.Printf(" %s", scratch_command.c_str());
 
-  if (cmd_obj != NULL)
+  if (cmd_obj != nullptr)
     command_line = revised_command_line.GetString();
 
   return cmd_obj;

@@ -1,4 +1,4 @@
-//===--------------------- StringLexer.h ------------------------*- C++ -*-===//
+//===-- StringLexer.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 #include <string>
 #include <utility>
 
-namespace lldb_utility {
+namespace lldb_private {
 
 class StringLexer {
 public:
@@ -23,8 +23,6 @@ public:
   typedef std::string::value_type Character;
 
   StringLexer(std::string s);
-
-  StringLexer(const StringLexer &rhs);
 
   // These APIs are not bounds-checked.  Use HasAtLeast() if you're not sure.
   Character Peek();

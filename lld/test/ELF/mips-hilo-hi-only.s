@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe 2>&1 | FileCheck -check-prefix=WARN %s
-# RUN: llvm-objdump -d -t %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
 
   .text
   .globl  __start
@@ -18,10 +18,10 @@ _label:
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
-# CHECK-NEXT:  20000:   3c 08 00 03   lui    $8, 3
-#                                                ^-- %hi(__start) w/o addend
-# CHECK-NEXT   20004:   21 08 00 08   addi   $8, $8, 8
-#                                                    ^-- %lo(_label)
+# CHECK-NEXT:  20000:       lui    $8, 3
+#                                      ^-- %hi(__start) w/o addend
+# CHECK-NEXT   20004:       addi   $8, $8, 8
+#                                          ^-- %lo(_label)
 
 # CHECK: SYMBOL TABLE:
 # CHECK: 00020008    .text   00000000 _label

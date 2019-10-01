@@ -112,10 +112,10 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::arm:
-    return llvm::make_unique<NativeRegisterContextLinux_arm>(target_arch,
+    return std::make_unique<NativeRegisterContextLinux_arm>(target_arch,
                                                              native_thread);
   case llvm::Triple::aarch64:
-    return llvm::make_unique<NativeRegisterContextLinux_arm64>(target_arch,
+    return std::make_unique<NativeRegisterContextLinux_arm64>(target_arch,
                                                                native_thread);
   default:
     llvm_unreachable("have no register context for architecture");
@@ -277,10 +277,6 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (!data_sp)
-    return Status("failed to allocate DataBufferHeap instance of size %" PRIu64,
-                  REG_CONTEXT_SIZE);
-
   error = ReadGPR();
   if (error.Fail())
     return error;
@@ -290,13 +286,6 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  if (dst == nullptr) {
-    error.SetErrorStringWithFormat("DataBufferHeap instance of size %" PRIu64
-                                   " returned a null pointer",
-                                   REG_CONTEXT_SIZE);
-    return error;
-  }
-
   ::memcpy(dst, &m_gpr_arm64, GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, &m_fpr, sizeof(m_fpr));
@@ -358,8 +347,7 @@ bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
 uint32_t NativeRegisterContextLinux_arm64::NumSupportedHardwareBreakpoints() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
 
   Status error;
 
@@ -469,8 +457,7 @@ Status NativeRegisterContextLinux_arm64::GetHardwareBreakHitIndex(
     uint32_t &bp_index, lldb::addr_t trap_addr) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
 
   lldb::addr_t break_addr;
 
@@ -490,8 +477,7 @@ Status NativeRegisterContextLinux_arm64::GetHardwareBreakHitIndex(
 Status NativeRegisterContextLinux_arm64::ClearAllHardwareBreakpoints() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
 
   Status error;
 
@@ -929,50 +915,32 @@ Status NativeRegisterContextLinux_arm64::DoWriteRegisterValue(
   return error;
 }
 
-Status NativeRegisterContextLinux_arm64::DoReadGPR(void *buf, size_t buf_size) {
-  int regset = NT_PRSTATUS;
+Status NativeRegisterContextLinux_arm64::ReadGPR() {
   struct iovec ioVec;
-  Status error;
-
-  ioVec.iov_base = buf;
-  ioVec.iov_len = buf_size;
-  return NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, buf_size);
+  ioVec.iov_base = GetGPRBuffer();
+  ioVec.iov_len = GetGPRSize();
+  return ReadRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
 }
 
-Status NativeRegisterContextLinux_arm64::DoWriteGPR(void *buf,
-                                                    size_t buf_size) {
-  int regset = NT_PRSTATUS;
+Status NativeRegisterContextLinux_arm64::WriteGPR() {
   struct iovec ioVec;
-  Status error;
-
-  ioVec.iov_base = buf;
-  ioVec.iov_len = buf_size;
-  return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, buf_size);
+  ioVec.iov_base = GetGPRBuffer();
+  ioVec.iov_len = GetGPRSize();
+  return WriteRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
 }
 
-Status NativeRegisterContextLinux_arm64::DoReadFPR(void *buf, size_t buf_size) {
-  int regset = NT_FPREGSET;
+Status NativeRegisterContextLinux_arm64::ReadFPR() {
   struct iovec ioVec;
-  Status error;
-
-  ioVec.iov_base = buf;
-  ioVec.iov_len = buf_size;
-  return NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, buf_size);
+  ioVec.iov_base = GetFPRBuffer();
+  ioVec.iov_len = GetFPRSize();
+  return ReadRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
 }
 
-Status NativeRegisterContextLinux_arm64::DoWriteFPR(void *buf,
-                                                    size_t buf_size) {
-  int regset = NT_FPREGSET;
+Status NativeRegisterContextLinux_arm64::WriteFPR() {
   struct iovec ioVec;
-  Status error;
-
-  ioVec.iov_base = buf;
-  ioVec.iov_len = buf_size;
-  return NativeProcessLinux::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
-                                           &regset, &ioVec, buf_size);
+  ioVec.iov_base = GetFPRBuffer();
+  ioVec.iov_len = GetFPRSize();
+  return WriteRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
 }
 
 uint32_t NativeRegisterContextLinux_arm64::CalculateFprOffset(

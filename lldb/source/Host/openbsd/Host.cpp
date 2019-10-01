@@ -19,12 +19,12 @@
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -36,6 +36,10 @@ extern char **environ;
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace lldb_private {
+class ProcessLaunchInfo;
+}
 
 Environment Host::GetEnvironment() {
   Environment env;
@@ -67,8 +71,7 @@ GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
 
       cstr = data.GetCStr(&offset);
       if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, false,
-                                                 FileSpec::Style::native);
+        process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
         if (!(match_info_ptr == NULL ||
               NameMatches(

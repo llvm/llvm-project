@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: openmp-4.5
 // XFAIL: gcc-4, gcc-5, clang-3.7, clang-3.8, icc-15, icc-16
 #include <stdio.h>
 #include <stdlib.h>

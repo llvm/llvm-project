@@ -267,9 +267,7 @@ public:
       m_command_thread_state = s;
   }
 
-  //----------------------------------------------------------------------
   // IOHandlerDelegate
-  //----------------------------------------------------------------------
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
@@ -277,9 +275,7 @@ public:
 
   static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -351,10 +347,6 @@ public:
 
   void LeaveSession();
 
-  void SaveTerminalState(int fd);
-
-  void RestoreTerminalState();
-
   uint32_t IsExecutingPython() const { return m_lock_count > 0; }
 
   uint32_t IncrementLockCount() { return ++m_lock_count; }
@@ -391,7 +383,6 @@ public:
   PythonObject m_run_one_line_function;
   PythonObject m_run_one_line_str_global;
   std::string m_dictionary_name;
-  TerminalState m_terminal_state;
   ActiveIOHandler m_active_io_handler;
   bool m_session_is_active;
   bool m_pty_slave_is_open;

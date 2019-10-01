@@ -28,8 +28,6 @@
 
 namespace lldb_private {
 class ConstString;
-}
-namespace lldb_private {
 class Event;
 }
 
@@ -42,9 +40,7 @@ public:
   friend class Broadcaster;
   friend class BroadcasterManager;
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   //
   // Listeners have to be constructed into shared pointers - at least if you
   // want them to listen to Broadcasters,
@@ -62,10 +58,11 @@ public:
 
   const char *GetName() { return m_name.c_str(); }
 
-  uint32_t StartListeningForEventSpec(lldb::BroadcasterManagerSP manager_sp,
-                                      const BroadcastEventSpec &event_spec);
+  uint32_t
+  StartListeningForEventSpec(const lldb::BroadcasterManagerSP &manager_sp,
+                             const BroadcastEventSpec &event_spec);
 
-  bool StopListeningForEventSpec(lldb::BroadcasterManagerSP manager_sp,
+  bool StopListeningForEventSpec(const lldb::BroadcasterManagerSP &manager_sp,
                                  const BroadcastEventSpec &event_spec);
 
   uint32_t StartListeningForEvents(Broadcaster *broadcaster,
@@ -99,9 +96,7 @@ public:
   size_t HandleBroadcastEvent(lldb::EventSP &event_sp);
 
 private:
-  //------------------------------------------------------------------
   // Classes that inherit from Listener can see and modify these
-  //------------------------------------------------------------------
   struct BroadcasterInfo {
     BroadcasterInfo(uint32_t mask, HandleBroadcastCallback cb = nullptr,
                     void *ud = nullptr)
@@ -149,9 +144,7 @@ private:
   //                             uint32_t event_mask,
   //                             bool exact);
 
-  //------------------------------------------------------------------
   // For Listener only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(Listener);
 };
 

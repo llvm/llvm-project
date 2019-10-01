@@ -88,7 +88,7 @@ public:
       file = absolute_path.GetPath();
     }
 
-    return llvm::make_unique<CommandLoader>(std::move(files));
+    return std::make_unique<CommandLoader>(std::move(files));
   }
 
   FILE *GetNextFile() {
@@ -204,7 +204,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
 
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          llvm::make_unique<SystemInitializerFull>(), LoadPlugin)) {
+          std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
     error.SetError(Status(std::move(e)));
   }
   return LLDB_RECORD_RESULT(error);
@@ -599,18 +599,18 @@ const char *SBDebugger::StateAsCString(StateType state) {
 static void AddBoolConfigEntry(StructuredData::Dictionary &dict,
                                llvm::StringRef name, bool value,
                                llvm::StringRef description) {
-  auto entry_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto entry_up = std::make_unique<StructuredData::Dictionary>();
   entry_up->AddBooleanItem("value", value);
   entry_up->AddStringItem("description", description);
   dict.AddItem(name, std::move(entry_up));
 }
 
 static void AddLLVMTargets(StructuredData::Dictionary &dict) {
-  auto array_up = llvm::make_unique<StructuredData::Array>();
+  auto array_up = std::make_unique<StructuredData::Array>();
 #define LLVM_TARGET(target)                                                    \
-  array_up->AddItem(llvm::make_unique<StructuredData::String>(#target));
+  array_up->AddItem(std::make_unique<StructuredData::String>(#target));
 #include "llvm/Config/Targets.def"
-  auto entry_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto entry_up = std::make_unique<StructuredData::Dictionary>();
   entry_up->AddItem("value", std::move(array_up));
   entry_up->AddStringItem("description", "A list of configured LLVM targets.");
   dict.AddItem("targets", std::move(entry_up));
@@ -620,10 +620,17 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBStructuredData, SBDebugger,
                                     GetBuildConfiguration);
 
-  auto config_up = llvm::make_unique<StructuredData::Dictionary>();
+  auto config_up = std::make_unique<StructuredData::Dictionary>();
   AddBoolConfigEntry(
       *config_up, "xml", XMLDocument::XMLEnabled(),
       "A boolean value that indicates if XML support is enabled in LLDB");
+  bool have_curses = true;
+#ifdef LLDB_DISABLE_CURSES
+  have_curses = false;
+#endif
+  AddBoolConfigEntry(
+      *config_up, "curses", have_curses,
+      "A boolean value that indicates if curses support is enabled in LLDB");
   AddLLVMTargets(*config_up);
 
   SBStructuredData data;
@@ -680,13 +687,13 @@ lldb::SBTarget SBDebugger::CreateTarget(const char *filename,
   }
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBDebugger(%p)::CreateTarget (filename=\"%s\", triple=%s, "
-                "platform_name=%s, add_dependent_modules=%u, error=%s) => "
-                "SBTarget(%p)",
-                static_cast<void *>(m_opaque_sp.get()), filename, target_triple,
-                platform_name, add_dependent_modules, sb_error.GetCString(),
-                static_cast<void *>(target_sp.get()));
+  LLDB_LOGF(log,
+            "SBDebugger(%p)::CreateTarget (filename=\"%s\", triple=%s, "
+            "platform_name=%s, add_dependent_modules=%u, error=%s) => "
+            "SBTarget(%p)",
+            static_cast<void *>(m_opaque_sp.get()), filename, target_triple,
+            platform_name, add_dependent_modules, sb_error.GetCString(),
+            static_cast<void *>(target_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_target);
 }
@@ -710,11 +717,11 @@ SBDebugger::CreateTargetWithFileAndTargetTriple(const char *filename,
   }
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBDebugger(%p)::CreateTargetWithFileAndTargetTriple "
-                "(filename=\"%s\", triple=%s) => SBTarget(%p)",
-                static_cast<void *>(m_opaque_sp.get()), filename, target_triple,
-                static_cast<void *>(target_sp.get()));
+  LLDB_LOGF(log,
+            "SBDebugger(%p)::CreateTargetWithFileAndTargetTriple "
+            "(filename=\"%s\", triple=%s) => SBTarget(%p)",
+            static_cast<void *>(m_opaque_sp.get()), filename, target_triple,
+            static_cast<void *>(target_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_target);
 }
@@ -743,11 +750,11 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
     }
   }
 
-  if (log)
-    log->Printf("SBDebugger(%p)::CreateTargetWithFileAndArch (filename=\"%s\", "
-                "arch=%s) => SBTarget(%p)",
-                static_cast<void *>(m_opaque_sp.get()), filename, arch_cstr,
-                static_cast<void *>(target_sp.get()));
+  LLDB_LOGF(log,
+            "SBDebugger(%p)::CreateTargetWithFileAndArch (filename=\"%s\", "
+            "arch=%s) => SBTarget(%p)",
+            static_cast<void *>(m_opaque_sp.get()), filename, arch_cstr,
+            static_cast<void *>(target_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_target);
 }
@@ -772,11 +779,10 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
     }
   }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf(
-        "SBDebugger(%p)::CreateTarget (filename=\"%s\") => SBTarget(%p)",
-        static_cast<void *>(m_opaque_sp.get()), filename,
-        static_cast<void *>(target_sp.get()));
+  LLDB_LOGF(log,
+            "SBDebugger(%p)::CreateTarget (filename=\"%s\") => SBTarget(%p)",
+            static_cast<void *>(m_opaque_sp.get()), filename,
+            static_cast<void *>(target_sp.get()));
   return LLDB_RECORD_RESULT(sb_target);
 }
 
@@ -788,11 +794,9 @@ SBTarget SBDebugger::GetDummyTarget() {
       sb_target.SetSP(m_opaque_sp->GetDummyTarget()->shared_from_this());
   }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf(
-        "SBDebugger(%p)::GetDummyTarget() => SBTarget(%p)",
-        static_cast<void *>(m_opaque_sp.get()),
-        static_cast<void *>(sb_target.GetSP().get()));
+  LLDB_LOGF(log, "SBDebugger(%p)::GetDummyTarget() => SBTarget(%p)",
+            static_cast<void *>(m_opaque_sp.get()),
+            static_cast<void *>(sb_target.GetSP().get()));
   return LLDB_RECORD_RESULT(sb_target);
 }
 
@@ -814,10 +818,9 @@ bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   }
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log)
-    log->Printf("SBDebugger(%p)::DeleteTarget (SBTarget(%p)) => %i",
-                static_cast<void *>(m_opaque_sp.get()),
-                static_cast<void *>(target.m_opaque_sp.get()), result);
+  LLDB_LOGF(log, "SBDebugger(%p)::DeleteTarget (SBTarget(%p)) => %i",
+            static_cast<void *>(m_opaque_sp.get()),
+            static_cast<void *>(target.m_opaque_sp.get()), result);
 
   return result;
 }
@@ -914,9 +917,9 @@ SBTarget SBDebugger::GetSelectedTarget() {
   if (log) {
     SBStream sstr;
     sb_target.GetDescription(sstr, eDescriptionLevelBrief);
-    log->Printf("SBDebugger(%p)::GetSelectedTarget () => SBTarget(%p): %s",
-                static_cast<void *>(m_opaque_sp.get()),
-                static_cast<void *>(target_sp.get()), sstr.GetData());
+    LLDB_LOGF(log, "SBDebugger(%p)::GetSelectedTarget () => SBTarget(%p): %s",
+              static_cast<void *>(m_opaque_sp.get()),
+              static_cast<void *>(target_sp.get()), sstr.GetData());
   }
 
   return LLDB_RECORD_RESULT(sb_target);
@@ -935,9 +938,9 @@ void SBDebugger::SetSelectedTarget(SBTarget &sb_target) {
   if (log) {
     SBStream sstr;
     sb_target.GetDescription(sstr, eDescriptionLevelBrief);
-    log->Printf("SBDebugger(%p)::SetSelectedTarget () => SBTarget(%p): %s",
-                static_cast<void *>(m_opaque_sp.get()),
-                static_cast<void *>(target_sp.get()), sstr.GetData());
+    LLDB_LOGF(log, "SBDebugger(%p)::SetSelectedTarget () => SBTarget(%p): %s",
+              static_cast<void *>(m_opaque_sp.get()),
+              static_cast<void *>(target_sp.get()), sstr.GetData());
   }
 }
 
@@ -951,11 +954,10 @@ SBPlatform SBDebugger::GetSelectedPlatform() {
   if (debugger_sp) {
     sb_platform.SetSP(debugger_sp->GetPlatformList().GetSelectedPlatform());
   }
-  if (log)
-    log->Printf("SBDebugger(%p)::GetSelectedPlatform () => SBPlatform(%p): %s",
-                static_cast<void *>(m_opaque_sp.get()),
-                static_cast<void *>(sb_platform.GetSP().get()),
-                sb_platform.GetName());
+  LLDB_LOGF(log, "SBDebugger(%p)::GetSelectedPlatform () => SBPlatform(%p): %s",
+            static_cast<void *>(m_opaque_sp.get()),
+            static_cast<void *>(sb_platform.GetSP().get()),
+            sb_platform.GetName());
   return LLDB_RECORD_RESULT(sb_platform);
 }
 
@@ -970,11 +972,10 @@ void SBDebugger::SetSelectedPlatform(SBPlatform &sb_platform) {
     debugger_sp->GetPlatformList().SetSelectedPlatform(sb_platform.GetSP());
   }
 
-  if (log)
-    log->Printf("SBDebugger(%p)::SetSelectedPlatform (SBPlatform(%p) %s)",
-                static_cast<void *>(m_opaque_sp.get()),
-                static_cast<void *>(sb_platform.GetSP().get()),
-                sb_platform.GetName());
+  LLDB_LOGF(log, "SBDebugger(%p)::SetSelectedPlatform (SBPlatform(%p) %s)",
+            static_cast<void *>(m_opaque_sp.get()),
+            static_cast<void *>(sb_platform.GetSP().get()),
+            sb_platform.GetName());
 }
 
 uint32_t SBDebugger::GetNumPlatforms() {
@@ -1018,7 +1019,7 @@ SBStructuredData SBDebugger::GetAvailablePlatformInfoAtIndex(uint32_t idx) {
                      GetAvailablePlatformInfoAtIndex, (uint32_t), idx);
 
   SBStructuredData data;
-  auto platform_dict = llvm::make_unique<StructuredData::Dictionary>();
+  auto platform_dict = std::make_unique<StructuredData::Dictionary>();
   llvm::StringRef name_str("name"), desc_str("description");
 
   if (idx == 0) {
@@ -1062,7 +1063,7 @@ void SBDebugger::DispatchInput(const void *data, size_t data_len) {
   //    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
   //
   //    if (log)
-  //        log->Printf ("SBDebugger(%p)::DispatchInput (data=\"%.*s\",
+  //        LLDB_LOGF(log, "SBDebugger(%p)::DispatchInput (data=\"%.*s\",
   //        size_t=%" PRIu64 ")",
   //                     m_opaque_sp.get(),
   //                     (int) data_len,
@@ -1246,10 +1247,9 @@ const char *SBDebugger::GetPrompt() const {
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
-  if (log)
-    log->Printf("SBDebugger(%p)::GetPrompt () => \"%s\"",
-                static_cast<void *>(m_opaque_sp.get()),
-                (m_opaque_sp ? m_opaque_sp->GetPrompt().str().c_str() : ""));
+  LLDB_LOGF(log, "SBDebugger(%p)::GetPrompt () => \"%s\"",
+            static_cast<void *>(m_opaque_sp.get()),
+            (m_opaque_sp ? m_opaque_sp->GetPrompt().str().c_str() : ""));
 
   return (m_opaque_sp ? ConstString(m_opaque_sp->GetPrompt()).GetCString()
                       : nullptr);
@@ -1374,7 +1374,8 @@ bool SBDebugger::SetCurrentPlatformSDKRoot(const char *sysroot) {
 
     if (platform_sp) {
       if (log && sysroot)
-        log->Printf("SBDebugger::SetCurrentPlatformSDKRoot (\"%s\")", sysroot);
+        LLDB_LOGF(log, "SBDebugger::SetCurrentPlatformSDKRoot (\"%s\")",
+                  sysroot);
       platform_sp->SetSDKRootDirectory(ConstString(sysroot));
       return true;
     }

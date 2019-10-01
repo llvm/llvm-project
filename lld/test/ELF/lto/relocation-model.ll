@@ -33,6 +33,15 @@
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 
+;; Explicit flag.
+
+; RUN: ld.lld %t.o -o %t-out -save-temps -r -mllvm -relocation-model=pic
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
+
+; RUN: ld.lld %t.o -o %t-out -save-temps -r -mllvm -relocation-model=static
+; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
+
+
 ; PIC: R_X86_64_REX_GOTPCRELX foo
 ; STATIC: R_X86_64_PC32 foo
 

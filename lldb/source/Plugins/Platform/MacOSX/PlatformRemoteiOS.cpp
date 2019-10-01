@@ -25,14 +25,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformRemoteiOS::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -65,8 +61,8 @@ PlatformSP PlatformRemoteiOS::CreateInstance(bool force, const ArchSpec *arch) {
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformRemoteiOS::%s(force=%s, arch={%s,%s})", __FUNCTION__,
-                force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformRemoteiOS::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -115,14 +111,14 @@ PlatformSP PlatformRemoteiOS::CreateInstance(bool force, const ArchSpec *arch) {
 
   if (create) {
     if (log)
-      log->Printf("PlatformRemoteiOS::%s() creating platform", __FUNCTION__);
+      LLDB_LOGF(log, "PlatformRemoteiOS::%s() creating platform", __FUNCTION__);
 
     return lldb::PlatformSP(new PlatformRemoteiOS());
   }
 
   if (log)
-    log->Printf("PlatformRemoteiOS::%s() aborting creation of platform",
-                __FUNCTION__);
+    LLDB_LOGF(log, "PlatformRemoteiOS::%s() aborting creation of platform",
+              __FUNCTION__);
 
   return lldb::PlatformSP();
 }
@@ -136,9 +132,7 @@ const char *PlatformRemoteiOS::GetDescriptionStatic() {
   return "Remote iOS platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteiOS::PlatformRemoteiOS()
     : PlatformRemoteDarwinDevice() {}
 

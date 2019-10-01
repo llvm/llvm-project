@@ -25,15 +25,13 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class ClangPersistentVariables ClangPersistentVariables.h
+/// \class ClangPersistentVariables ClangPersistentVariables.h
 /// "lldb/Expression/ClangPersistentVariables.h" Manages persistent values
 /// that need to be preserved between expression invocations.
 ///
 /// A list of variables that can be accessed and updated by any expression.  See
 /// ClangPersistentVariable for more discussion.  Also provides an increasing,
 /// 0-based counter for naming result variables.
-//----------------------------------------------------------------------
 class ClangPersistentVariables : public PersistentExpressionState {
 public:
   //----------------------------------------------------------------------
@@ -43,9 +41,7 @@ public:
 
   ~ClangPersistentVariables() override = default;
 
-  //------------------------------------------------------------------
   // llvm casting support
-  //------------------------------------------------------------------
   static bool classof(const PersistentExpressionState *pv) {
     return pv->getKind() == PersistentExpressionState::eKindClang;
   }
@@ -59,8 +55,8 @@ public:
       uint32_t addr_byte_size) override;
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
-  llvm::StringRef
-  GetPersistentVariablePrefix(bool is_error) const override {
+
+  llvm::StringRef GetPersistentVariablePrefix(bool is_error) const override {
     return "$";
   }
 
@@ -96,11 +92,10 @@ public:
   }
 
 private:
-  uint32_t m_next_persistent_variable_id; ///< The counter used by
-                                          ///GetNextResultName().
-  uint32_t m_next_persistent_error_id;    ///< The counter used by
-                                       ///GetNextResultName() when is_error is
-                                       ///true.
+  // The counter used by GetNextPersistentVariableName
+  uint32_t m_next_persistent_variable_id = 0;
+  /// The counter used by GetNextResultName when is_error is true.
+  uint32_t m_next_persistent_error_id;
 
   typedef llvm::DenseMap<const char *, clang::TypeDecl *>
       ClangPersistentTypeMap;

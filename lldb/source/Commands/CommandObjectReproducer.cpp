@@ -53,6 +53,9 @@ protected:
 
     result.GetOutputStream()
         << "Reproducer written to '" << r.GetReproducerPath() << "'\n";
+    result.GetOutputStream()
+        << "Please have a look at the directory to assess if you're willing to "
+           "share the contained information.\n";
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return result.Succeeded();
@@ -99,8 +102,8 @@ CommandObjectReproducer::CommandObjectReproducer(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "reproducer",
-          "Commands to inspect and manipulate the reproducer functionality.",
-          "log <subcommand> [<command-options>]") {
+          "Commands for manipulate the reproducer functionality.",
+          "reproducer <subcommand> [<subcommand-options>]") {
   LoadSubCommand(
       "generate",
       CommandObjectSP(new CommandObjectReproducerGenerate(interpreter)));

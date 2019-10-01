@@ -1,4 +1,4 @@
-//===-- SBBreakpointName.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBBreakpointOptionCommon.cpp --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,7 +41,7 @@ using namespace lldb_private;
 SBBreakpointCallbackBaton::SBBreakpointCallbackBaton(SBBreakpointHitCallback 
                                                          callback,
                                                      void *baton)
-      : TypedBaton(llvm::make_unique<CallbackData>()) {
+      : TypedBaton(std::make_unique<CallbackData>()) {
     getItem()->callback = callback;
     getItem()->callback_baton = baton;
   }

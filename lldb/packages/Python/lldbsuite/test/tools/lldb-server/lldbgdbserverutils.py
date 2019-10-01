@@ -11,7 +11,6 @@ import re
 import six
 import socket_packet_pump
 import subprocess
-import time
 from lldbsuite.test.lldbtest import *
 
 from six.moves import queue
@@ -924,6 +923,12 @@ def process_is_running(pid, unknown_value=True):
             "ps ax | awk '{ print $1; }'", shell=True).decode("utf-8")
         text_process_ids = output.split('\n')[1:]
         # Convert text pids to ints
+        process_ids = [int(text_pid)
+                       for text_pid in text_process_ids if text_pid != '']
+    elif platform.system() == 'Windows':
+        output = subprocess.check_output(
+            "for /f \"tokens=2 delims=,\" %F in ('tasklist /nh /fi \"PID ne 0\" /fo csv') do @echo %~F", shell=True).decode("utf-8")
+        text_process_ids = output.split('\n')[1:]
         process_ids = [int(text_pid)
                        for text_pid in text_process_ids if text_pid != '']
     # elif {your_platform_here}:

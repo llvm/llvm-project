@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "lldb/Host/Config.h"
+#include "llvm/ADT/ScopeExit.h"
 
 #include "GDBRemoteCommunicationReplayServer.h"
 #include "ProcessGDBRemoteLog.h"
@@ -142,6 +143,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
                  entry.packet.data);
         LLDB_LOG(log, "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
+        assert(false && "Encountered unexpected packet during replay");
         return PacketResult::ErrorSendFailed;
       }
 
@@ -202,9 +204,16 @@ bool GDBRemoteCommunicationReplayServer::StartAsyncThread() {
   if (!m_async_thread.IsJoinable()) {
     // Create a thread that watches our internal state and controls which
     // events make it to clients (into the DCProcess event queue).
-    m_async_thread = ThreadLauncher::LaunchThread(
+    llvm::Expected<HostThread> async_thread = ThreadLauncher::LaunchThread(
         "<lldb.gdb-replay.async>",
-        GDBRemoteCommunicationReplayServer::AsyncThread, this, nullptr);
+        GDBRemoteCommunicationReplayServer::AsyncThread, this);
+    if (!async_thread) {
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(async_thread.takeError()));
+      return false;
+    }
+    m_async_thread = *async_thread;
   }
 
   // Wait for handshake.
@@ -248,11 +257,10 @@ void GDBRemoteCommunicationReplayServer::ReceivePacket(
 thread_result_t GDBRemoteCommunicationReplayServer::AsyncThread(void *arg) {
   GDBRemoteCommunicationReplayServer *server =
       (GDBRemoteCommunicationReplayServer *)arg;
-
+  auto D = make_scope_exit([&]() { server->Disconnect(); });
   EventSP event_sp;
   bool done = false;
-
-  while (true) {
+  while (!done) {
     if (server->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&server->m_async_broadcaster)) {

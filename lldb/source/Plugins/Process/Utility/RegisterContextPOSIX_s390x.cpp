@@ -113,7 +113,7 @@ RegisterContextPOSIX_s390x::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < m_reg_info.num_registers)
     return &GetRegisterInfo()[reg];
   else
-    return NULL;
+    return nullptr;
 }
 
 size_t RegisterContextPOSIX_s390x::GetRegisterCount() {
@@ -156,10 +156,10 @@ const RegisterSet *RegisterContextPOSIX_s390x::GetRegisterSet(size_t set) {
       return &g_reg_sets_s390x[set];
     default:
       assert(false && "Unhandled target architecture.");
-      return NULL;
+      return nullptr;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 lldb::ByteOrder RegisterContextPOSIX_s390x::GetByteOrder() {

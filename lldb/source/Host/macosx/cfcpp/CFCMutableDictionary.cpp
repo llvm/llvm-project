@@ -8,21 +8,15 @@
 
 #include "CFCMutableDictionary.h"
 #include "CFCString.h"
-//----------------------------------------------------------------------
 // CFCString constructor
-//----------------------------------------------------------------------
 CFCMutableDictionary::CFCMutableDictionary(CFMutableDictionaryRef s)
     : CFCReleaser<CFMutableDictionaryRef>(s) {}
 
-//----------------------------------------------------------------------
 // CFCMutableDictionary copy constructor
-//----------------------------------------------------------------------
 CFCMutableDictionary::CFCMutableDictionary(const CFCMutableDictionary &rhs)
     : CFCReleaser<CFMutableDictionaryRef>(rhs) {}
 
-//----------------------------------------------------------------------
 // CFCMutableDictionary copy constructor
-//----------------------------------------------------------------------
 const CFCMutableDictionary &CFCMutableDictionary::
 operator=(const CFCMutableDictionary &rhs) {
   if (this != &rhs)
@@ -30,9 +24,7 @@ operator=(const CFCMutableDictionary &rhs) {
   return *this;
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 CFCMutableDictionary::~CFCMutableDictionary() {}
 
 CFIndex CFCMutableDictionary::GetCount() const {

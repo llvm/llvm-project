@@ -54,10 +54,8 @@ def pack_archive(bytes_io, src_root, filters):
             full_path = os.path.normpath(os.path.join(src_root, subfolder))
             candidates = [os.path.normpath(os.path.join(full_path, f))
                           for f in os.listdir(full_path)]
-            actual = filter(
-                lambda f: os.path.isfile(f) and os.path.splitext(f)[1] == ext,
-                candidates)
-            return (subfolder, map(lambda f: os.path.basename(f), actual))
+            actual = [f for f in candidates if os.path.isfile(f) and os.path.splitext(f)[1] == ext]
+            return (subfolder, [os.path.basename(f) for f in actual])
         archive_entries = map(filter_func, filters)
     else:
         for (root, dirs, files) in os.walk(src_root):

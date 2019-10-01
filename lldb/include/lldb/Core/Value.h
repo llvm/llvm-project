@@ -26,20 +26,10 @@
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class ExecutionContext;
-}
-namespace lldb_private {
 class Module;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class Type;
-}
-namespace lldb_private {
 class Variable;
 }
 
@@ -220,7 +210,6 @@ public:
   uint64_t GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx);
 
   Status GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
-                        uint32_t data_offset,
                         Module *module); // Can be nullptr
 
   static const char *GetValueTypeAsCString(ValueType context_type);

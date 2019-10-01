@@ -38,7 +38,7 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
                                     unsigned flags, addr_t fd, addr_t offset) {
   Thread *thread =
       process->GetThreadList().GetExpressionExecutionThread().get();
-  if (thread == NULL)
+  if (thread == nullptr)
     return false;
 
   const bool append = true;
@@ -126,7 +126,7 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
                                       addr_t length) {
   Thread *thread =
       process->GetThreadList().GetExpressionExecutionThread().get();
-  if (thread == NULL)
+  if (thread == nullptr)
     return false;
 
   const bool append = true;
@@ -188,7 +188,7 @@ bool lldb_private::InferiorCall(Process *process, const Address *address,
                                 addr_t &returned_func, bool trap_exceptions) {
   Thread *thread =
       process->GetThreadList().GetExpressionExecutionThread().get();
-  if (thread == NULL || address == NULL)
+  if (thread == nullptr || address == nullptr)
     return false;
 
   EvaluateExpressionOptions options;

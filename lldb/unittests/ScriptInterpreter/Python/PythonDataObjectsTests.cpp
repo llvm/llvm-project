@@ -195,6 +195,31 @@ TEST_F(PythonDataObjectsTest, TestPythonInteger) {
   EXPECT_EQ(7, constructed_int.GetInteger());
 }
 
+TEST_F(PythonDataObjectsTest, TestPythonBoolean) {
+  // Test PythonBoolean constructed from Py_True
+  EXPECT_TRUE(PythonBoolean::Check(Py_True));
+  PythonBoolean python_true(PyRefType::Owned, Py_True);
+  EXPECT_EQ(PyObjectType::Boolean, python_true.GetObjectType());
+
+  // Test PythonBoolean constructed from Py_False
+  EXPECT_TRUE(PythonBoolean::Check(Py_False));
+  PythonBoolean python_false(PyRefType::Owned, Py_False);
+  EXPECT_EQ(PyObjectType::Boolean, python_false.GetObjectType());
+
+  auto test_from_long = [](long value) {
+    PyObject *py_bool = PyBool_FromLong(value);
+    EXPECT_TRUE(PythonBoolean::Check(py_bool));
+    PythonBoolean python_boolean(PyRefType::Owned, py_bool);
+    EXPECT_EQ(PyObjectType::Boolean, python_boolean.GetObjectType());
+    EXPECT_EQ(bool(value), python_boolean.GetValue());
+  };
+
+  // Test PythonBoolean constructed from long integer values.
+  test_from_long(0); // Test 'false' value.
+  test_from_long(1); // Test 'true' value.
+  test_from_long(~0); // Any value != 0 is 'true'.
+}
+
 TEST_F(PythonDataObjectsTest, TestPythonBytes) {
   static const char *test_bytes = "PythonDataObjectsTest::TestPythonBytes";
   PyObject *py_bytes = PyBytes_FromString(test_bytes);

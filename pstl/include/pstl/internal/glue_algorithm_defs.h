@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- glue_algorithm_defs.h ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,9 @@
 #include <iterator>
 
 #include "execution_defs.h"
+#include "pstl_config.h"
+
+_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std
 {
@@ -549,4 +552,7 @@ lexicographical_compare(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _
                         _ForwardIterator2 __first2, _ForwardIterator2 __last2);
 
 } // namespace std
+
+_PSTL_HIDE_FROM_ABI_POP
+
 #endif /* _PSTL_GLUE_ALGORITHM_DEFS_H */

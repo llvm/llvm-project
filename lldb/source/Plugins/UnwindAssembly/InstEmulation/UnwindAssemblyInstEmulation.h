@@ -47,9 +47,7 @@ public:
   static lldb_private::UnwindAssembly *
   CreateInstance(const lldb_private::ArchSpec &arch);
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -67,7 +65,7 @@ private:
   UnwindAssemblyInstEmulation(const lldb_private::ArchSpec &arch,
                               lldb_private::EmulateInstruction *inst_emulator)
       : UnwindAssembly(arch), m_inst_emulator_up(inst_emulator),
-        m_range_ptr(NULL), m_unwind_plan_ptr(NULL), m_curr_row(),
+        m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr), m_curr_row(),
         m_cfa_reg_info(), m_fp_is_cfa(false), m_register_values(),
         m_pushed_regs(), m_curr_row_modified(false),
         m_forward_branch_offset(0) {

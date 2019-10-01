@@ -4,10 +4,11 @@ Status
 macOS
 -----
 
-LLDB has matured a lot in the last year and can be used for C, C++ and
-Objective-C development for x86_64, i386 and ARM debugging. The entire public
-API is exposed though a framework on Mac OS X which is used by Xcode, the lldb
-command line tool, and can also be used by Python. The entire public API is
+LLDB is the system debugger on macOS, iOS, tvOS, and watchOS and
+can be used for C, C++, Objective-C and Swift development for x86_64,
+i386, ARM, and AArch64 debugging. The entire public API is exposed
+through a macOS framework which is used by Xcode and the `lldb`
+command line tool. It can also be imported from Python. The entire public API is
 exposed through script bridging which allows LLDB to use an embedded Python
 script interpreter, as well as having a Python module named "lldb" which can be
 used from Python on the command line. This allows debug sessions to be
@@ -39,27 +40,26 @@ section below.
 
 Features Matrix
 ---------------
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Feature                        | FreeBSD    | Linux                   | Mac OS X (i386/x86_64 and ARM/Thumb) | Windows (i386)       |
-|                                | (x86_64)   | (x86_64 and PPC64le)    |                                      |                      |
-+================================+============+=========================+======================================+======================+
-| Backtracing                    | OK         | OK                      | OK                                   | OK                   |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Breakpoints                    | OK         | OK                      | OK                                   | OK                   |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| C++11:                         | OK         | OK                      | OK                                   | Unknown              |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Commandline lldb tool          | OK         | OK                      | OK                                   | OK                   |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Core file debugging            | OK (ELF)   | OK (ELF)                | OK (MachO)                           | OK (Minidump)        |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Debugserver (remote debugging) | Not ported | Not ported              | OK                                   | Not ported           |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Disassembly                    | OK         | OK                      | OK                                   | OK                   |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Expression evaluation          | Unknown    | Works with some bugs    | OK                                   | Works with some bugs |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| JIT debugging                  | Unknown    | Symbolic debugging only | Untested                             | No                   |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
-| Objective-C 2.0:               | Unknown    | Not applicable          | OK                                   | Not applicable       |
-+--------------------------------+------------+-------------------------+--------------------------------------+----------------------+
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Feature                        | FreeBSD    | Linux                   | macOS      | Windows              |
++================================+============+=========================+============+======================+
+| Backtracing                    | OK         | OK                      | OK         | OK                   |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Breakpoints                    | OK         | OK                      | OK         | OK                   |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| C++11:                         | OK         | OK                      | OK         | Unknown              |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Commandline lldb tool          | OK         | OK                      | OK         | OK                   |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Core file debugging            | OK (ELF)   | OK (ELF)                | OK (MachO) | OK (Minidump)        |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Debugserver (remote debugging) | Not ported | Not ported              | OK         | Not ported           |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Disassembly                    | OK         | OK                      | OK         | OK                   |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Expression evaluation          | Unknown    | Works with some bugs    | OK         | Works with some bugs |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| JIT debugging                  | Unknown    | Symbolic debugging only | Untested   | No                   |
++--------------------------------+------------+-------------------------+------------+----------------------+
+| Objective-C 2.0:               | Unknown    | Not applicable          | OK         | Not applicable       |
++--------------------------------+------------+-------------------------+------------+----------------------+

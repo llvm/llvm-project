@@ -16,24 +16,24 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-//------------------------------------------------------------------
+namespace lldb_private {
+class Process;
+}
+
 // Static Variables
-//------------------------------------------------------------------
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 void PlatformAppleWatchSimulator::Initialize() {
   PlatformDarwin::Initialize();
 
@@ -69,8 +69,8 @@ PlatformSP PlatformAppleWatchSimulator::CreateInstance(bool force,
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformAppleWatchSimulator::%s(force=%s, arch={%s,%s})",
-                __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformAppleWatchSimulator::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -119,17 +119,15 @@ PlatformSP PlatformAppleWatchSimulator::CreateInstance(bool force,
     }
   }
   if (create) {
-    if (log)
-      log->Printf("PlatformAppleWatchSimulator::%s() creating platform",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "PlatformAppleWatchSimulator::%s() creating platform",
+              __FUNCTION__);
 
     return PlatformSP(new PlatformAppleWatchSimulator());
   }
 
-  if (log)
-    log->Printf(
-        "PlatformAppleWatchSimulator::%s() aborting creation of platform",
-        __FUNCTION__);
+  LLDB_LOGF(log,
+            "PlatformAppleWatchSimulator::%s() aborting creation of platform",
+            __FUNCTION__);
 
   return PlatformSP();
 }
@@ -143,18 +141,14 @@ const char *PlatformAppleWatchSimulator::GetDescriptionStatic() {
   return "Apple Watch simulator platform plug-in.";
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformAppleWatchSimulator::PlatformAppleWatchSimulator()
     : PlatformDarwin(true), m_sdk_directory() {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformAppleWatchSimulator::~PlatformAppleWatchSimulator() {}
 
 void PlatformAppleWatchSimulator::GetStatus(Stream &strm) {

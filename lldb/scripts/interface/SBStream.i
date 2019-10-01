@@ -28,21 +28,20 @@ For example (from test/source-manager/TestSourceManager.py),
                                                      '=>', # prefix for current line
                                                      stream)
 
-        #    2    
+        #    2
         #    3    int main(int argc, char const *argv[]) {
         # => 4        printf('Hello world.\\n'); // Set break point at this line.
         #    5        return 0;
         #    6    }
         self.expect(stream.GetData(), 'Source code displayed correctly',
                     exe=False,
-            patterns = ['=> %d.*Hello world' % self.line])
-") SBStream;
+            patterns = ['=> %d.*Hello world' % self.line])") SBStream;
 class SBStream
 {
 public:
 
     SBStream ();
-    
+
     ~SBStream ();
 
     bool
@@ -51,21 +50,15 @@ public:
     explicit operator bool() const;
 
     %feature("docstring", "
-    //--------------------------------------------------------------------------
-    /// If this stream is not redirected to a file, it will maintain a local
-    /// cache for the stream data which can be accessed using this accessor.
-    //--------------------------------------------------------------------------
-    ") GetData;
+    If this stream is not redirected to a file, it will maintain a local
+    cache for the stream data which can be accessed using this accessor.") GetData;
     const char *
     GetData ();
 
     %feature("docstring", "
-    //--------------------------------------------------------------------------
-    /// If this stream is not redirected to a file, it will maintain a local
-    /// cache for the stream output whose length can be accessed using this 
-    /// accessor.
-    //--------------------------------------------------------------------------
-    ") GetSize;
+    If this stream is not redirected to a file, it will maintain a local
+    cache for the stream output whose length can be accessed using this
+    accessor.") GetSize;
     size_t
     GetSize();
 
@@ -77,7 +70,7 @@ public:
             self->Printf("%s", str);
         }
     }
-    
+
     void
     RedirectToFile (const char *path, bool append);
 
@@ -88,12 +81,9 @@ public:
     RedirectToFileDescriptor (int fd, bool transfer_fh_ownership);
 
     %feature("docstring", "
-    //--------------------------------------------------------------------------
-    /// If the stream is redirected to a file, forget about the file and if
-    /// ownership of the file was transferred to this object, close the file.
-    /// If the stream is backed by a local cache, clear this cache.
-    //--------------------------------------------------------------------------
-    ") Clear;
+    If the stream is redirected to a file, forget about the file and if
+    ownership of the file was transferred to this object, close the file.
+    If the stream is backed by a local cache, clear this cache.") Clear;
     void
     Clear ();
 };

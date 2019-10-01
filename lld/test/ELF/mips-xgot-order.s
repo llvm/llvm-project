@@ -4,20 +4,20 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
-# RUN: llvm-objdump -d -s -t %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t.exe | FileCheck %s
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
-# CHECK-NEXT:    20000:       3c 02 00 00     lui     $2, 0
-# CHECK-NEXT:    20004:       8c 42 80 24     lw      $2, -32732($2)
-# CHECK-NEXT:    20008:       3c 02 00 00     lui     $2, 0
-# CHECK-NEXT:    2000c:       8c 42 80 28     lw      $2, -32728($2)
+# CHECK-NEXT:    20000:       lui     $2, 0
+# CHECK-NEXT:    20004:       lw      $2, -32732($2)
+# CHECK-NEXT:    20008:       lui     $2, 0
+# CHECK-NEXT:    2000c:       lw      $2, -32728($2)
 #
 # CHECK:      bar:
-# CHECK-NEXT:    20010:       8c 42 80 20     lw      $2, -32736($2)
-# CHECK-NEXT:    20014:       8c 42 80 18     lw      $2, -32744($2)
-# CHECK-NEXT:    20018:       20 42 00 00     addi    $2, $2, 0
+# CHECK-NEXT:    20010:       lw      $2, -32736($2)
+# CHECK-NEXT:    20014:       lw      $2, -32744($2)
+# CHECK-NEXT:    20018:       addi    $2, $2, 0
 
 # CHECK:      Contents of section .got:
 # CHECK-NEXT:  30010 00000000 80000000 00030000 00040000

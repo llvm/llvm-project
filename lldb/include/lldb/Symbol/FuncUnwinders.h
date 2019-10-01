@@ -35,17 +35,10 @@ public:
 
   ~FuncUnwinders();
 
-  // current_offset is the byte offset into the function.
-  // 0 means no instructions have executed yet.  -1 means the offset is unknown.
-  // On architectures where the pc points to the next instruction that will
-  // execute, this offset value will have already been decremented by 1 to stay
-  // within the bounds of the correct function body.
-  lldb::UnwindPlanSP GetUnwindPlanAtCallSite(Target &target,
-                                             int current_offset);
+  lldb::UnwindPlanSP GetUnwindPlanAtCallSite(Target &target, Thread &thread);
 
   lldb::UnwindPlanSP GetUnwindPlanAtNonCallSite(Target &target,
-                                                lldb_private::Thread &thread,
-                                                int current_offset);
+                                                lldb_private::Thread &thread);
 
   lldb::UnwindPlanSP GetUnwindPlanFastUnwind(Target &target,
                                              lldb_private::Thread &thread);
@@ -81,26 +74,23 @@ public:
   // used. Instead, clients should ask for the *behavior* they are looking for,
   // using one of the above UnwindPlan retrieval methods.
 
-  lldb::UnwindPlanSP GetAssemblyUnwindPlan(Target &target, Thread &thread,
-                                           int current_offset);
+  lldb::UnwindPlanSP GetAssemblyUnwindPlan(Target &target, Thread &thread);
 
-  lldb::UnwindPlanSP GetEHFrameUnwindPlan(Target &target, int current_offset);
+  lldb::UnwindPlanSP GetEHFrameUnwindPlan(Target &target);
 
   lldb::UnwindPlanSP GetEHFrameAugmentedUnwindPlan(Target &target,
-                                                   Thread &thread,
-                                                   int current_offset);
+                                                   Thread &thread);
 
-  lldb::UnwindPlanSP GetDebugFrameUnwindPlan(Target &target,
-                                             int current_offset);
+  lldb::UnwindPlanSP GetDebugFrameUnwindPlan(Target &target);
 
   lldb::UnwindPlanSP GetDebugFrameAugmentedUnwindPlan(Target &target,
-                                                      Thread &thread,
-                                                      int current_offset);
+                                                      Thread &thread);
 
-  lldb::UnwindPlanSP GetCompactUnwindUnwindPlan(Target &target,
-                                                int current_offset);
+  lldb::UnwindPlanSP GetCompactUnwindUnwindPlan(Target &target);
 
-  lldb::UnwindPlanSP GetArmUnwindUnwindPlan(Target &target, int current_offset);
+  lldb::UnwindPlanSP GetArmUnwindUnwindPlan(Target &target);
+
+  lldb::UnwindPlanSP GetSymbolFileUnwindPlan(Thread &thread);
 
   lldb::UnwindPlanSP GetArchDefaultUnwindPlan(Thread &thread);
 
@@ -132,6 +122,7 @@ private:
 
   std::vector<lldb::UnwindPlanSP> m_unwind_plan_compact_unwind;
   lldb::UnwindPlanSP m_unwind_plan_arm_unwind_sp;
+  lldb::UnwindPlanSP m_unwind_plan_symbol_file_sp;
   lldb::UnwindPlanSP m_unwind_plan_fast_sp;
   lldb::UnwindPlanSP m_unwind_plan_arch_default_sp;
   lldb::UnwindPlanSP m_unwind_plan_arch_default_at_func_entry_sp;
@@ -143,8 +134,8 @@ private:
       m_tried_unwind_plan_eh_frame_augmented : 1,
       m_tried_unwind_plan_debug_frame_augmented : 1,
       m_tried_unwind_plan_compact_unwind : 1,
-      m_tried_unwind_plan_arm_unwind : 1, m_tried_unwind_fast : 1,
-      m_tried_unwind_arch_default : 1,
+      m_tried_unwind_plan_arm_unwind : 1, m_tried_unwind_plan_symbol_file : 1,
+      m_tried_unwind_fast : 1, m_tried_unwind_arch_default : 1,
       m_tried_unwind_arch_default_at_func_entry : 1;
 
   Address m_first_non_prologue_insn;

@@ -1,5 +1,3 @@
-LEVEL = ../../../make
-
 OBJC_SOURCES := main.m
 LDFLAGS = $(CFLAGS) -lobjc -framework Foundation
 
@@ -12,4 +10,4 @@ clean::
 	rm -f a.out.stripped
 	rm -rf a.out.stripped.dSYM
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

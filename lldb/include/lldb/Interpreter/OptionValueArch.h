@@ -33,9 +33,7 @@ public:
 
   ~OptionValueArch() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeArch; }
 
@@ -57,12 +55,10 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  size_t AutoComplete(CommandInterpreter &interpreter,
-                      lldb_private::CompletionRequest &request) override;
+  void AutoComplete(CommandInterpreter &interpreter,
+                    lldb_private::CompletionRequest &request) override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   ArchSpec &GetCurrentValue() { return m_current_value; }
 

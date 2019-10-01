@@ -27,7 +27,6 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test(self):
         """
         This testcase causes the scratch context to get destroyed by a
@@ -58,12 +57,9 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         self.expect("fr v -d no-dynamic-values -- input",
                     substrs=['(Dylib.LibraryProtocol) input'])
         self.expect("fr v -d run-target -- input",
-                    substrs=['(Dylib.LibraryProtocol) input'])
-                    # FIXME: substrs=['(main.FromMainModule) input'])
+                    substrs=['(a.FromMainModule) input'])
         self.expect("expr -d run-target -- input",
-                    "test that the expression evaluator can recover",
-                    substrs=['(Dylib.LibraryProtocol) $R0'])
-                    # FIXME: substrs=['(main.FromMainModule) input'])
+                    substrs=['(a.FromMainModule) $R0'])
 
 if __name__ == '__main__':
     import atexit

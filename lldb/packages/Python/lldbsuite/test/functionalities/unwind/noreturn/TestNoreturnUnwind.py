@@ -5,8 +5,6 @@ Test that we can backtrace correctly with 'noreturn' functions on the stack
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -20,6 +18,7 @@ class NoreturnUnwind(TestBase):
     # clang does not preserve LR in noreturn functions, making unwinding impossible
     @skipIf(compiler="clang", archs=['arm'], oslist=['linux'])
     @expectedFailureAll(bugnumber="llvm.org/pr33452", triple='^mips')
+    @expectedFailureNetBSD
     def test(self):
         """Test that we can backtrace correctly with 'noreturn' functions on the stack"""
         self.build()

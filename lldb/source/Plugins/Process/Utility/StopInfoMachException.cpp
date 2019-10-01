@@ -37,11 +37,11 @@ const char *StopInfoMachException::GetDescription() {
         target ? target->GetArchitecture().GetMachine()
                : llvm::Triple::UnknownArch;
 
-    const char *exc_desc = NULL;
+    const char *exc_desc = nullptr;
     const char *code_label = "code";
-    const char *code_desc = NULL;
+    const char *code_desc = nullptr;
     const char *subcode_label = "subcode";
-    const char *subcode_desc = NULL;
+    const char *subcode_desc = nullptr;
 
 #if defined(__APPLE__)
     char code_desc_buf[32];
@@ -313,6 +313,8 @@ const char *StopInfoMachException::GetDescription() {
           subcode_desc = nullptr;
           subcode_label = "unused";
           break;
+#if defined(RESOURCE_TYPE_IO)
+        // RESOURCE_TYPE_IO is introduced in macOS SDK 10.12.
         case RESOURCE_TYPE_IO:
           exc_desc = "EXC_RESOURCE RESOURCE_TYPE_IO";
           snprintf(code_desc_buf, sizeof(code_desc_buf), "%d MB",
@@ -320,6 +322,7 @@ const char *StopInfoMachException::GetDescription() {
           snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d MB",
             (int)EXC_RESOURCE_IO_OBSERVED(m_exc_subcode));;
           break;
+#endif
         }
       }
 #endif
@@ -593,7 +596,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
           // the thread ID so we must always report the breakpoint regardless
           // of the thread.
           if (bp_site_sp->ValidForThisThread(&thread) ||
-              thread.GetProcess()->GetOperatingSystem() != NULL)
+              thread.GetProcess()->GetOperatingSystem() != nullptr)
             return StopInfo::CreateStopReasonWithBreakpointSiteID(
                 thread, bp_site_sp->GetID());
           else if (is_trace_if_actual_breakpoint_missing)

@@ -28,15 +28,18 @@
 # RELOC-NEXT:   R_PPC_JMP_SLOT h 0x0
 # RELOC-NEXT: }
 
-# SEC: .got PROGBITS 00020088
-# DYN: PPC_GOT 0x20088
+# SEC: .got PROGBITS 00020374
+# DYN: PPC_GOT 0x20374
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: _start:
-# CHECK-NEXT:    bcl 20, 31, .+4
-# CHECK-NEXT:  10004: mflr 30
-# CHECK-NEXT:    addis 30, 30, 2
-# CHECK-NEXT:    addi 30, 30, 32764
+# CHECK-NEXT:         bcl 20, 31, .+4
+# PIE-NEXT:    10210: mflr 30
+# PIE-NEXT:           addis 30, 30, 3
+# PIE-NEXT:           addi 30, 30, -32400
+# SHARED-NEXT: 10230: mflr 30
+# SHARED-NEXT:        addis 30, 30, 3
+# SHARED-NEXT:        addi 30, 30, -32408
 
 ## Two bl 00008000.got2.plt_pic32.f
 # CHECK-NEXT:    bl .+40
@@ -80,8 +83,7 @@
 ## -fpic call stub of f.
 # CHECK-NEXT:  00000000.plt_pic32.f:
 # CHECK-NEXT:    addis 11, 30, 2
-# PIE-NEXT:      lwz 11, -144(11)
-# SHARED-NEXT:   lwz 11, -136(11)
+# CHECK-NEXT:    lwz 11, 4(11)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-EMPTY:
@@ -92,36 +94,38 @@
 # CHECK-NEXT:  00008000.got2.plt_pic32.f:
 
 ## In Secure PLT ABI, .plt stores function pointers to first instructions of .glink
-# HEX: 0x0003fff8 00010090 00010094 00010098
+# HEX: 0x00040378 000102a0 000102a4 000102a8
 
 ## These instructions are referenced by .plt entries.
-# CHECK: 00010090 .glink:
+# PIE:    000102a0 .glink:
+# SHARED: 000102c0 .glink:
 # CHECK-NEXT: b .+12
 # CHECK-NEXT: b .+8
 # CHECK-NEXT: b .+4
 
 ## PLTresolve
 ## Operand of addi: 0x100a8-.glink = 24
-# CHECK-NEXT: addis 11, 11, 0
-# CHECK-NEXT: mflr 0
-# CHECK-NEXT: bcl 20, 31, .+4
-# CHECK-NEXT: 100a8: addi 11, 11, 24
+# CHECK-NEXT:         addis 11, 11, 0
+# CHECK-NEXT:         mflr 0
+# CHECK-NEXT:         bcl 20, 31, .+4
+# PIE-NEXT:    102b8: addi 11, 11, 24
+# SHARED-NEXT: 102d8: addi 11, 11, 24
 
 # CHECK-NEXT: mflr 12
 # CHECK-NEXT: mtlr 0
 # CHECK-NEXT: subf 11, 12, 11
 
 ## Operand of lwz in -pie mode: &.got[1] - 0x100a8 = 0x20088+4 - 0x100a8 = 65536*1-28
-# CHECK-NEXT: addis 12, 12, 1
-# PIE-NEXT:   lwz 0, -28(12)
-# SHARED-NEXT: lwz 0, -36(12)
+# CHECK-NEXT:  addis 12, 12, 1
+# PIE-NEXT:    lwz 0, 192(12)
+# SHARED-NEXT: lwz 0, 184(12)
 
-# PIE-NEXT:   lwz 12, -24(12)
-# SHARED-NEXT: lwz 12, -32(12)
-# CHECK-NEXT: mtctr 0
-# CHECK-NEXT: add 0, 11, 11
-# CHECK-NEXT: add 11, 0, 11
-# CHECK-NEXT: bctr
+# PIE-NEXT:    lwz 12, 196(12)
+# SHARED-NEXT: lwz 12, 188(12)
+# CHECK-NEXT:  mtctr 0
+# CHECK-NEXT:  add 0, 11, 11
+# CHECK-NEXT:  add 11, 0, 11
+# CHECK-NEXT:  bctr
 
 .section .got2,"aw"
 .space 65516

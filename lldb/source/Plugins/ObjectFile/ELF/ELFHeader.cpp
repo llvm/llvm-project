@@ -18,7 +18,6 @@ using namespace elf;
 using namespace lldb;
 using namespace llvm::ELF;
 
-//------------------------------------------------------------------------------
 // Static utility functions.
 //
 // GetMaxU64 and GetMaxS64 wrap the similarly named methods from DataExtractor
@@ -67,7 +66,6 @@ static bool GetMaxS64(const lldb_private::DataExtractor &data,
   return true;
 }
 
-//------------------------------------------------------------------------------
 // ELFHeader
 
 ELFHeader::ELFHeader() { memset(this, 0, sizeof(ELFHeader)); }
@@ -116,7 +114,7 @@ void ELFHeader::ParseHeaderExtension(lldb_private::DataExtractor &data) {
 bool ELFHeader::Parse(lldb_private::DataExtractor &data,
                       lldb::offset_t *offset) {
   // Read e_ident.  This provides byte order and address size info.
-  if (data.GetU8(offset, &e_ident, EI_NIDENT) == NULL)
+  if (data.GetU8(offset, &e_ident, EI_NIDENT) == nullptr)
     return false;
 
   const unsigned byte_size = Is32Bit() ? 4 : 8;
@@ -124,11 +122,11 @@ bool ELFHeader::Parse(lldb_private::DataExtractor &data,
   data.SetAddressByteSize(byte_size);
 
   // Read e_type and e_machine.
-  if (data.GetU16(offset, &e_type, 2) == NULL)
+  if (data.GetU16(offset, &e_type, 2) == nullptr)
     return false;
 
   // Read e_version.
-  if (data.GetU32(offset, &e_version, 1) == NULL)
+  if (data.GetU32(offset, &e_version, 1) == nullptr)
     return false;
 
   // Read e_entry, e_phoff and e_shoff.
@@ -136,11 +134,11 @@ bool ELFHeader::Parse(lldb_private::DataExtractor &data,
     return false;
 
   // Read e_flags.
-  if (data.GetU32(offset, &e_flags, 1) == NULL)
+  if (data.GetU32(offset, &e_flags, 1) == nullptr)
     return false;
 
   // Read e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum and e_shstrndx.
-  if (data.GetU16(offset, &e_ehsize, 6) == NULL)
+  if (data.GetU16(offset, &e_ehsize, 6) == nullptr)
     return false;
 
   // Initialize e_phnum, e_shnum, and e_shstrndx with the values read from the
@@ -215,7 +213,6 @@ unsigned ELFHeader::GetRelocationJumpSlotType() const {
   return slot;
 }
 
-//------------------------------------------------------------------------------
 // ELFSectionHeader
 
 ELFSectionHeader::ELFSectionHeader() {
@@ -227,7 +224,7 @@ bool ELFSectionHeader::Parse(const lldb_private::DataExtractor &data,
   const unsigned byte_size = data.GetAddressByteSize();
 
   // Read sh_name and sh_type.
-  if (data.GetU32(offset, &sh_name, 2) == NULL)
+  if (data.GetU32(offset, &sh_name, 2) == nullptr)
     return false;
 
   // Read sh_flags.
@@ -239,7 +236,7 @@ bool ELFSectionHeader::Parse(const lldb_private::DataExtractor &data,
     return false;
 
   // Read sh_link and sh_info.
-  if (data.GetU32(offset, &sh_link, 2) == NULL)
+  if (data.GetU32(offset, &sh_link, 2) == nullptr)
     return false;
 
   // Read sh_addralign and sh_entsize.
@@ -249,7 +246,6 @@ bool ELFSectionHeader::Parse(const lldb_private::DataExtractor &data,
   return true;
 }
 
-//------------------------------------------------------------------------------
 // ELFSymbol
 
 ELFSymbol::ELFSymbol() { memset(this, 0, sizeof(ELFSymbol)); }
@@ -326,7 +322,7 @@ bool ELFSymbol::Parse(const lldb_private::DataExtractor &data,
   const bool parsing_32 = byte_size == 4;
 
   // Read st_name.
-  if (data.GetU32(offset, &st_name, 1) == NULL)
+  if (data.GetU32(offset, &st_name, 1) == nullptr)
     return false;
 
   if (parsing_32) {
@@ -335,29 +331,28 @@ bool ELFSymbol::Parse(const lldb_private::DataExtractor &data,
       return false;
 
     // Read st_info and st_other.
-    if (data.GetU8(offset, &st_info, 2) == NULL)
+    if (data.GetU8(offset, &st_info, 2) == nullptr)
       return false;
 
     // Read st_shndx.
-    if (data.GetU16(offset, &st_shndx, 1) == NULL)
+    if (data.GetU16(offset, &st_shndx, 1) == nullptr)
       return false;
   } else {
     // Read st_info and st_other.
-    if (data.GetU8(offset, &st_info, 2) == NULL)
+    if (data.GetU8(offset, &st_info, 2) == nullptr)
       return false;
 
     // Read st_shndx.
-    if (data.GetU16(offset, &st_shndx, 1) == NULL)
+    if (data.GetU16(offset, &st_shndx, 1) == nullptr)
       return false;
 
     // Read st_value and st_size.
-    if (data.GetU64(offset, &st_value, 2) == NULL)
+    if (data.GetU64(offset, &st_value, 2) == nullptr)
       return false;
   }
   return true;
 }
 
-//------------------------------------------------------------------------------
 // ELFProgramHeader
 
 ELFProgramHeader::ELFProgramHeader() {
@@ -370,7 +365,7 @@ bool ELFProgramHeader::Parse(const lldb_private::DataExtractor &data,
   const bool parsing_32 = byte_size == 4;
 
   // Read p_type;
-  if (data.GetU32(offset, &p_type, 1) == NULL)
+  if (data.GetU32(offset, &p_type, 1) == nullptr)
     return false;
 
   if (parsing_32) {
@@ -379,7 +374,7 @@ bool ELFProgramHeader::Parse(const lldb_private::DataExtractor &data,
       return false;
 
     // Read p_flags.
-    if (data.GetU32(offset, &p_flags, 1) == NULL)
+    if (data.GetU32(offset, &p_flags, 1) == nullptr)
       return false;
 
     // Read p_align.
@@ -387,7 +382,7 @@ bool ELFProgramHeader::Parse(const lldb_private::DataExtractor &data,
       return false;
   } else {
     // Read p_flags.
-    if (data.GetU32(offset, &p_flags, 1) == NULL)
+    if (data.GetU32(offset, &p_flags, 1) == nullptr)
       return false;
 
     // Read p_offset, p_vaddr, p_paddr, p_filesz, p_memsz and p_align.
@@ -398,7 +393,6 @@ bool ELFProgramHeader::Parse(const lldb_private::DataExtractor &data,
   return true;
 }
 
-//------------------------------------------------------------------------------
 // ELFDynamic
 
 ELFDynamic::ELFDynamic() { memset(this, 0, sizeof(ELFDynamic)); }
@@ -409,7 +403,6 @@ bool ELFDynamic::Parse(const lldb_private::DataExtractor &data,
   return GetMaxS64(data, offset, &d_tag, byte_size, 2);
 }
 
-//------------------------------------------------------------------------------
 // ELFRel
 
 ELFRel::ELFRel() { memset(this, 0, sizeof(ELFRel)); }
@@ -422,7 +415,6 @@ bool ELFRel::Parse(const lldb_private::DataExtractor &data,
   return GetMaxU64(data, offset, &r_offset, byte_size, 2) != false;
 }
 
-//------------------------------------------------------------------------------
 // ELFRela
 
 ELFRela::ELFRela() { memset(this, 0, sizeof(ELFRela)); }

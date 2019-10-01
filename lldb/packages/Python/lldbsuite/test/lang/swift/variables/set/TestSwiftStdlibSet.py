@@ -28,7 +28,6 @@ class TestSwiftStdlibSet(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_stdlib_set(self):
         """Tests that we properly vend synthetic children for Swift.Set"""
         self.build()

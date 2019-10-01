@@ -542,7 +542,7 @@ public:
   loadFile(std::unique_ptr<MemoryBuffer> mb,
            const Registry &registry) const override {
     std::unique_ptr<File> ret =
-      llvm::make_unique<MachOFile>(std::move(mb), &_ctx);
+      std::make_unique<MachOFile>(std::move(mb), &_ctx);
     return std::move(ret);
   }
 
@@ -568,7 +568,7 @@ public:
   loadFile(std::unique_ptr<MemoryBuffer> mb,
            const Registry &registry) const override {
     std::unique_ptr<File> ret =
-        llvm::make_unique<MachODylibFile>(std::move(mb), &_ctx);
+        std::make_unique<MachODylibFile>(std::move(mb), &_ctx);
     return std::move(ret);
   }
 

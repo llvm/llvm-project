@@ -14,8 +14,8 @@
 #include <cstdlib>
 #include "abort_message.h"
 #include "cxxabi.h"
-#include "cxa_handlers.hpp"
-#include "cxa_exception.hpp"
+#include "cxa_handlers.h"
+#include "cxa_exception.h"
 #include "private_typeinfo.h"
 #include "include/atomic_support.h"
 
@@ -25,6 +25,7 @@ static const char* cause = "uncaught";
 __attribute__((noreturn))
 static void demangling_terminate_handler()
 {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     // If there might be an uncaught exception
     using namespace __cxxabiv1;
     __cxa_eh_globals* globals = __cxa_get_globals_fast();
@@ -71,6 +72,7 @@ static void demangling_terminate_handler()
                 abort_message("terminating with %s foreign exception", cause);
         }
     }
+#endif
     // Else just note that we're terminating
     abort_message("terminating");
 }

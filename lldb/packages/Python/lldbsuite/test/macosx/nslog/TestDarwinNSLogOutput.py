@@ -9,10 +9,8 @@ targets.
 from __future__ import print_function
 
 import lldb
-import os
 import platform
 import re
-import sys
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -97,7 +95,7 @@ class DarwinNSLogOutputTestCase(TestBase):
 
         # Ensure we stopped at a breakpoint.
         self.runCmd("thread list")
-        self.expect(re.compile(r"stop reason = breakpoint"))
+        self.expect(re.compile(r"stop reason = .*breakpoint"))
 
     def runCmd(self, cmd):
         if self.child:

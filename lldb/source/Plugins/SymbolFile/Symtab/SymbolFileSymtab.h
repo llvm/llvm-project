@@ -17,16 +17,12 @@
 
 class SymbolFileSymtab : public lldb_private::SymbolFile {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
-  SymbolFileSymtab(lldb_private::ObjectFile *obj_file);
+  SymbolFileSymtab(lldb::ObjectFileSP objfile_sp);
 
   ~SymbolFileSymtab() override;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -36,17 +32,11 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
-  CreateInstance(lldb_private::ObjectFile *obj_file);
+  CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   uint32_t CalculateAbilities() override;
 
-  //------------------------------------------------------------------
   // Compile Unit function calls
-  //------------------------------------------------------------------
-  uint32_t GetNumCompileUnits() override;
-
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
-
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
@@ -85,14 +75,16 @@ public:
                   lldb::TypeClass type_mask,
                   lldb_private::TypeList &type_list) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
 
 protected:
+  uint32_t CalculateNumCompileUnits() override;
+
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
+
   typedef std::map<lldb_private::ConstString, lldb::TypeSP> TypeMap;
 
   lldb_private::Symtab::IndexCollection m_source_indexes;

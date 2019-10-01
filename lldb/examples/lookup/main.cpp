@@ -29,7 +29,6 @@
 
 using namespace lldb;
 
-//----------------------------------------------------------------------
 // This quick sample code shows how to create a debugger instance and
 // create an "i386" executable target. Then we can lookup the executable
 // module and resolve a file address into a section offset address,
@@ -45,7 +44,6 @@ using namespace lldb;
 //
 //    $ DYLD_FRAMEWORK_PATH=/Volumes/data/lldb/svn/ToT/build/Debug ./a.out
 //    executable_path file_address
-//----------------------------------------------------------------------
 class LLDBSentry {
 public:
   LLDBSentry() {

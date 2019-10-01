@@ -12,11 +12,10 @@ class ConcurrentManyBreakpoints(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @unittest2.skipIf(
-        TestBase.skipLongRunningTest(),
-        "Skip this long running test")
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
+    @expectedFailureNetBSD
+    @skipIfOutOfTreeDebugserver
     def test(self):
         """Test 100 breakpoints from 100 threads."""
         self.build(dictionary=self.getBuildFlags())

@@ -11,10 +11,10 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Host/Symbols.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
@@ -82,35 +82,12 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
     "Only load Swift modules via their .swiftmodule file - ignore "
     ".swiftinterface files."} };
 
-static constexpr PropertyDefinition g_properties[] = {
-    {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
-     {},
-     "Control the use of external tools and repositories to locate symbol "
-     "files. Directories listed in target.debug-file-search-paths and "
-     "directory of the executable are always checked first for separate debug "
-     "info files. Then depending on this setting: "
-     "On macOS, Spotlight would be also used to locate a matching .dSYM "
-     "bundle based on the UUID of the executable. "
-     "On NetBSD, directory /usr/libdata/debug would be also searched. "
-     "On platforms other than NetBSD directory /usr/lib/debug would be "
-     "also searched."
-    },
-    {"use-swift-dwarfimporter", OptionValue::eTypeBoolean, false, true, nullptr,
-     {}, "Reconstruct Clang module dependencies from DWARF "
-         "when debugging Swift code"},
-    {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     {},
-     "The path to the clang modules cache directory (-fmodules-cache-path)."},
-    {"swift-module-loading-mode", OptionValue::eTypeEnum, false,
-     eSwiftModuleLoadingModePreferSerialized, nullptr,
-     OptionEnumValues(g_swift_module_loading_mode_enums),
-     "The module loading mode to use when loading modules for Swift."}};
+#define LLDB_PROPERTIES_modulelist
+#include "CoreProperties.inc"
 
 enum {
-  ePropertyEnableExternalLookup,
-  ePropertyUseDWARFImporter,
-  ePropertyClangModulesCachePath,
-  ePropertySwiftModuleLoadingMode
+#define LLDB_PROPERTIES_modulelist
+#include "CorePropertiesEnum.inc"
 };
 
 } // namespace
@@ -118,7 +95,7 @@ enum {
 ModuleListProperties::ModuleListProperties() {
   m_collection_sp =
       std::make_shared<OptionValueProperties>(ConstString("symbols"));
-  m_collection_sp->Initialize(g_properties);
+  m_collection_sp->Initialize(g_modulelist_properties);
 
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
@@ -129,7 +106,12 @@ ModuleListProperties::ModuleListProperties() {
 bool ModuleListProperties::GetEnableExternalLookup() const {
   const uint32_t idx = ePropertyEnableExternalLookup;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
+  return m_collection_sp->SetPropertyAtIndexAsBoolean(
+      nullptr, ePropertyEnableExternalLookup, new_value);
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
@@ -142,7 +124,7 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
 bool ModuleListProperties::GetUseDWARFImporter() const {
   const uint32_t idx = ePropertyUseDWARFImporter;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      NULL, idx, g_properties[idx].default_uint_value != 0);
+      NULL, idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
@@ -153,15 +135,14 @@ bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return (SwiftModuleLoadingMode)
-  m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_properties[idx].default_uint_value);
+      m_collection_sp->GetPropertyAtIndexAsEnumeration(
+          nullptr, idx, g_modulelist_properties[idx].default_uint_value);
 }
 
 bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
   return m_collection_sp->SetPropertyAtIndexAsEnumeration(
       nullptr, ePropertySwiftModuleLoadingMode, mode);
 }
-
 
 ModuleList::ModuleList()
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
@@ -179,9 +160,9 @@ ModuleList::ModuleList(ModuleList::Notifier *notifier)
 const ModuleList &ModuleList::operator=(const ModuleList &rhs) {
   if (this != &rhs) {
     std::lock(m_modules_mutex, rhs.m_modules_mutex);
-    std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex, 
+    std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex,
                                                     std::adopt_lock);
-    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex, 
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex,
                                                     std::adopt_lock);
     m_modules = rhs.m_modules;
   }
@@ -199,8 +180,8 @@ void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
   }
 }
 
-void ModuleList::Append(const ModuleSP &module_sp, bool notify) { 
-  AppendImpl(module_sp, notify); 
+void ModuleList::Append(const ModuleSP &module_sp, bool notify) {
+  AppendImpl(module_sp, notify);
 }
 
 void ModuleList::ReplaceEquivalent(const ModuleSP &module_sp) {
@@ -755,11 +736,11 @@ void ModuleList::LogUUIDAndPaths(Log *log, const char *prefix_cstr) {
     for (pos = begin; pos != end; ++pos) {
       Module *module = pos->get();
       const FileSpec &module_file_spec = module->GetFileSpec();
-      log->Printf("%s[%u] %s (%s) \"%s\"", prefix_cstr ? prefix_cstr : "",
-                  (uint32_t)std::distance(begin, pos),
-                  module->GetUUID().GetAsString().c_str(),
-                  module->GetArchitecture().GetArchitectureName(),
-                  module_file_spec.GetPath().c_str());
+      LLDB_LOGF(log, "%s[%u] %s (%s) \"%s\"", prefix_cstr ? prefix_cstr : "",
+                (uint32_t)std::distance(begin, pos),
+                module->GetUUID().GetAsString().c_str(),
+                module->GetArchitecture().GetArchitectureName(),
+                module_file_spec.GetPath().c_str());
     }
   }
 }
@@ -922,8 +903,9 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
           Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
           if (log != nullptr)
-            log->Printf("module changed: %p, removing from global module list",
-                        static_cast<void *>(module_sp.get()));
+            LLDB_LOGF(log,
+                      "module changed: %p, removing from global module list",
+                      static_cast<void *>(module_sp.get()));
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();

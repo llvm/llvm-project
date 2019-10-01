@@ -17,9 +17,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectRegexCommand
-//-------------------------------------------------------------------------
 
 class CommandObjectRegexCommand : public CommandObjectRaw {
 public:
@@ -36,7 +34,7 @@ public:
 
   bool HasRegexEntries() const { return !m_entries.empty(); }
 
-  int HandleCompletion(CompletionRequest &request) override;
+  void HandleCompletion(CompletionRequest &request) override;
 
 protected:
   bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;

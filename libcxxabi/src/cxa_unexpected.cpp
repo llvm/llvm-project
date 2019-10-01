@@ -8,7 +8,7 @@
 
 #include <exception>
 #include "cxxabi.h"
-#include "cxa_exception.hpp"
+#include "cxa_exception.h"
 
 namespace __cxxabiv1
 {

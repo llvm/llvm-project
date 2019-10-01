@@ -16,9 +16,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // OptionGroupFormat
-//-------------------------------------------------------------------------
 
 class OptionGroupFormat : public OptionGroup {
 public:

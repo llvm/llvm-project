@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- algorithm_fwd.h --------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,13 @@
 #ifndef _PSTL_ALGORITHM_FWD_H
 #define _PSTL_ALGORITHM_FWD_H
 
+#include <iterator>
 #include <type_traits>
 #include <utility>
+
+#include "pstl_config.h"
+
+_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl
 {
@@ -1251,4 +1256,7 @@ __pattern_lexicographical_compare(_ExecutionPolicy&&, _ForwardIterator1, _Forwar
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
+
 #endif /* _PSTL_ALGORITHM_FWD_H */

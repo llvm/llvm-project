@@ -5,7 +5,6 @@ Test C++ virtual function and virtual inheritance.
 from __future__ import print_function
 
 import os
-import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -37,6 +36,7 @@ class CppVirtualMadness(TestBase):
         compiler="icc",
         bugnumber="llvm.org/pr16808 lldb does not call the correct virtual function with icc.")
     @skipIfWindows # This test will hang on windows llvm.org/pr21753
+    @expectedFlakeyNetBSD
     def test_virtual_madness(self):
         """Test that expression works correctly with virtual inheritance as well as virtual function."""
         self.build()

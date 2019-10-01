@@ -13,9 +13,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordProcess
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordProcess : public CommandObjectMultiword {
 public:

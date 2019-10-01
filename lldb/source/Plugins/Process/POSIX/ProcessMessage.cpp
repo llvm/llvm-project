@@ -20,7 +20,7 @@ const char *ProcessMessage::PrintKind(Kind kind) {
   chcar str[8];
   sprintf(str, "%d", reason);
 #else
-  const char *str = NULL;
+  const char *str = nullptr;
 
   switch (kind) {
   case eInvalidMessage:

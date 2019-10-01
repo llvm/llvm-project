@@ -13,9 +13,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectQuit
-//-------------------------------------------------------------------------
 
 class CommandObjectQuit : public CommandObjectParsed {
 public:

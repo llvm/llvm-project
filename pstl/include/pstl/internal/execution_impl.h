@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- execution_impl.h --------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,10 @@
 #include <iterator>
 #include <type_traits>
 
+#include "pstl_config.h"
 #include "execution_defs.h"
+
+_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl
 {
@@ -28,7 +31,7 @@ template <typename _Tp>
 std::false_type __lazy_and(_Tp, std::false_type)
 {
     return std::false_type{};
-};
+}
 
 template <typename _Tp>
 inline _Tp
@@ -41,7 +44,7 @@ template <typename _Tp>
 std::true_type __lazy_or(_Tp, std::true_type)
 {
     return std::true_type{};
-};
+}
 
 template <typename _Tp>
 inline _Tp
@@ -157,5 +160,7 @@ struct __prefer_parallel_tag
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_IMPL_H */

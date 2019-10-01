@@ -16,8 +16,6 @@ from __future__ import division, print_function
 import unittest2
 import gdbremote_testcase
 import lldbgdbserverutils
-import platform
-import signal
 from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -158,6 +156,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.build()
         self.inferior_print_exit()
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_inferior_print_exit_llgs(self):
@@ -436,6 +435,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.targetHasAVX(),
             "Advanced Vector Extensions" in register_sets)
 
+    @expectedFailureAll(oslist=["windows"]) # no avx for now.
     @llgs_test
     def test_qRegisterInfo_contains_avx_registers_llgs(self):
         self.init_llgs_test()
@@ -480,6 +480,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.qThreadInfo_contains_thread()
 
+    @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
     @llgs_test
     def test_qThreadInfo_contains_thread_attach_llgs(self):
         self.init_llgs_test()
@@ -538,6 +539,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
 
+    @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
     @llgs_test
     def test_qThreadInfo_matches_qC_attach_llgs(self):
         self.init_llgs_test()
@@ -558,9 +560,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(reg_infos)
         self.assertTrue(len(reg_infos) > 0)
 
-        inferior_exe_path = self.getBuildArtifact("a.out")
-        Target = self.dbg.CreateTarget(inferior_exe_path)
-        byte_order = Target.GetByteOrder()
+        byte_order = self.get_target_byte_order()
 
         # Read value for each register.
         reg_index = 0
@@ -668,6 +668,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.Hg_switches_to_3_threads()
 
+    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
     @llgs_test
     def test_Hg_switches_to_3_threads_launch_llgs(self):
         self.init_llgs_test()
@@ -683,6 +684,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.Hg_switches_to_3_threads()
 
+    @expectedFailureAll(oslist=["windows"]) # expecting one more thread
     @llgs_test
     def test_Hg_switches_to_3_threads_attach_llgs(self):
         self.init_llgs_test()
@@ -812,6 +814,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # expectations about fixed signal numbers.
         self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
 
+    @skipIfWindows # no SIGSEGV support
     @llgs_test
     def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
         self.init_llgs_test()
@@ -880,6 +883,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.m_packet_reads_memory()
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     def test_m_packet_reads_memory_llgs(self):
         self.init_llgs_test()
@@ -970,6 +974,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_code_address_as_executable()
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     def test_qMemoryRegionInfo_reports_code_address_as_executable_llgs(self):
         self.init_llgs_test()
@@ -1035,6 +1040,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_llgs(
             self):
@@ -1100,6 +1106,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_llgs(
             self):
@@ -1252,6 +1259,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=False)
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_software_breakpoint_set_and_remove_work_llgs(self):
@@ -1281,7 +1289,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @llgs_test
     @skipUnlessPlatform(oslist=['linux'])
-    @expectedFailureAndroid
     @skipIf(archs=no_match(['arm', 'aarch64']))
     def test_hardware_breakpoint_set_and_remove_work_llgs(self):
         self.init_llgs_test()
@@ -1389,6 +1396,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.written_M_content_reads_back_correctly()
 
+    @skipIfWindows # No pty support to test any inferior output
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_written_M_content_reads_back_correctly_llgs(self):
@@ -1564,6 +1572,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.P_and_p_thread_suffix_work()
 
+    @skipIfWindows
     @llgs_test
     def test_P_and_p_thread_suffix_work_llgs(self):
         self.init_llgs_test()

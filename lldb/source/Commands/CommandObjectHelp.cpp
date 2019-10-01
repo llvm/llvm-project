@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectHelp
-//-------------------------------------------------------------------------
 
 void CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
     Stream *s, llvm::StringRef command, llvm::StringRef prefix,
@@ -67,13 +65,8 @@ CommandObjectHelp::CommandObjectHelp(CommandInterpreter &interpreter)
 
 CommandObjectHelp::~CommandObjectHelp() = default;
 
-static constexpr OptionDefinition g_help_options[] = {
-    // clang-format off
-  {LLDB_OPT_SET_ALL, false, "hide-aliases",         'a', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Hide aliases in the command list."},
-  {LLDB_OPT_SET_ALL, false, "hide-user-commands",   'u', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Hide user-defined commands from the list."},
-  {LLDB_OPT_SET_ALL, false, "show-hidden-commands", 'h', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Include commands prefixed with an underscore."},
-    // clang-format on
-};
+#define LLDB_OPTIONS_help
+#include "CommandOptions.inc"
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectHelp::CommandOptions::GetDefinitions() {
@@ -208,24 +201,24 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
   return result.Succeeded();
 }
 
-int CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
+void CommandObjectHelp::HandleCompletion(CompletionRequest &request) {
   // Return the completions of the commands in the help system:
   if (request.GetCursorIndex() == 0) {
-    return m_interpreter.HandleCompletionMatches(request);
-  } else {
-    CommandObject *cmd_obj =
-        m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
-
-    // The command that they are getting help on might be ambiguous, in which
-    // case we should complete that, otherwise complete with the command the
-    // user is getting help on...
-
-    if (cmd_obj) {
-      request.GetParsedLine().Shift();
-      request.SetCursorIndex(request.GetCursorIndex() - 1);
-      return cmd_obj->HandleCompletion(request);
-    } else {
-      return m_interpreter.HandleCompletionMatches(request);
-    }
+    m_interpreter.HandleCompletionMatches(request);
+    return;
   }
+  CommandObject *cmd_obj =
+      m_interpreter.GetCommandObject(request.GetParsedLine()[0].ref);
+
+  // The command that they are getting help on might be ambiguous, in which
+  // case we should complete that, otherwise complete with the command the
+  // user is getting help on...
+
+  if (cmd_obj) {
+    request.GetParsedLine().Shift();
+    request.SetCursorIndex(request.GetCursorIndex() - 1);
+    cmd_obj->HandleCompletion(request);
+    return;
+  }
+  m_interpreter.HandleCompletionMatches(request);
 }

@@ -21,11 +21,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-const DWORD kWinContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+const DWORD kWinContextFlags = CONTEXT_ALL;
 
-//------------------------------------------------------------------
 // Constructors and Destructors
-//------------------------------------------------------------------
 RegisterContextWindows::RegisterContextWindows(Thread &thread,
                                                uint32_t concrete_frame_idx)
     : RegisterContext(thread, concrete_frame_idx), m_context(),
@@ -78,9 +76,7 @@ uint32_t RegisterContextWindows::ConvertRegisterKindToRegisterNumber(
   return LLDB_INVALID_REGNUM;
 }
 
-//------------------------------------------------------------------
 // Subclasses can these functions if desired
-//------------------------------------------------------------------
 uint32_t RegisterContextWindows::NumSupportedHardwareBreakpoints() {
   // Support for hardware breakpoints not yet implemented.
   return 0;
@@ -118,8 +114,20 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
     return true;
 
   TargetThreadWindows &wthread = static_cast<TargetThreadWindows &>(m_thread);
-  memset(&m_context, 0, sizeof(m_context));
-  m_context.ContextFlags = kWinContextFlags;
+  uint8_t buffer[2048];
+  memset(buffer, 0, sizeof(buffer));
+  PCONTEXT tmpContext = NULL;
+  DWORD contextLength = (DWORD)sizeof(buffer);
+  if (!::InitializeContext(buffer, kWinContextFlags, &tmpContext,
+                           &contextLength)) {
+    return false;
+  }
+  memcpy(&m_context, tmpContext, sizeof(m_context));
+  if (::SuspendThread(
+          wthread.GetHostThread().GetNativeThread().GetSystemHandle()) ==
+      (DWORD)-1) {
+    return false;
+  }
   if (!::GetThreadContext(
           wthread.GetHostThread().GetNativeThread().GetSystemHandle(),
           &m_context)) {
@@ -127,6 +135,11 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
         log,
         "GetThreadContext failed with error {0} while caching register values.",
         ::GetLastError());
+    return false;
+  }
+  if (::ResumeThread(
+          wthread.GetHostThread().GetNativeThread().GetSystemHandle()) ==
+      (DWORD)-1) {
     return false;
   }
   LLDB_LOG(log, "successfully updated the register values.");

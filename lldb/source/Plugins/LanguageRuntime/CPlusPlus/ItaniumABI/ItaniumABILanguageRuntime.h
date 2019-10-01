@@ -27,9 +27,7 @@ class ItaniumABILanguageRuntime : public lldb_private::CPPLanguageRuntime {
 public:
   ~ItaniumABILanguageRuntime() override = default;
 
-  //------------------------------------------------------------------
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -48,8 +46,6 @@ public:
   static bool classof(const LanguageRuntime *runtime) {
     return runtime->isA(&ID);
   }
-
-  bool IsVTableName(const char *name) override;
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
@@ -79,9 +75,7 @@ public:
   lldb::ValueObjectSP GetExceptionObjectForThread(
       lldb::ThreadSP thread_sp) override;
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;

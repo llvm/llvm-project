@@ -15,10 +15,18 @@ int main()
     int_list *numbers_list = new int_list{1,2,3,4,5,6,7,8,9,10};
 
     printf("// Set break point at this line.");
+
+#if _LIBCPP_VERSION >= 3800
+    auto *third_elem = numbers_list->__end_.__next_->__next_->__next_;
+    assert(third_elem->__as_node()->__value_ == 3);
+    auto *fifth_elem = third_elem->__next_->__next_;
+    assert(fifth_elem->__as_node()->__value_ == 5);
+#else
     auto *third_elem = numbers_list->__end_.__next_->__next_->__next_;
     assert(third_elem->__value_ == 3);
     auto *fifth_elem = third_elem->__next_->__next_;
     assert(fifth_elem->__value_ == 5);
+#endif
     fifth_elem->__next_ = third_elem;
 #endif
 

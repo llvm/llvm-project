@@ -869,12 +869,10 @@ static void __kmp_hierarchical_barrier_gather(
   kmp_uint64 new_state;
 
   int level = team->t.t_level;
-#if OMP_40_ENABLED
   if (other_threads[0]
           ->th.th_teams_microtask) // are we inside the teams construct?
     if (this_thr->th.th_teams_size.nteams > 1)
       ++level; // level was not increased in teams construct for team_of_masters
-#endif
   if (level == 1)
     thr_bar->use_oncore_barrier = 1;
   else
@@ -1099,7 +1097,6 @@ static void __kmp_hierarchical_barrier_release(
 
   nproc = this_thr->th.th_team_nproc;
   int level = team->t.t_level;
-#if OMP_40_ENABLED
   if (team->t.t_threads[0]
           ->th.th_teams_microtask) { // are we inside the teams construct?
     if (team->t.t_pkfn != (microtask_t)__kmp_teams_master &&
@@ -1108,7 +1105,6 @@ static void __kmp_hierarchical_barrier_release(
     if (this_thr->th.th_teams_size.nteams > 1)
       ++level; // level was not increased in teams construct for team_of_masters
   }
-#endif
   if (level == 1)
     thr_bar->use_oncore_barrier = 1;
   else
@@ -1425,7 +1421,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
       team->t.t_bar[bt].b_team_arrived += 1;
 #endif
 
-#if OMP_40_ENABLED
       if (__kmp_omp_cancellation) {
         kmp_int32 cancel_request = KMP_ATOMIC_LD_RLX(&team->t.t_cancel_request);
         // Reset cancellation flag for worksharing constructs
@@ -1434,7 +1429,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
           KMP_ATOMIC_ST_RLX(&team->t.t_cancel_request, cancel_noreq);
         }
       }
-#endif
 #if USE_ITT_BUILD
       /* TODO: In case of split reduction barrier, master thread may send
          acquired event early, before the final summation into the shared
@@ -1447,9 +1441,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
       // Barrier - report frame end (only if active_level == 1)
       if ((__itt_frame_submit_v3_ptr || KMP_ITT_DEBUG) &&
           __kmp_forkjoin_frames_mode &&
-#if OMP_40_ENABLED
           this_thr->th.th_teams_microtask == NULL &&
-#endif
           team->t.t_active_level == 1) {
         ident_t *loc = __kmp_threads[gtid]->th.th_ident;
         kmp_uint64 cur_time = __itt_get_timestamp();
@@ -1540,7 +1532,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
   } else { // Team is serialized.
     status = 0;
     if (__kmp_tasking_mode != tskm_immediate_exec) {
-#if OMP_45_ENABLED
       if (this_thr->th.th_task_team != NULL) {
 #if USE_ITT_NOTIFY
         void *itt_sync_obj = NULL;
@@ -1560,12 +1551,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
           __kmp_itt_barrier_finished(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
       }
-#else
-      // The task team should be NULL for serialized code (tasks will be
-      // executed immediately)
-      KMP_DEBUG_ASSERT(team->t.t_task_team[this_thr->th.th_task_state] == NULL);
-      KMP_DEBUG_ASSERT(this_thr->th.th_task_team == NULL);
-#endif
     }
   }
   KA_TRACE(15, ("__kmp_barrier: T#%d(%d:%d) is leaving with return value %d\n",
@@ -1816,11 +1801,9 @@ void __kmp_join_barrier(int gtid) {
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
     }
-#if OMP_50_ENABLED
     if (__kmp_display_affinity) {
       KMP_CHECK_UPDATE(team->t.t_display_affinity, 0);
     }
-#endif
 #if KMP_STATS_ENABLED
     // Have master thread flag the workers to indicate they are now waiting for
     // next parallel region, Also wake them up so they switch their timers to
@@ -1844,10 +1827,7 @@ void __kmp_join_barrier(int gtid) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     // Join barrier - report frame end
     if ((__itt_frame_submit_v3_ptr || KMP_ITT_DEBUG) &&
-        __kmp_forkjoin_frames_mode &&
-#if OMP_40_ENABLED
-        this_thr->th.th_teams_microtask == NULL &&
-#endif
+        __kmp_forkjoin_frames_mode && this_thr->th.th_teams_microtask == NULL &&
         team->t.t_active_level == 1) {
       kmp_uint64 cur_time = __itt_get_timestamp();
       ident_t *loc = team->t.t_ident;
@@ -2088,17 +2068,13 @@ void __kmp_fork_barrier(int gtid, int tid) {
     __kmp_task_team_sync(this_thr, team);
   }
 
-#if OMP_40_ENABLED && KMP_AFFINITY_SUPPORTED
+#if KMP_AFFINITY_SUPPORTED
   kmp_proc_bind_t proc_bind = team->t.t_proc_bind;
   if (proc_bind == proc_bind_intel) {
-#endif
-#if KMP_AFFINITY_SUPPORTED
     // Call dynamic affinity settings
     if (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed) {
       __kmp_balanced_affinity(this_thr, team->t.t_nproc);
     }
-#endif // KMP_AFFINITY_SUPPORTED
-#if OMP_40_ENABLED && KMP_AFFINITY_SUPPORTED
   } else if (proc_bind != proc_bind_false) {
     if (this_thr->th.th_new_place == this_thr->th.th_current_place) {
       KA_TRACE(100, ("__kmp_fork_barrier: T#%d already in correct place %d\n",
@@ -2108,8 +2084,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
       __kmp_affinity_set_place(gtid);
     }
   }
-#endif
-#if OMP_50_ENABLED
+#endif // KMP_AFFINITY_SUPPORTED
   // Perform the display affinity functionality
   if (__kmp_display_affinity) {
     if (team->t.t_display_affinity
@@ -2125,7 +2100,6 @@ void __kmp_fork_barrier(int gtid, int tid) {
   }
   if (!KMP_MASTER_TID(tid))
     KMP_CHECK_UPDATE(this_thr->th.th_def_allocator, team->t.t_def_allocator);
-#endif
 
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
   if (__itt_sync_create_ptr || KMP_ITT_DEBUG) {

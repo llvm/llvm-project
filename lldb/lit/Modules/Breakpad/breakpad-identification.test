@@ -1,5 +1,6 @@
 RUN: lldb-test object-file %p/Inputs/identification-linux.syms | FileCheck %s --check-prefix=LINUX
 RUN: lldb-test object-file %p/Inputs/identification-macosx.syms | FileCheck %s --check-prefix=MAC
+RUN: lldb-test object-file %p/Inputs/identification-macosx-arm64e.syms | FileCheck %s --check-prefix=ARM64E
 RUN: lldb-test object-file %p/Inputs/identification-windows.syms | FileCheck %s --check-prefix=WINDOWS
 RUN: not lldb-test object-file %p/Inputs/bad-module-id-1.syms 2>&1 | FileCheck %s --check-prefix=ERROR
 RUN: not lldb-test object-file %p/Inputs/bad-module-id-2.syms 2>&1 | FileCheck %s --check-prefix=ERROR
@@ -15,15 +16,17 @@ LINUX: Strata: user
 
 MAC: Plugin name: breakpad
 MAC: Architecture: x86_64--macosx
-MAC: UUID: 680E8CD9-8920-1BAA-EACD-6A8C1F16707B
+MAC: UUID: D98C0E68-2089-AA1B-EACD-6A8C1F16707B
 MAC: Executable: false
 MAC: Stripped: false
 MAC: Type: debug info
 MAC: Strata: user
 
+ARM64E: Architecture: aarch64--macosx
+
 WINDOWS: Plugin name: breakpad
 WINDOWS: Architecture: i386--windows
-WINDOWS: UUID: 5716C9A0-B580-0949-81A1-925EA62165C0-01000000
+WINDOWS: UUID: A0C91657-80B5-4909-81A1-925EA62165C0-00000001
 WINDOWS: Executable: false
 WINDOWS: Stripped: false
 WINDOWS: Type: debug info

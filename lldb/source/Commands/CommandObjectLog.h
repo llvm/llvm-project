@@ -16,23 +16,17 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectLog
-//-------------------------------------------------------------------------
 
 class CommandObjectLog : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectLog(CommandInterpreter &interpreter);
 
   ~CommandObjectLog() override;
 
 private:
-  //------------------------------------------------------------------
   // For CommandObjectLog only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommandObjectLog);
 };
 

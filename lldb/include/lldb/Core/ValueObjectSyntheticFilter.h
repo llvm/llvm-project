@@ -26,22 +26,14 @@
 
 namespace lldb_private {
 class Declaration;
-}
-namespace lldb_private {
 class Status;
-}
-namespace lldb_private {
 class SyntheticChildrenFrontEnd;
-}
-namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A ValueObject that obtains its children from some source other than
 // real information
 // This is currently used to implement Python-based children and filters but
 // you can bind it to any source of synthetic information and have it behave
 // accordingly
-//----------------------------------------------------------------------
 class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;

@@ -12,9 +12,7 @@
 namespace lldb_private {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 
-//---------------------------------------------------------------------------
 // Internal codes for all i386 registers.
-//---------------------------------------------------------------------------
 enum {
   k_first_gpr_i386,
   lldb_eax_i386 = k_first_gpr_i386,
@@ -135,9 +133,7 @@ enum {
                               k_num_mpx_registers_i386,
 };
 
-//---------------------------------------------------------------------------
 // Internal codes for all x86_64 registers.
-//---------------------------------------------------------------------------
 enum {
   k_first_gpr_x86_64,
   lldb_rax_x86_64 = k_first_gpr_x86_64,

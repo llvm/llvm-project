@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=i686-windows-msvc %s -o foo.obj
 # RUN: llc %S/Inputs/bar.ll -filetype=obj -mtriple=i686-windows-msvc -o bar.obj
 # RUN: llvm-lib bar.obj -out:bar.lib
-# RUN: lld-link -debug -pdb:foo.pdb foo.obj bar.lib -out:foo.exe -entry:main
+# RUN: lld-link -safeseh:no -debug -pdb:foo.pdb foo.obj bar.lib -out:foo.exe -entry:main
 # RUN: llvm-pdbutil dump -modules %t/foo.pdb | FileCheck %s
 
 # Make sure that the PDB has module descriptors. foo.obj and bar.lib should be

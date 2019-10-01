@@ -1,15 +1,16 @@
 RUN: ld.lld --version \
-RUN:   -allow-shlib-undefined \
+RUN:   -detect-odr-violations \
 RUN:   -g \
+RUN:   -long-plt \
 RUN:   -no-add-needed \
-RUN:   -no-allow-shlib-undefined \
 RUN:   -no-copy-dt-needed-entries \
 RUN:   -no-ctors-in-init-array \
 RUN:   -no-keep-memory \
+RUN:   -no-mmap-output-file \
 RUN:   -no-pipeline-knowledge \
-RUN:   -no-warn-common \
 RUN:   -no-warn-mismatch \
 RUN:   -p \
+RUN:   -rpath-link . \
 RUN:   -secure-plt \
 RUN:   -sort-common \
 RUN:   -stats \
@@ -18,5 +19,6 @@ RUN:   -warn-once \
 RUN:   -warn-shared-textrel \
 RUN:   -EB \
 RUN:   -EL \
+RUN:   -G 0 \
 RUN:   -Qy
 RUN: not ld.lld --version --not-an-ignored-argument

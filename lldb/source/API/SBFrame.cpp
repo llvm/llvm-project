@@ -1083,7 +1083,6 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
 
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  ExpressionResults exe_results = eExpressionSetupError;
   SBValue expr_result;
 
   if (expr == nullptr || expr[0] == '\0') {
@@ -1109,24 +1108,23 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
         if (target->GetDisplayExpressionsInCrashlogs()) {
           StreamString frame_description;
           frame->DumpUsingSettingsFormat(&frame_description);
-          stack_trace = llvm::make_unique<llvm::PrettyStackTraceFormat>(
+          stack_trace = std::make_unique<llvm::PrettyStackTraceFormat>(
               "SBFrame::EvaluateExpression (expr = \"%s\", fetch_dynamic_value "
               "= %u) %s",
               expr, options.GetFetchDynamicValue(),
               frame_description.GetData());
         }
 
-        exe_results = target->EvaluateExpression(expr, frame, expr_value_sp,
-                                                 options.ref());
+        target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
         expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
       }
     }
   }
 
-  if (expr_log)
-    expr_log->Printf("** [SBFrame::EvaluateExpression] Expression result is "
-                     "%s, summary %s **",
-                     expr_result.GetValue(), expr_result.GetSummary());
+  LLDB_LOGF(expr_log,
+            "** [SBFrame::EvaluateExpression] Expression result is "
+            "%s, summary %s **",
+            expr_result.GetValue(), expr_result.GetSummary());
 
   return LLDB_RECORD_RESULT(expr_result);
 }

@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc  -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2 2>&1
+// RUN: ld.lld %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump -d %t2 -start-address=1048576 -stop-address=1048588 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK1 %s

@@ -20,6 +20,7 @@ class TestMissingSDK(TestBase):
         TestBase.setUp(self)
 
     @skipIf(oslist=['linux', 'windows'])
+    @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
     def testMissingSDK(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

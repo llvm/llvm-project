@@ -5,9 +5,6 @@ Test that we work properly with classes with the trivial_abi attribute
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -28,7 +25,8 @@ class TestTrivialABI(TestBase):
         self.expr_test(True)
 
     @skipUnlessSupportedTypeAttribute("trivial_abi")
-    @expectedFailureAll(bugnumber="llvm.org/pr36870")
+    # fixed for SysV-x86_64 ABI, but not Windows-x86_64
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr36870")
     def test_call_nontrivial(self):
         """Test that we can print a variable & call a function on the same class w/o the trivial ABI marker."""
         self.build()

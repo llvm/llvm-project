@@ -109,9 +109,7 @@ const Flags Log::GetMask() const {
 void Log::PutCString(const char *cstr) { Printf("%s", cstr); }
 void Log::PutString(llvm::StringRef str) { PutCString(str.str().c_str()); }
 
-//----------------------------------------------------------------------
 // Simple variable argument logging with flags.
-//----------------------------------------------------------------------
 void Log::Printf(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -119,11 +117,9 @@ void Log::Printf(const char *format, ...) {
   va_end(args);
 }
 
-//----------------------------------------------------------------------
 // All logging eventually boils down to this function call. If we have a
 // callback registered, then we call the logging callback. If we have a valid
 // file handle, we also log to the file.
-//----------------------------------------------------------------------
 void Log::VAPrintf(const char *format, va_list args) {
   llvm::SmallString<64> FinalMessage;
   llvm::raw_svector_ostream Stream(FinalMessage);
@@ -137,9 +133,7 @@ void Log::VAPrintf(const char *format, va_list args) {
   WriteMessage(FinalMessage.str());
 }
 
-//----------------------------------------------------------------------
 // Printing of errors that are not fatal.
-//----------------------------------------------------------------------
 void Log::Error(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -154,9 +148,7 @@ void Log::VAError(const char *format, va_list args) {
   Printf("error: %s", Content.c_str());
 }
 
-//----------------------------------------------------------------------
 // Printing of warnings that are not fatal only if verbose mode is enabled.
-//----------------------------------------------------------------------
 void Log::Verbose(const char *format, ...) {
   if (!GetVerbose())
     return;
@@ -167,9 +159,7 @@ void Log::Verbose(const char *format, ...) {
   va_end(args);
 }
 
-//----------------------------------------------------------------------
 // Printing of warnings that are not fatal.
-//----------------------------------------------------------------------
 void Log::Warning(const char *format, ...) {
   llvm::SmallString<64> Content;
   va_list args;

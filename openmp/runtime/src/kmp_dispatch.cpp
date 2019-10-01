@@ -133,13 +133,10 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   active = !team->t.t_serialized;
 
 #if USE_ITT_BUILD
-  int itt_need_metadata_reporting = __itt_metadata_add_ptr &&
-                                    __kmp_forkjoin_frames_mode == 3 &&
-                                    KMP_MASTER_GTID(gtid) &&
-#if OMP_40_ENABLED
-                                    th->th.th_teams_microtask == NULL &&
-#endif
-                                    team->t.t_active_level == 1;
+  int itt_need_metadata_reporting =
+      __itt_metadata_add_ptr && __kmp_forkjoin_frames_mode == 3 &&
+      KMP_MASTER_GTID(gtid) && th->th.th_teams_microtask == NULL &&
+      team->t.t_active_level == 1;
 #endif
 
 #if KMP_USE_HIER_SCHED
@@ -244,7 +241,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       schedule = kmp_sch_guided_iterative_chunked;
       KMP_WARNING(DispatchManyThreads);
     }
-#if OMP_45_ENABLED
     if (schedule == kmp_sch_runtime_simd) {
       // compiler provides simd_width in the chunk parameter
       schedule = team->t.t_sched.r_sched_type;
@@ -278,7 +274,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       }
 #endif
     }
-#endif // OMP_45_ENABLED
     pr->u.p.parm1 = chunk;
   }
   KMP_ASSERT2((kmp_sch_lower < schedule && schedule < kmp_sch_upper),
@@ -461,7 +456,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     }
     break;
   } // case
-#if OMP_45_ENABLED
   case kmp_sch_static_balanced_chunked: {
     // similar to balanced, but chunk adjusted to multiple of simd width
     T nth = nproc;
@@ -476,7 +470,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     break;
   } // case
   case kmp_sch_guided_simd:
-#endif // OMP_45_ENABLED
   case kmp_sch_guided_iterative_chunked: {
     KD_TRACE(
         100,
@@ -783,9 +776,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
-#if OMP_50_ENABLED
   __kmp_resume_if_soft_paused();
-#endif
 
 #if INCLUDE_SSC_MARKS
   SSC_MARK_DISPATCH_INIT();
@@ -851,13 +842,10 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 
 #if USE_ITT_BUILD
   kmp_uint64 cur_chunk = chunk;
-  int itt_need_metadata_reporting = __itt_metadata_add_ptr &&
-                                    __kmp_forkjoin_frames_mode == 3 &&
-                                    KMP_MASTER_GTID(gtid) &&
-#if OMP_40_ENABLED
-                                    th->th.th_teams_microtask == NULL &&
-#endif
-                                    team->t.t_active_level == 1;
+  int itt_need_metadata_reporting =
+      __itt_metadata_add_ptr && __kmp_forkjoin_frames_mode == 3 &&
+      KMP_MASTER_GTID(gtid) && th->th.th_teams_microtask == NULL &&
+      team->t.t_active_level == 1;
 #endif
   if (!active) {
     pr = reinterpret_cast<dispatch_private_info_template<T> *>(
@@ -933,9 +921,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
         break;
       case kmp_sch_guided_iterative_chunked:
       case kmp_sch_guided_analytical_chunked:
-#if OMP_45_ENABLED
       case kmp_sch_guided_simd:
-#endif
         schedtype = 2;
         break;
       default:
@@ -1594,7 +1580,6 @@ int __kmp_dispatch_next_algorithm(int gtid,
   } // case
   break;
 
-#if OMP_45_ENABLED
   case kmp_sch_guided_simd: {
     // same as iterative but curr-chunk adjusted to be multiple of given
     // chunk
@@ -1667,7 +1652,6 @@ int __kmp_dispatch_next_algorithm(int gtid,
     } // if
   } // case
   break;
-#endif // OMP_45_ENABLED
 
   case kmp_sch_guided_analytical_chunked: {
     T chunkspec = pr->u.p.parm1;
@@ -2203,10 +2187,8 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
   }
   th = __kmp_threads[gtid];
   team = th->th.th_team;
-#if OMP_40_ENABLED
   KMP_DEBUG_ASSERT(th->th.th_teams_microtask); // we are in the teams construct
   nteams = th->th.th_teams_size.nteams;
-#endif
   team_id = team->t.t_master_tid;
   KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
 

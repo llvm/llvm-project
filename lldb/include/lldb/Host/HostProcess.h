@@ -12,8 +12,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/lldb-types.h"
 
-//----------------------------------------------------------------------
-/// @class HostInfo HostInfo.h "lldb/Host/HostProcess.h"
+/// \class HostInfo HostInfo.h "lldb/Host/HostProcess.h"
 /// A class that represents a running process on the host machine.
 ///
 /// HostProcess allows querying and manipulation of processes running on the
@@ -26,7 +25,6 @@
 /// statically to the concrete Process implementation for that platform.  See
 /// HostInfo for more details.
 ///
-//----------------------------------------------------------------------
 
 namespace lldb_private {
 
@@ -45,8 +43,9 @@ public:
   lldb::pid_t GetProcessId() const;
   bool IsRunning() const;
 
-  HostThread StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                             bool monitor_signals);
+  llvm::Expected<HostThread>
+  StartMonitoring(const Host::MonitorChildProcessCallback &callback,
+                  bool monitor_signals);
 
   HostNativeProcessBase &GetNativeProcess();
   const HostNativeProcessBase &GetNativeProcess() const;

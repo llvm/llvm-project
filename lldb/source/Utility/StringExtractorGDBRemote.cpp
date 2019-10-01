@@ -285,8 +285,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       break;
 
     case 'X':
-      if (PACKET_STARTS_WITH("qXfer:auxv:read::"))
-        return eServerPacketType_qXfer_auxv_read;
+      if (PACKET_STARTS_WITH("qXfer:"))
+        return eServerPacketType_qXfer;
       break;
     }
     break;
@@ -377,9 +377,7 @@ StringExtractorGDBRemote::GetServerPacketType() const {
     break;
 
   case 'g':
-    if (packet_size == 1)
-      return eServerPacketType_g;
-    break;
+    return eServerPacketType_g;
 
   case 'G':
     return eServerPacketType_G;

@@ -13,9 +13,7 @@
 
 class PlatformAppleTVSimulator : public PlatformDarwin {
 public:
-  //------------------------------------------------------------
   // Class Functions
-  //------------------------------------------------------------
   static lldb::PlatformSP CreateInstance(bool force,
                                          const lldb_private::ArchSpec *arch);
 
@@ -27,25 +25,19 @@ public:
 
   static const char *GetDescriptionStatic();
 
-  //------------------------------------------------------------
   // Class Methods
-  //------------------------------------------------------------
   PlatformAppleTVSimulator();
 
   virtual ~PlatformAppleTVSimulator();
 
-  //------------------------------------------------------------
   // lldb_private::PluginInterface functions
-  //------------------------------------------------------------
   lldb_private::ConstString GetPluginName() override {
     return GetPluginNameStatic();
   }
 
   uint32_t GetPluginVersion() override { return 1; }
 
-  //------------------------------------------------------------
   // lldb_private::Platform functions
-  //------------------------------------------------------------
   lldb_private::Status ResolveExecutable(
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr) override;

@@ -2,13 +2,10 @@
 Test that hitting a UBSan issue while running user expression doesn't break the evaluation.
 """
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
-import json
 
 
 class UbsanUserExpressionTestCase(TestBase):

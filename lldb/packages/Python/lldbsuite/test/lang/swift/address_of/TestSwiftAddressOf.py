@@ -49,7 +49,6 @@ class TestSwiftAddressOf(lldbtest.TestBase):
 
         
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_any_type(self):
         """Test the Any type"""
         self.build()

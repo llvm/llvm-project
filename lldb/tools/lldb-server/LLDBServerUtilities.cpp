@@ -8,7 +8,6 @@
 
 #include "LLDBServerUtilities.h"
 
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -25,7 +24,7 @@ static std::shared_ptr<raw_ostream> GetLogStream(StringRef log_file) {
   if (!log_file.empty()) {
     std::error_code EC;
     std::shared_ptr<raw_ostream> stream_sp = std::make_shared<raw_fd_ostream>(
-        log_file, EC, sys::fs::F_Text | sys::fs::F_Append);
+        log_file, EC, sys::fs::OF_Text | sys::fs::OF_Append);
     if (!EC)
       return stream_sp;
     errs() << llvm::formatv(

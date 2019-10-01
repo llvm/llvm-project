@@ -10,6 +10,7 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
 
@@ -19,17 +20,10 @@ namespace {
 class MainLoopTest : public testing::Test {
 public:
   static void SetUpTestCase() {
-#ifdef _MSC_VER
-    WSADATA data;
-    ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &data));
-#endif
+    ASSERT_THAT_ERROR(Socket::Initialize(), llvm::Succeeded());
   }
 
-  static void TearDownTestCase() {
-#ifdef _MSC_VER
-    ASSERT_EQ(0, WSACleanup());
-#endif
-  }
+  static void TearDownTestCase() { Socket::Terminate(); }
 
   void SetUp() override {
     bool child_processes_inherit = false;
@@ -108,11 +102,15 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 }
 
 #ifdef LLVM_ON_UNIX
+// NetBSD currently does not report slave pty EOF via kevent
+// causing this test to hang forever.
+#ifndef __NetBSD__
 TEST_F(MainLoopTest, DetectsEOF) {
+
   PseudoTerminal term;
   ASSERT_TRUE(term.OpenFirstAvailableMaster(O_RDWR, nullptr, 0));
   ASSERT_TRUE(term.OpenSlave(O_RDWR | O_NOCTTY, nullptr, 0));
-  auto conn = llvm::make_unique<ConnectionFileDescriptor>(
+  auto conn = std::make_unique<ConnectionFileDescriptor>(
       term.ReleaseMasterFileDescriptor(), true);
 
   Status error;
@@ -125,6 +123,7 @@ TEST_F(MainLoopTest, DetectsEOF) {
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(1u, callback_count);
 }
+#endif
 
 TEST_F(MainLoopTest, Signal) {
   MainLoop loop;
@@ -134,6 +133,30 @@ TEST_F(MainLoopTest, Signal) {
   ASSERT_TRUE(error.Success());
   kill(getpid(), SIGUSR1);
   ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
+// Test that a signal which is not monitored by the MainLoop does not
+// cause a premature exit.
+TEST_F(MainLoopTest, UnmonitoredSignal) {
+  MainLoop loop;
+  Status error;
+  struct sigaction sa;
+  sa.sa_sigaction = [](int, siginfo_t *, void *) { };
+  sa.sa_flags = SA_SIGINFO; // important: no SA_RESTART
+  sigemptyset(&sa.sa_mask);
+  ASSERT_EQ(0, sigaction(SIGUSR2, &sa, nullptr));
+
+  auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  std::thread killer([]() {
+    sleep(1);
+    kill(getpid(), SIGUSR2);
+    sleep(1);
+    kill(getpid(), SIGUSR1);
+  });
+  ASSERT_TRUE(loop.Run().Success());
+  killer.join();
   ASSERT_EQ(1u, callback_count);
 }
 #endif

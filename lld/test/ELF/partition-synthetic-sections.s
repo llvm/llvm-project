@@ -4,11 +4,11 @@
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/verneed1.s -o %t1.o
 // RUN: echo "v1 {}; v2 {}; v3 { local: *; };" > %t1.script
-// RUN: ld.lld -shared %t1.o --version-script %t1.script -o %t1.so -soname verneed1.so.0
+// RUN: ld.lld -shared %t1.o --version-script %t1.script -o %t1.so -soname verneed1.so.0 -z separate-code
 
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
 // RUN: echo "x1 { global: p0; }; x2 { global: p1; p1alias; };" > %t.script
-// RUN: ld.lld %t.o %t1.so --version-script %t.script -o %t --shared --gc-sections --eh-frame-hdr -soname main.so
+// RUN: ld.lld %t.o %t1.so --version-script %t.script -o %t --shared --gc-sections --eh-frame-hdr -soname main.so -z separate-code
 
 // RUN: llvm-objcopy --extract-main-partition %t %t0
 // RUN: llvm-objcopy --extract-partition=part1 %t %t1

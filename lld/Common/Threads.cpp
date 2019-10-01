@@ -8,4 +8,4 @@
 
 #include "lld/Common/Threads.h"
 
-bool lld::ThreadsEnabled = true;
+bool lld::threadsEnabled = true;

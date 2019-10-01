@@ -1,0 +1,12 @@
+# Check that stop command source on error.
+
+# RUN: %lldb -x -b -o "command source -e 1 %s" 2>&1 | FileCheck %s --check-prefix STOP
+# RUN: %lldb -x -b -o "command source -e 0 %s" 2>&1 | FileCheck %s --check-prefix CONTINUE
+# RUN: %lldb -x -b -o 'settings set interpreter.stop-command-source-on-error true' -o "command source %s" 2>&1 | FileCheck %s --check-prefix STOP
+# RUN: %lldb -x -b -o 'settings set interpreter.stop-command-source-on-error false' -o "command source %s" 2>&1 | FileCheck %s --check-prefix CONTINUE
+
+bogus
+p 10+1
+
+# CONTINUE: $0 = 11
+# STOP-NOT: $0 = 11

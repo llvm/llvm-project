@@ -50,9 +50,7 @@ public:
         m_callback_layout_record_type(layout_record_type_callback),
         m_callback_baton(callback_baton) {}
 
-  //------------------------------------------------------------------
   // clang::ExternalASTSource
-  //------------------------------------------------------------------
 
   clang::Decl *GetExternalDecl(uint32_t ID) override {
     // This method only needs to be implemented if the AST source ever passes
@@ -126,10 +124,8 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from ClangExternalASTSourceCallbacks can see and
   // modify these
-  //------------------------------------------------------------------
   CompleteTagDeclCallback m_callback_tag_decl;
   CompleteObjCInterfaceDeclCallback m_callback_objc_decl;
   FindExternalVisibleDeclsByNameCallback m_callback_find_by_name;

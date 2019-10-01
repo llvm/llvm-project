@@ -1,5 +1,4 @@
 //===-- CPPLanguageRuntime.cpp
-//-------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -204,7 +203,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
       return llvm::Regex::escape(first_template_parameter.str()) +
              R"(::operator\(\)\(.*\))";
 
-    if (symbol != NULL &&
+    if (symbol != nullptr &&
         symbol->GetName().GetStringRef().contains("__invoke")) {
 
       llvm::StringRef symbol_name = symbol->GetName().GetStringRef();

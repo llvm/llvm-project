@@ -45,8 +45,8 @@ struct run_unique_copy
               typename Predicate, typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n,
-               Predicate pred, T trash)
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n, Predicate pred,
+               T trash)
     {
         // Cleaning
         std::fill_n(expected_first, n, trash);
@@ -115,7 +115,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test<Number>(Number(42, OddTag()), std::equal_to<Number>(),
@@ -124,8 +124,8 @@ main()
     test<float32_t>(float32_t(42), std::equal_to<float32_t>(),
                     [](int32_t j) { return float32_t(5 * j / 23 ^ (j / 7)); });
 #if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
-    test<float32_t>(float32_t(42), [](float32_t, float32_t) { return false; },
-                    [](int32_t j) { return float32_t(j); }, false);
+    test<float32_t>(float32_t(42), [](float32_t, float32_t) { return false; }, [](int32_t j) { return float32_t(j); },
+                    false);
 #endif
 
     test_algo_basic_double<int32_t>(run_for_rnd_fw<test_non_const<int32_t>>());

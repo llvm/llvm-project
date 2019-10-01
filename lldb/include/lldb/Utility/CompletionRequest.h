@@ -16,83 +16,96 @@
 #include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
+enum class CompletionMode {
+  // The current token has been completed.
+  Normal,
+  // The current token has been partially completed. This means that we found
+  // a completion, but that the completed token is still incomplete. Examples
+  // for this are file paths, where we want to complete "/bi" to "/bin/", but
+  // the file path token is still incomplete after the completion. Clients
+  // should not indicate to the user that this is a full completion (e.g. by
+  // not inserting the usual trailing space after a successful completion).
+  Partial,
+  // The full line has been rewritten by the completion.
+  RewriteLine,
+};
+
 class CompletionResult {
-  //----------------------------------------------------------
+public:
   /// A single completion and all associated data.
-  //----------------------------------------------------------
-  struct Completion {
-    Completion(llvm::StringRef completion, llvm::StringRef description)
-        : m_completion(completion.str()), m_descripton(description.str()) {}
+  class Completion {
 
     std::string m_completion;
     std::string m_descripton;
+    CompletionMode m_mode;
+
+  public:
+    Completion(llvm::StringRef completion, llvm::StringRef description,
+               CompletionMode mode)
+        : m_completion(completion.str()), m_descripton(description.str()),
+          m_mode(mode) {}
+    const std::string &GetCompletion() const { return m_completion; }
+    const std::string &GetDescription() const { return m_descripton; }
+    CompletionMode GetMode() const { return m_mode; }
 
     /// Generates a string that uniquely identifies this completion result.
     std::string GetUniqueKey() const;
   };
+
+private:
   std::vector<Completion> m_results;
 
   /// List of added completions so far. Used to filter out duplicates.
   llvm::StringSet<> m_added_values;
 
 public:
-  void AddResult(llvm::StringRef completion, llvm::StringRef description);
+  void AddResult(llvm::StringRef completion, llvm::StringRef description,
+                 CompletionMode mode);
 
-  //----------------------------------------------------------
+  llvm::ArrayRef<Completion> GetResults() const { return m_results; }
+
   /// Adds all collected completion matches to the given list.
   /// The list will be cleared before the results are added. The number of
   /// results here is guaranteed to be equal to GetNumberOfResults().
-  //----------------------------------------------------------
   void GetMatches(StringList &matches) const;
 
-  //----------------------------------------------------------
   /// Adds all collected completion descriptions to the given list.
   /// The list will be cleared before the results are added. The number of
   /// results here is guaranteed to be equal to GetNumberOfResults().
-  //----------------------------------------------------------
   void GetDescriptions(StringList &descriptions) const;
 
   std::size_t GetNumberOfResults() const { return m_results.size(); }
 };
 
-//----------------------------------------------------------------------
-/// @class CompletionRequest CompletionRequest.h
+/// \class CompletionRequest CompletionRequest.h
 ///   "lldb/Utility/ArgCompletionRequest.h"
 ///
 /// Contains all information necessary to complete an incomplete command
 /// for the user. Will be filled with the generated completions by the different
 /// completions functions.
 ///
-//----------------------------------------------------------------------
 class CompletionRequest {
 public:
-  //----------------------------------------------------------
   /// Constructs a completion request.
   ///
-  /// @param [in] command_line
+  /// \param [in] command_line
   ///     The command line the user has typed at this point.
   ///
-  /// @param [in] raw_cursor_pos
+  /// \param [in] raw_cursor_pos
   ///     The position of the cursor in the command line string. Index 0 means
   ///     the cursor is at the start of the line. The completion starts from
   ///     this cursor position.
   ///
-  /// @param [in] match_start_point
-  /// @param [in] max_return_elements
-  ///     If there is a match that is expensive to compute, these are here to
-  ///     allow you to compute the completions in  batches.  Start the
-  ///     completion from match_start_point, and return match_return_elements
-  ///     elements.
-  ///
-  /// @param [out] result
+  /// \param [out] result
   ///     The CompletionResult that will be filled with the results after this
   ///     request has been handled.
-  //----------------------------------------------------------
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
-                    int match_start_point, int max_return_elements,
                     CompletionResult &result);
 
   llvm::StringRef GetRawLine() const { return m_command; }
+  llvm::StringRef GetRawLineUntilCursor() const {
+    return m_command.substr(0, m_cursor_index);
+  }
 
   unsigned GetRawCursorPos() const { return m_raw_cursor_pos; }
 
@@ -102,41 +115,38 @@ public:
 
   const Args &GetPartialParsedLine() const { return m_partial_parsed_line; }
 
+  const Args::ArgEntry &GetParsedArg() {
+    return GetParsedLine()[GetCursorIndex()];
+  }
+
   void SetCursorIndex(int i) { m_cursor_index = i; }
   int GetCursorIndex() const { return m_cursor_index; }
 
   void SetCursorCharPosition(int pos) { m_cursor_char_position = pos; }
   int GetCursorCharPosition() const { return m_cursor_char_position; }
 
-  int GetMatchStartPoint() const { return m_match_start_point; }
-
-  int GetMaxReturnElements() const { return m_max_return_elements; }
-
-  bool GetWordComplete() { return m_word_complete; }
-
-  void SetWordComplete(bool v) { m_word_complete = v; }
-
   /// Adds a possible completion string. If the completion was already
   /// suggested before, it will not be added to the list of results. A copy of
   /// the suggested completion is stored, so the given string can be free'd
   /// afterwards.
   ///
-  /// @param match The suggested completion.
-  /// @param match An optional description of the completion string. The
+  /// \param match The suggested completion.
+  /// \param match An optional description of the completion string. The
   ///     description will be displayed to the user alongside the completion.
   void AddCompletion(llvm::StringRef completion,
-                     llvm::StringRef description = "") {
-    m_result.AddResult(completion, description);
+                     llvm::StringRef description = "",
+                     CompletionMode mode = CompletionMode::Normal) {
+    m_result.AddResult(completion, description, mode);
   }
 
   /// Adds multiple possible completion strings.
   ///
   /// \param completions The list of completions.
   ///
-  /// @see AddCompletion
+  /// \see AddCompletion
   void AddCompletions(const StringList &completions) {
-    for (std::size_t i = 0; i < completions.GetSize(); ++i)
-      AddCompletion(completions.GetStringAtIndex(i));
+    for (const std::string &completion : completions)
+      AddCompletion(completion);
   }
 
   /// Adds multiple possible completion strings alongside their descriptions.
@@ -146,17 +156,13 @@ public:
   /// \param completions The list of completions.
   /// \param completions The list of descriptions.
   ///
-  /// @see AddCompletion
+  /// \see AddCompletion
   void AddCompletions(const StringList &completions,
                       const StringList &descriptions) {
     lldbassert(completions.GetSize() == descriptions.GetSize());
     for (std::size_t i = 0; i < completions.GetSize(); ++i)
       AddCompletion(completions.GetStringAtIndex(i),
                     descriptions.GetStringAtIndex(i));
-  }
-
-  std::size_t GetNumberOfMatches() const {
-    return m_result.GetNumberOfResults();
   }
 
   llvm::StringRef GetCursorArgument() const {
@@ -180,16 +186,6 @@ private:
   int m_cursor_index;
   /// The cursor position in the argument indexed by m_cursor_index.
   int m_cursor_char_position;
-  /// If there is a match that is expensive
-  /// to compute, these are here to allow you to compute the completions in
-  /// batches.  Start the completion from \amatch_start_point, and return
-  /// \amatch_return_elements elements.
-  // FIXME: These two values are not implemented.
-  int m_match_start_point;
-  int m_max_return_elements;
-  /// \btrue if this is a complete option value (a space will be inserted
-  /// after the completion.)  \bfalse otherwise.
-  bool m_word_complete = false;
 
   /// The result this request is supposed to fill out.
   /// We keep this object private to ensure that no backend can in any way

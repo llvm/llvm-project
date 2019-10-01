@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-
+import json
 import gdbremote_testcase
 import lldbgdbserverutils
 from lldbsuite.support import seven
@@ -20,9 +20,9 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         info = self.parse_process_info_response(context)
 
         self.test_sequence.add_log_lines([
-            'read packet: $jModulesInfo:[{"file":"%s","triple":"%s"}]]#00' % (
-                lldbutil.append_to_process_working_directory(self, "a.out"),
-                seven.unhexlify(info["triple"])),
+            'read packet: $jModulesInfo:%s]#00' % json.dumps(
+                [{"file":lldbutil.append_to_process_working_directory(self, "a.out"),
+                  "triple":seven.unhexlify(info["triple"])}]),
             {"direction": "send",
              "regex": r'^\$\[{(.*)}\]\]#[0-9A-Fa-f]{2}',
              "capture": {1: "spec"}},

@@ -35,9 +35,7 @@ public:
     err_dup2_failed_on_stdout = -11,
     err_dup2_failed_on_stderr = -12
   };
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   PseudoTerminal();
   ~PseudoTerminal();
 
@@ -69,18 +67,13 @@ public:
   pid_t Fork(Status &error);
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from PseudoTerminal can see and modify these
-  //------------------------------------------------------------------
   int m_master_fd;
   int m_slave_fd;
 
 private:
-  //------------------------------------------------------------------
-  // Outlaw copy and assignment constructors
-  //------------------------------------------------------------------
-  PseudoTerminal(const PseudoTerminal &rhs);
-  PseudoTerminal &operator=(const PseudoTerminal &rhs);
+  PseudoTerminal(const PseudoTerminal &rhs) = delete;
+  PseudoTerminal &operator=(const PseudoTerminal &rhs) = delete;
 };
 
 #endif // #ifndef __PseudoTerminal_h__

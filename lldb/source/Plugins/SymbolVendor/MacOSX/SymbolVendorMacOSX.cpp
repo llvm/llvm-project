@@ -10,38 +10,35 @@
 
 #include <string.h>
 
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/Symbols.h"
 #include "lldb/Host/XML.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // SymbolVendorMacOSX constructor
-//----------------------------------------------------------------------
 SymbolVendorMacOSX::SymbolVendorMacOSX(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SymbolVendorMacOSX::~SymbolVendorMacOSX() {}
 
 static bool UUIDsMatch(Module *module, ObjectFile *ofile,
                        lldb_private::Stream *feedback_strm) {
   if (module && ofile) {
     // Make sure the UUIDs match
-    lldb_private::UUID dsym_uuid;
-
-    if (!ofile->GetUUID(&dsym_uuid)) {
+    lldb_private::UUID dsym_uuid = ofile->GetUUID();
+    if (!dsym_uuid) {
       if (feedback_strm) {
         feedback_strm->PutCString(
             "warning: failed to get the uuid for object file: '");
@@ -90,26 +87,20 @@ const char *SymbolVendorMacOSX::GetPluginDescriptionStatic() {
          "executables.";
 }
 
-//----------------------------------------------------------------------
 // CreateInstance
 //
 // Platforms can register a callback to use when creating symbol vendors to
 // allow for complex debug information file setups, and to also allow for
 // finding separate debug information files.
-//----------------------------------------------------------------------
 SymbolVendor *
 SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                    lldb_private::Stream *feedback_strm) {
   if (!module_sp)
     return NULL;
 
-  ObjectFile *obj_file = module_sp->GetObjectFile();
+  ObjectFile *obj_file =
+      llvm::dyn_cast_or_null<ObjectFileMachO>(module_sp->GetObjectFile());
   if (!obj_file)
-    return NULL;
-
-  static ConstString obj_file_macho("mach-o");
-  ConstString obj_name = obj_file->GetPluginName();
-  if (obj_name != obj_file_macho)
     return NULL;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
@@ -143,7 +134,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
 
       ModuleSpec module_spec(file_spec, module_sp->GetArchitecture());
       module_spec.GetUUID() = module_sp->GetUUID();
-      dsym_fspec = Symbols::LocateExecutableSymbolFile(module_spec);
+      FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      dsym_fspec =
+          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);
@@ -162,8 +155,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
           char dsym_path[PATH_MAX];
           if (module_sp->GetSourceMappingList().IsEmpty() &&
               dsym_fspec.GetPath(dsym_path, sizeof(dsym_path))) {
-            lldb_private::UUID dsym_uuid;
-            if (dsym_objfile_sp->GetUUID(&dsym_uuid)) {
+            lldb_private::UUID dsym_uuid = dsym_objfile_sp->GetUUID();
+            if (dsym_uuid) {
               std::string uuid_str = dsym_uuid.GetAsString();
               if (!uuid_str.empty()) {
                 char *resources = strstr(dsym_path, "/Contents/Resources/");
@@ -310,9 +303,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   return symbol_vendor;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString SymbolVendorMacOSX::GetPluginName() {
   return GetPluginNameStatic();
 }

@@ -28,9 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-----------------------------------------------------------------------------------------------
 //  UnwindAssemblyInstEmulation method definitions
-//-----------------------------------------------------------------------------------------------
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, Thread &thread, UnwindPlan &unwind_plan) {
@@ -69,8 +67,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     const bool prefer_file_cache = true;
     DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(
-        m_arch, NULL, NULL, range.GetBaseAddress(), opcode_data, opcode_size,
-        99999, prefer_file_cache));
+        m_arch, nullptr, nullptr, range.GetBaseAddress(), opcode_data,
+        opcode_size, 99999, prefer_file_cache));
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
 
@@ -215,7 +213,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
               lldb_private::FormatEntity::Entry format;
               FormatEntity::Parse("${frame.pc}: ", format);
               inst->Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address,
-                         show_bytes, NULL, NULL, NULL, &format, 0);
+                         show_bytes, nullptr, nullptr, nullptr, &format, 0);
               log->PutString(strm.GetString());
             }
 
@@ -298,16 +296,14 @@ UnwindAssembly *
 UnwindAssemblyInstEmulation::CreateInstance(const ArchSpec &arch) {
   std::unique_ptr<EmulateInstruction> inst_emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypePrologueEpilogue,
-                                     NULL));
+                                     nullptr));
   // Make sure that all prologue instructions are handled
   if (inst_emulator_up)
     return new UnwindAssemblyInstEmulation(arch, inst_emulator_up.release());
-  return NULL;
+  return nullptr;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol in UnwindAssemblyParser_x86
-//------------------------------------------------------------------
 ConstString UnwindAssemblyInstEmulation::GetPluginName() {
   return GetPluginNameStatic();
 }

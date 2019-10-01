@@ -13,9 +13,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectScript
-//-------------------------------------------------------------------------
 
 class CommandObjectScript : public CommandObjectRaw {
 public:

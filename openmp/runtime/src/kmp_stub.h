@@ -41,10 +41,7 @@ typedef enum kmp_sched {
 void __kmps_set_schedule(kmp_sched_t kind, int modifier);
 void __kmps_get_schedule(kmp_sched_t *kind, int *modifier);
 
-#if OMP_40_ENABLED
-void __kmps_set_proc_bind(kmp_proc_bind_t arg);
 kmp_proc_bind_t __kmps_get_proc_bind(void);
-#endif /* OMP_40_ENABLED */
 
 double __kmps_get_wtime();
 double __kmps_get_wtick();

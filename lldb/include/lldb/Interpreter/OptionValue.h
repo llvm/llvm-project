@@ -19,12 +19,10 @@
 
 namespace lldb_private {
 
-//---------------------------------------------------------------------
 // OptionValue
-//---------------------------------------------------------------------
 class OptionValue {
 public:
-  typedef enum {
+  enum Type {
     eTypeInvalid = 0,
     eTypeArch,
     eTypeArgs,
@@ -45,7 +43,7 @@ public:
     eTypeUInt64,
     eTypeUUID,
     eTypeFormatEntity
-  } Type;
+  };
 
   enum {
     eDumpOptionName = (1u << 0),
@@ -69,9 +67,7 @@ public:
 
   virtual ~OptionValue() = default;
 
-  //-----------------------------------------------------------------
   // Subclasses should override these functions
-  //-----------------------------------------------------------------
   virtual Type GetType() const = 0;
 
   // If this value is always hidden, the avoid showing any info on this value,
@@ -97,12 +93,10 @@ public:
 
   virtual lldb::OptionValueSP DeepCopy() const = 0;
 
-  virtual size_t AutoComplete(CommandInterpreter &interpreter,
-                              CompletionRequest &request);
+  virtual void AutoComplete(CommandInterpreter &interpreter,
+                            CompletionRequest &request);
 
-  //-----------------------------------------------------------------
   // Subclasses can override these functions
-  //-----------------------------------------------------------------
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
                                           bool will_modify,
@@ -121,10 +115,8 @@ public:
 
   virtual bool DumpQualifiedName(Stream &strm) const;
 
-  //-----------------------------------------------------------------
   // Subclasses should NOT override these functions as they use the above
   // functions to implement functionality
-  //-----------------------------------------------------------------
   uint32_t GetTypeAsMask() { return 1u << GetType(); }
 
   static uint32_t ConvertTypeToMask(OptionValue::Type type) {

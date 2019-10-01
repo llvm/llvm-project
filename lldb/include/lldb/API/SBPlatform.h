@@ -109,9 +109,7 @@ public:
 
   bool IsConnected();
 
-  //----------------------------------------------------------------------
   // The following functions will work if the platform is connected
-  //----------------------------------------------------------------------
   const char *GetTriple();
 
   const char *GetHostname();

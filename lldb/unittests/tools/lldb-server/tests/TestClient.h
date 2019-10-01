@@ -11,7 +11,7 @@
 
 #include "MessageObjects.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Connection.h"
 #include "llvm/ADT/Optional.h"

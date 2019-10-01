@@ -44,17 +44,10 @@ public:
                     lldb::DescriptionLevel description_level);
 
     %pythoncode %{
-        __swig_getmethods__["name"] = GetName
-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
-
-        __swig_getmethods__["type"] = GetType
-        if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
-
-        __swig_getmethods__["signed"] = GetValueAsSigned
-        if _newclass: signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
-
-        __swig_getmethods__["unsigned"] = GetValueAsUnsigned
-        if _newclass: unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
+        name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
+        type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
+        signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
+        unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
     %}
 
 protected:

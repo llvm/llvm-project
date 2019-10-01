@@ -35,6 +35,4 @@ Sections:
     Flags:           [ SHF_EXCLUDE ]
     AddressAlign:    0x0000000000000001
     Content:         150000000500080001000000040000000100040C1F04253200
-Symbols:         {}
-DynamicSymbols:  {}
 ...

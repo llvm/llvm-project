@@ -23,20 +23,10 @@
 
 namespace lldb_private {
 class Address;
-}
-namespace lldb_private {
 class ExecutionContext;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class StringList;
-}
-namespace lldb_private {
 class SymbolContext;
-}
-namespace lldb_private {
 class ValueObject;
 }
 namespace llvm {
@@ -51,7 +41,7 @@ public:
       Invalid,
       ParentNumber,
       ParentString,
-      InsertString,
+      EscapeCode,
       Root,
       String,
       Scope,
@@ -110,14 +100,10 @@ public:
       CurrentPCArrow
     };
 
-    enum FormatType { None, UInt32, UInt64, CString };
-
     struct Definition {
       const char *name;
       const char *string; // Insert this exact string into the output
       Entry::Type type;
-      FormatType format_type; // uint32_t, uint64_t, cstr, or anything that can
-                              // be formatted by printf or lldb::Format
       uint64_t data;
       uint32_t num_children;
       Definition *children; // An array of "num_children" Definition entries,
@@ -213,16 +199,14 @@ public:
                                     llvm::StringRef &variable_name,
                                     llvm::StringRef &variable_format);
 
-  static size_t AutoComplete(lldb_private::CompletionRequest &request);
+  static void AutoComplete(lldb_private::CompletionRequest &request);
 
-  //----------------------------------------------------------------------
   // Format the current elements into the stream \a s.
   //
   // The root element will be stripped off and the format str passed in will be
   // either an empty string (print a description of this object), or contain a
   // `.`-separated series like a domain name that identifies further
   //  sub-elements to display.
-  //----------------------------------------------------------------------
   static bool FormatFileSpec(const FileSpec &file, Stream &s,
                              llvm::StringRef elements,
                              llvm::StringRef element_format);

@@ -33,9 +33,7 @@ using namespace lldb_private;
 
 uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepOut: Step out of the current frame
-//----------------------------------------------------------------------
 ThreadPlanStepOut::ThreadPlanStepOut(
     Thread &thread, SymbolContext *context, bool first_insn, bool stop_others,
     Vote stop_vote, Vote run_vote, uint32_t frame_idx,
@@ -118,8 +116,9 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       return_address_decr_pc.CalculateSymbolContext(
           &return_address_sc, lldb::eSymbolContextLineEntry);
       if (return_address_sc.line_entry.IsValid()) {
-        range =
-            return_address_sc.line_entry.GetSameLineContiguousAddressRange();
+        const bool include_inlined_functions = false;
+        range = return_address_sc.line_entry.GetSameLineContiguousAddressRange(
+            include_inlined_functions);
         if (range.GetByteSize() > 0) {
           return_address =
               m_thread.GetProcess()->AdvanceAddressToNextBranchInstruction(
@@ -446,7 +445,7 @@ bool ThreadPlanStepOut::MischiefManaged() {
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (log)
-      log->Printf("Completed step out plan.");
+      LLDB_LOGF(log, "Completed step out plan.");
     if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
       m_thread.CalculateTarget()->RemoveBreakpointByID(m_return_bp_id);
       m_return_bp_id = LLDB_INVALID_BREAK_ID;
@@ -471,7 +470,7 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   if (log) {
     StreamString s;
     immediate_return_from_sp->Dump(&s, true, false);
-    log->Printf("Queuing inlined frame to step past: %s.", s.GetData());
+    LLDB_LOGF(log, "Queuing inlined frame to step past: %s.", s.GetData());
   }
 
   Block *from_block = immediate_return_from_sp->GetFrameBlock();

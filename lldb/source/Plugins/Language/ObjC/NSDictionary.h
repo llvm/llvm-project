@@ -51,8 +51,8 @@ public:
     class Prefix : public Matcher {
     public:
       Prefix(ConstString p);
-      virtual ~Prefix() = default;
-      virtual bool Match(ConstString class_name) override;
+      ~Prefix() override = default;
+      bool Match(ConstString class_name) override;
 
     private:
       ConstString m_prefix;
@@ -60,18 +60,18 @@ public:
     class Full : public Matcher {
     public:
       Full(ConstString n);
-      virtual ~Full() = default;
-      virtual bool Match(ConstString class_name) override;
+      ~Full() override = default;
+      bool Match(ConstString class_name) override;
 
     private:
       ConstString m_name;
     };
     typedef Matcher::UP MatcherUP;
 
-    MatcherUP GetFullMatch(ConstString n) { return llvm::make_unique<Full>(n); }
+    MatcherUP GetFullMatch(ConstString n) { return std::make_unique<Full>(n); }
 
     MatcherUP GetPrefixMatch(ConstString p) {
-      return llvm::make_unique<Prefix>(p);
+      return std::make_unique<Prefix>(p);
     }
   };
 

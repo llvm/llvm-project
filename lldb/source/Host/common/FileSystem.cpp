@@ -49,7 +49,7 @@ void FileSystem::Initialize() {
   InstanceImpl().emplace();
 }
 
-void FileSystem::Initialize(FileCollector &collector) {
+void FileSystem::Initialize(std::shared_ptr<FileCollector> collector) {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace(collector);
 }
@@ -280,7 +280,7 @@ std::shared_ptr<DataBufferLLVM>
 FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
                              uint64_t offset) {
   if (m_collector)
-    m_collector->AddFile(path);
+    m_collector->addFile(path);
 
   const bool is_volatile = !IsLocal(path);
   const ErrorOr<std::string> external_path = GetExternalPath(path);
@@ -416,9 +416,9 @@ static mode_t GetOpenMode(uint32_t permissions) {
 }
 
 Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
-                        uint32_t permissions) {
+                        uint32_t permissions, bool should_close_fd) {
   if (m_collector)
-    m_collector->AddFile(file_spec);
+    m_collector->addFile(file_spec.GetPath());
 
   if (File.IsValid())
     File.Close();
@@ -439,7 +439,7 @@ Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
     File.SetDescriptor(descriptor, false);
     error.SetErrorToErrno();
   } else {
-    File.SetDescriptor(descriptor, true);
+    File.SetDescriptor(descriptor, should_close_fd);
     File.SetOptions(options);
   }
   return error;

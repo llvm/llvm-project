@@ -1317,9 +1317,7 @@ ABISysV_arm::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABISysV_arm::GetRedZoneSize() const { return 0; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_arm::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -1741,8 +1739,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           uint32_t index = 0;
           for (index = 0; index < num_children; index++) {
             std::string name;
-            base_type =
-                compiler_type.GetFieldAtIndex(index, name, NULL, NULL, NULL);
+            base_type = compiler_type.GetFieldAtIndex(index, name, nullptr,
+                                                      nullptr, nullptr);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
               llvm::Optional<uint64_t> base_byte_size =
@@ -1801,7 +1799,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
       const RegisterInfo *reg_info =
           reg_ctx->GetRegisterInfo(eRegisterKindDWARF, regnum);
-      if (reg_info == NULL)
+      if (reg_info == nullptr)
         break;
 
       RegisterValue reg_value;
@@ -1962,6 +1960,7 @@ bool ABISysV_arm::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.SetSourceName("arm default unwind plan");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
 
   return true;
 }
@@ -2149,9 +2148,7 @@ lldb_private::ConstString ABISysV_arm::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_arm::GetPluginName() {
   return GetPluginNameStatic();

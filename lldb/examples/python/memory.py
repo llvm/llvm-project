@@ -9,11 +9,13 @@
 #   (lldb) command script import /path/to/cmdtemplate.py
 #----------------------------------------------------------------------
 
-import commands
+from __future__ import print_function
+
 import platform
 import os
 import re
 import sys
+import subprocess
 
 try:
     # Just try for LLDB in case PYTHONPATH is already correctly setup
@@ -24,7 +26,7 @@ except ImportError:
     platform_system = platform.system()
     if platform_system == 'Darwin':
         # On Darwin, try the currently selected Xcode directory
-        xcode_dir = commands.getoutput("xcode-select --print-path")
+        xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True)
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
@@ -44,14 +46,13 @@ except ImportError:
                 except ImportError:
                     pass
                 else:
-                    print 'imported lldb from: "%s"' % (lldb_python_dir)
+                    print('imported lldb from: "%s"' % (lldb_python_dir))
                     success = True
                     break
     if not success:
-        print "error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly"
+        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
         sys.exit(1)
 
-import commands
 import optparse
 import shlex
 import string
@@ -197,9 +198,9 @@ def memfind_command(debugger, command, result, dict):
 
 
 def print_error(str, show_usage, result):
-    print >>result, str
+    print(str, file=result)
     if show_usage:
-        print >>result, create_memfind_options().format_help()
+        print(create_memfind_options().format_help(), file=result)
 
 
 def memfind(target, options, args, result):
@@ -233,44 +234,44 @@ def memfind(target, options, args, result):
         return
 
     if not options.data:
-        print >>result, 'error: no data specified to search for'
+        print('error: no data specified to search for', file=result)
         return
 
     if not target:
-        print >>result, 'error: invalid target'
+        print('error: invalid target', file=result)
         return
     process = target.process
     if not process:
-        print >>result, 'error: invalid process'
+        print('error: invalid process', file=result)
         return
 
     error = lldb.SBError()
     bytes = process.ReadMemory(start_addr, options.size, error)
     if error.Success():
         num_matches = 0
-        print >>result, "Searching memory range [%#x - %#x) for" % (
-            start_addr, end_addr),
+        print("Searching memory range [%#x - %#x) for" % (
+            start_addr, end_addr), end=' ', file=result)
         for byte in options.data:
-            print >>result, '%2.2x' % ord(byte),
-        print >>result
+            print('%2.2x' % ord(byte), end=' ', file=result)
+        print(file=result)
 
         match_index = string.find(bytes, options.data)
         while match_index != -1:
             num_matches = num_matches + 1
-            print >>result, '%#x: %#x + %u' % (start_addr +
-                                               match_index, start_addr, match_index)
+            print('%#x: %#x + %u' % (start_addr +
+                                               match_index, start_addr, match_index), file=result)
             match_index = string.find(bytes, options.data, match_index + 1)
 
         if num_matches == 0:
-            print >>result, "error: no matches found"
+            print("error: no matches found", file=result)
     else:
-        print >>result, 'error: %s' % (error.GetCString())
+        print('error: %s' % (error.GetCString()), file=result)
 
 
 if __name__ == '__main__':
-    print 'error: this script is designed to be used within the embedded script interpreter in LLDB'
+    print('error: this script is designed to be used within the embedded script interpreter in LLDB')
 elif getattr(lldb, 'debugger', None):
     memfind_command.__doc__ = create_memfind_options().format_help()
     lldb.debugger.HandleCommand(
         'command script add -f memory.memfind_command memfind')
-    print '"memfind" command installed, use the "--help" option for detailed help'
+    print('"memfind" command installed, use the "--help" option for detailed help')

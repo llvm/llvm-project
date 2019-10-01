@@ -34,9 +34,7 @@ PlatformRemoteDarwinDevice::SDKDirectoryInfo::SDKDirectoryInfo(
   build.SetString(build_str);
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformRemoteDarwinDevice::PlatformRemoteDarwinDevice()
     : PlatformDarwin(false), // This is a remote platform
       m_sdk_directory_infos(), m_device_support_directory(),
@@ -44,12 +42,10 @@ PlatformRemoteDarwinDevice::PlatformRemoteDarwinDevice()
       m_last_module_sdk_idx(UINT32_MAX),
       m_connected_module_sdk_idx(UINT32_MAX) {}
 
-//------------------------------------------------------------------
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformRemoteDarwinDevice::~PlatformRemoteDarwinDevice() {}
 
 void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
@@ -85,7 +81,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
     if (resolved_module_spec.GetArchitecture().IsValid() ||
         resolved_module_spec.GetUUID().IsValid()) {
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          NULL, NULL, NULL);
+                                          nullptr, nullptr, nullptr);
 
       if (exe_module_sp && exe_module_sp->GetObjectFile())
         return error;
@@ -99,7 +95,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
              idx, resolved_module_spec.GetArchitecture());
          ++idx) {
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          NULL, NULL, NULL);
+                                          nullptr, nullptr, nullptr);
       // Did we find an executable using one of the
       if (error.Success()) {
         if (exe_module_sp && exe_module_sp->GetObjectFile())
@@ -154,17 +150,21 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       const SDKDirectoryInfo sdk_sysroot_directory_info(sdk_sysroot_fspec);
       m_sdk_directory_infos.push_back(sdk_sysroot_directory_info);
       if (log) {
-        log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
-                    "--sysroot SDK directory %s",
-                    m_sdk_sysroot.GetCString());
+        LLDB_LOGF(
+            log,
+            "PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
+            "--sysroot SDK directory %s",
+            m_sdk_sysroot.GetCString());
       }
       return true;
     }
     const char *device_support_dir = GetDeviceSupportDirectory();
     if (log) {
-      log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
-                  "DeviceSupport directory %s",
-                  device_support_dir);
+      LLDB_LOGF(
+          log,
+          "PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
+          "DeviceSupport directory %s",
+          device_support_dir);
     }
     if (device_support_dir) {
       const bool find_directories = true;
@@ -187,9 +187,11 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
           m_sdk_directory_infos.push_back(sdk_directory_info);
           if (log) {
-            log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                        "added builtin SDK directory %s",
-                        sdk_symbols_symlink_fspec.GetPath().c_str());
+            LLDB_LOGF(
+                log,
+                "PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                "added builtin SDK directory %s",
+                sdk_symbols_symlink_fspec.GetPath().c_str());
           }
         }
       }
@@ -206,9 +208,11 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         FileSystem::Instance().Resolve(local_sdk_cache);
         if (FileSystem::Instance().Exists(local_sdk_cache)) {
           if (log) {
-            log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                        "searching %s for additional SDKs",
-                        local_sdk_cache.GetPath().c_str());
+            LLDB_LOGF(
+                log,
+                "PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                "searching %s for additional SDKs",
+                local_sdk_cache.GetPath().c_str());
           }
             char path[PATH_MAX];
             if (local_sdk_cache.GetPath(path, sizeof(path))) {
@@ -221,9 +225,12 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
               for (uint32_t i = num_installed; i < num_sdk_infos; ++i) {
                 m_sdk_directory_infos[i].user_cached = true;
                 if (log) {
-                log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                            "user SDK directory %s",
-                            m_sdk_directory_infos[i].directory.GetPath().c_str());
+                  LLDB_LOGF(
+                      log,
+                      "PlatformRemoteDarwinDevice::"
+                      "UpdateSDKDirectoryInfosIfNeeded "
+                      "user SDK directory %s",
+                      m_sdk_directory_infos[i].directory.GetPath().c_str());
                 }
             }
           }
@@ -244,9 +251,11 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
           if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
             m_sdk_directory_infos.push_back(sdk_directory_info);
             if (log) {
-              log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                          "added env var SDK directory %s",
-                          sdk_symbols_symlink_fspec.GetPath().c_str());
+              LLDB_LOGF(
+                  log,
+                  "PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                  "added env var SDK directory %s",
+                  sdk_symbols_symlink_fspec.GetPath().c_str());
             }
           }
         }
@@ -312,12 +321,12 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
           return &m_sdk_directory_infos[i];
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 const PlatformRemoteDarwinDevice::SDKDirectoryInfo *
 PlatformRemoteDarwinDevice::GetSDKDirectoryForLatestOSVersion() {
-  const PlatformRemoteDarwinDevice::SDKDirectoryInfo *result = NULL;
+  const PlatformRemoteDarwinDevice::SDKDirectoryInfo *result = nullptr;
   if (UpdateSDKDirectoryInfosIfNeeded()) {
     auto max = std::max_element(
         m_sdk_directory_infos.begin(), m_sdk_directory_infos.end(),
@@ -348,7 +357,7 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectory() {
   assert(m_device_support_directory.empty() == false);
   if (m_device_support_directory[0])
     return m_device_support_directory.c_str();
-  return NULL;
+  return nullptr;
 }
 
 const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() {
@@ -358,7 +367,7 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
   if (m_device_support_directory_for_os_version.empty()) {
     const PlatformRemoteDarwinDevice::SDKDirectoryInfo *sdk_dir_info =
         GetSDKDirectoryForCurrentOSVersion();
-    if (sdk_dir_info == NULL)
+    if (sdk_dir_info == nullptr)
       sdk_dir_info = GetSDKDirectoryForLatestOSVersion();
     if (sdk_dir_info) {
       char path[PATH_MAX];
@@ -378,7 +387,7 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
   assert(m_device_support_directory_for_os_version.empty() == false);
   if (m_device_support_directory_for_os_version[0])
     return m_device_support_directory_for_os_version.c_str();
-  return NULL;
+  return nullptr;
 }
 
 uint32_t PlatformRemoteDarwinDevice::FindFileInAllSDKs(const char *platform_file_path,
@@ -422,10 +431,8 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
         local_file.AppendPathComponent(platform_file_path);
         FileSystem::Instance().Resolve(local_file);
         if (FileSystem::Instance().Exists(local_file)) {
-          if (log)
-            log->Printf("Found a copy of %s in the SDK dir %s/%s",
-                        platform_file_path, sdkroot_path.c_str(),
-                        paths_to_try[i]);
+          LLDB_LOGF(log, "Found a copy of %s in the SDK dir %s/%s",
+                    platform_file_path, sdkroot_path.c_str(), paths_to_try[i]);
           return true;
         }
         local_file.Clear();
@@ -453,8 +460,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
-          log->Printf("Found a copy of %s in the DeviceSupport dir %s",
-                      platform_file_path, os_version_dir);
+          LLDB_LOGF(log, "Found a copy of %s in the DeviceSupport dir %s",
+                    platform_file_path, os_version_dir);
         }
         return error;
       }
@@ -466,7 +473,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
-          log->Printf(
+          LLDB_LOGF(
+              log,
               "Found a copy of %s in the DeviceSupport dir %s/Symbols.Internal",
               platform_file_path, os_version_dir);
         }
@@ -479,8 +487,9 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
-          log->Printf("Found a copy of %s in the DeviceSupport dir %s/Symbols",
-                      platform_file_path, os_version_dir);
+          LLDB_LOGF(log,
+                    "Found a copy of %s in the DeviceSupport dir %s/Symbols",
+                    platform_file_path, os_version_dir);
         }
         return error;
       }
@@ -527,7 +536,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       if (GetFileInSDK(platform_file_path, connected_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, NULL);
+        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
         if (module_sp) {
           m_last_module_sdk_idx = connected_sdk_idx;
           error.Clear();
@@ -544,7 +553,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       if (GetFileInSDK(platform_file_path, m_last_module_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, NULL);
+        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
         if (module_sp) {
           error.Clear();
           return error;
@@ -566,7 +575,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       if (GetFileInSDK(platform_file_path, current_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, NULL);
+        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
         if (module_sp) {
           m_last_module_sdk_idx = current_sdk_idx;
           error.Clear();
@@ -587,7 +596,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
                        platform_module_spec.GetFileSpec())) {
         // printf ("sdk[%u]: '%s'\n", sdk_idx, local_file.GetPath().c_str());
 
-        error = ResolveExecutable(platform_module_spec, module_sp, NULL);
+        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
         if (module_sp) {
           // Remember the index of the last SDK that we found a file in in case
           // the wrong SDK was selected.
@@ -652,7 +661,7 @@ uint32_t PlatformRemoteDarwinDevice::GetConnectedSDKIndex() {
 
 uint32_t PlatformRemoteDarwinDevice::GetSDKIndexBySDKDirectoryInfo(
     const SDKDirectoryInfo *sdk_info) {
-  if (sdk_info == NULL) {
+  if (sdk_info == nullptr) {
     return UINT32_MAX;
   }
 

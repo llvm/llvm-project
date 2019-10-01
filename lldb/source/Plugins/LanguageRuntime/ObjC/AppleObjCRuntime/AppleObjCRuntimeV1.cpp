@@ -63,9 +63,7 @@ bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
   return !class_type_or_name.IsEmpty();
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 lldb_private::LanguageRuntime *
 AppleObjCRuntimeV1::CreateInstance(Process *process,
                                    lldb::LanguageType language) {
@@ -79,9 +77,9 @@ AppleObjCRuntimeV1::CreateInstance(Process *process,
         ObjCRuntimeVersions::eAppleObjC_V1)
       return new AppleObjCRuntimeV1(process);
     else
-      return NULL;
+      return nullptr;
   } else
-    return NULL;
+    return nullptr;
 }
 
 void AppleObjCRuntimeV1::Initialize() {
@@ -100,9 +98,7 @@ lldb_private::ConstString AppleObjCRuntimeV1::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 ConstString AppleObjCRuntimeV1::GetPluginName() {
   return GetPluginNameStatic();
 }
@@ -399,10 +395,11 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                         new ClassDescriptorV1(isa, process_sp));
 
                     if (log && log->GetVerbose())
-                      log->Printf("AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
-                                  " from _objc_debug_class_hash to "
-                                  "isa->descriptor cache",
-                                  isa);
+                      LLDB_LOGF(log,
+                                "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
+                                " from _objc_debug_class_hash to "
+                                "isa->descriptor cache",
+                                isa);
 
                     AddClass(isa, descriptor_sp);
                   }
@@ -421,7 +418,8 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
                           new ClassDescriptorV1(isa, process_sp));
 
                       if (log && log->GetVerbose())
-                        log->Printf(
+                        LLDB_LOGF(
+                            log,
                             "AppleObjCRuntimeV1 added (ObjCISA)0x%" PRIx64
                             " from _objc_debug_class_hash to isa->descriptor "
                             "cache",

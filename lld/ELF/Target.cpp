@@ -37,17 +37,17 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-const TargetInfo *elf::Target;
+const TargetInfo *elf::target;
 
-std::string lld::toString(RelType Type) {
-  StringRef S = getELFRelocationTypeName(elf::Config->EMachine, Type);
-  if (S == "Unknown")
-    return ("Unknown (" + Twine(Type) + ")").str();
-  return S;
+std::string lld::toString(RelType type) {
+  StringRef s = getELFRelocationTypeName(elf::config->emachine, type);
+  if (s == "Unknown")
+    return ("Unknown (" + Twine(type) + ")").str();
+  return s;
 }
 
 TargetInfo *elf::getTarget() {
-  switch (Config->EMachine) {
+  switch (config->emachine) {
   case EM_386:
   case EM_IAMCU:
     return getX86TargetInfo();
@@ -62,7 +62,7 @@ TargetInfo *elf::getTarget() {
   case EM_HEXAGON:
     return getHexagonTargetInfo();
   case EM_MIPS:
-    switch (Config->EKind) {
+    switch (config->ekind) {
     case ELF32LEKind:
       return getMipsTargetInfo<ELF32LE>();
     case ELF32BEKind:
@@ -90,29 +90,29 @@ TargetInfo *elf::getTarget() {
   llvm_unreachable("unknown target machine");
 }
 
-template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *Loc) {
-  for (InputSectionBase *D : InputSections) {
-    auto *IS = cast<InputSection>(D);
-    if (!IS->getParent())
+template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
+  for (InputSectionBase *d : inputSections) {
+    auto *isec = cast<InputSection>(d);
+    if (!isec->getParent())
       continue;
 
-    uint8_t *ISLoc = Out::BufferStart + IS->getParent()->Offset + IS->OutSecOff;
-    if (ISLoc <= Loc && Loc < ISLoc + IS->getSize())
-      return {IS, IS->template getLocation<ELFT>(Loc - ISLoc) + ": "};
+    uint8_t *isecLoc = Out::bufferStart + isec->getParent()->offset + isec->outSecOff;
+    if (isecLoc <= loc && loc < isecLoc + isec->getSize())
+      return {isec, isec->template getLocation<ELFT>(loc - isecLoc) + ": "};
   }
   return {};
 }
 
-ErrorPlace elf::getErrorPlace(const uint8_t *Loc) {
-  switch (Config->EKind) {
+ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
+  switch (config->ekind) {
   case ELF32LEKind:
-    return getErrPlace<ELF32LE>(Loc);
+    return getErrPlace<ELF32LE>(loc);
   case ELF32BEKind:
-    return getErrPlace<ELF32BE>(Loc);
+    return getErrPlace<ELF32BE>(loc);
   case ELF64LEKind:
-    return getErrPlace<ELF64LE>(Loc);
+    return getErrPlace<ELF64LE>(loc);
   case ELF64BEKind:
-    return getErrPlace<ELF64BE>(Loc);
+    return getErrPlace<ELF64BE>(loc);
   default:
     llvm_unreachable("unknown ELF type");
   }
@@ -120,62 +120,62 @@ ErrorPlace elf::getErrorPlace(const uint8_t *Loc) {
 
 TargetInfo::~TargetInfo() {}
 
-int64_t TargetInfo::getImplicitAddend(const uint8_t *Buf, RelType Type) const {
+int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
   return 0;
 }
 
-bool TargetInfo::usesOnlyLowPageBits(RelType Type) const { return false; }
+bool TargetInfo::usesOnlyLowPageBits(RelType type) const { return false; }
 
-bool TargetInfo::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
-                            uint64_t BranchAddr, const Symbol &S) const {
+bool TargetInfo::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                            uint64_t branchAddr, const Symbol &s) const {
   return false;
 }
 
-bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
-                                                  uint8_t StOther) const {
+bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
+                                                  uint8_t stOther) const {
   llvm_unreachable("Target doesn't support split stacks.");
 }
 
-bool TargetInfo::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
+bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return true;
 }
 
-void TargetInfo::writeIgotPlt(uint8_t *Buf, const Symbol &S) const {
-  writeGotPlt(Buf, S);
+void TargetInfo::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  writeGotPlt(buf, s);
 }
 
-RelExpr TargetInfo::adjustRelaxExpr(RelType Type, const uint8_t *Data,
-                                    RelExpr Expr) const {
-  return Expr;
+RelExpr TargetInfo::adjustRelaxExpr(RelType type, const uint8_t *data,
+                                    RelExpr expr) const {
+  return expr;
 }
 
-void TargetInfo::relaxGot(uint8_t *Loc, RelType Type, uint64_t Val) const {
+void TargetInfo::relaxGot(uint8_t *loc, RelType type, uint64_t val) const {
   llvm_unreachable("Should not have claimed to be relaxable");
 }
 
-void TargetInfo::relaxTlsGdToLe(uint8_t *Loc, RelType Type,
-                                uint64_t Val) const {
+void TargetInfo::relaxTlsGdToLe(uint8_t *loc, RelType type,
+                                uint64_t val) const {
   llvm_unreachable("Should not have claimed to be relaxable");
 }
 
-void TargetInfo::relaxTlsGdToIe(uint8_t *Loc, RelType Type,
-                                uint64_t Val) const {
+void TargetInfo::relaxTlsGdToIe(uint8_t *loc, RelType type,
+                                uint64_t val) const {
   llvm_unreachable("Should not have claimed to be relaxable");
 }
 
-void TargetInfo::relaxTlsIeToLe(uint8_t *Loc, RelType Type,
-                                uint64_t Val) const {
+void TargetInfo::relaxTlsIeToLe(uint8_t *loc, RelType type,
+                                uint64_t val) const {
   llvm_unreachable("Should not have claimed to be relaxable");
 }
 
-void TargetInfo::relaxTlsLdToLe(uint8_t *Loc, RelType Type,
-                                uint64_t Val) const {
+void TargetInfo::relaxTlsLdToLe(uint8_t *loc, RelType type,
+                                uint64_t val) const {
   llvm_unreachable("Should not have claimed to be relaxable");
 }
 
 uint64_t TargetInfo::getImageBase() const {
   // Use -image-base if set. Fall back to the target default if not.
-  if (Config->ImageBase)
-    return *Config->ImageBase;
-  return Config->Pic ? 0 : DefaultImageBase;
+  if (config->imageBase)
+    return *config->imageBase;
+  return config->isPic ? 0 : defaultImageBase;
 }

@@ -4,8 +4,6 @@ Test basics of mach core file debugging.
 
 from __future__ import print_function
 
-import shutil
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -26,7 +24,10 @@ class MachCoreTestCase(TestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(MachCoreTestCase, self).tearDown()
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
+    # This was originally marked as expected failure on Windows, but it has
+    # started timing out instead, so the expectedFailure attribute no longer
+    # correctly tracks it: llvm.org/pr37371
+    @skipIfWindows
     def test_selected_thread(self):
         """Test that the right thread is selected after a core is loaded."""
         # Create core form YAML.

@@ -10,7 +10,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
-import os
 
 
 class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
@@ -19,7 +18,6 @@ class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
-    @skipIfLinux # Skip this test for now until we can figure out why tings aren't working on build bots
     @no_debug_info_test
     def test_step(self):
         '''
@@ -33,7 +31,7 @@ class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
         lines = [breakpoint1_line]
         # Set breakoint in the thread function so we can step the threads
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
+        self.assertEqual(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
         threads = self.vscode.get_threads()
@@ -57,24 +55,24 @@ class TestVSCode_step(lldbvscode_testcase.VSCodeTestCaseBase):
                     self.stepIn(threadId=tid, waitForStop=True)
                     x2 = self.get_local_as_int('x', threadId=tid)
                     (src2, line2) = self.get_source_and_line(threadId=tid)
-                    self.assertTrue(x1 == x2 + 1, 'verify step in variable')
-                    self.assertTrue(line2 < line1, 'verify step in line')
-                    self.assertTrue(src1 == src2, 'verify step in source')
+                    self.assertEqual(x1, x2 + 1, 'verify step in variable')
+                    self.assertLess(line2, line1, 'verify step in line')
+                    self.assertEqual(src1, src2, 'verify step in source')
 
                     # Now step out and verify
                     self.stepOut(threadId=tid, waitForStop=True)
                     x3 = self.get_local_as_int('x', threadId=tid)
                     (src3, line3) = self.get_source_and_line(threadId=tid)
-                    self.assertTrue(x1 == x3, 'verify step out variable')
-                    self.assertTrue(line3 >= line1, 'verify step out line')
-                    self.assertTrue(src1 == src3, 'verify step in source')
+                    self.assertEqual(x1, x3, 'verify step out variable')
+                    self.assertGreaterEqual(line3, line1, 'verify step out line')
+                    self.assertEqual(src1, src3, 'verify step in source')
 
                     # Step over and verify
                     self.stepOver(threadId=tid, waitForStop=True)
                     x4 = self.get_local_as_int('x', threadId=tid)
                     (src4, line4) = self.get_source_and_line(threadId=tid)
-                    self.assertTrue(x4 == x3, 'verify step over variable')
-                    self.assertTrue(line4 > line3, 'verify step over line')
-                    self.assertTrue(src1 == src4, 'verify step over source')
+                    self.assertEqual(x4, x3, 'verify step over variable')
+                    self.assertGreater(line4, line3, 'verify step over line')
+                    self.assertEqual(src1, src4, 'verify step over source')
                     # only step one thread that is at the breakpoint and stop
                     break

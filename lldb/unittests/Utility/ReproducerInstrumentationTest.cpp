@@ -31,7 +31,7 @@ struct Pod {
   bool a = true;
   bool b = false;
   char c = 'a';
-  float d = 1.1;
+  float d = 1.1f;
   int e = 2;
   long long f = 3;
   long g = 4;
@@ -443,7 +443,7 @@ TEST(RecordReplayTest, InstrumentedFoo) {
 
   {
     int b = 200;
-    float c = 300.3;
+    float c = 300.3f;
     double e = 400.4;
 
     InstrumentedFoo foo(0);
@@ -471,7 +471,7 @@ TEST(RecordReplayTest, InstrumentedFooSameThis) {
   g_serializer.emplace(os);
 
   int b = 200;
-  float c = 300.3;
+  float c = 300.3f;
   double e = 400.4;
 
   InstrumentedFoo *foo = new InstrumentedFoo(0);
@@ -517,7 +517,7 @@ TEST(RecordReplayTest, InstrumentedBar) {
 #endif
 
     int b = 200;
-    float c = 300.3;
+    float c = 300.3f;
     double e = 400.4;
 
     foo.A(100);
@@ -552,7 +552,7 @@ TEST(RecordReplayTest, InstrumentedBarRef) {
     InstrumentedFoo &foo = bar.GetInstrumentedFooRef();
 
     int b = 200;
-    float c = 300.3;
+    float c = 300.3f;
     double e = 400.4;
 
     foo.A(100);
@@ -587,7 +587,7 @@ TEST(RecordReplayTest, InstrumentedBarPtr) {
     InstrumentedFoo &foo = *(bar.GetInstrumentedFooPtr());
 
     int b = 200;
-    float c = 300.3;
+    float c = 300.3f;
     double e = 400.4;
 
     foo.A(100);

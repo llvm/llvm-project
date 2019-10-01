@@ -266,8 +266,6 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
           Devices[start + device_id].DeviceID = start + device_id;
           // RTL local device ID
           Devices[start + device_id].RTLDeviceID = device_id;
-          // RTL requires flags
-          Devices[start + device_id].RTLRequiresFlags = RequiresFlags;
         }
 
         // Initialize the index of this RTL and save it in the used RTLs.

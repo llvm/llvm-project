@@ -34,17 +34,21 @@ public:
 
   void Clear();
   dw_offset_t GetOffset() const { return m_offset; }
-  void Dump(lldb_private::Stream *s) const;
-  bool Extract(const lldb_private::DWARFDataExtractor &data,
-               lldb::offset_t *offset_ptr);
+
+  /// Extract all abbrev decls in a set.  Returns llvm::ErrorSuccess() on
+  /// success, and an appropriate llvm::Error object otherwise.
+  llvm::Error extract(const lldb_private::DWARFDataExtractor &data,
+                      lldb::offset_t *offset_ptr);
   // void Encode(BinaryStreamBuf& debug_abbrev_buf) const;
-  dw_uleb128_t
-  AppendAbbrevDeclSequential(const DWARFAbbreviationDeclaration &abbrevDecl);
   void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
 
   const DWARFAbbreviationDeclaration *
   GetAbbreviationDeclaration(dw_uleb128_t abbrCode) const;
 
+  /// Unit test accessor functions.
+  /// @{
+  uint32_t GetIndexOffset() const { return m_idx_offset; }
+  /// @}
 private:
   dw_offset_t m_offset;
   uint32_t m_idx_offset;
@@ -63,8 +67,10 @@ public:
   DWARFDebugAbbrev();
   const DWARFAbbreviationDeclarationSet *
   GetAbbreviationDeclarationSet(dw_offset_t cu_abbr_offset) const;
-  void Dump(lldb_private::Stream *s) const;
-  void Parse(const lldb_private::DWARFDataExtractor &data);
+  /// Extract all abbreviations for a particular compile unit.  Returns
+  /// llvm::ErrorSuccess() on success, and an appropriate llvm::Error object
+  /// otherwise.
+  llvm::Error parse(const lldb_private::DWARFDataExtractor &data);
   void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
 
 protected:

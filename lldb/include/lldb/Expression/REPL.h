@@ -11,17 +11,16 @@
 
 #include <string>
 
-#include "lldb/../../source/Commands/CommandObjectExpression.h"
+#include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
+#include "lldb/Target/Target.h"
 
 namespace lldb_private {
 
 class REPL : public IOHandlerDelegate {
 public:
-  //----------------------------------------------------------------------
   // See TypeSystem.h for how to add subclasses to this.
-  //----------------------------------------------------------------------
   enum LLVMCastKind { eKindClang, eKindSwift, eKindGo, kNumKinds };
 
   LLVMCastKind getKind() const { return m_kind; }
@@ -30,31 +29,29 @@ public:
 
   ~REPL() override;
 
-  //------------------------------------------------------------------
   /// Get a REPL with an existing target (or, failing that, a debugger to use),
   /// and (optional) extra arguments for the compiler.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     If this language is supported but the REPL couldn't be created, this
   ///     error is populated with the reason.
   ///
-  /// @param[in] language
+  /// \param[in] language
   ///     The language to create a REPL for.
   ///
-  /// @param[in] debugger
+  /// \param[in] debugger
   ///     If provided, and target is nullptr, the debugger to use when setting
   ///     up a top-level REPL.
   ///
-  /// @param[in] target
+  /// \param[in] target
   ///     If provided, the target to put the REPL inside.
   ///
-  /// @param[in] repl_options
+  /// \param[in] repl_options
   ///     If provided, additional options for the compiler when parsing REPL
   ///     expressions.
   ///
-  /// @return
+  /// \return
   ///     The range of the containing object in the target process.
-  //------------------------------------------------------------------
   static lldb::REPLSP Create(Status &Status, lldb::LanguageType language,
                              Debugger *debugger, Target *target,
                              const char *repl_options);
@@ -68,9 +65,8 @@ public:
     m_varobj_options = options;
   }
 
-  void
-  SetCommandOptions(const CommandObjectExpression::CommandOptions &options) {
-    m_command_options = options;
+  void SetEvaluateOptions(const EvaluateExpressionOptions &options) {
+    m_expr_options = options;
   }
 
   void SetCompilerOptions(const char *options) {
@@ -82,9 +78,7 @@ public:
 
   Status RunLoop();
 
-  //------------------------------------------------------------------
   // IOHandler::Delegate functions
-  //------------------------------------------------------------------
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override;
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
@@ -109,17 +103,13 @@ public:
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &line) override;
 
-  int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
-                        const char *cursor, const char *last_char,
-                        int skip_first_n_matches, int max_matches,
-                        StringList &matches, StringList &descriptions) override;
+  void IOHandlerComplete(IOHandler &io_handler,
+                         CompletionRequest &request) override;
 
 protected:
   static int CalculateActualIndentation(const StringList &lines);
 
-  //----------------------------------------------------------------------
   // Subclasses should override these functions to implement a functional REPL.
-  //----------------------------------------------------------------------
 
   virtual Status DoInitialization() = 0;
 
@@ -145,7 +135,7 @@ protected:
 
   OptionGroupFormat m_format_options = OptionGroupFormat(lldb::eFormatDefault);
   OptionGroupValueObjectDisplay m_varobj_options;
-  CommandObjectExpression::CommandOptions m_command_options;
+  EvaluateExpressionOptions m_expr_options;
   std::string m_compiler_options;
 
   bool m_enable_auto_indent = true;

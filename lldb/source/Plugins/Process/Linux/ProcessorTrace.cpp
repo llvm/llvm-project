@@ -117,7 +117,7 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
 
   errno = 0;
   auto base =
-      mmap(NULL, (metabufsize + page_size), PROT_WRITE, MAP_SHARED, fd, 0);
+      mmap(nullptr, (metabufsize + page_size), PROT_WRITE, MAP_SHARED, fd, 0);
 
   if (base == MAP_FAILED) {
     LLDB_LOG(log, "mmap base error {0}", errno);
@@ -133,7 +133,7 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
   m_mmap_meta->aux_size = bufsize;
 
   errno = 0;
-  auto mmap_aux = mmap(NULL, bufsize, PROT_READ, MAP_SHARED, fd,
+  auto mmap_aux = mmap(nullptr, bufsize, PROT_READ, MAP_SHARED, fd,
                        static_cast<long int>(m_mmap_meta->aux_offset));
 
   if (mmap_aux == MAP_FAILED) {

@@ -124,7 +124,7 @@ private:
 
 
 void addObjCPass(PassManager &pm, const MachOLinkingContext &ctx) {
-  pm.add(llvm::make_unique<ObjCPass>(ctx));
+  pm.add(std::make_unique<ObjCPass>(ctx));
 }
 
 } // end namespace mach_o

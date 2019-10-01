@@ -32,7 +32,6 @@ class TestSwiftBridgedStringVariables(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_bridged_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()

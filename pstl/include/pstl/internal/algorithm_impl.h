@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- algorithm_impl.h --------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,11 +18,13 @@
 
 #include "execution_impl.h"
 #include "memory_impl.h"
-#include "parallel_backend_utils.h"
 #include "parallel_backend.h"
+#include "parallel_backend_utils.h"
 #include "parallel_impl.h"
+#include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
+_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl
 {
@@ -402,9 +404,7 @@ __brick_equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _
     if (__last1 - __first1 != __last2 - __first2)
         return false;
 
-    return __unseq_backend::__simd_first(__first1, __last1 - __first1, __first2,
-                                         __internal::__not_pred<_BinaryPredicate>(__p))
-               .first == __last1;
+    return __unseq_backend::__simd_first(__first1, __last1 - __first1, __first2, std::not_fn(__p)).first == __last1;
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate,
@@ -454,8 +454,7 @@ bool
 __brick_equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _RandomAccessIterator2 __first2,
               _BinaryPredicate __p, /* is_vector = */ std::true_type) noexcept
 {
-    return __unseq_backend::__simd_first(__first1, __last1 - __first1, __first2, __not_pred<_BinaryPredicate>(__p))
-               .first == __last1;
+    return __unseq_backend::__simd_first(__first1, __last1 - __first1, __first2, std::not_fn(__p)).first == __last1;
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate,
@@ -611,8 +610,7 @@ __find_subrange(_RandomAccessIterator __first, _RandomAccessIterator __last, _Ra
 
         // check that all of elements in [first+1, first+count) equal to value
         if (__first != __last && (static_cast<_Size>(__global_last - __first) >= __count) &&
-            !__internal::__brick_any_of(__first + 1, __first + __count,
-                                        __not_pred<decltype(__unary_pred)>(__unary_pred), __is_vector))
+            !__internal::__brick_any_of(__first + 1, __first + __count, std::not_fn(__unary_pred), __is_vector))
         {
             return __first;
         }
@@ -1763,7 +1761,7 @@ __pattern_is_partitioned(_ExecutionPolicy&& __exec, _ForwardIterator __first, _F
                     {
                         // find first element that don't satisfy pred
                         _ForwardIterator __x =
-                            __internal::__brick_find_if(__i + 1, __j, __not_pred<_UnaryPredicate>(__pred), __is_vector);
+                            __internal::__brick_find_if(__i + 1, __j, std::not_fn(__pred), __is_vector);
                         if (__x != __j)
                         {
                             // find first element after "x" that satisfy pred
@@ -2133,7 +2131,7 @@ __pattern_partial_sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first,
                        _RandomAccessIterator __last, _Compare __comp, _IsVector, /*is_parallel=*/std::true_type)
 {
     const auto __n = __middle - __first;
-    if(__n == 0)
+    if (__n == 0)
         return;
 
     __internal::__except_handler([&]() {
@@ -2185,11 +2183,11 @@ __pattern_partial_sort_copy(_ExecutionPolicy&& __exec, _ForwardIterator __first,
                     _ForwardIterator __j1 = __first + (__j - __d_first);
 
                 // 1. Copy elements from input to output
-#    if !_PSTL_ICC_18_OMP_SIMD_BROKEN
+#if !_PSTL_ICC_18_OMP_SIMD_BROKEN
                     __internal::__brick_copy(__i1, __j1, __i, __is_vector);
-#    else
+#else
                     std::copy(__i1, __j1, __i);
-#    endif
+#endif
                     // 2. Sort elements in output sequence
                     std::sort(__i, __j, __comp);
                 },
@@ -2666,17 +2664,19 @@ __pattern_inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __firs
             return __internal::__brick_uninitialized_move(__first1, __last1, __first2, _IsVector());
         };
 
-        __par_backend::__parallel_merge(std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r,
-            __comp, [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
-            _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,_Compare __comp) {
-                (__par_backend::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values, __move_values, __move_sequences,
-                __move_sequences);
+        __par_backend::__parallel_merge(
+            std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r, __comp,
+            [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
+                                                   _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,
+                                                   _Compare __comp) {
+                (__utils::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values, __move_values,
+                                                    __move_sequences, __move_sequences);
                 return __f3 + (__l1 - __f1) + (__l2 - __f2);
             });
-            __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,
-                [__r, __first, __is_vector](_Tp* __i, _Tp* __j) {
-                    __internal::__brick_move(__i, __j, __first + (__i - __r), __is_vector);
-            });
+        __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,
+                                      [__r, __first, __is_vector](_Tp* __i, _Tp* __j) {
+                                          __internal::__brick_move(__i, __j, __first + (__i - __r), __is_vector);
+                                      });
     });
 }
 
@@ -3440,14 +3440,14 @@ __pattern_minmax_element(_ExecutionPolicy&& __exec, _ForwardIterator __first, _F
             std::forward<_ExecutionPolicy>(__exec), __first + 1, __last, std::make_pair(__first, __first),
             [=](_ForwardIterator __begin, _ForwardIterator __end, _Result __init) -> _Result {
                 const _Result __subresult = __internal::__brick_minmax_element(__begin, __end, __comp, __is_vector);
-                return std::make_pair(__internal::__cmp_iterators_by_values(__subresult.first, __init.first, __comp),
-                                      __internal::__cmp_iterators_by_values(__init.second, __subresult.second,
-                                                                            __not_pred<_Compare>(__comp)));
+                return std::make_pair(
+                    __internal::__cmp_iterators_by_values(__subresult.first, __init.first, __comp),
+                    __internal::__cmp_iterators_by_values(__init.second, __subresult.second, std::not_fn(__comp)));
             },
             [=](_Result __p1, _Result __p2) -> _Result {
                 return std::make_pair(
                     __internal::__cmp_iterators_by_values(__p1.first, __p2.first, __comp),
-                    __internal::__cmp_iterators_by_values(__p2.second, __p1.second, __not_pred<_Compare>(__comp)));
+                    __internal::__cmp_iterators_by_values(__p2.second, __p1.second, std::not_fn(__comp)));
             });
     });
 }
@@ -3484,7 +3484,7 @@ __brick_mismatch(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _Forward
                  _ForwardIterator2 __last2, _Predicate __pred, /* __is_vector = */ std::true_type) noexcept
 {
     auto __n = std::min(__last1 - __first1, __last2 - __first2);
-    return __unseq_backend::__simd_first(__first1, __n, __first2, __not_pred<_Predicate>(__pred));
+    return __unseq_backend::__simd_first(__first1, __n, __first2, std::not_fn(__pred));
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate, class _IsVector>
@@ -3621,5 +3621,7 @@ __pattern_lexicographical_compare(_ExecutionPolicy&& __exec, _ForwardIterator1 _
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_ALGORITHM_IMPL_H */

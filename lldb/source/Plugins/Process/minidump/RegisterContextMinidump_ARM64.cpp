@@ -769,7 +769,7 @@ static RegisterSet g_reg_sets[] = {
 constexpr size_t k_num_reg_sets = llvm::array_lengthof(g_reg_sets);
 
 RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
-    Thread &thread, const DataExtractor &data)
+    lldb_private::Thread &thread, const DataExtractor &data)
     : RegisterContext(thread, 0) {
   lldb::offset_t offset = 0;
   m_regs.context_flags = data.GetU64(&offset);
@@ -782,7 +782,7 @@ RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
   auto regs_data = data.GetData(&offset, sizeof(m_regs.v));
   if (regs_data)
     memcpy(m_regs.v, regs_data, sizeof(m_regs.v));
-  assert(k_num_regs == k_num_reg_infos);
+  static_assert(k_num_regs == k_num_reg_infos, "");
 }
 size_t RegisterContextMinidump_ARM64::GetRegisterCount() { return k_num_regs; }
 

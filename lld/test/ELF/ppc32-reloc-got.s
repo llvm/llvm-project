@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: echo '.globl b; b:' | llvm-mc -filetype=obj -triple=powerpc - -o %t1.o
-# RUN: ld.lld -shared %t1.o -o %t1.so
+# RUN: ld.lld -shared %t1.o -soname=t1.so -o %t1.so
 
 # RUN: ld.lld %t.o %t1.so -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
@@ -14,14 +14,14 @@
 # SEC: .got PROGBITS 00020068 020068 000014
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x10020078 R_PPC_GLOB_DAT b 0x0
+# RELOC-NEXT:   0x1002021C R_PPC_GLOB_DAT b 0x0
 # RELOC-NEXT: }
 
-# NM: 10030000 d a
+# NM: 10030220 d a
 
 ## The GOT slot of a can be filled at link time.
 # HEX: section '.got':
-# HEX: 0x10020068 {{[0-9a-f]+}} 00000000 00000000 10030000
+# HEX: 0x1002020c {{[0-9a-f]+}} 00000000 00000000 10030220
 
 ## a: &.got[3] - _GLOBAL_OFFSET_TABLE_ = 12
 ## b: &.got[4] - _GLOBAL_OFFSET_TABLE_ = 16

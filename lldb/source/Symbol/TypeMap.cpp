@@ -8,18 +8,6 @@
 
 #include <vector>
 
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclGroup.h"
-
-#include "clang/Basic/Builtins.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,13 +18,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace clang;
 
 TypeMap::TypeMap() : m_types() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 TypeMap::~TypeMap() {}
 
 void TypeMap::Insert(const TypeSP &type_sp) {
@@ -61,9 +46,7 @@ bool TypeMap::InsertUnique(const TypeSP &type_sp) {
   return true;
 }
 
-//----------------------------------------------------------------------
 // Find a base type by its unique ID.
-//----------------------------------------------------------------------
 // TypeSP
 // TypeMap::FindType(lldb::user_id_t uid)
 //{
@@ -73,9 +56,7 @@ bool TypeMap::InsertUnique(const TypeSP &type_sp) {
 //    return TypeSP();
 //}
 
-//----------------------------------------------------------------------
 // Find a type by name.
-//----------------------------------------------------------------------
 // TypeMap
 // TypeMap::FindTypes (ConstString name)
 //{

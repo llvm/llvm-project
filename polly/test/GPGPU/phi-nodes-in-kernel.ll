@@ -52,7 +52,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; IR:       [[REGC:%.+]] =   bitcast i32* %{{[0-9]+}} to i8*
 ; IR-NEXT:  call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_c, i8* [[REGC]], i64 196)
 
-; KERNEL-IR: define ptx_kernel void @FUNC_kernel_dynprog_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_c, i32) #0 {
+; KERNEL-IR: define ptx_kernel void @FUNC_kernel_dynprog_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_c, i32 %0) #0 {
 ; KERNEL-IR: %polly.access.MemRef_c = getelementptr i32, i32 addrspace(1)* %polly.access.cast.MemRef_c, i64 %10
 ; KERNEL-IR-NEXT: store i32 %0, i32 addrspace(1)* %polly.access.MemRef_c, align 4
 

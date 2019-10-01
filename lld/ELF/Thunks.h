@@ -27,20 +27,20 @@ class ThunkSection;
 // Thunks are assigned to synthetic ThunkSections
 class Thunk {
 public:
-  Thunk(Symbol &Destination);
+  Thunk(Symbol &destination);
   virtual ~Thunk();
 
   virtual uint32_t size() = 0;
-  virtual void writeTo(uint8_t *Buf) = 0;
+  virtual void writeTo(uint8_t *buf) = 0;
 
   // All Thunks must define at least one symbol, known as the thunk target
   // symbol, so that we can redirect relocations to it. The thunk may define
   // additional symbols, but these are never targets for relocations.
-  virtual void addSymbols(ThunkSection &IS) = 0;
+  virtual void addSymbols(ThunkSection &isec) = 0;
 
-  void setOffset(uint64_t Offset);
-  Defined *addSymbol(StringRef Name, uint8_t Type, uint64_t Value,
-                     InputSectionBase &Section);
+  void setOffset(uint64_t offset);
+  Defined *addSymbol(StringRef name, uint8_t type, uint64_t value,
+                     InputSectionBase &section);
 
   // Some Thunks must be placed immediately before their Target as they elide
   // a branch and fall through to the first Symbol in the Target.
@@ -53,19 +53,19 @@ public:
     return true;
   }
 
-  Defined *getThunkTargetSym() const { return Syms[0]; }
+  Defined *getThunkTargetSym() const { return syms[0]; }
 
   // The alignment requirement for this Thunk, defaults to the size of the
   // typical code section alignment.
-  Symbol &Destination;
-  llvm::SmallVector<Defined *, 3> Syms;
-  uint64_t Offset = 0;
-  uint32_t Alignment = 4;
+  Symbol &destination;
+  llvm::SmallVector<Defined *, 3> syms;
+  uint64_t offset = 0;
+  uint32_t alignment = 4;
 };
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection.
-Thunk *addThunk(const InputSection &IS, Relocation &Rel);
+Thunk *addThunk(const InputSection &isec, Relocation &rel);
 
 } // namespace elf
 } // namespace lld

@@ -88,23 +88,23 @@ protected:
   static const size_t k_num_fpu_registers_avx512f;
   static const size_t k_num_all_registers_avx512f;
 
-  typedef enum RegisterSetTag {
+  enum RegisterSet {
     e_regSetALL = REGISTER_SET_ALL,
     e_regSetGPR,
     e_regSetFPU,
     e_regSetEXC,
     e_regSetDBG,
     kNumRegisterSets
-  } RegisterSet;
+  };
 
-  typedef enum RegisterSetWordSizeTag {
+  enum RegisterSetWordSize {
     e_regSetWordSizeGPR = sizeof(GPR) / sizeof(int),
     e_regSetWordSizeFPU = sizeof(FPU) / sizeof(int),
     e_regSetWordSizeEXC = sizeof(EXC) / sizeof(int),
     e_regSetWordSizeAVX = sizeof(AVX) / sizeof(int),
     e_regSetWordSizeAVX512f = sizeof(AVX512F) / sizeof(int),
     e_regSetWordSizeDBG = sizeof(DBG) / sizeof(int)
-  } RegisterSetWordSize;
+  };
 
   enum { Read = 0, Write = 1, kNumErrors = 2 };
 

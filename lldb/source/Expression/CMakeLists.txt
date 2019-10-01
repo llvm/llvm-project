@@ -6,7 +6,6 @@ add_lldb_library(lldbExpression
   DiagnosticManager.cpp
   DWARFExpression.cpp
   Expression.cpp
-  ExpressionSourceCode.cpp
   ExpressionVariable.cpp
   FunctionCaller.cpp
   IRExecutionUnit.cpp
@@ -28,7 +27,7 @@ add_lldb_library(lldbExpression
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginExpressionParserClang
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFileJIT
 
     # Begin Swift Mods

@@ -202,7 +202,7 @@ bool SBTypeSummary::IsValid() const {
 SBTypeSummary::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeSummary, operator bool);
 
-  return m_opaque_sp.get() != NULL;
+  return m_opaque_sp.get() != nullptr;
 }
 
 bool SBTypeSummary::IsFunctionCode() {
@@ -244,7 +244,7 @@ const char *SBTypeSummary::GetData() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeSummary, GetData);
 
   if (!IsValid())
-    return NULL;
+    return nullptr;
   if (ScriptSummaryFormat *script_summary_ptr =
           llvm::dyn_cast<ScriptSummaryFormat>(m_opaque_sp.get())) {
     const char *fname = script_summary_ptr->GetFunctionName();

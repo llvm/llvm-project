@@ -21,9 +21,28 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Target/Language.h"
 
 using namespace lldb_private;
 using namespace lldb;
+
+/// A 64-bit SmallBitVector is only small up to 64-7 bits, and the
+/// setBitsInMask interface wants to write full bytes.
+static const size_t g_num_small_bitvector_bits = 64 - 8;
+static_assert(eNumLanguageTypes < g_num_small_bitvector_bits,
+              "Languages bit vector is no longer small on 64 bit systems");
+LanguageSet::LanguageSet() : bitvector(eNumLanguageTypes, 0) {}
+
+llvm::Optional<LanguageType> LanguageSet::GetSingularLanguage() {
+  if (bitvector.count() == 1)
+    return (LanguageType)bitvector.find_first();
+  return {};
+}
+
+void LanguageSet::Insert(LanguageType language) { bitvector.set(language); }
+size_t LanguageSet::Size() const { return bitvector.count(); }
+bool LanguageSet::Empty() const { return bitvector.none(); }
+bool LanguageSet::operator[](unsigned i) const { return bitvector[i]; }
 
 TypeSystem::TypeSystem(LLVMCastKind kind) : m_kind(kind), m_sym_file(nullptr) {}
 
@@ -233,79 +252,154 @@ void TypeSystemMap::ForEach(std::function<bool(TypeSystem *)> const &callback) {
   }
 }
 
-TypeSystem *TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
-                                                    Module *module,
-                                                    bool can_create) {
+llvm::Expected<TypeSystem &>
+TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
+                                        Module *module, bool can_create) {
+  llvm::Error error = llvm::Error::success();
+  assert(!error); // Check the success value when assertions are enabled
   std::lock_guard<std::mutex> guard(m_mutex);
-  collection::iterator pos = m_map.find(language);
-  if (pos != m_map.end())
-    return pos->second.get();
+  if (m_clear_in_progress) {
+    error = llvm::make_error<llvm::StringError>(
+        "Unable to get TypeSystem because TypeSystemMap is being cleared",
+        llvm::inconvertibleErrorCode());
+  } else {
+    collection::iterator pos = m_map.find(language);
+    if (pos != m_map.end()) {
+      auto *type_system = pos->second.get();
+      if (type_system) {
+        llvm::consumeError(std::move(error));
+        return *type_system;
+      }
+      error = llvm::make_error<llvm::StringError>(
+          "TypeSystem for language " +
+              llvm::toStringRef(Language::GetNameForLanguageType(language)) +
+              " doesn't exist",
+          llvm::inconvertibleErrorCode());
+      return std::move(error);
+    }
 
-  for (const auto &pair : m_map) {
-    if (pair.second && pair.second->SupportsLanguage(language)) {
-      // Add a new mapping for "language" to point to an already existing
-      // TypeSystem that supports this language
-      AddToMap(language, pair.second);
-      return pair.second.get();
+    for (const auto &pair : m_map) {
+      if (pair.second && pair.second->SupportsLanguage(language)) {
+        // Add a new mapping for "language" to point to an already existing
+        // TypeSystem that supports this language
+        m_map[language] = pair.second;
+        if (pair.second.get()) {
+          llvm::consumeError(std::move(error));
+          return *pair.second.get();
+        }
+        error = llvm::make_error<llvm::StringError>(
+            "TypeSystem for language " +
+                llvm::toStringRef(Language::GetNameForLanguageType(language)) +
+                " doesn't exist",
+            llvm::inconvertibleErrorCode());
+        return std::move(error);
+      }
+    }
+
+    if (!can_create) {
+      error = llvm::make_error<llvm::StringError>(
+          "Unable to find type system for language " +
+              llvm::toStringRef(Language::GetNameForLanguageType(language)),
+          llvm::inconvertibleErrorCode());
+    } else {
+      // Cache even if we get a shared pointer that contains a null type system
+      // back
+      auto type_system_sp = TypeSystem::CreateInstance(language, module);
+      m_map[language] = type_system_sp;
+      if (type_system_sp.get()) {
+        llvm::consumeError(std::move(error));
+        return *type_system_sp.get();
+      }
+      error = llvm::make_error<llvm::StringError>(
+          "TypeSystem for language " +
+              llvm::toStringRef(Language::GetNameForLanguageType(language)) +
+              " doesn't exist",
+          llvm::inconvertibleErrorCode());
     }
   }
 
-  if (!can_create)
-    return nullptr;
-
-  // Cache even if we get a shared pointer that contains null type system back
-  lldb::TypeSystemSP type_system_sp =
-      TypeSystem::CreateInstance(language, module);
-  AddToMap(language, type_system_sp);
-  return type_system_sp.get();
+  return std::move(error);
 }
 
-TypeSystem *
+llvm::Expected<TypeSystem &>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
                                         Target *target, bool can_create,
                                         const char *compiler_options) {
+  llvm::Error error = llvm::Error::success();
+  assert(!error); // Check the success value when assertions are enabled
   std::lock_guard<std::mutex> guard(m_mutex);
-  collection::iterator pos = m_map.find(language);
-  if (pos != m_map.end())
-    return pos->second.get();
+  if (m_clear_in_progress) {
+    error = llvm::make_error<llvm::StringError>(
+        "Unable to get TypeSystem because TypeSystemMap is being cleared",
+        llvm::inconvertibleErrorCode());
+  } else {
+    collection::iterator pos = m_map.find(language);
+    if (pos != m_map.end()) {
+      auto *type_system = pos->second.get();
+      if (type_system) {
+        llvm::consumeError(std::move(error));
+        return *type_system;
+      }
+      error = llvm::make_error<llvm::StringError>(
+          "TypeSystem for language " +
+              llvm::toStringRef(Language::GetNameForLanguageType(language)) +
+              " doesn't exist",
+          llvm::inconvertibleErrorCode());
+      return std::move(error);
+    }
 
-  for (const auto &pair : m_map) {
-    if (pair.second && pair.second->SupportsLanguage(language)) {
-      // Add a new mapping for "language" to point to an already existing
-      // TypeSystem that supports this language
+    for (const auto &pair : m_map) {
+      if (pair.second && pair.second->SupportsLanguage(language)) {
+        // Add a new mapping for "language" to point to an already existing
+        // TypeSystem that supports this language
+        m_map[language] = pair.second;
+        if (pair.second.get()) {
+          llvm::consumeError(std::move(error));
+          return *pair.second.get();
+        }
+        error = llvm::make_error<llvm::StringError>(
+            "TypeSystem for language " +
+                llvm::toStringRef(Language::GetNameForLanguageType(language)) +
+                " doesn't exist",
+            llvm::inconvertibleErrorCode());
+        return std::move(error);
+      }
+    }
 
-      AddToMap(language, pair.second);
-      return pair.second.get();
+    if (!can_create) {
+      error = llvm::make_error<llvm::StringError>(
+          "Unable to find type system for language " +
+              llvm::toStringRef(Language::GetNameForLanguageType(language)),
+          llvm::inconvertibleErrorCode());
+    } else {
+      // Cache even if we get a shared pointer that contains a null type system
+      // back
+      auto type_system_sp = TypeSystem::CreateInstance(language, target,
+                                                       compiler_options);
+      m_map[language] = type_system_sp;
+      if (type_system_sp.get()) {
+        llvm::consumeError(std::move(error));
+        return *type_system_sp.get();
+      }
+      error = llvm::make_error<llvm::StringError>(
+          "TypeSystem for language " +
+              llvm::toStringRef(Language::GetNameForLanguageType(language)) +
+              " doesn't exist",
+          llvm::inconvertibleErrorCode());
     }
   }
 
-  if (!can_create)
-    return nullptr;
-
-  // Cache even if we get a shared pointer that contains null type system back
-  lldb::TypeSystemSP type_system_sp;
-  if (!m_clear_in_progress)
-    type_system_sp =
-        TypeSystem::CreateInstance(language, target, compiler_options);
-
-  AddToMap(language, type_system_sp);
-  return type_system_sp.get();
+  return std::move(error);
 }
 
 void TypeSystemMap::RemoveTypeSystemsForLanguage(lldb::LanguageType language) {
   std::lock_guard<std::mutex> guard(m_mutex);
   collection::iterator pos = m_map.find(language);
-  // If we are clearing the map, we don't need to remove this individual
-  // item.  It will go away soon enough.
+  // If we are clearning the map, we don't need to remove this individual item.
+  // It will go away soon enough.
   if (!m_clear_in_progress) {
     if (pos != m_map.end())
       m_map.erase(pos);
   }
-}
-
-void TypeSystemMap::AddToMap(lldb::LanguageType language,
-                             lldb::TypeSystemSP const &type_system_sp) {
-  if (!m_clear_in_progress)
-    m_map[language] = type_system_sp;
 }
 

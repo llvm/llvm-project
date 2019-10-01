@@ -22,11 +22,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanBase: This one always stops, and never has anything particular to
 // do.
 // FIXME: The "signal handling" policies should probably go here.
-//----------------------------------------------------------------------
 
 ThreadPlanBase::ThreadPlanBase(Thread &thread)
     : ThreadPlan(ThreadPlan::eKindBase, "base plan", thread, eVoteYes,
@@ -94,11 +92,11 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
         // If we are going to stop for a breakpoint, then unship the other
         // plans at this point.  Don't force the discard, however, so Master
         // plans can stay in place if they want to.
-        if (log)
-          log->Printf(
-              "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
-              " (breakpoint hit.)",
-              m_thread.GetID());
+        LLDB_LOGF(
+            log,
+            "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
+            " (breakpoint hit.)",
+            m_thread.GetID());
         m_thread.DiscardThreadPlans(false);
         return true;
       }
@@ -124,11 +122,11 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
       // If we crashed, discard thread plans and stop.  Don't force the
       // discard, however, since on rerun the target may clean up this
       // exception and continue normally from there.
-      if (log)
-        log->Printf(
-            "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
-            " (exception: %s)",
-            m_thread.GetID(), stop_info_sp->GetDescription());
+      LLDB_LOGF(
+          log,
+          "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
+          " (exception: %s)",
+          m_thread.GetID(), stop_info_sp->GetDescription());
       m_thread.DiscardThreadPlans(false);
       return true;
 
@@ -136,22 +134,22 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
       // If we crashed, discard thread plans and stop.  Don't force the
       // discard, however, since on rerun the target may clean up this
       // exception and continue normally from there.
-      if (log)
-        log->Printf(
-            "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
-            " (exec.)",
-            m_thread.GetID());
+      LLDB_LOGF(
+          log,
+          "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
+          " (exec.)",
+          m_thread.GetID());
       m_thread.DiscardThreadPlans(false);
       return true;
 
     case eStopReasonThreadExiting:
     case eStopReasonSignal:
       if (stop_info_sp->ShouldStop(event_ptr)) {
-        if (log)
-          log->Printf(
-              "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
-              " (signal: %s)",
-              m_thread.GetID(), stop_info_sp->GetDescription());
+        LLDB_LOGF(
+            log,
+            "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
+            " (signal: %s)",
+            m_thread.GetID(), stop_info_sp->GetDescription());
         m_thread.DiscardThreadPlans(false);
         return true;
       } else {

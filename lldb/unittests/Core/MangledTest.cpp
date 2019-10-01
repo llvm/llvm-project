@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 
 #include "lldb/Core/Mangled.h"
@@ -20,6 +20,7 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -49,41 +50,119 @@ TEST(MangledTest, EmptyForInvalidName) {
   EXPECT_STREQ("", TheDemangled.GetCString());
 }
 
-#define ASSERT_NO_ERROR(x)                                                     \
-  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
-    llvm::SmallString<128> MessageStorage;                                     \
-    llvm::raw_svector_ostream Message(MessageStorage);                         \
-    Message << #x ": did not return errc::success.\n"                          \
-            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
-            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
-    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
-  } else {                                                                     \
-  }
-
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   FileSystem::Initialize();
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
-  SymbolVendorELF::Initialize();
+  SymbolFileSymtab::Initialize();
 
-  std::string Yaml = GetInputFilePath("mangled-function-names.yaml");
-  llvm::SmallString<128> Obj;
-  ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
-      "mangled-function-names-%%%%%%", "obj", Obj));
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Size:            0x20
+  - Name:            .anothertext
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000010
+    AddressAlign:    0x0000000000000010
+    Size:            0x40
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x00000000000000A8
+    AddressAlign:    0x0000000000000004
+    Content:         '01000000'
+Symbols:
+  - Name:            somedata
+    Type:            STT_OBJECT
+    Section:         .anothertext
+    Value:           0x0000000000000045
+    Binding:         STB_GLOBAL
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .anothertext
+    Value:           0x0000000000000010
+    Size:            0x000000000000003F
+    Binding:         STB_GLOBAL
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            puts@GLIBC_2.5
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            puts@GLIBC_2.6
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _Z5annotv@VERSION3
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZN1AC2Ev
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZN1AD2Ev
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZN1A3barEv
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZGVZN4llvm4dbgsEvE7thestrm
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZZN4llvm4dbgsEvE7thestrm
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _ZTVN5clang4DeclE
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            -[ObjCfoo]
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            +[B ObjCbar(WithCategory)]
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            _Z12undemangableEvx42
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  llvm::FileRemover Deleter(Obj);
-  llvm::StringRef Args[] = {YAML2OBJ, Yaml};
-  llvm::StringRef ObjRef = Obj;
-  const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, ObjRef,
-                                                       llvm::None};
-  ASSERT_EQ(0,
-            llvm::sys::ExecuteAndWait(YAML2OBJ, Args, llvm::None, redirects));
-  uint64_t Size;
-  ASSERT_NO_ERROR(llvm::sys::fs::file_size(Obj, Size));
-  ASSERT_GT(Size, 0u);
-
-  ModuleSpec Spec{FileSpec(Obj)};
-  Spec.GetSymbolFileSpec().SetFile(Obj, FileSpec::Style::native);
+  ModuleSpec Spec{FileSpec(ExpectedFile->name())};
   auto M = std::make_shared<Module>(Spec);
 
   auto Count = [M](const char *Name, FunctionNameType Type) -> int {
@@ -165,7 +244,7 @@ TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeBase));
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeMethod));
 
-  SymbolVendorELF::Terminate();
+  SymbolFileSymtab::Terminate();
   ObjectFileELF::Terminate();
   HostInfo::Terminate();
   FileSystem::Terminate();

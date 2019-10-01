@@ -36,7 +36,6 @@ using namespace lldb_private::platform_netbsd;
 
 static uint32_t g_initialize_count = 0;
 
-//------------------------------------------------------------------
 
 PlatformSP PlatformNetBSD::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -111,9 +110,7 @@ void PlatformNetBSD::Terminate() {
   PlatformPOSIX::Terminate();
 }
 
-//------------------------------------------------------------------
 /// Default Constructor
-//------------------------------------------------------------------
 PlatformNetBSD::PlatformNetBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
@@ -209,7 +206,7 @@ PlatformNetBSD::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
 
   // Figure out what shell we're planning on using.
   const char *shell_name = strrchr(shell_string.c_str(), '/');
-  if (shell_name == NULL)
+  if (shell_name == nullptr)
     shell_name = shell_string.c_str();
   else
     shell_name++;
@@ -325,7 +322,7 @@ PlatformNetBSD::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
     // Handle the hijacking of process events.
     if (listener_sp) {
       const StateType state = process_sp->WaitForProcessToStop(
-          llvm::None, NULL, false, listener_sp);
+          llvm::None, nullptr, false, listener_sp);
 
       LLDB_LOG(log, "pid {0} state {0}", process_sp->GetID(), state);
     }

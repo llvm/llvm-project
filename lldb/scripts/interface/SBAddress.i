@@ -51,10 +51,9 @@ public:
 
     SBAddress (lldb::SBSection section,
                lldb::addr_t offset);
-    
+
     %feature("docstring", "
-    Create an address by resolving a load address using the supplied target.
-    ") SBAddress;
+    Create an address by resolving a load address using the supplied target.") SBAddress;
     SBAddress (lldb::addr_t load_addr, lldb::SBTarget &target);
 
     ~SBAddress ();
@@ -63,6 +62,15 @@ public:
     IsValid () const;
 
     explicit operator bool() const;
+
+    // operator== is a free function, which swig does not handle, so we inject
+    // our own equality operator here
+    %pythoncode%{
+    def __eq__(self, other):
+      return not self.__ne__(other)
+    %}
+
+    bool operator!=(const SBAddress &rhs) const;
 
     void
     Clear ();
@@ -74,7 +82,7 @@ public:
     GetLoadAddress (const lldb::SBTarget &target) const;
 
     void
-    SetLoadAddress (lldb::addr_t load_addr, 
+    SetLoadAddress (lldb::addr_t load_addr,
                     lldb::SBTarget &target);
 
     bool
@@ -94,33 +102,27 @@ public:
                 lldb::addr_t offset);
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// GetSymbolContext() and the following can lookup symbol information for a given address.
-    /// An address might refer to code or data from an existing module, or it
-    /// might refer to something on the stack or heap. The following functions
-    /// will only return valid values if the address has been resolved to a code
-    /// or data address using 'void SBAddress::SetLoadAddress(...)' or 
-    /// 'lldb::SBAddress SBTarget::ResolveLoadAddress (...)'. 
-    //------------------------------------------------------------------
-    ") GetSymbolContext;
+    GetSymbolContext() and the following can lookup symbol information for a given address.
+    An address might refer to code or data from an existing module, or it
+    might refer to something on the stack or heap. The following functions
+    will only return valid values if the address has been resolved to a code
+    or data address using 'void SBAddress::SetLoadAddress(...)' or
+    'lldb::SBAddress SBTarget::ResolveLoadAddress (...)'.") GetSymbolContext;
     lldb::SBSymbolContext
     GetSymbolContext (uint32_t resolve_scope);
 
     %feature("docstring", "
-    //------------------------------------------------------------------
-    /// GetModule() and the following grab individual objects for a given address and
-    /// are less efficient if you want more than one symbol related objects. 
-    /// Use one of the following when you want multiple debug symbol related 
-    /// objects for an address:
-    ///    lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t resolve_scope);
-    ///    lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const SBAddress &addr, uint32_t resolve_scope);
-    /// One or more bits from the SymbolContextItem enumerations can be logically
-    /// OR'ed together to more efficiently retrieve multiple symbol objects.
-    //------------------------------------------------------------------
-    ") GetModule;
+    GetModule() and the following grab individual objects for a given address and
+    are less efficient if you want more than one symbol related objects.
+    Use one of the following when you want multiple debug symbol related
+    objects for an address:
+       lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t resolve_scope);
+       lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const SBAddress &addr, uint32_t resolve_scope);
+    One or more bits from the SymbolContextItem enumerations can be logically
+    OR'ed together to more efficiently retrieve multiple symbol objects.") GetModule;
     lldb::SBModule
     GetModule ();
-    
+
     lldb::SBCompileUnit
     GetCompileUnit ();
 
@@ -135,7 +137,7 @@ public:
 
     lldb::SBLineEntry
     GetLineEntry ();
-    
+
     %pythoncode %{
         def __get_load_addr_property__ (self):
             '''Get the load address for a lldb.SBAddress using the current target.'''
@@ -160,37 +162,16 @@ public:
             '''Convert the address to an hex string'''
             return '0x%x' % int(self)
 
-        __swig_getmethods__["module"] = GetModule
-        if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
-
-        __swig_getmethods__["compile_unit"] = GetCompileUnit
-        if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
-
-        __swig_getmethods__["line_entry"] = GetLineEntry
-        if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
-
-        __swig_getmethods__["function"] = GetFunction
-        if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
-
-        __swig_getmethods__["block"] = GetBlock
-        if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
-
-        __swig_getmethods__["symbol"] = GetSymbol
-        if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
-
-        __swig_getmethods__["offset"] = GetOffset
-        if _newclass: offset = property(GetOffset, None, doc='''A read only property that returns the section offset in bytes as an integer.''')
-
-        __swig_getmethods__["section"] = GetSection
-        if _newclass: section = property(GetSection, None, doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
-
-        __swig_getmethods__["file_addr"] = GetFileAddress
-        if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
-
-        __swig_getmethods__["load_addr"] = __get_load_addr_property__
-        __swig_setmethods__["load_addr"] = __set_load_addr_property__
-        if _newclass: load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
-
+        module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
+        compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
+        line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
+        function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
+        block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
+        symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
+        offset = property(GetOffset, None, doc='''A read only property that returns the section offset in bytes as an integer.''')
+        section = property(GetSection, None, doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
+        file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
+        load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
     %}
 
 };

@@ -14,8 +14,8 @@
 #include <exception>
 #include "abort_message.h"
 #include "cxxabi.h"
-#include "cxa_handlers.hpp"
-#include "cxa_exception.hpp"
+#include "cxa_handlers.h"
+#include "cxa_exception.h"
 #include "private_typeinfo.h"
 #include "include/atomic_support.h"
 
@@ -73,6 +73,7 @@ __attribute__((noreturn))
 void
 terminate() _NOEXCEPT
 {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     // If there might be an uncaught exception
     using namespace __cxxabiv1;
     __cxa_eh_globals* globals = __cxa_get_globals_fast();
@@ -87,6 +88,7 @@ terminate() _NOEXCEPT
                 __terminate(exception_header->terminateHandler);
         }
     }
+#endif
     __terminate(get_terminate());
 }
 

@@ -10,7 +10,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/Args.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
@@ -25,6 +24,10 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 using namespace llgs_tests;
+
+#ifdef SendMessage
+#undef SendMessage
+#endif
 
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
   SetConnection(Conn.release());
@@ -81,7 +84,7 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
     return status.ToError();
 
   args.AppendArgument(
-      ("localhost:" + Twine(listen_socket.GetLocalPortNumber())).str());
+      ("127.0.0.1:" + Twine(listen_socket.GetLocalPortNumber())).str());
 
   for (StringRef arg : ServerArgs)
     args.AppendArgument(arg);
@@ -108,7 +111,7 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
 
   Socket *accept_socket;
   listen_socket.Accept(accept_socket);
-  auto Conn = llvm::make_unique<ConnectionFileDescriptor>(accept_socket);
+  auto Conn = std::make_unique<ConnectionFileDescriptor>(accept_socket);
   auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
 
   if (Error E = Client->initializeConnection())

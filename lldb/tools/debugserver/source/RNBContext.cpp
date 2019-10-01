@@ -25,14 +25,10 @@
 #include "DNBLog.h"
 #include "RNBRemote.h"
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 RNBContext::~RNBContext() { SetProcessID(INVALID_NUB_PROCESS); }
 
-//----------------------------------------------------------------------
 // RNBContext constructor
-//----------------------------------------------------------------------
 
 const char *RNBContext::EnvironmentAtIndex(size_t index) {
   if (index < m_env_vec.size())
@@ -134,10 +130,8 @@ void RNBContext::StopProcessStatusThread() {
   }
 }
 
-//----------------------------------------------------------------------
 // This thread's sole purpose is to watch for any status changes in the
 // child process.
-//----------------------------------------------------------------------
 void *RNBContext::ThreadFunctionProcessStatus(void *arg) {
   RNBRemoteSP remoteSP(g_remoteSP);
   RNBRemote *remote = remoteSP.get();

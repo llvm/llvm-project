@@ -9,20 +9,17 @@
 #ifndef liblldb_LineTable_h_
 #define liblldb_LineTable_h_
 
-#include <vector>
-
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <vector>
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class LineSequence LineTable.h "lldb/Symbol/LineTable.h" An abstract base
+/// \class LineSequence LineTable.h "lldb/Symbol/LineTable.h" An abstract base
 /// class used during symbol table creation.
-//----------------------------------------------------------------------
 class LineSequence {
 public:
   LineSequence();
@@ -35,36 +32,28 @@ private:
   DISALLOW_COPY_AND_ASSIGN(LineSequence);
 };
 
-//----------------------------------------------------------------------
-/// @class LineTable LineTable.h "lldb/Symbol/LineTable.h"
+/// \class LineTable LineTable.h "lldb/Symbol/LineTable.h"
 /// A line table class.
-//----------------------------------------------------------------------
 class LineTable {
 public:
-  //------------------------------------------------------------------
   /// Construct with compile unit.
   ///
-  /// @param[in] comp_unit
+  /// \param[in] comp_unit
   ///     The compile unit to which this line table belongs.
-  //------------------------------------------------------------------
   LineTable(CompileUnit *comp_unit);
 
-  //------------------------------------------------------------------
   /// Destructor.
-  //------------------------------------------------------------------
   ~LineTable();
 
-  //------------------------------------------------------------------
   /// Adds a new line entry to this line table.
   ///
   /// All line entries are maintained in file address order.
   ///
-  /// @param[in] line_entry
+  /// \param[in] line_entry
   ///     A const reference to a new line_entry to add to this line
   ///     table.
   ///
-  /// @see Address::DumpStyle
-  //------------------------------------------------------------------
+  /// \see Address::DumpStyle
   //  void
   //  AddLineEntry (const LineEntry& line_entry);
 
@@ -89,45 +78,40 @@ public:
   // Insert a sequence of entries into this line table.
   void InsertSequence(LineSequence *sequence);
 
-  //------------------------------------------------------------------
   /// Dump all line entries in this line table to the stream \a s.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// @param[in] style
+  /// \param[in] style
   ///     The display style for the address.
   ///
-  /// @see Address::DumpStyle
-  //------------------------------------------------------------------
+  /// \see Address::DumpStyle
   void Dump(Stream *s, Target *target, Address::DumpStyle style,
             Address::DumpStyle fallback_style, bool show_line_ranges);
 
   void GetDescription(Stream *s, Target *target, lldb::DescriptionLevel level);
 
-  //------------------------------------------------------------------
   /// Find a line entry that contains the section offset address \a so_addr.
   ///
-  /// @param[in] so_addr
+  /// \param[in] so_addr
   ///     A section offset address object containing the address we
   ///     are searching for.
   ///
-  /// @param[out] line_entry
+  /// \param[out] line_entry
   ///     A copy of the line entry that was found if \b true is
   ///     returned, otherwise \a entry is left unmodified.
   ///
-  /// @param[out] index_ptr
+  /// \param[out] index_ptr
   ///     A pointer to a 32 bit integer that will get the actual line
   ///     entry index if it is not nullptr.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a so_addr is contained in a line entry
   ///     in this line table, \b false otherwise.
-  //------------------------------------------------------------------
   bool FindLineEntryByAddress(const Address &so_addr, LineEntry &line_entry,
                               uint32_t *index_ptr = nullptr);
 
-  //------------------------------------------------------------------
   /// Find a line entry index that has a matching file index and source line
   /// number.
   ///
@@ -135,34 +119,33 @@ public:
   /// line number \a line starting at the \a start_idx entries into the line
   /// entry collection.
   ///
-  /// @param[in] start_idx
+  /// \param[in] start_idx
   ///     The number of entries to skip when starting the search.
   ///
-  /// @param[out] file_idx
+  /// \param[out] file_idx
   ///     The file index to search for that should be found prior
   ///     to calling this function using the following functions:
   ///     CompileUnit::GetSupportFiles()
   ///     FileSpecList::FindFileIndex (uint32_t, const FileSpec &) const
   ///
-  /// @param[in] line
+  /// \param[in] line
   ///     The source line to match.
   ///
-  /// @param[in] exact
+  /// \param[in] exact
   ///     If true, match only if you find a line entry exactly matching \a line.
   ///     If false, return the closest line entry greater than \a line.
   ///
-  /// @param[out] line_entry
+  /// \param[out] line_entry
   ///     A reference to a line entry object that will get a copy of
   ///     the line entry if \b true is returned, otherwise \a
   ///     line_entry is left untouched.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if a matching line entry is found in this
   ///     line table, \b false otherwise.
   ///
-  /// @see CompileUnit::GetSupportFiles()
-  /// @see FileSpecList::FindFileIndex (uint32_t, const FileSpec &) const
-  //------------------------------------------------------------------
+  /// \see CompileUnit::GetSupportFiles()
+  /// \see FileSpecList::FindFileIndex (uint32_t, const FileSpec &) const
   uint32_t FindLineEntryIndexByFileIndex(uint32_t start_idx, uint32_t file_idx,
                                          uint32_t line, bool exact,
                                          LineEntry *line_entry_ptr);
@@ -174,61 +157,53 @@ public:
   size_t FineLineEntriesForFileIndex(uint32_t file_idx, bool append,
                                      SymbolContextList &sc_list);
 
-  //------------------------------------------------------------------
   /// Get the line entry from the line table at index \a idx.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     An index into the line table entry collection.
   ///
-  /// @return
+  /// \return
   ///     A valid line entry if \a idx is a valid index, or an invalid
   ///     line entry if \a idx is not valid.
   ///
-  /// @see LineTable::GetSize()
-  /// @see LineEntry::IsValid() const
-  //------------------------------------------------------------------
+  /// \see LineTable::GetSize()
+  /// \see LineEntry::IsValid() const
   bool GetLineEntryAtIndex(uint32_t idx, LineEntry &line_entry);
 
-  //------------------------------------------------------------------
   /// Gets the size of the line table in number of line table entries.
   ///
-  /// @return
+  /// \return
   ///     The number of line table entries in this line table.
-  //------------------------------------------------------------------
   uint32_t GetSize() const;
 
   typedef lldb_private::RangeArray<lldb::addr_t, lldb::addr_t, 32>
       FileAddressRanges;
 
-  //------------------------------------------------------------------
   /// Gets all contiguous file address ranges for the entire line table.
   ///
-  /// @param[out] file_ranges
+  /// \param[out] file_ranges
   ///     A collection of file address ranges that will be filled in
   ///     by this function.
   ///
-  /// @param[out] append
+  /// \param[out] append
   ///     If \b true, then append to \a file_ranges, otherwise clear
   ///     \a file_ranges prior to adding any ranges.
   ///
-  /// @return
+  /// \return
   ///     The number of address ranges added to \a file_ranges
-  //------------------------------------------------------------------
   size_t GetContiguousFileAddressRanges(FileAddressRanges &file_ranges,
                                         bool append);
 
-  //------------------------------------------------------------------
   /// Given a file range link map, relink the current line table and return a
   /// fixed up line table.
   ///
-  /// @param[out] file_range_map
+  /// \param[out] file_range_map
   ///     A collection of file ranges that maps to new file ranges
   ///     that will be used when linking the line table.
   ///
-  /// @return
+  /// \return
   ///     A new line table if at least one line table entry was able
   ///     to be mapped.
-  //------------------------------------------------------------------
   typedef RangeDataVector<lldb::addr_t, lldb::addr_t, lldb::addr_t>
       FileRangeMap;
 
@@ -303,9 +278,7 @@ protected:
       return lhs.file_addr < rhs.file_addr;
     }
 
-    //------------------------------------------------------------------
     // Member variables.
-    //------------------------------------------------------------------
     /// The file address for this line entry.
     lldb::addr_t file_addr;
     /// The source line number, or zero if there is no line number
@@ -338,24 +311,18 @@ protected:
     Entry *a_entry;
   };
 
-  //------------------------------------------------------------------
   // Types
-  //------------------------------------------------------------------
   typedef std::vector<lldb_private::Section *>
       section_collection; ///< The collection type for the sections.
   typedef std::vector<Entry>
       entry_collection; ///< The collection type for the line entries.
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   CompileUnit
       *m_comp_unit; ///< The compile unit that this line table belongs to.
   entry_collection
       m_entries; ///< The collection of line entries in this line table.
 
-  //------------------------------------------------------------------
   // Helper class
-  //------------------------------------------------------------------
   class LineSequenceImpl : public LineSequence {
   public:
     LineSequenceImpl() = default;

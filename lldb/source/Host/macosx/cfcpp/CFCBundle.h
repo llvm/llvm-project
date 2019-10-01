@@ -13,9 +13,7 @@
 
 class CFCBundle : public CFCReleaser<CFBundleRef> {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CFCBundle(const char *path = NULL);
   CFCBundle(CFURLRef url);
 
@@ -33,9 +31,9 @@ public:
 
 private:
   // Disallow copy and assignment constructors
-  CFCBundle(const CFCBundle &);
+  CFCBundle(const CFCBundle &) = delete;
 
-  const CFCBundle &operator=(const CFCBundle &);
+  const CFCBundle &operator=(const CFCBundle &) = delete;
 };
 
 #endif // #ifndef CoreFoundationCPP_CFBundle_h_

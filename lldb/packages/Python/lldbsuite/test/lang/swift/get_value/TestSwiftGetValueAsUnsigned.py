@@ -24,7 +24,6 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_get_value_as_unsigned_sbapi(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
         self.build()

@@ -13,10 +13,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include <memory>
 #include <thread>
-
-#include "gtest/gtest.h"
 
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
@@ -196,8 +196,8 @@ bool EditlineAdapter::IsInputComplete(lldb_private::Editline *editline,
   int start_block_count = 0;
   int brace_balance = 0;
 
-  for (size_t i = 0; i < lines.GetSize(); ++i) {
-    for (auto ch : lines[i]) {
+  for (const std::string &line : lines) {
+    for (auto ch : line) {
       if (ch == '{') {
         ++start_block_count;
         ++brace_balance;
@@ -250,7 +250,7 @@ public:
     setenv("TERM", "vt100", 1);
   }
 
-  void SetUp() {
+  void SetUp() override {
     FileSystem::Initialize();
 
     // Validate the editline adapter.
@@ -263,7 +263,7 @@ public:
         std::make_shared<std::thread>([&] { _el_adapter.ConsumeAllOutput(); });
   }
 
-  void TearDown() {
+  void TearDown() override {
     _el_adapter.CloseInput();
     if (_sp_output_thread)
       _sp_output_thread->join();
@@ -311,11 +311,11 @@ TEST_F(EditlineTestFixture, EditlineReceivesMultiLineText) {
 
   // Without any auto indentation support, our output should directly match our
   // input.
-  EXPECT_EQ(input_lines.size(), el_reported_lines.GetSize());
-  if (input_lines.size() == el_reported_lines.GetSize()) {
-    for (size_t i = 0; i < input_lines.size(); ++i)
-      EXPECT_EQ(input_lines[i], el_reported_lines[i]);
-  }
+  std::vector<std::string> reported_lines;
+  for (const std::string &line : el_reported_lines)
+    reported_lines.push_back(line);
+
+  EXPECT_THAT(reported_lines, testing::ContainerEq(input_lines));
 }
 
 #endif

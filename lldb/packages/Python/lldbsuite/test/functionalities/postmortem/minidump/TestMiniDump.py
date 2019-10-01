@@ -51,27 +51,27 @@ class MiniDumpTestCase(TestBase):
         expected_modules = [
             {
                 'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
-                'uuid' : '91B7450F-969A-F946-BF8F-2D6076EA421A-11000000',
+                'uuid' : '0F45B791-9A96-46F9-BF8F-2D6076EA421A-00000011',
             },
             {
                 'filename' : r"C:\Windows\SysWOW64/ntdll.dll",
-                'uuid' : '6A84B0BB-2C40-5240-A16B-67650BBFE6B0-02000000',
+                'uuid' : 'BBB0846A-402C-4052-A16B-67650BBFE6B0-00000002',
             },
             {
                 'filename' : r"C:\Windows\SysWOW64/kernel32.dll",
-                'uuid' : '1B7ECBE5-5E00-1341-AB98-98D6913B52D8-02000000',
+                'uuid' : 'E5CB7E1B-005E-4113-AB98-98D6913B52D8-00000002',
             },
             {
                 'filename' : r"C:\Windows\SysWOW64/KERNELBASE.dll",
-                'uuid' : '4152F90B-0DCB-D44B-AC5D-186A6452E522-01000000',
+                'uuid' : '0BF95241-CB0D-4BD4-AC5D-186A6452E522-00000001',
             },
             {
                 'filename' : r"C:\Windows\System32/MSVCP120D.dll",
-                'uuid' : '6E51053C-E757-EB40-8D3F-9722C5BD80DD-01000000',
+                'uuid' : '3C05516E-57E7-40EB-8D3F-9722C5BD80DD-00000001',
             },
             {
                 'filename' : r"C:\Windows\System32/MSVCR120D.dll",
-                'uuid' : '86FB8263-C446-4640-AE42-8D97B3F91FF2-01000000',
+                'uuid' : '6382FB86-46C4-4046-AE42-8D97B3F91FF2-00000001',
             },
         ]
         self.assertEqual(self.target.GetNumModules(), len(expected_modules))
@@ -79,6 +79,16 @@ class MiniDumpTestCase(TestBase):
             self.assertTrue(module.IsValid())
             self.assertEqual(module.file.fullpath, expected['filename'])
             self.assertEqual(module.GetUUIDString(), expected['uuid'])
+
+    def test_breakpad_uuid_matching(self):
+        """Test that the uuid computation algorithms in minidump and breakpad
+        files match."""
+        self.target = self.dbg.CreateTarget("")
+        self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.expect("target symbols add fizzbuzz.syms", substrs=["symbol file",
+            "fizzbuzz.syms", "has been added to", "fizzbuzz.exe"]),
+        self.assertTrue(self.target.modules[0].FindSymbol("main"))
 
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
@@ -99,7 +109,6 @@ class MiniDumpTestCase(TestBase):
             self.assertTrue(frame.GetModule().IsValid())
 
     @skipUnlessWindows # Minidump saving works only on windows
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
@@ -136,7 +145,6 @@ class MiniDumpTestCase(TestBase):
                 os.unlink(core)
 
     @skipUnlessWindows # Minidump saving works only on windows
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()

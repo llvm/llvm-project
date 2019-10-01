@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2 2>&1
+// RUN: ld.lld %t -o %t2
 // RUN: llvm-readobj --sections %t2 | FileCheck %s
 
 // Check that only a single .ARM.exidx output section is created when

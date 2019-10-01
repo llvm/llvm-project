@@ -6,7 +6,6 @@
 // RUN: env OMP_SCHEDULE=dynamic,1 %libomp-run 1
 // RUN: env OMP_SCHEDULE=dynamic,2 %libomp-run 2
 // RUN: env OMP_SCHEDULE=auto      %libomp-run
-// REQUIRES: openmp-4.5
 
 // The test checks schedule(simd:runtime)
 // in combination with OMP_SCHEDULE=guided[,chunk]

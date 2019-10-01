@@ -46,7 +46,6 @@ class TestFilePrivate(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
         self.build()

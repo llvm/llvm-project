@@ -5,7 +5,6 @@ Test whether a process started by lldb has no extra file descriptors open.
 from __future__ import print_function
 
 
-import os
 import lldb
 from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbtest import *

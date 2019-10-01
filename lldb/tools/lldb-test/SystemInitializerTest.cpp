@@ -213,9 +213,7 @@ llvm::Error SystemInitializerTest::Initialize() {
   // It shouldn't be limited to __APPLE__.
   StructuredDataDarwinLog::Initialize();
 
-  //----------------------------------------------------------------------
   // Platform agnostic plugins
-  //----------------------------------------------------------------------
   platform_gdb_server::PlatformRemoteGDBServer::Initialize();
 
   process_gdb_remote::ProcessGDBRemote::Initialize();

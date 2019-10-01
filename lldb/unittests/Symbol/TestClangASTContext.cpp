@@ -34,12 +34,12 @@ public:
     FileSystem::Terminate();
   }
 
-  virtual void SetUp() override {
+  void SetUp() override {
     std::string triple = HostInfo::GetTargetTriple();
     m_ast.reset(new ClangASTContext(triple.c_str()));
   }
 
-  virtual void TearDown() override { m_ast.reset(); }
+  void TearDown() override { m_ast.reset(); }
 
 protected:
   std::unique_ptr<ClangASTContext> m_ast;
@@ -422,12 +422,14 @@ TEST_F(TestClangASTContext, TemplateArguments) {
       type, "foo_def",
       CompilerDeclContext(m_ast.get(), m_ast->GetTranslationUnitDecl()));
 
-  CompilerType auto_type(m_ast->getASTContext(),
-                         m_ast->getASTContext()->getAutoType(
-                             ClangUtil::GetCanonicalQualType(typedef_type),
-                             clang::AutoTypeKeyword::Auto, false));
+  CompilerType auto_type(
+      m_ast.get(),
+      m_ast->getASTContext()
+          ->getAutoType(ClangUtil::GetCanonicalQualType(typedef_type),
+                        clang::AutoTypeKeyword::Auto, false)
+          .getAsOpaquePtr());
 
-  CompilerType int_type(m_ast->getASTContext(), m_ast->getASTContext()->IntTy);
+  CompilerType int_type(m_ast.get(), m_ast->getASTContext()->IntTy.getAsOpaquePtr());
   for (CompilerType t : {type, typedef_type, auto_type}) {
     SCOPED_TRACE(t.GetTypeName().AsCString());
 

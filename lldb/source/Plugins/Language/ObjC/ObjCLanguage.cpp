@@ -16,12 +16,13 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/Threading.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 #include "CF.h"
 #include "Cocoa.h"
@@ -48,9 +49,7 @@ lldb_private::ConstString ObjCLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ObjCLanguage::GetPluginName() {
   return GetPluginNameStatic();
@@ -58,9 +57,7 @@ lldb_private::ConstString ObjCLanguage::GetPluginName() {
 
 uint32_t ObjCLanguage::GetPluginVersion() { return 1; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 Language *ObjCLanguage::CreateInstance(lldb::LanguageType language) {
   switch (language) {
@@ -948,18 +945,20 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
         if (objc_runtime) {
           auto decl_vendor = objc_runtime->GetDeclVendor();
           if (decl_vendor) {
-            std::vector<clang::NamedDecl *> decls;
+            std::vector<CompilerDecl> decls;
             ConstString name(key);
             decl_vendor->FindDecls(name, true, UINT32_MAX, decls);
             for (auto decl : decls) {
               if (decl) {
-                if (CompilerType candidate =
-                        ClangASTContext::GetTypeForDecl(decl)) {
-                  result = true;
-                  std::unique_ptr<Language::TypeScavenger::Result> result(
-                      new ObjCScavengerResult(candidate));
-                  results.insert(std::move(result));
-                }
+                auto *ctx = llvm::dyn_cast<ClangASTContext>(decl.GetTypeSystem());
+                if (ctx)
+                  if (CompilerType candidate =
+                          ctx->GetTypeForDecl(decl.GetOpaqueDecl())) {
+                    result = true;
+                    std::unique_ptr<Language::TypeScavenger::Result> result(
+                        new ObjCScavengerResult(candidate));
+                    results.insert(std::move(result));
+                  }
               }
             }
           }
@@ -1006,7 +1005,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
   
   class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
   public:
-    virtual CompilerType AdjustForInclusion(CompilerType &candidate) override {
+    CompilerType AdjustForInclusion(CompilerType &candidate) override {
       LanguageType lang_type(candidate.GetMinimumLanguage());
       if (!Language::LanguageIsObjC(lang_type))
         return CompilerType();

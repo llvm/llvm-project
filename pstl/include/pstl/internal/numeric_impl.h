@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- numeric_impl.h ----------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,8 @@
 #include "execution_impl.h"
 #include "unseq_backend_simd.h"
 #include "algorithm_fwd.h"
+
+_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl
 {
@@ -93,11 +95,7 @@ _Tp
 __brick_transform_reduce(_ForwardIterator __first, _ForwardIterator __last, _Tp __init, _BinaryOperation __binary_op,
                          _UnaryOperation __unary_op, /*is_vector=*/std::false_type) noexcept
 {
-    for (; __first != __last; ++__first)
-    {
-        __init = __binary_op(__init, __unary_op(*__first));
-    }
-    return __init;
+    return std::transform_reduce(__first, __last, __init, __binary_op, __unary_op);
 }
 
 template <class _ForwardIterator, class _Tp, class _UnaryOperation, class _BinaryOperation>
@@ -354,5 +352,7 @@ __pattern_adjacent_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __fir
 
 } // namespace __internal
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_NUMERIC_IMPL_H */

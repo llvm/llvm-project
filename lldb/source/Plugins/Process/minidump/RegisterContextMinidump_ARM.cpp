@@ -463,7 +463,7 @@ static RegisterSet g_reg_sets[] = {
 constexpr size_t k_num_reg_sets = llvm::array_lengthof(g_reg_sets);
 
 RegisterContextMinidump_ARM::RegisterContextMinidump_ARM(
-    Thread &thread, const DataExtractor &data, bool apple)
+    lldb_private::Thread &thread, const DataExtractor &data, bool apple)
     : RegisterContext(thread, 0), m_apple(apple) {
   lldb::offset_t offset = 0;
   m_regs.context_flags = data.GetU32(&offset);

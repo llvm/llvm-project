@@ -25,7 +25,6 @@ class TestSwiftOneCaseEnum(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_one_case_enum(self):
         """Test that an enum with only one case does not crash LLDB"""
         self.build()

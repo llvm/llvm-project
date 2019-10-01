@@ -25,9 +25,7 @@ public:
 
   ~OptionValueFileSpecList() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeFileSpecList; }
 
@@ -52,9 +50,7 @@ public:
 
   bool IsAggregateValue() const override { return true; }
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   FileSpecList GetCurrentValue() const {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);

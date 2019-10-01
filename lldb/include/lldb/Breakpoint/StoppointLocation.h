@@ -17,9 +17,7 @@ namespace lldb_private {
 
 class StoppointLocation {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StoppointLocation(lldb::break_id_t bid, lldb::addr_t m_addr, bool hardware);
 
   StoppointLocation(lldb::break_id_t bid, lldb::addr_t m_addr,
@@ -27,13 +25,9 @@ public:
 
   virtual ~StoppointLocation();
 
-  //------------------------------------------------------------------
   // Operators
-  //------------------------------------------------------------------
 
-  //------------------------------------------------------------------
   // Methods
-  //------------------------------------------------------------------
   virtual lldb::addr_t GetLoadAddress() const { return m_addr; }
 
   virtual void SetLoadAddress(lldb::addr_t addr) { m_addr = addr; }
@@ -59,9 +53,7 @@ public:
   lldb::break_id_t GetID() const { return m_loc_id; }
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from StoppointLocation can see and modify these
-  //------------------------------------------------------------------
   lldb::break_id_t m_loc_id; // Stoppoint location ID
   lldb::addr_t
       m_addr; // The load address of this stop point. The base Stoppoint doesn't
@@ -84,11 +76,9 @@ protected:
   void DecrementHitCount();
 
 private:
-  //------------------------------------------------------------------
   // For StoppointLocation only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(StoppointLocation);
-  StoppointLocation(); // Disallow default constructor
+  StoppointLocation() = delete;
 };
 
 } // namespace lldb_private

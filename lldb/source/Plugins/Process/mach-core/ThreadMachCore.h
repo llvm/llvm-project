@@ -52,17 +52,13 @@ public:
 protected:
   friend class ProcessMachCore;
 
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   std::string m_thread_name;
   std::string m_dispatch_queue_name;
   lldb::addr_t m_thread_dispatch_qaddr;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
 
-  //------------------------------------------------------------------
   // Protected member functions.
-  //------------------------------------------------------------------
   bool CalculateStopInfo() override;
 };
 

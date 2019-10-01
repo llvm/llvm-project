@@ -32,7 +32,7 @@ SBLineEntry::SBLineEntry(const SBLineEntry &rhs) : m_opaque_up() {
 SBLineEntry::SBLineEntry(const lldb_private::LineEntry *lldb_object_ptr)
     : m_opaque_up() {
   if (lldb_object_ptr)
-    m_opaque_up = llvm::make_unique<LineEntry>(*lldb_object_ptr);
+    m_opaque_up = std::make_unique<LineEntry>(*lldb_object_ptr);
 }
 
 const SBLineEntry &SBLineEntry::operator=(const SBLineEntry &rhs) {
@@ -45,7 +45,7 @@ const SBLineEntry &SBLineEntry::operator=(const SBLineEntry &rhs) {
 }
 
 void SBLineEntry::SetLineEntry(const lldb_private::LineEntry &lldb_object_ref) {
-  m_opaque_up = llvm::make_unique<LineEntry>(lldb_object_ref);
+  m_opaque_up = std::make_unique<LineEntry>(lldb_object_ref);
 }
 
 SBLineEntry::~SBLineEntry() {}
@@ -162,7 +162,7 @@ const lldb_private::LineEntry *SBLineEntry::operator->() const {
 }
 
 lldb_private::LineEntry &SBLineEntry::ref() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new lldb_private::LineEntry());
   return *m_opaque_up;
 }

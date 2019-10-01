@@ -1,0 +1,17 @@
+# Test that we do something reasonable if a LINE record references a
+# non-existing FILE record.
+# Right now, "something reasonable" means creating a line entry with an empty
+# file.
+
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/line-table-missing-file.out
+# RUN: %lldb %T/line-table-missing-file.out \
+# RUN:   -o "target symbols add -s line-table-missing-file.out %S/Inputs/line-table-missing-file.syms" \
+# RUN:   -s %s -o exit | FileCheck %s
+
+image dump line-table a.c
+# CHECK-LABEL: Line table for /tmp/a.c
+# CHECK-NEXT: 0x00000000004000b0: /tmp/a.c:1
+# CHECK-NEXT: 0x00000000004000b1: /tmp/a.c:2
+# CHECK-NEXT: 0x00000000004000b2: :2
+# CHECK-NEXT: 0x00000000004000b3: 
+# CHECK-EMPTY: 

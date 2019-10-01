@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -191,4 +192,9 @@ TEST(CPlusPlusLanguage, FindAlternateFunctionManglings) {
   EXPECT_THAT(FindAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
   EXPECT_THAT(FindAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
   EXPECT_THAT(FindAlternate("_bogus"), IsEmpty());
+}
+
+TEST(CPlusPlusLanguage, CPlusPlusNameParser) {
+  // Don't crash.
+  CPlusPlusNameParser((const char *)nullptr);
 }

@@ -124,10 +124,8 @@ DataExtractor::DataExtractor()
       m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
       m_data_sp(), m_target_byte_size(1) {}
 
-//----------------------------------------------------------------------
 // This constructor allows us to use data that is owned by someone else. The
 // data must stay around as long as this object is valid.
-//----------------------------------------------------------------------
 DataExtractor::DataExtractor(const void *data, offset_t length,
                              ByteOrder endian, uint32_t addr_size,
                              uint32_t target_byte_size /*=1*/)
@@ -136,44 +134,34 @@ DataExtractor::DataExtractor(const void *data, offset_t length,
             length),
       m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(addr_size == 4 || addr_size == 8);
-#endif
 }
 
-//----------------------------------------------------------------------
 // Make a shared pointer reference to the shared data in "data_sp" and set the
 // endian swapping setting to "swap", and the address size to "addr_size". The
 // shared data reference will ensure the data lives as long as any
 // DataExtractor objects exist that have a reference to this data.
-//----------------------------------------------------------------------
 DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
                              uint32_t addr_size,
                              uint32_t target_byte_size /*=1*/)
     : m_start(nullptr), m_end(nullptr), m_byte_order(endian),
       m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(addr_size == 4 || addr_size == 8);
-#endif
   SetData(data_sp);
 }
 
-//----------------------------------------------------------------------
 // Initialize this object with a subset of the data bytes in "data". If "data"
 // contains shared data, then a reference to this shared data will added and
 // the shared data will stay around as long as any object contains a reference
 // to that data. The endian swap and address size settings are copied from
 // "data".
-//----------------------------------------------------------------------
 DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
                              offset_t length, uint32_t target_byte_size /*=1*/)
     : m_start(nullptr), m_end(nullptr), m_byte_order(data.m_byte_order),
       m_addr_size(data.m_addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   if (data.ValidOffset(offset)) {
     offset_t bytes_available = data.GetByteSize() - offset;
     if (length > bytes_available)
@@ -186,14 +174,10 @@ DataExtractor::DataExtractor(const DataExtractor &rhs)
     : m_start(rhs.m_start), m_end(rhs.m_end), m_byte_order(rhs.m_byte_order),
       m_addr_size(rhs.m_addr_size), m_data_sp(rhs.m_data_sp),
       m_target_byte_size(rhs.m_target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
 }
 
-//----------------------------------------------------------------------
 // Assignment operator
-//----------------------------------------------------------------------
 const DataExtractor &DataExtractor::operator=(const DataExtractor &rhs) {
   if (this != &rhs) {
     m_start = rhs.m_start;
@@ -207,10 +191,8 @@ const DataExtractor &DataExtractor::operator=(const DataExtractor &rhs) {
 
 DataExtractor::~DataExtractor() = default;
 
-//------------------------------------------------------------------
 // Clears the object contents back to a default invalid state, and release any
 // references to shared data that this object may contain.
-//------------------------------------------------------------------
 void DataExtractor::Clear() {
   m_start = nullptr;
   m_end = nullptr;
@@ -219,10 +201,8 @@ void DataExtractor::Clear() {
   m_data_sp.reset();
 }
 
-//------------------------------------------------------------------
 // If this object contains shared data, this function returns the offset into
 // that shared data. Else zero is returned.
-//------------------------------------------------------------------
 size_t DataExtractor::GetSharedDataOffset() const {
   if (m_start != nullptr) {
     const DataBuffer *data = m_data_sp.get();
@@ -237,7 +217,6 @@ size_t DataExtractor::GetSharedDataOffset() const {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Set the data with which this object will extract from to data starting at
 // BYTES and set the length of the data to LENGTH bytes long. The data is
 // externally owned must be around at least as long as this object points to
@@ -245,7 +224,6 @@ size_t DataExtractor::GetSharedDataOffset() const {
 // and can extract from it. If this object refers to any shared data upon
 // entry, the reference to that data will be released. Is SWAP is set to true,
 // any data extracted will be endian swapped.
-//----------------------------------------------------------------------
 lldb::offset_t DataExtractor::SetData(const void *bytes, offset_t length,
                                       ByteOrder endian) {
   m_byte_order = endian;
@@ -260,7 +238,6 @@ lldb::offset_t DataExtractor::SetData(const void *bytes, offset_t length,
   return GetByteSize();
 }
 
-//----------------------------------------------------------------------
 // Assign the data for this object to be a subrange in "data" starting
 // "data_offset" bytes into "data" and ending "data_length" bytes later. If
 // "data_offset" is not a valid offset into "data", then this object will
@@ -271,14 +248,11 @@ lldb::offset_t DataExtractor::SetData(const void *bytes, offset_t length,
 // a shared pointer to data, then the bytes referred to in "data" will need to
 // exist at least as long as this object refers to those bytes. The address
 // size and endian swap settings are copied from the current values in "data".
-//----------------------------------------------------------------------
 lldb::offset_t DataExtractor::SetData(const DataExtractor &data,
                                       offset_t data_offset,
                                       offset_t data_length) {
   m_addr_size = data.m_addr_size;
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   // If "data" contains shared pointer to data, then we can use that
   if (data.m_data_sp) {
     m_byte_order = data.m_byte_order;
@@ -296,7 +270,6 @@ lldb::offset_t DataExtractor::SetData(const DataExtractor &data,
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Assign the data for this object to be a subrange of the shared data in
 // "data_sp" starting "data_offset" bytes into "data_sp" and ending
 // "data_length" bytes later. If "data_offset" is not a valid offset into
@@ -308,7 +281,6 @@ lldb::offset_t DataExtractor::SetData(const DataExtractor &data,
 // starting at "data_offset") to ensure the data stays around as long as it is
 // needed. The address size and endian swap settings will remain unchanged from
 // their current settings.
-//----------------------------------------------------------------------
 lldb::offset_t DataExtractor::SetData(const DataBufferSP &data_sp,
                                       offset_t data_offset,
                                       offset_t data_length) {
@@ -341,30 +313,27 @@ lldb::offset_t DataExtractor::SetData(const DataBufferSP &data_sp,
   return new_size;
 }
 
-//----------------------------------------------------------------------
 // Extract a single unsigned char from the binary data and update the offset
 // pointed to by "offset_ptr".
 //
 // RETURNS the byte that was extracted, or zero on failure.
-//----------------------------------------------------------------------
 uint8_t DataExtractor::GetU8(offset_t *offset_ptr) const {
-  const uint8_t *data = (const uint8_t *)GetData(offset_ptr, 1);
+  const uint8_t *data = static_cast<const uint8_t *>(GetData(offset_ptr, 1));
   if (data)
     return *data;
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Extract "count" unsigned chars from the binary data and update the offset
 // pointed to by "offset_ptr". The extracted data is copied into "dst".
 //
 // RETURNS the non-nullptr buffer pointer upon successful extraction of
 // all the requested bytes, or nullptr when the data is not available in the
 // buffer due to being out of bounds, or insufficient data.
-//----------------------------------------------------------------------
 void *DataExtractor::GetU8(offset_t *offset_ptr, void *dst,
                            uint32_t count) const {
-  const uint8_t *data = (const uint8_t *)GetData(offset_ptr, count);
+  const uint8_t *data =
+      static_cast<const uint8_t *>(GetData(offset_ptr, count));
   if (data) {
     // Copy the data into the buffer
     memcpy(dst, data, count);
@@ -375,15 +344,14 @@ void *DataExtractor::GetU8(offset_t *offset_ptr, void *dst,
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Extract a single uint16_t from the data and update the offset pointed to by
 // "offset_ptr".
 //
 // RETURNS the uint16_t that was extracted, or zero on failure.
-//----------------------------------------------------------------------
 uint16_t DataExtractor::GetU16(offset_t *offset_ptr) const {
   uint16_t val = 0;
-  const uint8_t *data = (const uint8_t *)GetData(offset_ptr, sizeof(val));
+  const uint8_t *data =
+      static_cast<const uint8_t *>(GetData(offset_ptr, sizeof(val)));
   if (data) {
     if (m_byte_order != endian::InlHostByteOrder())
       val = ReadSwapInt16(data);
@@ -423,21 +391,20 @@ uint64_t DataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
   return val;
 }
 
-//----------------------------------------------------------------------
 // Extract "count" uint16_t values from the binary data and update the offset
 // pointed to by "offset_ptr". The extracted data is copied into "dst".
 //
 // RETURNS the non-nullptr buffer pointer upon successful extraction of
 // all the requested bytes, or nullptr when the data is not available in the
 // buffer due to being out of bounds, or insufficient data.
-//----------------------------------------------------------------------
 void *DataExtractor::GetU16(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint16_t) * count;
-  const uint16_t *src = (const uint16_t *)GetData(offset_ptr, src_size);
+  const uint16_t *src =
+      static_cast<const uint16_t *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      uint16_t *dst_pos = (uint16_t *)void_dst;
+      uint16_t *dst_pos = static_cast<uint16_t *>(void_dst);
       uint16_t *dst_end = dst_pos + count;
       const uint16_t *src_pos = src;
       while (dst_pos < dst_end) {
@@ -455,15 +422,14 @@ void *DataExtractor::GetU16(offset_t *offset_ptr, void *void_dst,
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Extract a single uint32_t from the data and update the offset pointed to by
 // "offset_ptr".
 //
 // RETURNS the uint32_t that was extracted, or zero on failure.
-//----------------------------------------------------------------------
 uint32_t DataExtractor::GetU32(offset_t *offset_ptr) const {
   uint32_t val = 0;
-  const uint8_t *data = (const uint8_t *)GetData(offset_ptr, sizeof(val));
+  const uint8_t *data =
+      static_cast<const uint8_t *>(GetData(offset_ptr, sizeof(val)));
   if (data) {
     if (m_byte_order != endian::InlHostByteOrder()) {
       val = ReadSwapInt32(data);
@@ -474,21 +440,20 @@ uint32_t DataExtractor::GetU32(offset_t *offset_ptr) const {
   return val;
 }
 
-//----------------------------------------------------------------------
 // Extract "count" uint32_t values from the binary data and update the offset
 // pointed to by "offset_ptr". The extracted data is copied into "dst".
 //
 // RETURNS the non-nullptr buffer pointer upon successful extraction of
 // all the requested bytes, or nullptr when the data is not available in the
 // buffer due to being out of bounds, or insufficient data.
-//----------------------------------------------------------------------
 void *DataExtractor::GetU32(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint32_t) * count;
-  const uint32_t *src = (const uint32_t *)GetData(offset_ptr, src_size);
+  const uint32_t *src =
+      static_cast<const uint32_t *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      uint32_t *dst_pos = (uint32_t *)void_dst;
+      uint32_t *dst_pos = static_cast<uint32_t *>(void_dst);
       uint32_t *dst_end = dst_pos + count;
       const uint32_t *src_pos = src;
       while (dst_pos < dst_end) {
@@ -506,15 +471,14 @@ void *DataExtractor::GetU32(offset_t *offset_ptr, void *void_dst,
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Extract a single uint64_t from the data and update the offset pointed to by
 // "offset_ptr".
 //
 // RETURNS the uint64_t that was extracted, or zero on failure.
-//----------------------------------------------------------------------
 uint64_t DataExtractor::GetU64(offset_t *offset_ptr) const {
   uint64_t val = 0;
-  const uint8_t *data = (const uint8_t *)GetData(offset_ptr, sizeof(val));
+  const uint8_t *data =
+      static_cast<const uint8_t *>(GetData(offset_ptr, sizeof(val)));
   if (data) {
     if (m_byte_order != endian::InlHostByteOrder()) {
       val = ReadSwapInt64(data);
@@ -525,20 +489,19 @@ uint64_t DataExtractor::GetU64(offset_t *offset_ptr) const {
   return val;
 }
 
-//----------------------------------------------------------------------
 // GetU64
 //
 // Get multiple consecutive 64 bit values. Return true if the entire read
 // succeeds and increment the offset pointed to by offset_ptr, else return
 // false and leave the offset pointed to by offset_ptr unchanged.
-//----------------------------------------------------------------------
 void *DataExtractor::GetU64(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint64_t) * count;
-  const uint64_t *src = (const uint64_t *)GetData(offset_ptr, src_size);
+  const uint64_t *src =
+      static_cast<const uint64_t *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      uint64_t *dst_pos = (uint64_t *)void_dst;
+      uint64_t *dst_pos = static_cast<uint64_t *>(void_dst);
       uint64_t *dst_end = dst_pos + count;
       const uint64_t *src_pos = src;
       while (dst_pos < dst_end) {
@@ -639,10 +602,11 @@ int64_t DataExtractor::GetMaxS64Bitfield(offset_t *offset_ptr, size_t size,
       lsbcount = size * 8 - bitfield_bit_offset - bitfield_bit_size;
     if (lsbcount > 0)
       sval64 >>= lsbcount;
-    uint64_t bitfield_mask = (((uint64_t)1) << bitfield_bit_size) - 1;
+    uint64_t bitfield_mask =
+        ((static_cast<uint64_t>(1)) << bitfield_bit_size) - 1;
     sval64 &= bitfield_mask;
     // sign extend if needed
-    if (sval64 & (((uint64_t)1) << (bitfield_bit_size - 1)))
+    if (sval64 & ((static_cast<uint64_t>(1)) << (bitfield_bit_size - 1)))
       sval64 |= ~bitfield_mask;
   }
   return sval64;
@@ -652,11 +616,12 @@ float DataExtractor::GetFloat(offset_t *offset_ptr) const {
   typedef float float_type;
   float_type val = 0.0;
   const size_t src_size = sizeof(float_type);
-  const float_type *src = (const float_type *)GetData(offset_ptr, src_size);
+  const float_type *src =
+      static_cast<const float_type *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      const uint8_t *src_data = (const uint8_t *)src;
-      uint8_t *dst_data = (uint8_t *)&val;
+      const uint8_t *src_data = reinterpret_cast<const uint8_t *>(src);
+      uint8_t *dst_data = reinterpret_cast<uint8_t *>(&val);
       for (size_t i = 0; i < sizeof(float_type); ++i)
         dst_data[sizeof(float_type) - 1 - i] = src_data[i];
     } else {
@@ -670,11 +635,12 @@ double DataExtractor::GetDouble(offset_t *offset_ptr) const {
   typedef double float_type;
   float_type val = 0.0;
   const size_t src_size = sizeof(float_type);
-  const float_type *src = (const float_type *)GetData(offset_ptr, src_size);
+  const float_type *src =
+      static_cast<const float_type *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      const uint8_t *src_data = (const uint8_t *)src;
-      uint8_t *dst_data = (uint8_t *)&val;
+      const uint8_t *src_data = reinterpret_cast<const uint8_t *>(src);
+      uint8_t *dst_data = reinterpret_cast<uint8_t *>(&val);
       for (size_t i = 0; i < sizeof(float_type); ++i)
         dst_data[sizeof(float_type) - 1 - i] = src_data[i];
     } else {
@@ -697,40 +663,30 @@ long double DataExtractor::GetLongDouble(offset_t *offset_ptr) const {
   return val;
 }
 
-//------------------------------------------------------------------
 // Extract a single address from the data and update the offset pointed to by
 // "offset_ptr". The size of the extracted address comes from the
 // "this->m_addr_size" member variable and should be set correctly prior to
 // extracting any address values.
 //
 // RETURNS the address that was extracted, or zero on failure.
-//------------------------------------------------------------------
 uint64_t DataExtractor::GetAddress(offset_t *offset_ptr) const {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   return GetMaxU64(offset_ptr, m_addr_size);
 }
 
 uint64_t DataExtractor::GetAddress_unchecked(offset_t *offset_ptr) const {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   return GetMaxU64_unchecked(offset_ptr, m_addr_size);
 }
 
-//------------------------------------------------------------------
 // Extract a single pointer from the data and update the offset pointed to by
 // "offset_ptr". The size of the extracted pointer comes from the
 // "this->m_addr_size" member variable and should be set correctly prior to
 // extracting any pointer values.
 //
 // RETURNS the pointer that was extracted, or zero on failure.
-//------------------------------------------------------------------
 uint64_t DataExtractor::GetPointer(offset_t *offset_ptr) const {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   return GetMaxU64(offset_ptr, m_addr_size);
 }
 
@@ -744,7 +700,7 @@ size_t DataExtractor::ExtractBytes(offset_t offset, offset_t length,
              length == 10 || length == 16 || length == 32);
 
       for (uint32_t i = 0; i < length; ++i)
-        ((uint8_t *)dst)[i] = src[length - i - 1];
+        (static_cast<uint8_t *>(dst))[i] = src[length - i - 1];
     } else
       ::memcpy(dst, src, length);
     return length;
@@ -790,8 +746,8 @@ DataExtractor::CopyByteOrderedData(offset_t src_offset, offset_t src_len,
       !(m_byte_order == eByteOrderBig || m_byte_order == eByteOrderLittle))
     return 0;
 
-  uint8_t *dst = (uint8_t *)dst_void_ptr;
-  const uint8_t *src = (const uint8_t *)PeekData(src_offset, src_len);
+  uint8_t *dst = static_cast<uint8_t *>(dst_void_ptr);
+  const uint8_t *src = PeekData(src_offset, src_len);
   if (src) {
     if (dst_len >= src_len) {
       // We are copying the entire value from src into dst. Calculate how many,
@@ -852,7 +808,6 @@ DataExtractor::CopyByteOrderedData(offset_t src_offset, offset_t src_len,
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Extracts a variable length NULL terminated C string from the data at the
 // offset pointed to by "offset_ptr".  The "offset_ptr" will be updated with
 // the offset of the byte that follows the NULL terminator byte.
@@ -860,12 +815,11 @@ DataExtractor::CopyByteOrderedData(offset_t src_offset, offset_t src_len,
 // If the offset pointed to by "offset_ptr" is out of bounds, or if "length" is
 // non-zero and there aren't enough available bytes, nullptr will be returned
 // and "offset_ptr" will not be updated.
-//----------------------------------------------------------------------
 const char *DataExtractor::GetCStr(offset_t *offset_ptr) const {
-  const char *cstr = (const char *)PeekData(*offset_ptr, 1);
+  const char *cstr = reinterpret_cast<const char *>(PeekData(*offset_ptr, 1));
   if (cstr) {
     const char *cstr_end = cstr;
-    const char *end = (const char *)m_end;
+    const char *end = reinterpret_cast<const char *>(m_end);
     while (cstr_end < end && *cstr_end)
       ++cstr_end;
 
@@ -884,7 +838,6 @@ const char *DataExtractor::GetCStr(offset_t *offset_ptr) const {
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // Extracts a NULL terminated C string from the fixed length field of length
 // "len" at the offset pointed to by "offset_ptr". The "offset_ptr" will be
 // updated with the offset of the byte that follows the fixed length field.
@@ -893,9 +846,8 @@ const char *DataExtractor::GetCStr(offset_t *offset_ptr) const {
 // plus the length of the field is out of bounds, or if the field does not
 // contain a NULL terminator byte, nullptr will be returned and "offset_ptr"
 // will not be updated.
-//----------------------------------------------------------------------
 const char *DataExtractor::GetCStr(offset_t *offset_ptr, offset_t len) const {
-  const char *cstr = (const char *)PeekData(*offset_ptr, len);
+  const char *cstr = reinterpret_cast<const char *>(PeekData(*offset_ptr, len));
   if (cstr != nullptr) {
     if (memchr(cstr, '\0', len) == nullptr) {
       return nullptr;
@@ -906,28 +858,24 @@ const char *DataExtractor::GetCStr(offset_t *offset_ptr, offset_t len) const {
   return nullptr;
 }
 
-//------------------------------------------------------------------
 // Peeks at a string in the contained data. No verification is done to make
 // sure the entire string lies within the bounds of this object's data, only
 // "offset" is verified to be a valid offset.
 //
 // Returns a valid C string pointer if "offset" is a valid offset in this
 // object's data, else nullptr is returned.
-//------------------------------------------------------------------
 const char *DataExtractor::PeekCStr(offset_t offset) const {
-  return (const char *)PeekData(offset, 1);
+  return reinterpret_cast<const char *>(PeekData(offset, 1));
 }
 
-//----------------------------------------------------------------------
 // Extracts an unsigned LEB128 number from this object's data starting at the
 // offset pointed to by "offset_ptr". The offset pointed to by "offset_ptr"
 // will be updated with the offset of the byte following the last extracted
 // byte.
 //
 // Returned the extracted integer value.
-//----------------------------------------------------------------------
 uint64_t DataExtractor::GetULEB128(offset_t *offset_ptr) const {
-  const uint8_t *src = (const uint8_t *)PeekData(*offset_ptr, 1);
+  const uint8_t *src = PeekData(*offset_ptr, 1);
   if (src == nullptr)
     return 0;
 
@@ -940,7 +888,7 @@ uint64_t DataExtractor::GetULEB128(offset_t *offset_ptr) const {
       int shift = 7;
       while (src < end) {
         uint8_t byte = *src++;
-        result |= (uint64_t)(byte & 0x7f) << shift;
+        result |= static_cast<uint64_t>(byte & 0x7f) << shift;
         if ((byte & 0x80) == 0)
           break;
         shift += 7;
@@ -953,16 +901,14 @@ uint64_t DataExtractor::GetULEB128(offset_t *offset_ptr) const {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Extracts an signed LEB128 number from this object's data starting at the
 // offset pointed to by "offset_ptr". The offset pointed to by "offset_ptr"
 // will be updated with the offset of the byte following the last extracted
 // byte.
 //
 // Returned the extracted integer value.
-//----------------------------------------------------------------------
 int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
-  const uint8_t *src = (const uint8_t *)PeekData(*offset_ptr, 1);
+  const uint8_t *src = PeekData(*offset_ptr, 1);
   if (src == nullptr)
     return 0;
 
@@ -979,7 +925,7 @@ int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
     while (src < end) {
       bytecount++;
       byte = *src++;
-      result |= (int64_t)(byte & 0x7f) << shift;
+      result |= static_cast<int64_t>(byte & 0x7f) << shift;
       shift += 7;
       if ((byte & 0x80) == 0)
         break;
@@ -995,17 +941,15 @@ int64_t DataExtractor::GetSLEB128(offset_t *offset_ptr) const {
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Skips a ULEB128 number (signed or unsigned) from this object's data starting
 // at the offset pointed to by "offset_ptr". The offset pointed to by
 // "offset_ptr" will be updated with the offset of the byte following the last
 // extracted byte.
 //
 // Returns the number of bytes consumed during the extraction.
-//----------------------------------------------------------------------
 uint32_t DataExtractor::Skip_LEB128(offset_t *offset_ptr) const {
   uint32_t bytes_consumed = 0;
-  const uint8_t *src = (const uint8_t *)PeekData(*offset_ptr, 1);
+  const uint8_t *src = PeekData(*offset_ptr, 1);
   if (src == nullptr)
     return 0;
 
@@ -1020,7 +964,6 @@ uint32_t DataExtractor::Skip_LEB128(offset_t *offset_ptr) const {
   return bytes_consumed;
 }
 
-//----------------------------------------------------------------------
 // Dumps bytes from this object's data to the stream "s" starting
 // "start_offset" bytes into this data, and ending with the byte before
 // "end_offset". "base_addr" will be added to the offset into the dumped data
@@ -1030,7 +973,6 @@ uint32_t DataExtractor::Skip_LEB128(offset_t *offset_ptr) const {
 // printf style formatting string. If "type_format" is nullptr, then an
 // appropriate format string will be used for the supplied "type". If the
 // stream "s" is nullptr, then the output will be send to Log().
-//----------------------------------------------------------------------
 lldb::offset_t DataExtractor::PutToLog(Log *log, offset_t start_offset,
                                        offset_t length, uint64_t base_addr,
                                        uint32_t num_per_line,
@@ -1054,7 +996,7 @@ lldb::offset_t DataExtractor::PutToLog(Log *log, offset_t start_offset,
       // Reset string offset and fill the current line string with address:
       if (base_addr != LLDB_INVALID_ADDRESS)
         sstr.Printf("0x%8.8" PRIx64 ":",
-                    (uint64_t)(base_addr + (offset - start_offset)));
+                    static_cast<uint64_t>(base_addr + (offset - start_offset)));
     }
 
     switch (type) {

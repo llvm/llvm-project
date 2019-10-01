@@ -8,10 +8,11 @@
 
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Program.h"
 
 #include <string>
 #include <vector>
@@ -29,15 +30,28 @@ void CreateEnvironmentBuffer(const Environment &env,
   for (const auto &KV : env) {
     std::wstring warg;
     if (llvm::ConvertUTF8toWide(Environment::compose(KV), warg)) {
-      buffer.insert(buffer.end(), (char *)warg.c_str(),
-                    (char *)(warg.c_str() + warg.size() + 1));
+      buffer.insert(
+          buffer.end(), reinterpret_cast<const char *>(warg.c_str()),
+          reinterpret_cast<const char *>(warg.c_str() + warg.size() + 1));
     }
   }
   // One null wchar_t (to end the block) is two null bytes
   buffer.push_back(0);
   buffer.push_back(0);
 }
+
+bool GetFlattenedWindowsCommandString(Args args, std::string &command) {
+  if (args.empty())
+    return false;
+
+  std::vector<llvm::StringRef> args_ref;
+  for (auto &entry : args.entries())
+    args_ref.push_back(entry.ref);
+
+  command = llvm::sys::flattenWindowsCommandLine(args_ref);
+  return true;
 }
+} // namespace
 
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
@@ -84,24 +98,28 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     env_block = environment.data();
 
   executable = launch_info.GetExecutableFile().GetPath();
-  launch_info.GetArguments().GetQuotedCommandString(commandLine);
+  GetFlattenedWindowsCommandString(launch_info.GetArguments(), commandLine);
 
   std::wstring wexecutable, wcommandLine, wworkingDirectory;
   llvm::ConvertUTF8toWide(executable, wexecutable);
   llvm::ConvertUTF8toWide(commandLine, wcommandLine);
   llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetCString(),
                           wworkingDirectory);
+  // If the command line is empty, it's best to pass a null pointer to tell
+  // CreateProcessW to use the executable name as the command line.  If the
+  // command line is not empty, its contents may be modified by CreateProcessW.
+  WCHAR *pwcommandLine = wcommandLine.empty() ? nullptr : &wcommandLine[0];
 
-  wcommandLine.resize(PATH_MAX); // Needs to be over-allocated because
-                                 // CreateProcessW can modify it
   BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), &wcommandLine[0], NULL, NULL, TRUE, flags, env_block,
+      wexecutable.c_str(), pwcommandLine, NULL, NULL, TRUE, flags, env_block,
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       &startupinfo, &pi);
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
     error.SetError(::GetLastError(), eErrorTypeWin32);
+    // Note that error 50 ("The request is not supported") will occur if you
+    // try debug a 64-bit inferior from a 32-bit LLDB.
   }
 
   if (result) {

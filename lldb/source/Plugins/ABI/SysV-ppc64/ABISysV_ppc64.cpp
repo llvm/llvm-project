@@ -64,17 +64,13 @@ lldb::ByteOrder ABISysV_ppc64::GetByteOrder() const {
   return GetProcessSP()->GetByteOrder();
 }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_ppc64::CreateInstance(lldb::ProcessSP process_sp,
                               const ArchSpec &arch) {
-  if (arch.GetTriple().getArch() == llvm::Triple::ppc64 ||
-      arch.GetTriple().getArch() == llvm::Triple::ppc64le) {
+  if (arch.GetTriple().isPPC64())
     return ABISP(new ABISysV_ppc64(process_sp));
-  }
   return ABISP();
 }
 
@@ -110,18 +106,16 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   for (size_t i = 0; i < args.size(); ++i) {
     reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
                                         LLDB_REGNUM_GENERIC_ARG1 + i);
-    if (log)
-      log->Printf("About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
-                  static_cast<uint64_t>(i + 1), args[i], reg_info->name);
+    LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
+              static_cast<uint64_t>(i + 1), args[i], reg_info->name);
     if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
       return false;
   }
 
   // First, align the SP
 
-  if (log)
-    log->Printf("16-byte aligning SP: 0x%" PRIx64 " to 0x%" PRIx64,
-                (uint64_t)sp, (uint64_t)(sp & ~0xfull));
+  LLDB_LOGF(log, "16-byte aligning SP: 0x%" PRIx64 " to 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)(sp & ~0xfull));
 
   sp &= ~(0xfull); // 16-byte alignment
 
@@ -140,22 +134,20 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   const RegisterInfo *r12_reg_info = reg_ctx->GetRegisterInfoAtIndex(12);
 
   // Save return address onto the stack.
-  if (log)
-    log->Printf("Pushing the return address onto the stack: 0x%" PRIx64
-                "(+16): 0x%" PRIx64,
-                (uint64_t)sp, (uint64_t)return_addr);
+  LLDB_LOGF(log,
+            "Pushing the return address onto the stack: 0x%" PRIx64
+            "(+16): 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)return_addr);
   if (!process_sp->WritePointerToMemory(sp + 16, return_addr, error))
     return false;
 
   // Write the return address to link register.
-  if (log)
-    log->Printf("Writing LR: 0x%" PRIx64, (uint64_t)return_addr);
+  LLDB_LOGF(log, "Writing LR: 0x%" PRIx64, (uint64_t)return_addr);
   if (!reg_ctx->WriteRegisterFromUnsigned(lr_reg_info, return_addr))
     return false;
 
   // Write target address to %r12 register.
-  if (log)
-    log->Printf("Writing R12: 0x%" PRIx64, (uint64_t)func_addr);
+  LLDB_LOGF(log, "Writing R12: 0x%" PRIx64, (uint64_t)func_addr);
   if (!reg_ctx->WriteRegisterFromUnsigned(r12_reg_info, func_addr))
     return false;
 
@@ -169,10 +161,9 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   else
     stack_offset = 40;
 
-  if (log)
-    log->Printf("Writing R2 (TOC) at SP(0x%" PRIx64 ")+%d: 0x%" PRIx64,
-                (uint64_t)(sp + stack_offset), (int)stack_offset,
-                (uint64_t)reg_value);
+  LLDB_LOGF(log, "Writing R2 (TOC) at SP(0x%" PRIx64 ")+%d: 0x%" PRIx64,
+            (uint64_t)(sp + stack_offset), (int)stack_offset,
+            (uint64_t)reg_value);
   if (!process_sp->WritePointerToMemory(sp + stack_offset, reg_value, error))
     return false;
 
@@ -180,23 +171,20 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   reg_value = reg_ctx->ReadRegisterAsUnsigned(sp_reg_info, 0);
 
   // Save current SP onto the stack.
-  if (log)
-    log->Printf("Writing SP at SP(0x%" PRIx64 ")+0: 0x%" PRIx64, (uint64_t)sp,
-                (uint64_t)reg_value);
+  LLDB_LOGF(log, "Writing SP at SP(0x%" PRIx64 ")+0: 0x%" PRIx64, (uint64_t)sp,
+            (uint64_t)reg_value);
   if (!process_sp->WritePointerToMemory(sp, reg_value, error))
     return false;
 
   // %r1 is set to the actual stack value.
-  if (log)
-    log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
+  LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
     return false;
 
   // %pc is set to the address of the called function.
 
-  if (log)
-    log->Printf("Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
+  LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
     return false;
@@ -1021,6 +1009,7 @@ bool ABISysV_ppc64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.SetSourceName("ppc64 default unwind plan");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   unwind_plan.SetReturnAddressRegister(pc_reg_num);
   return true;
 }
@@ -1086,9 +1075,7 @@ lldb_private::ConstString ABISysV_ppc64::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_ppc64::GetPluginName() {
   return GetPluginNameStatic();

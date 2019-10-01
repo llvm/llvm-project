@@ -88,43 +88,46 @@ public:
     FindSupportFileIndex (uint32_t start_idx, const SBFileSpec &sb_file, bool full);
 
     %feature("docstring", "
-     //------------------------------------------------------------------
-     /// Get all types matching \a type_mask from debug info in this
-     /// compile unit.
-     ///
-     /// @param[in] type_mask
-     ///    A bitfield that consists of one or more bits logically OR'ed
-     ///    together from the lldb::TypeClass enumeration. This allows
-     ///    you to request only structure types, or only class, struct
-     ///    and union types. Passing in lldb::eTypeClassAny will return
-     ///    all types found in the debug information for this compile
-     ///    unit.
-     ///
-     /// @return
-     ///    A list of types in this compile unit that match \a type_mask
-     //------------------------------------------------------------------
-     ") GetTypes;
+     Get all types matching type_mask from debug info in this
+     compile unit.
+
+     @param[in] type_mask
+        A bitfield that consists of one or more bits logically OR'ed
+        together from the lldb::TypeClass enumeration. This allows
+        you to request only structure types, or only class, struct
+        and union types. Passing in lldb::eTypeClassAny will return
+        all types found in the debug information for this compile
+        unit.
+
+     @return
+        A list of types in this compile unit that match type_mask") GetTypes;
     lldb::SBTypeList
     GetTypes (uint32_t type_mask = lldb::eTypeClassAny);
-    
+
      lldb::LanguageType
      GetLanguage ();
-             
+
     bool
     GetDescription (lldb::SBStream &description);
-    
+
     bool
     operator == (const lldb::SBCompileUnit &rhs) const;
-    
+
     bool
     operator != (const lldb::SBCompileUnit &rhs) const;
-    
+
     %pythoncode %{
-        __swig_getmethods__["file"] = GetFileSpec
-        if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
-        
-        __swig_getmethods__["num_line_entries"] = GetNumLineEntries
-        if _newclass: num_line_entries = property(GetNumLineEntries, None, doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
+        def __iter__(self):
+            '''Iterate over all line entries in a lldb.SBCompileUnit object.'''
+            return lldb_iter(self, 'GetNumLineEntries', 'GetLineEntryAtIndex')
+
+        def __len__(self):
+            '''Return the number of line entries in a lldb.SBCompileUnit
+            object.'''
+            return self.GetNumLineEntries()
+
+        file = property(GetFileSpec, None, doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
+        num_line_entries = property(GetNumLineEntries, None, doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
     %}
 };
 

@@ -41,7 +41,6 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_expressions_from_objc(self):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()

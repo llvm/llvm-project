@@ -5,9 +5,6 @@ Test getting return-values correctly when stepping out
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -57,7 +54,7 @@ class ReturnValueTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "outer_sint")
+        self.assertTrue(fun_name == "outer_sint(int)")
 
         return_value = thread.GetStopReturnValue()
         self.assertTrue(return_value.IsValid())
@@ -78,7 +75,7 @@ class ReturnValueTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(1)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "outer_sint")
+        self.assertTrue(fun_name == "outer_sint(int)")
         in_int = frame.FindVariable("value").GetValueAsSigned(error)
         self.assertTrue(error.Success())
 
@@ -98,7 +95,7 @@ class ReturnValueTestCase(TestBase):
 
         # Now try some simple returns that have different types:
         inner_float_bkpt = self.target.BreakpointCreateByName(
-            "inner_float", exe)
+            "inner_float(float)", exe)
         self.assertTrue(inner_float_bkpt, VALID_BREAKPOINT)
         self.process.Continue()
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
@@ -118,7 +115,7 @@ class ReturnValueTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
-        self.assertTrue(fun_name == "outer_float")
+        self.assertTrue(fun_name == "outer_float(float)")
 
         #return_value = thread.GetStopReturnValue()
         #self.assertTrue(return_value.IsValid())
@@ -190,6 +187,38 @@ class ReturnValueTestCase(TestBase):
         self.return_and_test_struct_value("return_ext_vector_size_float32_4")
         self.return_and_test_struct_value("return_ext_vector_size_float32_8")
 
+    # limit the nested struct and class tests to only x86_64
+    @skipIf(archs=no_match(['x86_64']))
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    def test_for_cpp_support(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        (self.target, self.process, thread, inner_sint_bkpt) = lldbutil.run_to_name_breakpoint(self, "inner_sint", exe_name = exe)
+
+        error = lldb.SBError()
+
+        self.target = self.dbg.CreateTarget(exe)
+        self.assertTrue(self.target, VALID_TARGET)
+
+        main_bktp = self.target.BreakpointCreateByName("main", exe)
+        self.assertTrue(main_bktp, VALID_BREAKPOINT)
+
+        self.process = self.target.LaunchSimple(
+            None, None, self.get_process_working_directory())
+        self.assertEqual(len(lldbutil.get_threads_stopped_at_breakpoint(
+            self.process, main_bktp)), 1)
+        # nested struct tests
+        self.return_and_test_struct_value("return_nested_one_float_three_base")
+        self.return_and_test_struct_value("return_double_nested_one_float_one_nested")
+        self.return_and_test_struct_value("return_nested_float_struct")
+        # class test
+        self.return_and_test_struct_value("return_base_class_one_char")
+        self.return_and_test_struct_value("return_nested_class_float_and_base")
+        self.return_and_test_struct_value("return_double_nested_class_float_and_nested")
+        self.return_and_test_struct_value("return_base_class")
+        self.return_and_test_struct_value("return_derived_class")
+
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def return_and_test_struct_value(self, func_name):
         """Pass in the name of the function to return from - takes in value, returns value."""
 

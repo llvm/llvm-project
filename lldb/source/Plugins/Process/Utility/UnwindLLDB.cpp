@@ -50,7 +50,7 @@ uint32_t UnwindLLDB::DoGetFrameCount() {
       return 0;
 
     ProcessSP process_sp(m_thread.GetProcess());
-    ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
+    ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
 
     while (AddOneMoreFrame(abi)) {
 #if DEBUG_FRAME_SPEED
@@ -73,13 +73,13 @@ bool UnwindLLDB::AddFirstFrame() {
     return true;
 
   ProcessSP process_sp(m_thread.GetProcess());
-  ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
+  ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
 
   // First, set up the 0th (initial) frame
   CursorSP first_cursor_sp(new Cursor());
   RegisterContextLLDBSP reg_ctx_sp(new RegisterContextLLDB(
       m_thread, RegisterContextLLDBSP(), first_cursor_sp->sctx, 0, *this));
-  if (reg_ctx_sp.get() == NULL)
+  if (reg_ctx_sp.get() == nullptr)
     goto unwind_done;
 
   if (!reg_ctx_sp->IsValid())
@@ -104,8 +104,8 @@ bool UnwindLLDB::AddFirstFrame() {
 unwind_done:
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
   if (log) {
-    log->Printf("th%d Unwind of this thread is complete.",
-                m_thread.GetIndexID());
+    LLDB_LOGF(log, "th%d Unwind of this thread is complete.",
+              m_thread.GetIndexID());
   }
   m_unwind_complete = true;
   return false;
@@ -140,14 +140,14 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
   // is going to blow out the stack space. If we're still unwinding at that
   // point, we're probably never going to finish.
   if (cur_idx >= max_stack_depth) {
-    if (log)
-      log->Printf("%*sFrame %d unwound too many frames, assuming unwind has "
-                  "gone astray, stopping.",
-                  cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+    LLDB_LOGF(log,
+              "%*sFrame %d unwound too many frames, assuming unwind has "
+              "gone astray, stopping.",
+              cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
 
-  if (reg_ctx_sp.get() == NULL) {
+  if (reg_ctx_sp.get() == nullptr) {
     // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.
@@ -161,9 +161,8 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    if (log)
-      log->Printf("%*sFrame %d did not get a RegisterContext, stopping.",
-                  cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+    LLDB_LOGF(log, "%*sFrame %d did not get a RegisterContext, stopping.",
+              cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
 
@@ -181,10 +180,10 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    if (log)
-      log->Printf("%*sFrame %d invalid RegisterContext for this frame, "
-                  "stopping stack walk",
-                  cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+    LLDB_LOGF(log,
+              "%*sFrame %d invalid RegisterContext for this frame, "
+              "stopping stack walk",
+              cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
   if (!reg_ctx_sp->GetCFA(cursor_sp->cfa)) {
@@ -201,10 +200,9 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    if (log)
-      log->Printf(
-          "%*sFrame %d did not get CFA for this frame, stopping stack walk",
-          cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+    LLDB_LOGF(log,
+              "%*sFrame %d did not get CFA for this frame, stopping stack walk",
+              cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
   if (abi && !abi->CallFrameAddressIsValid(cursor_sp->cfa)) {
@@ -230,17 +228,17 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
           return GetOneMoreFrame(abi);
         }
 
-        if (log)
-          log->Printf("%*sFrame %d did not get a valid CFA for this frame, "
-                      "stopping stack walk",
-                      cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+        LLDB_LOGF(log,
+                  "%*sFrame %d did not get a valid CFA for this frame, "
+                  "stopping stack walk",
+                  cur_idx < 100 ? cur_idx : 100, "", cur_idx);
         return nullptr;
       } else {
-        if (log)
-          log->Printf("%*sFrame %d had a bad CFA value but we switched the "
-                      "UnwindPlan being used and got one that looks more "
-                      "realistic.",
-                      cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+        LLDB_LOGF(log,
+                  "%*sFrame %d had a bad CFA value but we switched the "
+                  "UnwindPlan being used and got one that looks more "
+                  "realistic.",
+                  cur_idx < 100 ? cur_idx : 100, "", cur_idx);
       }
     }
   }
@@ -258,10 +256,9 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    if (log)
-      log->Printf(
-          "%*sFrame %d did not get PC for this frame, stopping stack walk",
-          cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+    LLDB_LOGF(log,
+              "%*sFrame %d did not get PC for this frame, stopping stack walk",
+              cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
   if (abi && !abi->CodeAddressIsValid(cursor_sp->start_pc)) {
@@ -278,18 +275,17 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    if (log)
-      log->Printf("%*sFrame %d did not get a valid PC, stopping stack walk",
-                  cur_idx < 100 ? cur_idx : 100, "", cur_idx);
+    LLDB_LOGF(log, "%*sFrame %d did not get a valid PC, stopping stack walk",
+              cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
   // Infinite loop where the current cursor is the same as the previous one...
   if (prev_frame->start_pc == cursor_sp->start_pc &&
       prev_frame->cfa == cursor_sp->cfa) {
-    if (log)
-      log->Printf("th%d pc of this frame is the same as the previous frame and "
-                  "CFAs for both frames are identical -- stopping unwind",
-                  m_thread.GetIndexID());
+    LLDB_LOGF(log,
+              "th%d pc of this frame is the same as the previous frame and "
+              "CFAs for both frames are identical -- stopping unwind",
+              m_thread.GetIndexID());
     return nullptr;
   }
 
@@ -337,9 +333,8 @@ bool UnwindLLDB::AddOneMoreFrame(ABI *abi) {
     new_frame = GetOneMoreFrame(abi);
 
   if (new_frame == nullptr) {
-    if (log)
-      log->Printf("th%d Unwind of this thread is complete.",
-                  m_thread.GetIndexID());
+    LLDB_LOGF(log, "th%d Unwind of this thread is complete.",
+              m_thread.GetIndexID());
     m_unwind_complete = true;
     return false;
   }
@@ -395,14 +390,15 @@ bool UnwindLLDB::AddOneMoreFrame(ABI *abi) {
   return true;
 }
 
-bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc) {
+bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc,
+                                       bool &behaves_like_zeroth_frame) {
   if (m_frames.size() == 0) {
     if (!AddFirstFrame())
       return false;
   }
 
   ProcessSP process_sp(m_thread.GetProcess());
-  ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
+  ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
 
   while (idx >= m_frames.size() && AddOneMoreFrame(abi))
     ;
@@ -410,6 +406,24 @@ bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc) {
   if (idx < m_frames.size()) {
     cfa = m_frames[idx]->cfa;
     pc = m_frames[idx]->start_pc;
+    if (idx == 0) {
+      // Frame zero always behaves like it.
+      behaves_like_zeroth_frame = true;
+    } else if (m_frames[idx - 1]->reg_ctx_lldb_sp->IsTrapHandlerFrame()) {
+      // This could be an asynchronous signal, thus the
+      // pc might point to the interrupted instruction rather
+      // than a post-call instruction
+      behaves_like_zeroth_frame = true;
+    } else if (m_frames[idx]->reg_ctx_lldb_sp->IsTrapHandlerFrame()) {
+      // This frame may result from signal processing installing
+      // a pointer to the first byte of a signal-return trampoline
+      // in the return address slot of the frame below, so this
+      // too behaves like the zeroth frame (i.e. the pc might not
+      // be pointing just past a call in it)
+      behaves_like_zeroth_frame = true;
+    } else {
+      behaves_like_zeroth_frame = false;
+    }
     return true;
   }
   return false;
@@ -430,7 +444,7 @@ UnwindLLDB::DoCreateRegisterContextForFrame(StackFrame *frame) {
   }
 
   ProcessSP process_sp(m_thread.GetProcess());
-  ABI *abi = process_sp ? process_sp->GetABI().get() : NULL;
+  ABI *abi = process_sp ? process_sp->GetABI().get() : nullptr;
 
   while (idx >= m_frames.size()) {
     if (!AddOneMoreFrame(abi))

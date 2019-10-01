@@ -61,10 +61,12 @@ using namespace lldb_private;
 
 static sig_atomic_t g_signal_flags[NSIG];
 
+#ifndef SIGNAL_POLLING_UNSUPPORTED
 static void SignalHandler(int signo, siginfo_t *info, void *) {
   assert(signo < NSIG);
   g_signal_flags[signo] = 1;
 }
+#endif
 
 class MainLoop::RunImpl {
 public:
@@ -107,8 +109,14 @@ Status MainLoop::RunImpl::Poll() {
   num_events = kevent(loop.m_kqueue, in_events.data(), in_events.size(),
                       out_events, llvm::array_lengthof(out_events), nullptr);
 
-  if (num_events < 0)
-    return Status("kevent() failed with error %d\n", num_events);
+  if (num_events < 0) {
+    if (errno == EINTR) {
+      // in case of EINTR, let the main loop run one iteration
+      // we need to zero num_events to avoid assertions failing
+      num_events = 0;
+    } else
+      return Status(errno, eErrorTypePOSIX);
+  }
   return Status();
 }
 
@@ -137,18 +145,20 @@ MainLoop::RunImpl::RunImpl(MainLoop &loop) : loop(loop) {
 }
 
 sigset_t MainLoop::RunImpl::get_sigmask() {
-#if SIGNAL_POLLING_UNSUPPORTED
-  return 0;
-#else
   sigset_t sigmask;
+#if defined(_WIN32)
+  sigmask = 0;
+#elif SIGNAL_POLLING_UNSUPPORTED
+  sigemptyset(&sigmask);
+#else
   int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask);
   assert(ret == 0);
   (void) ret;
 
   for (const auto &sig : loop.m_signals)
     sigdelset(&sigmask, sig.first);
-  return sigmask;
 #endif
+  return sigmask;
 }
 
 #ifdef __ANDROID__
@@ -310,6 +320,7 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
   // Even if using kqueue, the signal handler will still be invoked, so it's
   // important to replace it with our "benign" handler.
   int ret = sigaction(signo, &new_action, &info.old_action);
+  (void)ret;
   assert(ret == 0 && "sigaction failed");
 
 #if HAVE_SYS_EVENT_H
@@ -380,9 +391,6 @@ Status MainLoop::Run() {
       return error;
 
     impl.ProcessEvents();
-
-    if (m_terminate_request)
-      return Status();
   }
   return Status();
 }

@@ -15,17 +15,17 @@
 #include <cstring>
 #include <mutex>
 #include <sstream>
+#include <thread>
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileAction.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/FileAction.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
@@ -40,9 +40,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
-//----------------------------------------------------------------------
 // GDBRemoteCommunicationServerPlatform constructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, const char *socket_scheme)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server",
@@ -86,9 +84,7 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
                         });
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::~GDBRemoteCommunicationServerPlatform() {}
 
 Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
@@ -109,8 +105,8 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     hostname = "127.0.0.1";
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Launching debugserver with: %s:%u...", hostname.c_str(), port);
+  LLDB_LOGF(log, "Launching debugserver with: %s:%u...", hostname.c_str(),
+            port);
 
   // Do not run in a new session so that it can not linger after the platform
   // closes.
@@ -120,25 +116,24 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
                 this, std::placeholders::_1),
       false);
 
-  llvm::StringRef platform_scheme;
-  llvm::StringRef platform_ip;
-  int platform_port;
-  llvm::StringRef platform_path;
-  std::string platform_uri = GetConnection()->GetURI();
-  bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
-                             platform_port, platform_path);
-  UNUSED_IF_ASSERT_DISABLED(ok);
-  assert(ok);
-
   std::ostringstream url;
 // debugserver does not accept the URL scheme prefix.
 #if !defined(__APPLE__)
   url << m_socket_scheme << "://";
 #endif
   uint16_t *port_ptr = &port;
-  if (m_socket_protocol == Socket::ProtocolTcp)
+  if (m_socket_protocol == Socket::ProtocolTcp) {
+    llvm::StringRef platform_scheme;
+    llvm::StringRef platform_ip;
+    int platform_port;
+    llvm::StringRef platform_path;
+    std::string platform_uri = GetConnection()->GetURI();
+    bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
+                               platform_port, platform_path);
+    UNUSED_IF_ASSERT_DISABLED(ok);
+    assert(ok);
     url << platform_ip.str() << ":" << port;
-  else {
+  } else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;
     port_ptr = nullptr;
@@ -167,9 +162,8 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   // process...
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("GDBRemoteCommunicationServerPlatform::%s() called",
-                __FUNCTION__);
+  LLDB_LOGF(log, "GDBRemoteCommunicationServerPlatform::%s() called",
+            __FUNCTION__);
 
   ConnectionFileDescriptor file_conn;
   std::string hostname;
@@ -189,24 +183,24 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   Status error =
       LaunchGDBServer(Args(), hostname, debugserver_pid, port, socket_name);
   if (error.Fail()) {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerPlatform::%s() debugserver "
-                  "launch failed: %s",
-                  __FUNCTION__, error.AsCString());
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerPlatform::%s() debugserver "
+              "launch failed: %s",
+              __FUNCTION__, error.AsCString());
     return SendErrorResponse(9);
   }
 
-  if (log)
-    log->Printf("GDBRemoteCommunicationServerPlatform::%s() debugserver "
-                "launched successfully as pid %" PRIu64,
-                __FUNCTION__, debugserver_pid);
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerPlatform::%s() debugserver "
+            "launched successfully as pid %" PRIu64,
+            __FUNCTION__, debugserver_pid);
 
   StreamGDBRemote response;
   response.Printf("pid:%" PRIu64 ";port:%u;", debugserver_pid,
                   port + m_port_offset);
   if (!socket_name.empty()) {
     response.PutCString("socket_name:");
-    response.PutCStringAsRawHex8(socket_name.c_str());
+    response.PutStringAsRawHex8(socket_name);
     response.PutChar(';');
   }
 
@@ -287,10 +281,9 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
         return true;
       }
     }
-    usleep(10000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  // check one more time after the final usleep
   {
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     if (m_spawned_pids.find(pid) == m_spawned_pids.end())
@@ -309,10 +302,10 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
         return true;
       }
     }
-    usleep(10000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  // check one more time after the final usleep Scope for locker
+  // check one more time after the final sleep
   {
     std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     if (m_spawned_pids.find(pid) == m_spawned_pids.end())
@@ -398,7 +391,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
     StringExtractorGDBRemote &packet) {
   StructuredData::Array signal_array;
 
-  const auto &signals = Host::GetUnixSignals();
+  lldb::UnixSignalsSP signals = UnixSignals::CreateForHost();
   for (auto signo = signals->GetFirstSignalNumber();
        signo != LLDB_INVALID_SIGNAL_NUMBER;
        signo = signals->GetNextSignalNumber(signo)) {

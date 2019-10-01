@@ -13,6 +13,7 @@
 #include "SwiftExpressionParser.h"
 
 #include "SwiftASTManipulator.h"
+#include "SwiftExpressionSourceCode.h"
 #include "SwiftREPLMaterializer.h"
 #include "SwiftSILManipulator.h"
 #include "SwiftUserExpression.h"
@@ -25,7 +26,6 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -127,7 +127,7 @@ SwiftExpressionParser::SwiftExpressionParser(
 
   if (target_sp) {
     Status error;
-    m_swift_ast_context = llvm::make_unique<SwiftASTContextReader>(
+    m_swift_ast_context = std::make_unique<SwiftASTContextReader>(
         target_sp->GetScratchSwiftASTContext(error, *exe_scope, true));
   }
 }
@@ -401,10 +401,10 @@ public:
   virtual swift::Identifier getPreferredPrivateDiscriminator() {
     if (m_sc.comp_unit) {
       if (lldb_private::Module *module = m_sc.module_sp.get()) {
-        if (lldb_private::SymbolVendor *symbol_vendor =
-                module->GetSymbolVendor()) {
+        if (lldb_private::SymbolFile *symbol_file =
+                module->GetSymbolFile()) {
           std::string private_discriminator_string;
-          if (symbol_vendor->GetCompileOption("-private-discriminator",
+          if (symbol_file->GetCompileOption("-private-discriminator",
                                               private_discriminator_string,
                                               m_sc.comp_unit)) {
             return m_source_file.getASTContext().getIdentifier(
@@ -708,7 +708,9 @@ static void AddVariableInfo(
       new VariableMetadataVariable(variable_sp));
   SwiftASTManipulator::VariableInfo variable_info(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
-      metadata_sp, swift::VarDecl::Introducer::Var);
+      metadata_sp,
+      variable_sp->IsConstant() ? swift::VarDecl::Introducer::Let
+                                : swift::VarDecl::Introducer::Var);
 
   local_variables.push_back(variable_info);
   processed_variables.insert(overridden_name);
@@ -1288,7 +1290,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
     code_manipulator =
-        llvm::make_unique<SwiftASTManipulator>(*source_file, repl);
+        std::make_unique<SwiftASTManipulator>(*source_file, repl);
 
     if (!playground) {
       code_manipulator->RewriteResult();

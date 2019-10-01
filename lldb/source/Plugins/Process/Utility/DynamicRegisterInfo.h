@@ -64,9 +64,7 @@ public:
   void Clear();
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from DynamicRegisterInfo can see and modify these
-  //------------------------------------------------------------------
   typedef std::vector<lldb_private::RegisterInfo> reg_collection;
   typedef std::vector<lldb_private::RegisterSet> set_collection;
   typedef std::vector<uint32_t> reg_num_collection;

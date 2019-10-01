@@ -23,9 +23,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanPython
-//----------------------------------------------------------------------
 
 ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name)
     : ThreadPlan(ThreadPlan::eKindPython, "Python based Thread Plan", thread,
@@ -72,9 +70,8 @@ void ThreadPlanPython::DidPush() {
 
 bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-                m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
+            m_class_name.c_str());
 
   bool should_stop = true;
   if (m_implementation_sp) {
@@ -95,9 +92,8 @@ bool ThreadPlanPython::ShouldStop(Event *event_ptr) {
 
 bool ThreadPlanPython::IsPlanStale() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-                m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
+            m_class_name.c_str());
 
   bool is_stale = true;
   if (m_implementation_sp) {
@@ -118,9 +114,8 @@ bool ThreadPlanPython::IsPlanStale() {
 
 bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-                m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
+            m_class_name.c_str());
 
   bool explains_stop = true;
   if (m_implementation_sp) {
@@ -141,9 +136,8 @@ bool ThreadPlanPython::DoPlanExplainsStop(Event *event_ptr) {
 
 bool ThreadPlanPython::MischiefManaged() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-                m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
+            m_class_name.c_str());
   bool mischief_managed = true;
   if (m_implementation_sp) {
     // I don't really need mischief_managed, since it's simpler to just call
@@ -157,9 +151,8 @@ bool ThreadPlanPython::MischiefManaged() {
 
 lldb::StateType ThreadPlanPython::GetPlanRunState() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-                m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
+            m_class_name.c_str());
   lldb::StateType run_state = eStateRunning;
   if (m_implementation_sp) {
     ScriptInterpreter *script_interp = m_thread.GetProcess()
@@ -190,8 +183,7 @@ void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
 
 bool ThreadPlanPython::WillStop() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
-                m_class_name.c_str());
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
+            m_class_name.c_str());
   return true;
 }

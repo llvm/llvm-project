@@ -21,9 +21,7 @@ public:
 
   ~OptionValuePathMappings() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypePathMap; }
 
@@ -47,9 +45,7 @@ public:
 
   bool IsAggregateValue() const override { return true; }
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   PathMappingList &GetCurrentValue() { return m_path_mappings; }
 

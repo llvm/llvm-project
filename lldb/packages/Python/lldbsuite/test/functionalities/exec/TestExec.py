@@ -5,8 +5,6 @@ from __future__ import print_function
 
 
 import lldb
-import os
-import time
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -18,17 +16,19 @@ class ExecTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
-    @skipIfSanitized # rdar://problem/43756823
+    @expectedFailureNetBSD
+    @skipIfAsan # rdar://problem/43756823
+    @skipIfWindows
     def test_hitting_exec (self):
         self.do_test(False)
 
-    @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
-    @skipIfSanitized # rdar://problem/43756823
+    @expectedFailureNetBSD
+    @skipIfAsan # rdar://problem/43756823
+    @skipIfWindows
     def test_skipping_exec (self):
         self.do_test(False)
 

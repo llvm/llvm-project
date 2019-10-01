@@ -12,19 +12,13 @@
 namespace lldb_private {
 
 ProcessRunLock::ProcessRunLock() : m_running(false) {
-  int err = ::pthread_rwlock_init(&m_rwlock, NULL);
+  int err = ::pthread_rwlock_init(&m_rwlock, nullptr);
   (void)err;
-  //#if LLDB_CONFIGURATION_DEBUG
-  //        assert(err == 0);
-  //#endif
 }
 
 ProcessRunLock::~ProcessRunLock() {
   int err = ::pthread_rwlock_destroy(&m_rwlock);
   (void)err;
-  //#if LLDB_CONFIGURATION_DEBUG
-  //        assert(err == 0);
-  //#endif
 }
 
 bool ProcessRunLock::ReadTryLock() {

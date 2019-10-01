@@ -27,9 +27,7 @@ SystemRuntime *SystemRuntime::FindPlugin(Process *process) {
   return nullptr;
 }
 
-//----------------------------------------------------------------------
 // SystemRuntime constructor
-//----------------------------------------------------------------------
 SystemRuntime::SystemRuntime(Process *process)
     : m_process(process), m_types() {}
 

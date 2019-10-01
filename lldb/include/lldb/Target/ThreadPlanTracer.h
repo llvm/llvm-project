@@ -21,12 +21,12 @@ class ThreadPlanTracer {
   friend class ThreadPlan;
 
 public:
-  typedef enum ThreadPlanTracerStyle {
+  enum ThreadPlanTracerStyle {
     eLocation = 0,
     eStateChange,
     eCheckFrames,
     ePython
-  } ThreadPlanTracerStyle;
+  };
 
   ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp);
   ThreadPlanTracer(Thread &thread);

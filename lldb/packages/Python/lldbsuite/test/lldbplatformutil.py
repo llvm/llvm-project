@@ -16,7 +16,6 @@ from six.moves.urllib import parse as urlparse
 
 # LLDB modules
 from . import configuration
-import use_lldb_suite
 import lldb
 
 

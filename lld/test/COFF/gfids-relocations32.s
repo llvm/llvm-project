@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple i686-pc-win32 %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -entry:main
+# RUN: lld-link -safeseh:no %t.obj -guard:cf -out:%t.exe -entry:main
 # RUN: llvm-readobj --coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK
 
 # Only f and _main should go in the table.

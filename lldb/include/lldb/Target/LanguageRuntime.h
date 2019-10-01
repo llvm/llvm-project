@@ -214,9 +214,7 @@ public:
                                           bool resolve_thunks = true){};
 
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from LanguageRuntime can see and modify these
-  //------------------------------------------------------------------
 
   LanguageRuntime(Process *process);
   Process *m_process;

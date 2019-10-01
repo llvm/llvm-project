@@ -32,7 +32,7 @@
 # REPORT-NEXT: <internal>:(.got.plt) is being placed in '.got.plt'
 # REPORT-NEXT: <internal>:(.got.plt) is being placed in '.got.plt'
 # REPORT-NEXT: <internal>:(.rela.plt) is being placed in '.rela.plt'
-# REPORT-NEXT: <internal>:(.rela.plt) is being placed in '.rela.plt'
+# REPORT-NEXT: <internal>:(.rela.dyn) is being placed in '.rela.dyn'
 # REPORT-NEXT: <internal>:(.plt) is being placed in '.plt'
 # REPORT-NEXT: <internal>:(.plt) is being placed in '.plt'
 # REPORT-NEXT: <internal>:(.symtab) is being placed in '.symtab'

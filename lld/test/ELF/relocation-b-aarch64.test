@@ -2,7 +2,7 @@
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: ld.lld %t.o -o %t.out
-# RUN: llvm-objdump -d -triple=aarch64-none-linux %t.out | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.out | FileCheck %s
 
 # Check that the R_AARCH64_JUMP26 writes the branch opcode as well as the
 # immediate. We use this property to overwrite instructions with a branch.
@@ -10,9 +10,9 @@
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: foo:
-# CHECK-NEXT:    210000:        01 00 00 14     b       #4
+# CHECK-NEXT:    210120:       b       #4
 # CHECK: bar:
-# CHECK-NEXT:    210004:        ff ff ff 17     b       #-4
+# CHECK-NEXT:    210124:       b       #-4
 
 !ELF
 FileHeader:

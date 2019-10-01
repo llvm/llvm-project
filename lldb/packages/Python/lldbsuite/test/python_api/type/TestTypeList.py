@@ -5,9 +5,6 @@ Test SBType and SBTypeList API.
 from __future__ import print_function
 
 
-import os
-import re
-import time
 
 import lldb
 from lldbsuite.test.decorators import *

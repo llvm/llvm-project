@@ -72,15 +72,18 @@ A::B::C<void> ABCVoid;
 A::C<0> AC0;
 A::C<-1> ACNeg1;
 
+// FIXME: The type `D` is located now at the level of the translation unit.
+// FIXME: Should be located in the namespace `A`, in the struct `C<1>`.
+A::C<1>::D AC1D;
+
 A::C<0>::D AC0D;
 A::C<-1>::D ACNeg1D;
 A::D AD;
 A::D::E ADE;
 
-// FIXME: Anonymous namespaces aren't working correctly.
 Anonymous<int> AnonInt;
 Anonymous<A::B::C<void>> AnonABCVoid;
-Anonymous<A::B::C<int>>::D AnonABCVoidD;
+Anonymous<A::B::C<void>>::D AnonABCVoidD;
 
 // FIXME: Enum size isn't being correctly determined.
 // FIXME: Can't read memory for variable values.
@@ -94,10 +97,14 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = 0x{{0+}})
 // CHECK: (A::C<0>) AC0 = {}
 // CHECK: (A::C<-1>) ACNeg1 = {}
+// CHECK: (A::C<1>::D) AC1D = (ACDMember = 0, CPtr = 0x{{0+}})
 // CHECK: (A::C<0>::D) AC0D = (ACDMember = 0, CPtr = 0x{{0+}})
 // CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = 0, CPtr = 0x{{0+}})
 // CHECK: (A::D) AD = {}
 // CHECK: (A::D::E) ADE = (ADDMember = 0)
+// CHECK: ((anonymous namespace)::Anonymous<int>) AnonInt = (AnonymousMember = 0)
+// CHECK: ((anonymous namespace)::Anonymous<A::B::C<void>>) AnonABCVoid = (AnonymousMember = 0)
+// CHECK: ((anonymous namespace)::Anonymous<A::B::C<void>>::D) AnonABCVoidD = (AnonymousDMember = 0)
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
 // CHECK: |-CXXRecordDecl {{.*}} class TrivialC definition
@@ -113,6 +120,10 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: | | | `-FieldDecl {{.*}} ABCMember 'float'
 // CHECK: | | `-CXXRecordDecl {{.*}} struct C<void> definition
 // CHECK: | |   `-FieldDecl {{.*}} ABCSpecializationMember 'void *'
+// FIXME: | |-CXXRecordDecl {{.*}} struct C<1> definition
+// FIXME: | | `-CXXRecordDecl {{.*}} class D definition
+// FIXME: | |   |-FieldDecl {{.*}} ACDMember 'int'
+// FIXME: | |   `-FieldDecl {{.*}} CPtr 'A::C<1> *'
 // CHECK: | |-CXXRecordDecl {{.*}} struct C<0> definition
 // CHECK: | | `-CXXRecordDecl {{.*}} class D definition
 // CHECK: | |   |-FieldDecl {{.*}} ACDMember 'int'
@@ -125,7 +136,18 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: | `-CXXRecordDecl {{.*}} struct D definition
 // CHECK: |   `-CXXRecordDecl {{.*}} struct E definition
 // CHECK: |     `-FieldDecl {{.*}} ADDMember 'int'
+// CHECK: |-NamespaceDecl
+// CHECK: | |-CXXRecordDecl {{.*}} struct Anonymous<int> definition
+// CHECK: | | `-FieldDecl {{.*}} AnonymousMember 'int'
+// CHECK: | `-CXXRecordDecl {{.*}} struct Anonymous<A::B::C<void>> definition
+// CHECK: |   |-FieldDecl {{.*}} AnonymousMember 'int'
+// CHECK: |   `-CXXRecordDecl {{.*}} struct D definition
+// CHECK: |     `-FieldDecl {{.*}} AnonymousDMember 'int'
 
 int main(int argc, char **argv) {
+  AnonInt.AnonymousMember = 1;
+  AnonABCVoid.AnonymousMember = 2;
+  AnonABCVoidD.AnonymousDMember = 3;
+
   return 0;
 }

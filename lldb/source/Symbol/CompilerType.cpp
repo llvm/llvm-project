@@ -10,8 +10,6 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -36,15 +34,6 @@ CompilerType::CompilerType(TypeSystem *type_system,
                            lldb::opaque_compiler_type_t type)
     : m_type(type), m_type_system(type_system) {}
 
-CompilerType::CompilerType(clang::ASTContext *ast, clang::QualType qual_type)
-    : m_type(qual_type.getAsOpaquePtr()),
-      m_type_system(ClangASTContext::GetASTContext(ast)) {
-#ifdef LLDB_CONFIGURATION_DEBUG
-  if (m_type)
-    assert(m_type_system != nullptr);
-#endif
-}
-
 CompilerType::CompilerType(swift::Type qual_type)
     : m_type(qual_type.getPointer()),
       m_type_system(
@@ -52,9 +41,7 @@ CompilerType::CompilerType(swift::Type qual_type)
 
 CompilerType::~CompilerType() {}
 
-//----------------------------------------------------------------------
 // Tests
-//----------------------------------------------------------------------
 
 bool CompilerType::IsAggregateType() const {
   if (IsValid())
@@ -157,7 +144,7 @@ bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
     return m_type_system->IsBlockPointerType(m_type, function_pointer_type_ptr);
-  return 0;
+  return false;
 }
 
 bool CompilerType::IsIntegerType(bool &is_signed) const {
@@ -281,9 +268,7 @@ bool CompilerType::IsBeingDefined() const {
   return m_type_system->IsBeingDefined(m_type);
 }
 
-//----------------------------------------------------------------------
 // Type Completion
-//----------------------------------------------------------------------
 
 bool CompilerType::GetCompleteType() const {
   if (!IsValid())
@@ -291,9 +276,7 @@ bool CompilerType::GetCompleteType() const {
   return m_type_system->GetCompleteType(m_type);
 }
 
-//----------------------------------------------------------------------
 // AST related queries
-//----------------------------------------------------------------------
 size_t CompilerType::GetPointerByteSize() const {
   if (m_type_system)
     return m_type_system->GetPointerByteSize();
@@ -363,21 +346,13 @@ void CompilerType::SetCompilerType(TypeSystem *type_system,
   m_type = type;
 }
 
-void CompilerType::SetCompilerType(clang::ASTContext *ast,
-                                   clang::QualType qual_type) {
-  m_type_system = ClangASTContext::GetASTContext(ast);
-  m_type = qual_type.getAsOpaquePtr();
-}
-
 unsigned CompilerType::GetTypeQualifiers() const {
   if (IsValid())
     return m_type_system->GetTypeQualifiers(m_type);
   return 0;
 }
 
-//----------------------------------------------------------------------
 // Creating related types
-//----------------------------------------------------------------------
 
 CompilerType CompilerType::GetArrayElementType(uint64_t *stride) const {
   if (IsValid()) {
@@ -525,7 +500,6 @@ CompilerType CompilerType::GetUnboundType() const {
 
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
-//----------------------------------------------------------------------
 
 CompilerType
 CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
@@ -533,9 +507,7 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
     return m_type_system->GetBasicTypeFromAST(basic_type);
   return CompilerType();
 }
-//----------------------------------------------------------------------
 // Exploring the type
-//----------------------------------------------------------------------
 
 llvm::Optional<uint64_t>
 CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
@@ -799,16 +771,7 @@ CompilerType::GetIndexOfChildWithName(const char *name,
   return UINT32_MAX;
 }
 
-size_t CompilerType::ConvertStringToFloatValue(const char *s, uint8_t *dst,
-                                               size_t dst_size) const {
-  if (IsValid())
-    return m_type_system->ConvertStringToFloatValue(m_type, s, dst, dst_size);
-  return 0;
-}
-
-//----------------------------------------------------------------------
 // Dumping types
-//----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
 
 void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
@@ -1068,7 +1031,7 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
     return false;
 
   auto byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
   if (!byte_size)
     return false;
 
@@ -1113,7 +1076,7 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
     return false;
 
   auto byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
   if (!byte_size)
     return false;
 

@@ -19,7 +19,6 @@
 
 namespace lldb_private {
 
-//------------------------------------------------------------------
 // Queue:
 // This class represents a libdispatch aka Grand Central Dispatch queue in the
 // process.
@@ -29,7 +28,6 @@ namespace lldb_private {
 // pthreads to execute the work items for the queues.  A serial queue will be
 // associated with a single thread (or possibly no thread, if it is not doing
 // any work).  A concurrent queue may be associated with multiple threads.
-//------------------------------------------------------------------
 
 class Queue : public std::enable_shared_from_this<Queue> {
 public:
@@ -38,7 +36,6 @@ public:
 
   ~Queue();
 
-  //------------------------------------------------------------------
   /// Get the QueueID for this Queue
   ///
   /// A 64-bit ID number that uniquely identifies a queue at this particular
@@ -47,21 +44,17 @@ public:
   /// each queue.  A serialnum is not reused for a different queue in the
   /// lifetime of that process execution.
   ///
-  /// @return
+  /// \return
   ///     The QueueID for this Queue.
-  //------------------------------------------------------------------
   lldb::queue_id_t GetID();
 
-  //------------------------------------------------------------------
   /// Get the name of this Queue
   ///
-  /// @return
+  /// \return
   ///     The name of the queue, if one is available.
   ///     A NULL pointer is returned if none is available.
-  //------------------------------------------------------------------
   const char *GetName();
 
-  //------------------------------------------------------------------
   /// Get the IndexID for this Queue
   ///
   /// This is currently the same as GetID().  If it changes in the future,
@@ -72,66 +65,55 @@ public:
   /// maintain similar API to the Thread class, and allow for the
   /// possibility of GetID changing to a different source in the future.
   ///
-  /// @return
+  /// \return
   ///     The IndexID for this queue.
-  //------------------------------------------------------------------
   uint32_t GetIndexID();
 
-  //------------------------------------------------------------------
   /// Return the threads currently associated with this queue
   ///
   /// Zero, one, or many threads may be executing code for a queue at
   /// a given point in time.  This call returns the list of threads
   /// that are currently executing work for this queue.
   ///
-  /// @return
+  /// \return
   ///     The threads currently performing work for this queue
-  //------------------------------------------------------------------
   std::vector<lldb::ThreadSP> GetThreads();
 
-  //------------------------------------------------------------------
   /// Return the items that are currently enqueued
   ///
   /// "Enqueued" means that the item has been added to the queue to
   /// be done, but has not yet been done.  When the item is going to
   /// be processed it is "dequeued".
   ///
-  /// @return
+  /// \return
   ///     The vector of enqueued items for this queue
-  //------------------------------------------------------------------
   const std::vector<lldb::QueueItemSP> &GetPendingItems();
 
   lldb::ProcessSP GetProcess() const { return m_process_wp.lock(); }
 
-  //------------------------------------------------------------------
   /// Get the number of work items that this queue is currently running
   ///
-  /// @return
+  /// \return
   ///     The number of work items currently executing.  For a serial
   ///     queue, this will be 0 or 1.  For a concurrent queue, this
   ///     may be any number.
-  //------------------------------------------------------------------
   uint32_t GetNumRunningWorkItems() const;
 
-  //------------------------------------------------------------------
   /// Get the number of work items enqueued on this queue
   ///
-  /// @return
+  /// \return
   ///     The number of work items currently enqueued, waiting to
   ///     execute.
-  //------------------------------------------------------------------
   uint32_t GetNumPendingWorkItems() const;
 
-  //------------------------------------------------------------------
   /// Get the dispatch_queue_t structure address for this Queue
   ///
   /// Get the address in the inferior process' memory of this Queue's
   /// dispatch_queue_t structure.
   ///
-  /// @return
+  /// \return
   ///     The address of the dispatch_queue_t structure, if known.
   ///     LLDB_INVALID_ADDRESS will be returned if it is unavailable.
-  //------------------------------------------------------------------
   lldb::addr_t GetLibdispatchQueueAddress() const;
 
   void SetNumRunningWorkItems(uint32_t count);
@@ -144,20 +126,16 @@ public:
     m_pending_items.push_back(item);
   }
 
-  //------------------------------------------------------------------
   /// Return the kind (serial, concurrent) of this queue
   ///
-  /// @return
+  /// \return
   //      Whether this is a serial or a concurrent queue
-  //------------------------------------------------------------------
   lldb::QueueKind GetKind();
 
   void SetKind(lldb::QueueKind kind);
 
 private:
-  //------------------------------------------------------------------
   // For Queue only
-  //------------------------------------------------------------------
 
   lldb::ProcessWP m_process_wp;
   lldb::queue_id_t m_queue_id;

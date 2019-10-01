@@ -16,9 +16,7 @@ namespace lldb_private {
 
 class StackID {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   StackID()
       : m_pc(LLDB_INVALID_ADDRESS), m_cfa(LLDB_INVALID_ADDRESS),
         m_symbol_scope(nullptr) {}
@@ -54,9 +52,7 @@ public:
 
   void Dump(Stream *s);
 
-  //------------------------------------------------------------------
   // Operators
-  //------------------------------------------------------------------
   const StackID &operator=(const StackID &rhs) {
     if (this != &rhs) {
       m_pc = rhs.m_pc;

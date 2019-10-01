@@ -48,8 +48,7 @@ struct test_merge
     void
     operator()(Policy&& exec, std::reverse_iterator<InputIterator1> first1, std::reverse_iterator<InputIterator1> last1,
                std::reverse_iterator<InputIterator2> first2, std::reverse_iterator<InputIterator2> last2,
-               std::reverse_iterator<OutputIterator> out_first, std::reverse_iterator<OutputIterator> out_last,
-               Compare)
+               std::reverse_iterator<OutputIterator> out_first, std::reverse_iterator<OutputIterator> out_last, Compare)
     {
         using namespace std;
         typedef typename std::iterator_traits<std::reverse_iterator<InputIterator1>>::value_type T;
@@ -96,7 +95,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test_merge_by_type<int32_t>([](size_t v) { return (v % 2 == 0 ? v : -v) * 3; }, [](size_t v) { return v * 2; });

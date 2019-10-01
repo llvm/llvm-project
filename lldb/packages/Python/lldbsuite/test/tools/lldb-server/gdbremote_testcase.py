@@ -8,11 +8,9 @@ from __future__ import division, print_function
 import errno
 import os
 import os.path
-import platform
 import random
 import re
 import select
-import signal
 import socket
 import subprocess
 import sys
@@ -236,6 +234,10 @@ class GdbRemoteTestCaseBase(TestBase):
             # Remote platforms don't support named pipe based port negotiation
             use_named_pipe = False
 
+            triple = self.dbg.GetSelectedPlatform().GetTriple()
+            if re.match(".*-.*-windows", triple):
+                self.skipTest("Remotely testing is not supported on Windows yet.")
+
             # Grab the ppid from /proc/[shell pid]/stat
             err, retcode, shell_stat = self.run_platform_command(
                 "cat /proc/$$/stat")
@@ -261,6 +263,10 @@ class GdbRemoteTestCaseBase(TestBase):
             # Remove if it's there.
             self.debug_monitor_exe = re.sub(r' \(deleted\)$', '', exe)
         else:
+            # Need to figure out how to create a named pipe on Windows.
+            if platform.system() == 'Windows':
+                use_named_pipe = False
+
             self.debug_monitor_exe = get_lldb_server_exe()
             if not self.debug_monitor_exe:
                 self.skipTest("lldb-server exe not found")
@@ -378,6 +384,11 @@ class GdbRemoteTestCaseBase(TestBase):
         if self.named_pipe_path:
             commandline_args += ["--named-pipe", self.named_pipe_path]
         return commandline_args
+
+    def get_target_byte_order(self):
+        inferior_exe_path = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(inferior_exe_path)
+        return target.GetByteOrder()
 
     def launch_debug_monitor(self, attach_pid=None, logfile=None):
         # Create the command line.
@@ -509,7 +520,8 @@ class GdbRemoteTestCaseBase(TestBase):
             self,
             inferior_args=None,
             inferior_sleep_seconds=3,
-            inferior_exe_path=None):
+            inferior_exe_path=None,
+            inferior_env=None):
         """Prep the debug monitor, the inferior, and the expected packet stream.
 
         Handle the separate cases of using the debug monitor in attach-to-inferior mode
@@ -572,6 +584,9 @@ class GdbRemoteTestCaseBase(TestBase):
 
         # Build the expected protocol stream
         self.add_no_ack_remote_stream()
+        if inferior_env:
+            for name, value in inferior_env.items():
+                self.add_set_environment_packets(name, value)
         if self._inferior_startup == self._STARTUP_LAUNCH:
             self.add_verified_launch_packets(launch_args)
 
@@ -651,6 +666,12 @@ class GdbRemoteTestCaseBase(TestBase):
             ["read packet: $qProcessInfo#dc",
              {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "process_info_raw"}}],
             True)
+
+    def add_set_environment_packets(self, name, value):
+        self.test_sequence.add_log_lines(
+            ["read packet: $QEnvironment:" + name + "=" + value + "#00",
+             "send packet: $OK#00",
+             ], True)
 
     _KNOWN_PROCESS_INFO_KEYS = [
         "pid",
@@ -812,6 +833,7 @@ class GdbRemoteTestCaseBase(TestBase):
                     "error"])
             self.assertIsNotNone(val)
 
+        mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))
         # Return the dictionary of key-value pairs for the memory region.
         return mem_region_dict
 
@@ -995,6 +1017,22 @@ class GdbRemoteTestCaseBase(TestBase):
         self.assertIsNotNone(context.get("stop_result"))
 
         return context
+
+    def continue_process_and_wait_for_stop(self):
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vCont;c#a8",
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})(.*)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "stop_signo", 2: "stop_key_val_text"},
+                },
+            ],
+            True,
+        )
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        return self.parse_interrupt_packets(context)
 
     def select_modifiable_register(self, reg_infos):
         """Find a register that can be read/written freely."""

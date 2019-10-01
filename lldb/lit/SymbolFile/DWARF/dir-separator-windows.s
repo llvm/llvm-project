@@ -1,7 +1,7 @@
 # Test that parsing of line tables works reasonably, even if the host directory
 # separator does not match the separator of the compile unit.
 
-# REQUIRES: lld
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: ld.lld %t.o -o %t

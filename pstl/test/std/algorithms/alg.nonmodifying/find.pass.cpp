@@ -21,7 +21,7 @@ using namespace TestUtils;
 
 struct test_find
 {
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename Iterator, typename Value>
     void
@@ -80,12 +80,12 @@ class Weird
     Weird(int32_t val, OddTag) : value(val, OddTag()) {}
 };
 
-int32_t
+int
 main()
 {
     // Note that the "hit" and "miss" functions here avoid overflow issues.
     test<Number>(Weird(42, OddTag()), [](int32_t) { return Number(42, OddTag()); }, // hit
-                 [](int32_t j) { return Number(j == 42 ? 0 : j, OddTag()); });        // miss
+                 [](int32_t j) { return Number(j == 42 ? 0 : j, OddTag()); });      // miss
 
     // Test with value that is equal to two different bit patterns (-0.0 and 0.0)
     test<float32_t>(-0.0, [](int32_t j) { return j & 1 ? 0.0 : -0.0; }, // hit

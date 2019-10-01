@@ -26,7 +26,6 @@ class TestSwiftRemoteASTImport(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def testSwiftRemoteASTImport(self):
         """This tests that RemoteAST querying the dynamic type of a variable
         doesn't import any modules into a module SwiftASTContext that

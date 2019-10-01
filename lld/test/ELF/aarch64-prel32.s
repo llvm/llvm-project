@@ -7,8 +7,8 @@
 .globl _start
 _start:
 .data
-  .word foo - . + 0x100200eff
-  .word foo - . - 0x7fdff0fc
+  .word foo - . + 0x100202057
+  .word foo - . - 0x7fdfdfa4
 
 // Note: If this test fails, it probably happens because of
 //       the change of the address of the .data section.
@@ -18,11 +18,11 @@ _start:
 // RUN: llvm-objdump -s -section=.data %t2 | FileCheck %s
 
 // CHECK: Contents of section .data:
-// 201000: S = 0x100, A = 0x100200eff, P = 0x201000
+// 202158: S = 0x100, A = 0x100202057, P = 0x202158
 //         S + A - P = 0xffffffff
-// 201004: S = 0x100, A = -0x7fdff0fc, P = 0x201004
+// 20215c: S = 0x100, A = -0x7fdfdfa4, P = 0x20215c
 //         S + A - P = 0x80000000
-// CHECK-NEXT: 201000 ffffffff 00000080
+// CHECK-NEXT: 202158 ffffffff 00000080
 
 // RUN: not ld.lld -z max-page-size=4096 %t.o %t255.o -o %t2 2>&1 | FileCheck %s --check-prefix=OVERFLOW1
 // OVERFLOW1: relocation R_AARCH64_PREL32 out of range: -2147483649 is not in [-2147483648, 4294967295]

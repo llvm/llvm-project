@@ -134,7 +134,7 @@ XMLNode XMLNode::GetChild() const {
 
 llvm::StringRef XMLNode::GetAttributeValue(const char *name,
                                            const char *fail_value) const {
-  const char *attr_value = NULL;
+  const char *attr_value = nullptr;
 #if defined(LIBXML2_DEFINED)
 
   if (IsValid())

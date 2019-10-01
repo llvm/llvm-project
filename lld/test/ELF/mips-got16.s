@@ -3,23 +3,23 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-objdump -d -t %t.so | FileCheck %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck %s
 # RUN: llvm-readelf -r --mips-plt-got %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
-# CHECK-NEXT:    10000:       8f 88 80 18     lw      $8, -32744($gp)
-# CHECK-NEXT:    10004:       21 08 00 2c     addi    $8, $8, 44
-# CHECK-NEXT:    10008:       8f 88 80 24     lw      $8, -32732($gp)
-# CHECK-NEXT:    1000c:       21 08 90 00     addi    $8, $8, -28672
-# CHECK-NEXT:    10010:       8f 88 80 28     lw      $8, -32728($gp)
-# CHECK-NEXT:    10014:       21 08 90 04     addi    $8, $8, -28668
-# CHECK-NEXT:    10018:       8f 88 80 28     lw      $8, -32728($gp)
-# CHECK-NEXT:    1001c:       21 08 10 04     addi    $8, $8, 4100
-# CHECK-NEXT:    10020:       8f 88 80 30     lw      $8, -32720($gp)
-# CHECK-NEXT:    10024:       21 08 10 08     addi    $8, $8, 4104
-# CHECK-NEXT:    10028:       8f 88 80 34     lw      $8, -32716($gp)
+# CHECK-NEXT:    10000:       lw      $8, -32744($gp)
+# CHECK-NEXT:    10004:       addi    $8, $8, 44
+# CHECK-NEXT:    10008:       lw      $8, -32732($gp)
+# CHECK-NEXT:    1000c:       addi    $8, $8, -28672
+# CHECK-NEXT:    10010:       lw      $8, -32728($gp)
+# CHECK-NEXT:    10014:       addi    $8, $8, -28668
+# CHECK-NEXT:    10018:       lw      $8, -32728($gp)
+# CHECK-NEXT:    1001c:       addi    $8, $8, 4100
+# CHECK-NEXT:    10020:       lw      $8, -32720($gp)
+# CHECK-NEXT:    10024:       addi    $8, $8, 4104
+# CHECK-NEXT:    10028:       lw      $8, -32716($gp)
 #
 # CHECK: SYMBOL TABLE:
 # CHECK: 00041008         .data           00000000 .hidden bar

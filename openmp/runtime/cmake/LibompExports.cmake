@@ -13,16 +13,13 @@
 
 # Create the suffix for the export directory
 # - Only add to suffix when not a default value
-# - Example suffix: .deb.30.s1
-#   final export directory: exports/lin_32e.deb.30.s1/lib
-# - These suffixes imply the build is a Debug, OpenMP 3.0, Stats-Gathering version of the library
+# - Example suffix: .deb.s1
+#   final export directory: exports/lin_32e.deb.s1/lib
+# - These suffixes imply the build is a Debug, Stats-Gathering version of the library
 set(libomp_suffix)
 libomp_append(libomp_suffix .deb DEBUG_BUILD)
 libomp_append(libomp_suffix .dia RELWITHDEBINFO_BUILD)
 libomp_append(libomp_suffix .min MINSIZEREL_BUILD)
-if(NOT "${LIBOMP_OMP_VERSION}" STREQUAL "45")
-  libomp_append(libomp_suffix .${LIBOMP_OMP_VERSION})
-endif()
 libomp_append(libomp_suffix .s1 LIBOMP_STATS)
 libomp_append(libomp_suffix .ompt LIBOMP_OMPT_SUPPORT)
 if(${LIBOMP_OMPT_SUPPORT})
@@ -95,4 +92,3 @@ if(WIN32)
     COMMAND ${CMAKE_COMMAND} -E copy ${LIBOMPIMP_OUTPUT_DIRECTORY}/${LIBOMP_IMP_LIB_FILE} ${LIBOMP_EXPORTS_LIB_DIR}
   )
 endif()
-

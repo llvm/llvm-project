@@ -14,7 +14,7 @@
 #include <execution>
 #include <algorithm>
 
-int32_t
+int
 main()
 {
     return 0;

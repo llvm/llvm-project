@@ -24,81 +24,8 @@ NativeRegisterContextNetBSD::NativeRegisterContextNetBSD(
     : NativeRegisterContextRegisterInfo(native_thread,
                                         reg_info_interface_p) {}
 
-Status NativeRegisterContextNetBSD::ReadGPR() {
-  void *buf = GetGPRBuffer();
-  if (!buf)
-    return Status("GPR buffer is NULL");
-
-  return DoReadGPR(buf);
-}
-
-Status NativeRegisterContextNetBSD::WriteGPR() {
-  void *buf = GetGPRBuffer();
-  if (!buf)
-    return Status("GPR buffer is NULL");
-
-  return DoWriteGPR(buf);
-}
-
-Status NativeRegisterContextNetBSD::ReadFPR() {
-  void *buf = GetFPRBuffer();
-  if (!buf)
-    return Status("FPR buffer is NULL");
-
-  return DoReadFPR(buf);
-}
-
-Status NativeRegisterContextNetBSD::WriteFPR() {
-  void *buf = GetFPRBuffer();
-  if (!buf)
-    return Status("FPR buffer is NULL");
-
-  return DoWriteFPR(buf);
-}
-
-Status NativeRegisterContextNetBSD::ReadDBR() {
-  void *buf = GetDBRBuffer();
-  if (!buf)
-    return Status("DBR buffer is NULL");
-
-  return DoReadDBR(buf);
-}
-
-Status NativeRegisterContextNetBSD::WriteDBR() {
-  void *buf = GetDBRBuffer();
-  if (!buf)
-    return Status("DBR buffer is NULL");
-
-  return DoWriteDBR(buf);
-}
-
-Status NativeRegisterContextNetBSD::DoReadGPR(void *buf) {
-  return NativeProcessNetBSD::PtraceWrapper(PT_GETREGS, GetProcessPid(), buf,
-                                            m_thread.GetID());
-}
-
-Status NativeRegisterContextNetBSD::DoWriteGPR(void *buf) {
-  return NativeProcessNetBSD::PtraceWrapper(PT_SETREGS, GetProcessPid(), buf,
-                                            m_thread.GetID());
-}
-
-Status NativeRegisterContextNetBSD::DoReadFPR(void *buf) {
-  return NativeProcessNetBSD::PtraceWrapper(PT_GETFPREGS, GetProcessPid(), buf,
-                                            m_thread.GetID());
-}
-
-Status NativeRegisterContextNetBSD::DoWriteFPR(void *buf) {
-  return NativeProcessNetBSD::PtraceWrapper(PT_SETFPREGS, GetProcessPid(), buf,
-                                            m_thread.GetID());
-}
-
-Status NativeRegisterContextNetBSD::DoReadDBR(void *buf) {
-  return NativeProcessNetBSD::PtraceWrapper(PT_GETDBREGS, GetProcessPid(), buf,
-                                            m_thread.GetID());
-}
-
-Status NativeRegisterContextNetBSD::DoWriteDBR(void *buf) {
-  return NativeProcessNetBSD::PtraceWrapper(PT_SETDBREGS, GetProcessPid(), buf,
+Status NativeRegisterContextNetBSD::DoRegisterSet(int ptrace_req, void *buf) {
+  return NativeProcessNetBSD::PtraceWrapper(ptrace_req, GetProcessPid(), buf,
                                             m_thread.GetID());
 }
 

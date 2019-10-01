@@ -1,5 +1,4 @@
 //===-- CPPLanguageRuntime.h
-//---------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,8 +58,6 @@ public:
         process.GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus));
   }
 
-  virtual bool IsVTableName(const char *name) = 0;
-
   bool GetObjectDescription(Stream &str, ValueObject &object) override;
 
   bool GetObjectDescription(Stream &str, Value &value,
@@ -68,22 +65,20 @@ public:
 
   /// Obtain a ThreadPlan to get us into C++ constructs such as std::function.
   ///
-  /// @param[in] thread
+  /// \param[in] thread
   ///     Curent thrad of execution.
   ///
-  /// @param[in] stop_others
+  /// \param[in] stop_others
   ///     True if other threads should pause during execution.
   ///
-  /// @return
+  /// \return
   ///      A ThreadPlan Shared pointer
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
 
   bool IsWhitelistedRuntimeValue(ConstString name) override;
 protected:
-  //------------------------------------------------------------------
   // Classes that inherit from CPPLanguageRuntime can see and modify these
-  //------------------------------------------------------------------
   CPPLanguageRuntime(Process *process);
 
 private:

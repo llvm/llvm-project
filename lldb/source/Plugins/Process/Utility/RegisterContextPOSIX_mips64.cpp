@@ -96,7 +96,7 @@ RegisterContextPOSIX_mips64::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < m_num_registers)
     return &GetRegisterInfo()[reg];
   else
-    return NULL;
+    return nullptr;
 }
 
 size_t RegisterContextPOSIX_mips64::GetRegisterSetCount() {

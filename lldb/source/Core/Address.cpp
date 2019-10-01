@@ -161,7 +161,7 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
 static bool DumpUInt(ExecutionContextScope *exe_scope, const Address &address,
                      uint32_t byte_size, Stream *strm) {
   if (exe_scope == nullptr || byte_size == 0)
-    return 0;
+    return false;
   std::vector<uint8_t> buf(byte_size, 0);
 
   if (ReadBytes(exe_scope, address, &buf[0], buf.size()) == buf.size()) {
@@ -259,6 +259,24 @@ bool Address::ResolveAddressUsingFileSections(addr_t file_addr,
   }
   m_offset = file_addr;
   return false; // Failed to resolve this address to a section offset value
+}
+
+/// if "addr_range_ptr" is not NULL, then fill in with the address range of the function.
+bool Address::ResolveFunctionScope(SymbolContext &sym_ctx,
+                                   AddressRange *addr_range_ptr) {
+  constexpr SymbolContextItem resolve_scope =
+    eSymbolContextFunction | eSymbolContextSymbol;
+
+  if (!(CalculateSymbolContext(&sym_ctx, resolve_scope) & resolve_scope)) {
+    if (addr_range_ptr)
+      addr_range_ptr->Clear();
+   return false;
+  }
+
+  if (!addr_range_ptr)
+    return true;
+
+  return sym_ctx.GetAddressRange(resolve_scope, 0, false, *addr_range_ptr);
 }
 
 ModuleSP Address::GetModule() const {
@@ -475,23 +493,19 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         switch (sect_type) {
         case eSectionTypeData:
           if (module_sp) {
-            SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-            if (sym_vendor) {
-              Symtab *symtab = sym_vendor->GetSymtab();
-              if (symtab) {
-                const addr_t file_Addr = GetFileAddress();
-                Symbol *symbol =
-                    symtab->FindSymbolContainingFileAddress(file_Addr);
-                if (symbol) {
-                  const char *symbol_name = symbol->GetName().AsCString();
-                  if (symbol_name) {
-                    s->PutCString(symbol_name);
-                    addr_t delta =
-                        file_Addr - symbol->GetAddressRef().GetFileAddress();
-                    if (delta)
-                      s->Printf(" + %" PRIu64, delta);
-                    showed_info = true;
-                  }
+            if (Symtab *symtab = module_sp->GetSymtab()) {
+              const addr_t file_Addr = GetFileAddress();
+              Symbol *symbol =
+                  symtab->FindSymbolContainingFileAddress(file_Addr);
+              if (symbol) {
+                const char *symbol_name = symbol->GetName().AsCString();
+                if (symbol_name) {
+                  s->PutCString(symbol_name);
+                  addr_t delta =
+                      file_Addr - symbol->GetAddressRef().GetFileAddress();
+                  if (delta)
+                    s->Printf(" + %" PRIu64, delta);
+                  showed_info = true;
                 }
               }
             }
@@ -927,7 +941,6 @@ size_t Address::MemorySize() const {
   return sizeof(Address);
 }
 
-//----------------------------------------------------------------------
 // NOTE: Be careful using this operator. It can correctly compare two
 // addresses from the same Module correctly. It can't compare two addresses
 // from different modules in any meaningful way, but it will compare the module
@@ -939,7 +952,6 @@ size_t Address::MemorySize() const {
 //   address results to make much sense
 //
 // This basically lets Address objects be used in ordered collection classes.
-//----------------------------------------------------------------------
 
 bool lldb_private::operator<(const Address &lhs, const Address &rhs) {
   ModuleSP lhs_module_sp(lhs.GetModule());
@@ -987,10 +999,9 @@ AddressClass Address::GetAddressClass() const {
   if (module_sp) {
     ObjectFile *obj_file = module_sp->GetObjectFile();
     if (obj_file) {
-      // Give the symbol vendor a chance to add to the unified section list
-      // and to symtab from symbol file
-      if (SymbolVendor *vendor = module_sp->GetSymbolVendor())
-        vendor->GetSymtab();
+      // Give the symbol file a chance to add to the unified section list
+      // and to the symtab.
+      module_sp->GetSymtab();
       return obj_file->GetAddressClass(GetFileAddress());
     }
   }

@@ -5,9 +5,6 @@ Test lldb data formatter subsystem.
 from __future__ import print_function
 
 
-import datetime
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -19,7 +16,6 @@ class PyObjectSynthProviderTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"])
     def test_print_array(self):
         """Test that expr -Z works"""
         self.build()

@@ -77,10 +77,8 @@ struct UserArea {
    LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_x86_64 to declare our g_register_infos_x86_64
 // structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_X86_64_STRUCT
 #include "RegisterInfos_x86_64.h"
 #undef DECLARE_REGISTER_INFOS_X86_64_STRUCT

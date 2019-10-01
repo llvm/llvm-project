@@ -802,6 +802,13 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
      and also gives the user the stack space they requested for all threads */
   stack_size += gtid * __kmp_stkoffset * 2;
 
+#if defined(__ANDROID__) && __ANDROID_API__ < 19
+    // Round the stack size to a multiple of the page size. Older versions of
+    // Android (until KitKat) would fail pthread_attr_setstacksize with EINVAL
+    // if the stack size was not a multiple of the page size.
+    stack_size = (stack_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+#endif
+
   KA_TRACE(10, ("__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
                 "__kmp_stksize = %lu bytes, final stacksize = %lu bytes\n",
                 gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size));
@@ -1264,11 +1271,9 @@ static void __kmp_atfork_child(void) {
   // over-subscription after the fork and this can improve things for
   // scripting languages that use OpenMP inside process-parallel code).
   __kmp_affinity_type = affinity_none;
-#if OMP_40_ENABLED
   if (__kmp_nested_proc_bind.bind_types != NULL) {
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
   }
-#endif // OMP_40_ENABLED
 #endif // KMP_AFFINITY_SUPPORTED
 
   __kmp_init_runtime = FALSE;
@@ -1438,7 +1443,6 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   /* TODO: shouldn't this use release semantics to ensure that
      __kmp_suspend_initialize_thread gets called first? */
   old_spin = flag->set_sleeping();
-#if OMP_50_ENABLED
   if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
       __kmp_pause_status != kmp_soft_paused) {
     flag->unset_sleeping();
@@ -1446,7 +1450,6 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
     KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
     return;
   }
-#endif
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for spin(%p)==%x,"
                " was %x\n",
                th_gtid, flag->get(), flag->load(), old_spin));
@@ -2335,7 +2338,8 @@ finish: // Clean up and exit.
 #endif // USE_LOAD_BALANCE
 
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
-      ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) || KMP_ARCH_PPC64)
+      ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
+      KMP_ARCH_PPC64 || KMP_ARCH_RISCV64)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
@@ -2418,10 +2422,6 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
             p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
     break;
   }
-
-#if OMPT_SUPPORT
-  *exit_frame_ptr = 0;
-#endif
 
   return 1;
 }

@@ -10,7 +10,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
-import os
 
 
 def make_buffer_verify_dict(start_idx, count, offset=0):

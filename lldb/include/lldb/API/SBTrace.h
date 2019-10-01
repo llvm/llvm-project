@@ -19,25 +19,24 @@ namespace lldb {
 class LLDB_API SBTrace {
 public:
   SBTrace();
-  //------------------------------------------------------------------
   /// Obtain the trace data as raw bytes.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong.
   ///
-  /// @param[in] buf
+  /// \param[in] buf
   ///     Buffer to write the trace data to.
   ///
-  /// @param[in] size
+  /// \param[in] size
   ///     The size of the buffer used to read the data. This is
   ///     also the size of the data intended to read. It is also
   ///     possible to partially read the trace data for some trace
   ///     technologies by specifying a smaller buffer.
   ///
-  /// @param[in] offset
+  /// \param[in] offset
   ///     The start offset to begin reading the trace data.
   ///
-  /// @param[in] thread_id
+  /// \param[in] thread_id
   ///     Tracing could be started for the complete process or a
   ///     single thread, in the first case the traceid obtained would
   ///     map to all the threads existing within the process and the
@@ -45,28 +44,24 @@ public:
   ///     such a scenario to select the trace data for a specific
   ///     thread.
   ///
-  /// @return
+  /// \return
   ///     The size of the trace data effectively read by the API call.
-  //------------------------------------------------------------------
   size_t GetTraceData(SBError &error, void *buf, size_t size, size_t offset = 0,
                       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Obtain any meta data as raw bytes for the tracing instance.
   /// The input parameter definition is similar to the previous
   /// function.
-  //------------------------------------------------------------------
   size_t GetMetaData(SBError &error, void *buf, size_t size, size_t offset = 0,
                      lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Stop the tracing instance. Stopping the trace will also
   /// lead to deletion of any gathered trace data.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong.
   ///
-  /// @param[in] thread_id
+  /// \param[in] thread_id
   ///     The trace id could map to a tracing instance for a thread
   ///     or could also map to a group of threads being traced with
   ///     the same trace options. A thread_id is normally optional
@@ -80,22 +75,19 @@ public:
   ///     trace id of the process.
   ///     Now if the StopTrace API is called for the whole process,
   ///     thread A will not be stopped and must be stopped separately.
-  //------------------------------------------------------------------
   void StopTrace(SBError &error,
                  lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID);
 
-  //------------------------------------------------------------------
   /// Get the trace configuration being used for the trace instance.
   /// The threadid in the SBTraceOptions needs to be set when the
   /// configuration used by a specific thread is being requested.
   ///
-  /// @param[out] options
+  /// \param[out] options
   ///     The trace options actually used by the trace instance
   ///     would be filled by the API.
   ///
-  /// @param[out] error
+  /// \param[out] error
   ///     An error explaining what went wrong.
-  //------------------------------------------------------------------
   void GetTraceConfig(SBTraceOptions &options, SBError &error);
 
   lldb::user_id_t GetTraceUID();

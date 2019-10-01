@@ -27,7 +27,6 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test(self):
         self.build()
         exe_name = "a.out"

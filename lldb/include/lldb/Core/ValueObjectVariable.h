@@ -23,26 +23,13 @@
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class Declaration;
-}
-namespace lldb_private {
 class Status;
-}
-namespace lldb_private {
 class ExecutionContextScope;
-}
-namespace lldb_private {
 class SymbolContextScope;
-}
 
-namespace lldb_private {
-
-//----------------------------------------------------------------------
 // A ValueObject that contains a root variable that may or may not
 // have children.
-//----------------------------------------------------------------------
 class ValueObjectVariable : public ValueObject {
 public:
   ~ValueObjectVariable() override;
@@ -76,7 +63,7 @@ public:
 
   bool SetData(DataExtractor &data, Status &error) override;
 
-  virtual lldb::VariableSP GetVariable() override { return m_variable_sp; }
+  lldb::VariableSP GetVariable() override { return m_variable_sp; }
 
 protected:
   bool UpdateValue() override;
@@ -91,9 +78,7 @@ protected:
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,
                       const lldb::VariableSP &var_sp);
-  //------------------------------------------------------------------
   // For ValueObject only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ValueObjectVariable);
 };
 

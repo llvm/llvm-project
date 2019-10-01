@@ -13,14 +13,11 @@
 
 #include "lldb/Utility/SharingPtr.h"
 
-//----------------------------------------------------------------------
 // lldb forward declarations
-//----------------------------------------------------------------------
 namespace lldb_private {
 
 class ABI;
 class Address;
-class AddressImpl;
 class AddressRange;
 class AddressResolver;
 class ArchSpec;
@@ -54,7 +51,6 @@ class ClangASTSource;
 class ClangExpressionDeclMap;
 class ClangExpressionParser;
 class ClangExpressionVariable;
-class ClangExpressionVariables;
 class ClangModulesDeclVendor;
 class ClangPersistentVariables;
 class CommandInterpreter;
@@ -69,7 +65,6 @@ class CompilerDecl;
 class CompilerDeclContext;
 class CompilerType;
 class CompileUnit;
-class Condition;
 class Connection;
 class ConnectionFileDescriptor;
 class ConstString;
@@ -96,7 +91,6 @@ class EventData;
 class EventDataStructuredData;
 class ExecutionContext;
 class ExecutionContextRef;
-class ExecutionContextRefLocker;
 class ExecutionContextScope;
 class Expression;
 class ExpressionVariable;
@@ -136,9 +130,7 @@ class Module;
 class ModuleList;
 class ModuleSpec;
 class ModuleSpecList;
-class Mutex;
 struct NameSearchContext;
-class ObjCRuntimeSyntheticProvider;
 class ObjectContainer;
 class OptionGroup;
 class OptionGroupOptions;
@@ -167,7 +159,6 @@ class OptionValueSInt64;
 class OptionValueString;
 class OptionValueUInt64;
 class OptionValueUUID;
-class NamedOption;
 class PathMappingList;
 class FunctionCaller;
 class PersistentExpressionState;
@@ -185,8 +176,6 @@ struct PropertyDefinition;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;
-class RegisterLocation;
-class RegisterLocationList;
 class RegisterValue;
 class RegularExpression;
 class REPL;
@@ -197,7 +186,6 @@ class ScriptInterpreterLocker;
 struct ScriptSummaryFormat;
 class SearchFilter;
 class Section;
-class SectionImpl;
 class SectionList;
 class SectionLoadHistory;
 class SectionLoadList;
@@ -208,7 +196,6 @@ class SwiftREPL;
 class SourceManager;
 class SourceManagerImpl;
 class StackFrame;
-class StackFrameImpl;
 class StackFrameList;
 class StackFrameRecognizer;
 class StackFrameRecognizerManager;
@@ -275,7 +262,6 @@ class TypeEnumMemberImpl;
 class TypeEnumMemberListImpl;
 class TypeFormatImpl;
 class TypeNameSpecifierImpl;
-class TypePair;
 class TypeValidatorImpl;
 class UUID;
 class UnixSignals;
@@ -304,9 +290,7 @@ struct LineEntry;
 
 } // namespace lldb_private
 
-//----------------------------------------------------------------------
 // lldb forward declarations
-//----------------------------------------------------------------------
 namespace lldb {
 
 typedef std::shared_ptr<lldb_private::ABI> ABISP;
@@ -497,9 +481,7 @@ typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
 
 } // namespace lldb
 
-//----------------------------------------------------------------------
 // llvm forward declarations
-//----------------------------------------------------------------------
 namespace llvm {
 
 struct ItaniumPartialDemangler;

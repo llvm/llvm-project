@@ -37,14 +37,14 @@ public:
 
     uint32_t
     StartListeningForEventClass (SBDebugger &debugger,
-                                 const char *broadcaster_class, 
+                                 const char *broadcaster_class,
                                  uint32_t event_mask);
-                                 
+
     uint32_t
     StopListeningForEventClass (SBDebugger &debugger,
                                 const char *broadcaster_class,
                                 uint32_t event_mask);
-    
+
     uint32_t
     StartListeningForEvents (const lldb::SBBroadcaster& broadcaster,
                              uint32_t event_mask);

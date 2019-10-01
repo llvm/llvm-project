@@ -18,12 +18,13 @@
 
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 using namespace llvm;
 using namespace lldb_private;
@@ -103,8 +104,7 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
   return s;
 }
 
-//----------------------------------------------------------------------
-/// @class Instrumenter IRDynamicChecks.cpp
+/// \class Instrumenter IRDynamicChecks.cpp
 /// Finds and instruments individual LLVM IR instructions
 ///
 /// When instrumenting LLVM IR, it is frequently desirable to first search for
@@ -130,15 +130,12 @@ static std::string PrintValue(llvm::Value *V, bool truncate = false) {
 ///
 /// - InspectFunction [default: iterates through the basic blocks in a
 ///   function calling InspectBasicBlock]
-//----------------------------------------------------------------------
 class Instrumenter {
 public:
-  //------------------------------------------------------------------
   /// Constructor
   ///
-  /// @param[in] module
+  /// \param[in] module
   ///     The module being instrumented.
-  //------------------------------------------------------------------
   Instrumenter(llvm::Module &module,
                std::shared_ptr<UtilityFunction> checker_function)
       : m_module(module), m_checker_function(checker_function),
@@ -146,23 +143,19 @@ public:
 
   virtual ~Instrumenter() = default;
 
-  //------------------------------------------------------------------
   /// Inspect a function to find instructions to instrument
   ///
-  /// @param[in] function
+  /// \param[in] function
   ///     The function to inspect.
   ///
-  /// @return
+  /// \return
   ///     True on success; false on error.
-  //------------------------------------------------------------------
   bool Inspect(llvm::Function &function) { return InspectFunction(function); }
 
-  //------------------------------------------------------------------
   /// Instrument all the instructions found by Inspect()
   ///
-  /// @return
+  /// \return
   ///     True on success; false on error.
-  //------------------------------------------------------------------
   bool Instrument() {
     for (InstIterator ii = m_to_instrument.begin(),
                       last_ii = m_to_instrument.end();
@@ -175,48 +168,40 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   /// Add instrumentation to a single instruction
   ///
-  /// @param[in] inst
+  /// \param[in] inst
   ///     The instruction to be instrumented.
   ///
-  /// @return
+  /// \return
   ///     True on success; false otherwise.
-  //------------------------------------------------------------------
   virtual bool InstrumentInstruction(llvm::Instruction *inst) = 0;
 
-  //------------------------------------------------------------------
   /// Register a single instruction to be instrumented
   ///
-  /// @param[in] inst
+  /// \param[in] inst
   ///     The instruction to be instrumented.
-  //------------------------------------------------------------------
   void RegisterInstruction(llvm::Instruction &i) {
     m_to_instrument.push_back(&i);
   }
 
-  //------------------------------------------------------------------
   /// Determine whether a single instruction is interesting to instrument,
   /// and, if so, call RegisterInstruction
   ///
-  /// @param[in] i
+  /// \param[in] i
   ///     The instruction to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
-  //------------------------------------------------------------------
   virtual bool InspectInstruction(llvm::Instruction &i) { return true; }
 
-  //------------------------------------------------------------------
   /// Scan a basic block to see if any instructions are interesting
   ///
-  /// @param[in] bb
+  /// \param[in] bb
   ///     The basic block to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
-  //------------------------------------------------------------------
   virtual bool InspectBasicBlock(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator ii = bb.begin(), last_ii = bb.end();
          ii != last_ii; ++ii) {
@@ -227,15 +212,13 @@ protected:
     return true;
   }
 
-  //------------------------------------------------------------------
   /// Scan a function to see if any instructions are interesting
   ///
-  /// @param[in] f
+  /// \param[in] f
   ///     The function to be inspected.
   ///
-  /// @return
+  /// \return
   ///     False if there was an error scanning; true otherwise.
-  //------------------------------------------------------------------
   virtual bool InspectFunction(llvm::Function &f) {
     for (llvm::Function::iterator bbi = f.begin(), last_bbi = f.end();
          bbi != last_bbi; ++bbi) {
@@ -246,17 +229,15 @@ protected:
     return true;
   }
 
-  //------------------------------------------------------------------
   /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*) with a given address
   ///
-  /// @param[in] start_address
+  /// \param[in] start_address
   ///     The address of the function.
   ///
-  /// @return
+  /// \return
   ///     The function pointer, for use in a CallInst.
-  //------------------------------------------------------------------
-  llvm::Value *BuildPointerValidatorFunc(lldb::addr_t start_address) {
+  llvm::FunctionCallee BuildPointerValidatorFunc(lldb::addr_t start_address) {
     llvm::Type *param_array[1];
 
     param_array[0] = const_cast<llvm::PointerType *>(GetI8PtrTy());
@@ -268,20 +249,18 @@ protected:
     PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
-    return ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty);
+    return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
   }
 
-  //------------------------------------------------------------------
   /// Build a function pointer for a function with signature void
   /// (*)(uint8_t*, uint8_t*) with a given address
   ///
-  /// @param[in] start_address
+  /// \param[in] start_address
   ///     The address of the function.
   ///
-  /// @return
+  /// \return
   ///     The function pointer, for use in a CallInst.
-  //------------------------------------------------------------------
-  llvm::Value *BuildObjectCheckerFunc(lldb::addr_t start_address) {
+  llvm::FunctionCallee BuildObjectCheckerFunc(lldb::addr_t start_address) {
     llvm::Type *param_array[2];
 
     param_array[0] = const_cast<llvm::PointerType *>(GetI8PtrTy());
@@ -294,7 +273,7 @@ protected:
     PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
-    return ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty);
+    return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
   }
 
   PointerType *GetI8PtrTy() {
@@ -341,9 +320,8 @@ protected:
   bool InstrumentInstruction(llvm::Instruction *inst) override {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-    if (log)
-      log->Printf("Instrumenting load/store instruction: %s\n",
-                  PrintValue(inst).c_str());
+    LLDB_LOGF(log, "Instrumenting load/store instruction: %s\n",
+              PrintValue(inst).c_str());
 
     if (!m_valid_pointer_check_func)
       m_valid_pointer_check_func =
@@ -384,7 +362,7 @@ protected:
   }
 
 private:
-  llvm::Value *m_valid_pointer_check_func;
+  llvm::FunctionCallee m_valid_pointer_check_func;
 };
 
 class ObjcObjectChecker : public Instrumenter {
@@ -504,9 +482,8 @@ protected:
       std::string name_str = called_function->getName().str();
       const char *name_cstr = name_str.c_str();
 
-      if (log)
-        log->Printf("Found call to %s: %s\n", name_cstr,
-                    PrintValue(call_inst).c_str());
+      LLDB_LOGF(log, "Found call to %s: %s\n", name_cstr,
+                PrintValue(call_inst).c_str());
 
       if (name_str.find("objc_msgSend") == std::string::npos)
         return true;
@@ -541,10 +518,9 @@ protected:
         return true;
       }
 
-      if (log)
-        log->Printf(
-            "Function name '%s' contains 'objc_msgSend' but is not handled",
-            name_str.c_str());
+      LLDB_LOGF(log,
+                "Function name '%s' contains 'objc_msgSend' but is not handled",
+                name_str.c_str());
 
       return true;
     }
@@ -553,7 +529,7 @@ protected:
   }
 
 private:
-  llvm::Value *m_objc_object_check_func;
+  llvm::FunctionCallee m_objc_object_check_func;
 };
 
 IRDynamicChecks::IRDynamicChecks(
@@ -569,8 +545,7 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
   llvm::Function *function = M.getFunction(StringRef(m_func_name));
 
   if (!function) {
-    if (log)
-      log->Printf("Couldn't find %s() in the module", m_func_name.c_str());
+    LLDB_LOGF(log, "Couldn't find %s() in the module", m_func_name.c_str());
 
     return false;
   }
@@ -603,7 +578,7 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
 
     oss.flush();
 
-    log->Printf("Module after dynamic checks: \n%s", s.c_str());
+    LLDB_LOGF(log, "Module after dynamic checks: \n%s", s.c_str());
   }
 
   return true;

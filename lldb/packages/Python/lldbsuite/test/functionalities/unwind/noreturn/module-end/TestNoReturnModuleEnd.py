@@ -5,8 +5,6 @@ be at the end of the stack.
 
 from __future__ import print_function
 
-import shutil
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *

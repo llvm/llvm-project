@@ -19,18 +19,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // RegisterContextMacOSXFrameBackchain constructor
-//----------------------------------------------------------------------
 RegisterContextMacOSXFrameBackchain::RegisterContextMacOSXFrameBackchain(
     Thread &thread, uint32_t concrete_frame_idx,
     const UnwindMacOSXFrameBackchain::Cursor &cursor)
     : RegisterContext(thread, concrete_frame_idx), m_cursor(cursor),
       m_cursor_is_valid(true) {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 RegisterContextMacOSXFrameBackchain::~RegisterContextMacOSXFrameBackchain() {}
 
 void RegisterContextMacOSXFrameBackchain::InvalidateAllRegisters() {

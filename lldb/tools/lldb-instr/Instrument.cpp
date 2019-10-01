@@ -335,7 +335,7 @@ public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef File) override {
     MyRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
-    return llvm::make_unique<SBConsumer>(MyRewriter, CI.getASTContext());
+    return std::make_unique<SBConsumer>(MyRewriter, CI.getASTContext());
   }
 
 private:
@@ -348,8 +348,8 @@ int main(int argc, const char **argv) {
                          "instrumentation framework.");
 
   auto PCHOpts = std::make_shared<PCHContainerOperations>();
-  PCHOpts->registerWriter(llvm::make_unique<ObjectFilePCHContainerWriter>());
-  PCHOpts->registerReader(llvm::make_unique<ObjectFilePCHContainerReader>());
+  PCHOpts->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
+  PCHOpts->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
   ClangTool T(OP.getCompilations(), OP.getSourcePathList(), PCHOpts);
   return T.run(newFrontendActionFactory<SBAction>().get());

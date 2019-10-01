@@ -159,7 +159,7 @@ def process_args(args):
 
     group = parser.add_argument_group("static binding usage")
     group.add_argument(
-        "--allow-static-binding",
+        "--use-static-binding",
         action="store_true",
         help=(
             "Specify the pre-baked binding can be used if "
@@ -208,13 +208,10 @@ def find_file_in_paths(paths, exe_basename):
     return None
 
 
-def find_swig_executable(options, must_exist):
+def find_swig_executable(options):
     """Finds the swig executable in the PATH or known good locations.
 
     :param options the command line options returned by argparse.
-
-    :param must_exist if True, this method exits the program if
-    swig is not found; otherwise, always returns whether swig is found.
 
     Replaces options.swig_executable with the full swig executable path.
     """
@@ -236,29 +233,16 @@ def find_swig_executable(options, must_exist):
     # Add in the extra dirs
     paths_to_check.extend(extra_dirs)
     if len(paths_to_check) < 1:
-        if must_exist:
-            logging.error(
-                "swig executable was not specified, PATH has no "
-                "contents, and there are no extra directories to search")
-            sys.exit(-6)
-        else:
-            logging.info("failed to find swig: no paths available")
-            return
+        logging.info("failed to find swig: no paths available")
+        return
 
     # Find the swig executable
     options.swig_executable = find_file_in_paths(paths_to_check, exe_basename)
     if not options.swig_executable or len(options.swig_executable) < 1:
-        if must_exist:
-            logging.error(
-                "failed to find exe='%s' in paths='%s'",
-                exe_basename,
-                paths_to_check)
-            sys.exit(-6)
-        else:
-            logging.info(
-                "%s not found in paths %s",
-                exe_basename,
-                paths_to_check)
+        logging.info(
+            "%s not found in paths %s",
+            exe_basename,
+            paths_to_check)
     else:
         logging.info("found swig executable: %s", options.swig_executable)
 
@@ -272,16 +256,20 @@ def main(args):
     options = process_args(args)
     logging.debug("Processed args: options=%s", options)
 
-    # Ensure we have a swig executable.
-    if not options.swig_executable or len(options.swig_executable) == 0:
+    if options.use_static_binding:
+        # Clear the swig executable if we want to use the static bindings.
+        options.swig_executable = None
+        options.find_swig = False
+    elif not options.swig_executable or len(options.swig_executable) == 0:
+        # Ensure we have a swig executable.
         if options.find_swig:
-            must_exist = not options.allow_static_binding
-            find_swig_executable(options, must_exist)
+            find_swig_executable(options)
         else:
             logging.error(
                 "The --find-swig option must be specified "
                 "when the swig executable location is not "
-                "explicitly provided.")
+                "explicitly provided and not using the "
+                "static bindings.")
             sys.exit(-12)
 
     # Check if the swig file exists.

@@ -4,18 +4,18 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
 # RUN:         %p/Inputs/mips-pic.s -o %t.so.o
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.exe.o
-# RUN: ld.lld %t.so.o -shared -o %t.so
+# RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t.exe.o %t.so -o %t.exe
-# RUN: llvm-objdump -d -t %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readelf -r --mips-plt-got %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK:      __start:
 
-# CHECK-NEXT:    20000:   df 82 80 20   ld      $2, -32736($gp)
-# CHECK-NEXT:    20004:   64 42 00 18   daddiu  $2,  $2, 24
-# CHECK-NEXT:    20008:   24 42 80 40   addiu   $2,  $2, -32704
-# CHECK-NEXT:    2000c:   24 42 80 30   addiu   $2,  $2, -32720
-# CHECK-NEXT:    20010:   24 42 80 38   addiu   $2,  $2, -32712
+# CHECK-NEXT:    20000:       ld      $2, -32736($gp)
+# CHECK-NEXT:    20004:       daddiu  $2,  $2, 24
+# CHECK-NEXT:    20008:       addiu   $2,  $2, -32704
+# CHECK-NEXT:    2000c:       addiu   $2,  $2, -32720
+# CHECK-NEXT:    20010:       addiu   $2,  $2, -32712
 
 # CHECK: 0000000000020018   .text   00000000 foo
 # CHECK: 0000000000020000   .text   00000000 __start

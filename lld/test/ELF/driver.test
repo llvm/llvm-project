@@ -1,10 +1,10 @@
 # REQUIRES: x86
 
-# RUN: not ld.lld --unknown1 --unknown2 -m foo /no/such/file -lnosuchlib \
+# RUN: not ld.lld --unknown1 --unkn=own2 -m foo /no/such/file -lnosuchlib \
 # RUN:   2>&1 | FileCheck -check-prefix=UNKNOWN %s
 
 # UNKNOWN: unknown argument '--unknown1'
-# UNKNOWN: unknown argument '--unknown2'
+# UNKNOWN: unknown argument '--unkn=own2'
 # UNKNOWN: unknown emulation: foo
 # UNKNOWN: cannot open /no/such/file
 # UNKNOWN: unable to find library -lnosuchlib

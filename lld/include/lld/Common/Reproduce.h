@@ -22,13 +22,13 @@ namespace lld {
 // Makes a given pathname an absolute path first, and then remove
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".
-std::string relativeToRoot(StringRef Path);
+std::string relativeToRoot(StringRef path);
 
 // Quote a given string if it contains a space character.
-std::string quote(StringRef S);
+std::string quote(StringRef s);
 
 // Returns the string form of the given argument.
-std::string toString(const llvm::opt::Arg &Arg);
+std::string toString(const llvm::opt::Arg &arg);
 }
 
 #endif

@@ -468,7 +468,8 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
 
     for (auto NonAffineRegion : Context.NonAffineSubRegionSet) {
       if (isSafeToLoadUnconditionally(Load->getPointerOperand(),
-                                      Load->getAlignment(), DL))
+                                      Load->getType(), Load->getAlignment(),
+                                      DL))
         continue;
 
       if (NonAffineRegion->contains(Load) &&

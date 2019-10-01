@@ -29,18 +29,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsSource
-//-------------------------------------------------------------------------
 
-static constexpr OptionDefinition g_history_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "count",       'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "How many history commands to print." },
-  { LLDB_OPT_SET_1, false, "start-index", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "Index at which to start printing history commands (or end to mean tail mode)." },
-  { LLDB_OPT_SET_1, false, "end-index",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "Index at which to stop printing history commands." },
-  { LLDB_OPT_SET_2, false, "clear",       'C', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeBoolean,         "Clears the current command history." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_history
+#include "CommandOptions.inc"
 
 class CommandObjectCommandsHistory : public CommandObjectParsed {
 public:
@@ -93,9 +85,7 @@ protected:
         m_clear.SetOptionWasSet();
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -188,17 +178,10 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsSource
-//-------------------------------------------------------------------------
 
-static constexpr OptionDefinition g_source_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "stop-on-error",    'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true, stop executing commands on error." },
-  { LLDB_OPT_SET_ALL, false, "stop-on-continue", 'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true, stop executing commands on continue." },
-  { LLDB_OPT_SET_ALL, false, "silent-run",       's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true don't echo commands while executing." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_source
+#include "CommandOptions.inc"
 
 class CommandObjectCommandsSource : public CommandObjectParsed {
 public:
@@ -230,13 +213,12 @@ public:
     return "";
   }
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -269,9 +251,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -313,8 +293,13 @@ protected:
         m_options.m_stop_on_continue.OptionWasSet()) {
       // Use user set settings
       CommandInterpreterRunOptions options;
-      options.SetStopOnContinue(m_options.m_stop_on_continue.GetCurrentValue());
-      options.SetStopOnError(m_options.m_stop_on_error.GetCurrentValue());
+
+      if (m_options.m_stop_on_continue.OptionWasSet())
+        options.SetStopOnContinue(
+            m_options.m_stop_on_continue.GetCurrentValue());
+
+      if (m_options.m_stop_on_error.OptionWasSet())
+        options.SetStopOnError(m_options.m_stop_on_error.GetCurrentValue());
 
       // Individual silent setting is override for global command echo settings.
       if (m_options.m_silent_run.GetCurrentValue()) {
@@ -340,16 +325,10 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsAlias
-//-------------------------------------------------------------------------
 // CommandObjectCommandsAlias
-//-------------------------------------------------------------------------
 
-static constexpr OptionDefinition g_alias_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "help",      'h', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeHelpText, "Help text for this command" },
-  { LLDB_OPT_SET_ALL, false, "long-help", 'H', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeHelpText, "Long help text for this command" },
-    // clang-format on
-};
+#define LLDB_OPTIONS_alias
+#include "CommandOptions.inc"
 
 static const char *g_python_command_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
@@ -387,9 +366,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -766,9 +743,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsUnalias
-//-------------------------------------------------------------------------
 // CommandObjectCommandsUnalias
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsUnalias : public CommandObjectParsed {
 public:
@@ -849,9 +824,7 @@ protected:
 };
 
 #pragma mark CommandObjectCommandsDelete
-//-------------------------------------------------------------------------
 // CommandObjectCommandsDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsDelete : public CommandObjectParsed {
 public:
@@ -886,6 +859,7 @@ protected:
                                    "defined regular expression command names",
                                    GetCommandName().str().c_str());
       result.SetStatus(eReturnStatusFailed);
+      return false;
     }
 
     auto command_name = args[0].ref;
@@ -914,16 +888,10 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsAddRegex
-//-------------------------------------------------------------------------
 
-static constexpr OptionDefinition g_regex_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "help"  , 'h', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone, "The help text to display for this command." },
-  { LLDB_OPT_SET_1, false, "syntax", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone, "A syntax string showing the typical usage syntax." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_regex
+#include "CommandOptions.inc"
 
 #pragma mark CommandObjectCommandsAddRegex
 
@@ -992,17 +960,12 @@ protected:
     if (m_regex_cmd_up) {
       StringList lines;
       if (lines.SplitIntoLines(data)) {
-        const size_t num_lines = lines.GetSize();
         bool check_only = false;
-        for (size_t i = 0; i < num_lines; ++i) {
-          llvm::StringRef bytes_strref(lines[i]);
-          Status error = AppendRegexSubstitution(bytes_strref, check_only);
+        for (const std::string &line : lines) {
+          Status error = AppendRegexSubstitution(line, check_only);
           if (error.Fail()) {
-            if (!m_interpreter.GetDebugger()
-                     .GetCommandInterpreter()
-                     .GetBatchCommandMode()) {
-              StreamSP out_stream =
-                  m_interpreter.GetDebugger().GetAsyncOutputStream();
+            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode()) {
+              StreamSP out_stream = GetDebugger().GetAsyncOutputStream();
               out_stream->Printf("error: %s\n", error.AsCString());
             }
           }
@@ -1026,12 +989,12 @@ protected:
 
     Status error;
     auto name = command[0].ref;
-    m_regex_cmd_up = llvm::make_unique<CommandObjectRegexCommand>(
+    m_regex_cmd_up = std::make_unique<CommandObjectRegexCommand>(
         m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 10, 0,
         true);
 
     if (argc == 1) {
-      Debugger &debugger = m_interpreter.GetDebugger();
+      Debugger &debugger = GetDebugger();
       bool color_prompt = debugger.GetUseColor();
       const bool multiple_lines = true; // Get multiple lines
       IOHandlerSP io_handler_sp(new IOHandlerEditline(
@@ -1193,9 +1156,7 @@ private:
         m_syntax.assign(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1325,8 +1286,6 @@ public:
 
   bool IsRemovable() const override { return true; }
 
-  StructuredData::GenericSP GetImplementingObject() { return m_cmd_obj_sp; }
-
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
   llvm::StringRef GetHelp() override {
@@ -1394,15 +1353,9 @@ private:
   bool m_fetched_help_long : 1;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptImport
-//-------------------------------------------------------------------------
-
-static constexpr OptionDefinition g_script_import_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "allow-reload", 'r', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Allow the script to be loaded even if it was already loaded before. This argument exists for backwards compatibility, but reloading is always allowed, whether you specify it or not." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_script_import
+#include "CommandOptions.inc"
 
 class CommandObjectCommandsScriptImport : public CommandObjectParsed {
 public:
@@ -1427,13 +1380,12 @@ public:
 
   ~CommandObjectCommandsScriptImport() override = default;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override {
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
         request, nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1455,9 +1407,7 @@ protected:
         m_allow_reload = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1477,8 +1427,7 @@ protected:
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_interpreter.GetDebugger().GetScriptLanguage() !=
-        lldb::eScriptLanguagePython) {
+    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for module "
                          "importing is currently Python");
       result.SetStatus(eReturnStatusFailed);
@@ -1520,29 +1469,31 @@ protected:
   CommandOptions m_options;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptAdd
-//-------------------------------------------------------------------------
 static constexpr OptionEnumValueElement g_script_synchro_type[] = {
-  {eScriptedCommandSynchronicitySynchronous, "synchronous",
-   "Run synchronous"},
-  {eScriptedCommandSynchronicityAsynchronous, "asynchronous",
-   "Run asynchronous"},
-  {eScriptedCommandSynchronicityCurrentValue, "current",
-   "Do not alter current setting"} };
+    {
+        eScriptedCommandSynchronicitySynchronous,
+        "synchronous",
+        "Run synchronous",
+    },
+    {
+        eScriptedCommandSynchronicityAsynchronous,
+        "asynchronous",
+        "Run asynchronous",
+    },
+    {
+        eScriptedCommandSynchronicityCurrentValue,
+        "current",
+        "Do not alter current setting",
+    },
+};
 
 static constexpr OptionEnumValues ScriptSynchroType() {
   return OptionEnumValues(g_script_synchro_type);
 }
 
-static constexpr OptionDefinition g_script_add_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1,   false, "function",      'f', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypePythonFunction,               "Name of the Python function to bind to this command name." },
-  { LLDB_OPT_SET_2,   false, "class",         'c', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypePythonClass,                  "Name of the Python class to bind to this command name." },
-  { LLDB_OPT_SET_1,   false, "help"  ,        'h', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypeHelpText,                     "The help text to display for this command." },
-  { LLDB_OPT_SET_ALL, false, "synchronicity", 's', OptionParser::eRequiredArgument, nullptr, ScriptSynchroType(), 0, eArgTypeScriptedCommandSynchronicity, "Set the synchronicity of this command's executions with regard to LLDB event system." },
-    // clang-format on
-};
+#define LLDB_OPTIONS_script_add
+#include "CommandOptions.inc"
 
 class CommandObjectCommandsScriptAdd : public CommandObjectParsed,
                                        public IOHandlerDelegateMultiline {
@@ -1608,9 +1559,7 @@ protected:
               option_arg.str().c_str());
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1693,8 +1642,7 @@ protected:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (m_interpreter.GetDebugger().GetScriptLanguage() !=
-        lldb::eScriptLanguagePython) {
+    if (GetDebugger().GetScriptLanguage() != lldb::eScriptLanguagePython) {
       result.AppendError("only scripting language supported for scripted "
                          "commands is currently Python");
       result.SetStatus(eReturnStatusFailed);
@@ -1766,9 +1714,7 @@ protected:
   ScriptedCommandSynchronicity m_synchronicity;
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptList
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptList : public CommandObjectParsed {
 public:
@@ -1779,6 +1725,12 @@ public:
   ~CommandObjectCommandsScriptList() override = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 0) {
+      result.AppendError("'command script list' doesn't take any arguments");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
     m_interpreter.GetHelp(result, CommandInterpreter::eCommandTypesUserDef);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1787,9 +1739,7 @@ public:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptClear
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptClear : public CommandObjectParsed {
 public:
@@ -1801,6 +1751,12 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 0) {
+      result.AppendError("'command script clear' doesn't take any arguments");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
     m_interpreter.RemoveAllUser();
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1809,9 +1765,7 @@ protected:
   }
 };
 
-//-------------------------------------------------------------------------
 // CommandObjectCommandsScriptDelete
-//-------------------------------------------------------------------------
 
 class CommandObjectCommandsScriptDelete : public CommandObjectParsed {
 public:
@@ -1861,9 +1815,7 @@ protected:
 
 #pragma mark CommandObjectMultiwordCommandsScript
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordCommandsScript
-//-------------------------------------------------------------------------
 
 class CommandObjectMultiwordCommandsScript : public CommandObjectMultiword {
 public:
@@ -1893,9 +1845,7 @@ public:
 
 #pragma mark CommandObjectMultiwordCommands
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordCommands
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordCommands::CommandObjectMultiwordCommands(
     CommandInterpreter &interpreter)

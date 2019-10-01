@@ -146,7 +146,7 @@ RegisterContextPOSIX_arm::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < m_reg_info.num_registers)
     return &GetRegisterInfo()[reg];
   else
-    return NULL;
+    return nullptr;
 }
 
 size_t RegisterContextPOSIX_arm::GetRegisterSetCount() {
@@ -167,10 +167,10 @@ RegisterContextPOSIX_arm::GetRegisterSet(size_t set) {
       return &g_reg_sets_arm[set];
     default:
       assert(false && "Unhandled target architecture.");
-      return NULL;
+      return nullptr;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 const char *RegisterContextPOSIX_arm::GetRegisterName(unsigned reg) {

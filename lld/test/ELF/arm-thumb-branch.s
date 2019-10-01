@@ -6,7 +6,7 @@
 // RUN:          .callee1 : { *(.callee_low) } \
 // RUN:          .caller : { *(.text) } \
 // RUN:          .callee2 : { *(.callee_high) } } " > %t.script
-// RUN: ld.lld --script %t.script %t %tfar -o %t2 2>&1
+// RUN: ld.lld --script %t.script %t %tfar -o %t2
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck  %s
 
  .syntax unified

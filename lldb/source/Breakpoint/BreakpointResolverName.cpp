@@ -31,7 +31,8 @@ BreakpointResolverName::BreakpointResolverName(
       m_class_name(), m_regex(), m_match_type(type), m_language(language),
       m_skip_prologue(skip_prologue) {
   if (m_match_type == Breakpoint::Regexp) {
-    if (!m_regex.Compile(llvm::StringRef::withNullAsEmpty(name_cstr))) {
+    m_regex = RegularExpression(llvm::StringRef::withNullAsEmpty(name_cstr));
+    if (!m_regex.IsValid()) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
       if (log)
@@ -70,12 +71,12 @@ BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
 }
 
 BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
-                                               RegularExpression &func_regex,
+                                               RegularExpression func_regex,
                                                lldb::LanguageType language,
                                                lldb::addr_t offset,
                                                bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
-      m_class_name(nullptr), m_regex(func_regex),
+      m_class_name(nullptr), m_regex(std::move(func_regex)),
       m_match_type(Breakpoint::Regexp), m_language(language),
       m_skip_prologue(skip_prologue) {}
 
@@ -125,9 +126,8 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::RegexString), regex_text);
   if (success) {
-    RegularExpression regex(regex_text);
-    return new BreakpointResolverName(bkpt, regex, language, offset,
-                                      skip_prologue);
+    return new BreakpointResolverName(bkpt, RegularExpression(regex_text),
+                                      language, offset, skip_prologue);
   } else {
     StructuredData::Array *names_array;
     success = options_dict.GetValueForKeyAsArray(
@@ -235,9 +235,9 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
   if (Language *lang = Language::FindPlugin(m_language)) {
     add_variant_funcs(lang);
   } else {
-    // Most likely m_language is eLanguageTypeUnknown. We check each language
-    // for possible variants or more qualified names and create lookups for
-    // those as well.
+    // Most likely m_language is eLanguageTypeUnknown. We check each language for
+    // possible variants or more qualified names and create lookups for those as
+    // well.
     Language::ForEach(add_variant_funcs);
   }
 }
@@ -388,7 +388,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
               if (log) {
                 StreamString s;
                 bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
-                log->Printf("Added location: %s\n", s.GetData());
+                LLDB_LOGF(log, "Added location: %s\n", s.GetData());
               }
             }
           }

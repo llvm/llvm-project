@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: openmp-4.5
 
 // The test checks schedule(simd:runtime)
 // in combination with omp_set_schedule()

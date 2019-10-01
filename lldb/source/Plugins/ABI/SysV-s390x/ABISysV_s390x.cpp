@@ -195,9 +195,7 @@ ABISysV_s390x::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABISysV_s390x::GetRedZoneSize() const { return 0; }
 
-//------------------------------------------------------------------
 // Static Functions
-//------------------------------------------------------------------
 
 ABISP
 ABISysV_s390x::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
@@ -254,16 +252,14 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
     if (i < 5) {
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + i);
-      if (log)
-        log->Printf("About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
-                    static_cast<uint64_t>(i + 1), args[i], reg_info->name);
+      LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
+                static_cast<uint64_t>(i + 1), args[i], reg_info->name);
       if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
         return false;
     } else {
       Status error;
-      if (log)
-        log->Printf("About to write arg%" PRIu64 " (0x%" PRIx64 ") onto stack",
-                    static_cast<uint64_t>(i + 1), args[i]);
+      LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") onto stack",
+                static_cast<uint64_t>(i + 1), args[i]);
       if (!process_sp->WritePointerToMemory(arg_pos, args[i], error))
         return false;
       arg_pos += 8;
@@ -272,24 +268,21 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   // %r14 is set to the return address
 
-  if (log)
-    log->Printf("Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
+  LLDB_LOGF(log, "Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(ra_reg_info, return_addr))
     return false;
 
   // %r15 is set to the actual stack value.
 
-  if (log)
-    log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
+  LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
     return false;
 
   // %pc is set to the address of the called function.
 
-  if (log)
-    log->Printf("Writing PC: 0x%" PRIx64, (uint64_t)func_addr);
+  LLDB_LOGF(log, "Writing PC: 0x%" PRIx64, (uint64_t)func_addr);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
     return false;
@@ -742,9 +735,7 @@ lldb_private::ConstString ABISysV_s390x::GetPluginNameStatic() {
   return g_name;
 }
 
-//------------------------------------------------------------------
 // PluginInterface protocol
-//------------------------------------------------------------------
 
 lldb_private::ConstString ABISysV_s390x::GetPluginName() {
   return GetPluginNameStatic();

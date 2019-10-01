@@ -59,6 +59,19 @@ bool CompilerDeclContext::IsClassMethod(lldb::LanguageType *language_ptr,
     return false;
 }
 
+bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {
+  if (!IsValid())
+    return false;
+
+  // If the other context is just the current context, we don't need to go
+  // over the type system to know that the lookup is identical.
+  if (this == &other)
+    return true;
+
+  return m_type_system->DeclContextIsContainedInLookup(m_opaque_decl_ctx,
+                                                       other.m_opaque_decl_ctx);
+}
+
 bool lldb_private::operator==(const lldb_private::CompilerDeclContext &lhs,
                               const lldb_private::CompilerDeclContext &rhs) {
   return lhs.GetTypeSystem() == rhs.GetTypeSystem() &&

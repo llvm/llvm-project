@@ -49,7 +49,7 @@ bool SBTypeFormat::IsValid() const {
 SBTypeFormat::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFormat, operator bool);
 
-  return m_opaque_sp.get() != NULL;
+  return m_opaque_sp.get() != nullptr;
 }
 
 lldb::Format SBTypeFormat::GetFormat() {

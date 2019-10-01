@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#include "target_impl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -380,21 +381,19 @@ public:
   // Support for dispatch next
 
   INLINE static int64_t Shuffle(unsigned active, int64_t val, int leader) {
-    int lo, hi;
-    asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
-    hi = __SHFL_SYNC(active, hi, leader);
-    lo = __SHFL_SYNC(active, lo, leader);
-    asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
-    return val;
+    uint32_t lo, hi;
+    __kmpc_impl_unpack(val, lo, hi);
+    hi = __kmpc_impl_shfl_sync(active, hi, leader);
+    lo = __kmpc_impl_shfl_sync(active, lo, leader);
+    return __kmpc_impl_pack(lo, hi);
   }
 
   INLINE static uint64_t NextIter() {
-    unsigned int active = __ACTIVEMASK();
-    int leader = __ffs(active) - 1;
-    int change = __popc(active);
-    unsigned lane_mask_lt;
-    asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lane_mask_lt));
-    unsigned int rank = __popc(active & lane_mask_lt);
+    __kmpc_impl_lanemask_t active = __kmpc_impl_activemask();
+    uint32_t leader = __kmpc_impl_ffs(active) - 1;
+    uint32_t change = __kmpc_impl_popc(active);
+    __kmpc_impl_lanemask_t lane_mask_lt = __kmpc_impl_lanemask_lt();
+    unsigned int rank = __kmpc_impl_popc(active & lane_mask_lt);
     uint64_t warp_res;
     if (rank == 0) {
       warp_res = atomicAdd(

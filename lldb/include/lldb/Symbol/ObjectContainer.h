@@ -18,8 +18,7 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class ObjectContainer ObjectContainer.h "lldb/Symbol/ObjectContainer.h"
+/// \class ObjectContainer ObjectContainer.h "lldb/Symbol/ObjectContainer.h"
 /// A plug-in interface definition class for object containers.
 ///
 /// Object containers contain object files from one or more architectures, and
@@ -28,16 +27,13 @@ namespace lldb_private {
 /// Typical object containers are static libraries (.a files) that contain
 /// multiple named object files, and universal files that contain multiple
 /// architectures.
-//----------------------------------------------------------------------
 class ObjectContainer : public PluginInterface, public ModuleChild {
 public:
-  //------------------------------------------------------------------
   /// Construct with a parent module, offset, and header data.
   ///
   /// Object files belong to modules and a valid module must be supplied upon
   /// construction. The at an offset within a file for objects that contain
   /// more than one architecture or object.
-  //------------------------------------------------------------------
   ObjectContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
                   lldb::offset_t file_offset, lldb::offset_t length,
                   lldb::DataBufferSP &data_sp, lldb::offset_t data_offset)
@@ -50,72 +46,61 @@ public:
       m_data.SetData(data_sp, data_offset, length);
   }
 
-  //------------------------------------------------------------------
   /// Destructor.
   ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
-  //------------------------------------------------------------------
   ~ObjectContainer() override = default;
 
-  //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the current contents of this object to the
   /// supplied stream \a s. The dumping should include the section list if it
   /// has been parsed, and the symbol table if it has been parsed.
   ///
-  /// @param[in] s
+  /// \param[in] s
   ///     The stream to which to dump the object description.
-  //------------------------------------------------------------------
   virtual void Dump(Stream *s) const = 0;
 
-  //------------------------------------------------------------------
   /// Gets the architecture given an index.
   ///
   /// Copies the architecture specification for index \a idx.
   ///
-  /// @param[in] idx
+  /// \param[in] idx
   ///     The architecture index to extract.
   ///
-  /// @param[out] arch
+  /// \param[out] arch
   ///     A architecture object that will be filled in if \a idx is a
   ///     architecture valid index.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if \a idx is valid and \a arch has been
   ///     filled in, \b false otherwise.
   ///
-  /// @see ObjectContainer::GetNumArchitectures() const
-  //------------------------------------------------------------------
+  /// \see ObjectContainer::GetNumArchitectures() const
   virtual bool GetArchitectureAtIndex(uint32_t idx, ArchSpec &arch) const {
     return false;
   }
 
-  //------------------------------------------------------------------
   /// Returns the offset into a file at which this object resides.
   ///
   /// Some files contain many object files, and this function allows access to
   /// an object's offset within the file.
   ///
-  /// @return
+  /// \return
   ///     The offset in bytes into the file. Defaults to zero for
   ///     simple object files that a represented by an entire file.
-  //------------------------------------------------------------------
   virtual lldb::addr_t GetOffset() const { return m_offset; }
 
   virtual lldb::addr_t GetByteSize() const { return m_length; }
 
-  //------------------------------------------------------------------
   /// Get the number of objects within this object file (archives).
   ///
-  /// @return
+  /// \return
   ///     Zero for object files that are not archives, or the number
   ///     of objects contained in the archive.
-  //------------------------------------------------------------------
   virtual size_t GetNumObjects() const { return 0; }
 
-  //------------------------------------------------------------------
   /// Get the number of architectures in this object file.
   ///
   /// The default implementation returns 1 as for object files that contain a
@@ -123,12 +108,10 @@ public:
   /// one architecture should override this function and return an appropriate
   /// value.
   ///
-  /// @return
+  /// \return
   ///     The number of architectures contained in this object file.
-  //------------------------------------------------------------------
   virtual size_t GetNumArchitectures() const { return 0; }
 
-  //------------------------------------------------------------------
   /// Attempts to parse the object header.
   ///
   /// This function is used as a test to see if a given plug-in instance can
@@ -137,13 +120,11 @@ public:
   /// false should be returned and the next plug-in can attempt to parse an
   /// object file.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the header was parsed successfully, \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   virtual bool ParseHeader() = 0;
 
-  //------------------------------------------------------------------
   /// Selects an architecture in an object file.
   ///
   /// Object files that contain a single architecture should verify that the
@@ -155,11 +136,10 @@ public:
   /// state from any previously selected architecture and prepare to return
   /// information for the new architecture.
   ///
-  /// @return
+  /// \return
   ///     Returns a pointer to the object file of the requested \a
   ///     arch and optional \a name. Returns nullptr of no such object
   ///     file exists in the container.
-  //------------------------------------------------------------------
   virtual lldb::ObjectFileSP GetObjectFile(const FileSpec *file) = 0;
 
   virtual bool ObjectAtIndexIsContainer(uint32_t object_idx) { return false; }
@@ -177,9 +157,7 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   FileSpec m_file; ///< The file that represents this container objects (which
                    ///can be different from the module's file).
   lldb::addr_t

@@ -34,8 +34,9 @@ using namespace lldb_private;
 
 ASTResultSynthesizer::ASTResultSynthesizer(ASTConsumer *passthrough,
                                            bool top_level, Target &target)
-    : m_ast_context(NULL), m_passthrough(passthrough), m_passthrough_sema(NULL),
-      m_target(target), m_sema(NULL), m_top_level(top_level) {
+    : m_ast_context(nullptr), m_passthrough(passthrough),
+      m_passthrough_sema(nullptr), m_target(target), m_sema(nullptr),
+      m_top_level(top_level) {
   if (!m_passthrough)
     return;
 
@@ -57,13 +58,13 @@ void ASTResultSynthesizer::TransformTopLevelDecl(Decl *D) {
   if (NamedDecl *named_decl = dyn_cast<NamedDecl>(D)) {
     if (log && log->GetVerbose()) {
       if (named_decl->getIdentifier())
-        log->Printf("TransformTopLevelDecl(%s)",
-                    named_decl->getIdentifier()->getNameStart());
+        LLDB_LOGF(log, "TransformTopLevelDecl(%s)",
+                  named_decl->getIdentifier()->getNameStart());
       else if (ObjCMethodDecl *method_decl = dyn_cast<ObjCMethodDecl>(D))
-        log->Printf("TransformTopLevelDecl(%s)",
-                    method_decl->getSelector().getAsString().c_str());
+        LLDB_LOGF(log, "TransformTopLevelDecl(%s)",
+                  method_decl->getSelector().getAsString().c_str());
       else
-        log->Printf("TransformTopLevelDecl(<complex>)");
+        LLDB_LOGF(log, "TransformTopLevelDecl(<complex>)");
     }
 
     if (m_top_level) {
@@ -129,7 +130,7 @@ bool ASTResultSynthesizer::SynthesizeFunctionResult(FunctionDecl *FunDecl) {
 
     os.flush();
 
-    log->Printf("Untransformed function AST:\n%s", s.c_str());
+    LLDB_LOGF(log, "Untransformed function AST:\n%s", s.c_str());
   }
 
   Stmt *function_body = function_decl->getBody();
@@ -145,7 +146,7 @@ bool ASTResultSynthesizer::SynthesizeFunctionResult(FunctionDecl *FunDecl) {
 
     os.flush();
 
-    log->Printf("Transformed function AST:\n%s", s.c_str());
+    LLDB_LOGF(log, "Transformed function AST:\n%s", s.c_str());
   }
 
   return ret;
@@ -169,7 +170,7 @@ bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
 
     os.flush();
 
-    log->Printf("Untransformed method AST:\n%s", s.c_str());
+    LLDB_LOGF(log, "Untransformed method AST:\n%s", s.c_str());
   }
 
   Stmt *method_body = MethodDecl->getBody();
@@ -189,7 +190,7 @@ bool ASTResultSynthesizer::SynthesizeObjCMethodResult(
 
     os.flush();
 
-    log->Printf("Transformed method AST:\n%s", s.c_str());
+    LLDB_LOGF(log, "Transformed method AST:\n%s", s.c_str());
   }
 
   return ret;
@@ -238,7 +239,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
       break;
 
     last_expr = implicit_cast->getSubExpr();
-  } while (0);
+  } while (false);
 
   // is_lvalue is used to record whether the expression returns an assignable
   // Lvalue or an Rvalue.  This is relevant because they are handled
@@ -307,11 +308,11 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   if (log) {
     std::string s = expr_qual_type.getAsString();
 
-    log->Printf("Last statement is an %s with type: %s",
-                (is_lvalue ? "lvalue" : "rvalue"), s.c_str());
+    LLDB_LOGF(log, "Last statement is an %s with type: %s",
+              (is_lvalue ? "lvalue" : "rvalue"), s.c_str());
   }
 
-  clang::VarDecl *result_decl = NULL;
+  clang::VarDecl *result_decl = nullptr;
 
   if (is_lvalue) {
     IdentifierInfo *result_ptr_id;
@@ -329,14 +330,14 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
 
     QualType ptr_qual_type;
 
-    if (expr_qual_type->getAs<ObjCObjectType>() != NULL)
+    if (expr_qual_type->getAs<ObjCObjectType>() != nullptr)
       ptr_qual_type = Ctx.getObjCObjectPointerType(expr_qual_type);
     else
       ptr_qual_type = Ctx.getPointerType(expr_qual_type);
 
     result_decl =
         VarDecl::Create(Ctx, DC, SourceLocation(), SourceLocation(),
-                        result_ptr_id, ptr_qual_type, NULL, SC_Static);
+                        result_ptr_id, ptr_qual_type, nullptr, SC_Static);
 
     if (!result_decl)
       return false;
@@ -350,8 +351,9 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   } else {
     IdentifierInfo &result_id = Ctx.Idents.get("$__lldb_expr_result");
 
-    result_decl = VarDecl::Create(Ctx, DC, SourceLocation(), SourceLocation(),
-                                  &result_id, expr_qual_type, NULL, SC_Static);
+    result_decl =
+        VarDecl::Create(Ctx, DC, SourceLocation(), SourceLocation(), &result_id,
+                        expr_qual_type, nullptr, SC_Static);
 
     if (!result_decl)
       return false;
@@ -420,8 +422,7 @@ void ASTResultSynthesizer::MaybeRecordPersistentType(TypeDecl *D) {
 
   ConstString name_cs(name.str().c_str());
 
-  if (log)
-    log->Printf("Recording persistent type %s\n", name_cs.GetCString());
+  LLDB_LOGF(log, "Recording persistent type %s\n", name_cs.GetCString());
 
   m_decls.push_back(D);
 }
@@ -441,8 +442,7 @@ void ASTResultSynthesizer::RecordPersistentDecl(NamedDecl *D) {
 
   ConstString name_cs(name.str().c_str());
 
-  if (log)
-    log->Printf("Recording persistent decl %s\n", name_cs.GetCString());
+  LLDB_LOGF(log, "Recording persistent decl %s\n", name_cs.GetCString());
 
   m_decls.push_back(D);
 }
@@ -465,7 +465,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
         decl->dump(ss);
         ss.flush();
 
-        log->Printf("Couldn't commit persistent  decl: %s\n", s.c_str());
+        LLDB_LOGF(log, "Couldn't commit persistent  decl: %s\n", s.c_str());
       }
 
       continue;
@@ -507,7 +507,7 @@ void ASTResultSynthesizer::InitializeSema(Sema &S) {
 }
 
 void ASTResultSynthesizer::ForgetSema() {
-  m_sema = NULL;
+  m_sema = nullptr;
 
   if (m_passthrough_sema)
     m_passthrough_sema->ForgetSema();

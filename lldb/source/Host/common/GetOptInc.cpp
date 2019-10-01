@@ -97,9 +97,9 @@ static void permute_args(int panonopt_start, int panonopt_end, int opt_end,
         pos += nopts;
       swap = nargv[pos];
       /* LINTED const cast */
-      ((char **)nargv)[pos] = nargv[cstart];
+      const_cast<char **>(nargv)[pos] = nargv[cstart];
       /* LINTED const cast */
-      ((char **)nargv)[cstart] = swap;
+      const_cast<char **>(nargv)[cstart] = swap;
     }
   }
 }

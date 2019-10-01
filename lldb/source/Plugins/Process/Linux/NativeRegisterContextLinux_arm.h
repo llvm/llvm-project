@@ -40,9 +40,7 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  //------------------------------------------------------------------
   // Hardware breakpoints/watchpoint management functions
-  //------------------------------------------------------------------
 
   uint32_t NumSupportedHardwareBreakpoints() override;
 
@@ -85,13 +83,13 @@ protected:
   Status DoWriteRegisterValue(uint32_t offset, const char *reg_name,
                               const RegisterValue &value) override;
 
-  Status DoReadGPR(void *buf, size_t buf_size) override;
+  Status ReadGPR() override;
 
-  Status DoWriteGPR(void *buf, size_t buf_size) override;
+  Status WriteGPR() override;
 
-  Status DoReadFPR(void *buf, size_t buf_size) override;
+  Status ReadFPR() override;
 
-  Status DoWriteFPR(void *buf, size_t buf_size) override;
+  Status WriteFPR() override;
 
   void *GetGPRBuffer() override { return &m_gpr_arm; }
 

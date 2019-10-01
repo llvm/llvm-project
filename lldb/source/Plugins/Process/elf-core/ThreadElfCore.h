@@ -149,7 +149,7 @@ public:
 
   const char *GetName() override {
     if (m_thread_name.empty())
-      return NULL;
+      return nullptr;
     return m_thread_name.c_str();
   }
 
@@ -161,9 +161,7 @@ public:
   }
 
 protected:
-  //------------------------------------------------------------------
   // Member variables.
-  //------------------------------------------------------------------
   std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
 

@@ -56,34 +56,32 @@ public:
         : item_buffer_ptr(LLDB_INVALID_ADDRESS), item_buffer_size(0) {}
   };
 
-  //----------------------------------------------------------
   /// Get the information about a work item by calling
   /// __introspection_dispatch_thread_get_item_info.  If there's a page of
   /// memory that needs to be freed, pass in the address and size and it will
   /// be freed before getting the list of queues.
   ///
-  /// @param [in] thread_id
+  /// \param [in] thread_id
   ///     The thread to get the extended backtrace for.
   ///
-  /// @param [in] page_to_free
+  /// \param [in] page_to_free
   ///     An address of an inferior process vm page that needs to be
   ///     deallocated,
   ///     LLDB_INVALID_ADDRESS if this is not needed.
   ///
-  /// @param [in] page_to_free_size
+  /// \param [in] page_to_free_size
   ///     The size of the vm page that needs to be deallocated if an address was
   ///     passed in to page_to_free.
   ///
-  /// @param [out] error
+  /// \param [out] error
   ///     This object will be updated with the error status / error string from
   ///     any failures encountered.
   ///
-  /// @returns
+  /// \returns
   ///     The result of the inferior function call execution.  If there was a
   ///     failure of any kind while getting
   ///     the information, the item_buffer_ptr value will be
   ///     LLDB_INVALID_ADDRESS.
-  //----------------------------------------------------------
   GetThreadItemInfoReturnInfo GetThreadItemInfo(Thread &thread,
                                                 lldb::tid_t thread_id,
                                                 lldb::addr_t page_to_free,

@@ -22,9 +22,7 @@ public:
 
   ~OptionValueUUID() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeUUID; }
 
@@ -46,9 +44,7 @@ public:
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   UUID &GetCurrentValue() { return m_uuid; }
 
@@ -56,8 +52,8 @@ public:
 
   void SetCurrentValue(const UUID &value) { m_uuid = value; }
 
-  size_t AutoComplete(CommandInterpreter &interpreter,
-                      CompletionRequest &request) override;
+  void AutoComplete(CommandInterpreter &interpreter,
+                    CompletionRequest &request) override;
 
 protected:
   UUID m_uuid;

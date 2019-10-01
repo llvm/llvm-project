@@ -16,13 +16,13 @@ namespace lldb {
 class SBThreadCollection
 {
 public:
-    
+
     SBThreadCollection ();
-    
+
     SBThreadCollection (const SBThreadCollection &rhs);
-    
+
     ~SBThreadCollection ();
-    
+
     bool
     IsValid () const;
 
@@ -30,10 +30,10 @@ public:
     
     size_t
     GetSize ();
-    
+
     lldb::SBThread
     GetThreadAtIndex (size_t idx);
-    
+
 };
-    
+
 } // namespace lldb

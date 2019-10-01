@@ -132,9 +132,8 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
 
     PdbCompilandSymId cu_sym_id(modi, iter.offset());
 
-    // If the debug info is incorrect, we could have multiple symbols with the
-    // same address.  So use try_emplace instead of insert, and the first one
-    // will win.
+    // It's rare, but we could have multiple symbols with the same address
+    // because of identical comdat folding.  Right now, the first one will win.
     cci.m_symbols_by_va.insert(std::make_pair(va, PdbSymUid(cu_sym_id)));
   }
 }
@@ -186,8 +185,6 @@ std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
 }
 
 CVSymbol PdbIndex::ReadSymbolRecord(PdbCompilandSymId cu_sym) const {
-  // We need to subtract 4 here to adjust for the codeview debug magic
-  // at the beginning of the debug info stream.
   const CompilandIndexItem *cci = compilands().GetCompiland(cu_sym.modi);
   auto iter = cci->m_debug_stream.getSymbolArray().at(cu_sym.offset);
   lldbassert(iter != cci->m_debug_stream.getSymbolArray().end());

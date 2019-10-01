@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- pstl_config.h -----------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,16 +10,16 @@
 #ifndef _PSTL_CONFIG_H
 #define _PSTL_CONFIG_H
 
+#include <__pstl_config_site>
+
 // The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
-#define _PSTL_VERSION 9000
+#define _PSTL_VERSION 10000
 #define _PSTL_VERSION_MAJOR (_PSTL_VERSION / 1000)
 #define _PSTL_VERSION_MINOR ((_PSTL_VERSION % 1000) / 10)
 #define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
 #if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
-// TODO: In the future, we need to handle this setting using a configure-time
-//       option and something like a __config_site header.
-#    define _PSTL_PAR_BACKEND_SERIAL
+#    error "A parallel backend must be specified"
 #endif
 
 // Check the user-defined macro for warnings
@@ -42,6 +42,15 @@
 #define _PSTL_STRING(x) _PSTL_STRING_AUX(x)
 #define _PSTL_STRING_CONCAT(x, y) x #y
 
+#ifdef _PSTL_HIDE_FROM_ABI_PER_TU
+#    define _PSTL_HIDE_FROM_ABI_PUSH                                                                                   \
+        _Pragma("clang attribute push(__attribute__((internal_linkage)), apply_to=any(function,record))")
+#    define _PSTL_HIDE_FROM_ABI_POP _Pragma("clang attribute pop")
+#else
+#    define _PSTL_HIDE_FROM_ABI_PUSH /* nothing */
+#    define _PSTL_HIDE_FROM_ABI_POP  /* nothing */
+#endif
+
 // note that when ICC or Clang is in use, _PSTL_GCC_VERSION might not fully match
 // the actual GCC version on the system.
 #define _PSTL_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -52,7 +61,8 @@
 #endif
 
 // Enable SIMD for compilers that support OpenMP 4.0
-#if (_OPENMP >= 201307) || (__INTEL_COMPILER >= 1600) || (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || defined(__clang__)
+#if (_OPENMP >= 201307) || (__INTEL_COMPILER >= 1600) || (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || \
+    defined(__clang__)
 #    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
 #    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))

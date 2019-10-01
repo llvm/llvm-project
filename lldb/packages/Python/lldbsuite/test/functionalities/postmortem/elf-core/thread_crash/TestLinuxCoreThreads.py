@@ -4,8 +4,6 @@ Test signal reporting when debugging with linux core files.
 
 from __future__ import print_function
 
-import shutil
-import struct
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -17,7 +15,14 @@ class LinuxCoreThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
-    _initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def setUp(self):
+        super(LinuxCoreThreadsTestCase, self).setUp()
+        self._initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def tearDown(self):
+        lldb.DBG.SetSelectedPlatform(self._initial_platform)
+        super(LinuxCoreThreadsTestCase, self).tearDown()
 
     _i386_pid = 5193
     _x86_64_pid = 5222
@@ -58,4 +63,3 @@ class LinuxCoreThreadsTestCase(TestBase):
                 self.assertEqual(signal, 0)
 
         self.dbg.DeleteTarget(target)
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)

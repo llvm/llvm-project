@@ -42,9 +42,7 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ClangFunctionCaller constructor
-//----------------------------------------------------------------------
 ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
                                          const CompilerType &return_type,
                                          const Address &functionAddress,
@@ -58,9 +56,7 @@ ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
   assert(m_jit_process_wp.lock());
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 ClangFunctionCaller::~ClangFunctionCaller() {}
 
 unsigned
@@ -183,8 +179,7 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
   m_wrapper_function_text.append(");\n}\n");
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-  if (log)
-    log->Printf("Expression: \n\n%s\n\n", m_wrapper_function_text.c_str());
+  LLDB_LOGF(log, "Expression: \n\n%s\n\n", m_wrapper_function_text.c_str());
 
   // Okay, now compile this expression
 

@@ -19,9 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // "bugreport unwind"
-//-------------------------------------------------------------------------
 
 class CommandObjectBugreportUnwind : public CommandObjectParsed {
 public:
@@ -110,9 +108,7 @@ private:
 
 #pragma mark CommandObjectMultiwordBugreport
 
-//-------------------------------------------------------------------------
 // CommandObjectMultiwordBugreport
-//-------------------------------------------------------------------------
 
 CommandObjectMultiwordBugreport::CommandObjectMultiwordBugreport(
     CommandInterpreter &interpreter)

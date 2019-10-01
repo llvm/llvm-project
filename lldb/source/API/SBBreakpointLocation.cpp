@@ -179,7 +179,7 @@ const char *SBBreakpointLocation::GetCondition() {
         loc_sp->GetTarget().GetAPIMutex());
     return loc_sp->GetConditionText();
   }
-  return NULL;
+  return nullptr;
 }
 
 void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
@@ -357,7 +357,7 @@ const char *SBBreakpointLocation::GetThreadName() const {
         loc_sp->GetTarget().GetAPIMutex());
     return loc_sp->GetThreadName();
   }
-  return NULL;
+  return nullptr;
 }
 
 void SBBreakpointLocation::SetQueueName(const char *queue_name) {
@@ -382,7 +382,7 @@ const char *SBBreakpointLocation::GetQueueName() const {
         loc_sp->GetTarget().GetAPIMutex());
     loc_sp->GetQueueName();
   }
-  return NULL;
+  return nullptr;
 }
 
 bool SBBreakpointLocation::IsResolved() {

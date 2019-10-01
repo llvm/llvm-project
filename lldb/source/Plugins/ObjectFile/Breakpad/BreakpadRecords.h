@@ -20,12 +20,12 @@ namespace breakpad {
 
 class Record {
 public:
-  enum Kind { Module, Info, File, Func, Line, Public, Stack };
+  enum Kind { Module, Info, File, Func, Line, Public, StackCFI, StackWin };
 
   /// Attempt to guess the kind of the record present in the argument without
   /// doing a full parse. The returned kind will always be correct for valid
   /// records, but the full parse can still fail in case of corrupted input.
-  static Kind classify(llvm::StringRef Line);
+  static llvm::Optional<Kind> classify(llvm::StringRef Line);
 
 protected:
   Record(Kind K) : TheKind(K) {}
@@ -140,6 +140,45 @@ public:
 
 bool operator==(const PublicRecord &L, const PublicRecord &R);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const PublicRecord &R);
+
+class StackCFIRecord : public Record {
+public:
+  static llvm::Optional<StackCFIRecord> parse(llvm::StringRef Line);
+  StackCFIRecord(lldb::addr_t Address, llvm::Optional<lldb::addr_t> Size,
+                 llvm::StringRef UnwindRules)
+      : Record(StackCFI), Address(Address), Size(Size),
+        UnwindRules(UnwindRules) {}
+
+  lldb::addr_t Address;
+  llvm::Optional<lldb::addr_t> Size;
+  llvm::StringRef UnwindRules;
+};
+
+bool operator==(const StackCFIRecord &L, const StackCFIRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StackCFIRecord &R);
+
+class StackWinRecord : public Record {
+public:
+  static llvm::Optional<StackWinRecord> parse(llvm::StringRef Line);
+
+  StackWinRecord(lldb::addr_t RVA, lldb::addr_t CodeSize,
+                 lldb::addr_t ParameterSize, lldb::addr_t SavedRegisterSize,
+                 lldb::addr_t LocalSize, llvm::StringRef ProgramString)
+      : Record(StackWin), RVA(RVA), CodeSize(CodeSize),
+        ParameterSize(ParameterSize), SavedRegisterSize(SavedRegisterSize),
+        LocalSize(LocalSize), ProgramString(ProgramString) {}
+
+  enum class FrameType : uint8_t { FPO = 0, FrameData = 4 };
+  lldb::addr_t RVA;
+  lldb::addr_t CodeSize;
+  lldb::addr_t ParameterSize;
+  lldb::addr_t SavedRegisterSize;
+  lldb::addr_t LocalSize;
+  llvm::StringRef ProgramString;
+};
+
+bool operator==(const StackWinRecord &L, const StackWinRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StackWinRecord &R);
 
 } // namespace breakpad
 } // namespace lldb_private

@@ -42,7 +42,6 @@ class TestSwiftExpressionAccessControl(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_expression_access_control(self):
         """Make sure expressions ignore access control"""
         self.build()

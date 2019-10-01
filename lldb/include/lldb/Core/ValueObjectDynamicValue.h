@@ -26,19 +26,11 @@
 
 namespace lldb_private {
 class DataExtractor;
-}
-namespace lldb_private {
 class Declaration;
-}
-namespace lldb_private {
 class Status;
-}
-namespace lldb_private {
 
-//----------------------------------------------------------------------
 // A ValueObject that represents memory at a given address, viewed as some
 // set lldb type.
-//----------------------------------------------------------------------
 class ValueObjectDynamicValue : public ValueObject {
 public:
   ~ValueObjectDynamicValue() override;

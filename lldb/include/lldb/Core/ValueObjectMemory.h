@@ -23,14 +23,9 @@
 
 namespace lldb_private {
 class ExecutionContextScope;
-}
 
-namespace lldb_private {
-
-//----------------------------------------------------------------------
 // A ValueObject that represents memory at a given address, viewed as some
 // set lldb type.
-//----------------------------------------------------------------------
 class ValueObjectMemory : public ValueObject {
 public:
   ~ValueObjectMemory() override;
@@ -74,9 +69,7 @@ private:
 
   ValueObjectMemory(ExecutionContextScope *exe_scope, llvm::StringRef name,
                     const Address &address, const CompilerType &ast_type);
-  //------------------------------------------------------------------
   // For ValueObject only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(ValueObjectMemory);
 };
 

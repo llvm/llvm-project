@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 import lldb
 import shlex
@@ -6,10 +7,10 @@ import shlex
 
 def dump_module_sources(module, result):
     if module:
-        print >> result, "Module: %s" % (module.file)
+        print("Module: %s" % (module.file), file=result)
         for compile_unit in module.compile_units:
             if compile_unit.file:
-                print >> result, "  %s" % (compile_unit.file)
+                print("  %s" % (compile_unit.file), file=result)
 
 
 def info_sources(debugger, command, result, dict):
@@ -28,4 +29,4 @@ def __lldb_init_module(debugger, dict):
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand(
         'command script add -f sources.info_sources info_sources')
-    print 'The "info_sources" command has been installed, type "help info_sources" or "info_sources --help" for detailed help.'
+    print('The "info_sources" command has been installed, type "help info_sources" or "info_sources --help" for detailed help.')

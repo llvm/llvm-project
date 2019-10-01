@@ -113,8 +113,7 @@ target = debugger.CreateTarget('')
 error = lldb.SBError()
 process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
 
-or the equivalent arguments for AttachToProcessWithID.
-") SBDebugger;
+or the equivalent arguments for AttachToProcessWithID.") SBDebugger;
 class SBDebugger
 {
 public:
@@ -279,8 +278,7 @@ public:
 
     @param idx Zero-based index of the platform for which info should be
                retrieved, must be less than the value returned by
-               GetNumAvailablePlatforms().
-    ") GetAvailablePlatformInfoAtIndex;
+               GetNumAvailablePlatforms().") GetAvailablePlatformInfoAtIndex;
     lldb::SBStructuredData
     GetAvailablePlatformInfoAtIndex (uint32_t idx);
 
@@ -425,6 +423,32 @@ public:
     lldb::SBTypeSynthetic
     GetSyntheticForType (lldb::SBTypeNameSpecifier);
 
+    %feature("docstring",
+"Launch a command interpreter session. Commands are read from standard input or
+from the input handle specified for the debugger object. Output/errors are
+similarly redirected to standard output/error or the configured handles.
+
+@param[in] auto_handle_events If true, automatically handle resulting events.
+@param[in] spawn_thread If true, start a new thread for IO handling.
+@param[in] options Parameter collection of type SBCommandInterpreterRunOptions.
+@param[in] num_errors Initial error counter.
+@param[in] quit_requested Initial quit request flag.
+@param[in] stopped_for_crash Initial crash flag.
+
+@return
+A tuple with the number of errors encountered by the interpreter, a boolean
+indicating whether quitting the interpreter was requested and another boolean
+set to True in case of a crash.
+
+Example:
+
+# Start an interactive lldb session from a script (with a valid debugger object
+# created beforehand):
+n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,
+    False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)") RunCommandInterpreter;
+    %apply int& INOUT { int& num_errors };
+    %apply bool& INOUT { bool& quit_requested };
+    %apply bool& INOUT { bool& stopped_for_crash };
     void
     RunCommandInterpreter (bool auto_handle_events,
                            bool spawn_thread,
@@ -435,6 +459,17 @@ public:
 
     lldb::SBError
     RunREPL (lldb::LanguageType language, const char *repl_options);
+
+    %pythoncode%{
+    def __iter__(self):
+        '''Iterate over all targets in a lldb.SBDebugger object.'''
+        return lldb_iter(self, 'GetNumTargets', 'GetTargetAtIndex')
+
+    def __len__(self):
+        '''Return the number of targets in a lldb.SBDebugger object.'''
+        return self.GetNumTargets()
+    %}
+
 }; // class SBDebugger
 
 } // namespace lldb

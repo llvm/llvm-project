@@ -19,8 +19,8 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Host/FileSystem.h"
@@ -42,6 +42,10 @@ enum class ProcessState {
   TracedOrStopped,
   Zombie,
 };
+}
+
+namespace lldb_private {
+class ProcessLaunchInfo;
 }
 
 static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
@@ -212,12 +216,12 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
 
   DIR *dirproc = opendir(procdir);
   if (dirproc) {
-    struct dirent *direntry = NULL;
+    struct dirent *direntry = nullptr;
     const uid_t our_uid = getuid();
     const lldb::pid_t our_pid = getpid();
     bool all_users = match_info.GetMatchAllUsers();
 
-    while ((direntry = readdir(dirproc)) != NULL) {
+    while ((direntry = readdir(dirproc)) != nullptr) {
       if (direntry->d_type != DT_DIR || !IsDirNumeric(direntry->d_name))
         continue;
 
@@ -265,8 +269,8 @@ bool Host::FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach) {
   DIR *dirproc = opendir(process_task_dir.c_str());
 
   if (dirproc) {
-    struct dirent *direntry = NULL;
-    while ((direntry = readdir(dirproc)) != NULL) {
+    struct dirent *direntry = nullptr;
+    while ((direntry = readdir(dirproc)) != nullptr) {
       if (direntry->d_type != DT_DIR || !IsDirNumeric(direntry->d_name))
         continue;
 

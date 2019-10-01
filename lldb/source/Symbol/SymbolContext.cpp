@@ -13,7 +13,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -22,6 +21,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -46,11 +46,6 @@ SymbolContext::SymbolContext(const TargetSP &t, const ModuleSP &m,
   if (le)
     line_entry = *le;
 }
-
-SymbolContext::SymbolContext(const SymbolContext &rhs)
-    : target_sp(rhs.target_sp), module_sp(rhs.module_sp),
-      comp_unit(rhs.comp_unit), function(rhs.function), block(rhs.block),
-      line_entry(rhs.line_entry), symbol(rhs.symbol), variable(rhs.variable) {}
 
 SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
     : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
@@ -499,21 +494,18 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
         Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
 
         if (log) {
-          log->Printf(
+          LLDB_LOGF(
+              log,
               "warning: inlined block 0x%8.8" PRIx64
               " doesn't have a range that contains file address 0x%" PRIx64,
               curr_inlined_block->GetID(), curr_frame_pc.GetFileAddress());
         }
 #ifdef LLDB_CONFIGURATION_DEBUG
         else {
-          ObjectFile *objfile = NULL;
+          ObjectFile *objfile = nullptr;
           if (module_sp) {
-            SymbolVendor *symbol_vendor = module_sp->GetSymbolVendor();
-            if (symbol_vendor) {
-              SymbolFile *symbol_file = symbol_vendor->GetSymbolFile();
-              if (symbol_file)
-                objfile = symbol_file->GetObjectFile();
-            }
+            if (SymbolFile *symbol_file = module_sp->GetSymbolFile())
+              objfile = symbol_file->GetObjectFile();
           }
           if (objfile) {
             Host::SystemLog(
@@ -586,10 +578,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
       curr_block->GetContainingInlinedBlock() != nullptr)
     isInlinedblock = true;
 
-  //----------------------------------------------------------------------
   // Find all types that match the current block if we have one and put them
   // first in the list. Keep iterating up through all blocks.
-  //----------------------------------------------------------------------
   while (curr_block != nullptr && !isInlinedblock) {
     type_map.ForEach(
         [curr_block, &type_list](const lldb::TypeSP &type_sp) -> bool {
@@ -607,10 +597,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
     });
     curr_block = curr_block->GetParent();
   }
-  //----------------------------------------------------------------------
   // Find all types that match the current function, if we have onem, and put
   // them next in the list.
-  //----------------------------------------------------------------------
   if (function != nullptr && !type_map.Empty()) {
     const size_t old_type_list_size = type_list.GetSize();
     type_map.ForEach([this, &type_list](const lldb::TypeSP &type_sp) -> bool {
@@ -628,10 +616,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
         type_map.Remove(type_list.GetTypeAtIndex(i));
     }
   }
-  //----------------------------------------------------------------------
   // Find all types that match the current compile unit, if we have one, and
   // put them next in the list.
-  //----------------------------------------------------------------------
   if (comp_unit != nullptr && !type_map.Empty()) {
     const size_t old_type_list_size = type_list.GetSize();
 
@@ -650,10 +636,8 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
         type_map.Remove(type_list.GetTypeAtIndex(i));
     }
   }
-  //----------------------------------------------------------------------
   // Find all types that match the current module, if we have one, and put them
   // next in the list.
-  //----------------------------------------------------------------------
   if (module_sp && !type_map.Empty()) {
     const size_t old_type_list_size = type_list.GetSize();
     type_map.ForEach([this, &type_list](const lldb::TypeSP &type_sp) -> bool {
@@ -670,9 +654,7 @@ void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
         type_map.Remove(type_list.GetTypeAtIndex(i));
     }
   }
-  //----------------------------------------------------------------------
   // Any types that are left get copied into the list an any order.
-  //----------------------------------------------------------------------
   if (!type_map.Empty()) {
     type_map.ForEach([&type_list](const lldb::TypeSP &type_sp) -> bool {
       type_list.Insert(type_sp);
@@ -744,7 +726,7 @@ bool SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
 
   uint32_t line_index = 0;
   bool found = false;
-  while (1) {
+  while (true) {
     LineEntry this_line;
     line_index = comp_unit->FindLineEntry(line_index, line_entry.line, nullptr,
                                           false, &this_line);
@@ -952,11 +934,9 @@ SymbolContext::FindBestGlobalDataSymbol(ConstString name, Status &error) {
 }
 
 
-//----------------------------------------------------------------------
 //
 //  SymbolContextSpecifier
 //
-//----------------------------------------------------------------------
 
 SymbolContextSpecifier::SymbolContextSpecifier(const TargetSP &target_sp)
     : m_target_sp(target_sp), m_module_spec(), m_module_sp(), m_file_spec_up(),
@@ -1216,11 +1196,9 @@ void SymbolContextSpecifier::GetDescription(
   }
 }
 
-//----------------------------------------------------------------------
 //
 //  SymbolContextList
 //
-//----------------------------------------------------------------------
 
 SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 

@@ -5,8 +5,6 @@ Test number of threads.
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -32,6 +30,7 @@ class BreakpointAfterJoinTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
+    @expectedFailureNetBSD
     def test(self):
         """Test breakpoint handling after a thread join."""
         self.build(dictionary=self.getBuildFlags())

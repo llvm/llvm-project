@@ -31,7 +31,6 @@ class TestSwiftArrayType(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(bugnumber='rdar://30663811', oslist=['linux'])
-    @add_test_categories(["swiftpr"])
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()

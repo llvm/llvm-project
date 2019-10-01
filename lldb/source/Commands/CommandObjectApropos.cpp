@@ -17,9 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectApropos
-//-------------------------------------------------------------------------
 
 CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
     : CommandObjectParsed(
@@ -65,13 +63,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         if (commands_found.GetSize() > 0) {
           result.AppendMessageWithFormat(
               "The following commands may relate to '%s':\n", args[0].c_str());
-          size_t max_len = 0;
-
-          for (size_t i = 0; i < commands_found.GetSize(); ++i) {
-            size_t len = strlen(commands_found.GetStringAtIndex(i));
-            if (len > max_len)
-              max_len = len;
-          }
+          const size_t max_len = commands_found.GetMaxStringLength();
 
           for (size_t i = 0; i < commands_found.GetSize(); ++i)
             m_interpreter.OutputFormattedHelpText(
@@ -82,7 +74,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
 
       std::vector<const Property *> properties;
       const size_t num_properties =
-          m_interpreter.GetDebugger().Apropos(search_word, properties);
+          GetDebugger().Apropos(search_word, properties);
       if (num_properties) {
         const bool dump_qualified_name = true;
         result.AppendMessageWithFormatv(

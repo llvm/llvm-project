@@ -1,5 +1,4 @@
 // RUN: %libomp-compile && env KMP_AFFINITY=compact %libomp-run
-// REQUIRES: openmp-4.0
 
 #include <stdio.h>
 #include <stdint.h>

@@ -36,17 +36,17 @@ static void display_usage(const char *progname) {
 int main_gdbserver(int argc, char *argv[]);
 int main_platform(int argc, char *argv[]);
 
+namespace llgs {
 static void initialize() {
   if (auto e = g_debugger_lifetime->Initialize(
-          llvm::make_unique<SystemInitializerLLGS>(), nullptr))
+          std::make_unique<SystemInitializerLLGS>(), nullptr))
     llvm::consumeError(std::move(e));
 }
 
-static void terminate() { g_debugger_lifetime->Terminate(); }
+static void terminate_debugger() { g_debugger_lifetime->Terminate(); }
+} // namespace llgs
 
-//----------------------------------------------------------------------
 // main
-//----------------------------------------------------------------------
 int main(int argc, char *argv[]) {
   llvm::StringRef ToolName = argv[0];
   llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
@@ -61,14 +61,14 @@ int main(int argc, char *argv[]) {
 
   switch (argv[1][0]) {
   case 'g':
-    initialize();
+    llgs::initialize();
     main_gdbserver(argc, argv);
-    terminate();
+    llgs::terminate_debugger();
     break;
   case 'p':
-    initialize();
+    llgs::initialize();
     main_platform(argc, argv);
-    terminate();
+    llgs::terminate_debugger();
     break;
   case 'v':
     fprintf(stderr, "%s\n", lldb_private::GetVersion());

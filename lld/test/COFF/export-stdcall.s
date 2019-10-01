@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple i686-windows-msvc %s -o %t.obj -filetype=obj
-# RUN: lld-link %t.obj -out:%t.dll -dll -nodefaultlib -noentry -export:foo_std=bar_std -export:foo_fast=bar_fast
+# RUN: lld-link -safeseh:no %t.obj -out:%t.dll -dll -nodefaultlib -noentry -export:foo_std=bar_std -export:foo_fast=bar_fast
 # RUN: llvm-nm %t.lib | FileCheck %s
 
 # MSVC fudges the lookup of 'bar' to allow it to find the stdcall function

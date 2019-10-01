@@ -14,18 +14,16 @@
 #include "lldb/Utility/ConstString.h"
 #include "DWARFDefines.h"
 
-//----------------------------------------------------------------------
 // DWARFDeclContext
 //
 // A class that represents a declaration context all the way down to a
 // DIE. This is useful when trying to find a DIE in one DWARF to a DIE
 // in another DWARF file.
-//----------------------------------------------------------------------
 
 class DWARFDeclContext {
 public:
   struct Entry {
-    Entry() : tag(0), name(NULL) {}
+    Entry() : tag(0), name(nullptr) {}
     Entry(dw_tag_t t, const char *n) : tag(t), name(n) {}
 
     bool NameMatches(const Entry &rhs) const {

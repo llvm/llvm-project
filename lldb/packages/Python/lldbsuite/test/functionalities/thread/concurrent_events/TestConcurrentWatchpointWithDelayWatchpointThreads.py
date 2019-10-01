@@ -15,6 +15,7 @@ class ConcurrentWatchpointWithDelayWatchpointThreads(ConcurrentEventsBase):
     @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
+    @expectedFailureNetBSD
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test two threads that trigger a watchpoint where one thread has a 1 second delay. """

@@ -24,13 +24,13 @@ class OutputSection;
 class SectionChunk;
 class SymbolTable;
 
-void createPDB(SymbolTable *Symtab,
-               llvm::ArrayRef<OutputSection *> OutputSections,
-               llvm::ArrayRef<uint8_t> SectionTable,
-               llvm::codeview::DebugInfo *BuildId);
+void createPDB(SymbolTable *symtab,
+               llvm::ArrayRef<OutputSection *> outputSections,
+               llvm::ArrayRef<uint8_t> sectionTable,
+               llvm::codeview::DebugInfo *buildId);
 
-std::pair<llvm::StringRef, uint32_t> getFileLine(const SectionChunk *C,
-                                                 uint32_t Addr);
+std::pair<llvm::StringRef, uint32_t> getFileLine(const SectionChunk *c,
+                                                 uint32_t addr);
 }
 }
 

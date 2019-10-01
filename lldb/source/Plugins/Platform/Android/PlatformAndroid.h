@@ -29,9 +29,7 @@ public:
 
   static void Terminate();
 
-  //------------------------------------------------------------
   // lldb_private::PluginInterface functions
-  //------------------------------------------------------------
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static ConstString GetPluginNameStatic(bool is_host);
@@ -42,9 +40,7 @@ public:
 
   uint32_t GetPluginVersion() override { return 1; }
 
-  //------------------------------------------------------------
   // lldb_private::Platform functions
-  //------------------------------------------------------------
 
   Status ConnectRemote(Args &args) override;
 

@@ -28,7 +28,6 @@ class TestSwiftRangeType(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_range_type(self):
         """Test the Swift.Range<T> type"""
         self.build()

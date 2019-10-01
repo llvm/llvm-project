@@ -21,7 +21,7 @@ using namespace TestUtils;
 
 struct test_one_policy
 {
-#if _PSTL_ICC_18_VC141_TEST_SIMD_LAMBDA_RELEASE_BROKEN || _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||     \
+#if _PSTL_ICC_18_VC141_TEST_SIMD_LAMBDA_RELEASE_BROKEN || _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||       \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN // dummy specialization by policy type, in case of broken configuration
     template <typename Iterator1, typename Iterator2>
     typename std::enable_if<is_same_iterator_category<Iterator1, std::random_access_iterator_tag>::value, void>::type
@@ -89,7 +89,7 @@ struct wrapper
     }
 };
 
-int32_t
+int
 main()
 {
     test<int32_t>();

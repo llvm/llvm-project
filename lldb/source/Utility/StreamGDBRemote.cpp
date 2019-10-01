@@ -26,7 +26,7 @@ StreamGDBRemote::~StreamGDBRemote() {}
 
 int StreamGDBRemote::PutEscapedBytes(const void *s, size_t src_len) {
   int bytes_written = 0;
-  const uint8_t *src = (const uint8_t *)s;
+  const uint8_t *src = static_cast<const uint8_t *>(s);
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
   while (src_len) {

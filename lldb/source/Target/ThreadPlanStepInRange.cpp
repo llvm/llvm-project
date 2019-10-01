@@ -30,10 +30,8 @@ using namespace lldb_private;
 uint32_t ThreadPlanStepInRange::s_default_flag_values =
     ThreadPlanShouldStopHere::eStepInAvoidNoDebug;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepInRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
-//----------------------------------------------------------------------
 
 ThreadPlanStepInRange::ThreadPlanStepInRange(
     Thread &thread, const AddressRange &range,
@@ -154,7 +152,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
     s.Address(
         m_thread.GetRegisterContext()->GetPC(),
         m_thread.CalculateTarget()->GetArchitecture().GetAddressByteSize());
-    log->Printf("ThreadPlanStepInRange reached %s.", s.GetData());
+    LLDB_LOGF(log, "ThreadPlanStepInRange reached %s.", s.GetData());
   }
 
   if (IsPlanComplete())
@@ -203,13 +201,14 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
             CheckShouldStopHereAndQueueStepOut(frame_order, m_status);
         if (log) {
           if (m_sub_plan_sp)
-            log->Printf("ShouldStopHere found plan to step out of this frame.");
+            LLDB_LOGF(log,
+                      "ShouldStopHere found plan to step out of this frame.");
           else
-            log->Printf("ShouldStopHere no plan to step out of this frame.");
+            LLDB_LOGF(log, "ShouldStopHere no plan to step out of this frame.");
         }
       } else if (log) {
-        log->Printf(
-            "Thought I stepped out, but in fact arrived at a trampoline.");
+        LLDB_LOGF(
+            log, "Thought I stepped out, but in fact arrived at a trampoline.");
       }
     } else if (frame_order == eFrameCompareEqual && InSymbol()) {
       // If we are not in a place we should step through, we're done. One
@@ -243,9 +242,10 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
     if (log) {
       if (m_sub_plan_sp)
-        log->Printf("Found a step through plan: %s", m_sub_plan_sp->GetName());
+        LLDB_LOGF(log, "Found a step through plan: %s",
+                  m_sub_plan_sp->GetName());
       else
-        log->Printf("No step through plan found.");
+        LLDB_LOGF(log, "No step through plan found.");
     }
 
     // If not, give the "should_stop" callback a chance to push a plan to get
@@ -295,8 +295,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
         if (bytes_to_skip != 0) {
           func_start_address.Slide(bytes_to_skip);
           log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP);
-          if (log)
-            log->Printf("Pushing past prologue ");
+          LLDB_LOGF(log, "Pushing past prologue ");
 
           m_sub_plan_sp = m_thread.QueueThreadPlanForRunToAddress(
               false, func_start_address, true, m_status);
@@ -325,10 +324,10 @@ bool ThreadPlanStepInRange::MischiefManaged() {
 
 void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
   auto name_ref = llvm::StringRef::withNullAsEmpty(name);
-  if (!m_avoid_regexp_up)
+  if (m_avoid_regexp_up)
+    *m_avoid_regexp_up = RegularExpression(name_ref);
+  else
     m_avoid_regexp_up.reset(new RegularExpression(name_ref));
-
-  m_avoid_regexp_up->Compile(name_ref);
 }
 
 void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
@@ -439,25 +438,17 @@ bool ThreadPlanStepInRange::FrameMatchesAvoidCriteria() {
           sc.GetFunctionName(Mangled::ePreferDemangledWithoutArguments)
               .GetCString();
       if (frame_function_name) {
-        size_t num_matches = 0;
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-        if (log)
-          num_matches = 1;
-
-        RegularExpression::Match regex_match(num_matches);
-
+        llvm::SmallVector<llvm::StringRef, 2> matches;
         bool return_value =
-            avoid_regexp_to_use->Execute(frame_function_name, &regex_match);
-        if (return_value) {
-          if (log) {
-            std::string match;
-            regex_match.GetMatchAtIndex(frame_function_name, 0, match);
-            log->Printf("Stepping out of function \"%s\" because it matches "
-                        "the avoid regexp \"%s\" - match substring: \"%s\".",
-                        frame_function_name,
-                        avoid_regexp_to_use->GetText().str().c_str(),
-                        match.c_str());
-          }
+            avoid_regexp_to_use->Execute(frame_function_name, &matches);
+        if (return_value && matches.size() > 1) {
+          std::string match = matches[1].str();
+          LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP),
+                    "Stepping out of function \"%s\" because it matches "
+                    "the avoid regexp \"%s\" - match substring: \"%s\".",
+                    frame_function_name,
+                    avoid_regexp_to_use->GetText().str().c_str(),
+                    match.c_str());
         }
         return return_value;
       }
@@ -512,10 +503,11 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
           should_stop_here = false;
       }
       if (log && !should_stop_here)
-        log->Printf("Stepping out of frame %s which did not match step into "
-                    "target %s.",
-                    sc.GetFunctionName().AsCString(),
-                    m_step_into_target.AsCString());
+        LLDB_LOGF(log,
+                  "Stepping out of frame %s which did not match step into "
+                  "target %s.",
+                  sc.GetFunctionName().AsCString(),
+                  m_step_into_target.AsCString());
     }
   }
 
@@ -623,10 +615,10 @@ bool ThreadPlanStepInRange::DoWillResume(lldb::StateType resume_state,
     bool step_without_resume = m_thread.DecrementCurrentInlinedDepth();
     if (step_without_resume) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-      if (log)
-        log->Printf("ThreadPlanStepInRange::DoWillResume: returning false, "
-                    "inline_depth: %d",
-                    m_thread.GetCurrentInlinedDepth());
+      LLDB_LOGF(log,
+                "ThreadPlanStepInRange::DoWillResume: returning false, "
+                "inline_depth: %d",
+                m_thread.GetCurrentInlinedDepth());
       SetStopInfo(StopInfo::CreateStopReasonToTrace(m_thread));
 
       // FIXME: Maybe it would be better to create a InlineStep stop reason, but

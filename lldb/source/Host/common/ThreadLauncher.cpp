@@ -1,5 +1,4 @@
-//===-- ThreadLauncher.cpp ---------------------------------------*- C++
-//-*-===//
+//===-- ThreadLauncher.cpp --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,18 +16,14 @@
 #include "lldb/Host/windows/windows.h"
 #endif
 
+#include "llvm/Support/WindowsError.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
-HostThread ThreadLauncher::LaunchThread(llvm::StringRef name,
-                                        lldb::thread_func_t thread_function,
-                                        lldb::thread_arg_t thread_arg,
-                                        Status *error_ptr,
-                                        size_t min_stack_byte_size) {
-  Status error;
-  if (error_ptr)
-    error_ptr->Clear();
-
+llvm::Expected<HostThread> ThreadLauncher::LaunchThread(
+    llvm::StringRef name, lldb::thread_func_t thread_function,
+    lldb::thread_arg_t thread_arg, size_t min_stack_byte_size) {
   // Host::ThreadCreateTrampoline will delete this pointer for us.
   HostThreadCreateInfo *info_ptr =
       new HostThreadCreateInfo(name.data(), thread_function, thread_arg);
@@ -37,8 +32,8 @@ HostThread ThreadLauncher::LaunchThread(llvm::StringRef name,
   thread = (lldb::thread_t)::_beginthreadex(
       0, (unsigned)min_stack_byte_size,
       HostNativeThread::ThreadCreateTrampoline, info_ptr, 0, NULL);
-  if (thread == (lldb::thread_t)(-1L))
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+  if (thread == LLDB_INVALID_HOST_THREAD)
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
 #else
 
 // ASAN instrumentation adds a lot of bookkeeping overhead on stack frames.
@@ -49,7 +44,7 @@ HostThread ThreadLauncher::LaunchThread(llvm::StringRef name,
   }
 #endif
 
-  pthread_attr_t *thread_attr_ptr = NULL;
+  pthread_attr_t *thread_attr_ptr = nullptr;
   pthread_attr_t thread_attr;
   bool destroy_attr = false;
   if (min_stack_byte_size > 0) {
@@ -73,12 +68,10 @@ HostThread ThreadLauncher::LaunchThread(llvm::StringRef name,
   if (destroy_attr)
     ::pthread_attr_destroy(&thread_attr);
 
-  error.SetError(err, eErrorTypePOSIX);
+  if (err)
+    return llvm::errorCodeToError(
+        std::error_code(err, std::generic_category()));
 #endif
-  if (error_ptr)
-    *error_ptr = error;
-  if (!error.Success())
-    thread = LLDB_INVALID_HOST_THREAD;
 
   return HostThread(thread);
 }

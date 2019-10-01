@@ -17,7 +17,7 @@ public:
 
     static lldb::SBFileSpec
     GetLLDBPythonPath ();
-    
+
     static lldb::SBFileSpec
     GetLLDBPath (lldb::PathType path_type);
 

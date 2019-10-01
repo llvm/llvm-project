@@ -13,8 +13,8 @@
 #ifndef lldb_ObjCRuntimeSyntheticProvider_h
 #define lldb_ObjCRuntimeSyntheticProvider_h
 
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 
 namespace lldb_private {
 class ObjCRuntimeSyntheticProvider : public SyntheticChildren {

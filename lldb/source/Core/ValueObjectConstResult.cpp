@@ -182,7 +182,7 @@ ValueObjectConstResult::ValueObjectConstResult(ExecutionContextScope *exe_scope,
   m_name = name;
   ExecutionContext exe_ctx;
   exe_scope->CalculateExecutionContext(exe_ctx);
-  m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, module);
+  m_error = m_value.GetValueAsData(&exe_ctx, m_data, module);
 }
 
 ValueObjectConstResult::~ValueObjectConstResult() {}

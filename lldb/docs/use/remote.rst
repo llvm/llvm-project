@@ -17,14 +17,17 @@ advanced debugging operations, like copying files from/to the remote system and
 can be used to execute arbitrary shell commands on the remote system.
 
 In order to reduce code complexity and improve remote debugging experience LLDB
-on Linux and OSX uses the remote debugging stub even when debugging a process
+on Linux and macOS uses the remote debugging stub even when debugging a process
 locally. This is achieved by spawning a remote stub process locally and
 communicating with it over the loopback interface. In the case of local
 debugging this whole process is transparent to the user. The platform binary is
 not used in this case, since no file transfers are needed.
 
+.. contents::
+   :local:
+
 Preparation for Remote Debugging
---------------------------------
+---------------------------------
 
 While the process of actual debugging (stepping, backtraces, evaluating
 expressions) is same as in the local case, in the case of remote debugging,
@@ -32,7 +35,8 @@ more preparation is needed as the required binaries cannot started on the
 remote system automatically. Also, if the remote system runs a different OS or
 architecture, the server component needs to be compiled separately.
 
-**Remote system**
+Remote system
+*************
 
 On Linux and Android, all required remote functionality is contained in the
 lldb-server binary. This binary combines the functionality of the platform and
@@ -40,7 +44,7 @@ gdb-remote stub. A single binary facilitates deployment and reduces code size,
 since the two functions share a lot of code. The lldb-server binary is also
 statically linked with the rest of LLDB (unlike lldb, which dynamically links
 to liblldb.so by default), so it does not have any dependencies on the rest of
-lldb. On Mac OSX and iOS, the remote-gdb functionality is implemented by the
+lldb. On macOS and iOS, the remote-gdb functionality is implemented by the
 debugserver binary, which you will need to deploy alongside lldb-server.
 
 The binaries mentioned above need to be present on the remote system to enable
@@ -64,7 +68,8 @@ originating from that address. Adding a --server parameter to the command line
 will fork off a new process for every incoming connection, allowing multiple
 parallel debug sessions.
 
-**Local system**
+Local system
+************
 
 On the local system, you need to let LLDB know that you intend to do remote
 debugging. This is achieved through the platform command and its sub-commands.
@@ -76,14 +81,14 @@ system. A list of available plug-ins can be obtained through platform list.
    local% lldb
    (lldb) platform list
    Available platforms:
-   host: Local Mac OS X user platform plug-in.
+   host: Local macOS user platform plug-in.
    remote-freebsd: Remote FreeBSD user platform plug-in.
    remote-linux: Remote Linux user platform plug-in.
    remote-netbsd: Remote NetBSD user platform plug-in.
    remote-windows: Remote Windows user platform plug-in.
    remote-android: Remote Android user platform plug-in.
    remote-ios: Remote iOS platform plug-in.
-   remote-macosx: Remote Mac OS X user platform plug-in.
+   remote-macosx: Remote macOS user platform plug-in.
    ios-simulator: iOS simulator platform plug-in.
    darwin-kernel: Darwin Kernel platform plug-in.
    tvos-simulator: Apple TV simulator platform plug-in.
@@ -130,9 +135,11 @@ application needs additional files, you can transfer them using the platform
 commands: get-file, put-file, mkdir, etc. The environment can be prepared
 further using the platform shell command.
 
-**Launching a locally built process on the remote machine**
+Launching a locally built process on the remote machine
+-------------------------------------------------------
 
-*Install and run in the platform working directory*
+Install and run in the platform working directory
+*************************************************
 
 To launch a locally built process on the remote system in the platform working
 directory:
@@ -151,7 +158,8 @@ changed. LLDB will automatically launch a lldb-server in gdbremote mode to
 allow you to debug this executable, connect to it and start your debug session
 for you.
 
-*Changing the platform working directory*
+Changing the platform working directory
+***************************************
 
 You can change the platform working directory while connected to the platform
 with:
@@ -173,7 +181,8 @@ And you can verify it worked using "platform status":
 
 If we run again, the program will be installed into ``/usr/local/bin``.
 
-*Install and run by specifying a remote install path*
+Install and run by specifying a remote install path
+***************************************************
 
 If you want the "a.out" executable to be installed into "/bin/a.out" instead of
 the platform's current working directory, we can set the platform file
@@ -201,7 +210,8 @@ specification:
    (lldb) script lldb.target.module['libbar.so'].SetPlatformFileSpec("/usr/local/lib/libbar.so")
    (lldb) run
 
-*Attaching to a remote process*
+Attaching to a remote process
+*****************************
 
 If you want to attach to a remote process, you can first list the processes on
 the remote system:

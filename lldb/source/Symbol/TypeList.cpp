@@ -21,9 +21,7 @@ using namespace lldb_private;
 
 TypeList::TypeList() : m_types() {}
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 TypeList::~TypeList() {}
 
 void TypeList::Insert(const TypeSP &type_sp) {
@@ -33,9 +31,7 @@ void TypeList::Insert(const TypeSP &type_sp) {
     m_types.push_back(type_sp);
 }
 
-//----------------------------------------------------------------------
 // Find a base type by its unique ID.
-//----------------------------------------------------------------------
 // TypeSP
 // TypeList::FindType(lldb::user_id_t uid)
 //{
@@ -45,9 +41,7 @@ void TypeList::Insert(const TypeSP &type_sp) {
 //    return TypeSP();
 //}
 
-//----------------------------------------------------------------------
 // Find a type by name.
-//----------------------------------------------------------------------
 // TypeList
 // TypeList::FindTypes (ConstString name)
 //{

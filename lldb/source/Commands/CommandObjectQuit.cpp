@@ -16,9 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//-------------------------------------------------------------------------
 // CommandObjectQuit
-//-------------------------------------------------------------------------
 
 CommandObjectQuit::CommandObjectQuit(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "quit", "Quit the LLDB debugger.",

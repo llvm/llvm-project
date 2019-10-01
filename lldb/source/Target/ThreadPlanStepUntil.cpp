@@ -19,10 +19,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // ThreadPlanStepUntil: Run until we reach a given line number or step out of
 // the current frame
-//----------------------------------------------------------------------
 
 ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
                                          lldb::addr_t *address_list,
@@ -328,8 +326,7 @@ bool ThreadPlanStepUntil::MischiefManaged() {
   bool done = false;
   if (IsPlanComplete()) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-    if (log)
-      log->Printf("Completed step until plan.");
+    LLDB_LOGF(log, "Completed step until plan.");
 
     Clear();
     done = true;

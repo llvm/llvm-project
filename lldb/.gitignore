@@ -26,6 +26,7 @@
 # OS X specific files.
 .DS_store
 DerivedData/
+*.noindex
 
 # Remote build configuration files.
 .remote-build.conf

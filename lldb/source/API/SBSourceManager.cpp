@@ -131,7 +131,7 @@ size_t SBSourceManager::DisplaySourceLinesWithLineNumbersAndColumn(
        const char *, lldb::SBStream &),
       file, line, column, context_before, context_after, current_line_cstr, s);
 
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     return 0;
 
   return m_opaque_up->DisplaySourceLinesWithLineNumbers(

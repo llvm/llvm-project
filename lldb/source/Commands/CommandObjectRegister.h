@@ -13,23 +13,17 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectRegister
-//-------------------------------------------------------------------------
 
 class CommandObjectRegister : public CommandObjectMultiword {
 public:
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   CommandObjectRegister(CommandInterpreter &interpreter);
 
   ~CommandObjectRegister() override;
 
 private:
-  //------------------------------------------------------------------
   // For CommandObjectRegister only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(CommandObjectRegister);
 };
 

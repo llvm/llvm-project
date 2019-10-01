@@ -97,30 +97,26 @@ public:
   Target &GetTarget() { return m_target; }
   const Status &GetError() { return m_error; }
 
-  //------------------------------------------------------------------
   /// Returns the WatchpointOptions structure set for this watchpoint.
   ///
-  /// @return
+  /// \return
   ///     A pointer to this watchpoint's WatchpointOptions.
-  //------------------------------------------------------------------
   WatchpointOptions *GetOptions() { return &m_options; }
 
-  //------------------------------------------------------------------
   /// Set the callback action invoked when the watchpoint is hit.
   ///
-  /// @param[in] callback
+  /// \param[in] callback
   ///    The method that will get called when the watchpoint is hit.
-  /// @param[in] callback_baton
+  /// \param[in] callback_baton
   ///    A void * pointer that will get passed back to the callback function.
-  /// @param[in] is_synchronous
+  /// \param[in] is_synchronous
   ///    If \b true the callback will be run on the private event thread
   ///    before the stop event gets reported.  If false, the callback will get
   ///    handled on the public event thread after the stop has been posted.
   ///
-  /// @return
+  /// \return
   ///    \b true if the process should stop when you hit the watchpoint.
   ///    \b false if it should continue.
-  //------------------------------------------------------------------
   void SetCallback(WatchpointHitCallback callback, void *callback_baton,
                    bool is_synchronous = false);
 
@@ -130,36 +126,28 @@ public:
 
   void ClearCallback();
 
-  //------------------------------------------------------------------
   /// Invoke the callback action when the watchpoint is hit.
   ///
-  /// @param[in] context
+  /// \param[in] context
   ///     Described the watchpoint event.
   ///
-  /// @return
+  /// \return
   ///     \b true if the target should stop at this watchpoint and \b false not.
-  //------------------------------------------------------------------
   bool InvokeCallback(StoppointCallbackContext *context);
 
-  //------------------------------------------------------------------
   // Condition
-  //------------------------------------------------------------------
-  //------------------------------------------------------------------
   /// Set the watchpoint's condition.
   ///
-  /// @param[in] condition
+  /// \param[in] condition
   ///    The condition expression to evaluate when the watchpoint is hit.
   ///    Pass in nullptr to clear the condition.
-  //------------------------------------------------------------------
   void SetCondition(const char *condition);
 
-  //------------------------------------------------------------------
   /// Return a pointer to the text of the condition expression.
   ///
-  /// @return
+  /// \return
   ///    A pointer to the condition expression text, or nullptr if no
   //     condition has been set.
-  //------------------------------------------------------------------
   const char *GetConditionText() const;
 
   void TurnOnEphemeralMode();

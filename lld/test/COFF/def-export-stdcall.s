@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-windows-msvc %s -o %t.obj
 # RUN: echo -e "LIBRARY foo\nEXPORTS\n  stdcall\n  fastcall\n  vectorcall\n  _underscored" > %t.def
-# RUN: lld-link -entry:dllmain -dll -def:%t.def %t.obj -out:%t.dll -implib:%t.lib
+# RUN: lld-link -safeseh:no -entry:dllmain -dll -def:%t.def %t.obj -out:%t.dll -implib:%t.lib
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix UNDECORATED-IMPLIB %s
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix UNDECORATED-EXPORTS %s
 
@@ -25,7 +25,7 @@
 
 
 # RUN: echo -e "LIBRARY foo\nEXPORTS\n  _stdcall@8\n  @fastcall@8\n  vectorcall@@8" > %t.def
-# RUN: lld-link -entry:dllmain -dll -def:%t.def %t.obj -out:%t.dll -implib:%t.lib
+# RUN: lld-link -safeseh:no -entry:dllmain -dll -def:%t.def %t.obj -out:%t.dll -implib:%t.lib
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix DECORATED-IMPLIB %s
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix DECORATED-EXPORTS %s
 

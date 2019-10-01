@@ -49,7 +49,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
     : ValueObject(exe_scope), m_address(address), m_type_sp(type_sp),
       m_compiler_type() {
   // Do not attempt to construct one of these objects with no variable!
-  assert(m_type_sp.get() != NULL);
+  assert(m_type_sp.get() != nullptr);
   SetName(ConstString(name));
   m_value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
   TargetSP target_sp(GetTargetSP());
@@ -172,7 +172,7 @@ bool ValueObjectMemory::UpdateValue() {
     case Value::eValueTypeScalar:
       // The variable value is in the Scalar value inside the m_value. We can
       // point our m_data right to it.
-      m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+      m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
       break;
 
     case Value::eValueTypeFileAddress:
@@ -213,7 +213,7 @@ bool ValueObjectMemory::UpdateValue() {
           value.SetCompilerType(m_compiler_type);
         }
 
-        m_error = value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+        m_error = value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
       }
       break;
     }

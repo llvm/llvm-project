@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,6 +12,7 @@ from lldbsuite.test import lldbutil
 class CommandInterpreterAPICase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -73,3 +73,19 @@ class CommandInterpreterAPICase(TestBase):
 
         if self.TraceOn():
             lldbutil.print_stacktraces(process)
+
+    @add_test_categories(['pyapi'])
+    def test_command_output(self):
+        """Test command output handling."""
+        ci = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
+
+        # Test that a command which produces no output returns "" instead of
+        # None.
+        res = lldb.SBCommandReturnObject()
+        ci.HandleCommand("settings set use-color false", res)
+        self.assertTrue(res.Succeeded())
+        self.assertIsNotNone(res.GetOutput())
+        self.assertEquals(res.GetOutput(), "")
+        self.assertIsNotNone(res.GetError())
+        self.assertEquals(res.GetError(), "")

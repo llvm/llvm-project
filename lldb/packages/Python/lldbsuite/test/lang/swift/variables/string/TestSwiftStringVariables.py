@@ -31,7 +31,6 @@ class TestSwiftStringVariables(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()

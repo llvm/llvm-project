@@ -12,11 +12,17 @@
 #include <map>
 #include <vector>
 
-#include "DWARFUnit.h"
 #include "DWARFDIE.h"
+#include "DWARFTypeUnit.h"
+#include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "lldb/Core/STLUtils.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Error.h"
+
+namespace lldb_private {
+class DWARFContext;
+}
 
 typedef std::multimap<const char *, dw_offset_t, CStringCompareFunctionObject>
     CStringToDIEMap;
@@ -31,16 +37,20 @@ public:
                                   const dw_offset_t next_offset,
                                   const uint32_t depth, void *userData);
 
-  DWARFDebugInfo();
-  void SetDwarfData(SymbolFileDWARF *dwarf2Data);
+  explicit DWARFDebugInfo(SymbolFileDWARF &dwarf,
+                          lldb_private::DWARFContext &context);
 
-  size_t GetNumCompileUnits();
-  bool ContainsCompileUnit(const DWARFUnit *cu) const;
-  DWARFUnit *GetCompileUnitAtIndex(uint32_t idx);
-  DWARFUnit *GetCompileUnit(dw_offset_t cu_offset, uint32_t *idx_ptr = NULL);
-  DWARFUnit *GetCompileUnitContainingDIEOffset(dw_offset_t die_offset);
-  DWARFUnit *GetCompileUnit(const DIERef &die_ref);
-  DWARFDIE GetDIEForDIEOffset(dw_offset_t die_offset);
+  size_t GetNumUnits();
+  DWARFUnit *GetUnitAtIndex(lldb::user_id_t idx);
+  DWARFUnit *GetUnitAtOffset(DIERef::Section section, dw_offset_t cu_offset,
+                             uint32_t *idx_ptr = nullptr);
+  DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
+                                        dw_offset_t die_offset);
+  DWARFUnit *GetUnit(const DIERef &die_ref);
+  DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
+  bool ContainsTypeUnits();
+  DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
+                              dw_offset_t die_offset);
   DWARFDIE GetDIE(const DIERef &die_ref);
 
   enum {
@@ -50,26 +60,27 @@ public:
         (1 << 2) // Show all parent DIEs when dumping single DIEs
   };
 
-  DWARFDebugAranges &GetCompileUnitAranges();
+  llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
 protected:
-  static bool OffsetLessThanCompileUnitOffset(dw_offset_t offset,
-                                              const DWARFUnitSP &cu_sp);
+  typedef std::vector<DWARFUnitSP> UnitColl;
 
-  typedef std::vector<DWARFUnitSP> CompileUnitColl;
-
-  //----------------------------------------------------------------------
-  // Member variables
-  //----------------------------------------------------------------------
-  SymbolFileDWARF *m_dwarf2Data;
-  CompileUnitColl m_compile_units;
+  SymbolFileDWARF &m_dwarf;
+  lldb_private::DWARFContext &m_context;
+  UnitColl m_units;
   std::unique_ptr<DWARFDebugAranges>
       m_cu_aranges_up; // A quick address to compile unit table
+
+  std::vector<std::pair<uint64_t, uint32_t>> m_type_hash_to_unit_index;
 
 private:
   // All parsing needs to be done partially any managed by this class as
   // accessors are called.
-  void ParseCompileUnitHeadersIfNeeded();
+  void ParseUnitHeadersIfNeeded();
+
+  void ParseUnitsFor(DIERef::Section section);
+
+  uint32_t FindUnitIndex(DIERef::Section section, dw_offset_t offset);
 
   DISALLOW_COPY_AND_ASSIGN(DWARFDebugInfo);
 };

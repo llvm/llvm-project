@@ -26,6 +26,10 @@ llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
   return ::InitTargetOptionsFromCodeGenFlags();
 }
 
+llvm::Optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
+  return getRelocModel();
+}
+
 llvm::Optional<llvm::CodeModel::Model> lld::getCodeModelFromCMModel() {
   return getCodeModel();
 }

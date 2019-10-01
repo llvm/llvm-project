@@ -16,6 +16,7 @@
 
 namespace lld {
 llvm::TargetOptions initTargetOptionsFromCodeGenFlags();
+llvm::Optional<llvm::Reloc::Model> getRelocModelFromCMModel();
 llvm::Optional<llvm::CodeModel::Model> getCodeModelFromCMModel();
 std::string getCPUStr();
 std::vector<std::string> getMAttrs();

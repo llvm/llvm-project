@@ -1,0 +1,52 @@
+# RUN: yaml2obj %S/Inputs/stack-cfi-parsing.yaml > %t
+# RUN: %lldb -c %t -o "target symbols add %S/Inputs/stack-cfi-parsing.syms" \
+# RUN:   -s %s -b | FileCheck %s
+
+image show-unwind -n func0
+# CHECK-LABEL: image show-unwind -n func0
+# CHECK: Asynchronous (not restricted to call-sites) UnwindPlan is 'breakpad STACK CFI'
+# CHECK: Synchronous (restricted to call-sites) UnwindPlan is 'breakpad STACK CFI'
+# CHECK:      Symbol file UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from breakpad STACK CFI
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
+# CHECK-NEXT: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 0-0x0000000000000002)
+# CHECK-NEXT: row[0]:    0: CFA=DW_OP_breg7 +0 => rbp=DW_OP_breg7 +0 rip=DW_OP_pick 0x00 
+# CHECK-NEXT: row[1]:    1: CFA=DW_OP_breg7 +0 => rbx=DW_OP_breg2 +0 rbp=DW_OP_breg0 +0 rip=DW_OP_pick 0x00 
+
+# The following plans are all (syntactically) invalid for various reasons.
+# Processing those should not cause a crash.
+
+image show-unwind -n func2
+# CHECK-LABEL: image show-unwind -n func2
+# CHECK-NOT: Symbol file
+
+image show-unwind -n func3
+# CHECK-LABEL: image show-unwind -n func3
+# CHECK-NOT: Symbol file
+
+image show-unwind -n func4
+# CHECK-LABEL: image show-unwind -n func4
+# CHECK-NOT: Symbol file
+
+image show-unwind -n func5
+# CHECK-LABEL: image show-unwind -n func5
+# CHECK-NOT: Symbol file
+
+image show-unwind -n func6
+# CHECK-LABEL: image show-unwind -n func6
+# CHECK-NOT: Symbol file
+
+image show-unwind -n func7
+# CHECK-LABEL: image show-unwind -n func7
+# CHECK-NOT: Symbol file
+
+# Finally, try an unwind plan with just a single row
+image show-unwind -n func9
+# CHECK-LABEL: image show-unwind -n func9
+# CHECK: Asynchronous (not restricted to call-sites) UnwindPlan is 'breakpad STACK CFI'
+# CHECK: Synchronous (restricted to call-sites) UnwindPlan is 'breakpad STACK CFI'
+# CHECK: Symbol file UnwindPlan:
+# CHECK: Address range of this UnwindPlan: [stack-cfi-parsing.out..module_image + 9-0x000000000000000a)
+# CHECK: row[0]:    0: CFA=DW_OP_breg6 +0 => rip=DW_OP_breg0 +0
+

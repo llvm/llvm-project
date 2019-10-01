@@ -26,15 +26,15 @@ class TestObjCIVarDiscovery(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    NO_DEBUG_INFO_TESTCASE = True
-
     @skipUnlessDarwin
+    @skipIf(debug_info=no_match("dsym"))
     def test_nodbg(self):
         self.build()
-        shutil.rmtree(self.getBuildArtifact("aTestFramework.framework.dSYM"))
+        shutil.rmtree(self.getBuildArtifact("aTestFramework.framework/Versions/A/aTestFramework.dSYM"))
         self.do_test(False)
 
     @skipUnlessDarwin
+    @skipIf(debug_info=no_match("dsym"))
     def test_dbg(self):
         self.build()
         self.do_test(True)

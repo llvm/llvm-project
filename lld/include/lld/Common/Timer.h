@@ -21,18 +21,18 @@ namespace lld {
 class Timer;
 
 struct ScopedTimer {
-  explicit ScopedTimer(Timer &T);
+  explicit ScopedTimer(Timer &t);
 
   ~ScopedTimer();
 
   void stop();
 
-  Timer *T = nullptr;
+  Timer *t = nullptr;
 };
 
 class Timer {
 public:
-  Timer(llvm::StringRef Name, Timer &Parent);
+  Timer(llvm::StringRef name, Timer &parent);
 
   static Timer &root();
 
@@ -43,14 +43,14 @@ public:
   double millis() const;
 
 private:
-  explicit Timer(llvm::StringRef Name);
-  void print(int Depth, double TotalDuration, bool Recurse = true) const;
+  explicit Timer(llvm::StringRef name);
+  void print(int depth, double totalDuration, bool recurse = true) const;
 
-  std::chrono::time_point<std::chrono::high_resolution_clock> StartTime;
-  std::chrono::nanoseconds Total;
-  std::vector<Timer *> Children;
-  std::string Name;
-  Timer *Parent;
+  std::chrono::time_point<std::chrono::high_resolution_clock> startTime;
+  std::chrono::nanoseconds total;
+  std::vector<Timer *> children;
+  std::string name;
+  Timer *parent;
 };
 
 } // namespace lld

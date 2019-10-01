@@ -2,9 +2,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 # System modules
-from distutils.version import LooseVersion, StrictVersion
+from distutils.version import LooseVersion
 from functools import wraps
-import inspect
 import os
 import platform
 import re
@@ -17,8 +16,6 @@ import six
 import unittest2
 
 # LLDB modules
-import use_lldb_suite
-
 import lldb
 from . import configuration
 from . import test_categories
@@ -198,11 +195,9 @@ def _decorateTest(mode,
                 macos_version[0],
                 macos_version[1],
                 platform.mac_ver()[0])))
-        skip_for_dwarf_version = (
-             dwarf_version is None) or (
-                 (self.getDebugInfo() is 'dwarf') and
-                 _check_expected_version(
-                     dwarf_version[0], dwarf_version[1], self.getDwarfVersion()))
+        skip_for_dwarf_version = (dwarf_version is None) or (
+            _check_expected_version(dwarf_version[0], dwarf_version[1],
+                                    self.getDwarfVersion()))
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
@@ -437,6 +432,12 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
             archs),
         bugnumber)
 
+
+def expectedFailureNetBSD(bugnumber=None):
+    return expectedFailureOS(
+        ['netbsd'],
+        bugnumber)
+
 # Flakey tests get two chances to run. If they fail the first time round, the result formatter
 # makes sure it is run one more time.
 
@@ -591,11 +592,6 @@ def skipIfWindows(func):
     """Decorate the item to skip tests that should be skipped on Windows."""
     return skipIfPlatform(["windows"])(func)
 
-def skipIfTargetAndroid(func):
-    return unittest2.skipIf(lldbplatformutil.target_is_android(),
-                                "skip on target Android")(func)
-
-
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
     return skipUnlessPlatform(["windows"])(func)
@@ -663,7 +659,7 @@ def skipUnlessPlatform(oslist):
                                 "requires one of %s" % (", ".join(oslist)))
 
 
-def skipIfTargetAndroid(api_levels=None, archs=None):
+def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.
 
     Arguments:
@@ -676,7 +672,8 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
         _skip_for_android(
             "skipping for android",
             api_levels,
-            archs))
+            archs),
+        bugnumber)
 
 def skipUnlessSupportedTypeAttribute(attr):
     """Decorate the item to skip test unless Clang supports type __attribute__(attr)."""
@@ -835,13 +832,18 @@ def skipUnlessSwiftThreadSanitizer(func):
     return skipTestIfFn(is_swift_compiler_with_thread_sanitizer)(func)
 
 
-def skipIfXmlSupportMissing(func):
+def _get_bool_config_skip_if_decorator(key):
     config = lldb.SBDebugger.GetBuildConfiguration()
-    xml = config.GetValueForKey("xml")
-
+    value_node = config.GetValueForKey(key)
     fail_value = True # More likely to notice if something goes wrong
-    have_xml = xml.GetValueForKey("value").GetBooleanValue(fail_value)
-    return unittest2.skipIf(not have_xml, "requires xml support")(func)
+    have = value_node.GetValueForKey("value").GetBooleanValue(fail_value)
+    return unittest2.skipIf(not have, "requires " + key)
+
+def skipIfCursesSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("curses")(func)
+
+def skipIfXmlSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("xml")(func)
 
 def skipIfLLVMTargetMissing(target):
     config = lldb.SBDebugger.GetBuildConfiguration()
@@ -871,9 +873,10 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
 
-def skipIfSanitized(func):
+def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB itself under ASAN."""
-    def is_sanitized():
-        return (('DYLD_INSERT_LIBRARIES' in os.environ) and
-                'libclang_rt.asan' in os.environ['DYLD_INSERT_LIBRARIES'])
-    return skipTestIfFn(is_sanitized)(func)
+    def is_asan():
+        if ('ASAN_OPTIONS' in os.environ):
+            return "ASAN unsupported"
+        return None
+    return skipTestIfFn(is_asan)(func)

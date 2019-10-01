@@ -15,9 +15,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectDisassemble
-//-------------------------------------------------------------------------
 
 class CommandObjectDisassemble : public CommandObjectParsed {
 public:

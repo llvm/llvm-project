@@ -22,9 +22,7 @@ public:
 
   ~OptionValueArray() override {}
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeArray; }
 
@@ -52,9 +50,7 @@ public:
                                   llvm::StringRef name, bool will_modify,
                                   Status &error) const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
 
   size_t GetSize() const { return m_values.size(); }
 

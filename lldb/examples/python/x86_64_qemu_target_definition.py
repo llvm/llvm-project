@@ -738,7 +738,7 @@ def get_target_definition():
             # info
             if 'slice' not in reg_info and 'composite' not in reg_info:
                 reg_info['offset'] = offset
-                offset += reg_info['bitsize'] / 8
+                offset += reg_info['bitsize'] // 8
 
             # Set the GCC/DWARF register number for this register if it has one
             reg_num = get_reg_num(name_to_gcc_dwarf_regnum, reg_name)

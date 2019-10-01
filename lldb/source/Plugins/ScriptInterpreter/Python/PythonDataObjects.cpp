@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Errno.h"
 
 #include <stdio.h>
 
@@ -32,13 +33,11 @@ void StructuredPythonObject::Dump(Stream &s, bool pretty_print) const {
   s << "Python Obj: 0x" << GetValue();
 }
 
-//----------------------------------------------------------------------
 // PythonObject
-//----------------------------------------------------------------------
 
 void PythonObject::Dump(Stream &strm) const {
   if (m_py_obj) {
-    FILE *file = ::tmpfile();
+    FILE *file = llvm::sys::RetryAfterSignal(nullptr, ::tmpfile);
     if (file) {
       ::PyObject_Print(m_py_obj, file, 0);
       const long length = ftell(file);
@@ -76,6 +75,8 @@ PyObjectType PythonObject::GetObjectType() const {
 #endif
   if (PythonByteArray::Check(m_py_obj))
     return PyObjectType::ByteArray;
+  if (PythonBoolean::Check(m_py_obj))
+    return PyObjectType::Boolean;
   if (PythonInteger::Check(m_py_obj))
     return PyObjectType::Integer;
   if (PythonFile::Check(m_py_obj))
@@ -177,6 +178,9 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
         .CreateStructuredDictionary();
+  case PyObjectType::Boolean:
+    return PythonBoolean(PyRefType::Borrowed, m_py_obj)
+        .CreateStructuredBoolean();
   case PyObjectType::Integer:
     return PythonInteger(PyRefType::Borrowed, m_py_obj)
         .CreateStructuredInteger();
@@ -196,9 +200,7 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   }
 }
 
-//----------------------------------------------------------------------
 // PythonString
-//----------------------------------------------------------------------
 PythonBytes::PythonBytes() : PythonObject() {}
 
 PythonBytes::PythonBytes(llvm::ArrayRef<uint8_t> bytes) : PythonObject() {
@@ -212,8 +214,6 @@ PythonBytes::PythonBytes(const uint8_t *bytes, size_t length) : PythonObject() {
 PythonBytes::PythonBytes(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
 }
-
-PythonBytes::PythonBytes(const PythonBytes &object) : PythonObject(object) {}
 
 PythonBytes::~PythonBytes() {}
 
@@ -332,15 +332,11 @@ StructuredData::StringSP PythonByteArray::CreateStructuredString() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonString
-//----------------------------------------------------------------------
 
 PythonString::PythonString(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a string
 }
-
-PythonString::PythonString(const PythonString &object) : PythonObject(object) {}
 
 PythonString::PythonString(llvm::StringRef string) : PythonObject() {
   SetString(string);
@@ -432,9 +428,7 @@ StructuredData::StringSP PythonString::CreateStructuredString() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonInteger
-//----------------------------------------------------------------------
 
 PythonInteger::PythonInteger() : PythonObject() {}
 
@@ -442,9 +436,6 @@ PythonInteger::PythonInteger(PyRefType type, PyObject *py_obj)
     : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a integer type
 }
-
-PythonInteger::PythonInteger(const PythonInteger &object)
-    : PythonObject(object) {}
 
 PythonInteger::PythonInteger(int64_t value) : PythonObject() {
   SetInteger(value);
@@ -524,9 +515,51 @@ StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
   return result;
 }
 
-//----------------------------------------------------------------------
+// PythonBoolean
+
+PythonBoolean::PythonBoolean(PyRefType type, PyObject *py_obj)
+    : PythonObject() {
+  Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a boolean type
+}
+
+PythonBoolean::PythonBoolean(bool value) {
+  SetValue(value);
+}
+
+bool PythonBoolean::Check(PyObject *py_obj) {
+  return py_obj ? PyBool_Check(py_obj) : false;
+}
+
+void PythonBoolean::Reset(PyRefType type, PyObject *py_obj) {
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
+  PythonObject result(type, py_obj);
+
+  if (!PythonBoolean::Check(py_obj)) {
+    PythonObject::Reset();
+    return;
+  }
+
+  // Calling PythonObject::Reset(const PythonObject&) will lead to stack
+  // overflow since it calls back into the virtual implementation.
+  PythonObject::Reset(PyRefType::Borrowed, result.get());
+}
+
+bool PythonBoolean::GetValue() const {
+  return m_py_obj ? PyObject_IsTrue(m_py_obj) : false;
+}
+
+void PythonBoolean::SetValue(bool value) {
+  PythonObject::Reset(PyRefType::Owned, PyBool_FromLong(value));
+}
+
+StructuredData::BooleanSP PythonBoolean::CreateStructuredBoolean() const {
+  StructuredData::BooleanSP result(new StructuredData::Boolean);
+  result->SetValue(GetValue());
+  return result;
+}
+
 // PythonList
-//----------------------------------------------------------------------
 
 PythonList::PythonList(PyInitialValue value) : PythonObject() {
   if (value == PyInitialValue::Empty)
@@ -540,8 +573,6 @@ PythonList::PythonList(int list_size) : PythonObject() {
 PythonList::PythonList(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a list
 }
-
-PythonList::PythonList(const PythonList &list) : PythonObject(list) {}
 
 PythonList::~PythonList() {}
 
@@ -605,9 +636,7 @@ StructuredData::ArraySP PythonList::CreateStructuredArray() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonTuple
-//----------------------------------------------------------------------
 
 PythonTuple::PythonTuple(PyInitialValue value) : PythonObject() {
   if (value == PyInitialValue::Empty)
@@ -621,8 +650,6 @@ PythonTuple::PythonTuple(int tuple_size) : PythonObject() {
 PythonTuple::PythonTuple(PyRefType type, PyObject *py_obj) : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a tuple
 }
-
-PythonTuple::PythonTuple(const PythonTuple &tuple) : PythonObject(tuple) {}
 
 PythonTuple::PythonTuple(std::initializer_list<PythonObject> objects) {
   m_py_obj = PyTuple_New(objects.size());
@@ -701,9 +728,7 @@ StructuredData::ArraySP PythonTuple::CreateStructuredArray() const {
   return result;
 }
 
-//----------------------------------------------------------------------
 // PythonDictionary
-//----------------------------------------------------------------------
 
 PythonDictionary::PythonDictionary(PyInitialValue value) : PythonObject() {
   if (value == PyInitialValue::Empty)
@@ -714,9 +739,6 @@ PythonDictionary::PythonDictionary(PyRefType type, PyObject *py_obj)
     : PythonObject() {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a dictionary
 }
-
-PythonDictionary::PythonDictionary(const PythonDictionary &object)
-    : PythonObject(object) {}
 
 PythonDictionary::~PythonDictionary() {}
 
@@ -787,8 +809,6 @@ PythonModule::PythonModule(PyRefType type, PyObject *py_obj) {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a module
 }
 
-PythonModule::PythonModule(const PythonModule &dict) : PythonObject(dict) {}
-
 PythonModule::~PythonModule() {}
 
 PythonModule PythonModule::BuiltinsModule() {
@@ -842,9 +862,6 @@ PythonCallable::PythonCallable() : PythonObject() {}
 PythonCallable::PythonCallable(PyRefType type, PyObject *py_obj) {
   Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a callable
 }
-
-PythonCallable::PythonCallable(const PythonCallable &callable)
-    : PythonObject(callable) {}
 
 PythonCallable::~PythonCallable() {}
 

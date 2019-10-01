@@ -2,8 +2,6 @@
 Tests that TSan and LLDB have correct thread numbers.
 """
 
-import os
-import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -18,6 +16,7 @@ class TsanThreadNumbersTestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
+    @expectedFailureNetBSD
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessThreadSanitizer

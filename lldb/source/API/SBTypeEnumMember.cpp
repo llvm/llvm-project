@@ -64,7 +64,7 @@ const char *SBTypeEnumMember::GetName() {
 
   if (m_opaque_sp.get())
     return m_opaque_sp->GetName().GetCString();
-  return NULL;
+  return nullptr;
 }
 
 int64_t SBTypeEnumMember::GetValueAsSigned() {
@@ -98,7 +98,7 @@ void SBTypeEnumMember::reset(TypeEnumMemberImpl *type_member_impl) {
 }
 
 TypeEnumMemberImpl &SBTypeEnumMember::ref() {
-  if (m_opaque_sp.get() == NULL)
+  if (m_opaque_sp.get() == nullptr)
     m_opaque_sp = std::make_shared<TypeEnumMemberImpl>();
   return *m_opaque_sp.get();
 }
@@ -130,7 +130,7 @@ bool SBTypeEnumMemberList::IsValid() {
 SBTypeEnumMemberList::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeEnumMemberList, operator bool);
 
-  return (m_opaque_up != NULL);
+  return (m_opaque_up != nullptr);
 }
 
 SBTypeEnumMemberList &SBTypeEnumMemberList::

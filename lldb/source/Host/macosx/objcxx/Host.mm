@@ -56,9 +56,8 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -67,6 +66,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
@@ -313,13 +313,16 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   // in a shell and the shell will fork/exec a couple of times before we get
   // to the process that we wanted to launch. So when our process actually
   // gets launched, we will handshake with it and get the process ID for it.
-  HostThread accept_thread = ThreadLauncher::LaunchThread(
-      unix_socket_name, AcceptPIDFromInferior, connect_url, &lldb_error);
+  llvm::Expected<HostThread> accept_thread = ThreadLauncher::LaunchThread(
+      unix_socket_name, AcceptPIDFromInferior, connect_url);
+
+  if (!accept_thread)
+    return Status(accept_thread.takeError());
 
   [applescript executeAndReturnError:nil];
 
   thread_result_t accept_thread_result = NULL;
-  lldb_error = accept_thread.Join(&accept_thread_result);
+  lldb_error = accept_thread->Join(&accept_thread_result);
   if (lldb_error.Success() && accept_thread_result) {
     pid = (intptr_t)accept_thread_result;
 
@@ -360,10 +363,9 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   CFCReleaser<CFURLRef> file_URL(::CFURLCreateWithFileSystemPath(
       NULL, file_cfstr.get(), kCFURLPOSIXPathStyle, false));
 
-  if (log)
-    log->Printf(
-        "Sending source file: \"%s\" and line: %d to external editor.\n",
-        file_path, line_no);
+  LLDB_LOGF(log,
+            "Sending source file: \"%s\" and line: %d to external editor.\n",
+            file_path, line_no);
 
   long error;
   BabelAESelInfo file_and_line_info = {
@@ -382,8 +384,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
                          &(file_and_line_desc.descContent));
 
   if (error != noErr) {
-    if (log)
-      log->Printf("Error creating AEDesc: %ld.\n", error);
+    LLDB_LOGF(log, "Error creating AEDesc: %ld.\n", error);
     return false;
   }
 
@@ -400,8 +401,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   char *external_editor = ::getenv("LLDB_EXTERNAL_EDITOR");
 
   if (external_editor) {
-    if (log)
-      log->Printf("Looking for external editor \"%s\".\n", external_editor);
+    LLDB_LOGF(log, "Looking for external editor \"%s\".\n", external_editor);
 
     if (g_app_name.empty() ||
         strcmp(g_app_name.c_str(), external_editor) != 0) {
@@ -412,10 +412,9 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
       // If we found the app, then store away the name so we don't have to
       // re-look it up.
       if (error != noErr) {
-        if (log)
-          log->Printf(
-              "Could not find External Editor application, error: %ld.\n",
-              error);
+        LLDB_LOGF(log,
+                  "Could not find External Editor application, error: %ld.\n",
+                  error);
         return false;
       }
     }
@@ -431,8 +430,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   AEDisposeDesc(&(file_and_line_desc.descContent));
 
   if (error != noErr) {
-    if (log)
-      log->Printf("LSOpenURLsWithRole failed, error: %ld.\n", error);
+    LLDB_LOGF(log, "LSOpenURLsWithRole failed, error: %ld.\n", error);
 
     return false;
   }
@@ -547,7 +545,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                 match_info_ptr->GetNameMatchType(),
                 match_info_ptr->GetProcessInfo().GetName())) {
           // Skip NULLs
-          while (1) {
+          while (true) {
             const uint8_t *p = data.PeekData(offset, 1);
             if ((p == NULL) || (*p != '\0'))
               break;
@@ -1417,7 +1415,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-HostThread Host::StartMonitoringChildProcess(
+llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
     const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
     bool monitor_signals) {
   unsigned long mask = DISPATCH_PROC_EXIT;
@@ -1431,12 +1429,12 @@ HostThread Host::StartMonitoringChildProcess(
       DISPATCH_SOURCE_TYPE_PROC, pid, mask,
       ::dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
 
-  if (log)
-    log->Printf("Host::StartMonitoringChildProcess "
-                "(callback, pid=%i, monitor_signals=%i) "
-                "source = %p\n",
-                static_cast<int>(pid), monitor_signals,
-                reinterpret_cast<void *>(source));
+  LLDB_LOGF(log,
+            "Host::StartMonitoringChildProcess "
+            "(callback, pid=%i, monitor_signals=%i) "
+            "source = %p\n",
+            static_cast<int>(pid), monitor_signals,
+            reinterpret_cast<void *>(source));
 
   if (source) {
     Host::MonitorChildProcessCallback callback_copy = callback;
@@ -1470,10 +1468,10 @@ HostThread Host::StartMonitoringChildProcess(
           status_cstr = "???";
         }
 
-        if (log)
-          log->Printf("::waitpid (pid = %llu, &status, 0) => pid = %i, status "
-                      "= 0x%8.8x (%s), signal = %i, exit_status = %i",
-                      pid, wait_pid, status, status_cstr, signal, exit_status);
+        LLDB_LOGF(log,
+                  "::waitpid (pid = %llu, &status, 0) => pid = %i, status "
+                  "= 0x%8.8x (%s), signal = %i, exit_status = %i",
+                  pid, wait_pid, status, status_cstr, signal, exit_status);
 
         if (callback_copy)
           cancel = callback_copy(pid, exited, signal, exit_status);

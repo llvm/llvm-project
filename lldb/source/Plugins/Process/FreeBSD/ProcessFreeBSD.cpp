@@ -64,7 +64,6 @@ UnixSignalsSP &GetFreeBSDSignals() {
 }
 }
 
-//------------------------------------------------------------------------------
 // Static functions.
 
 lldb::ProcessSP
@@ -96,7 +95,6 @@ const char *ProcessFreeBSD::GetPluginDescriptionStatic() {
   return "Process plugin for FreeBSD";
 }
 
-//------------------------------------------------------------------------------
 // ProcessInterface protocol.
 
 lldb_private::ConstString ProcessFreeBSD::GetPluginName() {
@@ -156,9 +154,8 @@ Status ProcessFreeBSD::DoResume() {
     do_step = true;
   }
 
-  if (log)
-    log->Printf("process %" PRIu64 " resuming (%s)", GetID(),
-                do_step ? "step" : "continue");
+  LLDB_LOGF(log, "process %" PRIu64 " resuming (%s)", GetID(),
+            do_step ? "step" : "continue");
   if (do_step && !software_single_step)
     m_monitor->SingleStep(GetID(), m_resume_signo);
   else
@@ -170,9 +167,8 @@ Status ProcessFreeBSD::DoResume() {
 bool ProcessFreeBSD::UpdateThreadList(ThreadList &old_thread_list,
                                       ThreadList &new_thread_list) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  if (log)
-    log->Printf("ProcessFreeBSD::%s (pid = %" PRIu64 ")", __FUNCTION__,
-                GetID());
+  LLDB_LOGF(log, "ProcessFreeBSD::%s (pid = %" PRIu64 ")", __FUNCTION__,
+            GetID());
 
   std::vector<lldb::pid_t> tds;
   if (!GetMonitor().GetCurrentThreadIDs(tds)) {
@@ -185,20 +181,18 @@ bool ProcessFreeBSD::UpdateThreadList(ThreadList &old_thread_list,
     ThreadSP thread_sp(old_thread_list_copy.RemoveThreadByID(tid, false));
     if (!thread_sp) {
       thread_sp.reset(new FreeBSDThread(*this, tid));
-      if (log)
-        log->Printf("ProcessFreeBSD::%s new tid = %" PRIu64, __FUNCTION__, tid);
+      LLDB_LOGF(log, "ProcessFreeBSD::%s new tid = %" PRIu64, __FUNCTION__,
+                tid);
     } else {
-      if (log)
-        log->Printf("ProcessFreeBSD::%s existing tid = %" PRIu64, __FUNCTION__,
-                    tid);
+      LLDB_LOGF(log, "ProcessFreeBSD::%s existing tid = %" PRIu64, __FUNCTION__,
+                tid);
     }
     new_thread_list.AddThread(thread_sp);
   }
   for (size_t i = 0; i < old_thread_list_copy.GetSize(false); ++i) {
     ThreadSP old_thread_sp(old_thread_list_copy.GetThreadAtIndex(i, false));
     if (old_thread_sp) {
-      if (log)
-        log->Printf("ProcessFreeBSD::%s remove tid", __FUNCTION__);
+      LLDB_LOGF(log, "ProcessFreeBSD::%s remove tid", __FUNCTION__);
     }
   }
 
@@ -250,7 +244,6 @@ void ProcessFreeBSD::SendMessage(const ProcessMessage &message) {
   m_message_queue.push(message);
 }
 
-//------------------------------------------------------------------------------
 // Constructors and destructors.
 
 ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp,
@@ -269,7 +262,6 @@ ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp,
 
 ProcessFreeBSD::~ProcessFreeBSD() { delete m_monitor; }
 
-//------------------------------------------------------------------------------
 // Process protocol.
 void ProcessFreeBSD::Finalize() {
   Process::Finalize();
@@ -702,14 +694,13 @@ Status ProcessFreeBSD::EnableWatchpoint(Watchpoint *wp, bool notify) {
     user_id_t watchID = wp->GetID();
     addr_t addr = wp->GetLoadAddress();
     Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-    if (log)
-      log->Printf("ProcessFreeBSD::EnableWatchpoint(watchID = %" PRIu64 ")",
-                  watchID);
+    LLDB_LOGF(log, "ProcessFreeBSD::EnableWatchpoint(watchID = %" PRIu64 ")",
+              watchID);
     if (wp->IsEnabled()) {
-      if (log)
-        log->Printf("ProcessFreeBSD::EnableWatchpoint(watchID = %" PRIu64
-                    ") addr = 0x%8.8" PRIx64 ": watchpoint already enabled.",
-                    watchID, (uint64_t)addr);
+      LLDB_LOGF(log,
+                "ProcessFreeBSD::EnableWatchpoint(watchID = %" PRIu64
+                ") addr = 0x%8.8" PRIx64 ": watchpoint already enabled.",
+                watchID, (uint64_t)addr);
       return error;
     }
 
@@ -757,14 +748,13 @@ Status ProcessFreeBSD::DisableWatchpoint(Watchpoint *wp, bool notify) {
     user_id_t watchID = wp->GetID();
     addr_t addr = wp->GetLoadAddress();
     Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
-    if (log)
-      log->Printf("ProcessFreeBSD::DisableWatchpoint(watchID = %" PRIu64 ")",
-                  watchID);
+    LLDB_LOGF(log, "ProcessFreeBSD::DisableWatchpoint(watchID = %" PRIu64 ")",
+              watchID);
     if (!wp->IsEnabled()) {
-      if (log)
-        log->Printf("ProcessFreeBSD::DisableWatchpoint(watchID = %" PRIu64
-                    ") addr = 0x%8.8" PRIx64 ": watchpoint already disabled.",
-                    watchID, (uint64_t)addr);
+      LLDB_LOGF(log,
+                "ProcessFreeBSD::DisableWatchpoint(watchID = %" PRIu64
+                ") addr = 0x%8.8" PRIx64 ": watchpoint already disabled.",
+                watchID, (uint64_t)addr);
       // This is needed (for now) to keep watchpoints disabled correctly
       wp->SetEnabled(false, notify);
       return error;
@@ -835,7 +825,6 @@ size_t ProcessFreeBSD::PutSTDIN(const char *buf, size_t len, Status &error) {
   return status;
 }
 
-//------------------------------------------------------------------------------
 // Utility functions.
 
 bool ProcessFreeBSD::HasExited() {
@@ -881,7 +870,7 @@ bool ProcessFreeBSD::IsAThreadRunning() {
   return is_running;
 }
 
-const DataBufferSP ProcessFreeBSD::GetAuxvData() {
+lldb_private::DataExtractor ProcessFreeBSD::GetAuxvData() {
   // If we're the local platform, we can ask the host for auxv data.
   PlatformSP platform_sp = GetTarget().GetPlatform();
   assert(platform_sp && platform_sp->IsHost());
@@ -895,7 +884,7 @@ const DataBufferSP ProcessFreeBSD::GetAuxvData() {
     buf_sp.reset();
   }
 
-  return buf_sp;
+  return DataExtractor(buf_sp, GetByteOrder(), GetAddressByteSize());
 }
 
 struct EmulatorBaton {
@@ -975,8 +964,9 @@ Status ProcessFreeBSD::SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   if (log) {
-    log->Printf("ProcessFreeBSD::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
-    log->Printf("SoftwareBreakpoint::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
+    LLDB_LOGF(log, "ProcessFreeBSD::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
+    LLDB_LOGF(log, "SoftwareBreakpoint::%s addr = 0x%" PRIx64, __FUNCTION__,
+              addr);
   }
 
   // Validate the address.
@@ -989,9 +979,8 @@ Status ProcessFreeBSD::SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
   sw_step_break->SetCallback(SingleStepBreakpointHit, this, true);
   sw_step_break->SetBreakpointKind("software-signle-step");
 
-  if (log)
-    log->Printf("ProcessFreeBSD::%s addr = 0x%" PRIx64 " -- SUCCESS",
-                __FUNCTION__, addr);
+  LLDB_LOGF(log, "ProcessFreeBSD::%s addr = 0x%" PRIx64 " -- SUCCESS",
+            __FUNCTION__, addr);
 
   m_threads_stepping_with_breakpoint.insert({tid, sw_step_break->GetID()});
   return Status();
@@ -1025,11 +1014,7 @@ bool ProcessFreeBSD::IsSoftwareStepBreakpoint(lldb::tid_t tid) {
 
 bool ProcessFreeBSD::SupportHardwareSingleStepping() const {
   lldb_private::ArchSpec arch = GetTarget().GetArchitecture();
-  if (arch.GetMachine() == llvm::Triple::arm ||
-      arch.GetMachine() == llvm::Triple::mips64 ||
-      arch.GetMachine() == llvm::Triple::mips64el ||
-      arch.GetMachine() == llvm::Triple::mips ||
-      arch.GetMachine() == llvm::Triple::mipsel)
+  if (arch.GetMachine() == llvm::Triple::arm || arch.IsMIPS())
     return false;
   return true;
 }

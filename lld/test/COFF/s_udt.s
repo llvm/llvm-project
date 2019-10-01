@@ -173,7 +173,7 @@ main:                                   # @main
 	.short	1                       # Flags
 	.asciz	"argc"
 .Ltmp13:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\f\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 12
 	.short	.Ltmp15-.Ltmp14         # Record length
 .Ltmp14:
 	.short	4414                    # Record kind: S_LOCAL
@@ -181,7 +181,7 @@ main:                                   # @main
 	.short	1                       # Flags
 	.asciz	"argv"
 .Ltmp15:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\020\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 16
 	.short	.Ltmp17-.Ltmp16         # Record length
 .Ltmp16:
 	.short	4414                    # Record kind: S_LOCAL
@@ -189,7 +189,7 @@ main:                                   # @main
 	.short	0                       # Flags
 	.asciz	"SPtr"
 .Ltmp17:
-	.cv_def_range	 .Ltmp0 .Ltmp1, "B\021\000\000\000\000"
+	.cv_def_range	 .Ltmp0 .Ltmp1, frame_ptr_rel, 0
 	.short	.Ltmp19-.Ltmp18         # Record length
 .Ltmp18:
 	.short	4360                    # Record kind: S_UDT

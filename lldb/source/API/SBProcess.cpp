@@ -25,6 +25,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
@@ -52,9 +53,7 @@ SBProcess::SBProcess() : m_opaque_wp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBProcess);
 }
 
-//----------------------------------------------------------------------
 // SBProcess constructor
-//----------------------------------------------------------------------
 
 SBProcess::SBProcess(const SBProcess &rhs) : m_opaque_wp(rhs.m_opaque_wp) {
   LLDB_RECORD_CONSTRUCTOR(SBProcess, (const lldb::SBProcess &), rhs);
@@ -74,9 +73,7 @@ const SBProcess &SBProcess::operator=(const SBProcess &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
-//----------------------------------------------------------------------
 SBProcess::~SBProcess() {}
 
 const char *SBProcess::GetBroadcasterClassName() {
@@ -338,7 +335,7 @@ void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {
   LLDB_RECORD_METHOD_CONST(void, SBProcess, ReportEventState,
                            (const lldb::SBEvent &, FILE *), event, out);
 
-  if (out == NULL)
+  if (out == nullptr)
     return;
 
   ProcessSP process_sp(GetSP());
@@ -537,7 +534,7 @@ int SBProcess::GetExitStatus() {
 const char *SBProcess::GetExitDescription() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBProcess, GetExitDescription);
 
-  const char *exit_desc = NULL;
+  const char *exit_desc = nullptr;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -605,7 +602,7 @@ SBError SBProcess::Continue() {
     if (process_sp->GetTarget().GetDebugger().GetAsyncExecution())
       sb_error.ref() = process_sp->Resume();
     else
-      sb_error.ref() = process_sp->ResumeSynchronous(NULL);
+      sb_error.ref() = process_sp->ResumeSynchronous(nullptr);
   } else
     sb_error.SetErrorString("SBProcess is invalid");
 
@@ -988,7 +985,7 @@ bool SBProcess::GetDescription(SBStream &description) {
     char path[PATH_MAX];
     GetTarget().GetExecutable().GetPath(path, sizeof(path));
     Module *exe_module = process_sp->GetTarget().GetExecutableModulePointer();
-    const char *exe_name = NULL;
+    const char *exe_name = nullptr;
     if (exe_module)
       exe_name = exe_module->GetFileSpec().GetFilename().AsCString();
 
@@ -1159,7 +1156,7 @@ const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
       return names[idx].AsCString();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 SBThreadCollection SBProcess::GetHistoryThreads(addr_t addr) {

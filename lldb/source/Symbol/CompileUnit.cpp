@@ -9,7 +9,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
 
@@ -81,12 +81,10 @@ void CompileUnit::ForeachFunction(
       return;
 }
 
-//----------------------------------------------------------------------
 // Dump the current contents of this object. No functions that cause on demand
 // parsing of functions, globals, statics are called, so this is a good
 // function to call to get an idea of the current contents of the CompileUnit
 // object.
-//----------------------------------------------------------------------
 void CompileUnit::Dump(Stream *s, bool show_context) const {
   const char *language = Language::GetNameForLanguageType(m_language);
 
@@ -116,57 +114,10 @@ void CompileUnit::Dump(Stream *s, bool show_context) const {
   }
 }
 
-//----------------------------------------------------------------------
 // Add a function to this compile unit
-//----------------------------------------------------------------------
 void CompileUnit::AddFunction(FunctionSP &funcSP) {
   m_functions_by_uid[funcSP->GetID()] = funcSP;
 }
-
-//----------------------------------------------------------------------
-// Find functions using the Mangled::Tokens token list. This function currently
-// implements an interactive approach designed to find all instances of certain
-// functions. It isn't designed to the quickest way to lookup functions as it
-// will need to iterate through all functions and see if they match, though it
-// does provide a powerful and context sensitive way to search for all
-// functions with a certain name, all functions in a namespace, or all
-// functions of a template type. See Mangled::Tokens::Parse() comments for more
-// information.
-//
-// The function prototype will need to change to return a list of results. It
-// was originally used to help debug the Mangled class and the
-// Mangled::Tokens::MatchesQuery() function and it currently will print out a
-// list of matching results for the functions that are currently in this
-// compile unit.
-//
-// A FindFunctions method should be called prior to this that takes
-// a regular function name (const char * or ConstString as a parameter) before
-// resorting to this slower but more complete function. The other FindFunctions
-// method should be able to take advantage of any accelerator tables available
-// in the debug information (which is parsed by the SymbolFile parser plug-ins
-// and registered with each Module).
-//----------------------------------------------------------------------
-// void
-// CompileUnit::FindFunctions(const Mangled::Tokens& tokens)
-//{
-//  if (!m_functions.empty())
-//  {
-//      Stream s(stdout);
-//      std::vector<FunctionSP>::const_iterator pos;
-//      std::vector<FunctionSP>::const_iterator end = m_functions.end();
-//      for (pos = m_functions.begin(); pos != end; ++pos)
-//      {
-//          const ConstString& demangled = (*pos)->Mangled().Demangled();
-//          if (demangled)
-//          {
-//              const Mangled::Tokens& func_tokens =
-//              (*pos)->Mangled().GetTokens();
-//              if (func_tokens.MatchesQuery (tokens))
-//                  s << "demangled MATCH found: " << demangled << "\n";
-//          }
-//      }
-//  }
-//}
 
 FunctionSP CompileUnit::FindFunctionByUID(lldb::user_id_t func_uid) {
   auto it = m_functions_by_uid.find(func_uid);
@@ -179,10 +130,8 @@ lldb::LanguageType CompileUnit::GetLanguage() {
   if (m_language == eLanguageTypeUnknown) {
     if (m_flags.IsClear(flagsParsedLanguage)) {
       m_flags.Set(flagsParsedLanguage);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        m_language = symbol_vendor->ParseLanguage(*this);
-      }
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        m_language = symfile->ParseLanguage(*this);
     }
   }
   return m_language;
@@ -192,9 +141,8 @@ LineTable *CompileUnit::GetLineTable() {
   if (m_line_table_up == nullptr) {
     if (m_flags.IsClear(flagsParsedLineTable)) {
       m_flags.Set(flagsParsedLineTable);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor)
-        symbol_vendor->ParseLineTable(*this);
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        symfile->ParseLineTable(*this);
     }
   }
   return m_line_table_up.get();
@@ -208,14 +156,16 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
   m_line_table_up.reset(line_table);
 }
 
+void CompileUnit::SetSupportFiles(const FileSpecList &support_files) {
+  m_support_files = support_files;
+}
+
 DebugMacros *CompileUnit::GetDebugMacros() {
   if (m_debug_macros_sp.get() == nullptr) {
     if (m_flags.IsClear(flagsParsedDebugMacros)) {
       m_flags.Set(flagsParsedDebugMacros);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        symbol_vendor->ParseDebugMacros(*this);
-      }
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        symfile->ParseDebugMacros(*this);
     }
   }
 
@@ -235,7 +185,7 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
     SymbolContext sc;
     CalculateSymbolContext(&sc);
     assert(sc.module_sp);
-    sc.module_sp->GetSymbolVendor()->ParseVariablesForContext(sc);
+    sc.module_sp->GetSymbolFile()->ParseVariablesForContext(sc);
   }
 
   return m_variables;
@@ -254,7 +204,7 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
     // All the line table entries actually point to the version of the Compile
     // Unit that is in the support files (the one at 0 was artificially added.)
     // So prefer the one further on in the support files if it exists...
-    FileSpecList &support_files = GetSupportFiles();
+    const FileSpecList &support_files = GetSupportFiles();
     const bool full = true;
     file_idx = support_files.FindFileIndex(
         1, support_files.GetFileSpecAtIndex(0), full);
@@ -378,8 +328,8 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
 bool CompileUnit::GetIsOptimized() {
   if (m_is_optimized == eLazyBoolCalculate) {
     m_is_optimized = eLazyBoolNo;
-    if (SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor()) {
-      if (symbol_vendor->ParseIsOptimized(*this))
+    if (SymbolFile *symfile = GetModule()->GetSymbolFile()) {
+      if (symfile->ParseIsOptimized(*this))
         m_is_optimized = eLazyBoolYes;
     }
   }
@@ -394,23 +344,21 @@ const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
   if (m_imported_modules.empty() &&
       m_flags.IsClear(flagsParsedImportedModules)) {
     m_flags.Set(flagsParsedImportedModules);
-    if (SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor()) {
+    if (SymbolFile *symfile = GetModule()->GetSymbolFile()) {
       SymbolContext sc;
       CalculateSymbolContext(&sc);
-      symbol_vendor->ParseImportedModules(sc, m_imported_modules);
+      symfile->ParseImportedModules(sc, m_imported_modules);
     }
   }
   return m_imported_modules;
 }
 
-FileSpecList &CompileUnit::GetSupportFiles() {
+const FileSpecList &CompileUnit::GetSupportFiles() {
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {
       m_flags.Set(flagsParsedSupportFiles);
-      SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        symbol_vendor->ParseSupportFiles(*this, m_support_files);
-      }
+      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+        symfile->ParseSupportFiles(*this, m_support_files);
     }
   }
   return m_support_files;

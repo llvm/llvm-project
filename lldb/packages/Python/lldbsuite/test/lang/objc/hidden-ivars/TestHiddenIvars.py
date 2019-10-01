@@ -4,9 +4,7 @@ from __future__ import print_function
 
 
 import unittest2
-import os
 import subprocess
-import time
 
 import lldb
 from lldbsuite.test.decorators import *

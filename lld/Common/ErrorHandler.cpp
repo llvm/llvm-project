@@ -16,6 +16,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
+#include <regex>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -26,29 +27,31 @@ using namespace lld;
 
 // The functions defined in this file can be called from multiple threads,
 // but outs() or errs() are not thread-safe. We protect them using a mutex.
-static std::mutex Mu;
+static std::mutex mu;
 
-// Prints "\n" or does nothing, depending on Msg contents of
-// the previous call of this function.
-static void newline(raw_ostream *ErrorOS, const Twine &Msg) {
-  // True if the previous error message contained "\n".
-  // We want to separate multi-line error messages with a newline.
-  static bool Flag;
+// We want to separate multi-line messages with a newline. `sep` is "\n"
+// if the last messages was multi-line. Otherwise "".
+static StringRef sep;
 
-  if (Flag)
-    *ErrorOS << "\n";
-  Flag = StringRef(Msg.str()).contains('\n');
+static StringRef getSeparator(const Twine &msg) {
+  if (StringRef(msg.str()).contains('\n'))
+    return "\n";
+  return "";
 }
 
 ErrorHandler &lld::errorHandler() {
-  static ErrorHandler Handler;
-  return Handler;
+  static ErrorHandler handler;
+  return handler;
 }
 
-void lld::exitLld(int Val) {
+void lld::enableColors(bool enable) {
+  errorHandler().errorOS->enable_colors(enable);
+}
+
+void lld::exitLld(int val) {
   // Delete any temporary file, while keeping the memory mapping open.
-  if (errorHandler().OutputBuffer)
-    errorHandler().OutputBuffer->discard();
+  if (errorHandler().outputBuffer)
+    errorHandler().outputBuffer->discard();
 
   // Dealloc/destroy ManagedStatic variables before calling
   // _exit(). In a non-LTO build, this is a nop. In an LTO
@@ -57,87 +60,150 @@ void lld::exitLld(int Val) {
 
   outs().flush();
   errs().flush();
-  _exit(Val);
+  _exit(val);
 }
 
-void lld::diagnosticHandler(const DiagnosticInfo &DI) {
-  SmallString<128> S;
-  raw_svector_ostream OS(S);
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-  switch (DI.getSeverity()) {
+void lld::diagnosticHandler(const DiagnosticInfo &di) {
+  SmallString<128> s;
+  raw_svector_ostream os(s);
+  DiagnosticPrinterRawOStream dp(os);
+  di.print(dp);
+  switch (di.getSeverity()) {
   case DS_Error:
-    error(S);
+    error(s);
     break;
   case DS_Warning:
-    warn(S);
+    warn(s);
     break;
   case DS_Remark:
   case DS_Note:
-    message(S);
+    message(s);
     break;
   }
 }
 
-void lld::checkError(Error E) {
-  handleAllErrors(std::move(E),
-                  [&](ErrorInfoBase &EIB) { error(EIB.message()); });
+void lld::checkError(Error e) {
+  handleAllErrors(std::move(e),
+                  [&](ErrorInfoBase &eib) { error(eib.message()); });
 }
 
-void ErrorHandler::print(StringRef S, raw_ostream::Colors C) {
-  *ErrorOS << LogName << ": ";
-  if (ColorDiagnostics) {
-    ErrorOS->changeColor(C, true);
-    *ErrorOS << S;
-    ErrorOS->resetColor();
-  } else {
-    *ErrorOS << S;
+// This is for --vs-diagnostics.
+//
+// Normally, lld's error message starts with argv[0]. Therefore, it usually
+// looks like this:
+//
+//   ld.lld: error: ...
+//
+// This error message style is unfortunately unfriendly to Visual Studio
+// IDE. VS interprets the first word of the first line as an error location
+// and make it clickable, thus "ld.lld" in the above message would become a
+// clickable text. When you click it, VS opens "ld.lld" executable file with
+// a binary editor.
+//
+// As a workaround, we print out an error location instead of "ld.lld" if
+// lld is running in VS diagnostics mode. As a result, error message will
+// look like this:
+//
+//   src/foo.c(35): error: ...
+//
+// This function returns an error location string. An error location is
+// extracted from an error message using regexps.
+std::string ErrorHandler::getLocation(const Twine &msg) {
+  if (!vsDiagnostics)
+    return logName;
+
+  static std::regex regexes[] = {
+      std::regex(
+          R"(^undefined (?:\S+ )?symbol:.*\n)"
+          R"(>>> referenced by .+\((\S+):(\d+)\))"),
+      std::regex(
+          R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+))"),
+      std::regex(R"(^undefined symbol:.*\n>>> referenced by (.*):)"),
+      std::regex(
+          R"(^duplicate symbol: .*\n>>> defined in (\S+)\n>>> defined in.*)"),
+      std::regex(
+          R"(^duplicate symbol: .*\n>>> defined at .+\((\S+):(\d+)\))"),
+      std::regex(R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+))"),
+      std::regex(
+          R"(.*\n>>> defined in .*\n>>> referenced by .+\((\S+):(\d+)\))"),
+      std::regex(R"(.*\n>>> defined in .*\n>>> referenced by (\S+):(\d+))"),
+      std::regex(R"((\S+):(\d+): unclosed quote)"),
+  };
+
+  std::string str = msg.str();
+  for (std::regex &re : regexes) {
+    std::smatch m;
+    if (!std::regex_search(str, m, re))
+      continue;
+
+    assert(m.size() == 2 || m.size() == 3);
+    if (m.size() == 2)
+      return m.str(1);
+    return m.str(1) + "(" + m.str(2) + ")";
   }
+
+  return logName;
 }
 
-void ErrorHandler::log(const Twine &Msg) {
-  if (Verbose) {
-    std::lock_guard<std::mutex> Lock(Mu);
-    *ErrorOS << LogName << ": " << Msg << "\n";
-  }
+void ErrorHandler::log(const Twine &msg) {
+  if (!verbose)
+    return;
+  std::lock_guard<std::mutex> lock(mu);
+  *errorOS << logName << ": " << msg << "\n";
 }
 
-void ErrorHandler::message(const Twine &Msg) {
-  std::lock_guard<std::mutex> Lock(Mu);
-  outs() << Msg << "\n";
+void ErrorHandler::message(const Twine &msg) {
+  std::lock_guard<std::mutex> lock(mu);
+  outs() << msg << "\n";
   outs().flush();
 }
 
-void ErrorHandler::warn(const Twine &Msg) {
-  if (FatalWarnings) {
-    error(Msg);
+void ErrorHandler::warn(const Twine &msg) {
+  if (fatalWarnings) {
+    error(msg);
     return;
   }
 
-  std::lock_guard<std::mutex> Lock(Mu);
-  newline(ErrorOS, Msg);
-  print("warning: ", raw_ostream::MAGENTA);
-  *ErrorOS << Msg << "\n";
+  std::lock_guard<std::mutex> lock(mu);
+  *errorOS << sep << getLocation(msg) << ": " << Colors::MAGENTA
+           << "warning: " << Colors::RESET << msg << "\n";
+  sep = getSeparator(msg);
 }
 
-void ErrorHandler::error(const Twine &Msg) {
-  std::lock_guard<std::mutex> Lock(Mu);
-  newline(ErrorOS, Msg);
+void ErrorHandler::error(const Twine &msg) {
+  // If Visual Studio-style error message mode is enabled,
+  // this particular error is printed out as two errors.
+  if (vsDiagnostics) {
+    static std::regex re(R"(^(duplicate symbol: .*))"
+                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))"
+                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))");
+    std::string str = msg.str();
+    std::smatch m;
 
-  if (ErrorLimit == 0 || ErrorCount < ErrorLimit) {
-    print("error: ", raw_ostream::RED);
-    *ErrorOS << Msg << "\n";
-  } else if (ErrorCount == ErrorLimit) {
-    print("error: ", raw_ostream::RED);
-    *ErrorOS << ErrorLimitExceededMsg << "\n";
-    if (ExitEarly)
+    if (std::regex_match(str, m, re)) {
+      error(m.str(1) + m.str(2));
+      error(m.str(1) + m.str(3));
+      return;
+    }
+  }
+
+  std::lock_guard<std::mutex> lock(mu);
+
+  if (errorLimit == 0 || errorCount < errorLimit) {
+    *errorOS << sep << getLocation(msg) << ": " << Colors::RED
+             << "error: " << Colors::RESET << msg << "\n";
+  } else if (errorCount == errorLimit) {
+    *errorOS << sep << getLocation(msg) << ": " << Colors::RED
+             << "error: " << Colors::RESET << errorLimitExceededMsg << "\n";
+    if (exitEarly)
       exitLld(1);
   }
 
-  ++ErrorCount;
+  sep = getSeparator(msg);
+  ++errorCount;
 }
 
-void ErrorHandler::fatal(const Twine &Msg) {
-  error(Msg);
+void ErrorHandler::fatal(const Twine &msg) {
+  error(msg);
   exitLld(1);
 }

@@ -7,13 +7,12 @@ import unittest2
 class TestSwiftExtraClangFlags(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    
+
     def setUp(self):
         TestBase.setUp(self)
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_sanity(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here",
@@ -23,7 +22,6 @@ class TestSwiftExtraClangFlags(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_extra_clang_flags(self):
         """
         Test that a debug-only module map can be installed by injecting a

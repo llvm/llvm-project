@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 
-import sys
 
 import gdbremote_testcase
 import lldbgdbserverutils
@@ -175,12 +174,11 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build()
         self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
 
-    @skipUnlessPlatform(["linux"])
     @llgs_test
-    def test_qProcessInfo_contains_triple_llgs_linux(self):
+    def test_qProcessInfo_contains_triple_ppid_llgs(self):
         self.init_llgs_test()
         self.build()
-        self.qProcessInfo_contains_keys(set(['triple']))
+        self.qProcessInfo_contains_keys(set(['triple', 'parent-pid']))
 
     @skipUnlessDarwin
     @debugserver_test
@@ -203,9 +201,9 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         # for the remote Host and Process.
         self.qProcessInfo_does_not_contain_keys(set(['triple']))
 
-    @skipUnlessPlatform(["linux"])
+    @skipIfDarwin
     @llgs_test
-    def test_qProcessInfo_does_not_contain_cputype_cpusubtype_llgs_linux(self):
+    def test_qProcessInfo_does_not_contain_cputype_cpusubtype_llgs(self):
         self.init_llgs_test()
         self.build()
         self.qProcessInfo_does_not_contain_keys(set(['cputype', 'cpusubtype']))

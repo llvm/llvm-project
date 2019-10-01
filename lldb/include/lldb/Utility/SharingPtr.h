@@ -35,8 +35,8 @@ namespace lldb_private {
 namespace imp {
 
 class shared_count {
-  shared_count(const shared_count &);
-  shared_count &operator=(const shared_count &);
+  shared_count(const shared_count &) = delete;
+  shared_count &operator=(const shared_count &) = delete;
 
 public:
   explicit shared_count(long refs = 0) : shared_owners_(refs) {}
@@ -66,10 +66,8 @@ public:
 private:
   void on_zero_shared() override;
 
-  // Outlaw copy constructor and assignment operator to keep effective C++
-  // warnings down to a minimum
-  shared_ptr_pointer(const shared_ptr_pointer &);
-  shared_ptr_pointer &operator=(const shared_ptr_pointer &);
+  shared_ptr_pointer(const shared_ptr_pointer &) = delete;
+  shared_ptr_pointer &operator=(const shared_ptr_pointer &) = delete;
 };
 
 template <class T> void shared_ptr_pointer<T>::on_zero_shared() {
@@ -455,8 +453,8 @@ protected:
   friend class IntrusiveSharingPtr<T>;
 
 private:
-  ReferenceCountedBase(const ReferenceCountedBase &);
-  ReferenceCountedBase &operator=(const ReferenceCountedBase &);
+  ReferenceCountedBase(const ReferenceCountedBase &) = delete;
+  ReferenceCountedBase &operator=(const ReferenceCountedBase &) = delete;
 };
 
 template <class T> void lldb_private::ReferenceCountedBase<T>::add_shared() {

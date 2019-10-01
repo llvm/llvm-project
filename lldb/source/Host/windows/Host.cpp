@@ -13,11 +13,13 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Process.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -167,10 +169,26 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   GetProcessExecutableAndTriple(handle, process_info);
 
   // Need to read the PEB to get parent process and command line arguments.
-  return true;
+
+  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  if (!snapshot.IsValid())
+    return false;
+
+  PROCESSENTRY32W pe;
+  pe.dwSize = sizeof(PROCESSENTRY32W);
+  if (Process32FirstW(snapshot.get(), &pe)) {
+    do {
+      if (pe.th32ProcessID == pid) {
+        process_info.SetParentProcessID(pe.th32ParentProcessID);
+        return true;
+      }
+    } while (Process32NextW(snapshot.get(), &pe));
+  }
+
+  return false;
 }
 
-HostThread Host::StartMonitoringChildProcess(
+llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
     const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
     bool monitor_signals) {
   return HostThread();

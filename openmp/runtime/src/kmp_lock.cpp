@@ -2943,10 +2943,10 @@ static int (*direct_test_check[])(kmp_dyna_lock_t *, kmp_int32) = {
 #undef expand
 
 // Exposes only one set of jump tables (*lock or *lock_with_checks).
-void (*(*__kmp_direct_destroy))(kmp_dyna_lock_t *) = 0;
-int (*(*__kmp_direct_set))(kmp_dyna_lock_t *, kmp_int32) = 0;
-int (*(*__kmp_direct_unset))(kmp_dyna_lock_t *, kmp_int32) = 0;
-int (*(*__kmp_direct_test))(kmp_dyna_lock_t *, kmp_int32) = 0;
+void (**__kmp_direct_destroy)(kmp_dyna_lock_t *) = 0;
+int (**__kmp_direct_set)(kmp_dyna_lock_t *, kmp_int32) = 0;
+int (**__kmp_direct_unset)(kmp_dyna_lock_t *, kmp_int32) = 0;
+int (**__kmp_direct_test)(kmp_dyna_lock_t *, kmp_int32) = 0;
 
 // Jump tables for the indirect lock functions
 #define expand(l, op) (void (*)(kmp_user_lock_p)) __kmp_##op##_##l##_##lock,
@@ -2993,10 +2993,10 @@ static int (*indirect_test_check[])(kmp_user_lock_p, kmp_int32) = {
 #undef expand
 
 // Exposes only one jump tables (*lock or *lock_with_checks).
-void (*(*__kmp_indirect_destroy))(kmp_user_lock_p) = 0;
-int (*(*__kmp_indirect_set))(kmp_user_lock_p, kmp_int32) = 0;
-int (*(*__kmp_indirect_unset))(kmp_user_lock_p, kmp_int32) = 0;
-int (*(*__kmp_indirect_test))(kmp_user_lock_p, kmp_int32) = 0;
+void (**__kmp_indirect_destroy)(kmp_user_lock_p) = 0;
+int (**__kmp_indirect_set)(kmp_user_lock_p, kmp_int32) = 0;
+int (**__kmp_indirect_unset)(kmp_user_lock_p, kmp_int32) = 0;
+int (**__kmp_indirect_test)(kmp_user_lock_p, kmp_int32) = 0;
 
 // Lock index table.
 kmp_indirect_lock_table_t __kmp_i_lock_table;

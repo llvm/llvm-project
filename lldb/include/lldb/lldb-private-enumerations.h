@@ -15,10 +15,8 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
 // Thread Step Types
-//----------------------------------------------------------------------
-typedef enum StepType {
+enum StepType {
   eStepTypeNone,
   eStepTypeTrace,     ///< Single step one instruction.
   eStepTypeTraceOver, ///< Single step one instruction, stepping over.
@@ -26,22 +24,19 @@ typedef enum StepType {
   eStepTypeOver,      ///< Single step over a specified context.
   eStepTypeOut,       ///< Single step out a specified context.
   eStepTypeScripted   ///< A step type implemented by the script interpreter.
-} StepType;
+};
 
-//----------------------------------------------------------------------
 // Address Types
-//----------------------------------------------------------------------
-typedef enum AddressType {
+enum AddressType {
   eAddressTypeInvalid = 0,
   eAddressTypeFile, ///< Address is an address as found in an object or symbol
-                    ///file
+                    /// file
   eAddressTypeLoad, ///< Address is an address as in the current target inferior
-                    ///process
+                    /// process
   eAddressTypeHost  ///< Address is an address in the process that is running
-                    ///this code
-} AddressType;
+                    /// this code
+};
 
-//----------------------------------------------------------------------
 // Address Class
 //
 // A way of classifying an address used for disassembling and setting
@@ -50,7 +45,6 @@ typedef enum AddressType {
 // beyond just looking at the section types. For example, code might contain PC
 // relative data and the object file might be able to tell us that an address
 // in code is data.
-//----------------------------------------------------------------------
 enum class AddressClass {
   eInvalid,
   eUnknown,
@@ -61,23 +55,19 @@ enum class AddressClass {
   eRuntime
 };
 
-//----------------------------------------------------------------------
 // Votes - Need a tri-state, yes, no, no opinion...
-//----------------------------------------------------------------------
-typedef enum Vote { eVoteNo = -1, eVoteNoOpinion = 0, eVoteYes = 1 } Vote;
+enum Vote { eVoteNo = -1, eVoteNoOpinion = 0, eVoteYes = 1 };
 
-typedef enum ArchitectureType {
+enum ArchitectureType {
   eArchTypeInvalid,
   eArchTypeMachO,
   eArchTypeELF,
   eArchTypeCOFF,
   kNumArchTypes
-} ArchitectureType;
+};
 
-//----------------------------------------------------------------------
 /// Settable state variable types.
 ///
-//----------------------------------------------------------------------
 
 // typedef enum SettableVariableType
 //{
@@ -90,7 +80,7 @@ typedef enum ArchitectureType {
 //    eSetVarTypeNone
 //} SettableVariableType;
 
-typedef enum VarSetOperationType {
+enum VarSetOperationType {
   eVarSetOperationReplace,
   eVarSetOperationInsertBefore,
   eVarSetOperationInsertAfter,
@@ -99,9 +89,9 @@ typedef enum VarSetOperationType {
   eVarSetOperationClear,
   eVarSetOperationAssign,
   eVarSetOperationInvalid
-} VarSetOperationType;
+};
 
-typedef enum ArgumentRepetitionType {
+enum ArgumentRepetitionType {
   eArgRepeatPlain,        // Exactly one occurrence
   eArgRepeatOptional,     // At most one occurrence, but it's optional
   eArgRepeatPlus,         // One or more occurrences
@@ -115,29 +105,17 @@ typedef enum ArgumentRepetitionType {
   eArgRepeatPairRange,    // A pair that repeats from 1 to n
   eArgRepeatPairRangeOptional // A pair that repeats from 1 to n, but is
                               // optional
-} ArgumentRepetitionType;
+};
 
-typedef enum SortOrder {
-  eSortOrderNone,
-  eSortOrderByAddress,
-  eSortOrderByName
-} SortOrder;
+enum SortOrder { eSortOrderNone, eSortOrderByAddress, eSortOrderByName };
 
-//----------------------------------------------------------------------
 // LazyBool is for boolean values that need to be calculated lazily. Values
 // start off set to eLazyBoolCalculate, and then they can be calculated once
 // and set to eLazyBoolNo or eLazyBoolYes.
-//----------------------------------------------------------------------
-typedef enum LazyBool {
-  eLazyBoolCalculate = -1,
-  eLazyBoolNo = 0,
-  eLazyBoolYes = 1
-} LazyBool;
+enum LazyBool { eLazyBoolCalculate = -1, eLazyBoolNo = 0, eLazyBoolYes = 1 };
 
-//------------------------------------------------------------------
 /// Instruction types
-//------------------------------------------------------------------
-typedef enum InstructionType {
+enum InstructionType {
   eInstructionTypeAny, // Support for any instructions at all (at least one)
   eInstructionTypePrologueEpilogue, // All prologue and epilogue instructions
                                     // that push and pop register values and
@@ -146,12 +124,10 @@ typedef enum InstructionType {
                                     // counter/instruction pointer
   eInstructionTypeAll               // All instructions of any kind
 
-} InstructionType;
+};
 
-//------------------------------------------------------------------
 /// Format category entry types
-//------------------------------------------------------------------
-typedef enum FormatCategoryItem {
+enum FormatCategoryItem {
   eFormatCategoryItemSummary = 0x0001,
   eFormatCategoryItemRegexSummary = 0x0002,
   eFormatCategoryItemFilter = 0x0004,
@@ -162,22 +138,18 @@ typedef enum FormatCategoryItem {
   eFormatCategoryItemRegexValue = 0x0080,
   eFormatCategoryItemValidator = 0x0100,
   eFormatCategoryItemRegexValidator = 0x0200
-} FormatCategoryItem;
+};
 
-//------------------------------------------------------------------
 /// Expression execution policies
-//------------------------------------------------------------------
-typedef enum {
+enum ExecutionPolicy {
   eExecutionPolicyOnlyWhenNeeded,
   eExecutionPolicyNever,
   eExecutionPolicyAlways,
   eExecutionPolicyTopLevel // used for top-level code
-} ExecutionPolicy;
+};
 
-//----------------------------------------------------------------------
 // Ways that the FormatManager picks a particular format for a type
-//----------------------------------------------------------------------
-typedef enum FormatterChoiceCriterion {
+enum FormatterChoiceCriterion {
   eFormatterChoiceCriterionDirectChoice = 0x00000000,
   eFormatterChoiceCriterionStrippedPointerReference = 0x00000001,
   eFormatterChoiceCriterionNavigatedTypedefs = 0x00000002,
@@ -186,32 +158,26 @@ typedef enum FormatterChoiceCriterion {
   eFormatterChoiceCriterionLanguagePlugin = 0x00000008,
   eFormatterChoiceCriterionStrippedBitField = 0x00000010,
   eFormatterChoiceCriterionWentToStaticValue = 0x00000020
-} FormatterChoiceCriterion;
+};
 
-//----------------------------------------------------------------------
 // Synchronicity behavior of scripted commands
-//----------------------------------------------------------------------
-typedef enum ScriptedCommandSynchronicity {
+enum ScriptedCommandSynchronicity {
   eScriptedCommandSynchronicitySynchronous,
   eScriptedCommandSynchronicityAsynchronous,
   eScriptedCommandSynchronicityCurrentValue // use whatever the current
                                             // synchronicity is
-} ScriptedCommandSynchronicity;
+};
 
-//----------------------------------------------------------------------
 // Verbosity mode of "po" output
-//----------------------------------------------------------------------
-typedef enum LanguageRuntimeDescriptionDisplayVerbosity {
+enum LanguageRuntimeDescriptionDisplayVerbosity {
   eLanguageRuntimeDescriptionDisplayVerbosityCompact, // only print the
                                                       // description string, if
                                                       // any
   eLanguageRuntimeDescriptionDisplayVerbosityFull,    // print the full-blown
                                                       // output
-} LanguageRuntimeDescriptionDisplayVerbosity;
+};
 
-//----------------------------------------------------------------------
 // Loading mode for Swift module files
-//----------------------------------------------------------------------
 typedef enum SwiftModuleLoadingMode {
   eSwiftModuleLoadingModePreferSerialized, // Prefer loading via .swiftmodule,
                                            // falling back to .swiftinterface
@@ -222,18 +188,14 @@ typedef enum SwiftModuleLoadingMode {
   eSwiftModuleLoadingModeOnlyInterface,    // Load via .swiftinterface only
 } SwiftModuleLoadingMode;
 
-//----------------------------------------------------------------------
 // Loading modules from memory
-//----------------------------------------------------------------------
-typedef enum MemoryModuleLoadLevel {
+enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelMinimal,  // Load sections only
   eMemoryModuleLoadLevelPartial,  // Load function bounds but no symbols
   eMemoryModuleLoadLevelComplete, // Load sections and all symbols
-} MemoryModuleLoadLevel;
+};
 
-//----------------------------------------------------------------------
 // Result enums for when reading multiple lines from IOHandlers
-//----------------------------------------------------------------------
 enum class LineStatus {
   Success, // The line that was just edited if good and should be added to the
            // lines
@@ -243,14 +205,10 @@ enum class LineStatus {
   Done     // Lines are complete
 };
 
-//----------------------------------------------------------------------
 // Boolean result of running a Type Validator
-//----------------------------------------------------------------------
 enum class TypeValidatorResult : bool { Success = true, Failure = false };
 
-//----------------------------------------------------------------------
 // Enumerations that can be used to specify scopes types when looking up types.
-//----------------------------------------------------------------------
 enum class CompilerContextKind : uint16_t {
   Invalid = 0,
   TranslationUnit = 1,
@@ -271,10 +229,8 @@ enum class CompilerContextKind : uint16_t {
   AnyType = Any | Class | Struct | Union | Enum | Typedef
 };
 
-//----------------------------------------------------------------------
 // Enumerations that can be used to specify the kind of metric we're looking at
 // when collecting stats.
-//----------------------------------------------------------------------
 enum StatisticKind {
   ExpressionSuccessful = 0,
   ExpressionFailure = 1,

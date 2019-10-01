@@ -1,84 +1,84 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf %S/Inputs/arm-shared.s -o %t1.o
-// RUN: ld.lld %t1.o --shared -o %t.so
+// RUN: ld.lld %t1.o --shared -soname=t.so -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=armv7a-linux-gnueabihf %s -o %t.o
-// RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
-// RUN: llvm-objdump -triple=armv7a-linux-gnueabihf -d %tout | FileCheck %s --check-prefix=DISASM
+// RUN: ld.lld %t.so %t.o -o %tout
+// RUN: llvm-objdump -triple=armv7a-linux-gnueabihf -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
 // Check that the IRELATIVE relocations are last in the .got
 // CHECK: Relocations [
-// CHECK-NEXT:   Section (4) .rel.dyn {
-// CHECK-NEXT:     0x12078 R_ARM_GLOB_DAT bar2 0x0
-// CHECK-NEXT:     0x1207C R_ARM_GLOB_DAT zed2 0x0
-// CHECK-NEXT:     0x12080 R_ARM_IRELATIVE - 0x0
-// CHECK-NEXT:     0x12084 R_ARM_IRELATIVE - 0x0
+// CHECK-NEXT:   Section (5) .rel.dyn {
+// CHECK-NEXT:     0x122E0 R_ARM_GLOB_DAT bar2 0x0
+// CHECK-NEXT:     0x122E4 R_ARM_GLOB_DAT zed2 0x0
+// CHECK-NEXT:     0x122E8 R_ARM_IRELATIVE - 0x0
+// CHECK-NEXT:     0x122EC R_ARM_IRELATIVE - 0x0
 // CHECK-NEXT:   }
-// CHECK-NEXT:   Section (5) .rel.plt {
-// CHECK-NEXT:     0x1300C R_ARM_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x13010 R_ARM_JUMP_SLOT zed2 0x0
+// CHECK-NEXT:   Section (6) .rel.plt {
+// CHECK-NEXT:     0x132FC R_ARM_JUMP_SLOT bar2 0x0
+// CHECK-NEXT:     0x13300 R_ARM_JUMP_SLOT zed2 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 // Check that the GOT entries refer back to the ifunc resolver
 // GOTPLT: Contents of section .got:
-// GOTPLT-NEXT:  12078 00000000 00000000 00100100 04100100
+// GOTPLT-NEXT:  122e0 00000000 00000000 dc110100 e0110100
 // GOTPLT: Contents of section .got.plt:
-// GOTPLT-NEXT:  13000 00000000 00000000 00000000 20100100
-// GOTPLT-NEXT:  13010 20100100
+// GOTPLT-NEXT:  132f0 00000000 00000000 00000000 00120100
+// GOTPLT-NEXT:  13300 00120100
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:    11000:       1e ff 2f e1     bx      lr
+// DISASM-NEXT:    111dc:       bx      lr
 // DISASM: bar:
-// DISASM-NEXT:    11004:       1e ff 2f e1     bx      lr
+// DISASM-NEXT:    111e0:       bx      lr
 // DISASM: _start:
-// DISASM-NEXT:    11008:       14 00 00 eb     bl      #80
-// DISASM-NEXT:    1100c:       17 00 00 eb     bl      #92
+// DISASM-NEXT:    111e4:       bl      #84
+// DISASM-NEXT:    111e8:       bl      #96
 // DISASM: $d.1:
-// DISASM-NEXT:    11010:       00 00 00 00     .word   0x00000000
-// DISASM-NEXT:    11014:       04 00 00 00     .word   0x00000004
-// DISASM:         11018:       08 00 00 eb     bl      #32
-// DISASM-NEXT:    1101c:       0b 00 00 eb     bl      #44
+// DISASM-NEXT:    111ec:       00 00 00 00     .word   0x00000000
+// DISASM-NEXT:    111f0:       04 00 00 00     .word   0x00000004
+// DISASM:         111f4:       bl      #36
+// DISASM-NEXT:    111f8:       bl      #48
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: $a:
-// DISASM-NEXT:    11020:       04 e0 2d e5     str     lr, [sp, #-4]!
-// DISASM-NEXT:    11024:       00 e6 8f e2     add     lr, pc, #0, #12
-// DISASM-NEXT:    11028:       01 ea 8e e2     add     lr, lr, #4096
-// DISASM-NEXT:    1102c:       dc ff be e5     ldr     pc, [lr, #4060]!
+// DISASM-NEXT:    11200:       str     lr, [sp, #-4]!
+// DISASM-NEXT:    11204:       add     lr, pc, #0, #12
+// DISASM-NEXT:    11208:       add     lr, lr, #8192
+// DISASM-NEXT:    1120c:       ldr     pc, [lr, #236]!
 // DISASM: $d:
-// DISASM-NEXT:    11030:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM-NEXT:    11034:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM-NEXT:    11038:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM-NEXT:    1103c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    11210:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    11214:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    11218:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    1121c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM: $a:
-// DISASM-NEXT:    11040:       00 c6 8f e2     add     r12, pc, #0, #12
-// DISASM-NEXT:    11044:       01 ca 8c e2     add     r12, r12, #4096
-// DISASM-NEXT:    11048:       c4 ff bc e5     ldr     pc, [r12, #4036]!
+// DISASM-NEXT:    11220:       add     r12, pc, #0, #12
+// DISASM-NEXT:    11224:       add     r12, r12, #8192
+// DISASM-NEXT:    11228:       ldr     pc, [r12, #212]!
 // DISASM: $d:
-// DISASM-NEXT:    1104c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    1122c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM: $a:
-// DISASM-NEXT:    11050:       00 c6 8f e2     add     r12, pc, #0, #12
-// DISASM-NEXT:    11054:       01 ca 8c e2     add     r12, r12, #4096
-// DISASM-NEXT:    11058:       b8 ff bc e5     ldr     pc, [r12, #4024]!
+// DISASM-NEXT:    11230:       add     r12, pc, #0, #12
+// DISASM-NEXT:    11234:       add     r12, r12, #8192
+// DISASM-NEXT:    11238:       ldr     pc, [r12, #200]!
 // DISASM: $d:
-// DISASM-NEXT:    1105c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    1123c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM: $a:
-// DISASM-NEXT:    11060:       00 c6 8f e2     add     r12, pc, #0, #12
-// DISASM-NEXT:    11064:       01 ca 8c e2     add     r12, r12, #4096
-// DISASM-NEXT:    11068:       18 f0 bc e5     ldr     pc, [r12, #24]!
+// DISASM-NEXT:    11240:       add     r12, pc, #0, #12
+// DISASM-NEXT:    11244:       add     r12, r12, #4096
+// DISASM-NEXT:    11248:       ldr     pc, [r12, #160]!
 // DISASM: $d:
-// DISASM-NEXT:    1106c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// DISASM-NEXT:    1124c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM: $a:
-// DISASM-NEXT:    11070:       00 c6 8f e2     add     r12, pc, #0, #12
-// DISASM-NEXT:    11074:       01 ca 8c e2     add     r12, r12, #4096
-// DISASM-NEXT:    11078:       0c f0 bc e5     ldr     pc, [r12, #12]!
+// DISASM-NEXT:    11250:       add     r12, pc, #0, #12
+// DISASM-NEXT:    11254:       add     r12, r12, #4096
+// DISASM-NEXT:    11258:       ldr     pc, [r12, #148]!
 // DISASM: $d:
-// DISASM-NEXT:   1107c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// DISASM-NEXT:    1125c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 
 .syntax unified
 .text

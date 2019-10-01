@@ -96,6 +96,7 @@ llvm::VersionTuple HostInfoMacOSX::GetMacCatalystVersion() {
   return g_version;
 }
 
+
 FileSpec HostInfoMacOSX::GetProgramFileSpec() {
   static FileSpec g_program_filespec;
   if (!g_program_filespec) {
@@ -150,9 +151,8 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     FileSystem::Instance().Resolve(support_dir_spec);
     if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-      if (log)
-        log->Printf("HostInfoMacOSX::%s(): failed to find support directory",
-                    __FUNCTION__);
+      LLDB_LOGF(log, "HostInfoMacOSX::%s(): failed to find support directory",
+                __FUNCTION__);
       return false;
     }
 

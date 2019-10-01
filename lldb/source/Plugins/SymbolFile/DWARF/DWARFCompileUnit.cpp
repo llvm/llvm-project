@@ -7,91 +7,109 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFCompileUnit.h"
+#include "DWARFDebugAranges.h"
+#include "SymbolFileDWARFDebugMap.h"
 
-#include "SymbolFileDWARF.h"
+#include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/LineTable.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-extern int g_verbose;
-
-DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
-    : DWARFUnit(dwarf2Data) {}
-
-DWARFUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
-                                      const DWARFDataExtractor &debug_info,
-                                      lldb::offset_t *offset_ptr) {
-  // std::make_shared would require the ctor to be public.
-  std::shared_ptr<DWARFCompileUnit> cu_sp(new DWARFCompileUnit(dwarf2Data));
-
-  cu_sp->m_offset = *offset_ptr;
-
-  if (debug_info.ValidOffset(*offset_ptr)) {
-    dw_offset_t abbr_offset;
-    const DWARFDebugAbbrev *abbr = dwarf2Data->DebugAbbrev();
-    cu_sp->m_length = debug_info.GetDWARFInitialLength(offset_ptr);
-    cu_sp->m_is_dwarf64 = debug_info.IsDWARF64();
-    cu_sp->m_version = debug_info.GetU16(offset_ptr);
-
-    if (cu_sp->m_version == 5) {
-      cu_sp->m_unit_type = debug_info.GetU8(offset_ptr);
-      cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
-      abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
-
-      if (cu_sp->m_unit_type == llvm::dwarf::DW_UT_skeleton)
-        cu_sp->m_dwo_id = debug_info.GetU64(offset_ptr);
-    } else {
-      abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
-      cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
-    }
-
-    bool length_OK =
-        debug_info.ValidOffset(cu_sp->GetNextCompileUnitOffset() - 1);
-    bool version_OK = SymbolFileDWARF::SupportedVersion(cu_sp->m_version);
-    bool abbr_offset_OK =
-        dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
-    bool addr_size_OK = (cu_sp->m_addr_size == 4) || (cu_sp->m_addr_size == 8);
-
-    if (length_OK && version_OK && addr_size_OK && abbr_offset_OK &&
-        abbr != NULL) {
-      cu_sp->m_abbrevs = abbr->GetAbbreviationDeclarationSet(abbr_offset);
-      return cu_sp;
-    }
-
-    // reset the offset to where we tried to parse from if anything went wrong
-    *offset_ptr = cu_sp->m_offset;
-  }
-
-  return nullptr;
-}
-
 void DWARFCompileUnit::Dump(Stream *s) const {
   s->Printf("0x%8.8x: Compile Unit: length = 0x%8.8x, version = 0x%4.4x, "
             "abbr_offset = 0x%8.8x, addr_size = 0x%2.2x (next CU at "
             "{0x%8.8x})\n",
-            m_offset, m_length, m_version, GetAbbrevOffset(), m_addr_size,
-            GetNextCompileUnitOffset());
+            GetOffset(), GetLength(), GetVersion(), GetAbbrevOffset(),
+            GetAddressByteSize(), GetNextUnitOffset());
 }
 
-uint32_t DWARFCompileUnit::GetHeaderByteSize() const {
-  if (m_version < 5)
-    return m_is_dwarf64 ? 23 : 11;
+void DWARFCompileUnit::BuildAddressRangeTable(
+    DWARFDebugAranges *debug_aranges) {
+  // This function is usually called if there in no .debug_aranges section in
+  // order to produce a compile unit level set of address ranges that is
+  // accurate.
 
-  switch (m_unit_type) {
-  case llvm::dwarf::DW_UT_compile:
-  case llvm::dwarf::DW_UT_partial:
-    return 12;
-  case llvm::dwarf::DW_UT_skeleton:
-  case llvm::dwarf::DW_UT_split_compile:
-    return 20;
-  case llvm::dwarf::DW_UT_type:
-  case llvm::dwarf::DW_UT_split_type:
-    return 24;
+  size_t num_debug_aranges = debug_aranges->GetNumRanges();
+
+  // First get the compile unit DIE only and check if it has a DW_AT_ranges
+  const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
+
+  const dw_offset_t cu_offset = GetOffset();
+  if (die) {
+    DWARFRangeList ranges;
+    const size_t num_ranges =
+        die->GetAttributeAddressRanges(this, ranges, false);
+    if (num_ranges > 0) {
+      // This compile unit has DW_AT_ranges, assume this is correct if it is
+      // present since clang no longer makes .debug_aranges by default and it
+      // emits DW_AT_ranges for DW_TAG_compile_units. GCC also does this with
+      // recent GCC builds.
+      for (size_t i = 0; i < num_ranges; ++i) {
+        const DWARFRangeList::Entry &range = ranges.GetEntryRef(i);
+        debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
+                                   range.GetRangeEnd());
+      }
+
+      return; // We got all of our ranges from the DW_AT_ranges attribute
+    }
   }
-  llvm_unreachable("invalid UnitType.");
-}
+  // We don't have a DW_AT_ranges attribute, so we need to parse the DWARF
 
-const lldb_private::DWARFDataExtractor &DWARFCompileUnit::GetData() const {
-  return m_dwarf->get_debug_info_data();
+  // If the DIEs weren't parsed, then we don't want all dies for all compile
+  // units to stay loaded when they weren't needed. So we can end up parsing
+  // the DWARF and then throwing them all away to keep memory usage down.
+  ScopedExtractDIEs clear_dies(ExtractDIEsScoped());
+
+  die = DIEPtr();
+  if (die)
+    die->BuildAddressRangeTable(this, debug_aranges);
+
+  if (debug_aranges->GetNumRanges() == num_debug_aranges) {
+    // We got nothing from the functions, maybe we have a line tables only
+    // situation. Check the line tables and build the arange table from this.
+    SymbolContext sc;
+    sc.comp_unit = m_dwarf.GetCompUnitForDWARFCompUnit(*this);
+    if (sc.comp_unit) {
+      SymbolFileDWARFDebugMap *debug_map_sym_file =
+          m_dwarf.GetDebugMapSymfile();
+      if (debug_map_sym_file == nullptr) {
+        if (LineTable *line_table = sc.comp_unit->GetLineTable()) {
+          LineTable::FileAddressRanges file_ranges;
+          const bool append = true;
+          const size_t num_ranges =
+              line_table->GetContiguousFileAddressRanges(file_ranges, append);
+          for (uint32_t idx = 0; idx < num_ranges; ++idx) {
+            const LineTable::FileAddressRanges::Entry &range =
+                file_ranges.GetEntryRef(idx);
+            debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
+                                       range.GetRangeEnd());
+          }
+        }
+      } else
+        debug_map_sym_file->AddOSOARanges(&m_dwarf, debug_aranges);
+    }
+  }
+
+  if (debug_aranges->GetNumRanges() == num_debug_aranges) {
+    // We got nothing from the functions, maybe we have a line tables only
+    // situation. Check the line tables and build the arange table from this.
+    SymbolContext sc;
+    sc.comp_unit = m_dwarf.GetCompUnitForDWARFCompUnit(*this);
+    if (sc.comp_unit) {
+      if (LineTable *line_table = sc.comp_unit->GetLineTable()) {
+        LineTable::FileAddressRanges file_ranges;
+        const bool append = true;
+        const size_t num_ranges =
+            line_table->GetContiguousFileAddressRanges(file_ranges, append);
+        for (uint32_t idx = 0; idx < num_ranges; ++idx) {
+          const LineTable::FileAddressRanges::Entry &range =
+              file_ranges.GetEntryRef(idx);
+          debug_aranges->AppendRange(GetOffset(), range.GetRangeBase(),
+                                     range.GetRangeEnd());
+        }
+      }
+    }
+  }
 }

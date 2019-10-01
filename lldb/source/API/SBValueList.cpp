@@ -92,7 +92,7 @@ bool SBValueList::IsValid() const {
 SBValueList::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValueList, operator bool);
 
-  return (m_opaque_up != NULL);
+  return (m_opaque_up != nullptr);
 }
 
 void SBValueList::Clear() {
@@ -172,7 +172,7 @@ uint32_t SBValueList::GetSize() const {
 }
 
 void SBValueList::CreateIfNeeded() {
-  if (m_opaque_up == NULL)
+  if (m_opaque_up == nullptr)
     m_opaque_up.reset(new ValueListImpl());
 }
 

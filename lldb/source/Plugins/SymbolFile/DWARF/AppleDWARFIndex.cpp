@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/AppleDWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
@@ -22,30 +21,30 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
     Module &module, DWARFDataExtractor apple_names,
     DWARFDataExtractor apple_namespaces, DWARFDataExtractor apple_types,
     DWARFDataExtractor apple_objc, DWARFDataExtractor debug_str) {
-  auto apple_names_table_up = llvm::make_unique<DWARFMappedHash::MemoryTable>(
+  auto apple_names_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
       apple_names, debug_str, ".apple_names");
   if (!apple_names_table_up->IsValid())
     apple_names_table_up.reset();
 
   auto apple_namespaces_table_up =
-      llvm::make_unique<DWARFMappedHash::MemoryTable>(
+      std::make_unique<DWARFMappedHash::MemoryTable>(
           apple_namespaces, debug_str, ".apple_namespaces");
   if (!apple_namespaces_table_up->IsValid())
     apple_namespaces_table_up.reset();
 
-  auto apple_types_table_up = llvm::make_unique<DWARFMappedHash::MemoryTable>(
+  auto apple_types_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
       apple_types, debug_str, ".apple_types");
   if (!apple_types_table_up->IsValid())
     apple_types_table_up.reset();
 
-  auto apple_objc_table_up = llvm::make_unique<DWARFMappedHash::MemoryTable>(
+  auto apple_objc_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
       apple_objc, debug_str, ".apple_objc");
   if (!apple_objc_table_up->IsValid())
     apple_objc_table_up.reset();
 
   if (apple_names_table_up || apple_names_table_up || apple_types_table_up ||
       apple_objc_table_up)
-    return llvm::make_unique<AppleDWARFIndex>(
+    return std::make_unique<AppleDWARFIndex>(
         module, std::move(apple_names_table_up),
         std::move(apple_namespaces_table_up), std::move(apple_types_table_up),
         std::move(apple_objc_table_up));
@@ -74,8 +73,8 @@ void AppleDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
     return;
 
   DWARFMappedHash::DIEInfoArray hash_data;
-  if (m_apple_names_up->AppendAllDIEsInRange(
-          cu.GetOffset(), cu.GetNextCompileUnitOffset(), hash_data))
+  if (m_apple_names_up->AppendAllDIEsInRange(cu.GetOffset(),
+                                             cu.GetNextUnitOffset(), hash_data))
     DWARFMappedHash::ExtractDIEArray(hash_data, offsets);
 }
 
@@ -133,14 +132,14 @@ void AppleDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
     m_apple_namespaces_up->FindByName(name.GetStringRef(), offsets);
 }
 
-void AppleDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
+void AppleDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t name_type_mask,
                                    std::vector<DWARFDIE> &dies) {
   DIEArray offsets;
   m_apple_names_up->FindByName(name.GetStringRef(), offsets);
   for (const DIERef &die_ref : offsets) {
-    ProcessFunctionDIE(name.GetStringRef(), die_ref, info, parent_decl_ctx,
+    ProcessFunctionDIE(name.GetStringRef(), die_ref, dwarf, parent_decl_ctx,
                        name_type_mask, dies);
   }
 }
@@ -155,12 +154,12 @@ void AppleDWARFIndex::GetFunctions(const RegularExpression &regex,
     DWARFMappedHash::ExtractDIEArray(hash_data, offsets);
 }
 
-void AppleDWARFIndex::ReportInvalidDIEOffset(dw_offset_t offset,
-                                             llvm::StringRef name) {
+void AppleDWARFIndex::ReportInvalidDIERef(const DIERef &ref,
+                                          llvm::StringRef name) {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
       "bad die 0x%8.8x for '%s')\n",
-      offset, name.str().c_str());
+      ref.die_offset(), name.str().c_str());
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {

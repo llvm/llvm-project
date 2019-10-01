@@ -63,7 +63,7 @@ public:
 
     std::unique_ptr<ToolOutputFile> Out;
     std::error_code EC;
-    Out.reset(new ToolOutputFile(Dumpfile, EC, sys::fs::F_None));
+    Out.reset(new ToolOutputFile(Dumpfile, EC, sys::fs::OF_None));
     if (EC) {
       errs() << EC.message() << '\n';
       return false;

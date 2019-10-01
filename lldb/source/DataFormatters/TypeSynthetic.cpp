@@ -128,7 +128,7 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromData(
 ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
                                               ValueObject &backend)
     : SyntheticChildrenFrontEnd(backend), m_python_class(pclass),
-      m_wrapper_sp(), m_interpreter(NULL) {
+      m_wrapper_sp(), m_interpreter(nullptr) {
   if (backend == LLDB_INVALID_UID)
     return;
 
@@ -139,7 +139,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
 
   m_interpreter = target_sp->GetDebugger().GetScriptInterpreter();
 
-  if (m_interpreter != NULL)
+  if (m_interpreter != nullptr)
     m_wrapper_sp = m_interpreter->CreateSyntheticScriptedProvider(
         m_python_class.c_str(), backend.GetSP());
 }
@@ -159,26 +159,26 @@ bool ScriptedSyntheticChildren::FrontEnd::IsValid() {
 }
 
 size_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return 0;
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, UINT32_MAX);
 }
 
 size_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return 0;
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, max);
 }
 
 bool ScriptedSyntheticChildren::FrontEnd::Update() {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return false;
 
   return m_interpreter->UpdateSynthProviderInstance(m_wrapper_sp);
 }
 
 bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return false;
 
   return m_interpreter->MightHaveChildrenSynthProviderInstance(m_wrapper_sp);
@@ -186,21 +186,21 @@ bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
 
 size_t ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return UINT32_MAX;
   return m_interpreter->GetIndexOfChildWithName(m_wrapper_sp,
                                                 name.GetCString());
 }
 
 lldb::ValueObjectSP ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return nullptr;
 
   return m_interpreter->GetSyntheticValue(m_wrapper_sp);
 }
 
 ConstString ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
-  if (!m_wrapper_sp || m_interpreter == NULL)
+  if (!m_wrapper_sp || m_interpreter == nullptr)
     return ConstString();
 
   return m_interpreter->GetSyntheticTypeName(m_wrapper_sp);

@@ -28,7 +28,6 @@ class TestSwiftTypeLookup(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_type_lookup(self):
         """Test the ability to look for type definitions at the command line"""
         self.build()

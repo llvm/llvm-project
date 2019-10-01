@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
@@ -39,23 +40,20 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     ConstString lang_name(value.trim());
-    std::set<lldb::LanguageType> languages_for_types;
-    std::set<lldb::LanguageType> languages_for_expressions;
-    Language::GetLanguagesSupportingTypeSystems(languages_for_types,
-                                                languages_for_expressions);
-
+    LanguageSet languages_for_types = Language::GetLanguagesSupportingTypeSystems();
     LanguageType new_type =
         Language::GetLanguageTypeFromString(lang_name.GetStringRef());
-    if (new_type && languages_for_types.count(new_type)) {
+    if (new_type && languages_for_types[new_type]) {
       m_value_was_set = true;
       m_current_value = new_type;
     } else {
       StreamString error_strm;
       error_strm.Printf("invalid language type '%s', ", value.str().c_str());
       error_strm.Printf("valid values are:\n");
-      for (lldb::LanguageType language : languages_for_types) {
-        error_strm.Printf("%s%s%s", "    ",
-                          Language::GetNameForLanguageType(language), "\n");
+      for (int bit : languages_for_types.bitvector.set_bits()) {
+        auto language = (LanguageType)bit;
+        error_strm.Printf("    %s\n",
+                          Language::GetNameForLanguageType(language));
       }
       error.SetErrorString(error_strm.GetString());
     }

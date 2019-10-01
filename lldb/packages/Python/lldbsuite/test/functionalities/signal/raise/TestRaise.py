@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-import os
 import lldb
 import re
 from lldbsuite.test.lldbplatformutil import getDarwinOSTriples
@@ -18,6 +17,7 @@ class RaiseTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfNetBSD  # Hangs on NetBSD
     def test_sigstop(self):
         self.build()
         self.signal_test('SIGSTOP', False)
@@ -30,6 +30,7 @@ class RaiseTestCase(TestBase):
         self.build()
         self.signal_test('SIGRTMIN', True)
 
+    @skipIfNetBSD  # Hangs on NetBSD
     def test_sigtrap(self):
         self.build()
         self.signal_test('SIGTRAP', True)

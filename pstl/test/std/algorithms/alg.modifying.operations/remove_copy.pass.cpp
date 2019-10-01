@@ -24,8 +24,8 @@ struct run_remove_copy
               typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n,
-               const T& value, T trash)
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n, const T& value,
+               T trash)
     {
         // Cleaning
         std::fill_n(expected_first, n, trash);
@@ -76,7 +76,7 @@ test(T trash, const T& value, Convert convert, bool check_weakness = true)
     }
 }
 
-int32_t
+int
 main()
 {
 

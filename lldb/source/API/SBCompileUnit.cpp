@@ -14,13 +14,14 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/TypeList.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBCompileUnit::SBCompileUnit() : m_opaque_ptr(NULL) {
+SBCompileUnit::SBCompileUnit() : m_opaque_ptr(nullptr) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCompileUnit);
 }
 
@@ -41,7 +42,7 @@ const SBCompileUnit &SBCompileUnit::operator=(const SBCompileUnit &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBCompileUnit::~SBCompileUnit() { m_opaque_ptr = NULL; }
+SBCompileUnit::~SBCompileUnit() { m_opaque_ptr = nullptr; }
 
 SBFileSpec SBCompileUnit::GetFileSpec() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBCompileUnit,
@@ -58,8 +59,9 @@ uint32_t SBCompileUnit::GetNumLineEntries() const {
 
   if (m_opaque_ptr) {
     LineTable *line_table = m_opaque_ptr->GetLineTable();
-    if (line_table)
+    if (line_table) {
       return line_table->GetSize();
+    }
   }
   return 0;
 }
@@ -107,8 +109,8 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
       file_spec = *m_opaque_ptr;
 
     index = m_opaque_ptr->FindLineEntry(
-        start_idx, line, inline_file_spec ? inline_file_spec->get() : NULL,
-        exact, NULL);
+        start_idx, line, inline_file_spec ? inline_file_spec->get() : nullptr,
+        exact, nullptr);
   }
 
   return index;
@@ -117,10 +119,9 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
 uint32_t SBCompileUnit::GetNumSupportFiles() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBCompileUnit, GetNumSupportFiles);
 
-  if (m_opaque_ptr) {
-    FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
-    return support_files.GetSize();
-  }
+  if (m_opaque_ptr)
+    return m_opaque_ptr->GetSupportFiles().GetSize();
+
   return 0;
 }
 
@@ -137,13 +138,13 @@ lldb::SBTypeList SBCompileUnit::GetTypes(uint32_t type_mask) {
   if (!module_sp)
     return LLDB_RECORD_RESULT(sb_type_list);
 
-  SymbolVendor *vendor = module_sp->GetSymbolVendor();
-  if (!vendor)
+  SymbolFile *symfile = module_sp->GetSymbolFile();
+  if (!symfile)
     return LLDB_RECORD_RESULT(sb_type_list);
 
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
-  vendor->GetTypes(m_opaque_ptr, type_class, type_list);
+  symfile->GetTypes(m_opaque_ptr, type_class, type_list);
   sb_type_list.m_opaque_up->Append(type_list);
   return LLDB_RECORD_RESULT(sb_type_list);
 }
@@ -154,9 +155,8 @@ SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
 
   SBFileSpec sb_file_spec;
   if (m_opaque_ptr) {
-    FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
-    FileSpec file_spec = support_files.GetFileSpecAtIndex(idx);
-    sb_file_spec.SetFileSpec(file_spec);
+    FileSpec spec = m_opaque_ptr->GetSupportFiles().GetFileSpecAtIndex(idx);
+    sb_file_spec.SetFileSpec(spec);
   }
 
 
@@ -171,7 +171,7 @@ uint32_t SBCompileUnit::FindSupportFileIndex(uint32_t start_idx,
                      sb_file, full);
 
   if (m_opaque_ptr) {
-    FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
+    const FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
     return support_files.FindFileIndex(start_idx, sb_file.ref(), full);
   }
   return 0;
@@ -192,7 +192,7 @@ bool SBCompileUnit::IsValid() const {
 SBCompileUnit::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCompileUnit, operator bool);
 
-  return m_opaque_ptr != NULL;
+  return m_opaque_ptr != nullptr;
 }
 
 bool SBCompileUnit::operator==(const SBCompileUnit &rhs) const {

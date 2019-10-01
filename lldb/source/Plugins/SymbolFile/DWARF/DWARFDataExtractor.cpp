@@ -7,20 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDataExtractor.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
 uint64_t
 DWARFDataExtractor::GetDWARFInitialLength(lldb::offset_t *offset_ptr) const {
-  uint64_t length = GetU32(offset_ptr);
-  m_is_dwarf64 = (length == UINT32_MAX);
-  if (m_is_dwarf64)
-    length = GetU64(offset_ptr);
-  return length;
+  return GetU32(offset_ptr);
 }
 
 dw_offset_t
 DWARFDataExtractor::GetDWARFOffset(lldb::offset_t *offset_ptr) const {
   return GetMaxU64(offset_ptr, GetDWARFSizeOfOffset());
 }
+
+llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVM() const {
+  return llvm::DWARFDataExtractor(
+      llvm::StringRef(reinterpret_cast<const char *>(GetDataStart()),
+                      GetByteSize()),
+      GetByteOrder() == lldb::eByteOrderLittle, GetAddressByteSize());
 }
+} // namespace lldb_private

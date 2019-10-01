@@ -51,9 +51,7 @@ public:
                                                uint32_t num) override;
 
 private:
-  //------------------------------------------------------------------
   // For RegisterContextLLDB only
-  //------------------------------------------------------------------
 
   lldb_private::RegisterSet m_reg_set0; // register set 0 (PC only)
   lldb_private::RegisterInfo m_pc_reg_info;

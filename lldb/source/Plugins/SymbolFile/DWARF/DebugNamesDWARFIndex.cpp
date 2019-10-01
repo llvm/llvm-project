@@ -16,13 +16,6 @@
 using namespace lldb_private;
 using namespace lldb;
 
-static llvm::DWARFDataExtractor ToLLVM(const DWARFDataExtractor &data) {
-  return llvm::DWARFDataExtractor(
-      llvm::StringRef(reinterpret_cast<const char *>(data.GetDataStart()),
-                      data.GetByteSize()),
-      data.GetByteOrder() == eByteOrderLittle, data.GetAddressByteSize());
-}
-
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
                              DWARFDataExtractor debug_str,
@@ -31,8 +24,8 @@ DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
     return llvm::make_error<llvm::StringError>("debug info null",
                                                llvm::inconvertibleErrorCode());
   }
-  auto index_up =
-      llvm::make_unique<DebugNames>(ToLLVM(debug_names), ToLLVM(debug_str));
+  auto index_up = std::make_unique<DebugNames>(debug_names.GetAsLLVM(),
+                                                debug_str.GetAsLLVM());
   if (llvm::Error E = index_up->extract())
     return std::move(E);
 
@@ -50,31 +43,33 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   return result;
 }
 
-DIERef DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
+llvm::Optional<DIERef>
+DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   llvm::Optional<uint64_t> cu_offset = entry.getCUOffset();
   if (!cu_offset)
-    return DIERef();
+    return llvm::None;
 
-  DWARFUnit *cu = m_debug_info.GetCompileUnit(*cu_offset);
+  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
   if (!cu)
-    return DIERef();
+    return llvm::None;
 
   // This initializes the DWO symbol file. It's not possible for
   // GetDwoSymbolFile to call this automatically because of mutual recursion
   // between this and DWARFDebugInfoEntry::GetAttributeValue.
   cu->ExtractUnitDIEIfNeeded();
-  uint64_t die_bias = cu->GetDwoSymbolFile() ? 0 : *cu_offset;
+  cu = &cu->GetNonSkeletonUnit();
 
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(*cu_offset, die_bias + *die_offset);
+    return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
+                  DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
 
-  return DIERef();
+  return llvm::None;
 }
 
 void DebugNamesDWARFIndex::Append(const DebugNames::Entry &entry,
                                   DIEArray &offsets) {
-  if (DIERef ref = ToDIERef(entry))
-    offsets.push_back(ref);
+  if (llvm::Optional<DIERef> ref = ToDIERef(entry))
+    offsets.push_back(*ref);
 }
 
 void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
@@ -110,7 +105,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
       if (!regex.Execute(nte.getString()))
         continue;
 
-      uint32_t entry_offset = nte.getEntryOffset();
+      uint64_t entry_offset = nte.getEntryOffset();
       llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
       for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {
         if (entry_or->tag() != DW_TAG_variable)
@@ -130,7 +125,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
   uint64_t cu_offset = cu.GetOffset();
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
-      uint32_t entry_offset = nte.getEntryOffset();
+      uint64_t entry_offset = nte.getEntryOffset();
       llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
       for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {
         if (entry_or->tag() != DW_TAG_variable)
@@ -160,27 +155,27 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
         entry.tag() != DW_TAG_class_type)
       continue;
 
-    DIERef ref = ToDIERef(entry);
+    llvm::Optional<DIERef> ref = ToDIERef(entry);
     if (!ref)
       continue;
 
-    DWARFUnit *cu = m_debug_info.GetCompileUnit(ref.cu_offset);
+    DWARFUnit *cu = m_debug_info.GetUnit(*ref);
     if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
-      incomplete_types.push_back(ref);
+      incomplete_types.push_back(*ref);
       continue;
     }
 
     // FIXME: We should return DWARFDIEs so we don't have to resolve it twice.
-    DWARFDIE die = m_debug_info.GetDIE(ref);
+    DWARFDIE die = m_debug_info.GetDIE(*ref);
     if (!die)
       continue;
 
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
-      offsets.push_back(ref);
+      offsets.push_back(*ref);
       return;
     } else {
-      incomplete_types.push_back(ref);
+      incomplete_types.push_back(*ref);
     }
   }
 
@@ -220,12 +215,12 @@ void DebugNamesDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
 }
 
 void DebugNamesDWARFIndex::GetFunctions(
-    ConstString name, DWARFDebugInfo &info,
+    ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
     std::vector<DWARFDIE> &dies) {
 
   std::vector<DWARFDIE> v;
-  m_fallback.GetFunctions(name, info, parent_decl_ctx, name_type_mask, v);
+  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask, v);
 
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
@@ -233,8 +228,8 @@ void DebugNamesDWARFIndex::GetFunctions(
     if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
       continue;
 
-    if (DIERef ref = ToDIERef(entry))
-      ProcessFunctionDIE(name.GetStringRef(), ref, info, parent_decl_ctx,
+    if (llvm::Optional<DIERef> ref = ToDIERef(entry))
+      ProcessFunctionDIE(name.GetStringRef(), *ref, dwarf, parent_decl_ctx,
                          name_type_mask, v);
   }
 
@@ -253,7 +248,7 @@ void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,
       if (!regex.Execute(nte.getString()))
         continue;
 
-      uint32_t entry_offset = nte.getEntryOffset();
+      uint64_t entry_offset = nte.getEntryOffset();
       llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
       for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {
         Tag tag = entry_or->tag();

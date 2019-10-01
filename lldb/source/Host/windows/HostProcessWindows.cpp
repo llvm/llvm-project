@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/WindowsError.h"
 
 #include <psapi.h>
 
@@ -80,22 +81,22 @@ bool HostProcessWindows::IsRunning() const {
   return (code == STILL_ACTIVE);
 }
 
-HostThread HostProcessWindows::StartMonitoring(
+llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
     const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
-  HostThread monitor_thread;
   MonitorInfo *info = new MonitorInfo;
   info->callback = callback;
 
   // Since the life of this HostProcessWindows instance and the life of the
   // process may be different, duplicate the handle so that the monitor thread
   // can have ownership over its own copy of the handle.
-  HostThread result;
   if (::DuplicateHandle(GetCurrentProcess(), m_process, GetCurrentProcess(),
-                        &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS))
-    result = ThreadLauncher::LaunchThread("ChildProcessMonitor",
-                                          HostProcessWindows::MonitorThread,
-                                          info, nullptr);
-  return result;
+                        &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+    return ThreadLauncher::LaunchThread("ChildProcessMonitor",
+                                        HostProcessWindows::MonitorThread,
+                                        info);
+  } else {
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
+  }
 }
 
 lldb::thread_result_t HostProcessWindows::MonitorThread(void *thread_arg) {
@@ -109,7 +110,7 @@ lldb::thread_result_t HostProcessWindows::MonitorThread(void *thread_arg) {
     ::CloseHandle(info->process_handle);
     delete (info);
   }
-  return 0;
+  return {};
 }
 
 void HostProcessWindows::Close() {

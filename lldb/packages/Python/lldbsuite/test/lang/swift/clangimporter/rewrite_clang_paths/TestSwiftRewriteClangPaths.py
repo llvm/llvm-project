@@ -27,14 +27,12 @@ class TestSwiftRewriteClangPaths(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     @skipIf(debug_info=no_match(["dsym"]))
     def testWithRemap(self):
         self.dotest(True)
 
     @skipUnlessDarwin
     @swiftTest
-    @add_test_categories(["swiftpr"])
     @skipIf(debug_info=no_match(["dsym"]))
     def testWithoutRemap(self):
         self.dotest(False)

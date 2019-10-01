@@ -25,7 +25,7 @@ uint8_t *ExpressionVariable::GetValueBytes() {
     return const_cast<uint8_t *>(
         m_frozen_sp->GetDataExtractor().GetDataStart());
   }
-  return NULL;
+  return nullptr;
 }
 
 PersistentExpressionState::~PersistentExpressionState() {}
@@ -50,8 +50,7 @@ void PersistentExpressionState::RegisterExecutionUnit(
 
   m_execution_units.insert(execution_unit_sp);
 
-  if (log)
-    log->Printf("Registering JITted Functions:\n");
+  LLDB_LOGF(log, "Registering JITted Functions:\n");
 
   for (const IRExecutionUnit::JittedFunction &jitted_function :
        execution_unit_sp->GetJittedFunctions()) {
@@ -60,15 +59,13 @@ void PersistentExpressionState::RegisterExecutionUnit(
         jitted_function.m_remote_addr != LLDB_INVALID_ADDRESS) {
       m_symbol_map[jitted_function.m_name.GetCString()] =
           jitted_function.m_remote_addr;
-      if (log)
-        log->Printf("  Function: %s at 0x%" PRIx64 ".",
-                    jitted_function.m_name.GetCString(),
-                    jitted_function.m_remote_addr);
+      LLDB_LOGF(log, "  Function: %s at 0x%" PRIx64 ".",
+                jitted_function.m_name.GetCString(),
+                jitted_function.m_remote_addr);
     }
   }
 
-  if (log)
-    log->Printf("Registering JIIted Symbols:\n");
+  LLDB_LOGF(log, "Registering JIIted Symbols:\n");
 
   for (const IRExecutionUnit::JittedGlobalVariable &global_var :
        execution_unit_sp->GetJittedGlobalVariables()) {
@@ -79,9 +76,8 @@ void PersistentExpressionState::RegisterExecutionUnit(
       Mangled mangler(global_var.m_name);
       mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
       m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;
-      if (log)
-        log->Printf("  Symbol: %s at 0x%" PRIx64 ".",
-                    global_var.m_name.GetCString(), global_var.m_remote_addr);
+      LLDB_LOGF(log, "  Symbol: %s at 0x%" PRIx64 ".",
+                global_var.m_name.GetCString(), global_var.m_remote_addr);
     }
   }
 }

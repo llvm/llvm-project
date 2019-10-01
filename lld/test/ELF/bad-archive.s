@@ -2,10 +2,13 @@
 
 // Check bad archive error reporting with --whole-archive
 // and without it.
+
+// RUN: echo "!<arch>" > %t.a
+// RUN: echo "foo" >> %t.a
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-// RUN: not ld.lld %t.o %p/Inputs/bad-archive.a -o %t 2>&1 | FileCheck %s
-// RUN: not ld.lld %t.o --whole-archive %p/Inputs/bad-archive.a -o %t 2>&1 | FileCheck %s
-// CHECK: bad-archive.a: failed to parse archive
+// RUN: not ld.lld %t.o %t.a -o %t 2>&1 | FileCheck -DFILE=%t.a %s
+// RUN: not ld.lld %t.o --whole-archive %t.a -o %t 2>&1 | FileCheck -DFILE=%t.a %s
+// CHECK: error: [[FILE]]: failed to parse archive: truncated or malformed archive (remaining size of archive too small for next archive member header at offset 8)
 
 .globl _start
 _start:

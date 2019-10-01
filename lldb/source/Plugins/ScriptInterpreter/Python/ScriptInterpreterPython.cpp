@@ -448,9 +448,9 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_sys_module_dict(PyInitialValue::Invalid), m_run_one_line_function(),
       m_run_one_line_str_global(),
       m_dictionary_name(m_debugger.GetInstanceName().AsCString()),
-      m_terminal_state(), m_active_io_handler(eIOHandlerNone),
-      m_session_is_active(false), m_pty_slave_is_open(false),
-      m_valid_session(true), m_lock_count(0), m_command_thread_state(nullptr) {
+      m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
+      m_pty_slave_is_open(false), m_valid_session(true), m_lock_count(0),
+      m_command_thread_state(nullptr) {
   InitializePrivate();
 
   m_dictionary_name.append("_dict");
@@ -558,7 +558,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       if (!bp_options)
         continue;
 
-      auto data_up = llvm::make_unique<CommandDataPython>();
+      auto data_up = std::make_unique<CommandDataPython>();
       if (!data_up)
         break;
       data_up->user_source.SplitIntoLines(data);
@@ -583,7 +583,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
   case eIOHandlerWatchpoint: {
     WatchpointOptions *wp_options =
         (WatchpointOptions *)io_handler.GetUserData();
-    auto data_up = llvm::make_unique<WatchpointOptions::CommandData>();
+    auto data_up = std::make_unique<WatchpointOptions::CommandData>();
     data_up->user_source.SplitIntoLines(data);
 
     if (GenerateWatchpointCommandCallbackData(data_up->user_source,
@@ -610,22 +610,6 @@ ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
 }
 
 void ScriptInterpreterPythonImpl::ResetOutputFileHandle(FILE *fh) {}
-
-void ScriptInterpreterPythonImpl::SaveTerminalState(int fd) {
-  // Python mucks with the terminal state of STDIN. If we can possibly avoid
-  // this by setting the file handles up correctly prior to entering the
-  // interpreter we should. For now we save and restore the terminal state on
-  // the input file handle.
-  m_terminal_state.Save(fd, false);
-}
-
-void ScriptInterpreterPythonImpl::RestoreTerminalState() {
-  // Python mucks with the terminal state of STDIN. If we can possibly avoid
-  // this by setting the file handles up correctly prior to entering the
-  // interpreter we should. For now we save and restore the terminal state on
-  // the input file handle.
-  m_terminal_state.Restore();
-}
 
 void ScriptInterpreterPythonImpl::LeaveSession() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
@@ -688,19 +672,18 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
   // it, then there is no need to 'enter' it again.
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
   if (m_session_is_active) {
-    if (log)
-      log->Printf(
-          "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16
-          ") session is already active, returning without doing anything",
-          on_entry_flags);
+    LLDB_LOGF(
+        log,
+        "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16
+        ") session is already active, returning without doing anything",
+        on_entry_flags);
     return false;
   }
 
-  if (log)
-    log->Printf(
-        "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16
-        ")",
-        on_entry_flags);
+  LLDB_LOGF(
+      log,
+      "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16 ")",
+      on_entry_flags);
 
   m_session_is_active = true;
 
@@ -1040,17 +1023,16 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
       long tid = state->thread_id;
       PyThreadState_Swap(state);
       int num_threads = PyThreadState_SetAsyncExc(tid, PyExc_KeyboardInterrupt);
-      if (log)
-        log->Printf("ScriptInterpreterPythonImpl::Interrupt() sending "
-                    "PyExc_KeyboardInterrupt (tid = %li, num_threads = %i)...",
-                    tid, num_threads);
+      LLDB_LOGF(log,
+                "ScriptInterpreterPythonImpl::Interrupt() sending "
+                "PyExc_KeyboardInterrupt (tid = %li, num_threads = %i)...",
+                tid, num_threads);
       return true;
     }
   }
-  if (log)
-    log->Printf(
-        "ScriptInterpreterPythonImpl::Interrupt() python code not running, "
-        "can't interrupt");
+  LLDB_LOGF(log,
+            "ScriptInterpreterPythonImpl::Interrupt() python code not running, "
+            "can't interrupt");
   return false;
 }
 bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
@@ -1308,7 +1290,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the breakpoint.
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions *bp_options, const char *command_body_text) {
-  auto data_up = llvm::make_unique<CommandDataPython>();
+  auto data_up = std::make_unique<CommandDataPython>();
 
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will wrap the body in an
@@ -1331,7 +1313,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *oneliner) {
-  auto data_up = llvm::make_unique<WatchpointOptions::CommandData>();
+  auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
   // The former is used to generate callback description (as in watchpoint
@@ -1943,7 +1925,7 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
     should_step = LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "should_step", NULL, script_error);
+        generic->GetValue(), "should_step", nullptr, script_error);
     if (script_error)
       should_step = true;
   }
@@ -2858,7 +2840,8 @@ bool ScriptInterpreterPythonImpl::IsReservedWord(const char *word) {
 
   // filter out a few characters that would just confuse us and that are
   // clearly not keyword material anyway
-  if (word_sr.find_first_of("'\"") != llvm::StringRef::npos)
+  if (word_sr.find('"') != llvm::StringRef::npos ||
+      word_sr.find('\'') != llvm::StringRef::npos)
     return false;
 
   StreamString command_stream;

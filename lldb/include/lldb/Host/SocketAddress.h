@@ -33,28 +33,21 @@ namespace lldb_private {
 
 class SocketAddress {
 public:
-  //----------------------------------------------------------------------------
   // Static method to get all address information for a host and/or service
-  //----------------------------------------------------------------------------
   static std::vector<SocketAddress>
   GetAddressInfo(const char *hostname, const char *servname, int ai_family,
                  int ai_socktype, int ai_protocol, int ai_flags = 0);
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
   SocketAddress();
   SocketAddress(const struct addrinfo *addr_info);
   SocketAddress(const struct sockaddr &s);
   SocketAddress(const struct sockaddr_in &s);
   SocketAddress(const struct sockaddr_in6 &s);
   SocketAddress(const struct sockaddr_storage &s);
-  SocketAddress(const SocketAddress &rhs);
   ~SocketAddress();
 
-  //------------------------------------------------------------------
   // Operators
-  //------------------------------------------------------------------
   const SocketAddress &operator=(const SocketAddress &rhs);
 
   const SocketAddress &operator=(const struct addrinfo *addr_info);
@@ -70,53 +63,35 @@ public:
   bool operator==(const SocketAddress &rhs) const;
   bool operator!=(const SocketAddress &rhs) const;
 
-  //------------------------------------------------------------------
   // Clear the contents of this socket address
-  //------------------------------------------------------------------
   void Clear();
 
-  //------------------------------------------------------------------
   // Get the length for the current socket address family
-  //------------------------------------------------------------------
   socklen_t GetLength() const;
 
-  //------------------------------------------------------------------
   // Get the max length for the largest socket address supported.
-  //------------------------------------------------------------------
   static socklen_t GetMaxLength();
 
-  //------------------------------------------------------------------
   // Get the socket address family
-  //------------------------------------------------------------------
   sa_family_t GetFamily() const;
 
-  //------------------------------------------------------------------
   // Set the socket address family
-  //------------------------------------------------------------------
   void SetFamily(sa_family_t family);
 
-  //------------------------------------------------------------------
   // Get the address
-  //------------------------------------------------------------------
   std::string GetIPAddress() const;
 
-  //------------------------------------------------------------------
   // Get the port if the socket address for the family has a port
-  //------------------------------------------------------------------
   uint16_t GetPort() const;
 
-  //------------------------------------------------------------------
   // Set the port if the socket address for the family has a port. The family
   // must be set correctly prior to calling this function.
-  //------------------------------------------------------------------
   bool SetPort(uint16_t port);
 
-  //------------------------------------------------------------------
   // Set the socket address according to the first match from a call to
   // getaddrinfo() (or equivalent functions for systems that don't have
   // getaddrinfo(). If "addr_info_ptr" is not NULL, it will get filled in with
   // the match that was used to populate this socket address.
-  //------------------------------------------------------------------
   bool
   getaddrinfo(const char *host,    // Hostname ("foo.bar.com" or "foo" or IP
                                    // address string ("123.234.12.1" or
@@ -126,33 +101,23 @@ public:
               int ai_family = PF_UNSPEC, int ai_socktype = 0,
               int ai_protocol = 0, int ai_flags = 0);
 
-  //------------------------------------------------------------------
   // Quick way to set the SocketAddress to localhost given the family. Returns
   // true if successful, false if "family" doesn't support localhost or if
   // "family" is not supported by this class.
-  //------------------------------------------------------------------
   bool SetToLocalhost(sa_family_t family, uint16_t port);
 
   bool SetToAnyAddress(sa_family_t family, uint16_t port);
 
-  //------------------------------------------------------------------
   // Returns true if there is a valid socket address in this object.
-  //------------------------------------------------------------------
   bool IsValid() const;
 
-  //------------------------------------------------------------------
   // Returns true if the socket is INADDR_ANY
-  //------------------------------------------------------------------
   bool IsAnyAddr() const;
 
-  //------------------------------------------------------------------
   // Returns true if the socket is INADDR_LOOPBACK
-  //------------------------------------------------------------------
   bool IsLocalhost() const;
 
-  //------------------------------------------------------------------
   // Direct access to all of the sockaddr structures
-  //------------------------------------------------------------------
   struct sockaddr &sockaddr() {
     return m_socket_addr.sa;
   }
@@ -183,12 +148,10 @@ public:
     return m_socket_addr.sa_storage;
   }
 
-  //------------------------------------------------------------------
   // Conversion operators to allow getting the contents of this class as a
   // pointer to the appropriate structure. This allows an instance of this
   // class to be used in calls that take one of the sockaddr structure variants
   // without having to manually use the correct accessor function.
-  //------------------------------------------------------------------
 
   operator struct sockaddr *() { return &m_socket_addr.sa; }
 
@@ -218,9 +181,7 @@ protected:
     struct sockaddr_storage sa_storage;
   } sockaddr_t;
 
-  //------------------------------------------------------------------
   // Classes that inherit from SocketAddress can see and modify these
-  //------------------------------------------------------------------
   sockaddr_t m_socket_addr;
 };
 

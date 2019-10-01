@@ -12,8 +12,9 @@
 #include <mutex>
 
 #include "AppleObjCRuntimeV2.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 namespace lldb_private {
 

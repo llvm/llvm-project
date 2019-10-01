@@ -15,10 +15,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
@@ -616,7 +616,7 @@ public:
     if (!class_descriptor_sp)
       return false;
 
-    m_synth_backend_up = llvm::make_unique<ObjCRuntimeSyntheticProvider>(
+    m_synth_backend_up = std::make_unique<ObjCRuntimeSyntheticProvider>(
         SyntheticChildren::Flags(), class_descriptor_sp);
     m_synth_frontend_up = m_synth_backend_up->GetFrontEnd(*underlying_sp);
     if (!m_synth_frontend_up)

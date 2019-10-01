@@ -1,9 +1,13 @@
-# REQUIRES: lld
+# Test basics of debug_line parsing. This test uses a linker script which
+# ensures the code is placed at the end of a module to test the boundary
+# condition when the final end-of-sequence line table entry points to an address
+# that is outside the range of memory covered by the module.
+
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld --script=%S/Inputs/debug-line-basic.script %t.o -o %t
 # RUN: %lldb %t -o "image dump line-table -v a.c" -o exit | FileCheck %s
-
 
 	.text
 	.globl	_start
@@ -35,8 +39,15 @@ _start:
 	.loc   2 1 0 is_stmt 0
         nop
 # CHECK-NEXT: 0x0000000000201007: /tmp/c.c:1{{$}}
-
 # CHECK-NEXT: 0x0000000000201008: /tmp/c.c:1, is_terminal_entry = TRUE{{$}}
+
+	.section	.text.f,"ax",@progbits
+f:
+        .loc   1 3 0 is_stmt 0
+        nop
+# CHECK-NEXT: 0x0000000000201008: /tmp/b.c:3{{$}}
+# CHECK-NEXT: 0x0000000000201009: /tmp/b.c:3, is_terminal_entry = TRUE{{$}}
+
 
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string1:

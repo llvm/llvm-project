@@ -19,7 +19,6 @@ class TestOptionalAmbiguity(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_sample_rename_this(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")

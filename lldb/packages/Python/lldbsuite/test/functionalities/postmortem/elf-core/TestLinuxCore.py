@@ -41,35 +41,30 @@ class LinuxCoreTestCase(TestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(LinuxCoreTestCase, self).tearDown()
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid, self._i386_regions, "a.out")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIfLLVMTargetMissing("Mips")
     def test_mips_o32(self):
         """Test that lldb can read the process information from an MIPS O32 linux core file."""
         self.do_test("linux-mipsel-gnuabio32", self._mips_o32_pid,
                 self._mips_regions, "linux-mipsel-gn")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIfLLVMTargetMissing("Mips")
     def test_mips_n32(self):
         """Test that lldb can read the process information from an MIPS N32 linux core file """
         self.do_test("linux-mips64el-gnuabin32", self._mips64_n32_pid,
                 self._mips_regions, "linux-mips64el-")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIfLLVMTargetMissing("Mips")
     def test_mips_n64(self):
         """Test that lldb can read the process information from an MIPS N64 linux core file """
         self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid,
                 self._mips_regions, "linux-mips64el-")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("PowerPC")
     def test_ppc64le(self):
@@ -77,7 +72,6 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions,
                 "linux-ppc64le.ou")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64(self):
@@ -85,7 +79,6 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
         "a.out")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("SystemZ")
     def test_s390x(self):
@@ -93,7 +86,6 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions,
         "a.out")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_same_pid_running(self):
@@ -122,7 +114,6 @@ class LinuxCoreTestCase(TestBase):
         self.do_test(self.getBuildArtifact("linux-x86_64-pid"), os.getpid(),
                 self._x86_64_regions, "a.out")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_two_cores_same_pid(self):
@@ -153,7 +144,6 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
                 "a.out")
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_FPR_SSE(self):
@@ -204,7 +194,6 @@ class LinuxCoreTestCase(TestBase):
         for regname, value in values.items():
             self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
 
-    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_i386_sysroot(self):
@@ -227,6 +216,35 @@ class LinuxCoreTestCase(TestBase):
         self.check_all(process, self._i386_pid, self._i386_regions, "a.out")
 
         self.dbg.DeleteTarget(target)
+
+    @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("ARM")
+    def test_arm_core(self):
+        # check 32 bit ARM core file
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-arm.core")
+
+        values = {}
+        values["r0"] = "0x00000000"
+        values["r1"] = "0x00000001"
+        values["r2"] = "0x00000002"
+        values["r3"] = "0x00000003"
+        values["r4"] = "0x00000004"
+        values["r5"] = "0x00000005"
+        values["r6"] = "0x00000006"
+        values["r7"] = "0x00000007"
+        values["r8"] = "0x00000008"
+        values["r9"] = "0x00000009"
+        values["r10"] = "0x0000000a"
+        values["r11"] = "0x0000000b"
+        values["r12"] = "0x0000000c"
+        values["sp"] = "0x0000000d"
+        values["lr"] = "0x0000000e"
+        values["pc"] = "0x0000000f"
+        values["cpsr"] = "0x00000010"
+        for regname, value in values.items():
+            self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

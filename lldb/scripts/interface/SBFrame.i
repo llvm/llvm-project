@@ -50,7 +50,7 @@ public:
     SBFrame ();
 
     SBFrame (const lldb::SBFrame &rhs);
-    
+
    ~SBFrame();
 
     bool
@@ -104,52 +104,49 @@ public:
     GetSymbol () const;
 
     %feature("docstring", "
-    /// Gets the deepest block that contains the frame PC.
-    ///
-    /// See also GetFrameBlock().
-    ") GetBlock;
+    Gets the deepest block that contains the frame PC.
+
+    See also GetFrameBlock().") GetBlock;
     lldb::SBBlock
     GetBlock () const;
 
     %feature("docstring", "
-    /// Get the appropriate function name for this frame. Inlined functions in
-    /// LLDB are represented by Blocks that have inlined function information, so
-    /// just looking at the SBFunction or SBSymbol for a frame isn't enough.
-    /// This function will return the appropriate function, symbol or inlined
-    /// function name for the frame.
-    ///
-    /// This function returns:
-    /// - the name of the inlined function (if there is one)
-    /// - the name of the concrete function (if there is one)
-    /// - the name of the symbol (if there is one)
-    /// - NULL
-    ///
-    /// See also IsInlined().
-    ") GetFunctionName;
+    Get the appropriate function name for this frame. Inlined functions in
+    LLDB are represented by Blocks that have inlined function information, so
+    just looking at the SBFunction or SBSymbol for a frame isn't enough.
+    This function will return the appropriate function, symbol or inlined
+    function name for the frame.
+
+    This function returns:
+    - the name of the inlined function (if there is one)
+    - the name of the concrete function (if there is one)
+    - the name of the symbol (if there is one)
+    - NULL
+
+    See also IsInlined().") GetFunctionName;
     const char *
     GetFunctionName();
-             
+
      const char *
      GetDisplayFunctionName ();
 
     const char *
     GetFunctionName() const;
-             
+
     %feature("docstring", "
-    /// Returns the language of the frame's SBFunction, or if there.
-    /// is no SBFunction, guess the language from the mangled name.
-    /// .
-    ") GuessLanguage;
+    Returns the language of the frame's SBFunction, or if there.
+    is no SBFunction, guess the language from the mangled name.
+    .") GuessLanguage;
     lldb::LanguageType
     GuessLanguage() const;
 
     bool IsSwiftThunk() const;
 
-   %feature("docstring", "
-    /// Return true if this frame represents an inlined function.
-    ///
-    /// See also GetFunctionName().
-    ") IsInlined;
+    %feature("docstring", "
+    Return true if this frame represents an inlined function.
+
+    See also GetFunctionName().") IsInlined;
+
     bool
     IsInlined();
 
@@ -157,10 +154,9 @@ public:
     IsInlined() const;
 
     %feature("docstring", "
-    /// Return true if this frame is artificial (e.g a frame synthesized to
-    /// capture a tail call). Local variables may not be available in an artificial
-    /// frame.
-    ") IsArtificial;
+    Return true if this frame is artificial (e.g a frame synthesized to
+    capture a tail call). Local variables may not be available in an artificial
+    frame.") IsArtificial;
     bool
     IsArtificial();
 
@@ -168,35 +164,33 @@ public:
     IsArtificial() const;
 
     %feature("docstring", "
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") EvaluateExpression;
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") EvaluateExpression;
     lldb::SBValue
-    EvaluateExpression (const char *expr);    
+    EvaluateExpression (const char *expr);
 
     lldb::SBValue
     EvaluateExpression (const char *expr, lldb::DynamicValueType use_dynamic);
 
     lldb::SBValue
     EvaluateExpression (const char *expr, lldb::DynamicValueType use_dynamic, bool unwind_on_error);
-    
+
     lldb::SBValue
     EvaluateExpression (const char *expr, SBExpressionOptions &options);
 
     %feature("docstring", "
-    /// Gets the lexical block that defines the stack frame. Another way to think
-    /// of this is it will return the block that contains all of the variables
-    /// for a stack frame. Inlined functions are represented as SBBlock objects
-    /// that have inlined function information: the name of the inlined function,
-    /// where it was called from. The block that is returned will be the first 
-    /// block at or above the block for the PC (SBFrame::GetBlock()) that defines
-    /// the scope of the frame. When a function contains no inlined functions,
-    /// this will be the top most lexical block that defines the function. 
-    /// When a function has inlined functions and the PC is currently
-    /// in one of those inlined functions, this method will return the inlined
-    /// block that defines this frame. If the PC isn't currently in an inlined
-    /// function, the lexical block that defines the function is returned.
-    ") GetFrameBlock;
+    Gets the lexical block that defines the stack frame. Another way to think
+    of this is it will return the block that contains all of the variables
+    for a stack frame. Inlined functions are represented as SBBlock objects
+    that have inlined function information: the name of the inlined function,
+    where it was called from. The block that is returned will be the first
+    block at or above the block for the PC (SBFrame::GetBlock()) that defines
+    the scope of the frame. When a function contains no inlined functions,
+    this will be the top most lexical block that defines the function.
+    When a function has inlined functions and the PC is currently
+    in one of those inlined functions, this method will return the inlined
+    block that defines this frame. If the PC isn't currently in an inlined
+    function, the lexical block that defines the function is returned.") GetFrameBlock;
     lldb::SBBlock
     GetFrameBlock () const;
 
@@ -212,19 +206,15 @@ public:
     void
     Clear();
 
-#ifndef SWIG
     bool
     operator == (const lldb::SBFrame &rhs) const;
 
     bool
     operator != (const lldb::SBFrame &rhs) const;
 
-#endif
-
     %feature("docstring", "
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") GetVariables;
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") GetVariables;
     lldb::SBValueList
     GetVariables (bool arguments,
                   bool locals,
@@ -240,14 +230,13 @@ public:
 
     lldb::SBValueList
     GetVariables (const lldb::SBVariablesOptions& options);
-             
+
     lldb::SBValueList
     GetRegisters ();
 
     %feature("docstring", "
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") FindVariable;
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") FindVariable;
     lldb::SBValue
     FindVariable (const char *var_name);
 
@@ -258,40 +247,38 @@ public:
     FindRegister (const char *name);
 
     %feature("docstring", "
-    /// Get a lldb.SBValue for a variable path. 
-    ///
-    /// Variable paths can include access to pointer or instance members:
-    ///     rect_ptr->origin.y
-    ///     pt.x
-    /// Pointer dereferences:
-    ///     *this->foo_ptr
-    ///     **argv
-    /// Address of:
-    ///     &pt
-    ///     &my_array[3].x
-    /// Array accesses and treating pointers as arrays:
-    ///     int_array[1]
-    ///     pt_ptr[22].x
-    ///
-    /// Unlike EvaluateExpression() which returns lldb.SBValue objects
-    /// with constant copies of the values at the time of evaluation,
-    /// the result of this function is a value that will continue to
-    /// track the current value of the value as execution progresses
-    /// in the current frame.
-    ") GetValueForVariablePath;
+    Get a lldb.SBValue for a variable path.
+
+    Variable paths can include access to pointer or instance members:
+        rect_ptr->origin.y
+        pt.x
+    Pointer dereferences:
+        *this->foo_ptr
+        **argv
+    Address of:
+        &pt
+        &my_array[3].x
+    Array accesses and treating pointers as arrays:
+        int_array[1]
+        pt_ptr[22].x
+
+    Unlike EvaluateExpression() which returns lldb.SBValue objects
+    with constant copies of the values at the time of evaluation,
+    the result of this function is a value that will continue to
+    track the current value of the value as execution progresses
+    in the current frame.") GetValueForVariablePath;
     lldb::SBValue
     GetValueForVariablePath (const char *var_path);
-             
+
     lldb::SBValue
     GetValueForVariablePath (const char *var_path, lldb::DynamicValueType use_dynamic);
 
     %feature("docstring", "
-    /// Find variables, register sets, registers, or persistent variables using
-    /// the frame as the scope.
-    ///
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    ") FindValue;
+    Find variables, register sets, registers, or persistent variables using
+    the frame as the scope.
+
+    The version that doesn't supply a 'use_dynamic' value will use the
+    target's default.") FindValue;
     lldb::SBValue
     FindValue (const char *name, ValueType value_type);
 
@@ -300,11 +287,11 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description);
-    
+
     %pythoncode %{
         def get_all_variables(self):
             return self.GetVariables(True,True,True,True)
-        
+
         def get_parent_frame(self):
             parent_idx = self.idx + 1
             if parent_idx >= 0 and parent_idx < len(self.thread.frame):
@@ -322,7 +309,7 @@ public:
             return self.GetVariables(False,False,True,False)
 
         def var(self, var_expr_path):
-            '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns 
+            '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns
             a value that represents the variable expression path'''
             return self.GetValueForVariablePath(var_expr_path)
 
@@ -344,85 +331,32 @@ public:
 
             return registers_access(self.registers)
 
-        __swig_getmethods__["pc"] = GetPC
-        __swig_setmethods__["pc"] = SetPC
-        if _newclass: pc = property(GetPC, SetPC)
-
-        __swig_getmethods__["addr"] = GetPCAddress
-        if _newclass: addr = property(GetPCAddress, None, doc='''A read only property that returns the program counter (PC) as a section offset address (lldb.SBAddress).''')
-
-        __swig_getmethods__["fp"] = GetFP
-        if _newclass: fp = property(GetFP, None, doc='''A read only property that returns the frame pointer (FP) as an unsigned integer.''')
-
-        __swig_getmethods__["sp"] = GetSP
-        if _newclass: sp = property(GetSP, None, doc='''A read only property that returns the stack pointer (SP) as an unsigned integer.''')
-
-        __swig_getmethods__["module"] = GetModule
-        if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) for this stack frame.''')
-
-        __swig_getmethods__["compile_unit"] = GetCompileUnit
-        if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) for this stack frame.''')
-
-        __swig_getmethods__["function"] = GetFunction
-        if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) for this stack frame.''')
-
-        __swig_getmethods__["symbol"] = GetSymbol
-        if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) for this stack frame.''')
-
-        __swig_getmethods__["block"] = GetBlock
-        if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) for this stack frame.''')
-
-        __swig_getmethods__["is_inlined"] = IsInlined
-        if _newclass: is_inlined = property(IsInlined, None, doc='''A read only property that returns an boolean that indicates if the block frame is an inlined function.''')
-
-        __swig_getmethods__["name"] = GetFunctionName
-        if _newclass: name = property(GetFunctionName, None, doc='''A read only property that retuns the name for the function that this frame represents. Inlined stack frame might have a concrete function that differs from the name of the inlined function (a named lldb.SBBlock).''')
-
-        __swig_getmethods__["line_entry"] = GetLineEntry
-        if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line table entry (lldb.SBLineEntry) for this stack frame.''')
-
-        __swig_getmethods__["thread"] = GetThread
-        if _newclass: thread = property(GetThread, None, doc='''A read only property that returns an lldb object that represents the thread (lldb.SBThread) for this stack frame.''')
-
-        __swig_getmethods__["disassembly"] = Disassemble
-        if _newclass: disassembly = property(Disassemble, None, doc='''A read only property that returns the disassembly for this stack frame as a python string.''')
-
-        __swig_getmethods__["idx"] = GetFrameID
-        if _newclass: idx = property(GetFrameID, None, doc='''A read only property that returns the zero based stack frame index.''')
-
-        __swig_getmethods__["variables"] = get_all_variables
-        if _newclass: variables = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
-
-        __swig_getmethods__["vars"] = get_all_variables
-        if _newclass: vars = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
-
-        __swig_getmethods__["locals"] = get_locals
-        if _newclass: locals = property(get_locals, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the local variables in this stack frame.''')
-
-        __swig_getmethods__["args"] = get_arguments
-        if _newclass: args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
-
-        __swig_getmethods__["arguments"] = get_arguments
-        if _newclass: arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
-
-        __swig_getmethods__["statics"] = get_statics
-        if _newclass: statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
-
-        __swig_getmethods__["registers"] = GetRegisters
-        if _newclass: registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
-
-        __swig_getmethods__["regs"] = GetRegisters
-        if _newclass: regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
-
-        __swig_getmethods__["register"] = get_registers_access
-        if _newclass: register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
-
-        __swig_getmethods__["reg"] = get_registers_access
-        if _newclass: reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
-
-        __swig_getmethods__["parent"] = get_parent_frame
-        if _newclass: parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
-
+        pc = property(GetPC, SetPC)
+        addr = property(GetPCAddress, None, doc='''A read only property that returns the program counter (PC) as a section offset address (lldb.SBAddress).''')
+        fp = property(GetFP, None, doc='''A read only property that returns the frame pointer (FP) as an unsigned integer.''')
+        sp = property(GetSP, None, doc='''A read only property that returns the stack pointer (SP) as an unsigned integer.''')
+        module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) for this stack frame.''')
+        compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) for this stack frame.''')
+        function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) for this stack frame.''')
+        symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) for this stack frame.''')
+        block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) for this stack frame.''')
+        is_inlined = property(IsInlined, None, doc='''A read only property that returns an boolean that indicates if the block frame is an inlined function.''')
+        name = property(GetFunctionName, None, doc='''A read only property that retuns the name for the function that this frame represents. Inlined stack frame might have a concrete function that differs from the name of the inlined function (a named lldb.SBBlock).''')
+        line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line table entry (lldb.SBLineEntry) for this stack frame.''')
+        thread = property(GetThread, None, doc='''A read only property that returns an lldb object that represents the thread (lldb.SBThread) for this stack frame.''')
+        disassembly = property(Disassemble, None, doc='''A read only property that returns the disassembly for this stack frame as a python string.''')
+        idx = property(GetFrameID, None, doc='''A read only property that returns the zero based stack frame index.''')
+        variables = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
+        vars = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
+        locals = property(get_locals, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the local variables in this stack frame.''')
+        args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
+        arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
+        statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
+        registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+        regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+        register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
+        reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
+        parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
     %}
 };
 

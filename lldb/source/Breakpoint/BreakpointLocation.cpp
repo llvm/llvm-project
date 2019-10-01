@@ -256,11 +256,10 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     m_user_expression_sp.reset(GetTarget().GetUserExpressionForLanguage(
         exe_ctx,
         condition_text, llvm::StringRef(), language, Expression::eResultTypeAny,
-        EvaluateExpressionOptions(), error));
+        EvaluateExpressionOptions(), nullptr, error));
     if (error.Fail()) {
-      if (log)
-        log->Printf("Error getting condition expression: %s.",
-                    error.AsCString());
+      LLDB_LOGF(log, "Error getting condition expression: %s.",
+                error.AsCString());
       m_user_expression_sp.reset();
       return true;
     }
@@ -313,8 +312,8 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
       ret = result_value_sp->IsLogicalTrue(error);
       if (log) {
         if (error.Success()) {
-          log->Printf("Condition successfully evaluated, result is %s.\n",
-                      ret ? "true" : "false");
+          LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",
+                    ret ? "true" : "false");
         } else {
           error.SetErrorString(
               "Failed to get an integer result from the expression");
@@ -409,8 +408,8 @@ bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context) {
   if (log) {
     StreamString s;
     GetDescription(&s, lldb::eDescriptionLevelVerbose);
-    log->Printf("Hit breakpoint location: %s, %s.\n", s.GetData(),
-                should_stop ? "stopping" : "continuing");
+    LLDB_LOGF(log, "Hit breakpoint location: %s, %s.\n", s.GetData(),
+              should_stop ? "stopping" : "continuing");
   }
 
   return should_stop;

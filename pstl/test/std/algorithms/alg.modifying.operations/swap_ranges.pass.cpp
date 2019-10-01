@@ -120,7 +120,7 @@ test()
     }
 }
 
-int32_t
+int
 main()
 {
     test<wrapper<uint16_t>>();

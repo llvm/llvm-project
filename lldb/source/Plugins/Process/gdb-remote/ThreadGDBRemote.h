@@ -11,13 +11,14 @@
 
 #include <string>
 
-#include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/StructuredData.h"
 
 class StringExtractor;
 
 namespace lldb_private {
+class Process;
+
 namespace process_gdb_remote {
 
 class ProcessGDBRemote;

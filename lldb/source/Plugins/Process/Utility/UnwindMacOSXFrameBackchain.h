@@ -26,7 +26,8 @@ protected:
   uint32_t DoGetFrameCount() override;
 
   bool DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
-                             lldb::addr_t &pc) override;
+                             lldb::addr_t &pc,
+                             bool &behaves_like_zeroth_frame) override;
 
   lldb::RegisterContextSP
   DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
@@ -46,9 +47,7 @@ private:
   size_t
   GetStackFrameData_x86_64(const lldb_private::ExecutionContext &exe_ctx);
 
-  //------------------------------------------------------------------
   // For UnwindMacOSXFrameBackchain only
-  //------------------------------------------------------------------
   DISALLOW_COPY_AND_ASSIGN(UnwindMacOSXFrameBackchain);
 };
 

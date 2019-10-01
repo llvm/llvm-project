@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- unseq_backend_simd.h ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,10 +12,14 @@
 
 #include <type_traits>
 
+#include "pstl_config.h"
 #include "utils.h"
 
 // This header defines the minimum set of vector routines required
 // to support parallel STL.
+
+_PSTL_HIDE_FROM_ABI_PUSH
+
 namespace __pstl
 {
 namespace __unseq_backend
@@ -852,5 +856,7 @@ __simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredi
 }
 } // namespace __unseq_backend
 } // namespace __pstl
+
+_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_UNSEQ_BACKEND_SIMD_H */

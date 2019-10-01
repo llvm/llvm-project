@@ -43,34 +43,34 @@ namespace {
 class AVR final : public TargetInfo {
 public:
   AVR();
-  RelExpr getRelExpr(RelType Type, const Symbol &S,
-                     const uint8_t *Loc) const override;
-  void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
+  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
 };
 } // namespace
 
-AVR::AVR() { NoneRel = R_AVR_NONE; }
+AVR::AVR() { noneRel = R_AVR_NONE; }
 
-RelExpr AVR::getRelExpr(RelType Type, const Symbol &S,
-                        const uint8_t *Loc) const {
+RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
+                        const uint8_t *loc) const {
   return R_ABS;
 }
 
-void AVR::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  switch (Type) {
+void AVR::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
+  switch (type) {
   case R_AVR_CALL: {
-    uint16_t Hi = Val >> 17;
-    uint16_t Lo = Val >> 1;
-    write16le(Loc, read16le(Loc) | ((Hi >> 1) << 4) | (Hi & 1));
-    write16le(Loc + 2, Lo);
+    uint16_t hi = val >> 17;
+    uint16_t lo = val >> 1;
+    write16le(loc, read16le(loc) | ((hi >> 1) << 4) | (hi & 1));
+    write16le(loc + 2, lo);
     break;
   }
   default:
-    error(getErrorLocation(Loc) + "unrecognized relocation " + toString(Type));
+    error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
   }
 }
 
 TargetInfo *elf::getAVRTargetInfo() {
-  static AVR Target;
-  return &Target;
+  static AVR target;
+  return &target;
 }

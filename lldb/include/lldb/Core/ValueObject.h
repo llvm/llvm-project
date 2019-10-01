@@ -40,40 +40,19 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 namespace lldb_private {
 class Declaration;
-}
-namespace lldb_private {
 class DumpValueObjectOptions;
-}
-namespace lldb_private {
 class EvaluateExpressionOptions;
-}
-namespace lldb_private {
 class ExecutionContextScope;
-}
-namespace lldb_private {
 class Log;
-}
-namespace lldb_private {
 class Scalar;
-}
-namespace lldb_private {
 class Stream;
-}
-namespace lldb_private {
 class SymbolContextScope;
-}
-namespace lldb_private {
 class TypeFormatImpl;
-}
-namespace lldb_private {
 class TypeSummaryImpl;
-}
-namespace lldb_private {
 class TypeSummaryOptions;
-}
-namespace lldb_private {
 
 /// ValueObject:
 ///
@@ -380,16 +359,12 @@ public:
 
   virtual bool CanProvideValue();
 
-  //------------------------------------------------------------------
   // Subclasses must implement the functions below.
-  //------------------------------------------------------------------
   virtual uint64_t GetByteSize() = 0;
 
   virtual lldb::ValueType GetValueType() const = 0;
 
-  //------------------------------------------------------------------
   // Subclasses can implement the functions below.
-  //------------------------------------------------------------------
   virtual ConstString GetMangledTypeName();
 
   virtual ConstString GetTypeName();
@@ -481,9 +456,7 @@ public:
 
   virtual bool GetDeclaration(Declaration &decl);
 
-  //------------------------------------------------------------------
   // The functions below should NOT be modified by subclasses
-  //------------------------------------------------------------------
   const Status &GetError();
 
   ConstString GetName() const;
@@ -793,7 +766,6 @@ public:
 
   void SetHasCompleteType() { m_did_calculate_complete_objc_class_type = true; }
 
-  //------------------------------------------------------------------
   /// Find out if a ValueObject might have children.
   ///
   /// This call is much more efficient than CalculateNumChildren() as
@@ -805,10 +777,9 @@ public:
   /// pointers, references, arrays and more. Again, it does so without
   /// doing any expensive type completion.
   ///
-  /// @return
+  /// \return
   ///     Returns \b true if the ValueObject might have children, or \b
   ///     false otherwise.
-  //------------------------------------------------------------------
   virtual bool MightHaveChildren();
 
   virtual lldb::VariableSP GetVariable() { return nullptr; }
@@ -863,9 +834,7 @@ protected:
     size_t m_children_count;
   };
 
-  //------------------------------------------------------------------
   // Classes that inherit from ValueObject can see and modify these
-  //------------------------------------------------------------------
   ValueObject
       *m_parent; // The parent value object, or nullptr if this has no parent
   ValueObject *m_root; // The root of the hierarchy for this ValueObject (or
@@ -948,9 +917,7 @@ protected:
   friend class ValueObjectConstResultImpl;
   friend class ValueObjectSynthetic; // For ClearUserVisibleData
 
-  //------------------------------------------------------------------
   // Constructors and Destructors
-  //------------------------------------------------------------------
 
   // Use the no-argument constructor to make a constant variable object (with
   // no ExecutionContextScope.)
@@ -1010,9 +977,7 @@ protected:
 
   void ClearDynamicTypeInformation();
 
-  //------------------------------------------------------------------
   // Subclasses must implement the functions below.
-  //------------------------------------------------------------------
 
   virtual CompilerType GetCompilerTypeImpl() = 0;
 
@@ -1036,14 +1001,12 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ValueObject);
 };
 
-//------------------------------------------------------------------------------
 // A value object manager class that is seeded with the static variable value
 // and it vends the user facing value object. If the type is dynamic it can
 // vend the dynamic type. If this user type also has a synthetic type
 // associated with it, it will vend the synthetic type. The class watches the
 // process' stop
 // ID and will update the user type when needed.
-//------------------------------------------------------------------------------
 class ValueObjectManager {
   // The root value object is the static typed variable object.
   lldb::ValueObjectSP m_root_valobj_sp;

@@ -174,7 +174,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     using TestUtils::float64_t;

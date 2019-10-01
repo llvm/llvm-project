@@ -25,7 +25,6 @@ class TestSwiftOptionalType(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_optional_type(self):
         """Check formatting for T? and T!"""
         self.do_check_consistency()

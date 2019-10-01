@@ -204,6 +204,7 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
             "-c++",
             "-shadow",
             "-python",
+            "-features", "autodoc",
             "-threads",
             "-I" + os.path.normpath(os.path.join(options.src_root, "include")),
             "-I" + os.path.curdir,
@@ -339,48 +340,6 @@ def static_bindings_require_refresh(options, config_build_dir, settings):
 
     # If we made it here, we don't need to update.
     return False
-
-
-def run_python_script(script_and_args):
-    """Runs a python script, logging appropriately.
-
-    If the command returns anything non-zero, it is registered as
-    an error and exits the program.
-
-    @param script_and_args the python script to execute, along with
-    the command line arguments to pass to it.
-    """
-    command = [sys.executable] + script_and_args
-    process = subprocess.Popen(command)
-    script_stdout, script_stderr = process.communicate()
-    return_code = process.returncode
-    if return_code != 0:
-        logging.error("failed to run %r: %r", command, script_stderr)
-        sys.exit(return_code)
-    else:
-        logging.info("ran script %r'", command)
-        if script_stdout is not None:
-            logging.info("output: %s", script_stdout)
-
-
-def do_modify_python_lldb(options, config_build_dir):
-    """Executes the modify-python-lldb.py script.
-
-    @param options the parsed command line arguments
-    @param config_build_dir the directory where the Python output was created.
-    """
-    script_path = os.path.normcase(
-        os.path.join(
-            options.src_root,
-            "scripts",
-            "Python",
-            "modify-python-lldb.py"))
-
-    if not os.path.exists(script_path):
-        logging.error("failed to find python script: '%s'", script_path)
-        sys.exit(-11)
-
-    run_python_script([script_path, config_build_dir])
 
 
 def get_python_module_path(options):
@@ -529,14 +488,9 @@ def main(options):
         # here - the modifications have already been applied.
         copy_static_bindings(options, config_build_dir, settings)
     else:
-        # Generate the bindings with swig.
+        # Generate the Python binding with swig.
         logging.info("Python binding is out of date, regenerating")
         do_swig_rebuild(options, dependency_file, config_build_dir, settings)
-        if options.generate_dependency_file:
-            return
-
-        # Post process the swig-generated file.
-        do_modify_python_lldb(options, config_build_dir)
 
 
 # This script can be called by another Python script by calling the main()

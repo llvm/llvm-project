@@ -23,6 +23,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
@@ -31,7 +32,6 @@
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -206,9 +206,7 @@ static Status EnsureFDFlags(int fd, int flags) {
   return error;
 }
 
-// -----------------------------------------------------------------------------
 // Public Static Methods
-// -----------------------------------------------------------------------------
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
@@ -284,15 +282,13 @@ NativeProcessLinux::Factory::Attach(
       pid, -1, native_delegate, Info.GetArchitecture(), mainloop, *tids_or));
 }
 
-// -----------------------------------------------------------------------------
 // Public Instance Methods
-// -----------------------------------------------------------------------------
 
 NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
                                        NativeDelegate &delegate,
                                        const ArchSpec &arch, MainLoop &mainloop,
                                        llvm::ArrayRef<::pid_t> tids)
-    : NativeProcessProtocol(pid, terminal_fd, delegate), m_arch(arch) {
+    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch) {
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
@@ -412,9 +408,9 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
   // Handle when the thread exits.
   if (exited) {
     LLDB_LOG(log,
-             "got exit signal({0}) , tid = {1} ({2} main thread), process "
+             "got exit status({0}) , tid = {1} ({2} main thread), process "
              "state = {3}",
-             signal, pid, is_main_thread ? "is" : "is not", GetState());
+             status, pid, is_main_thread ? "is" : "is not", GetState());
 
     // This is a thread that exited.  Ensure we're not tracking it anymore.
     StopTrackingThread(pid);
@@ -495,9 +491,9 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
       const bool thread_found = StopTrackingThread(pid);
 
       LLDB_LOG(log,
-               "GetSignalInfo failed: {0}, tid = {1}, signal = {2}, "
+               "GetSignalInfo failed: {0}, tid = {1}, status = {2}, "
                "status = {3}, main_thread = {4}, thread_found: {5}",
-               info_err, pid, signal, status, is_main_thread, thread_found);
+               info_err, pid, status, status, is_main_thread, thread_found);
 
       if (is_main_thread) {
         // Notify the delegate - our process is not available but appears to
@@ -603,12 +599,9 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     // which only copies the main thread.
     LLDB_LOG(log, "exec received, stop tracking all but main thread");
 
-    for (auto i = m_threads.begin(); i != m_threads.end();) {
-      if ((*i)->GetID() == GetID())
-        i = m_threads.erase(i);
-      else
-        ++i;
-    }
+    llvm::erase_if(m_threads, [&](std::unique_ptr<NativeThreadProtocol> &t) {
+      return t->GetID() != GetID();
+    });
     assert(m_threads.size() == 1);
     auto *main_thread = static_cast<NativeThreadLinux *>(m_threads[0].get());
 
@@ -1011,11 +1004,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
       // Arm mode
       error = SetSoftwareBreakpoint(next_pc, 4);
     }
-  } else if (m_arch.GetMachine() == llvm::Triple::mips64 ||
-             m_arch.GetMachine() == llvm::Triple::mips64el ||
-             m_arch.GetMachine() == llvm::Triple::mips ||
-             m_arch.GetMachine() == llvm::Triple::mipsel ||
-             m_arch.GetMachine() == llvm::Triple::ppc64le)
+  } else if (m_arch.IsMIPS() || m_arch.GetTriple().isPPC64())
     error = SetSoftwareBreakpoint(next_pc, 4);
   else {
     // No size hint is given for the next breakpoint
@@ -1035,11 +1024,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
-  if (m_arch.GetMachine() == llvm::Triple::arm ||
-      m_arch.GetMachine() == llvm::Triple::mips64 ||
-      m_arch.GetMachine() == llvm::Triple::mips64el ||
-      m_arch.GetMachine() == llvm::Triple::mips ||
-      m_arch.GetMachine() == llvm::Triple::mipsel)
+  if (m_arch.GetMachine() == llvm::Triple::arm || m_arch.IsMIPS())
     return false;
   return true;
 }
@@ -1401,11 +1386,6 @@ Status NativeProcessLinux::DeallocateMemory(lldb::addr_t addr) {
   return Status("not implemented");
 }
 
-lldb::addr_t NativeProcessLinux::GetSharedLibraryInfoAddress() {
-  // punt on this for now
-  return LLDB_INVALID_ADDRESS;
-}
-
 size_t NativeProcessLinux::UpdateThreads() {
   // The NativeProcessLinux monitoring threads are always up to date with
   // respect to thread state and they keep the thread list populated properly.
@@ -1611,7 +1591,7 @@ NativeThreadLinux &NativeProcessLinux::AddThread(lldb::tid_t thread_id) {
   if (m_threads.empty())
     SetCurrentThreadID(thread_id);
 
-  m_threads.push_back(llvm::make_unique<NativeThreadLinux>(*this, thread_id));
+  m_threads.push_back(std::make_unique<NativeThreadLinux>(*this, thread_id));
 
   if (m_pt_proces_trace_id != LLDB_INVALID_UID) {
     auto traceMonitor = ProcessorTraceMonitor::Create(

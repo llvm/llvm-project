@@ -25,7 +25,6 @@ class TestSwiftClassTypes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @add_test_categories(["swiftpr"])
     def test_swift_class_types(self):
         """Test swift Class types"""
         self.build()

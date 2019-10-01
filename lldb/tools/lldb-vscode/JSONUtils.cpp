@@ -164,7 +164,6 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("success", true);
 }
 
-//----------------------------------------------------------------------
 // "Scope": {
 //   "type": "object",
 //   "description": "A Scope is a named container for variables. Optionally
@@ -223,7 +222,6 @@ void FillResponse(const llvm::json::Object &request,
 //   },
 //   "required": [ "name", "variablesReference", "expensive" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateScope(const llvm::StringRef name,
                               int64_t variablesReference,
                               int64_t namedVariables, bool expensive) {
@@ -235,7 +233,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
   return llvm::json::Value(std::move(object));
 }
 
-//----------------------------------------------------------------------
 // "Breakpoint": {
 //   "type": "object",
 //   "description": "Information about a Breakpoint created in setBreakpoints
@@ -284,7 +281,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 //   },
 //   "required": [ "verified" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
@@ -318,7 +314,6 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints) {
   }
 }
 
-//----------------------------------------------------------------------
 // "Event": {
 //   "allOf": [ { "$ref": "#/definitions/ProtocolMessage" }, {
 //     "type": "object",
@@ -357,7 +352,6 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints) {
 //   },
 //   "required": [ "seq", "type" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
   event.try_emplace("seq", 0);
@@ -366,7 +360,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   return event;
 }
 
-//----------------------------------------------------------------------
 // "ExceptionBreakpointsFilter": {
 //   "type": "object",
 //   "description": "An ExceptionBreakpointsFilter is shown in the UI as an
@@ -389,7 +382,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 //   },
 //   "required": [ "filter", "label" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   llvm::json::Object object;
@@ -399,7 +391,6 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   return llvm::json::Value(std::move(object));
 }
 
-//----------------------------------------------------------------------
 // "Source": {
 //   "type": "object",
 //   "description": "A Source is a descriptor for source code. It is returned
@@ -465,7 +456,6 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
 //     }
 //   }
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
   llvm::json::Object object;
   lldb::SBFileSpec file = line_entry.GetFileSpec();
@@ -569,7 +559,6 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
   return llvm::json::Value(std::move(object));
 }
 
-//----------------------------------------------------------------------
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -626,7 +615,6 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   llvm::json::Object object;
   int64_t frame_id = MakeVSCodeFrameID(frame);
@@ -648,7 +636,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   return llvm::json::Value(std::move(object));
 }
 
-//----------------------------------------------------------------------
 // "Thread": {
 //   "type": "object",
 //   "description": "A Thread",
@@ -664,7 +651,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
 //   },
 //   "required": [ "id", "name" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateThread(lldb::SBThread &thread) {
   llvm::json::Object object;
   object.try_emplace("id", (int64_t)thread.GetThreadID());
@@ -682,7 +668,6 @@ llvm::json::Value CreateThread(lldb::SBThread &thread) {
   return llvm::json::Value(std::move(object));
 }
 
-//----------------------------------------------------------------------
 // "StoppedEvent": {
 //   "allOf": [ { "$ref": "#/definitions/Event" }, {
 //     "type": "object",
@@ -740,7 +725,6 @@ llvm::json::Value CreateThread(lldb::SBThread &thread) {
 //     "required": [ "event", "body" ]
 //   }]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
                                       uint32_t stop_id) {
   llvm::json::Object event(CreateEventObject("stopped"));
@@ -799,7 +783,6 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   return llvm::json::Value(std::move(event));
 }
 
-//----------------------------------------------------------------------
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -862,7 +845,6 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
 //   },
 //   "required": [ "name", "value", "variablesReference" ]
 // }
-//----------------------------------------------------------------------
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex) {
   llvm::json::Object object;

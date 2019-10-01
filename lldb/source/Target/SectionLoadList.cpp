@@ -121,7 +121,8 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
 
   } else {
     if (log) {
-      log->Printf(
+      LLDB_LOGF(
+          log,
           "SectionLoadList::%s (section = %p (%s), load_addr = 0x%16.16" PRIx64
           ") error: module has been deleted",
           __FUNCTION__, static_cast<void *>(section.get()),
@@ -145,9 +146,9 @@ size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
             section_sp->GetModule()->GetFileSpec());
         module_name = module_file_spec.GetPath();
       }
-      log->Printf("SectionLoadList::%s (section = %p (%s.%s))", __FUNCTION__,
-                  static_cast<void *>(section_sp.get()), module_name.c_str(),
-                  section_sp->GetName().AsCString());
+      LLDB_LOGF(log, "SectionLoadList::%s (section = %p (%s.%s))", __FUNCTION__,
+                static_cast<void *>(section_sp.get()), module_name.c_str(),
+                section_sp->GetName().AsCString());
     }
 
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -179,7 +180,8 @@ bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
       const FileSpec &module_file_spec(section_sp->GetModule()->GetFileSpec());
       module_name = module_file_spec.GetPath();
     }
-    log->Printf(
+    LLDB_LOGF(
+        log,
         "SectionLoadList::%s (section = %p (%s.%s), load_addr = 0x%16.16" PRIx64
         ")",
         __FUNCTION__, static_cast<void *>(section_sp.get()),

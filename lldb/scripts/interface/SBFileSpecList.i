@@ -22,19 +22,19 @@ public:
 
     bool
     GetDescription (SBStream &description) const;
-    
+
     void
     Append (const SBFileSpec &sb_file);
-    
+
     bool
     AppendIfUnique (const SBFileSpec &sb_file);
-    
+
     void
     Clear();
-    
+
     uint32_t
     FindFileIndex (uint32_t idx, const SBFileSpec &sb_file, bool full);
-    
+
     const SBFileSpec
     GetFileSpecAtIndex (uint32_t idx) const;
 

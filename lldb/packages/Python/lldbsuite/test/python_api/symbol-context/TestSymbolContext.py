@@ -5,9 +5,6 @@ Test SBSymbolContext APIs.
 from __future__ import print_function
 
 
-import os
-import re
-import time
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -102,3 +99,9 @@ class SymbolContextAPITestCase(TestBase):
         self.assertTrue(
             function.GetName() == symbol.GetName() and symbol.GetName() == 'c',
             "The symbol name should be 'c'")
+
+        sc_list = lldb.SBSymbolContextList()
+        sc_list.Append(context)
+        self.assertEqual(len(sc_list), 1)
+        for sc in sc_list:
+            self.assertEqual(lineEntry, sc.GetLineEntry())

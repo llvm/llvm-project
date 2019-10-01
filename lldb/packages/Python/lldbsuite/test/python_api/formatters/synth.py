@@ -92,7 +92,7 @@ def __lldb_init_module(debugger, dict):
     debugger.CreateCategory("JASSynth").AddTypeSynthetic(
         lldb.SBTypeNameSpecifier("JustAStruct"),
         lldb.SBTypeSynthetic.CreateWithClassName("synth.jasSynthProvider"))
-    cat = lldb.debugger.CreateCategory("CCCSynth")
+    cat = debugger.CreateCategory("CCCSynth")
     cat.AddTypeSynthetic(
         lldb.SBTypeNameSpecifier("CCC"),
         lldb.SBTypeSynthetic.CreateWithClassName("synth.CCCSynthProvider",

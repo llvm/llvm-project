@@ -23,9 +23,7 @@ class Address;
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
 // FileLineResolver:
-//----------------------------------------------------------------------
 FileLineResolver::FileLineResolver(const FileSpec &file_spec, uint32_t line_no,
                                    bool check_inlines)
     : Searcher(), m_file_spec(file_spec), m_line_number(line_no),

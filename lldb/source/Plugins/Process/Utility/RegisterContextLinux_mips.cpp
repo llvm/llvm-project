@@ -21,9 +21,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-//---------------------------------------------------------------------------
 // Include RegisterInfos_mips to declare our g_register_infos_mips structure.
-//---------------------------------------------------------------------------
 #define DECLARE_REGISTER_INFOS_MIPS_STRUCT
 #include "RegisterInfos_mips.h"
 #undef DECLARE_REGISTER_INFOS_MIPS_STRUCT
@@ -118,7 +116,7 @@ const RegisterInfo *RegisterContextLinux_mips::GetRegisterInfo() const {
     return g_register_infos_mips;
   default:
     assert(false && "Unhandled target architecture.");
-    return NULL;
+    return nullptr;
   }
 }
 

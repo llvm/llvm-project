@@ -6,10 +6,12 @@
 
 target triple = "wasm32-unknown-unknown"
 
+declare void @__wasm_call_ctors()
 declare i32 @comdatFn()
 
 define void @_start() {
 entry:
+  call void @__wasm_call_ctors()
   %call = call i32 @comdatFn()
   ret void
 }
@@ -35,37 +37,43 @@ entry:
 ; CHECK-NEXT:        Index:           0
 ; CHECK-NEXT:      - Name:            _start
 ; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           0
+; CHECK-NEXT:        Index:           1
 ; CHECK-NEXT:      - Name:            comdatFn
 ; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           1
+; CHECK-NEXT:        Index:           2
 ; CHECK-NEXT:      - Name:            constantData
 ; CHECK-NEXT:        Kind:            GLOBAL
 ; CHECK-NEXT:        Index:           1
 ; CHECK-NEXT:      - Name:            callComdatFn1
 ; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           2
+; CHECK-NEXT:        Index:           4
 ; CHECK-NEXT:      - Name:            callComdatFn2
 ; CHECK-NEXT:        Kind:            FUNCTION
-; CHECK-NEXT:        Index:           3
+; CHECK-NEXT:        Index:           5
 ; CHECK-NEXT:  - Type:            ELEM
 ; CHECK-NEXT:    Segments:
 ; CHECK-NEXT:      - Offset:
 ; CHECK-NEXT:          Opcode:          I32_CONST
 ; CHECK-NEXT:          Value:           1
-; CHECK-NEXT:        Functions:       [ 1 ]
+; CHECK-NEXT:        Functions:       [ 2 ]
 ; CHECK-NEXT:  - Type:            CODE
 ; CHECK-NEXT:    Functions:
 ; CHECK-NEXT:      - Index:           0
 ; CHECK-NEXT:        Locals:
-; CHECK-NEXT:        Body:            1081808080001A0B
+; CHECK-NEXT:        Body:            10030B
 ; CHECK-NEXT:      - Index:           1
 ; CHECK-NEXT:        Locals:
-; CHECK-NEXT:        Body:            4180888080000B
+; CHECK-NEXT:        Body:            1080808080001082808080001A0B
 ; CHECK-NEXT:      - Index:           2
 ; CHECK-NEXT:        Locals:
-; CHECK-NEXT:        Body:            4181808080000B
+; CHECK-NEXT:        Body:            4180888080000B
 ; CHECK-NEXT:      - Index:           3
+; CHECK-NEXT:        Locals:
+; CHECK-NEXT:        Body:            0B
+; CHECK-NEXT:      - Index:           4
+; CHECK-NEXT:        Locals:
+; CHECK-NEXT:        Body:            4181808080000B
+; CHECK-NEXT:      - Index:           5
 ; CHECK-NEXT:        Locals:
 ; CHECK-NEXT:        Body:            4181808080000B
 ; CHECK-NEXT:  - Type:            DATA

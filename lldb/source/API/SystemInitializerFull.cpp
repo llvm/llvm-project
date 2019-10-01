@@ -35,6 +35,7 @@
 #include "Plugins/ABI/SysV-ppc64/ABISysV_ppc64.h"
 #include "Plugins/ABI/SysV-s390x/ABISysV_s390x.h"
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
+#include "Plugins/ABI/Windows-x86_64/ABIWindows_x86_64.h"
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Architecture/Mips/ArchitectureMips.h"
 #include "Plugins/Architecture/PPC64/ArchitecturePPC64.h"
@@ -99,9 +100,9 @@
 #include "Plugins/Platform/MacOSX/PlatformAppleTVSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteAppleBridge.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteAppleBridge.h"
 #include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
 #include "Plugins/Process/MacOSX-Kernel/ProcessKDP.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
@@ -124,6 +125,11 @@
 #endif
 
 #include "llvm/Support/TargetSelect.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+#include "llvm/ExecutionEngine/MCJIT.h"
+#pragma clang diagnostic pop
 
 #include <string>
 
@@ -206,6 +212,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   ABISysV_mips::Initialize();
   ABISysV_mips64::Initialize();
   ABISysV_s390x::Initialize();
+  ABIWindows_x86_64::Initialize();
 
   ArchitectureArm::Initialize();
   ArchitectureMips::Initialize();
@@ -271,9 +278,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   // shouldn't be limited to __APPLE__.
   StructuredDataDarwinLog::Initialize();
 
-  //----------------------------------------------------------------------
   // Platform agnostic plugins
-  //----------------------------------------------------------------------
   platform_gdb_server::PlatformRemoteGDBServer::Initialize();
 
   process_gdb_remote::ProcessGDBRemote::Initialize();
@@ -324,6 +329,7 @@ void SystemInitializerFull::Terminate() {
   ABISysV_mips::Terminate();
   ABISysV_mips64::Terminate();
   ABISysV_s390x::Terminate();
+  ABIWindows_x86_64::Terminate();
   DisassemblerLLVMC::Terminate();
 
   JITLoaderGDB::Terminate();

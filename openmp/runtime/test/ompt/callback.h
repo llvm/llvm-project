@@ -168,6 +168,26 @@ ompt_label_##id:
 #define print_possible_return_addresses(addr) \
   printf("%" PRIu64 ": current_address=%p or %p\n", ompt_get_thread_data()->value, \
          ((char *)addr) - 4, ((char *)addr) - 8)
+#elif KMP_ARCH_RISCV64
+#if __riscv_compressed
+// On RV64GC the C.NOP instruction is 2 byte long. In addition, the compiler
+// inserts a J instruction (targeting the successor basic block), which
+// accounts for another 4 bytes. Finally, an additional J instruction may
+// appear (adding 4 more bytes) when the C.NOP is referenced elsewhere (ie.
+// another branch).
+#define print_possible_return_addresses(addr) \
+  printf("%" PRIu64 ": current_address=%p or %p\n", \
+         ompt_get_thread_data()->value, ((char *)addr) - 6, ((char *)addr) - 10)
+#else
+// On RV64G the NOP instruction is 4 byte long. In addition, the compiler
+// inserts a J instruction (targeting the successor basic block), which
+// accounts for another 4 bytes. Finally, an additional J instruction may
+// appear (adding 4 more bytes) when the NOP is referenced elsewhere (ie.
+// another branch).
+#define print_possible_return_addresses(addr) \
+  printf("%" PRIu64 ": current_address=%p or %p\n", \
+         ompt_get_thread_data()->value, ((char *)addr) - 8, ((char *)addr) - 12)
+#endif
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif
@@ -472,7 +492,8 @@ on_ompt_callback_implicit_task(
         char buffer[2048];
 
         format_task_type(flags, buffer);
-        if(parallel_data->ptr)
+        // Only check initial task not created by teams construct
+        if (team_size == 1 && thread_num == 1 && parallel_data->ptr)
           printf("%s\n", "0: parallel_data initially not null");
         parallel_data->value = ompt_get_unique_id();
         printf("%" PRIu64 ": ompt_event_initial_task_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", actual_parallelism=%" PRIu32 ", index=%" PRIu32 ", flags=%" PRIu32 "\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, team_size, thread_num, flags);
@@ -483,7 +504,12 @@ on_ompt_callback_implicit_task(
       break;
     case ompt_scope_end:
       if(flags & ompt_task_initial){
-        printf("%" PRIu64 ": ompt_event_initial_task_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, team_size, thread_num);
+        printf("%" PRIu64 ": ompt_event_initial_task_end: parallel_id=%" PRIu64
+               ", task_id=%" PRIu64 ", actual_parallelism=%" PRIu32
+               ", index=%" PRIu32 "\n",
+               ompt_get_thread_data()->value,
+               (parallel_data) ? parallel_data->value : 0, task_data->value,
+               team_size, thread_num);
       } else {
         printf("%" PRIu64 ": ompt_event_implicit_task_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", team_size=%" PRIu32 ", thread_num=%" PRIu32 "\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, team_size, thread_num);
       }
@@ -624,23 +650,28 @@ static void on_ompt_callback_parallel_begin(
   if(parallel_data->ptr)
     printf("0: parallel_data initially not null\n");
   parallel_data->value = ompt_get_unique_id();
-  printf("%" PRIu64 ": ompt_event_parallel_begin: parent_task_id=%" PRIu64
+  int invoker = flag & 0xF;
+  const char *event = (flag & ompt_parallel_team) ? "parallel" : "teams";
+  const char *size = (flag & ompt_parallel_team) ? "team_size" : "num_teams";
+  printf("%" PRIu64 ": ompt_event_%s_begin: parent_task_id=%" PRIu64
          ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, "
-         "parallel_id=%" PRIu64 ", requested_team_size=%" PRIu32
+         "parallel_id=%" PRIu64 ", requested_%s=%" PRIu32
          ", codeptr_ra=%p, invoker=%d\n",
-         ompt_get_thread_data()->value, encountering_task_data->value,
+         ompt_get_thread_data()->value, event, encountering_task_data->value,
          encountering_task_frame->exit_frame.ptr,
-         encountering_task_frame->enter_frame.ptr, parallel_data->value,
-         requested_team_size, codeptr_ra, flag);
+         encountering_task_frame->enter_frame.ptr, parallel_data->value, size,
+         requested_team_size, codeptr_ra, invoker);
 }
 
 static void on_ompt_callback_parallel_end(ompt_data_t *parallel_data,
                                           ompt_data_t *encountering_task_data,
                                           int flag, const void *codeptr_ra) {
-  printf("%" PRIu64 ": ompt_event_parallel_end: parallel_id=%" PRIu64
+  int invoker = flag & 0xF;
+  const char *event = (flag & ompt_parallel_team) ? "parallel" : "teams";
+  printf("%" PRIu64 ": ompt_event_%s_end: parallel_id=%" PRIu64
          ", task_id=%" PRIu64 ", invoker=%d, codeptr_ra=%p\n",
-         ompt_get_thread_data()->value, parallel_data->value,
-         encountering_task_data->value, flag, codeptr_ra);
+         ompt_get_thread_data()->value, event, parallel_data->value,
+         encountering_task_data->value, invoker, codeptr_ra);
 }
 
 static void

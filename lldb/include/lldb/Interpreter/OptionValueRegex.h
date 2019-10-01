@@ -21,9 +21,7 @@ public:
 
   ~OptionValueRegex() override = default;
 
-  //---------------------------------------------------------------------
   // Virtual subclass pure virtual overrides
-  //---------------------------------------------------------------------
 
   OptionValue::Type GetType() const override { return eTypeRegex; }
 
@@ -38,25 +36,23 @@ public:
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
-    m_regex.Clear();
+    m_regex = RegularExpression();
     m_value_was_set = false;
     return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;
 
-  //---------------------------------------------------------------------
   // Subclass specific functions
-  //---------------------------------------------------------------------
   const RegularExpression *GetCurrentValue() const {
     return (m_regex.IsValid() ? &m_regex : nullptr);
   }
 
   void SetCurrentValue(const char *value) {
     if (value && value[0])
-      m_regex.Compile(llvm::StringRef(value));
+      m_regex = RegularExpression(llvm::StringRef(value));
     else
-      m_regex.Clear();
+      m_regex = RegularExpression();
   }
 
   bool IsValid() const { return m_regex.IsValid(); }

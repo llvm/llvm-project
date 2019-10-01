@@ -26,7 +26,6 @@ class TestSwiftCoreGraphicsTypes(TestBase):
 
     @swiftTest
     @skipUnlessDarwin
-    @add_test_categories(["swiftpr"])
     def test_swift_coregraphics_types(self):
         """Test that we are able to properly format basic CG types"""
         self.build()

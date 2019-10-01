@@ -14,9 +14,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectReproducer
-//-------------------------------------------------------------------------
 
 class CommandObjectReproducer : public CommandObjectMultiword {
 public:

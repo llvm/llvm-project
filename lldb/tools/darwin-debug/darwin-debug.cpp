@@ -1,4 +1,4 @@
-//===-- Launcher.cpp --------------------------------------------*- C++ -*-===//
+//===-- darwin-debug.cpp ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//----------------------------------------------------------------------
 // Darwin launch helper
 //
 // This program was written to allow programs to be launched in a new
@@ -20,7 +19,6 @@
 //
 // Since it uses darwin specific flags this code should not be compiled
 // on other systems.
-//----------------------------------------------------------------------
 #if defined(__APPLE__)
 
 #include <crt_externs.h>

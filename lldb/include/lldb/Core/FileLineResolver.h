@@ -18,18 +18,11 @@
 
 namespace lldb_private {
 class Address;
-}
-namespace lldb_private {
 class Stream;
-}
 
-namespace lldb_private {
-
-//----------------------------------------------------------------------
-/// @class FileLineResolver FileLineResolver.h "lldb/Core/FileLineResolver.h"
+/// \class FileLineResolver FileLineResolver.h "lldb/Core/FileLineResolver.h"
 /// This class finds address for source file and line.  Optionally, it will
 /// look for inlined instances of the file and line specification.
-//----------------------------------------------------------------------
 
 class FileLineResolver : public Searcher {
 public:

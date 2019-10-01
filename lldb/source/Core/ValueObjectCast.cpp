@@ -79,7 +79,7 @@ bool ValueObjectCast::UpdateValue() {
                         m_value.GetScalar() != old_value.GetScalar());
     }
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+    m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
     SetValueDidChange(m_parent->GetValueDidChange());
     return true;
   }

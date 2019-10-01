@@ -46,8 +46,7 @@ static inline bool isprint8(int ch) {
   return isprint(ch);
 }
 
-//----------------------------------------------------------------------
-/// @class Options Options.h "lldb/Interpreter/Options.h"
+/// \class Options Options.h "lldb/Interpreter/Options.h"
 /// A command line option parsing protocol class.
 ///
 /// Options is designed to be subclassed to contain all needed options for a
@@ -60,7 +59,6 @@ static inline bool isprint8(int ch) {
 ///     *optstring, const struct option *longopts, int *longindex);
 /// \endcode
 ///
-//----------------------------------------------------------------------
 class Options {
 public:
   Options();
@@ -73,12 +71,10 @@ public:
 
   uint32_t NumCommandOptions();
 
-  //------------------------------------------------------------------
   /// Get the option definitions to use when parsing Args options.
   ///
-  /// @see Args::ParseOptions (Options&)
-  /// @see man getopt_long_only
-  //------------------------------------------------------------------
+  /// \see Args::ParseOptions (Options&)
+  /// \see man getopt_long_only
   Option *GetLongOptions();
 
   // This gets passed the short option as an integer...
@@ -114,7 +110,6 @@ public:
   // and subclasses shouldn't have to do it.
   void NotifyOptionParsingStarting(ExecutionContext *execution_context);
 
-  //------------------------------------------------------------------
   /// Parse the provided arguments.
   ///
   /// The parsed options are set via calls to SetOptionValue. In case of a
@@ -131,7 +126,6 @@ public:
   /// param[in] require_validation
   ///   When true, it will fail option parsing if validation could
   ///   not occur due to not having a platform.
-  //------------------------------------------------------------------
   llvm::Expected<Args> Parse(const Args &args,
                              ExecutionContext *execution_context,
                              lldb::PlatformSP platform_sp,
@@ -146,67 +140,54 @@ public:
 
   Status NotifyOptionParsingFinished(ExecutionContext *execution_context);
 
-  //------------------------------------------------------------------
   /// Set the value of an option.
   ///
-  /// @param[in] option_idx
+  /// \param[in] option_idx
   ///     The index into the "struct option" array that was returned
   ///     by Options::GetLongOptions().
   ///
-  /// @param[in] option_arg
+  /// \param[in] option_arg
   ///     The argument value for the option that the user entered, or
   ///     nullptr if there is no argument for the current option.
   ///
-  /// @param[in] execution_context
+  /// \param[in] execution_context
   ///     The execution context to use for evaluating the option.
   ///     May be nullptr if the option is to be evaluated outside any
   ///     particular context.
   ///
-  /// @see Args::ParseOptions (Options&)
-  /// @see man getopt_long_only
-  //------------------------------------------------------------------
+  /// \see Args::ParseOptions (Options&)
+  /// \see man getopt_long_only
   virtual Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                                 ExecutionContext *execution_context) = 0;
 
-  //------------------------------------------------------------------
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// @param[in/out] request
+  /// \param[in/out] request
   ///    The completion request that we need to act upon.
   ///
-  /// @param[in] interpreter
+  /// \param[in] interpreter
   ///     The interpreter that's doing the completing.
   ///
   /// FIXME: This is the wrong return value, since we also need to
   /// make a distinction between total number of matches, and the window the
   /// user wants returned.
   ///
-  /// @return
+  /// \return
   ///     \btrue if we were in an option, \bfalse otherwise.
-  //------------------------------------------------------------------
   bool HandleOptionCompletion(lldb_private::CompletionRequest &request,
                               OptionElementVector &option_map,
                               CommandInterpreter &interpreter);
 
-  //------------------------------------------------------------------
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// @param[in/out] request
+  /// \param[in/out] request
   ///    The completion request that we need to act upon.
   ///
-  /// @param[in] interpreter
+  /// \param[in] interpreter
   ///    The command interpreter doing the completion.
-  ///
-  /// FIXME: This is the wrong return value, since we also need to
-  /// make a distinction between total number of matches, and the window the
-  /// user wants returned.
-  ///
-  /// @return
-  ///     \btrue if we were in an option, \bfalse otherwise.
-  //------------------------------------------------------------------
-  virtual bool
+  virtual void
   HandleOptionArgumentCompletion(lldb_private::CompletionRequest &request,
                                  OptionElementVector &opt_element_vector,
                                  int opt_element_index,
@@ -283,40 +264,36 @@ public:
 
   ~OptionGroupOptions() override = default;
 
-  //----------------------------------------------------------------------
   /// Append options from a OptionGroup class.
   ///
   /// Append all options from \a group using the exact same option groups that
   /// each option is defined with.
   ///
-  /// @param[in] group
+  /// \param[in] group
   ///     A group of options to take option values from and copy their
   ///     definitions into this class.
-  //----------------------------------------------------------------------
   void Append(OptionGroup *group);
 
-  //----------------------------------------------------------------------
   /// Append options from a OptionGroup class.
   ///
   /// Append options from \a group that have a usage mask that has any bits in
   /// "src_mask" set. After the option definition is copied into the options
   /// definitions in this class, set the usage_mask to "dst_mask".
   ///
-  /// @param[in] group
+  /// \param[in] group
   ///     A group of options to take option values from and copy their
   ///     definitions into this class.
   ///
-  /// @param[in] src_mask
+  /// \param[in] src_mask
   ///     When copying options from \a group, you might only want some of
   ///     the options to be appended to this group. This mask allows you
   ///     to control which options from \a group get added. It also allows
   ///     you to specify the same options from \a group multiple times
   ///     for different option sets.
   ///
-  /// @param[in] dst_mask
+  /// \param[in] dst_mask
   ///     Set the usage mask for any copied options to \a dst_mask after
   ///     copying the option definition.
-  //----------------------------------------------------------------------
   void Append(OptionGroup *group, uint32_t src_mask, uint32_t dst_mask);
 
   void Finalize();

@@ -3,14 +3,14 @@
 # misinterpreted that value as a reference to a DIE specifying the VLA size even
 # though the form was a data form (as it should be).
 
-# REQUIRES: lld
+# REQUIRES: lld, x86
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: lldb-test symbols %t | FileCheck %s
 
-# CHECK: Variable{0xffffffff0000001e}, name = "X"
-# CHECK-SAME: type = {ffffffff00000033} 0x{{[0-9a-f]*}} (char [56])
+# CHECK: Variable{0x7fffffff0000001e}, name = "X"
+# CHECK-SAME: type = {7fffffff00000033} 0x{{[0-9a-f]*}} (char [56])
 
 
 # Generated from "char X[47];"

@@ -82,7 +82,7 @@ test_fill_by_type(std::size_t n)
     invoke_on_all_policies(test_fill_n(), in.begin(), n, value);
 }
 
-int32_t
+int
 main()
 {
 

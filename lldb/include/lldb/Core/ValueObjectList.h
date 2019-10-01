@@ -18,24 +18,10 @@
 
 namespace lldb_private {
 class ValueObject;
-}
 
-namespace lldb_private {
-
-//----------------------------------------------------------------------
 // A collection of ValueObject values that
-//----------------------------------------------------------------------
 class ValueObjectList {
 public:
-  //------------------------------------------------------------------
-  // Constructors and Destructors
-  //------------------------------------------------------------------
-  ValueObjectList();
-
-  ValueObjectList(const ValueObjectList &rhs);
-
-  ~ValueObjectList();
-
   const ValueObjectList &operator=(const ValueObjectList &rhs);
 
   void Append(const lldb::ValueObjectSP &val_obj_sp);
@@ -67,9 +53,7 @@ public:
   }
 protected:
   typedef std::vector<lldb::ValueObjectSP> collection;
-  //------------------------------------------------------------------
   // Classes that inherit from ValueObjectList can see and modify these
-  //------------------------------------------------------------------
   collection m_value_objects;
 };
 

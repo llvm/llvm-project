@@ -164,7 +164,7 @@ void *kmp_aligned_malloc(size_t sz, size_t a) {
 #if KMP_OS_WINDOWS
   res = _aligned_malloc(sz, a);
 #else
-  if (err = posix_memalign(&res, a, sz)) {
+  if ((err = posix_memalign(&res, a, sz))) {
     errno = err; // can be EINVAL or ENOMEM
     res = NULL;
   }
@@ -275,21 +275,10 @@ void __kmps_get_schedule(kmp_sched_t *kind, int *modifier) {
   *modifier = __kmps_sched_modifier;
 } // __kmps_get_schedule
 
-#if OMP_40_ENABLED
-
-static kmp_proc_bind_t __kmps_proc_bind = proc_bind_false;
-
-void __kmps_set_proc_bind(kmp_proc_bind_t arg) {
-  i;
-  __kmps_proc_bind = arg;
-} // __kmps_set_proc_bind
-
 kmp_proc_bind_t __kmps_get_proc_bind(void) {
   i;
-  return __kmps_proc_bind;
+  return proc_bind_false;
 } // __kmps_get_proc_bind
-
-#endif /* OMP_40_ENABLED */
 
 double __kmps_get_wtime(void) {
   // Elapsed wall clock time (in second) from "sometime in the past".
@@ -342,7 +331,6 @@ double __kmps_get_wtick(void) {
   return wtick;
 } // __kmps_get_wtick
 
-#if OMP_50_ENABLED
 /* OpenMP 5.0 Memory Management */
 #if KMP_OS_WINDOWS
 omp_allocator_handle_t const omp_null_allocator = 0;
@@ -393,6 +381,5 @@ size_t omp_capture_affinity(char *buffer, size_t buf_size, char const *format) {
   i;
   return 0;
 }
-#endif /* OMP_50_ENABLED */
 
 // end of file //

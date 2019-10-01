@@ -34,6 +34,7 @@
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
+class DependencyTracker;
 class DWARFImporterDelegate;
 class IRGenOptions;
 class NominalTypeDecl;
@@ -107,9 +108,7 @@ public:
     LanguageFlags() = delete;
   };
 
-  //------------------------------------------------------------------
   // llvm casting support
-  //------------------------------------------------------------------
   static bool classof(const TypeSystem *ts) {
     return ts->getKind() == TypeSystem::eKindSwift;
   }
@@ -117,9 +116,7 @@ public:
   /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
 
-  //------------------------------------------------------------------
   // Constructors and destructors
-  //------------------------------------------------------------------
   SwiftASTContext(std::string description, llvm::Triple triple,
                   Target *target = nullptr);
 
@@ -127,9 +124,7 @@ public:
 
   ~SwiftASTContext();
 
-  //------------------------------------------------------------------
   // PluginInterface functions
-  //------------------------------------------------------------------
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -379,16 +374,12 @@ public:
 
   DWARFASTParser *GetDWARFParser() override;
 
-  //----------------------------------------------------------------------
   // CompilerDecl functions
-  //----------------------------------------------------------------------
   ConstString DeclGetName(void *opaque_decl) override {
     return ConstString("");
   }
 
-  //----------------------------------------------------------------------
   // CompilerDeclContext functions
-  //----------------------------------------------------------------------
 
   std::vector<CompilerDecl>
   DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
@@ -406,10 +397,15 @@ public:
                                 lldb::LanguageType *language_ptr,
                                 bool *is_instance_method_ptr,
                                 ConstString *language_object_name_ptr) override;
+                                
+  bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
+                                      void *other_opaque_decl_ctx) override {
+    if (opaque_decl_ctx == other_opaque_decl_ctx)
+      return true;
+    return false;
+  }
 
-  //----------------------------------------------------------------------
   // Tests
-  //----------------------------------------------------------------------
 
   bool IsArrayType(void *type, CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override;
@@ -449,6 +445,8 @@ public:
   bool IsScalarType(void *type) override;
 
   bool IsVoidType(void *type) override;
+
+  bool CanPassInRegisters(const CompilerType &type) override;
 
   static bool IsGenericType(const CompilerType &compiler_type);
 
@@ -494,21 +492,15 @@ public:
       const CompilerType &type, NonTriviallyManagedReferenceStrategy &strategy,
       CompilerType *underlying_type = nullptr);
 
-  //----------------------------------------------------------------------
   // Type Completion
-  //----------------------------------------------------------------------
 
   bool GetCompleteType(void *type) override;
 
-  //----------------------------------------------------------------------
   // AST related queries
-  //----------------------------------------------------------------------
 
   uint32_t GetPointerByteSize() override;
 
-  //----------------------------------------------------------------------
   // Accessors
-  //----------------------------------------------------------------------
 
   ConstString GetTypeName(void *type) override;
 
@@ -523,9 +515,7 @@ public:
 
   lldb::TypeClass GetTypeClass(void *type) override;
 
-  //----------------------------------------------------------------------
   // Creating related types
-  //----------------------------------------------------------------------
 
   CompilerType GetArrayElementType(void *type, uint64_t *stride) override;
 
@@ -550,9 +540,7 @@ public:
 
   CompilerType GetPointerType(void *type) override;
 
-  //----------------------------------------------------------------------
   // Exploring the type
-  //----------------------------------------------------------------------
 
   llvm::Optional<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
@@ -621,9 +609,7 @@ public:
                                   bool *has_payload, CompilerType *payload,
                                   bool *is_indirect);
 
-  //----------------------------------------------------------------------
   // Dumping types
-  //----------------------------------------------------------------------
 #ifndef NDEBUG
   /// Convenience LLVM-style dump method for use in the debugger only.
   LLVM_DUMP_METHOD virtual void
@@ -654,9 +640,7 @@ public:
   void DumpTypeDescription(void *type, Stream *s, bool print_help_if_available,
                            bool print_extensions_if_available);
 
-  //----------------------------------------------------------------------
   // TODO: These methods appear unused. Should they be removed?
-  //----------------------------------------------------------------------
 
   bool IsRuntimeGeneratedType(void *type) override;
 
@@ -664,14 +648,7 @@ public:
                    const DataExtractor &data, lldb::offset_t data_offset,
                    size_t data_byte_size) override;
 
-  // Converts "s" to a floating point value and place resulting floating
-  // point bytes in the "dst" buffer.
-  size_t ConvertStringToFloatValue(void *type, const char *s, uint8_t *dst,
-                                   size_t dst_size) override;
-
-  //----------------------------------------------------------------------
   // TODO: Determine if these methods should move to ClangASTContext.
-  //----------------------------------------------------------------------
 
   bool IsPointerOrReferenceType(void *type,
                                 CompilerType *pointee_type) override;
@@ -705,6 +682,8 @@ public:
   CompilerType GetTypedefedType(void *type) override;
 
   CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   bool IsVectorType(void *type, CompilerType *element_type,
                     uint64_t *size) override;
@@ -809,6 +788,7 @@ protected:
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
+  std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
   /// A collection of (not necessarily fatal) error messages that
   /// should be printed by Process::PrintWarningCantLoadSwift().
@@ -912,7 +892,8 @@ public:
   GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
                     lldb::LanguageType language,
                     Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options) override;
+                    const EvaluateExpressionOptions &options,
+                    ValueObject *ctx_obj) override;
 
   PersistentExpressionState *GetPersistentExpressionState() override;
 

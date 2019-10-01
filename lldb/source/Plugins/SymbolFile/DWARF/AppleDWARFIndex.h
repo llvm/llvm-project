@@ -42,14 +42,13 @@ public:
   void GetTypes(ConstString name, DIEArray &offsets) override;
   void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;
-  void GetFunctions(ConstString name, DWARFDebugInfo &info,
+  void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
                     std::vector<DWARFDIE> &dies) override;
   void GetFunctions(const RegularExpression &regex, DIEArray &offsets) override;
 
-  void ReportInvalidDIEOffset(dw_offset_t offset,
-                              llvm::StringRef name) override;
+  void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) override;
   void Dump(Stream &s) override;
 
 private:

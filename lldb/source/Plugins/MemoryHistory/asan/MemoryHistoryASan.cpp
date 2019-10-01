@@ -30,7 +30,7 @@ using namespace lldb_private;
 
 MemoryHistorySP MemoryHistoryASan::CreateInstance(const ProcessSP &process_sp) {
   if (!process_sp.get())
-    return NULL;
+    return nullptr;
 
   Target &target = process_sp->GetTarget();
 

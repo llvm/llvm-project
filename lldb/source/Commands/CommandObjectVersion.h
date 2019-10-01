@@ -13,9 +13,7 @@
 
 namespace lldb_private {
 
-//-------------------------------------------------------------------------
 // CommandObjectVersion
-//-------------------------------------------------------------------------
 
 class CommandObjectVersion : public CommandObjectParsed {
 public:
