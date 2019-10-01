@@ -1789,8 +1789,33 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx != 2)
       return UnableToLegalize;
     Observer.changingInstr(MI);
+    // TODO: Probably should be zext
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
     Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    if (TypeIdx == 1) {
+      Observer.changingInstr(MI);
+
+      Register VecReg = MI.getOperand(1).getReg();
+      LLT VecTy = MRI.getType(VecReg);
+      LLT WideVecTy = LLT::vector(VecTy.getNumElements(), WideTy);
+
+      widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_ANYEXT);
+      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
+      widenScalarDst(MI, WideVecTy, 0);
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
+
+    if (TypeIdx == 2) {
+      Observer.changingInstr(MI);
+      // TODO: Probably should be zext
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
+      Observer.changedInstr(MI);
+    }
+
     return Legalized;
   }
   case TargetOpcode::G_FADD:
