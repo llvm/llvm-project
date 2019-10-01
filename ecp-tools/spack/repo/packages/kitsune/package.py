@@ -198,16 +198,26 @@ class Kitsune(CMakePackage):
     # bindings are appropriately linked into the python tree
     extends('python', when='+python')
 
-    
+    # NOTE: Simply requiring {kokkos,legion,qthreads} should be sufficient to
+    # enable the respective Kitsune functionality. No need to add CMake defines
+    # in cmake_args()
     depends_on('kokkos', when='+kokkos')
 
     depends_on('legion', when='tapir_runtimes=realm')
 
     depends_on('qthreads+hwloc', when='tapir_runtimes=qthreads')
+
     # NOTE: qthreads backend requires linking against libnuma, which is pulled
     # in by the hwloc dependency.  Not sure if it's worth making the Spack
     # numactl package an explicit dependency here or not.
+    #
     # depends_on('numactl', when='tapir_runtimes=qthreads')
+
+    # Need to specify these as well, unfortunately.  There is not yet any way to
+    # make tapir_runtimes=all implicitly the same as
+    # tapir_runtimes=qthreads,realm,openmp
+    depends_on('legion', when='tapir_runtimes=all')
+    depends_on('qthreads+hwloc', when='tapir_runtimes=all')
 
 
 
@@ -316,13 +326,13 @@ class Kitsune(CMakePackage):
 
 
         enable_projects=[]
-        for project in projects:
+        for project in Kitsune.projects:
             if '+{}'.format(project) in spec:
                 enable_projects.append(project)
         
         cmake_args.append(
             '-DLLVM_ENABLE_PROJECTS:STRING={}'.format(
-                ';'.join(enabled_projects)))
+                ';'.join(enable_projects)))
 
         
         # all is default in CMake config, so only mess with args if something
