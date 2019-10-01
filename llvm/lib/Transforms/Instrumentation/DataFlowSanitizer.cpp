@@ -1212,7 +1212,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     return DFS.ZeroShadow;
   case 1: {
     LoadInst *LI = new LoadInst(DFS.ShadowTy, ShadowAddr, "", Pos);
-    LI->setAlignment(ShadowAlign);
+    LI->setAlignment(MaybeAlign(ShadowAlign));
     return LI;
   }
   case 2: {

@@ -50,8 +50,8 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 
 ; CHECK-LABEL: expand_v8i16_v4i32
 ; CHECK: [[ELEMS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[ELEMS_REM:%[^ ]+]], %vector.body ]
+; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS]])
 ; CHECK: [[ELEMS_REM]] = sub i32 [[ELEMS]], 8
-; CHECK: [[VCTP:%[^ ]+]] = call <8 x i1> @llvm.arm.vctp16(i32 [[ELEMS_REM]])
 ; CHECK: tail call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* {{.*}}, i32 4, <8 x i1> [[VCTP]], <8 x i16> undef)
 ; CHECK: %store.pred = icmp ule <4 x i32> %induction.store
 ; CHECK: tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> {{.*}}, <4 x i32>* {{.*}}, i32 4, <4 x i1> %store.pred)

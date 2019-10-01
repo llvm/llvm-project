@@ -65,6 +65,13 @@ namespace {
   private:
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
 
+    static llvm::StringRef ExpandModuleName(llvm::StringRef ModuleName,
+                                            const CodeGenOptions &CGO) {
+      if (ModuleName == "-" && !CGO.MainFileName.empty())
+        return CGO.MainFileName;
+      return ModuleName;
+    }
+
   public:
     CodeGeneratorImpl(DiagnosticsEngine &diags, llvm::StringRef ModuleName,
                       const HeaderSearchOptions &HSO,
@@ -73,7 +80,8 @@ namespace {
                       CoverageSourceInfo *CoverageInfo = nullptr)
         : Diags(diags), Ctx(nullptr), HeaderSearchOpts(HSO),
           PreprocessorOpts(PPO), CodeGenOpts(CGO), HandlingTopLevelDecls(0),
-          CoverageInfo(CoverageInfo), M(new llvm::Module(ModuleName, C)) {
+          CoverageInfo(CoverageInfo),
+          M(new llvm::Module(ExpandModuleName(ModuleName, CGO), C)) {
       C.setDiscardValueNames(CGO.DiscardValueNames);
     }
 
@@ -121,7 +129,7 @@ namespace {
     llvm::Module *StartModule(llvm::StringRef ModuleName,
                               llvm::LLVMContext &C) {
       assert(!M && "Replacing existing Module?");
-      M.reset(new llvm::Module(ModuleName, C));
+      M.reset(new llvm::Module(ExpandModuleName(ModuleName, CodeGenOpts), C));
       Initialize(*Ctx);
       return M.get();
     }

@@ -310,19 +310,14 @@ uint32_t SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
 
 uint32_t SymbolFileBreakpad::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
-  if (!append)
-    types.Clear();
-  return types.GetSize();
+    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {
+  return 0;
 }
 
 size_t SymbolFileBreakpad::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                     LanguageSet languages, bool append,
-                                     TypeMap &types) {
-  if (!append)
-    types.Clear();
-  return types.GetSize();
+                                     LanguageSet languages, TypeMap &types) {
+  return 0;
 }
 
 void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {

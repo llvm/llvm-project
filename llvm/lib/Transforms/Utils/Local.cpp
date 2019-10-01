@@ -1154,7 +1154,7 @@ static unsigned enforceKnownAlignment(Value *V, unsigned Alignment,
     // then don't round up. This avoids dynamic stack realignment.
     if (DL.exceedsNaturalStackAlignment(Align(PrefAlign)))
       return Alignment;
-    AI->setAlignment(PrefAlign);
+    AI->setAlignment(MaybeAlign(PrefAlign));
     return PrefAlign;
   }
 

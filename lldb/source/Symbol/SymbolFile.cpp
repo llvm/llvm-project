@@ -141,19 +141,14 @@ void SymbolFile::GetMangledNamesForFunction(
 
 uint32_t SymbolFile::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches,
+    uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
-  if (!append)
-    types.Clear();
   return 0;
 }
 
 size_t SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                             LanguageSet languages, bool append,
-                             TypeMap &types) {
-  if (!append)
-    types.Clear();
+                             LanguageSet languages, TypeMap &types) {
   return 0;
 }
 

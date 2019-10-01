@@ -107,11 +107,13 @@ public:
   LazyASTImporter(ExternalASTMerger &_Parent, ASTContext &ToContext,
                   FileManager &ToFileManager, ASTContext &FromContext,
                   FileManager &FromFileManager,
-                  const ExternalASTMerger::OriginMap &_FromOrigins)
+                  const ExternalASTMerger::OriginMap &_FromOrigins,
+                  std::shared_ptr<ASTImporterSharedState> SharedState)
       : ASTImporter(ToContext, ToFileManager, FromContext, FromFileManager,
-                    /*MinimalImport=*/true),
+                    /*MinimalImport=*/true, SharedState),
         Parent(_Parent), Reverse(FromContext, FromFileManager, ToContext,
-                                 ToFileManager, /*MinimalImport=*/true), FromOrigins(_FromOrigins) {}
+                                 ToFileManager, /*MinimalImport=*/true),
+        FromOrigins(_FromOrigins) {}
 
   /// Whenever a DeclContext is imported, ensure that ExternalASTSource's origin
   /// map is kept up to date.  Also set the appropriate flags.
@@ -314,6 +316,8 @@ void ExternalASTMerger::RecordOriginImpl(const DeclContext *ToDC, DCOrigin Origi
 
 ExternalASTMerger::ExternalASTMerger(const ImporterTarget &Target,
                                      llvm::ArrayRef<ImporterSource> Sources) : LogStream(&llvm::nulls()), Target(Target) {
+  SharedState = std::make_shared<ASTImporterSharedState>(
+      *Target.AST.getTranslationUnitDecl());
   AddSources(Sources);
 }
 
@@ -321,7 +325,7 @@ void ExternalASTMerger::AddSources(llvm::ArrayRef<ImporterSource> Sources) {
   for (const ImporterSource &S : Sources) {
     assert(&S.AST != &Target.AST);
     Importers.push_back(std::make_unique<LazyASTImporter>(
-        *this, Target.AST, Target.FM, S.AST, S.FM, S.OM));
+        *this, Target.AST, Target.FM, S.AST, S.FM, S.OM, SharedState));
   }
 }
 

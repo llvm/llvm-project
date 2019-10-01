@@ -355,8 +355,8 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  EXPECT_EQ(1u, symfile->FindTypes(ConstString("Class"), nullptr, false, 0,
-                                   searched_files, results));
+  symfile->FindTypes(ConstString("Class"), nullptr, false, 0, searched_files,
+                     results);
   EXPECT_EQ(1u, results.GetSize());
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
   EXPECT_EQ(ConstString("Class"), udt_type->GetName());
@@ -385,8 +385,8 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
       llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
-  EXPECT_EQ(1u, symfile->FindTypes(ConstString("Class"), nullptr, false, 0,
-                                   searched_files, results));
+  symfile->FindTypes(ConstString("Class"), nullptr, false, 0, searched_files,
+                     results);
   EXPECT_EQ(1u, results.GetSize());
 
   auto Class = results.GetTypeAtIndex(0);
@@ -404,9 +404,8 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   // compiler type for both, but `FindTypes` may return more than one type
   // (with the same compiler type) because the symbols have different IDs.
   auto ClassCompilerDeclCtx = CompilerDeclContext(clang_ast_ctx, ClassDeclCtx);
-  EXPECT_LE(1u, symfile->FindTypes(ConstString("NestedClass"),
-                                   &ClassCompilerDeclCtx, false, 0,
-                                   searched_files, results));
+  symfile->FindTypes(ConstString("NestedClass"), &ClassCompilerDeclCtx, false,
+                     0, searched_files, results);
   EXPECT_LE(1u, results.GetSize());
 
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
@@ -450,8 +449,8 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   auto ns_namespace = symfile->FindNamespace(ConstString("NS"), nullptr);
   EXPECT_TRUE(ns_namespace.IsValid());
 
-  EXPECT_EQ(1u, symfile->FindTypes(ConstString("NSClass"), &ns_namespace, false,
-                                   0, searched_files, results));
+  symfile->FindTypes(ConstString("NSClass"), &ns_namespace, false,
+                     0, searched_files, results);
   EXPECT_EQ(1u, results.GetSize());
 
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
@@ -476,8 +475,8 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
   const char *EnumsToCheck[] = {"Enum", "ShortEnum"};
   for (auto Enum : EnumsToCheck) {
     TypeMap results;
-    EXPECT_EQ(1u, symfile->FindTypes(ConstString(Enum), nullptr, false, 0,
-                                     searched_files, results));
+    symfile->FindTypes(ConstString(Enum), nullptr, false, 0,
+                       searched_files, results);
     EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP enum_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Enum), enum_type->GetName());
@@ -525,8 +524,8 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
                                    "VariadicFuncPointerTypedef"};
   for (auto Typedef : TypedefsToCheck) {
     TypeMap results;
-    EXPECT_EQ(1u, symfile->FindTypes(ConstString(Typedef), nullptr, false, 0,
-                                     searched_files, results));
+    symfile->FindTypes(ConstString(Typedef), nullptr, false, 0,
+                       searched_files, results);
     EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP typedef_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Typedef), typedef_type->GetName());
@@ -571,17 +570,17 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
   const ConstString name("ClassTypedef");
-  uint32_t num_results =
-      symfile->FindTypes(name, nullptr, false, 0, searched_files, results);
+  symfile->FindTypes(name, nullptr, false, 0, searched_files, results);
   // Try to limit ourselves from 1 to 10 results, otherwise we could be doing
   // this thousands of times.
   // The idea is just to make sure that for a variety of values, the number of
   // limited results always
   // comes out to the number we are expecting.
-  uint32_t iterations = std::min(num_results, 10u);
+  uint32_t iterations = std::min(results.GetSize(), 10u);
+  uint32_t num_results = results.GetSize();
   for (uint32_t i = 1; i <= iterations; ++i) {
-    uint32_t num_limited_results =
-        symfile->FindTypes(name, nullptr, false, i, searched_files, results);
+    symfile->FindTypes(name, nullptr, false, i, searched_files, results);
+    uint32_t num_limited_results = results.GetSize() - num_results);
     EXPECT_EQ(i, num_limited_results);
     EXPECT_EQ(num_limited_results, results.GetSize());
   }
@@ -596,9 +595,7 @@ TEST_F(SymbolFilePDBTests, TestNullName) {
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  uint32_t num_results = symfile->FindTypes(ConstString(), nullptr, false, 0,
-                                            searched_files, results);
-  EXPECT_EQ(0u, num_results);
+  symfile->FindTypes(ConstString(), nullptr, false, 0, searched_files, results);
   EXPECT_EQ(0u, results.GetSize());
 }
 
