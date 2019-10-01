@@ -3386,6 +3386,18 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  /// Return 1 if we can compute the negated form of the specified expression
+  /// for the same cost as the expression itself, or 2 if we can compute the
+  /// negated form more cheaply than the expression itself. Else return 0.
+  virtual char isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
+                                  bool LegalOperations, bool ForCodeSize,
+                                  unsigned Depth = 0) const;
+
+  /// If isNegatibleForFree returns true, return the newly negated expression.
+  virtual SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                       bool LegalOperations, bool ForCodeSize,
+                                       unsigned Depth = 0) const;
+
   //===--------------------------------------------------------------------===//
   // Lowering methods - These methods must be implemented by targets so that
   // the SelectionDAGBuilder code knows how to lower these.

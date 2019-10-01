@@ -416,9 +416,8 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI));
   assert(TII->getNamedOperand(MI, AMDGPU::OpName::soffset)->getReg() ==
-         MF->getInfo<SIMachineFunctionInfo>()->getFrameOffsetReg() &&
-         "should only be seeing frame offset relative FrameIndex");
-
+         MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg() &&
+         "should only be seeing stack pointer offset relative FrameIndex");
 
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;
@@ -1975,6 +1974,9 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
   case 512:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
                                                  &AMDGPU::SReg_512RegClass;
+  case 1024:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_1024RegClass :
+                                                 &AMDGPU::SReg_1024RegClass;
   default:
     if (Size < 32)
       return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :

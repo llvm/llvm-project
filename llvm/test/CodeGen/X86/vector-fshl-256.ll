@@ -1550,10 +1550,11 @@ define <32 x i8> @splatvar_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %
 ; AVX512VL-NEXT:    vpsrlw %xmm4, %xmm5, %xmm4
 ; AVX512VL-NEXT:    vpsrlw $8, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vpbroadcastb %xmm4, %ymm4
-; AVX512VL-NEXT:    vpternlogq $236, %ymm1, %ymm3, %ymm4
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpcmpeqb %ymm1, %ymm2, %ymm1
-; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm0, %ymm4, %ymm0
+; AVX512VL-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpor %ymm1, %ymm3, %ymm1
+; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatvar_funnnel_v32i8:
