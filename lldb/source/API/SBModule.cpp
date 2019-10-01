@@ -503,16 +503,10 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
     const bool exact_match = false;
     ConstString name(type);
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    const uint32_t num_matches = module_sp->FindTypes(
-        name, exact_match, UINT32_MAX, searched_symbol_files, type_list);
+    module_sp->FindTypes(name, exact_match, UINT32_MAX, searched_symbol_files,
+                         type_list);
 
-    if (num_matches > 0) {
-      for (size_t idx = 0; idx < num_matches; idx++) {
-        TypeSP type_sp(type_list.GetTypeAtIndex(idx));
-        if (type_sp)
-          retval.Append(SBType(type_sp));
-      }
-    } else {
+    if (type_list.Empty()) {
       auto type_system_or_err =
           module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
@@ -523,9 +517,14 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
         if (compiler_type)
           retval.Append(SBType(compiler_type));
       }
+    } else {
+      for (size_t idx = 0; idx < type_list.GetSize(); idx++) {
+        TypeSP type_sp(type_list.GetTypeAtIndex(idx));
+        if (type_sp)
+          retval.Append(SBType(type_sp));
+      }
     }
   }
-
   return LLDB_RECORD_RESULT(retval);
 }
 

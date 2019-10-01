@@ -29,8 +29,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
-void StructuredPythonObject::Dump(Stream &s, bool pretty_print) const {
-  s << "Python Obj: 0x" << GetValue();
+void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
+  s.value(llvm::formatv("Python Obj: {0:X}", GetValue()).str());
 }
 
 // PythonObject

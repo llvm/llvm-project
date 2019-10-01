@@ -939,7 +939,7 @@ void Module::FindAddressesForLine(const lldb::TargetSP target_sp,
   }
 }
 
-size_t Module::FindTypes_Impl(
+void Module::FindTypes_Impl(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
@@ -947,42 +947,38 @@ size_t Module::FindTypes_Impl(
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   if (SymbolFile *symbols = GetSymbolFile())
-    return symbols->FindTypes(name, parent_decl_ctx, max_matches,
-                              searched_symbol_files, types);
-  return 0;
+    symbols->FindTypes(name, parent_decl_ctx, max_matches,
+                       searched_symbol_files, types);
 }
 
-size_t Module::FindTypesInNamespace(ConstString type_name,
-                                    const CompilerDeclContext *parent_decl_ctx,
-                                    size_t max_matches, TypeList &type_list) {
+void Module::FindTypesInNamespace(ConstString type_name,
+                                  const CompilerDeclContext *parent_decl_ctx,
+                                  size_t max_matches, TypeList &type_list) {
   TypeMap types_map;
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  size_t num_types = FindTypes_Impl(type_name, parent_decl_ctx, max_matches,
-                                    searched_symbol_files, types_map);
-  if (num_types > 0) {
+  FindTypes_Impl(type_name, parent_decl_ctx, max_matches, searched_symbol_files,
+                 types_map);
+  if (types_map.GetSize()) {
     SymbolContext sc;
     sc.module_sp = shared_from_this();
     sc.SortTypeList(types_map, type_list);
   }
-  return num_types;
 }
 
 lldb::TypeSP Module::FindFirstType(const SymbolContext &sc,
                                    ConstString name, bool exact_match) {
   TypeList type_list;
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  const size_t num_matches =
-      FindTypes(name, exact_match, 1, searched_symbol_files, type_list);
-  if (num_matches)
+  FindTypes(name, exact_match, 1, searched_symbol_files, type_list);
+  if (type_list.GetSize())
     return type_list.GetTypeAtIndex(0);
   return TypeSP();
 }
 
-size_t Module::FindTypes(
+void Module::FindTypes(
     ConstString name, bool exact_match, size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeList &types) {
-  size_t num_matches = 0;
   const char *type_name_cstr = name.GetCString();
   llvm::StringRef type_scope;
   llvm::StringRef type_basename;
@@ -998,12 +994,11 @@ size_t Module::FindTypes(
     exact_match = type_scope.consume_front("::");
 
     ConstString type_basename_const_str(type_basename);
-    if (FindTypes_Impl(type_basename_const_str, nullptr, max_matches,
-                       searched_symbol_files, typesmap)) {
+    FindTypes_Impl(type_basename_const_str, nullptr, max_matches,
+                   searched_symbol_files, typesmap);
+    if (typesmap.GetSize())
       typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                      exact_match);
-      num_matches = typesmap.GetSize();
-    }
   } else {
     // The type is not in a namespace/class scope, just search for it by
     // basename
@@ -1014,33 +1009,28 @@ size_t Module::FindTypes(
                      searched_symbol_files, typesmap);
       typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                      exact_match);
-      num_matches = typesmap.GetSize();
     } else {
-      num_matches = FindTypes_Impl(name, nullptr, UINT_MAX,
-                                   searched_symbol_files, typesmap);
+      FindTypes_Impl(name, nullptr, UINT_MAX, searched_symbol_files, typesmap);
       if (exact_match) {
         std::string name_str(name.AsCString(""));
         typesmap.RemoveMismatchedTypes(type_scope, name_str, type_class,
                                        exact_match);
-        num_matches = typesmap.GetSize();
       }
     }
   }
-  if (num_matches > 0) {
+  if (typesmap.GetSize()) {
     SymbolContext sc;
     sc.module_sp = shared_from_this();
     sc.SortTypeList(typesmap, types);
   }
-  return num_matches;
 }
 
-size_t Module::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                         LanguageSet languages, TypeMap &types) {
+void Module::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                       LanguageSet languages, TypeMap &types) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   if (SymbolFile *symbols = GetSymbolFile())
-    return symbols->FindTypes(pattern, languages, types);
-  return 0;
+    symbols->FindTypes(pattern, languages, types);
 }
 
 SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {

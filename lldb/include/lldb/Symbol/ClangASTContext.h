@@ -52,7 +52,13 @@ public:
   }
 
   // Constructors and Destructors
-  ClangASTContext(const char *triple = nullptr);
+  explicit ClangASTContext(llvm::StringRef triple = "");
+
+  /// Constructs a ClangASTContext that uses an existing ASTContext internally.
+  /// Useful when having an existing ASTContext created by Clang.
+  ///
+  /// \param existing_ctxt An existing ASTContext.
+  explicit ClangASTContext(clang::ASTContext &existing_ctxt);
 
   ~ClangASTContext() override;
 
@@ -78,8 +84,6 @@ public:
   static ClangASTContext *GetASTContext(clang::ASTContext *ast_ctx);
 
   clang::ASTContext *getASTContext();
-
-  void setASTContext(clang::ASTContext *ast_ctx);
 
   clang::Builtin::Context *getBuiltinContext();
 
@@ -110,16 +114,12 @@ public:
 
   const char *GetTargetTriple();
 
-  void SetTargetTriple(const char *target_triple);
+  void SetTargetTriple(llvm::StringRef target_triple);
 
   void SetArchitecture(const ArchSpec &arch);
 
-  bool HasExternalSource();
-
   void SetExternalSource(
       llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
-
-  void RemoveExternalSource();
 
   bool GetCompleteDecl(clang::Decl *decl) {
     return ClangASTContext::GetCompleteDecl(getASTContext(), decl);
@@ -862,7 +862,6 @@ public:
   static bool SetHasExternalStorage(lldb::opaque_compiler_type_t type,
                                     bool has_extern);
 
-  static bool GetHasExternalStorage(const CompilerType &type);
   // Tag Declarations
   static bool StartTagDeclarationDefinition(const CompilerType &type);
 
@@ -978,34 +977,33 @@ protected:
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
 
   // Classes that inherit from ClangASTContext can see and modify these
-  // clang-format off
-    std::string                                     m_target_triple;
-    std::unique_ptr<clang::ASTContext>              m_ast_up;
-    std::unique_ptr<clang::LangOptions>             m_language_options_up;
-    std::unique_ptr<clang::FileManager>             m_file_manager_up;
-    std::unique_ptr<clang::SourceManager>           m_source_manager_up;
-    std::unique_ptr<clang::DiagnosticsEngine>       m_diagnostics_engine_up;
-    std::unique_ptr<clang::DiagnosticConsumer>      m_diagnostic_consumer_up;
-    std::shared_ptr<clang::TargetOptions>           m_target_options_rp;
-    std::unique_ptr<clang::TargetInfo>              m_target_info_up;
-    std::unique_ptr<clang::IdentifierTable>         m_identifier_table_up;
-    std::unique_ptr<clang::SelectorTable>           m_selector_table_up;
-    std::unique_ptr<clang::Builtin::Context>        m_builtins_up;
-    std::unique_ptr<DWARFASTParserClang>            m_dwarf_ast_parser_up;
-    std::unique_ptr<PDBASTParser>                   m_pdb_ast_parser_up;
-    std::unique_ptr<ClangASTSource>                 m_scratch_ast_source_up;
-    std::unique_ptr<clang::MangleContext>           m_mangle_ctx_up;
-    CompleteTagDeclCallback                         m_callback_tag_decl;
-    CompleteObjCInterfaceDeclCallback               m_callback_objc_decl;
-    void *                                          m_callback_baton;
-    clang::ExternalASTMerger::OriginMap             m_origins;
-    uint32_t                                        m_pointer_byte_size;
-    bool                                            m_ast_owned;
-    /// The sema associated that is currently used to build this ASTContext.
-    /// May be null if we are already done parsing this ASTContext or the
-    /// ASTContext wasn't created by parsing source code.
-    clang::Sema *                                   m_sema = nullptr;
-  // clang-format on
+  std::string m_target_triple;
+  std::unique_ptr<clang::ASTContext> m_ast_up;
+  std::unique_ptr<clang::LangOptions> m_language_options_up;
+  std::unique_ptr<clang::FileManager> m_file_manager_up;
+  std::unique_ptr<clang::SourceManager> m_source_manager_up;
+  std::unique_ptr<clang::DiagnosticsEngine> m_diagnostics_engine_up;
+  std::unique_ptr<clang::DiagnosticConsumer> m_diagnostic_consumer_up;
+  std::shared_ptr<clang::TargetOptions> m_target_options_rp;
+  std::unique_ptr<clang::TargetInfo> m_target_info_up;
+  std::unique_ptr<clang::IdentifierTable> m_identifier_table_up;
+  std::unique_ptr<clang::SelectorTable> m_selector_table_up;
+  std::unique_ptr<clang::Builtin::Context> m_builtins_up;
+  std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
+  std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
+  std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
+  std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
+  CompleteTagDeclCallback m_callback_tag_decl = nullptr;
+  CompleteObjCInterfaceDeclCallback m_callback_objc_decl = nullptr;
+  void *m_callback_baton = nullptr;
+  clang::ExternalASTMerger::OriginMap m_origins;
+  uint32_t m_pointer_byte_size = 0;
+  bool m_ast_owned = false;
+  /// The sema associated that is currently used to build this ASTContext.
+  /// May be null if we are already done parsing this ASTContext or the
+  /// ASTContext wasn't created by parsing source code.
+  clang::Sema *m_sema = nullptr;
+
 private:
   // For ClangASTContext only
   ClangASTContext(const ClangASTContext &);

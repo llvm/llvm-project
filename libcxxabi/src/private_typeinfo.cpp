@@ -11,47 +11,41 @@
 // The flag _LIBCXX_DYNAMIC_FALLBACK is used to make dynamic_cast more
 // forgiving when type_info's mistakenly have hidden visibility and thus
 // multiple type_infos can exist for a single type.
-// 
+//
 // When _LIBCXX_DYNAMIC_FALLBACK is defined, and only in the case where
 // there is a detected inconsistency in the type_info hierarchy during a
 // dynamic_cast, then the equality operation will fall back to using strcmp
 // on type_info names to determine type_info equality.
-// 
+//
 // This change happens *only* under dynamic_cast, and only when
 // dynamic_cast is faced with the choice:  abort, or possibly give back the
 // wrong answer.  If when the dynamic_cast is done with this fallback
 // algorithm and an inconsistency is still detected, dynamic_cast will call
 // abort with an appropriate message.
-// 
+//
 // The current implementation of _LIBCXX_DYNAMIC_FALLBACK requires a
 // printf-like function called syslog:
-// 
+//
 //     void syslog(int facility_priority, const char* format, ...);
-// 
+//
 // If you want this functionality but your platform doesn't have syslog,
 // just implement it in terms of fprintf(stderr, ...).
-// 
+//
 // _LIBCXX_DYNAMIC_FALLBACK is currently off by default.
-
-
-#include <string.h>
-
-
-#ifdef _LIBCXX_DYNAMIC_FALLBACK
-#include "abort_message.h"
-#include <sys/syslog.h>
-#endif
 
 // On Windows, typeids are different between DLLs and EXEs, so comparing
 // type_info* will work for typeids from the same compiled file but fail
 // for typeids from a DLL and an executable. Among other things, exceptions
 // are not caught by handlers since can_catch() returns false.
 //
-// Defining _LIBCXX_DYNAMIC_FALLBACK does not help since can_catch() calls 
+// Defining _LIBCXX_DYNAMIC_FALLBACK does not help since can_catch() calls
 // is_equal() with use_strcmp=false so the string names are not compared.
 
-#ifdef _WIN32
 #include <string.h>
+
+#ifdef _LIBCXX_DYNAMIC_FALLBACK
+#include "abort_message.h"
+#include <sys/syslog.h>
 #endif
 
 static inline
@@ -158,11 +152,11 @@ __pointer_to_member_type_info::~__pointer_to_member_type_info()
 //      std::nullptr_t.
 
 // adjustedPtr:
-// 
+//
 // catch (A& a) : adjustedPtr == &a
 // catch (A* a) : adjustedPtr == a
 // catch (A** a) : adjustedPtr == a
-// 
+//
 // catch (D2& d2) : adjustedPtr == &d2  (d2 is base class of thrown object)
 // catch (D2* d2) : adjustedPtr == d2
 // catch (D2*& d2) : adjustedPtr == d2
@@ -1112,7 +1106,7 @@ __class_type_info::search_below_dst(__dynamic_cast_info* info,
             info->dst_ptr_not_leading_to_static_ptr = current_ptr;
             info->number_to_dst_ptr += 1;
             // If there exists another dst with a private path to
-            //    (static_ptr, static_type), then the cast from 
+            //    (static_ptr, static_type), then the cast from
             //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous.
             if (info->number_to_static_ptr == 1 &&
                     info->path_dst_ptr_to_static_ptr == not_public_path)

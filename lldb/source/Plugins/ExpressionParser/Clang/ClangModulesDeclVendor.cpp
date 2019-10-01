@@ -163,9 +163,7 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
       m_parser(std::move(parser)), m_origin_map() {
 
   // Initialize our ClangASTContext.
-  auto target_opts = m_compiler_invocation->getTargetOpts();
-  m_ast_context.reset(new ClangASTContext(target_opts.Triple.c_str()));
-  m_ast_context->setASTContext(&m_compiler_instance->getASTContext());
+  m_ast_context.reset(new ClangASTContext(m_compiler_instance->getASTContext()));
 }
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
