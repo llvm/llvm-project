@@ -15,6 +15,7 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_LATENCY_H
 
 #include "BenchmarkRunner.h"
+#include "Error.h"
 #include "MCInstrDescView.h"
 #include "SnippetGenerator.h"
 

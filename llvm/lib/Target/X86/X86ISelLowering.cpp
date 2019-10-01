@@ -8459,10 +8459,20 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   }
 
   // for splat use " (select i1 splat_elt, all-ones, all-zeroes)"
-  if (IsSplat)
-    return DAG.getSelect(dl, VT, Op.getOperand(SplatIdx),
+  if (IsSplat) {
+    // The build_vector allows the scalar element to be larger than the vector
+    // element type. We need to mask it to use as a condition unless we know
+    // the upper bits are zero.
+    // FIXME: Use computeKnownBits instead of checking specific opcode?
+    SDValue Cond = Op.getOperand(SplatIdx);
+    assert(Cond.getValueType() == MVT::i8 && "Unexpected VT!");
+    if (Cond.getOpcode() != ISD::SETCC)
+      Cond = DAG.getNode(ISD::AND, dl, MVT::i8, Cond,
+                         DAG.getConstant(1, dl, MVT::i8));
+    return DAG.getSelect(dl, VT, Cond,
                          DAG.getConstant(1, dl, VT),
                          DAG.getConstant(0, dl, VT));
+  }
 
   // insert elements one by one
   SDValue DstVec;
@@ -24117,12 +24127,11 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
-unsigned X86TargetLowering::getRegisterByName(const char* RegName, EVT VT,
-                                              SelectionDAG &DAG) const {
+Register X86TargetLowering::getRegisterByName(const char* RegName, EVT VT,
+                                              const MachineFunction &MF) const {
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-  const MachineFunction &MF = DAG.getMachineFunction();
 
-  unsigned Reg = StringSwitch<unsigned>(RegName)
+  Register Reg = StringSwitch<unsigned>(RegName)
                        .Case("esp", X86::ESP)
                        .Case("rsp", X86::RSP)
                        .Case("ebp", X86::EBP)
@@ -24136,8 +24145,7 @@ unsigned X86TargetLowering::getRegisterByName(const char* RegName, EVT VT,
 #ifndef NDEBUG
     else {
       const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-      unsigned FrameReg =
-          RegInfo->getPtrSizedFrameRegister(DAG.getMachineFunction());
+      Register FrameReg = RegInfo->getPtrSizedFrameRegister(MF);
       assert((FrameReg == X86::EBP || FrameReg == X86::RBP) &&
              "Invalid Frame Register!");
     }
@@ -27887,6 +27895,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::ANY_EXTEND:
+    // Right now, only MVT::v8i8 has Custom action for an illegal type.
+    // It's intended to custom handle the input type.
+    assert(N->getValueType(0) == MVT::v8i8 &&
+           "Do not know how to legalize this Node");
+    return;
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
     EVT VT = N->getValueType(0);
@@ -43473,16 +43487,19 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // FIXME: We have the (sub Y, (zext (vXi1 X))) -> (add (sext (vXi1 X)), Y) in
   // generic DAG combine without a legal type check, but adding this there
   // caused regressions.
-  if (Subtarget.hasAVX512() && VT.isVector()) {
+  if (VT.isVector()) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (Op0.getOpcode() == ISD::ZERO_EXTEND &&
-        Op0.getOperand(0).getValueType().getVectorElementType() == MVT::i1) {
+        Op0.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
+        TLI.isTypeLegal(Op0.getOperand(0).getValueType())) {
       SDLoc DL(N);
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op0.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op1, SExt);
     }
 
     if (Op1.getOpcode() == ISD::ZERO_EXTEND &&
-        Op1.getOperand(0).getValueType().getVectorElementType() == MVT::i1) {
+        Op1.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
+        TLI.isTypeLegal(Op1.getOperand(0).getValueType())) {
       SDLoc DL(N);
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op1.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op0, SExt);

@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "SIInstrInfo.h"
 
 namespace llvm {
 
@@ -57,6 +58,10 @@ public:
                                MachineIRBuilder &B) const;
   bool legalizeSinCos(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
+
+  bool buildPCRelGlobalAddress(
+    Register DstReg, LLT PtrTy, MachineIRBuilder &B, const GlobalValue *GV,
+    unsigned Offset, unsigned GAFlags = SIInstrInfo::MO_NONE) const;
 
   bool legalizeGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;

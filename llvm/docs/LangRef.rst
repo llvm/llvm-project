@@ -3862,12 +3862,12 @@ ARM and ARM's Thumb2 mode:
   as ``r``.
 - ``h``: In Thumb2 mode, a high 32-bit GPR register (``r8-r15``). In ARM mode,
   invalid.
-- ``w``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s31``,
-  ``d0-d31``, or ``q0-q15``.
-- ``x``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s15``,
-  ``d0-d7``, or ``q0-q3``.
-- ``t``: A low floating-point/SIMD register: ``s0-s31``, ``d0-d16``, or
-  ``q0-q8``.
+- ``w``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
+  ``s0-s31``, ``d0-d31``, or ``q0-q15``, respectively.
+- ``t``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
+  ``s0-s31``, ``d0-d15``, or ``q0-q7``, respectively.
+- ``x``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
+  ``s0-s15``, ``d0-d7``, or ``q0-q3``, respectively.
 
 ARM's Thumb1 mode:
 
@@ -3882,12 +3882,12 @@ ARM's Thumb1 mode:
 - ``r``: A low 32-bit GPR register (``r0-r7``).
 - ``l``: A low 32-bit GPR register (``r0-r7``).
 - ``h``: A high GPR register (``r0-r7``).
-- ``w``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s31``,
-  ``d0-d31``, or ``q0-q15``.
-- ``x``: A 32, 64, or 128-bit floating-point/SIMD register: ``s0-s15``,
-  ``d0-d7``, or ``q0-q3``.
-- ``t``: A low floating-point/SIMD register: ``s0-s31``, ``d0-d16``, or
-  ``q0-q8``.
+- ``w``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
+  ``s0-s31``, ``d0-d31``, or ``q0-q15``, respectively.
+- ``t``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
+  ``s0-s31``, ``d0-d15``, or ``q0-q7``, respectively.
+- ``x``: A 32, 64, or 128-bit floating-point/SIMD register in the ranges
+  ``s0-s15``, ``d0-d7``, or ``q0-q3``, respectively.
 
 
 Hexagon:
@@ -15155,9 +15155,6 @@ The number and order of floating-point exceptions is NOT guaranteed.  For
 example, a series of FP operations that each may raise exceptions may be
 vectorized into a single instruction that raises each unique exception a single
 time.
-
-Required Function Attributes:
-"""""""""""""""""""""""""""""
 
 Proper :ref:`function attributes <fnattrs>` usage is required for the
 constrained intrinsics to function correctly.

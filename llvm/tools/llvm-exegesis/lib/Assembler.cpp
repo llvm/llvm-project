@@ -163,11 +163,11 @@ llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM) {
   std::unique_ptr<llvm::Module> Module =
       createModule(Context, TM.createDataLayout());
   // TODO: This only works for targets implementing LLVMTargetMachine.
-  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine&>(TM);
-  std::unique_ptr<llvm::MachineModuleInfo> MMI =
-      std::make_unique<llvm::MachineModuleInfo>(&LLVMTM);
-  llvm::MachineFunction &MF =
-      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
+  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
+  std::unique_ptr<llvm::MachineModuleInfoWrapperPass> MMIWP =
+      std::make_unique<llvm::MachineModuleInfoWrapperPass>(&LLVMTM);
+  llvm::MachineFunction &MF = createVoidVoidPtrMachineFunction(
+      FunctionID, Module.get(), &MMIWP.get()->getMMI());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
@@ -182,10 +182,10 @@ void assembleToStream(const ExegesisTarget &ET,
       std::make_unique<llvm::LLVMContext>();
   std::unique_ptr<llvm::Module> Module =
       createModule(Context, TM->createDataLayout());
-  std::unique_ptr<llvm::MachineModuleInfo> MMI =
-      std::make_unique<llvm::MachineModuleInfo>(TM.get());
-  llvm::MachineFunction &MF =
-      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
+  std::unique_ptr<llvm::MachineModuleInfoWrapperPass> MMIWP =
+      std::make_unique<llvm::MachineModuleInfoWrapperPass>(TM.get());
+  llvm::MachineFunction &MF = createVoidVoidPtrMachineFunction(
+      FunctionID, Module.get(), &MMIWP.get()->getMMI());
 
   // We need to instruct the passes that we're done with SSA and virtual
   // registers.
@@ -221,7 +221,7 @@ void assembleToStream(const ExegesisTarget &ET,
   MF.getRegInfo().freezeReservedRegs(MF);
 
   // We create the pass manager, run the passes to populate AsmBuffer.
-  llvm::MCContext &MCContext = MMI->getContext();
+  llvm::MCContext &MCContext = MMIWP->getMMI().getContext();
   llvm::legacy::PassManager PM;
 
   llvm::TargetLibraryInfoImpl TLII(llvm::Triple(Module->getTargetTriple()));
@@ -229,7 +229,7 @@ void assembleToStream(const ExegesisTarget &ET,
 
   llvm::TargetPassConfig *TPC = TM->createPassConfig(PM);
   PM.add(TPC);
-  PM.add(MMI.release());
+  PM.add(MMIWP.release());
   TPC->printAndVerify("MachineFunctionGenerator::assemble");
   // Add target-specific passes.
   ET.addTargetSpecificPasses(PM);

@@ -283,6 +283,11 @@ let Predicates = [HasSVE] in {
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
 
+class SVE_1_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                   Instruction inst>
+: Pat<(vtd (op vt1:$Op1)),
+      (inst $Op1)>;
+
 class SVE_3_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, ValueType vt3, Instruction inst>
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3)),
@@ -4278,6 +4283,14 @@ class sve_int_perm_punpk<bit opc, string asm>
   let Inst{8-5}   = Pn;
   let Inst{4}     = 0b0;
   let Inst{3-0}   = Pd;
+}
+
+multiclass sve_int_perm_punpk<bit opc, string asm, SDPatternOperator op> {
+  def NAME : sve_int_perm_punpk<opc, asm>;
+
+  def : SVE_1_Op_Pat<nxv8i1, op, nxv16i1, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Pat<nxv4i1, op, nxv8i1,  !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Pat<nxv2i1, op, nxv4i1,  !cast<Instruction>(NAME)>;
 }
 
 class sve_int_rdffr_pred<bit s, string asm>

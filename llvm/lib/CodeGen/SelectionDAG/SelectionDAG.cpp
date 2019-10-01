@@ -6553,7 +6553,7 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
 SDValue SelectionDAG::getMemIntrinsicNode(
     unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
     EVT MemVT, MachinePointerInfo PtrInfo, unsigned Align,
-    MachineMemOperand::Flags Flags, unsigned Size, const AAMDNodes &AAInfo) {
+    MachineMemOperand::Flags Flags, uint64_t Size, const AAMDNodes &AAInfo) {
   if (Align == 0)  // Ensure that codegen never sees alignment 0
     Align = getEVTAlignment(MemVT);
 

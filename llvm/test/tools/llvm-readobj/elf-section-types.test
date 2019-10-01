@@ -150,6 +150,7 @@ Sections:
     Info: progbits
   - Name: hash
     Type: SHT_HASH
+    Content: ''
   - Name: dynamic
     Type: SHT_DYNAMIC
   - Name: note

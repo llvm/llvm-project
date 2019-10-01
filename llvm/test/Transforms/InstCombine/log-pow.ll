@@ -3,7 +3,7 @@
 
 define double @log_pow(double %x, double %y) {
 ; CHECK-LABEL: @log_pow(
-; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @log(double [[X:%.*]]) #0
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @llvm.log.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -12,24 +12,22 @@ define double @log_pow(double %x, double %y) {
   ret double %log
 }
 
-; FIXME: log10f() should also be simplified.
 define float @log10f_powf(float %x, float %y) {
 ; CHECK-LABEL: @log10f_powf(
-; CHECK-NEXT:    [[POW:%.*]] = call fast float @powf(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast float @log10f(float [[POW]])
-; CHECK-NEXT:    ret float [[LOG]]
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast float @llvm.log10.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[LOG1]], [[Y:%.*]]
+; CHECK-NEXT:    ret float [[MUL]]
 ;
   %pow = call fast float @powf(float %x, float %y)
-  %log = call fast float @log10f(float %pow)
+  %log = call fast float @llvm.log10.f32(float %pow)
   ret float %log
 }
 
-; FIXME: Intrinsic log2() should also be simplified.
 define <2 x double> @log2v_powv(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @log2v_powv(
-; CHECK-NEXT:    [[POW:%.*]] = call fast <2 x double> @llvm.pow.v2f64(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast <2 x double> @llvm.log2.v2f64(<2 x double> [[POW]])
-; CHECK-NEXT:    ret <2 x double> [[LOG]]
+; CHECK-NEXT:    [[LOG1:%.*]] = call fast <2 x double> @llvm.log2.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x double> [[LOG1]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[MUL]]
 ;
   %pow = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> %y)
   %log = call fast <2 x double> @llvm.log2.v2f64(<2 x double> %pow)
@@ -58,39 +56,33 @@ define float @function_pointer(float ()* %fptr, float %p1) {
   ret float %log
 }
 
-; FIXME: The call to exp2() should be removed.
-define double @log_exp2(double %x) {
-; CHECK-LABEL: @log_exp2(
-; CHECK-NEXT:    [[EXP:%.*]] = call fast double @exp2(double [[X:%.*]])
-; CHECK-NEXT:    [[LOGMUL:%.*]] = fmul fast double [[X]], 0x3FE62E42FEFA39EF
-; CHECK-NEXT:    ret double [[LOGMUL]]
+define double @log10_exp(double %x) {
+; CHECK-LABEL: @log10_exp(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], 0x3FDBCB7B1526E50E
+; CHECK-NEXT:    ret double [[MUL]]
 ;
-  %exp = call fast double @exp2(double %x)
-  %log = call fast double @log(double %exp)
+  %exp = call fast double @exp(double %x)
+  %log = call fast double @log10(double %exp)
   ret double %log
 }
 
-; FIXME: Intrinsic logf() should also be simplified.
 define <2 x float> @logv_exp2v(<2 x float> %x) {
 ; CHECK-LABEL: @logv_exp2v(
-; CHECK-NEXT:    [[EXP:%.*]] = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast <2 x float> @llvm.log.v2f32(<2 x float> [[EXP]])
-; CHECK-NEXT:    ret <2 x float> [[LOG]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], <float 0x3FE62E4300000000, float 0x3FE62E4300000000>
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %exp = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> %x)
   %log = call fast <2 x float> @llvm.log.v2f32(<2 x float> %exp)
   ret <2 x float> %log
 }
 
-; FIXME: log10f() should also be simplified.
-define float @log10f_exp2f(float %x) {
-; CHECK-LABEL: @log10f_exp2f(
-; CHECK-NEXT:    [[EXP:%.*]] = call fast float @exp2f(float [[X:%.*]])
-; CHECK-NEXT:    [[LOG:%.*]] = call fast float @log10f(float [[EXP]])
-; CHECK-NEXT:    ret float [[LOG]]
+define float @log2f_exp10f(float %x) {
+; CHECK-LABEL: @log2f_exp10f(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], 0x400A934F00000000
+; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %exp = call fast float @exp2f(float %x)
-  %log = call fast float @log10f(float %exp)
+  %exp = call fast float @exp10f(float %x)
+  %log = call fast float @log2f(float %exp)
   ret float %log
 }
 
@@ -108,11 +100,13 @@ define double @log_exp2_not_fast(double %x) {
 declare double @log(double) #0
 declare float @logf(float) #0
 declare <2 x float> @llvm.log.v2f32(<2 x float>)
-declare double @log2(double) #0
+declare float @log2f(float) #0
 declare <2 x double> @llvm.log2.v2f64(<2 x double>)
-declare float @log10f(float) #0
-declare double @exp2(double)
-declare float @exp2f(float)
+declare double @log10(double) #0
+declare float @llvm.log10.f32(float)
+declare double @exp(double %x) #0
+declare double @exp2(double) #0
+declare float @exp10f(float) #0
 declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
