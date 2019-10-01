@@ -87,13 +87,10 @@ When the dynamic_cast would normally fail, this option will cause the \
 library to try comparing the type_info names to see if they are equal \
 instead." OFF)
 
-# FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
-# programs to due undefined references to new/delete in libc++abi. Once this
-# has been fixed or worked around the default value should be changed.
-# See https://reviews.llvm.org/D68269 for more details.
 option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
-    "Build libc++abi with definitions for operator new/delete. Normally libc++
-    provides these definitions" ON)
+  "Build libc++abi with definitions for operator new/delete. These are normally
+   defined in libc++abi, but it is also possible to define them in libc++, in
+   which case the definition in libc++abi should be turned off." ON)
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
