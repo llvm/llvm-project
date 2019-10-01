@@ -597,8 +597,7 @@ int main(int argc, char **argv) {
                             CheckFileText, CheckFile.getBufferIdentifier()),
                         SMLoc());
 
-  std::vector<FileCheckString> CheckStrings;
-  if (FC.ReadCheckFile(SM, CheckFileText, PrefixRE, CheckStrings))
+  if (FC.readCheckFile(SM, CheckFileText, PrefixRE))
     return 2;
 
   // Open the file to check and add it to SourceMgr.
@@ -628,7 +627,7 @@ int main(int argc, char **argv) {
     DumpInput = DumpInputOnFailure ? DumpInputFail : DumpInputNever;
 
   std::vector<FileCheckDiag> Diags;
-  int ExitCode = FC.CheckInput(SM, InputFileText, CheckStrings,
+  int ExitCode = FC.checkInput(SM, InputFileText,
                                DumpInput == DumpInputNever ? nullptr : &Diags)
                      ? EXIT_SUCCESS
                      : 1;

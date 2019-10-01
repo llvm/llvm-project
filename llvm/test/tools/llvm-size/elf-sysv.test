@@ -63,6 +63,7 @@ Sections:
     Address: 0x20000
   - Name:    .hash
     Type:    SHT_HASH
+    Content: ''
     ShSize:  0x40
     Address: 0x10000
   - Name:    .dynamic

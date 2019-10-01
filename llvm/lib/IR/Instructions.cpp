@@ -1228,7 +1228,7 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
   : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                      getAISize(Ty->getContext(), ArraySize), InsertBefore),
     AllocatedType(Ty) {
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   assert(!Ty->isVoidTy() && "Cannot allocate void!");
   setName(Name);
 }
@@ -1239,13 +1239,9 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
   : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
                      getAISize(Ty->getContext(), ArraySize), InsertAtEnd),
       AllocatedType(Ty) {
-  setAlignment(Align);
+  setAlignment(MaybeAlign(Align));
   assert(!Ty->isVoidTy() && "Cannot allocate void!");
   setName(Name);
-}
-
-void AllocaInst::setAlignment(unsigned Align) {
-  setAlignment(llvm::MaybeAlign(Align));
 }
 
 void AllocaInst::setAlignment(MaybeAlign Align) {

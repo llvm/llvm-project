@@ -5303,7 +5303,8 @@ multiclass avx512_fp_scalar_round<bits<8> opc, string OpcodeStr,X86VectorVTInfo 
 }
 multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                                 SDNode OpNode, SDNode VecNode, SDNode SaeNode,
-                                X86FoldableSchedWrite sched, bit IsCommutable> {
+                                X86FoldableSchedWrite sched, bit IsCommutable,
+                                string EVEX2VexOvrd> {
   let ExeDomain = _.ExeDomain in {
   defm rr_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                            (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
@@ -5323,7 +5324,8 @@ multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          (ins _.FRC:$src1, _.FRC:$src2),
                           OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                           [(set _.FRC:$dst, (OpNode _.FRC:$src1, _.FRC:$src2))]>,
-                          Sched<[sched]> {
+                          Sched<[sched]>,
+                          EVEX2VEXOverride<EVEX2VexOvrd#"rr"> {
     let isCommutable = IsCommutable;
   }
   def rm : I< opc, MRMSrcMem, (outs _.FRC:$dst),
@@ -5331,7 +5333,8 @@ multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set _.FRC:$dst, (OpNode _.FRC:$src1,
                          (_.ScalarLdFrag addr:$src2)))]>,
-                         Sched<[sched.Folded, sched.ReadAfterFold]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>,
+                         EVEX2VEXOverride<EVEX2VexOvrd#"rm">;
   }
 
   defm rrb_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -5361,10 +5364,12 @@ multiclass avx512_binop_s_sae<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               SDNode VecNode, SDNode SaeNode,
                               X86SchedWriteSizes sched, bit IsCommutable> {
   defm SSZ : avx512_fp_scalar_sae<opc, OpcodeStr#"ss", f32x_info, OpNode,
-                              VecNode, SaeNode, sched.PS.Scl, IsCommutable>,
+                              VecNode, SaeNode, sched.PS.Scl, IsCommutable,
+                              NAME#"SS">,
                               XS, EVEX_4V, VEX_LIG,  EVEX_CD8<32, CD8VT1>;
   defm SDZ : avx512_fp_scalar_sae<opc, OpcodeStr#"sd", f64x_info, OpNode,
-                              VecNode, SaeNode, sched.PD.Scl, IsCommutable>,
+                              VecNode, SaeNode, sched.PD.Scl, IsCommutable,
+                              NAME#"SD">,
                               XD, VEX_W, EVEX_4V, VEX_LIG, EVEX_CD8<64, CD8VT1>;
 }
 defm VADD : avx512_binop_s_round<0x58, "vadd", fadd, X86fadds, X86faddRnds,
@@ -5384,13 +5389,14 @@ defm VMAX : avx512_binop_s_sae<0x5F, "vmax", X86fmax, X86fmaxs, X86fmaxSAEs,
 // X86fminc and X86fmaxc instead of X86fmin and X86fmax
 multiclass avx512_comutable_binop_s<bits<8> opc, string OpcodeStr,
                                     X86VectorVTInfo _, SDNode OpNode,
-                                    X86FoldableSchedWrite sched> {
+                                    X86FoldableSchedWrite sched,
+                                    string EVEX2VEXOvrd> {
   let isCodeGenOnly = 1, Predicates = [HasAVX512], ExeDomain = _.ExeDomain in {
   def rr : I< opc, MRMSrcReg, (outs _.FRC:$dst),
                          (ins _.FRC:$src1, _.FRC:$src2),
                           OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                           [(set _.FRC:$dst, (OpNode _.FRC:$src1, _.FRC:$src2))]>,
-                          Sched<[sched]> {
+                          Sched<[sched]>, EVEX2VEXOverride<EVEX2VEXOvrd#"rr"> {
     let isCommutable = 1;
   }
   def rm : I< opc, MRMSrcMem, (outs _.FRC:$dst),
@@ -5398,24 +5404,27 @@ multiclass avx512_comutable_binop_s<bits<8> opc, string OpcodeStr,
                          OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set _.FRC:$dst, (OpNode _.FRC:$src1,
                          (_.ScalarLdFrag addr:$src2)))]>,
-                         Sched<[sched.Folded, sched.ReadAfterFold]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>,
+                         EVEX2VEXOverride<EVEX2VEXOvrd#"rm">;
   }
 }
 defm VMINCSSZ : avx512_comutable_binop_s<0x5D, "vminss", f32x_info, X86fminc,
-                                         SchedWriteFCmp.Scl>, XS, EVEX_4V,
-                                         VEX_LIG, EVEX_CD8<32, CD8VT1>;
+                                         SchedWriteFCmp.Scl, "VMINCSS">, XS,
+                                         EVEX_4V, VEX_LIG, EVEX_CD8<32, CD8VT1>;
 
 defm VMINCSDZ : avx512_comutable_binop_s<0x5D, "vminsd", f64x_info, X86fminc,
-                                         SchedWriteFCmp.Scl>, XD, VEX_W, EVEX_4V,
-                                         VEX_LIG, EVEX_CD8<64, CD8VT1>;
+                                         SchedWriteFCmp.Scl, "VMINCSD">, XD,
+                                         VEX_W, EVEX_4V, VEX_LIG,
+                                         EVEX_CD8<64, CD8VT1>;
 
 defm VMAXCSSZ : avx512_comutable_binop_s<0x5F, "vmaxss", f32x_info, X86fmaxc,
-                                         SchedWriteFCmp.Scl>, XS, EVEX_4V,
-                                         VEX_LIG, EVEX_CD8<32, CD8VT1>;
+                                         SchedWriteFCmp.Scl, "VMAXCSS">, XS,
+                                         EVEX_4V, VEX_LIG, EVEX_CD8<32, CD8VT1>;
 
 defm VMAXCSDZ : avx512_comutable_binop_s<0x5F, "vmaxsd", f64x_info, X86fmaxc,
-                                         SchedWriteFCmp.Scl>, XD, VEX_W, EVEX_4V,
-                                         VEX_LIG, EVEX_CD8<64, CD8VT1>;
+                                         SchedWriteFCmp.Scl, "VMAXCSD">, XD,
+                                         VEX_W, EVEX_4V, VEX_LIG,
+                                         EVEX_CD8<64, CD8VT1>;
 
 multiclass avx512_fp_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                             X86VectorVTInfo _, X86FoldableSchedWrite sched,

@@ -1,0 +1,179 @@
+## Check how yaml2obj produces SHT_HASH sections.
+
+## Check we can describe a SHT_HASH section using the "Content" tag.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=CONTENT
+
+# CONTENT:      Name: .hash
+# CONTENT-NEXT: Type: SHT_HASH
+# CONTENT-NEXT: Flags [
+# CONTENT-NEXT: ]
+# CONTENT-NEXT: Address: 0x0
+# CONTENT-NEXT: Offset: 0x44
+# CONTENT-NEXT: Size: 20
+# CONTENT-NEXT: Link: 1
+# CONTENT-NEXT: Info: 0
+# CONTENT-NEXT: AddressAlignment: 0
+# CONTENT-NEXT: EntrySize: 0
+# CONTENT-NEXT: SectionData (
+# CONTENT-NEXT:   0000: 01000000 02000000 03000000 04000000
+# CONTENT-NEXT:   0010: 05000000
+# CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+## SHT_HASH is linked to dynamic symbol table by default.
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+  - Name:    .hash
+    Type:    SHT_HASH
+    Content: '0100000002000000030000000400000005000000'
+
+## Check we can describe a SHT_HASH section using "Bucket" and "Chain" tags.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=BUCKET-CHAIN
+
+# BUCKET-CHAIN:      Name: .hash
+# BUCKET-CHAIN:      Size:
+# BUCKET-CHAIN-SAME: 28
+# BUCKET-CHAIN:      Link:
+# BUCKET-CHAIN-SAME: 0
+# BUCKET-CHAIN:      SectionData (
+# BUCKET-CHAIN-NEXT:   0000: 02000000 03000000 01000000 02000000  |
+# BUCKET-CHAIN-NEXT:   0010: 03000000 04000000 05000000           |
+# BUCKET-CHAIN-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Bucket: [ 1, 2 ]
+    Chain:  [ 3, 4, 5 ]
+
+## Check we can't use "Content" and "Bucket" tags together.
+
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-BUCKET
+
+# CONTENT-BUCKET: error: "Content" and "Bucket" cannot be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Bucket: [ 1 ]
+    Content: '00'
+
+## Check we can't use "Content" and "Chain" tags together.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-CHAIN
+
+# CONTENT-CHAIN: error: "Content" and "Chain" cannot be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Chain:  [ 1 ]
+    Content: '00'
+
+## Check we can't use "Bucket" without "Chain".
+
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=NO-BUCKET-OR-CHAIN
+
+# NO-BUCKET-OR-CHAIN: error: "Bucket" and "Chain" must be used together
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Bucket: [ 1 ]
+
+## Check we can't use "Chain" without "Bucket".
+
+# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=NO-BUCKET-OR-CHAIN
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:  .hash
+    Type:  SHT_HASH
+    Chain: [ 1 ]
+
+## Check we report an error if neither "Bucket", "Chain" nor "Content" were set.
+
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+
+# NO-TAGS: error: one of "Content", "Bucket" or "Chain" must be specified
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:  .hash
+    Type:  SHT_HASH
+
+## Check we can set any sh_link value with use of the "Link" tag.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readobj --sections %t8 | FileCheck %s --check-prefix=LINK
+
+# LINK:      Name: .hash1
+# LINK:      Link:
+# LINK-SAME: 123
+
+# LINK:      Name: .hash2
+# LINK:      Link:
+# LINK-SAME: 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .hash1
+    Type: SHT_HASH
+    Content: ""
+    Link: 123
+  - Name: .hash2
+    Type: SHT_HASH
+    Content: ""
+    Link: .hash1
+## SHT_HASH is linked to dynamic symbol table by default if it exists.
+  - Name: .dynsym
+    Type: SHT_DYNSYM

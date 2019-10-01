@@ -58,8 +58,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineModuleInfo>();
-    AU.addPreserved<MachineModuleInfo>();
+    AU.addRequired<MachineModuleInfoWrapperPass>();
+    AU.addPreserved<MachineModuleInfoWrapperPass>();
   }
 
 private:
@@ -97,7 +97,7 @@ bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   Is64Bit = TM->getTargetTriple().getArch() == Triple::x86_64;
 
-  MMI = &getAnalysis<MachineModuleInfo>();
+  MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   Module &M = const_cast<Module &>(*MMI->getModule());
 
   // If this function is not a thunk, check to see if we need to insert

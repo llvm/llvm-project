@@ -2996,3 +2996,283 @@ define void @zero_mask(<2 x double>%a1, <2 x double*> %ptr) {
   call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %a1, <2 x double*> %ptr, i32 4, <2 x i1> zeroinitializer)
   ret void
 }
+
+define <2 x i64> @gather_2i64_constant_indices(i64* %ptr, <2 x i1> %mask) {
+; KNL_64-LABEL: gather_2i64_constant_indices:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vpsllq $63, %xmm0, %xmm0
+; KNL_64-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL_64-NEXT:    kshiftlw $14, %k0, %k0
+; KNL_64-NEXT:    kshiftrw $14, %k0, %k1
+; KNL_64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,18446744073709551614,u,u,u,u,u,u>
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_64-NEXT:    vpgatherqq (%rdi,%zmm1,8), %zmm0 {%k1}
+; KNL_64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: gather_2i64_constant_indices:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    vpsllq $63, %xmm0, %xmm0
+; KNL_32-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL_32-NEXT:    kshiftlw $14, %k0, %k0
+; KNL_32-NEXT:    kshiftrw $14, %k0, %k1
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,4294967294,4294967295]
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_32-NEXT:    vpgatherqq (%eax,%zmm1,8), %zmm0 {%k1}
+; KNL_32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX_SMALL-LABEL: gather_2i64_constant_indices:
+; SKX_SMALL:       # %bb.0:
+; SKX_SMALL-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_SMALL-NEXT:    vpmovq2m %xmm0, %k1
+; SKX_SMALL-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,254,255,255,255,255,255,255,255]
+; SKX_SMALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX_SMALL-NEXT:    vpgatherqq (%rdi,%xmm1,8), %xmm0 {%k1}
+; SKX_SMALL-NEXT:    retq
+;
+; SKX_LARGE-LABEL: gather_2i64_constant_indices:
+; SKX_LARGE:       # %bb.0:
+; SKX_LARGE-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_LARGE-NEXT:    vpmovq2m %xmm0, %k1
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vmovdqa (%rax), %xmm1
+; SKX_LARGE-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX_LARGE-NEXT:    vpgatherqq (%rdi,%xmm1,8), %xmm0 {%k1}
+; SKX_LARGE-NEXT:    retq
+;
+; SKX_32-LABEL: gather_2i64_constant_indices:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_32-NEXT:    vpmovq2m %xmm0, %k1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,4294967294,4294967295]
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX_32-NEXT:    vpgatherqq (%eax,%xmm1,8), %xmm0 {%k1}
+; SKX_32-NEXT:    retl
+  %gep = getelementptr i64, i64* %ptr, <2 x i64> <i64 0, i64 -2>
+  %res = tail call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> %gep, i32 8, <2 x i1> %mask, <2 x i64> zeroinitializer) #1
+  ret <2 x i64> %res
+}
+
+define <16 x i32> @gather_16i64_constant_indices(i32* %ptr, <16 x i1> %mask) {
+; KNL_64-LABEL: gather_16i64_constant_indices:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL_64-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL_64-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; KNL_64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,18446744073709551614,1,18446744073709551608,10,20,50,65536]
+; KNL_64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16777215,2147483647,100,18446744073709549616,18446744071562067968,76897723,7,18446744073641653929]
+; KNL_64-NEXT:    kshiftrw $8, %k1, %k2
+; KNL_64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL_64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL_64-NEXT:    vpgatherqd (%rdi,%zmm1,4), %ymm3 {%k2}
+; KNL_64-NEXT:    vpgatherqd (%rdi,%zmm0,4), %ymm2 {%k1}
+; KNL_64-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: gather_16i64_constant_indices:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL_32-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL_32-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,0,4294967294,4294967295,1,0,4294967288,4294967295,10,0,20,0,50,0,65536,0]
+; KNL_32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16777215,0,2147483647,0,100,0,4294965296,4294967295,2147483648,4294967295,76897723,0,7,0,4227069609,4294967295]
+; KNL_32-NEXT:    kshiftrw $8, %k1, %k2
+; KNL_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; KNL_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL_32-NEXT:    vpgatherqd (%eax,%zmm1,4), %ymm3 {%k2}
+; KNL_32-NEXT:    vpgatherqd (%eax,%zmm0,4), %ymm2 {%k1}
+; KNL_32-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; KNL_32-NEXT:    retl
+;
+; SKX_SMALL-LABEL: gather_16i64_constant_indices:
+; SKX_SMALL:       # %bb.0:
+; SKX_SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; SKX_SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX_SMALL-NEXT:    vpmovd2m %zmm0, %k1
+; SKX_SMALL-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,18446744073709551614,1,18446744073709551608,10,20,50,65536]
+; SKX_SMALL-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16777215,2147483647,100,18446744073709549616,18446744071562067968,76897723,7,18446744073641653929]
+; SKX_SMALL-NEXT:    kshiftrw $8, %k1, %k2
+; SKX_SMALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; SKX_SMALL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; SKX_SMALL-NEXT:    vpgatherqd (%rdi,%zmm1,4), %ymm3 {%k2}
+; SKX_SMALL-NEXT:    vpgatherqd (%rdi,%zmm0,4), %ymm2 {%k1}
+; SKX_SMALL-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; SKX_SMALL-NEXT:    retq
+;
+; SKX_LARGE-LABEL: gather_16i64_constant_indices:
+; SKX_LARGE:       # %bb.0:
+; SKX_LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
+; SKX_LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX_LARGE-NEXT:    vpmovd2m %zmm0, %k1
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vmovdqa64 (%rax), %zmm0
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vmovdqa64 (%rax), %zmm1
+; SKX_LARGE-NEXT:    kshiftrw $8, %k1, %k2
+; SKX_LARGE-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; SKX_LARGE-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; SKX_LARGE-NEXT:    vpgatherqd (%rdi,%zmm1,4), %ymm3 {%k2}
+; SKX_LARGE-NEXT:    vpgatherqd (%rdi,%zmm0,4), %ymm2 {%k1}
+; SKX_LARGE-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; SKX_LARGE-NEXT:    retq
+;
+; SKX_32-LABEL: gather_16i64_constant_indices:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    vpmovsxbd %xmm0, %zmm0
+; SKX_32-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX_32-NEXT:    vpmovd2m %zmm0, %k1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,0,4294967294,4294967295,1,0,4294967288,4294967295,10,0,20,0,50,0,65536,0]
+; SKX_32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16777215,0,2147483647,0,100,0,4294965296,4294967295,2147483648,4294967295,76897723,0,7,0,4227069609,4294967295]
+; SKX_32-NEXT:    kshiftrw $8, %k1, %k2
+; SKX_32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; SKX_32-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; SKX_32-NEXT:    vpgatherqd (%eax,%zmm1,4), %ymm3 {%k2}
+; SKX_32-NEXT:    vpgatherqd (%eax,%zmm0,4), %ymm2 {%k1}
+; SKX_32-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; SKX_32-NEXT:    retl
+  %gep = getelementptr i32, i32* %ptr, <16 x i64> <i64 0, i64 -2, i64 1, i64 -8, i64 10, i64 20, i64 50, i64 65536, i64 16777215, i64 2147483647, i64 100, i64 -2000, i64 -2147483648, i64 76897723, i64 7, i64 -67897687>
+  %res = tail call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %gep, i32 4, <16 x i1> %mask, <16 x i32> zeroinitializer) #1
+  ret <16 x i32> %res
+}
+
+define void @scatter_2i64_constant_indices(i32* %ptr, <2 x i1> %mask, <2 x i32> %src0)  {
+; KNL_64-LABEL: scatter_2i64_constant_indices:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; KNL_64-NEXT:    vpsllq $63, %xmm0, %xmm0
+; KNL_64-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL_64-NEXT:    kshiftlw $14, %k0, %k0
+; KNL_64-NEXT:    kshiftrw $14, %k0, %k1
+; KNL_64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = <0,18446744073709551614,u,u,u,u,u,u>
+; KNL_64-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm0,4) {%k1}
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scatter_2i64_constant_indices:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; KNL_32-NEXT:    vpsllq $63, %xmm0, %xmm0
+; KNL_32-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL_32-NEXT:    kshiftlw $14, %k0, %k0
+; KNL_32-NEXT:    kshiftrw $14, %k0, %k1
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,0,4294967294,4294967295]
+; KNL_32-NEXT:    vpscatterqd %ymm1, (%eax,%zmm0,4) {%k1}
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX_SMALL-LABEL: scatter_2i64_constant_indices:
+; SKX_SMALL:       # %bb.0:
+; SKX_SMALL-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_SMALL-NEXT:    vpmovq2m %xmm0, %k1
+; SKX_SMALL-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,254,255,255,255,255,255,255,255]
+; SKX_SMALL-NEXT:    vpscatterqd %xmm1, (%rdi,%xmm0,4) {%k1}
+; SKX_SMALL-NEXT:    retq
+;
+; SKX_LARGE-LABEL: scatter_2i64_constant_indices:
+; SKX_LARGE:       # %bb.0:
+; SKX_LARGE-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_LARGE-NEXT:    vpmovq2m %xmm0, %k1
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vmovdqa (%rax), %xmm0
+; SKX_LARGE-NEXT:    vpscatterqd %xmm1, (%rdi,%xmm0,4) {%k1}
+; SKX_LARGE-NEXT:    retq
+;
+; SKX_32-LABEL: scatter_2i64_constant_indices:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_32-NEXT:    vpmovq2m %xmm0, %k1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,0,4294967294,4294967295]
+; SKX_32-NEXT:    vpscatterqd %xmm1, (%eax,%xmm0,4) {%k1}
+; SKX_32-NEXT:    retl
+  %gep = getelementptr i32, i32* %ptr, <2 x i64> <i64 0, i64 -2>
+  call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %src0, <2 x i32*> %gep, i32 4, <2 x i1> %mask)
+  ret void
+}
+
+define void @scatter_16i64_constant_indices(i32* %ptr, <16 x i1> %mask, <16 x i32> %src0)  {
+; KNL_64-LABEL: scatter_16i64_constant_indices:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL_64-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL_64-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; KNL_64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [16777215,2147483647,100,18446744073709549616,18446744071562067968,76897723,7,18446744073641653929]
+; KNL_64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,18446744073709551614,1,18446744073709551608,10,20,50,65536]
+; KNL_64-NEXT:    kshiftrw $8, %k1, %k2
+; KNL_64-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm2,4) {%k1}
+; KNL_64-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; KNL_64-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm0,4) {%k2}
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: scatter_16i64_constant_indices:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL_32-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL_32-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [16777215,0,2147483647,0,100,0,4294965296,4294967295,2147483648,4294967295,76897723,0,7,0,4227069609,4294967295]
+; KNL_32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,0,4294967294,4294967295,1,0,4294967288,4294967295,10,0,20,0,50,0,65536,0]
+; KNL_32-NEXT:    kshiftrw $8, %k1, %k2
+; KNL_32-NEXT:    vpscatterqd %ymm1, (%eax,%zmm2,4) {%k1}
+; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; KNL_32-NEXT:    vpscatterqd %ymm1, (%eax,%zmm0,4) {%k2}
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX_SMALL-LABEL: scatter_16i64_constant_indices:
+; SKX_SMALL:       # %bb.0:
+; SKX_SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; SKX_SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX_SMALL-NEXT:    vpmovd2m %zmm0, %k1
+; SKX_SMALL-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [16777215,2147483647,100,18446744073709549616,18446744071562067968,76897723,7,18446744073641653929]
+; SKX_SMALL-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,18446744073709551614,1,18446744073709551608,10,20,50,65536]
+; SKX_SMALL-NEXT:    kshiftrw $8, %k1, %k2
+; SKX_SMALL-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm2,4) {%k1}
+; SKX_SMALL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; SKX_SMALL-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm0,4) {%k2}
+; SKX_SMALL-NEXT:    vzeroupper
+; SKX_SMALL-NEXT:    retq
+;
+; SKX_LARGE-LABEL: scatter_16i64_constant_indices:
+; SKX_LARGE:       # %bb.0:
+; SKX_LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
+; SKX_LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX_LARGE-NEXT:    vpmovd2m %zmm0, %k1
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vmovdqa64 (%rax), %zmm0
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vmovdqa64 (%rax), %zmm2
+; SKX_LARGE-NEXT:    kshiftrw $8, %k1, %k2
+; SKX_LARGE-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm2,4) {%k1}
+; SKX_LARGE-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; SKX_LARGE-NEXT:    vpscatterqd %ymm1, (%rdi,%zmm0,4) {%k2}
+; SKX_LARGE-NEXT:    vzeroupper
+; SKX_LARGE-NEXT:    retq
+;
+; SKX_32-LABEL: scatter_16i64_constant_indices:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    vpmovsxbd %xmm0, %zmm0
+; SKX_32-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX_32-NEXT:    vpmovd2m %zmm0, %k1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [16777215,0,2147483647,0,100,0,4294965296,4294967295,2147483648,4294967295,76897723,0,7,0,4227069609,4294967295]
+; SKX_32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,0,4294967294,4294967295,1,0,4294967288,4294967295,10,0,20,0,50,0,65536,0]
+; SKX_32-NEXT:    kshiftrw $8, %k1, %k2
+; SKX_32-NEXT:    vpscatterqd %ymm1, (%eax,%zmm2,4) {%k1}
+; SKX_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; SKX_32-NEXT:    vpscatterqd %ymm1, (%eax,%zmm0,4) {%k2}
+; SKX_32-NEXT:    vzeroupper
+; SKX_32-NEXT:    retl
+  %gep = getelementptr i32, i32* %ptr, <16 x i64> <i64 0, i64 -2, i64 1, i64 -8, i64 10, i64 20, i64 50, i64 65536, i64 16777215, i64 2147483647, i64 100, i64 -2000, i64 -2147483648, i64 76897723, i64 7, i64 -67897687>
+  call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %src0, <16 x i32*> %gep, i32 4, <16 x i1> %mask)
+  ret void
+}

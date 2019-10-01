@@ -197,7 +197,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
     if (C->getValue().getActiveBits() <= 64) {
       Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, nullptr, AI.getName());
-      New->setAlignment(AI.getAlignment());
+      New->setAlignment(MaybeAlign(AI.getAlignment()));
 
       // Scan to the end of the allocation instructions, to skip over a block of
       // allocas if possible...also skip interleaved debug info
@@ -345,7 +345,8 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
   if (AI.getAllocatedType()->isSized()) {
     // If the alignment is 0 (unspecified), assign it the preferred alignment.
     if (AI.getAlignment() == 0)
-      AI.setAlignment(DL.getPrefTypeAlignment(AI.getAllocatedType()));
+      AI.setAlignment(
+          MaybeAlign(DL.getPrefTypeAlignment(AI.getAllocatedType())));
 
     // Move all alloca's of zero byte objects to the entry block and merge them
     // together.  Note that we only do this for alloca's, because malloc should
@@ -377,12 +378,12 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
         // assign it the preferred alignment.
         if (EntryAI->getAlignment() == 0)
           EntryAI->setAlignment(
-              DL.getPrefTypeAlignment(EntryAI->getAllocatedType()));
+              MaybeAlign(DL.getPrefTypeAlignment(EntryAI->getAllocatedType())));
         // Replace this zero-sized alloca with the one at the start of the entry
         // block after ensuring that the address will be aligned enough for both
         // types.
-        unsigned MaxAlign = std::max(EntryAI->getAlignment(),
-                                     AI.getAlignment());
+        const MaybeAlign MaxAlign(
+            std::max(EntryAI->getAlignment(), AI.getAlignment()));
         EntryAI->setAlignment(MaxAlign);
         if (AI.getType() != EntryAI->getType())
           return new BitCastInst(EntryAI, AI.getType());
